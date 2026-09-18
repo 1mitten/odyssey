@@ -414,18 +414,24 @@ namespace Odyssey.Presentation.Rendering
         /// the board — leaving it out is what keeps the cost of the feature confined to the things
         /// that can actually hide somebody.</para>
         ///
-        /// <para><b>Water and banks</b> (owner, 2026-09-18), because both are <em>surfaces</em>
-        /// rather than objects, and half a surface is not a view through it — it is a hole. A pond
-        /// is drawn as a body of faces, so fading the instances the beam crosses opens a window
-        /// into the bed of the stream and leaves a ragged edge where the beam stops; a bank is a
-        /// sheet leaning on a terrace step that no cell in the simulation even contains, so fading
-        /// it cuts a gap in a hillside that has no gap in it. Neither ever stands between the
-        /// camera and a colonist in the way a wall or an outcrop does: a colonist in the water is
-        /// standing <em>in</em> it, and one at the top of a step is above the bank, not behind it.
-        /// The ground either side of them still fades, which is what the feature is for.</para>
+        /// <para><b>Water, banks and marsh</b> (owner, 2026-09-18, in two reports), because all
+        /// three are <em>surfaces</em> rather than objects, and half a surface is not a view through
+        /// it — it is a hole. A pond is drawn as a body of faces, so fading the instances the beam
+        /// crosses opens a window into the bed of the stream and leaves a ragged edge where the beam
+        /// stops; a bank is a sheet leaning on a terrace step that no cell in the simulation even
+        /// contains, so fading it cuts a gap in a hillside that has no gap in it; and marsh is the
+        /// wet fringe of the same pond, so fading it punched a hole in the shore right beside water
+        /// that stayed whole. None of them ever stands between the camera and a colonist the way a
+        /// wall or an outcrop does: a colonist in the water or the bog is standing <em>in</em> it,
+        /// and one at the top of a step is above the bank, not behind it. The ground either side of
+        /// them still fades, which is what the feature is for.</para>
+        ///
+        /// <para>Water keeps its own marker because it already had one; the bank and the bog share
+        /// <c>TintCode.WholeBase</c>, which is named for this rule rather than for either of them,
+        /// so the next surface that wants it needs nothing here.</para>
         /// </summary>
         public static bool NeverFades(int tint) =>
-            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsBank(tint);
+            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint);
 
         /// <summary>
         /// Split one bucket's instances into the ones standing in a line of sight and the rest,

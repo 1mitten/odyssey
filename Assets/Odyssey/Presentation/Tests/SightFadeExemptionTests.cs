@@ -12,11 +12,12 @@ namespace Odyssey.Tests.Presentation
     ///
     /// <para>The fade ghosts whatever stands between the eye and a selected colonist. Owner,
     /// 2026-09-18: *"it shouldn't do it on the artificial façade terrain on the height edges and in
-    /// water/around water"*. Both of those are <b>surfaces</b> rather than objects — a pond is a body
-    /// of faces and a bank is a sheet leaning on a terrace step that no cell in the simulation even
-    /// contains — so half of one is not a view through it, it is a hole in the landscape. Neither
-    /// can hide anybody either: a colonist in the water is standing in it, and one at the top of a
-    /// step is above the bank rather than behind it.</para>
+    /// water/around water"*, and then *"sometimes it hides marsh as well — omit this"*. All three
+    /// are <b>surfaces</b> rather than objects — a pond is a body of faces, a bank is a sheet leaning
+    /// on a terrace step that no cell in the simulation even contains, and a bog is the wet fringe
+    /// of the pond — so half of one is not a view through it, it is a hole in the landscape. None of
+    /// them can hide anybody either: a colonist in the water or the bog is standing in it, and one
+    /// at the top of a step is above the bank rather than behind it.</para>
     ///
     /// <para>Each test below carries its own <b>control</b>, because an exemption is the easiest
     /// thing in the world to assert vacuously — a beam that crosses nothing proves nothing. The
@@ -46,7 +47,7 @@ namespace Odyssey.Tests.Presentation
         {
             Assert.That(ChunkRenderer.NeverFades(TintCode.Foliage(0)), Is.True, "grass is ankle-high");
             Assert.That(ChunkRenderer.NeverFades(TintCode.Water(NaturalContent.TerrainShallowWater)), Is.True);
-            Assert.That(ChunkRenderer.NeverFades(TintCode.Bank(NaturalContent.TerrainGrass)), Is.True);
+            Assert.That(ChunkRenderer.NeverFades(Whole(NaturalContent.TerrainGrass)), Is.True);
 
             // The half that matters as much: an exemption written too wide turns the feature off.
             Assert.That(ChunkRenderer.NeverFades(TintCode.Terrain(NaturalContent.TerrainGrass)), Is.False,
@@ -54,20 +55,26 @@ namespace Odyssey.Tests.Presentation
             Assert.That(ChunkRenderer.NeverFades(TintCode.Stuff(CoreContentStuff)), Is.False, "a wall must fade");
             Assert.That(ChunkRenderer.NeverFades(TintCode.Tree(TreeSpecies.Broadleaf)), Is.False, "a tree must fade");
 
-            // A bank is still terrain and still tinted as terrain — the marker says what it is, not
-            // what colour it is, and a bank that stopped reading as terrain would draw grey.
-            Assert.That(TintCode.IsTerrain(TintCode.Bank(NaturalContent.TerrainGrass)), Is.True);
-            Assert.That(TintCode.Value(TintCode.Bank(NaturalContent.TerrainGrass)),
-                Is.EqualTo(TintCode.Value(TintCode.Terrain(NaturalContent.TerrainGrass))));
+            // A marked surface is still terrain and still tinted as terrain — the marker says what
+            // the thing is, not what colour it is, and one that stopped reading as terrain would
+            // draw grey.
+            Assert.That(TintCode.IsTerrain(Whole(NaturalContent.TerrainGrass)), Is.True);
+            Assert.That(TintCode.Value(Whole(NaturalContent.TerrainMarsh)),
+                Is.EqualTo(TintCode.Value(TintCode.Terrain(NaturalContent.TerrainMarsh))));
         }
+
+        static int Whole(ushort terrain) => TintCode.Whole(TintCode.Terrain(terrain));
 
         /// <summary>Any construction stuff; which one is beside the point.</summary>
         const int CoreContentStuff = 3;
 
-        // --------------------------------------------------------------- water
+        // --------------------------------------------------- water, and the bog beside it
 
-        /// <summary>Bare grass with one cell of layer 1 occupied, and a colonist east of it.</summary>
-        static RenderTestWorld Board(bool water)
+        /// <summary>
+        /// Bare grass with one cell of layer 1 filled, and a colonist east of it. The one cell is
+        /// what each test varies: rock is the control, water and marsh are the exemptions.
+        /// </summary>
+        static RenderTestWorld Board(ushort terrain, bool solid)
         {
             GroundRelief.Reset();
             var world = new RenderTestWorld(8, 8, 4);
@@ -75,8 +82,8 @@ namespace Odyssey.Tests.Presentation
             for (int x = 0; x < 8; x++)
                 world.Solid(x, z, 0, NaturalContent.TerrainGrass);
 
-            if (water) world.Surface(2, 4, 1, NaturalContent.TerrainShallowWater);
-            else world.Solid(2, 4, 1);
+            if (solid) world.Solid(2, 4, 1, terrain);
+            else world.Surface(2, 4, 1, terrain);
 
             return world.Publish();
         }
@@ -107,11 +114,30 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void WaterInTheBeamIsNotGhostedThoughRockInTheSameCellIs()
         {
-            Assert.That(FadedAcross(Board(water: false)), Is.GreaterThan(0),
+            Assert.That(FadedAcross(Board(NaturalContent.TerrainRock, solid: true)), Is.GreaterThan(0),
                 "the control failed: this beam ghosts nothing even when a rock is standing in it");
 
-            Assert.That(FadedAcross(Board(water: true)), Is.Zero,
+            Assert.That(FadedAcross(Board(NaturalContent.TerrainShallowWater, solid: false)), Is.Zero,
                 "the beam opened a hole in the water");
+        }
+
+        /// <summary>
+        /// Marsh is the awkward one and the reason the marker is named for the rule rather than for
+        /// the bank: it is an ordinary solid ground cell, walkable, in
+        /// <c>NaturalContent.IsGround</c> — so it fell through every exemption and faded like any
+        /// other ground, punching a hole in the shore right beside water that stayed whole.
+        ///
+        /// <para>The same solid cell in the same place as the rock control, so what differs between
+        /// this and the assertion above is the terrain and nothing else.</para>
+        /// </summary>
+        [Test]
+        public void MarshInTheBeamIsNotGhostedThoughItIsOrdinarySolidGround()
+        {
+            Assert.That(NaturalContent.IsGround(NaturalContent.TerrainMarsh), Is.True,
+                "marsh stopped being solid ground, so this test is no longer about the awkward case");
+
+            Assert.That(FadedAcross(Board(NaturalContent.TerrainMarsh, solid: true)), Is.Zero,
+                "the beam opened a hole in the bog");
         }
 
         // --------------------------------------------------------------- banks

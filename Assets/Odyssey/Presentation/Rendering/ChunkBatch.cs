@@ -111,21 +111,27 @@ namespace Odyssey.Presentation.Rendering
         public const int LinenBase = 8192;
 
         /// <summary>
-        /// Bit 14 marks a code as a <b>bank</b> — the stepped earth ramp presentation draws against
-        /// a one-layer terrace step, which no cell in the simulation contains.
+        /// Bit 14 marks a code as a surface that is drawn <b>whole</b>: the sight fade never splits
+        /// it, however squarely it stands in the beam.
         ///
-        /// <para>A bank is tinted exactly as the terrain it is made of, so this bit says nothing
-        /// about its colour and <see cref="ChunkRenderer.ResolveColour"/> never reads it. It is here so the
-        /// <em>drawing</em> can tell a bank from the ground it leans against, which matters because
-        /// a bank is scenery: it is not a thing anybody hides behind, and ghosting half of one for
-        /// a sight line cuts a hole in a hillside that has no hole in it.</para>
+        /// <para>It names a rule rather than a thing, because two different things want it and a
+        /// third will. A <b>bank</b> is the stepped earth ramp drawn against a one-layer terrace
+        /// step, which no cell in the simulation contains at all. <b>Marsh</b> is the wet fringe of
+        /// a pond, which is an ordinary solid cell but reads as part of the water beside it. In both
+        /// cases a half-ghosted surface is not a view through anything — it is a hole in the
+        /// landscape, in a place that has no hole in it, and next to water that stays whole because
+        /// water is exempt too. <c>ChunkRenderer.NeverFades</c> is where the rule is spent.</para>
         ///
-        /// <para>It costs no extra bucket. A bank is already its own module, and a bucket is keyed
-        /// on the module before the tint, so every bank instance was in a bucket of its own before
-        /// this bit existed — which is exactly why the marker can be free here and could not be on,
-        /// say, a tree's colour.</para>
+        /// <para>This bit says nothing about colour — <see cref="ChunkRenderer.ResolveColour"/>
+        /// never reads it, and a bank and a marsh are both still terrain, still tinted as terrain.
+        /// It is here so the <em>drawing</em> can tell one from the ground beside it.</para>
+        ///
+        /// <para>It costs no extra bucket worth counting. A bank is its own module and so was
+        /// already its own bucket; marsh is its own terrain index and so already had its own tint.
+        /// That is exactly why the marker can be free here and could not be on, say, a tree's
+        /// colour.</para>
         /// </summary>
-        public const int BankBase = 16384;
+        public const int WholeBase = 16384;
 
         public static int Stuff(int stuff) => stuff;
 
@@ -154,10 +160,9 @@ namespace Odyssey.Presentation.Rendering
         public static int Water(int terrain) => WaterBase + TerrainBase + terrain;
 
         /// <summary>
-        /// A bank of this terrain. Terrain as well, and tinted as terrain — the marker only says
-        /// what the thing <em>is</em>.
+        /// The same code, marked as a surface to draw whole. Adds nothing to how it is coloured.
         /// </summary>
-        public static int Bank(int terrain) => BankBase + TerrainBase + terrain;
+        public static int Whole(int code) => code | WholeBase;
 
         public static bool IsTerrain(int code) => (code & TerrainBase) != 0;
 
@@ -165,8 +170,8 @@ namespace Odyssey.Presentation.Rendering
 
         public static bool IsWater(int code) => (code & WaterBase) != 0;
 
-        /// <summary>Is this bucket a bank — scenery leaning on a terrace step, not a thing in the way?</summary>
-        public static bool IsBank(int code) => (code & BankBase) != 0;
+        /// <summary>Is this bucket a surface the sight fade must leave in one piece?</summary>
+        public static bool IsWhole(int code) => (code & WholeBase) != 0;
 
         /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
         public static bool IsTree(int code) => (code & TreeBase) != 0;

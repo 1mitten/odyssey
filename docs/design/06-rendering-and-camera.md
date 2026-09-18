@@ -878,25 +878,34 @@ its bounds.
 swapping materials on its renderers rather than partitioning an instance array, and a person
 standing in front of a person is a much rarer complaint than a wood is.
 
-**Nor grass, water or banks** (`ChunkRenderer.NeverFades`). Grass was exempt from the first day on
-cost grounds — a tuft hides nobody and tufts are most of the instances on the board — and water and
-banks joined it on 2026-09-18, on the owner's report: *"it shouldn't do it on the artificial façade
-terrain on the height edges and in water/around water."* The argument is the same one in both
-cases, and it is not cost. **Both are surfaces rather than objects, so half of one is not a view
-through it — it is a hole.** A pond is drawn as a body of faces, and fading the faces a beam crosses
-opens a window into the bed of the stream with a ragged edge where the beam stops; a bank is a sheet
-leaning on a terrace step that *no cell in the simulation contains at all*, so fading it cuts a gap
-in a hillside that has no gap in it. Neither ever hides anybody in the way a wall or an outcrop
-does: a colonist in the water is standing in it, and one at the top of a step is above the bank
-rather than behind it. The ground either side of them still fades, which is the feature.
+**Nor grass, water, banks or marsh** (`ChunkRenderer.NeverFades`). Grass was exempt from the first
+day on cost grounds — a tuft hides nobody and tufts are most of the instances on the board — and the
+other three joined it on 2026-09-18, on two reports from the owner: *"it shouldn't do it on the
+artificial façade terrain on the height edges and in water/around water"*, and then *"sometimes it
+hides marsh as well — omit this."* The argument is the same one all three times, and it is not cost.
+**They are surfaces rather than objects, so half of one is not a view through it — it is a hole.** A
+pond is drawn as a body of faces, and fading the faces a beam crosses opens a window into the bed of
+the stream with a ragged edge where the beam stops; a bank is a sheet leaning on a terrace step that
+*no cell in the simulation contains at all*, so fading it cuts a gap in a hillside that has no gap in
+it; marsh is the wet fringe of the same pond, so fading it punched a hole in the shore right beside
+water that stayed whole. None of them hides anybody in the way a wall or an outcrop does: a colonist
+in the water or the bog is standing in it, and one at the top of a step is above the bank rather than
+behind it. The ground either side of them still fades, which is the feature.
 
-A bank says what it is with a bit of its own in the tint code (`TintCode.BankBase`), the way foliage
-and water already do. It costs no extra bucket — a bank is its own module and so was already its own
-bucket — and it changes no colour: a bank is still terrain and still tinted as terrain.
-`SightFadeExemptionTests` pins all of it, and each of its two render tests carries a **control**,
-because an exemption is the easiest thing in the world to assert vacuously: the water test shows the
+Water keeps the marker it already had. The bank and the bog share one bit named for the **rule**
+rather than for either of them — `TintCode.WholeBase`, "a surface drawn whole" — which is what makes
+this two lines rather than a bit per noun, and what the next surface that wants it will use. **Marsh
+is the awkward case and the reason the name matters:** it is an ordinary solid ground cell, walkable
+and in `NaturalContent.IsGround`, so it fell through every exemption there was. The bit is set in
+`ChunkMesher` (`DrawnWhole`) rather than named in the content tables, because nothing in the
+simulation is different about a bog for this reason. It costs no extra bucket worth counting and
+changes no colour: a bank and a bog are both still terrain, still tinted as terrain.
+
+`SightFadeExemptionTests` pins all of it, and each render test carries a **control**, because an
+exemption is the easiest thing in the world to assert vacuously: the water and marsh tests show the
 same beam through the same cell still ghosts rock, and the bank test draws the same board with banks
-switched off and shows the count does not move.
+switched off and shows the count does not move. All of them were checked by removing the exemption
+and watching them fail.
 
 **On by default** (owner, 2026-09-16), which has three separate homes and needs saying in all
 three: the field initialiser, `SettingsDirector`'s own starting state, and the serialised scene. A
