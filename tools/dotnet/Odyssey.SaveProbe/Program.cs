@@ -121,6 +121,65 @@ namespace Odyssey.SaveProbe
                 Console.WriteLine($"    Floor={Kind(pair.Key.kind),-10} Stuff={Stuff(pair.Key.stuff),-10} {pair.Value}");
 
             ReportMixedMaterials(grid, size);
+            ReportItems(colony, size);
+            ReportTerrain(grid);
+        }
+
+        /// <summary>
+        /// What is lying about, by kind and by layer.
+        ///
+        /// <para>Here because an item on a deck is drawn on the deck, and "grey slivers scattered
+        /// over a wooden floor" describes a scatter of dropped things at least as well as it
+        /// describes a rendering fault (2026-09-18). The layer matters: a stack on the storey below
+        /// is not what anybody is looking at.</para>
+        /// </summary>
+        static void ReportItems(ColonyWorld colony, GridSize size)
+        {
+            var byKind = new Dictionary<(string kind, int layer), (int stacks, int units)>();
+
+            foreach (ColonyItem item in colony.Pawns.Items.Items)
+            {
+                if (item.Despawned || item.Cell < 0) continue;
+                if ((uint)item.Cell >= (uint)size.CellCount) continue;
+
+                string kind = item.DefIndex >= 0 && item.DefIndex < colony.Pawns.Items.Content.Items.Length
+                    ? colony.Pawns.Items.Content.Items[item.DefIndex].defName
+                    : $"def({item.DefIndex})";
+
+                var key = (kind, size.FromIndex(item.Cell).Y);
+                byKind.TryGetValue(key, out var n);
+                byKind[key] = (n.stacks + 1, n.units + item.Stack);
+            }
+
+            if (byKind.Count == 0) { Console.WriteLine("    no items on the ground"); return; }
+
+            foreach (var pair in byKind)
+                Console.WriteLine(
+                    $"    item {pair.Key.kind,-14} L{pair.Key.layer,-3} " +
+                    $"{pair.Value.stacks,4} stacks {pair.Value.units,5} units");
+        }
+
+        /// <summary>
+        /// Which terrains the board actually holds.
+        ///
+        /// <para>Some terrains are drawn with a street tile — pavement, soil, gravel all resolve to
+        /// a grey <c>SM_Env_Ground_Tile_*</c> — so "is there anything on this board that draws
+        /// grey?" is a question about terrain as much as about slabs.</para>
+        /// </summary>
+        static void ReportTerrain(CellGrid grid)
+        {
+            var counts = new Dictionary<ushort, int>();
+            for (int i = 0; i < grid.Terrain.Length; i++)
+            {
+                ushort t = grid.Terrain[i];
+                if (t == CoreContent.TerrainAir) continue;
+                counts.TryGetValue(t, out int n);
+                counts[t] = n + 1;
+            }
+
+            foreach (var pair in counts)
+                Console.WriteLine(
+                    $"    terrain {WorldContent.Table[pair.Key].defName,-18} {pair.Value,8}");
         }
 
         /// <summary>

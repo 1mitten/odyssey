@@ -661,6 +661,10 @@ deck in the folder mixes *materials*, never layers, and in every one of them the
 `SlabPaved` — the **Paving** tool — and never `SlabBuilt`. A run of four at one z, with wood at the
 next z, is exactly the picture.
 
+> **Wrong, and superseded the same day — see "The grey was never a floor" below.** Stone paving is
+> real and those two saves do hold it, but it is not what the owner photographed. The save from
+> *that* session holds **no stone anywhere on the board**. The grey was rubble *terrain*.
+
 Three things follow, and they are separate faults:
 
 - **Two tools both mean "floor" and they remember different materials.** `PaletteTools` files
@@ -764,3 +768,57 @@ choice and it is the owner's.
 Three sessions argued about this tile from stills and from reading, and produced three confident
 wrong answers. The save files were on the same disk throughout. `Odyssey.SaveProbe` exists so that
 the next report starts from the file.
+
+### The grey was never a floor
+
+**2026-09-18, fourth round, and the one that ends it.** The owner could not reproduce any of it in a
+new game and asked the right question: *"could an old game cause problems?"*
+
+`Odyssey.SaveProbe` on the save from the session that was photographed:
+
+```
+the-lost-buckets-day-3.odyssey  day 4
+    Floor=Paved  Stuff=Wood   20
+    Floor=Built  Stuff=Wood   95        <- no stone slab anywhere on the board
+    terrain Rubble  8                   <- eight cells
+```
+
+**Eight rubble cells, and eight grey plates in the screenshot.** `PlayScene` registers
+`Slab(ModuleIds.Terrain("Rubble"), "SM_Env_Ground_Tile_Half_03")`, so rubble *terrain* is drawn with
+a grey street tile — the same family as the stone slab art, which is why three sessions kept
+recognising it as one.
+
+**A surface terrain and a floor slab can share a cell, and a collapse guarantees they will.**
+`SupportSystem.Rubble` writes rubble into `FirstFloorAtOrBelow(cell)` — on purpose, so debris lands
+on something rather than in mid-air, and on purpose not solid so it buries nothing. **The cell it
+chooses therefore has a floor by definition.** `ChunkMesher.EmitFloor` draws the slab and
+`SurfaceContributor` draws the surface tile, both at that cell's floor plane, and neither knows
+about the other.
+
+**This is why the pane and the picture disagreed, and the pane was right all along.**
+`CellDetailContributor` reads `FloorStuff`, the floor really was wood, and "Wood floor" was the
+truth. The grey on top of it was not a floor and has no `FloorStuff` to report. Every explanation
+offered across three sessions was about the floor — a stale mirror, a hole one layer down, stone
+paving — and the answer was a second thing drawn in the same place.
+
+**The fix lifts the rubble on to the floor rather than hiding it.** Hiding was shorter and wrong:
+rubble refuses to be built on until it is cleared (`TerrainDef.buildable`), so a cell that silently
+rejects orders with nothing on screen to explain why is the "command that does nothing and says
+nothing" this build has apologised for three times. It is a heap lying on a deck, so it is drawn as
+one, `CellMetrics.SlabLift` above the slab — the same clearance a slab takes over the ground, taken
+again over the slab.
+
+**Pinned by `RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt`**, which meshes the same cell twice,
+once with a floor under the rubble and once without. An instance matrix carries its prefab's own
+normalisation and the ground relief varies with x and z, so neither the two instances in one cell
+nor a cell against its neighbour isolates the lift; the same cell in two worlds holds both constant.
+
+**What the levelling work above was, in hindsight.** The 25 mm step between the slab arts was real
+and is fixed and tested, and the clearance rule came out of it. But it was never what the owner
+photographed, and levelling the arts on to the plane is what made the board z-fight. **Three wrong
+answers in a row, all reached by reasoning about a screenshot.** The save file answered it in one
+command, and `docs/bug-patterns.md` P6 is about exactly that.
+
+**Rubble is worth a look of its own** (§8): a grey street tile is what "a heap of debris" draws as
+today, and on a wooden deck it reads as somebody's paving rather than as a mess to clear. That is an
+art call and the owner's.

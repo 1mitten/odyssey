@@ -247,6 +247,25 @@ namespace Odyssey.Presentation.Rendering
     /// <summary>
     /// A surface material — pavement, soil, rubble. One tile on the cell floor, in the roof list
     /// so that a storey above the slice can drop its ground.
+    ///
+    /// <para><b>A surface and a floor can share a cell, and a collapse guarantees it.</b>
+    /// <c>SupportSystem.Rubble</c> writes rubble into <c>FirstFloorAtOrBelow</c> — deliberately, so
+    /// that debris lands on something rather than in mid-air, and deliberately not solid so it
+    /// buries nothing. The cell it picks therefore <em>has a floor by definition</em>, and both are
+    /// drawn: the slab by <c>ChunkMesher.EmitFloor</c> and the surface tile here, at the same cell's
+    /// floor plane. Two coplanar surfaces in one cell.</para>
+    ///
+    /// <para><b>The owner met it as a grey tile in a wooden deck</b> (2026-09-18) and it took three
+    /// sessions, because every explanation offered was about the <i>floor</i> — the pane read
+    /// <c>FloorStuff</c> and honestly said "Wood floor", and the save holds no stone slab anywhere
+    /// on the board. The grey was never a floor at all. It is `SM_Env_Ground_Tile_Half_03`, the
+    /// rubble <em>terrain</em>, drawn over the deck the player built.</para>
+    ///
+    /// <para><b>Rubble on a floor is lifted to sit on it</b>, rather than hidden. Hiding it was the
+    /// shorter fix and the wrong one: rubble refuses to be built on until it is cleared
+    /// (<c>TerrainDef.buildable</c>), so a cell that silently rejects orders with nothing on screen
+    /// to explain why is the "command that does nothing and says nothing" this build keeps
+    /// apologising for. It is a heap lying on the deck, so it is drawn as one.</para>
     /// </summary>
     public sealed class SurfaceContributor : ITerrainContributor
     {
@@ -254,7 +273,13 @@ namespace Odyssey.Presentation.Rendering
         {
             if (cell.Solid) return false;
 
-            sink.Roof(cell.Module, cell.Tint, cell.Drape);
+            // The same clearance a slab takes over the ground, taken again over the slab, and for
+            // the same reason: two things at one height is the fault, not which of them is on top.
+            Matrix4x4 at = cell.Model.Floor(cell.Index) != CoreContent.SlabNone
+                ? Matrix4x4.Translate(Vector3.up * CellMetrics.SlabLift) * cell.Drape
+                : cell.Drape;
+
+            sink.Roof(cell.Module, cell.Tint, at);
             return true;
         }
     }

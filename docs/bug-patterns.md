@@ -30,7 +30,8 @@ Every occurrence so far:
 | Which face is a ladder on? | `ChunkMesher.EmitLadder` (fell back north), `TryWallBeside` (fell back to nothing) | figure climbed through the air |
 | Does this thing rotate? | the Defs, and `BuildShapes.Rotates` | R did the other of its two jobs, silently |
 | Which cells does a bed claim? | the simulation's guard, and the ghost | ghost drew legal, click did nothing |
-| **What layer does a run land on?** | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | **a deck with a hole in it** |
+| What layer does a run land on? | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | a deck with a hole in it |
+| **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -138,7 +139,49 @@ is still clear of whatever the old margin was clearing.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
-### 2026-09-18 — The grey tile was stone paving all along (P5, P6)
+### 2026-09-18 — The grey tile was rubble terrain drawn on top of a wood floor (P1, P5, P6)
+
+*"I can't seem to recreate this in a new game — could an old game cause problems?"*
+
+**The fourth answer, and the one that holds.** The owner's own question was the right one. The save
+from the photographed session:
+
+```
+the-lost-buckets-day-3.odyssey   Floor=Built/Wood 95, Paved/Wood 20   <- no stone on the board
+                                 terrain Rubble 8                      <- eight cells
+```
+
+Eight rubble cells; eight grey plates in the screenshot. `PlayScene` registers
+`Slab(ModuleIds.Terrain("Rubble"), "SM_Env_Ground_Tile_Half_03")`, so rubble **terrain** draws as a
+grey street tile — the same art family as the stone slab, which is why three sessions kept
+recognising it as one.
+
+**Cause (P1).** "A floor hides what is beneath it" has one owner and a second site that never asks
+it. `ChunkMesher.EmitScatter` obeys it — *"a built floor, a stamped deck and a deck plate all
+equally hide what is beneath"* — and `SurfaceContributor` does not, so a cell holding both a surface
+terrain and a floor slab draws both, coplanar. **A collapse guarantees that cell exists**:
+`SupportSystem.Rubble` writes into `FirstFloorAtOrBelow`, which has a floor by definition.
+
+**Why the pane and the picture disagreed, and the pane was right.** `CellDetailContributor` reads
+`FloorStuff`; the floor really was wood. The grey on top of it was not a floor and has no
+`FloorStuff` to report. Three sessions explained a *floor* — stale mirror, hole one layer down,
+stone paving — and the answer was a second thing drawn in the same place.
+
+**Fix:** rubble on a floor is lifted `CellMetrics.SlabLift` on to it rather than hidden. Hiding was
+shorter and wrong: rubble refuses to be built on until cleared, so an invisible one is a cell that
+rejects orders with nothing on screen to say why. Pinned by
+`RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt`, which meshes the same cell twice — with and
+without a floor under the rubble — because an instance matrix carries its prefab's normalisation and
+the relief varies with x and z, so nothing else isolates the lift.
+
+**Caught next time by:** asking `Odyssey.SaveProbe` first. It reports terrain as well as floors now,
+for exactly this reason.
+
+### 2026-09-18 — The grey tile was stone paving all along (P5, P6) — *wrong, superseded*
+
+> The row above is the real cause. Stone paving is real and two older saves hold it, but the board
+> the owner photographed has no stone slab on it at all. Kept because the reasoning below is a clean
+> example of P6 and was still not enough.
 
 *"The slab was placed on the top level but then the colonists tried to build the most outer slabs
 first which then landed a stone/steel looking tile 1 height below instead of where it was … you can
