@@ -6103,4 +6103,4 @@ going up definitely … should be much slower."* The design is `docs/design/22-t
   not content and nothing is placed differently, and **not one number on the barren meadow**, which
   is a flat table with no step to hop.
 - **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1771 total, 1757 passed,
-  0 failed**.
+  0 failed**; PlayMode **82 total, 77 passed, 0 failed**, so the frame budget is unmoved by the arc.
