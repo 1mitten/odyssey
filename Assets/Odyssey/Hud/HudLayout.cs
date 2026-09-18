@@ -245,8 +245,9 @@ namespace Odyssey.Hud
         /// rows — who this is, and what they are at — so the card is sized by the longer of them
         /// rather than by a number somebody liked.</para>
         ///
-        /// <para>Widest name row: the avatar (26) plus its gap (8) plus the longest name the pool
-        /// can produce. Widest activity row: the icon (17) plus its gap (6) plus the longest word
+        /// <para>Widest name row: the avatar plus its gap plus the longest name the pool
+        /// can produce — which is a fact about <c>docs/design/colonist-names.csv</c>, so adding a
+        /// long name to that file is a change to this number. Widest activity row: the icon (17) plus its gap (6) plus the longest word
         /// in <c>ui.status</c>. Both plus padding on each side. The figures are not taken on
         /// trust — <c>TheCardIsWideEnoughForItsRowsAndNoWider</c> asks the text engine what those
         /// strings really draw in the real face at the real size, and fails on either side with a
@@ -262,7 +263,30 @@ namespace Odyssey.Hud
         /// 16 + 52 + 8 + 50 = 126, which overtakes the activity row's 106 and becomes the width.
         /// The measured strings are the test's, not an estimate — 'Wrenn 10' draws 50 px and
         /// 'Deconstructing' 67.</para>
+        ///
+        /// <para><b>It stayed 126 when the name pool went from eight to 244</b> (owner,
+        /// 2026-09-18: *"remove any longer names for now"*). Sizing the card to the widest name
+        /// the owner's list can produce would have cost <see cref="CardWidth"/> ten pixels and the
+        /// coverage ceiling a fourth raise, 19.80% → 20.19% at the forced two-row strip; the
+        /// cheaper trade is to keep the card and let the pool fit it. <b>The budget is therefore a
+        /// constraint on content</b>, and <see cref="CardNameBudget"/> is what states it —
+        /// <c>NoNameInThePoolIsWiderThanTheCardBudgetsFor</c> measures every name in the real face
+        /// and names all of them at once, because the one thing this must not become is a name
+        /// removed per CI round.</para>
         public const int CardWidth = 126;
+
+        /// <summary>
+        /// The room a card leaves for a colonist's name: the card less its padding, the avatar and
+        /// the gap after it.
+        ///
+        /// <para>Derived rather than written down, and stated as a constant because it is a rule
+        /// about <c>docs/design/colonist-names.csv</c> rather than about the card: a name wider
+        /// than this does not fit, and the pool is what has to give. <b>Width is not length</b> —
+        /// <i>Christopher</i> is eleven characters and 60 px, <i>Alexander</i> nine and 52 — so
+        /// the check that enforces this has to ask the text engine, and a character-count proxy
+        /// in the fast tier passed both.</para>
+        /// </summary>
+        public const int CardNameBudget = CardWidth - 2 * CardPad - CardAvatar - CardAvatarGap;
 
         /// <summary>
         /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
@@ -1674,6 +1698,14 @@ namespace Odyssey.Hud
         /// <para><b>It is the owner's to reverse</b>, exactly as the orders strip's one per cent
         /// is. The cheapest reversal is the avatar: every pixel of it is four pixels of card area
         /// and the card is what the strip is made of.</para>
+        ///
+        /// <para><b>The name pool nearly took it to 0.21 and the owner declined</b>, 2026-09-18.
+        /// Sizing the card to the widest of 244 owner-supplied names would have put the forced
+        /// two-row strip at 20.19%; the answer was *"remove any longer names for now"*, so the
+        /// card kept its width and the pool lost the names that did not fit
+        /// (<see cref="CardNameBudget"/>). Worth keeping in view if the pool is ever the thing
+        /// that matters more than the ceiling: it is one line here and one in
+        /// <see cref="CardWidth"/>.</para>
         /// </summary>
         public const float CoverageCeiling = 0.20f;
     }

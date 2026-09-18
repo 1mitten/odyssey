@@ -5471,3 +5471,76 @@ panel are built from — so the fill, the border and the radius are tokens the s
 nothing about the colour is restated. `.setup` overrides only where it sits and how much air it
 keeps. **The general form: when a screen needs to look like the rest of the interface, wear the
 interface's classes rather than copy its values.** A copied value is a value that drifts.
+
+### A name pool that is one file, generated, and costs nothing to read (2026-09-18)
+
+The owner supplied about 240 given names in three lists — ordinary ones, invented ones, and a run of
+British nicknames (*Spudgun*, *Treacle*, *The Dude*) — and then, mid-change, the two constraints
+that decided the shape: *"make it performant then and centralise it if need be."*
+
+**The pool was eight names in a C# array**, with a comment promising it would reach "about forty at
+M2, when pawn generation needs a pool that does not repeat in a colony of fifty". That promise was
+three milestones old. It is 244 now, which is six times what it asked for, and
+`ThePoolOutlastsAnyColonyThisGameBuilds` walks a colony of fifty and asserts no two share a name —
+so the `"Wrenn 2"` suffix a ninth colonist used to get is unreachable by any colony this game
+builds. The branch is kept because it is what makes the method total, and it is the only line in the
+namer that allocates: on every path anybody actually walks, naming a colonist allocates nothing.
+
+**Centralised the way the icon keys already were.** `docs/design/colonist-names.csv` is the one
+place a name is decided; `emit_labels.py` — the generator that already turns `icon-keys.csv` into
+`Registry.g.cs` — gained a second output rather than a script of its own, so it is still **one
+generator and one `--check`**, and CI covers the new file without a workflow change. The wiki gained
+a page listing all 244 with their register and gender, because the whole reason names are content is
+that the owner can read them and strike the ones they do not want.
+
+**Performance was the easy half and worth stating anyway.** The generator writes string literals, so
+the pool lives in the assembly's constant pool and naming a colonist is an index and a modulo — no
+parse, no file read, no dictionary, no allocation. That matters because the roster strip and the
+inspect header ask per figure per frame.
+
+**Two names were dropped as duplicates and the generator now refuses them.** *Nova* appeared in both
+of the first two lists and *John* in the first and third; a pool with a repeat in it would name two
+colonists in one colony the same thing, which is precisely the fault the whole seed-and-id scheme
+exists to prevent. `load_names` raises on a repeat rather than silently deduping, because a name
+quietly vanishing from a 244-row CSV is not something anybody would notice.
+
+**The order of the CSV is load-bearing, and that is the trap to write down.** A name is arithmetic
+on a saved seed and a slot, so **sorting the file renames every colonist in every existing save**.
+Add to the end; never sort. Growing the pool from 8 to 244 already did this once — every colonist in
+every save made before today now goes by a different name — which is harmless exactly once and the
+reason the rule is stated in the CSV's own wiki page, in the generated header and in the namer.
+
+**Gender is recorded and nothing reads it, deliberately.** The owner asked "if can apply to gender".
+It cannot yet, and the reason is not the names: **no pawn in the simulation has a gender at all**,
+and the drawn colonist is one of sixty-one Synty models in a single undifferentiated family, so a
+gendered name would be contradicted by the figure beside it about half the time. Adding gendered
+names without a gendered figure would make the game look *more* wrong, not less — there is currently
+no expectation for a face to fail. The column is in the CSV because it cannot be re-derived cheaply
+later and because the wiki is where the owner corrects it; it is **not** generated into C#, since a
+constant nothing reads is the artefact this project keeps being bitten by.
+
+**And the pool cost ten pixels a card, after two rounds of getting it wrong.** The Unity tier
+failed on `TheCardIsWideEnoughForItsRowsAndNoWider`'s **lower** bound — the roster card budgets
+50 px for a name and *Christopher* draws 60 — which is the bound that exists for exactly this and
+which `CardWidth`'s own comment had predicted in words a month earlier.
+
+The first answer was to shorten that one name, on the reasoning that it was the only entry over ten
+characters. **The next run named *Alexander*: nine characters, 52 px, where *Christopher* is eleven
+and 60.** Character count does not predict width, which is a sentence I had written into a test
+comment on the previous commit and then immediately acted against. "Trim the long ones" is not a
+rule anybody can apply — it is guessing until CI stops complaining, one round at a time, against a
+list that is the owner's content rather than ours.
+
+So the card is sized once to the widest name the pool can produce, which terminates, and the
+coverage ceiling goes 20% → 21% (the forced two-row strip at 1280 × 720, 19.80% → 20.19%). **The
+fourth raise of a number that is the owner's**, and it is recorded beside the other three with what
+it buys: no colonist's name is cut short on the roster. The reversal is cheaper than the avatar's —
+ten of the 136 pixels are the name budget, so putting the ceiling back is a content decision about
+accepting an ellipsis on the longest few names, which is the one thing on a card this interface
+already permits to be cut short.
+
+**The reusable half is about proxies.** A fast-tier test cannot measure text, so it guarded the pool
+by character count — and passed an eleven-character name that then failed the pixel measurement.
+A proxy that does not fail where the real thing fails is not a cheap version of the gate; it is a
+second opinion nobody asked for, and it is worse than nothing when it is believed. That test now
+says out loud that it only catches the absurd and that `HudGeometryTests` is the gate.
