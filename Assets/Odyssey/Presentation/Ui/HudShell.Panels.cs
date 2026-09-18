@@ -586,10 +586,23 @@ namespace Odyssey.Presentation.Ui
                     }
                     _prevPageBtn?.SetEnabled(_roster.Page > 0);
                     _nextPageBtn?.SetEnabled(_roster.Page < _roster.PageCount - 1);
+
+                    if (_cardsHost != null)
+                    {
+                        _cardsHost.style.width = HudLayout.StripCardsCap * (HudLayout.CardWidth + HudLayout.CardGap);
+                        _cardsHost.style.flexShrink = 0f;
+                        _cardsHost.style.justifyContent = Justify.FlexStart;
+                    }
                 }
                 else
                 {
                     _rosterPager.style.display = DisplayStyle.None;
+                    if (_cardsHost != null)
+                    {
+                        _cardsHost.style.width = StyleKeyword.Auto;
+                        _cardsHost.style.flexShrink = 1f;
+                        _cardsHost.style.justifyContent = Justify.Center;
+                    }
                 }
             }
         }

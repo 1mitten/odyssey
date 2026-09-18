@@ -232,7 +232,7 @@
 
 .strip__cards {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     align-content: flex-start;
 }
@@ -351,7 +351,7 @@
     align-items: center;
     justify-content: center;
     height: 24px;
-    margin: 0 0 7px 6px;
+    margin: 0 0 7px 0.5px;
     padding: 0 2px;
     background-color: rgba(12, 16, 20, 0.86);
     border-width: 1px;

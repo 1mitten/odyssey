@@ -785,6 +785,12 @@ namespace Odyssey.Presentation.Ui
             if (_cardsHost != null)
             {
                 _cardsHost.style.maxWidth = perRow * (HudLayout.CardWidth + HudLayout.CardGap);
+                if (_roster != null && _roster.PageCount > 1)
+                {
+                    _cardsHost.style.width = perRow * (HudLayout.CardWidth + HudLayout.CardGap);
+                    _cardsHost.style.flexShrink = 0f;
+                    _cardsHost.style.justifyContent = Justify.FlexStart;
+                }
             }
 
             float height = _hud.resolvedStyle.height;
