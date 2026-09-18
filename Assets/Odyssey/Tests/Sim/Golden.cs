@@ -88,6 +88,20 @@ namespace Odyssey.Tests.Sim
     /// <c>Generated</c> here would have meant something else had come along with it. Checked by
     /// running the table before re-baking and reading which assertion failed: all three failed on
     /// the second, which is the one that fires only after the first has passed.</para>
+    ///
+    /// <para><b>Re-baked again on 2026-09-18, for diagonal movement</b>
+    /// (<c>docs/design/21-diagonal-movement.md</c>). The cell search went 8-connected, so every
+    /// colonist walks a different route and the three colonies reach a different state.</para>
+    ///
+    /// <para><b>The same signature held, and this time it carries a second claim.</b> All three
+    /// <c>Simulated</c> values moved and all three <c>Generated</c> values are byte-for-byte what
+    /// they were — which says not merely that placement is untouched but that <b>the region graph
+    /// is untouched</b>, because <c>NavGraph.ContributeTo</c> and <c>StructureFingerprint</c> both
+    /// fold into the hash taken before the first tick. That is the whole point of the corner rule.
+    /// A diagonal is refused unless <em>both</em> flanking cells are enterable, and a diagonal
+    /// whose flanks are both enterable joins two cells that were already two orthogonal steps
+    /// apart — so 8-connectivity adds no reachability anywhere, only cheaper routes. No region, no
+    /// link, no district and no zone had to change, and this table is the evidence.</para>
     /// </summary>
     public static class Golden
     {
@@ -143,7 +157,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7415324713255390796UL,
-            Simulated = 3128752858895027949UL,
+            Simulated = 5281620229346056639UL,
         };
 
         /// <summary>
@@ -160,7 +174,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 8029423938199474119UL,
-            Simulated = 16725035343162846352UL,
+            Simulated = 7104968452818682327UL,
         };
 
         /// <summary>
@@ -176,7 +190,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 2695749815698818099UL,
-            Simulated = 2896902808510897329UL,
+            Simulated = 5288466124516671724UL,
         };
     }
 }
