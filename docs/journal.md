@@ -5894,6 +5894,53 @@ game?"*
 - **Verified:** fast tier 723 Sim + 412 Hud; EditMode **1713 total, 1699 passed, 0 failed**;
   PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
 
+### Roster top bar pagination and slot reordering (2026-09-18)
+
+The owner: *"when many colonists are generated - the roster top bar stops generating profile cards - I suggest a small toolbar control that sits alongside the right hand side of the roster bar which is effectively pages of colonists to display - so you switch between the pages of colonists to the maximum or maybe suggest a better way to handle many colonists - also take into account when you say click on an alert to go to a person, the profile switches to that page. Also if you could make it so if you right click and hold on a roster profile card you can drag and drop them between slots and it will swap them"*.
+
+- **Overflow pagination**: When the colony size exceeds the capacity of the roster bar (computed via `CardsPerRow(width) * StripRowsAllowed(height)`), the roster now pages across colonists rather than truncating them or overflowing into adjacent regions.
+- **The pager toolbar**: Docked cleanly alongside the right-hand edge of the card matrix. Features `< [page] / [total] >` controls with `ChevronLeft` and `ChevronRight` vector glyphs drawn via `Painter2D` in `HudGlyph`. It hides automatically (`display: none`) when all colonists fit on a single page. Mouse wheel over the strip cycles through pages.
+- **Steady-state zero GC**: Following ADR 0003, page labels cache last-seen page indices and rebuild their string text only on page transitions.
+- **Selection synchronization**: Selecting a colonist in the 3D world, clicking an alert, or navigating to a colonist flips the roster bar to the page containing that colonist's profile card, without resetting manual page navigation during steady state.
+- **Direct slot swapping on right-click drag-and-drop**: Holding right-click and dragging a card shows a semi-transparent drag ghost following the cursor, highlights target cards with `.card--drag-target`, and directly swaps positions (A ↔ B) upon release. Edge hover paging allows dragging across page boundaries.
+- **Persistence across save/load**: Custom colonist order and the active roster page persist in `ViewStateSection` (version 2) under the `"view"` save key, isolated from simulation hash determinism.
+- **Guards**:
+  - `HudModelTests.RosterPaginationClampsAndSlicesCorrectly` asserts pagination mathematics.
+  - `HudModelTests.RosterEnsurePageForSwitchesActivePage` asserts selection synchronization.
+  - `HudModelTests.RosterSwapDirectlySwapsColonistPositions` asserts direct slot swapping.
+  - `ViewStateTests.TheRosterOrderAndPageSurviveAStreamAndRestore` asserts save/load round-trip in PlayMode.
+- **Verified**: fast tier 723 Sim + 416 Hud; EditMode **1717 total, 1703 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### Roster single row, 6-card capacity, and fixed-position docked pager (2026-09-18)
+
+The owner: *"Should be one row with 6 on an more (no 2 rows or anthing - always one). The pagination control needs to stay in the exact same place but it moves around according to how many colonists on that page, also move this control flush next to the last possible 6th slot with little spacing and make sure it stays in fixed position"*.
+
+- **Single row strictly enforced**: `HudLayout.StripRows = 1`, `StripRowsAllowed(height) => 1`, and `StripRowsUsed(...) => 1`. The roster bar never wraps to two rows at any resolution.
+- **6-card capacity per page**: `HudLayout.StripCardsCap = 6` clamps `CardsPerRow(width)`. Colonies of 6 or fewer occupy a single row of up to 6 cards; colonies of 7 or more paginate across pages of 6 cards each.
+- **Stationary pagination control**: Previously, `_cardsHost` dynamically sized to the count of cards on the active page, causing the pager to shift horizontally whenever a page had fewer cards than the capacity (e.g. jumping left on a 1- or 2-colonist remainder page). Now, when paginated (`PageCount > 1`), `_cardsHost` locks to the exact width of 6 card slots (`6 * (CardWidth + CardGap) = 618 px`) with `Justify.FlexStart` and `flexShrink = 0`. As a result, the 6 card slots and the pagination toolbar remain in the exact same screen position regardless of how many cards are on that page.
+- **Flush docking with little spacing**: `.roster-pager` margin reduced to 0.5px (combined with card margin-right of 3.5px, providing a clean 4.0px gap flush next to the 6th slot). `HudLayout.PagerGap = 4`.
+- **Verified**: fast tier 723 Sim + 418 Hud; EditMode **1725 total, 1711 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### Depth control default button and flush colonist info card (2026-09-18)
+
+The owner: *"- The button that is the default button in the depth control should be twice as big as the other ones and be tinted to indicate the default view to the player. - The colonist info card needs to be flush against the bottom bar as there is a gap/spacing to allow for maximise space for seeing"*.
+
+- **Depth control default button (2× height & earth tint)**:
+  - The starting/ground layer represents the default slice view. Its button on the depth rail now stands twice as tall at 32 px (`HudLayout.RailSurfaceCellHeight = 32`, 2× the 16 px of standard cells), while maintaining standard 26 px cell width.
+  - Wears a subtle earth-green tint (`rgba(127, 201, 140, 0.25)` derived from `HudTheme.Good`, with a matching `rgba(127, 201, 140, 0.65)` border) when inactive, clearly distinguishing ground level from pale sky and dark subterranean rock. When active, the active cyan (`#6fd3e3`) highlight cleanly takes precedence.
+  - Squeezing geometry in `HudLayout.RailPitch` and `HudLayout.RailHeight` now distributes room across `layers + 1` effective cell units, ensuring that on short viewports or deep boards the taller surface button never encroaches on the orders strip or command bar.
+  - `HudShell.FitRail()` scales the surface view cell to `2f * cell` and preserves label visibility.
+- **Colonist info card & info panels flush against bottom bar**:
+  - `HudLayout.InspectToBar` dropped from 14 px to 0 px, moving `InspectBottom` from 64 px to 50 px (`BarBottom + HudCommands.BarHeight + Frame = 50`).
+  - Shifting the inspect pane down eliminates the floating 14 px gap above the docked command bar, recovering 14 px of visible game world above the card.
+  - In `Hud.uss`, `.inspect` updated to `bottom: 50px;` and both bottom corners squared off (`border-bottom-right-radius: 0;`), creating a seamless docked transition against the command bar edge that matches popover styling.
+  - Applies to both wide colonist inspection (560 px) and narrow tile/pile readout (280 px).
+- **Guards & Verification**:
+  - `HudStyleSheetTests` asserts `.rail__cell--surface` height equals `HudLayout.RailSurfaceCellHeight` (32 px) and `.inspect` bottom equals `HudLayout.InspectBottom` (50 px).
+  - `HudLayoutTests.TheOrdersStripStandsInTheGutterUnderTheRail` validates depth rail gutter clearance across all resolutions.
+  - `HudLayoutTests.TheInspectPaneNeverReachesTheCommandBar` validates inspect pane bottom clearance.
+  - Fast tier: 723 Sim + 418 Hud passed; both content checks current.
+
 ### Typing took the keyboard off the game, names became the player's, and the starting kit stopped being a pantry (2026-09-18, branch `claude/start-inventory-and-naming`)
 
 Three owner asks in one branch, and the first turned out to be the biggest.

@@ -171,6 +171,7 @@ namespace Odyssey.Tests.Hud
             (".rail", "padding-left", () => HudLayout.RailSidePad, "rail side padding"),
             (".rail__cell", "width", () => HudLayout.RailCellWidth, "rail cell"),
             (".rail__cell", "height", () => HudLayout.RailCellHeight, "rail cell"),
+            (".rail__cell--surface", "height", () => HudLayout.RailSurfaceCellHeight, "rail surface cell"),
             (".rail__cell", "margin-bottom", () => HudLayout.RailCellGap, "rail cell gap"),
 
             (".orders", "margin-top", () => HudLayout.RailToOrders, "rail to orders strip"),

@@ -427,15 +427,94 @@ namespace Odyssey.Presentation.Ui
             // then describes what the engine will do rather than competing with it.
             _strip = new VisualElement { name = "strip", pickingMode = PickingMode.Ignore };
             _strip.AddToClassList("strip");
+
+            _cardsHost = new VisualElement { name = "cards-host", pickingMode = PickingMode.Ignore };
+            _cardsHost.AddToClassList("strip__cards");
+            _strip.Add(_cardsHost);
+
+            _rosterPager = new VisualElement { name = "roster-pager" };
+            _rosterPager.AddToClassList("roster-pager");
+            _rosterPager.style.display = DisplayStyle.None;
+
+            _prevPageBtn = new VisualElement { name = "roster-pager__prev" };
+            _prevPageBtn.AddToClassList("roster-pager__btn");
+            _prevPageBtn.Add(new HudGlyph(HudGlyphKind.ChevronLeft, 10f, HudTokens.TextDim));
+            _prevPageBtn.RegisterCallback<ClickEvent>(evt =>
+            {
+                _roster.SetPage(_roster.Page - 1);
+                RefreshStrip();
+                evt.StopPropagation();
+            });
+            _rosterPager.Add(_prevPageBtn);
+
+            _pageLabel = HudText.Make("1 / 1", HudTextRole.Row, ussClass: "roster-pager__label");
+            _rosterPager.Add(_pageLabel);
+
+            _nextPageBtn = new VisualElement { name = "roster-pager__next" };
+            _nextPageBtn.AddToClassList("roster-pager__btn");
+            _nextPageBtn.Add(new HudGlyph(HudGlyphKind.ChevronRight, 10f, HudTokens.TextDim));
+            _nextPageBtn.RegisterCallback<ClickEvent>(evt =>
+            {
+                _roster.SetPage(_roster.Page + 1);
+                RefreshStrip();
+                evt.StopPropagation();
+            });
+            _rosterPager.Add(_nextPageBtn);
+
+            _strip.Add(_rosterPager);
+
+            _strip.RegisterCallback<WheelEvent>(evt =>
+            {
+                if (_roster.PageCount <= 1) return;
+                int delta = evt.delta.y > 0 ? 1 : (evt.delta.y < 0 ? -1 : 0);
+                if (delta != 0)
+                {
+                    _roster.SetPage(_roster.Page + delta);
+                    RefreshStrip();
+                    evt.StopPropagation();
+                }
+            });
+
+            _dragGhost = new VisualElement { name = "card-drag-ghost", pickingMode = PickingMode.Ignore };
+            _dragGhost.AddToClassList("card-drag-ghost");
+            _dragGhost.style.display = DisplayStyle.None;
+
+            var ghostAvatarBox = new VisualElement { pickingMode = PickingMode.Ignore };
+            ghostAvatarBox.AddToClassList("card__avatar-box");
+            _ghostAvatar = new AvatarGlyph(HudLayout.CardAvatar) { pickingMode = PickingMode.Ignore };
+            _ghostAvatar.AddToClassList("card__avatar");
+            ghostAvatarBox.Add(_ghostAvatar);
+            _dragGhost.Add(ghostAvatarBox);
+
+            _ghostName = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card-drag-ghost__name");
+            _ghostName.pickingMode = PickingMode.Ignore;
+            _dragGhost.Add(_ghostName);
+
             _worldUi.Add(_strip);
+            _worldUi.Add(_dragGhost);
         }
 
         void RefreshStrip()
         {
             var world = _boot!.World;
             if (world == null) return;
-            _roster.Refresh(world.Views.Current,
-                selected: _directors != null ? _directors.Selection.Pawns : (IReadOnlyList<PawnId>)Array.Empty<PawnId>());
+
+            IReadOnlyList<PawnId> selected = _directors != null
+                ? _directors.Selection.Pawns
+                : (IReadOnlyList<PawnId>)Array.Empty<PawnId>();
+
+            PawnId primary = selected.Count > 0 ? selected[0] : PawnId.None;
+            if (primary != _lastSelectedPawn)
+            {
+                _lastSelectedPawn = primary;
+                if (primary.IsValid)
+                {
+                    _roster.PageCapacity = Math.Max(1, _stripCapacity);
+                    _roster.EnsurePageFor(primary);
+                }
+            }
+
+            _roster.Refresh(world.Views.Current, selected: selected, capacity: _stripCapacity);
 
             int shown = Math.Min(_roster.Cards.Count, _stripCapacity);
 
@@ -493,6 +572,39 @@ namespace Odyssey.Presentation.Ui
                 view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
                 view.LastLayer = model.Layer;
             }
+
+            if (_rosterPager != null)
+            {
+                if (_roster.PageCount > 1)
+                {
+                    _rosterPager.style.display = DisplayStyle.Flex;
+                    if (_pageLabel != null && (_lastRosterPage != _roster.Page || _lastRosterPageCount != _roster.PageCount))
+                    {
+                        _lastRosterPage = _roster.Page;
+                        _lastRosterPageCount = _roster.PageCount;
+                        HudText.Set(_pageLabel, $"{_roster.Page + 1} / {_roster.PageCount}", HudTextRole.Row);
+                    }
+                    _prevPageBtn?.SetEnabled(_roster.Page > 0);
+                    _nextPageBtn?.SetEnabled(_roster.Page < _roster.PageCount - 1);
+
+                    if (_cardsHost != null)
+                    {
+                        _cardsHost.style.width = HudLayout.StripCardsCap * (HudLayout.CardWidth + HudLayout.CardGap);
+                        _cardsHost.style.flexShrink = 0f;
+                        _cardsHost.style.justifyContent = Justify.FlexStart;
+                    }
+                }
+                else
+                {
+                    _rosterPager.style.display = DisplayStyle.None;
+                    if (_cardsHost != null)
+                    {
+                        _cardsHost.style.width = StyleKeyword.Auto;
+                        _cardsHost.style.flexShrink = 1f;
+                        _cardsHost.style.justifyContent = Justify.Center;
+                    }
+                }
+            }
         }
 
         CardView NewCard(int index)
@@ -528,33 +640,184 @@ namespace Odyssey.Presentation.Ui
             Label name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
             card.Add(name);
 
-            // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
-            // turns it on or off without moving the camera, and while shift is held a drag across
-            // cards toggles each one it crosses (A2 "drag-select a range"). A plain press keeps the
-            // jump: a card is a way of getting to someone far away.
-            card.RegisterCallback<PointerDownEvent>(evt =>
-            {
-                if (index >= _roster.Cards.Count || _boot!.World == null) return;
-                PawnId id = _roster.Cards[index].Id;
-                if (evt.shiftKey)
-                {
-                    _sweepingRoster = true;
-                    _directors?.Selection.Toggle(id);
-                }
-                else _directors?.ChooseColonist(id, _boot.World.Views.Current);
-            });
-            card.RegisterCallback<PointerEnterEvent>(_ =>
-            {
-                if (!_sweepingRoster || index >= _roster.Cards.Count) return;
-                _directors?.Selection.Toggle(_roster.Cards[index].Id);
-            });
-
-            _strip.Add(card);
-            return new CardView
+            var view = new CardView
             {
                 Root = card, Ring = ring, Avatar = avatar, Name = name,
                 JobIcon = jobIcon,
             };
+
+            // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
+            // turns it on or off without moving the camera, and while shift is held a drag across
+            // cards toggles each one it crosses (A2 "drag-select a range"). A plain press keeps the
+            // jump: a card is a way of getting to someone far away. Right-click and hold initiates
+            // drag-and-drop to reorder slots.
+            card.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (!view.LastId.IsValid || _boot!.World == null) return;
+                PawnId id = view.LastId;
+                if (evt.button == 0)
+                {
+                    if (evt.shiftKey)
+                    {
+                        _sweepingRoster = true;
+                        _directors?.Selection.Toggle(id);
+                    }
+                    else _directors?.ChooseColonist(id, _boot.World.Views.Current);
+                }
+                else if (evt.button == 2)
+                {
+                    _pendingRightDrag = true;
+                    _rightDragStartPos = evt.position;
+                    _draggedPawnId = id;
+                    _draggedSlot = index;
+                    card.CapturePointer(evt.pointerId);
+                    evt.StopPropagation();
+                }
+            });
+
+            card.RegisterCallback<PointerMoveEvent>(evt =>
+            {
+                if (_pendingRightDrag && !_isRightDragging)
+                {
+                    if (Vector2.Distance(evt.position, _rightDragStartPos) > 4f)
+                    {
+                        _isRightDragging = true;
+                        StartDragDrop(card, _draggedPawnId);
+                    }
+                }
+
+                if (_isRightDragging)
+                {
+                    UpdateDragDrop(evt.position);
+                    evt.StopPropagation();
+                }
+            });
+
+            card.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                if (evt.button == 2)
+                {
+                    if (card.HasPointerCapture(evt.pointerId))
+                        card.ReleasePointer(evt.pointerId);
+
+                    if (_isRightDragging)
+                    {
+                        if (_dragTargetView != null && _dragTargetView.LastId.IsValid && _dragTargetView.LastId != _draggedPawnId)
+                        {
+                            _roster.Swap(_draggedPawnId, _dragTargetView.LastId);
+                        }
+                        EndDragDrop();
+                        RefreshStrip();
+                        evt.StopPropagation();
+                    }
+                    _pendingRightDrag = false;
+                }
+            });
+
+            card.RegisterCallback<PointerCancelEvent>(evt =>
+            {
+                if (card.HasPointerCapture(evt.pointerId))
+                    card.ReleasePointer(evt.pointerId);
+                if (_isRightDragging)
+                {
+                    EndDragDrop();
+                    RefreshStrip();
+                }
+                _pendingRightDrag = false;
+            });
+
+            card.RegisterCallback<PointerEnterEvent>(_ =>
+            {
+                if (!_sweepingRoster || !view.LastId.IsValid) return;
+                _directors?.Selection.Toggle(view.LastId);
+            });
+
+            _cardsHost.Add(card);
+            return view;
+        }
+
+        void StartDragDrop(VisualElement sourceCard, PawnId pawnId)
+        {
+            sourceCard.AddToClassList("card--dragging");
+            if (_dragGhost != null && _boot?.World != null)
+            {
+                var world = _boot.World;
+                _ghostAvatar?.SetFace(ColonistFace.Of(world.Views.Current, pawnId));
+                if (_boot.Portraits != null)
+                    _ghostAvatar?.SetPortrait(_boot.Portraits.For(world.Views.Current, pawnId));
+                if (_ghostName != null)
+                    HudText.Set(_ghostName, ColonistNames.Of(world.Views.Current, pawnId), HudTextRole.Row);
+                _dragGhost.style.display = DisplayStyle.Flex;
+            }
+            _edgeHoverTimer = 0f;
+        }
+
+        void UpdateDragDrop(Vector2 pos)
+        {
+            if (_dragGhost != null)
+            {
+                _dragGhost.style.left = pos.x - HudLayout.CardWidth * 0.5f;
+                _dragGhost.style.top = pos.y - HudLayout.CardHeight * 0.5f;
+            }
+
+            CardView? hitCard = null;
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                if (_cards[i].Root.worldBound.Contains(pos))
+                {
+                    hitCard = _cards[i];
+                    break;
+                }
+            }
+
+            if (hitCard != _dragTargetView)
+            {
+                _dragTargetView?.Root.RemoveFromClassList("card--drag-target");
+                _dragTargetView = hitCard;
+                if (_dragTargetView != null && _dragTargetView.LastId != _draggedPawnId)
+                {
+                    _dragTargetView.Root.AddToClassList("card--drag-target");
+                }
+            }
+
+            if (_roster.PageCount > 1)
+            {
+                bool overPrev = _prevPageBtn != null && _prevPageBtn.worldBound.Contains(pos);
+                bool overNext = _nextPageBtn != null && _nextPageBtn.worldBound.Contains(pos);
+                if (overPrev || overNext)
+                {
+                    _edgeHoverTimer += Time.unscaledDeltaTime;
+                    if (_edgeHoverTimer >= 0.35f)
+                    {
+                        _edgeHoverTimer = 0f;
+                        int targetPage = overPrev ? _roster.Page - 1 : _roster.Page + 1;
+                        _roster.SetPage(targetPage);
+                        RefreshStrip();
+                    }
+                }
+                else
+                {
+                    _edgeHoverTimer = 0f;
+                }
+            }
+        }
+
+        void EndDragDrop()
+        {
+            _isRightDragging = false;
+            _pendingRightDrag = false;
+            _dragTargetView?.Root.RemoveFromClassList("card--drag-target");
+            _dragTargetView = null;
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                _cards[i].Root.RemoveFromClassList("card--dragging");
+                _cards[i].Root.RemoveFromClassList("card--drag-target");
+            }
+            if (_dragGhost != null)
+            {
+                _dragGhost.style.display = DisplayStyle.None;
+            }
+            _edgeHoverTimer = 0f;
         }
 
         // ============================================================ A3/A4 clock and speed, A5 alerts

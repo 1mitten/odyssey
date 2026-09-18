@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using Odyssey.Hud;
@@ -313,6 +314,49 @@ namespace Odyssey.Tests.PlayMode
                 "the camera was moved and never restored, yet the focus matches the save");
             Assert.That(directors.Slice.ActiveLayer, Is.Not.EqualTo(read.Layer));
             Assert.That(directors.Selection.Pawn, Is.Not.EqualTo(read.Selected));
+
+            UnityEngine.Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator TheRosterOrderAndPageSurviveAStreamAndRestore()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig rig, out _);
+            yield return RigWorld.WarmUp();
+            yield return RigWorld.SettleCamera(rig);
+
+            HudDirectors directors = boot.Directors!;
+            var hud = root.GetComponent<Odyssey.Presentation.Ui.HudShell>();
+
+            var pawns = boot.World!.Views.Current.Pawns;
+            var customOrder = new List<PawnId>();
+            for (int i = pawns.Length - 1; i >= 0; i--)
+            {
+                customOrder.Add(pawns[i].Id);
+            }
+            int targetPage = 1;
+
+            var written = new ViewStateSection();
+            written.Capture(rig, directors, Speed, customOrder, targetPage);
+            ViewStateSection read = RoundTrip(boot, written);
+
+            Assert.That(read.HasState, Is.True);
+            Assert.That(read.RosterPage, Is.EqualTo(targetPage), "roster page was not preserved in round trip");
+            Assert.That(read.RosterOrder.Count, Is.EqualTo(customOrder.Count), "roster order count mismatch");
+            for (int i = 0; i < customOrder.Count; i++)
+            {
+                Assert.That(read.RosterOrder[i], Is.EqualTo(customOrder[i]), $"roster order index {i} mismatch");
+            }
+
+            if (hud != null)
+            {
+                read.Apply(rig, directors, _ => { }, hud: hud);
+                Assert.That(hud.Roster.Page, Is.EqualTo(targetPage), "roster page was not restored to hud");
+                for (int i = 0; i < customOrder.Count; i++)
+                {
+                    Assert.That(hud.Roster.CustomOrder[i], Is.EqualTo(customOrder[i]), $"hud roster custom order index {i} mismatch");
+                }
+            }
 
             UnityEngine.Object.Destroy(root);
         }
