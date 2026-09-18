@@ -608,9 +608,27 @@ wood-floored cell cannot draw the stone module:
   and `WorldRenderModel.CopyCell` mirrors `_floor` and `_floorStuff` on adjacent lines. They cannot
   disagree about a cell's material.
 
-**So the leading explanation is that there is no second bug**: the grey is the ground showing through
-the hole — `SM_Env_Ground_Tile_Half_01` is an environment ground tile, which is exactly what a grey
-cross-hatched plate would be — and the pane named a neighbouring deck cell rather than the gap.
-**Not confirmed.** The discriminator is free and is already on this branch: drag a floor over a room
-again. If the hole is gone and the grey with it, the run rule was the whole of it. If a grey tile
-survives on an unbroken deck, there is a second fault and that is the shape to report.
+Then the owner deconstructed those floors: **the wood came back, the simulation agreed the floor was
+gone, and the grey stayed on screen.** That is the observation that settles it, and it admits two
+explanations wanting opposite fixes — a stale render mirror, or a surface that was never removed
+because it was never the one being removed.
+
+**Measured, through the real mirror** (`StaleFloorProbe`, kept beside `StoneFloorProbe` because this
+will be asked again):
+
+```
+before any floor   grid.Floor=0 stuff=0   mirror.FloorModule=0   stuff=0
+wood floor built   grid.Floor=4 stuff=4   mirror.FloorModule=134 stuff=4
+RemoveSlab -> True, gave back stuff 4
+floor taken up     grid.Floor=0 stuff=0   mirror.FloorModule=0   stuff=0
+```
+
+**Nothing goes stale.** The module drops to 0 in the same refresh that clears the grid, so a floor
+that has been taken up stops being drawn. Together with the three checks above — one field, matching
+ids, both arts resolving — a removed wood floor cannot leave a grey one behind, and a wood floor
+cannot draw as stone.
+
+**So the grey is a different surface, one cell down**, seen through the gap the run-layer bug left in
+the deck above and still there after the deck above is removed. There is no second bug to fix here.
+What would overturn it is a grey tile on an *unbroken* deck, which the fix above should now make
+impossible; that is the version worth a screenshot, because it rules out everything in this section.
