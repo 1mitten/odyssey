@@ -155,6 +155,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. The card is identity alone — name, age, occupation — at 76 px, which is the face plus its padding on both sides, and **a card is now asserted to clear its own avatar by that padding**; the skills live in the detail pane beside it, two columns and a heading. |
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
+| **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -261,15 +262,15 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **721 Sim + 409 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **723 Sim + 416 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the
-  blueprint-race shaft rule and the one-layer run rule: EditMode **1670 total, 1657 passed, 0
-  failed**. The remainder are `[Explicit]` or ignored.
-- **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
-  `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
-  frame time is measured — never an editor `camera.Render()` loop.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on
+  roster pagination and slot reordering: EditMode **1717 total, 1703 passed, 0 failed**.
+  The remainder are `[Explicit]` or ignored.
+- **PlayMode, the same day: 82 total, 77 passed, 0 failed**, including
+  `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and `TheRosterBarFollowsTheColonyIntoANewSession`.
+  PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
   **Its previously recorded 74 was wrong, not superseded**: nothing under
   `Assets/Odyssey/Tests/PlayMode` had changed since the commit it was recorded against, no PlayMode
   test is parameterised, and this branch added none at the point it was re-measured at 77. Three

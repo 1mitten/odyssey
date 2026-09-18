@@ -1996,7 +1996,12 @@ namespace Odyssey.Presentation.Bootstrap
             // ever needed once and a camera that told a save component about every frame would be
             // the most-written state in the game for the least reason.
             if (cameraRig != null && Directors != null)
-                _view.Capture(cameraRig, Directors, _world.GameSpeed);
+            {
+                var hud = GetComponent<Ui.HudShell>();
+                _view.Capture(cameraRig, Directors, _world.GameSpeed,
+                    hud != null ? hud.Roster.CustomOrder : null,
+                    hud != null ? hud.Roster.Page : 0);
+            }
 
             WorldSave.SaveToFile(path, _world, WithView(_colony.SaveComponents), CurrentRecipe());
 
@@ -2115,9 +2120,13 @@ namespace Odyssey.Presentation.Bootstrap
             // world is already paused, so a colony saved paused would come back running. The
             // intent says what was meant.
             if (cameraRig != null && Directors != null)
+            {
+                var hud = GetComponent<Ui.HudShell>();
                 _view.Apply(cameraRig, Directors,
                     setGameSpeed: speed =>
-                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed)));
+                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed)),
+                    hud: hud);
+            }
 
             SessionChanged?.Invoke();
         }

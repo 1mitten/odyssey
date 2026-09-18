@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Sim.Contracts;
@@ -57,7 +58,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// reader that finds a number it does not recognise reads what it can and leaves the rest
         /// alone.</para>
         /// </summary>
-        public const int SectionVersion = 1;
+        public const int SectionVersion = 2;
 
         /// <summary>
         /// Stable, and separate from the class name for the reason <see cref="ISaveable.SaveKey"/>
@@ -95,6 +96,13 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>0 paused, 1 normal, 2 fast, 3 very fast — exactly <c>SimWorld.GameSpeed</c>.</summary>
         public int GameSpeed { get; private set; } = 1;
 
+        /// <summary>The active page index of the colonist roster.</summary>
+        public int RosterPage { get; private set; }
+
+        /// <summary>The player's custom colonist ordering, or empty if default.</summary>
+        public IReadOnlyList<PawnId> RosterOrder => _rosterOrder;
+        readonly List<PawnId> _rosterOrder = new List<PawnId>();
+
         /// <summary>
         /// Read the live view, immediately before the section is handed to <c>WorldSave.Save</c>.
         ///
@@ -102,7 +110,8 @@ namespace Odyssey.Presentation.Bootstrap
         /// <i>asks</i> for a speed and the simulation decides, so the only correct answer is the
         /// one the composition root already holds (<c>World.GameSpeed</c>).</para>
         /// </summary>
-        public void Capture(SliceCameraRig rig, HudDirectors directors, int gameSpeed)
+        public void Capture(SliceCameraRig rig, HudDirectors directors, int gameSpeed,
+            IReadOnlyList<PawnId>? rosterOrder = null, int rosterPage = 0)
         {
             if (rig == null) throw new ArgumentNullException(nameof(rig));
             if (directors == null) throw new ArgumentNullException(nameof(directors));
@@ -111,6 +120,16 @@ namespace Odyssey.Presentation.Bootstrap
             Layer = directors.Slice.ActiveLayer;
             Selected = directors.Selection.Pawn;
             GameSpeed = gameSpeed;
+            RosterPage = rosterPage;
+            _rosterOrder.Clear();
+            if (rosterOrder != null)
+            {
+                for (int i = 0; i < rosterOrder.Count; i++)
+                {
+                    if (rosterOrder[i].IsValid)
+                        _rosterOrder.Add(rosterOrder[i]);
+                }
+            }
             _captured = true;
         }
 
@@ -143,6 +162,13 @@ namespace Odyssey.Presentation.Bootstrap
             writer.Write(Layer);
             writer.Write(Selected.Value);
             writer.Write(GameSpeed);
+
+            writer.Write(RosterPage);
+            writer.Write(_rosterOrder.Count);
+            for (int i = 0; i < _rosterOrder.Count; i++)
+            {
+                writer.Write(_rosterOrder[i].Value);
+            }
         }
 
         /// <inheritdoc/>
@@ -171,6 +197,21 @@ namespace Odyssey.Presentation.Bootstrap
             Layer = reader.ReadInt();
             Selected = new PawnId(reader.ReadInt());
             GameSpeed = reader.ReadInt();
+
+            _rosterOrder.Clear();
+            if (version >= 2)
+            {
+                RosterPage = reader.ReadInt();
+                int orderCount = reader.ReadInt();
+                for (int i = 0; i < orderCount; i++)
+                {
+                    _rosterOrder.Add(new PawnId(reader.ReadInt()));
+                }
+            }
+            else
+            {
+                RosterPage = 0;
+            }
         }
 
         /// <summary>
@@ -202,8 +243,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// replay, a test watching what was asked for — and not because the default is second
         /// best.</para>
         /// </param>
+        /// <param name="hud">The HUD shell to restore custom colonist ordering and active page.</param>
         public void Apply(SliceCameraRig rig, HudDirectors directors,
-            Action<int>? setGameSpeed = null, Action<CameraPose>? restorePose = null)
+            Action<int>? setGameSpeed = null, Action<CameraPose>? restorePose = null,
+            Ui.HudShell? hud = null)
         {
             if (rig == null) throw new ArgumentNullException(nameof(rig));
             if (directors == null) throw new ArgumentNullException(nameof(directors));
@@ -230,6 +273,14 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (setGameSpeed != null) setGameSpeed(GameSpeed);
             else rig.RequestGameSpeed(GameSpeed);
+
+            if (hud != null)
+            {
+                if (_rosterOrder.Count > 0)
+                    hud.Roster.LoadOrder(_rosterOrder, RosterPage);
+                else if (RosterPage > 0)
+                    hud.Roster.SetPage(RosterPage);
+            }
         }
 
         static void WriteFloat(SaveWriter writer, float value) =>

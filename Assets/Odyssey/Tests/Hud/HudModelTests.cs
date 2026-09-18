@@ -193,6 +193,127 @@ namespace Odyssey.Tests.Hud
             Assert.That(MoodBands.Band(roster.Cards[1].Mood), Is.EqualTo("breaking"));
         }
 
+        [Test]
+        public void PaginationDividesColonistsIntoDiscretePagesAndClampsPage()
+        {
+            var snapshot = Frame.Write();
+            for (int i = 1; i <= 7; i++)
+            {
+                snapshot.AddPawn(new PawnView(new PawnId(i), new CellRef(i, 0, 0), 600, 800, 800, JobHandle.Wait));
+            }
+
+            var roster = new RosterModel();
+            roster.Refresh(snapshot, selected: PawnId.None, capacity: 3);
+
+            Assert.That(roster.TotalCount, Is.EqualTo(7));
+            Assert.That(roster.PageCapacity, Is.EqualTo(3));
+            Assert.That(roster.PageCount, Is.EqualTo(3));
+            Assert.That(roster.Page, Is.EqualTo(0));
+            Assert.That(roster.Cards.Count, Is.EqualTo(3));
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(1)));
+            Assert.That(roster.Cards[2].Id, Is.EqualTo(new PawnId(3)));
+
+            // Switch to page 1
+            roster.SetPage(1);
+            roster.Refresh(snapshot, selected: PawnId.None, capacity: 3);
+            Assert.That(roster.Page, Is.EqualTo(1));
+            Assert.That(roster.Cards.Count, Is.EqualTo(3));
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(4)));
+            Assert.That(roster.Cards[2].Id, Is.EqualTo(new PawnId(6)));
+
+            // Switch to page 2 (remainder)
+            roster.SetPage(2);
+            roster.Refresh(snapshot, selected: PawnId.None, capacity: 3);
+            Assert.That(roster.Page, Is.EqualTo(2));
+            Assert.That(roster.Cards.Count, Is.EqualTo(1));
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(7)));
+
+            // Page clamping on overflow and underflow
+            roster.SetPage(99);
+            Assert.That(roster.Page, Is.EqualTo(2));
+            roster.SetPage(-5);
+            Assert.That(roster.Page, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void EnsurePageForSwitchesActivePageToTargetColonist()
+        {
+            var snapshot = Frame.Write();
+            for (int i = 1; i <= 8; i++)
+            {
+                snapshot.AddPawn(new PawnView(new PawnId(i), new CellRef(i, 0, 0), 600, 800, 800, JobHandle.Wait));
+            }
+
+            var roster = new RosterModel();
+            roster.Refresh(snapshot, selected: PawnId.None, capacity: 3);
+            Assert.That(roster.Page, Is.EqualTo(0));
+
+            // Pawn 7 is at index 6, which is page 2 (indices 6, 7)
+            bool found = roster.EnsurePageFor(new PawnId(7));
+            Assert.That(found, Is.True);
+            Assert.That(roster.Page, Is.EqualTo(2));
+
+            roster.Refresh(snapshot, selected: new PawnId(7), capacity: 3);
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(7)));
+            Assert.That(roster.Cards[0].Selected, Is.True);
+
+            // Searching for non-existent pawn returns false and leaves page untouched
+            Assert.That(roster.EnsurePageFor(new PawnId(999)), Is.False);
+            Assert.That(roster.Page, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void SwapExchangesTwoColonistPositionsInOrder()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 0, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 0, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot.AddPawn(new PawnView(new PawnId(3), new CellRef(3, 0, 0), 600, 800, 800, JobHandle.Wait));
+
+            var roster = new RosterModel();
+            roster.Refresh(snapshot, selected: PawnId.None);
+
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(1)));
+            Assert.That(roster.Cards[2].Id, Is.EqualTo(new PawnId(3)));
+
+            // Swap 1 and 3
+            bool swapped = roster.Swap(new PawnId(1), new PawnId(3));
+            Assert.That(swapped, Is.True);
+
+            roster.Refresh(snapshot, selected: PawnId.None);
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(3)));
+            Assert.That(roster.Cards[1].Id, Is.EqualTo(new PawnId(2)));
+            Assert.That(roster.Cards[2].Id, Is.EqualTo(new PawnId(1)));
+        }
+
+        [Test]
+        public void OrderReconciliationHandlesArrivalsAndDepartures()
+        {
+            var snapshot1 = Frame.Write();
+            snapshot1.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 0, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot1.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 0, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot1.AddPawn(new PawnView(new PawnId(3), new CellRef(3, 0, 0), 600, 800, 800, JobHandle.Wait));
+
+            var roster = new RosterModel();
+            roster.Refresh(snapshot1, selected: PawnId.None);
+
+            // Customise order: put 3 first -> 3, 1, 2
+            roster.Swap(new PawnId(1), new PawnId(3));
+
+            // Snapshot 2: pawn 1 dies, pawn 4 arrives
+            var snapshot2 = Frame.Write();
+            snapshot2.AddPawn(new PawnView(new PawnId(3), new CellRef(3, 0, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot2.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 0, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot2.AddPawn(new PawnView(new PawnId(4), new CellRef(4, 0, 0), 600, 800, 800, JobHandle.Wait));
+
+            roster.Refresh(snapshot2, selected: PawnId.None);
+
+            Assert.That(roster.Cards.Count, Is.EqualTo(3));
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(3)));
+            Assert.That(roster.Cards[1].Id, Is.EqualTo(new PawnId(2)));
+            Assert.That(roster.Cards[2].Id, Is.EqualTo(new PawnId(4)));
+        }
+
         /// <summary>
         /// <b>Loading another colony gives the same slot a different person, and the card has to
         /// say so.</b>
