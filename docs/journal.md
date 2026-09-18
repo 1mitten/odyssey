@@ -5702,3 +5702,38 @@ actually explains the result.
 **The counts were resolved by running them, not by adding them up.** 721 Sim + 409 Hud, Long 21 —
 the merge of a branch at 712 + 406 with a main at 694 + 409, which is not an arithmetic anybody
 should attempt in their head.
+
+### Chopping gets a skill of its own, found by a player feeling it work (2026-09-18)
+
+The owner, playing WS2: *"I noticed the chopping varied in speed — could we possibly add that to
+the skills in all the places it needs to be and assign one there?"*
+
+**Chopping had no skill on screen, and the axe work was levelling up Growing.** `SkillCatalogue`
+mapped the simulation's `Skill_Cutting` onto `ui.skill.growing`, on reasoning that was perfectly
+defensible when it was written: felling is plant work, the canon work type is "cut plants and clear
+growth", and growing was the only plant skill in the list. The consequence was that a colonist who
+spent a day with an axe got better at *Growing*, and a player looking for the number behind the
+speed they had just watched change found nothing called Chopping anywhere.
+
+**It was found from the far end, which is the interesting part.** Nothing was broken — the sim had a
+`cutting` skill all along, it was saved, hashed, and driving the rate correctly. What was missing
+was only the name, and a missing name is invisible until somebody has a reason to go looking. WS2
+gave them one: **a skill that does something is a skill people try to find.** For three milestones
+the mapping was harmless because no rate read a level; the day one did, it stopped being harmless.
+
+**The word is the owner's and the family now agrees.** The order says Chop, `ui.status.felling` says
+Chopping, and `ui.work.cutting` said *Cutting* until this change brought it along. Four surfaces,
+one word. **The key stays `cutting`** — `ui.skill.cutting` — because it matches the simulation's
+`SkillIndex.Cutting` and a key is a stable identifier rather than a label; three rows of that
+catalogue already do not spell their own labels.
+
+**Growing goes back to being unsimulated**, with the reason every disabled row must carry: nothing
+is planted yet. **The new row has no art** and says so in `icon-map.csv` rather than borrowing the
+seed-sack picture — a wrong icon is worse than an outlined square, because the square admits it.
+
+**Two tests changed and one got stronger.** The pair that pinned "felling is plant work and trains
+growing" now pin chopping's own row; the assertion that a borrowed row explains itself was replaced
+by one naming the live set outright — `ui.skill.mining` and `ui.skill.cutting`, each under its own
+name — because asserting a borrow that no longer exists would pin the very thing this removed. The
+grid is unmoved at seven rows: `(13+1)/2` and `(14+1)/2` are both 7, so nothing in the pane or the
+setup page had to be re-derived.

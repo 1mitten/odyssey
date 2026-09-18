@@ -66,6 +66,7 @@ ui.skill.mining,06,1,0,pickaxe on dark rock,high,mapped
 ui.skill.salvage,06,1,4,drill bit biting a riveted plate,high,mapped
 ui.skill.cooking,06,0,1,stew pot over a fire,high,mapped
 ui.skill.growing,06,3,0,"sack of seed, leaf-marked",high,mapped
+ui.skill.cutting,-,,,"an axe head, edge-on",-,gap
 ui.skill.animals,06,3,6,paw print in mud,high,mapped
 ui.skill.crafting,06,2,5,hammer striking an anvil,high,mapped
 ui.skill.fabrication,06,3,1,crucible pouring molten metal,high,mapped

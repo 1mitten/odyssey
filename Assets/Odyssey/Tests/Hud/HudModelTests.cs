@@ -277,7 +277,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
             Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(2),
-                "mining and growing are the two the simulation backs; hauling is a work type " +
+                "mining and chopping are the two the simulation backs; hauling is a work type " +
                 "and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
@@ -286,9 +286,23 @@ namespace Odyssey.Tests.Hud
             Assert.That(mining.Passion, Is.EqualTo(2));
             Assert.That(mining.Experience, Is.EqualTo(9_500));
 
+            // Chopping has a row of its own since 2026-09-18. It used to wear Growing's, so a
+            // colonist who spent a day with an axe levelled up a skill called Growing and there
+            // was no Chopping anywhere on screen — which is how the owner found it, by watching
+            // WS2's curve work and going looking for the number behind it.
+            SkillRow chopping = pane.Skills.Single(s => s.IconKey == "ui.skill.cutting");
+            Assert.That(chopping.Name, Is.EqualTo("Chopping"), "the registry's word for ui.skill.cutting");
+            Assert.That(chopping.Level, Is.EqualTo(4), "felling trains chopping");
+
             SkillRow growing = pane.Skills.Single(s => s.IconKey == "ui.skill.growing");
-            Assert.That(growing.Level, Is.EqualTo(4), "felling is plant work and trains growing");
-            Assert.That(growing.Note, Is.Not.Empty, "a row that borrows another skill's work says so");
+            Assert.That(growing.Live, Is.False, "nothing is planted yet, so growing trains on nothing");
+            // No row borrows another skill's work any more. The Note field stays — it is what a
+            // row uses to explain itself when the mapping is not obvious — but nothing needs it,
+            // and asserting a borrow that no longer exists would pin the very thing this change
+            // removed.
+            Assert.That(pane.Skills.Where(s => s.Live).Select(s => s.IconKey),
+                Is.EquivalentTo(new[] { "ui.skill.mining", "ui.skill.cutting" }),
+                "the live rows are the simulation's own skills, each under its own name");
 
             foreach (SkillRow row in pane.Skills.Where(s => !s.Live))
             {
