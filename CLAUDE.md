@@ -386,6 +386,14 @@ clothes: one rule with two owners; a rule that asks the built world and misses t
 compatibility clause keeping the bug alive; and a conditional rule applied per cell across a drag.
 **Add a row whenever a bug is fixed.**
 
+**For a report about how something *looks*, start at that file's runbook, "a tile that looks wrong".**
+One grey tile cost four rounds, three of which produced confident wrong answers reasoned from
+screenshots while the save that settled it sat on the same disk. The first move is
+`dotnet run --project tools/dotnet/Odyssey.SaveProbe` — it prints every floor, item and terrain in a
+save with no Unity. **A cell can hold more than one drawable thing**, and the report will name only
+the one the player recognises: that tile was a wood floor *and* rubble terrain, and the pane calling
+it "Wood floor" was telling the truth.
+
 The two that come up daily:
 
 - **Tests:** `scripts/test-fast.sh` while working (~1.7 s, no Unity), `scripts/unity.sh test editmode` before committing (authoritative).

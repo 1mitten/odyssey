@@ -360,3 +360,67 @@ fix cannot be mistaken for a no-op.
 reading would not have.
 
 **And check the fix is even in the player's build** before hunting a second cause.
+
+---
+
+## Runbook: a tile that looks wrong
+
+**Written 2026-09-18, after one grey tile cost four rounds.** Three of those rounds produced
+confident wrong answers reasoned from screenshots — a stale render mirror, a hole one layer down,
+stone paving — while the file that answered it sat on the same disk throughout. This is the order to
+work in when the next "that tile looks wrong" arrives.
+
+**Do not start by reading the renderer.** That is what was done three times.
+
+### 1. Get the save, not the screenshot
+
+Ask for a save, by name. A screenshot is an argument about pixels; a save is the state.
+
+```
+dotnet run --project tools/dotnet/Odyssey.SaveProbe                  # the usual folder
+dotnet run --project tools/dotnet/Odyssey.SaveProbe -- "<path>"      # one file
+```
+
+No Unity, about a second, and it prints every **floor** (kind and material), every **item** (by kind
+and layer) and every **terrain** on the board. Saves live at
+`%USERPROFILE%\AppData\LocalLow\Unity Technologies\com_unity_template_urp-blank\Saves`.
+
+### 2. Ask what is *in* the cell before asking why it is *drawn* that way
+
+A cell can hold more than one drawable thing at once, and the report will name only the one the
+player recognises. The grey tile was **a wood floor and rubble terrain in the same cell**: the pane
+said "Wood floor" and was telling the truth, and the grey on top of it was not a floor at all and had
+no material to report.
+
+| The report says | Check, in this order |
+|---|---|
+| a floor is the wrong material | `Floor=` and `Stuff=` for that cell — **and** `terrain` for the same cell |
+| something is at the wrong height | both things drawn there, before any placement code |
+| something appears/disappears/flickers | two things at one height: coplanar geometry, not a shader |
+| it only happens in an old game | what the old game has that a new one does not — `terrain` and items are where that lives |
+
+### 3. Turn the clean exclusions around
+
+"A wood floor cannot draw as stone" is also "**a cell drawing as stone is not a wood floor**". Three
+sessions proved the first and never read the second. When every mechanism is excluded and the
+symptom persists, the thing is not what the report calls it (**P6**).
+
+### 4. Read the reporter's causal claim and test *that* first
+
+The owner's first sentence was *"the colonists tried to build the most outer slabs first which then
+landed a stone/steel looking tile 1 height below"*. That is the mechanism, exactly, and it was
+testable headlessly in the fast tier from the first minute. Four rounds went on the tile's
+appearance instead.
+
+### 5. Known-good facts, so they are not re-derived
+
+- **Grey cross-hatched plate** = `SM_Env_Ground_Tile_Half_01/02/03`, used by `slab.stone` **and** by
+  the Pavement / CrackedPavement / **Rubble** terrains. Seeing one does not mean a stone floor.
+- **Rubble comes from a collapse** (`SupportSystem.Rubble`) and lands in a cell that **has a floor by
+  definition**, so floor-plus-terrain in one cell is normal, not corruption.
+- **Rubble is clearable** — `clearable: true`, 90 ticks, cleared with the **Mine** order. Rubble
+  already in a save stays until somebody clears it; a fix stops new ones and does not tidy old ones.
+- **The pane titles a floor by `FloorStuff` alone** — it never says "paving", and it says nothing at
+  all about anything drawn on top of the floor.
+- **Every slab's top face is `CellMetrics.SlabLift` above the cell floor plane.** Two things at the
+  same height z-fight; the clearance is why. Do not "tidy" it to zero.
