@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Construction;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
@@ -71,6 +73,12 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // Built here rather than passed in, for the same argument the construction grid's
+            // `out` was: an optional growing-zone parameter is how a caller forgets one, and a
+            // forgetful build is a paint tool that silently does nothing. Reached through
+            // `pawns.Growing` by the sowing giver and the save.
+            var growing = new GrowingZones(pawns.Cells, ContentPack.Plants());
+            pawns.Growing = growing;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -106,6 +114,9 @@ namespace Odyssey.Sim.Pawns
                     return pipeline;
                 })
                 .AddSystem(_ => new MovementSystem(pawns))
+                // The crops grow after the world has moved; Order 40 puts the pass there whatever
+                // line of this chain it sits on, which is the whole point of the schedule.
+                .AddSystem(_ => new PlantGrowthSystem(pawns, growing))
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
@@ -126,6 +137,7 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
             designations.Attach(builder);
             construction.Attach(builder);
+            growing.Attach(builder);
             return builder;
         }
     }

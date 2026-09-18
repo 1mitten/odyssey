@@ -108,6 +108,12 @@ namespace Odyssey.Tests.Sim
     /// <c>Simulated</c> numbers are new to both branches, which is the one place two changes could
     /// combine. Any other pattern would have meant something had come along uninvited.</para>
     /// </summary>
+    /// <para><b>Moved for the growing zones, 2026-09-18, and all six numbers again.</b>
+    /// U46 registers <c>GrowingZones</c> as hashed state on every colony, and an empty
+    /// contribution still contributes its count — the same shape as the edifice list's first
+    /// re-bake. Nothing about generation or simulation moved: the fields are new and empty,
+    /// and both numbers move in every case for it.</para>
+    ///
     public static class Golden
     {
         /// <summary>One world, pinned: how to build it, how long to run it, and what it came to.</summary>
@@ -161,8 +167,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7415324713255390796UL,
-            Simulated = 3128752858895027949UL,
+            Generated = 4215014633701583116UL,
+            Simulated = 15128862469781481421UL,
         };
 
         /// <summary>
@@ -178,8 +184,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 15662665231234558495UL,
-            Simulated = 3319942754904635200UL,
+            Generated = 16310110166269190031UL,
+            Simulated = 10215959261266427536UL,
         };
 
         /// <summary>
@@ -194,8 +200,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 13030130651254543899UL,
-            Simulated = 10435990758459796433UL,
+            Generated = 4643545608710265163UL,
+            Simulated = 3636313229702395345UL,
         };
     }
 }
