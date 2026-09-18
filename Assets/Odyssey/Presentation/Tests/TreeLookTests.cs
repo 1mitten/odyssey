@@ -319,32 +319,33 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// The table must fit the field a tint code keeps it in, and every index in it must survive
-        /// the round trip without disturbing the markers that share the code.
+        /// A tint code says which species a tree is and nothing else, and must disturb none of the
+        /// markers that share the code.
         ///
-        /// <para>The field was the low byte until 2026-09-18, when the palette reached 240 of a
-        /// possible 255 — one bark tone short of wrapping in silence and drawing one wood in
-        /// another's colours. Twelve bits at bit 16 is the room it has now, and this is what says
-        /// so out loud rather than leaving it to a comment.</para>
+        /// <para>It used to carry the theme, first in the low byte and then in twelve bits of its
+        /// own — and carrying it at all is what made a coloured wood cost draw calls, because the
+        /// code <em>is</em> the bucket key. The colours are per-instance data now and the palette
+        /// is unbounded, so what is left to assert is that the two species codes are clean.</para>
         /// </summary>
         [Test]
         public void EveryThemeSurvivesTheTintCode()
         {
-            Assert.That(TreePalette.Count, Is.LessThanOrEqualTo(TintCode.MaxTreeValue + 1),
-                "the palette outgrew the field TintCode.TreeValue reads it from; widen it first");
+            Assert.That(TintCode.Tree(TreeSpecies.Conifer),
+                Is.Not.EqualTo(TintCode.Tree(TreeSpecies.Broadleaf)),
+                "the two trees must land in different buckets: they repaint different atlas cells");
 
-            for (int theme = 0; theme < TreePalette.Count; theme++)
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
             {
-                int code = TintCode.Tree(theme);
-                Assert.That(TintCode.TreeValue(code), Is.EqualTo(theme), "theme index round trip");
+                int code = TintCode.Tree(species);
+                Assert.That(TintCode.TreeSpeciesOf(code), Is.EqualTo(species), "species round trip");
                 Assert.That(TintCode.IsTree(code), Is.True);
-                // The markers that share the code space. A theme index reaching down into them
-                // would make a tree answer yes to IsTerrain, and the renderer resolves foliage and
-                // water *before* it looks at trees.
-                Assert.That(TintCode.IsTerrain(code), Is.False, $"theme {theme} reads as terrain");
-                Assert.That(TintCode.IsFoliage(code), Is.False, $"theme {theme} reads as foliage");
-                Assert.That(TintCode.IsWater(code), Is.False, $"theme {theme} reads as water");
-                Assert.That(TintCode.IsDaylit(code), Is.False, $"theme {theme} reads as daylit");
+                // The markers that share the code space. A value reaching down into them would
+                // make a tree answer yes to IsTerrain, and the renderer resolves foliage and water
+                // *before* it looks at trees.
+                Assert.That(TintCode.IsTerrain(code), Is.False, $"{species} reads as terrain");
+                Assert.That(TintCode.IsFoliage(code), Is.False, $"{species} reads as foliage");
+                Assert.That(TintCode.IsWater(code), Is.False, $"{species} reads as water");
+                Assert.That(TintCode.IsDaylit(code), Is.False, $"{species} reads as daylit");
             }
         }
 

@@ -31,26 +31,26 @@ namespace Odyssey.Presentation.Rendering
         readonly struct Key : IEquatable<Key>
         {
             readonly Material _source;
-            readonly int _theme;
+            readonly TreeSpecies _species;
             readonly int _shade;
             readonly int _mute;
 
-            public Key(Material source, int theme, int shade, int mute)
+            public Key(Material source, TreeSpecies species, int shade, int mute)
             {
                 _source = source;
-                _theme = theme;
+                _species = species;
                 _shade = shade;
                 _mute = mute;
             }
 
             public bool Equals(Key other) =>
-                ReferenceEquals(_source, other._source) && _theme == other._theme &&
+                ReferenceEquals(_source, other._source) && _species == other._species &&
                 _shade == other._shade && _mute == other._mute;
 
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() => unchecked(
-                ((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_source) * 397 ^ _theme) * 397 ^ _shade) * 397 ^ _mute);
+                ((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_source) * 397 ^ (int)_species) * 397 ^ _shade) * 397 ^ _mute);
         }
 
         readonly Dictionary<Key, Material?> _cache = new Dictionary<Key, Material?>();
@@ -112,8 +112,15 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// The material that draws this tree in this theme at this depth shade, or <c>null</c> to
+        /// The material that draws this species of tree at this depth shade, or <c>null</c> to
         /// leave the art alone.
+        ///
+        /// <para><b>The theme is not part of this any more.</b> It used to be, and that is what made
+        /// a coloured wood cost draw calls: a material is a bucket, so a colour on the material was
+        /// a colour per bucket. The four colours ride beside the matrices now and are read out of
+        /// an instancing buffer by <c>Odyssey/Tree</c>; what is left here is the pair of things a
+        /// material genuinely has to carry, which is <em>which atlas cells to repaint</em> (the
+        /// species) and the shading the slice and the surround apply to the whole draw.</para>
         ///
         /// <para>Null rather than a clone that happens to change nothing, whenever there is no
         /// shader, no source material or no atlas to repaint. The caller then draws exactly what
@@ -127,7 +134,7 @@ namespace Odyssey.Presentation.Rendering
         /// standing on it. <c>SkirtLayout.MuteSteps</c> is 3, so it costs at most three times the
         /// themes the surround actually samples, and the board itself always passes 0.
         /// </param>
-        public Material? For(Material? source, int theme, float shade, int muteStep = 0)
+        public Material? For(Material? source, TreeSpecies species, float shade, int muteStep = 0)
         {
             if (source == null || !Enabled) return null;
             Shader? shader = Shader;
@@ -136,15 +143,18 @@ namespace Odyssey.Presentation.Rendering
             // RemapStrength is deliberately not in the key: it is a diagnostic, and a diagnostic
             // that changes what a clone holds builds a fresh renderer to photograph it, which is
             // the bargain MeadowCheck already states for the foliage queue.
-            var key = new Key(source, theme, Quantise(shade), muteStep);
+            var key = new Key(source, species, Quantise(shade), muteStep);
             if (_cache.TryGetValue(key, out Material? cached)) return cached;
 
-            TreeTheme look = TreePalette.At(theme);
-            TreeCells cells = TreeSwatches.For(look.Species);
+            // The fallback colours, for a draw that is not instanced and so reads the plain
+            // uniforms rather than the instancing buffer. The species' first theme rather than
+            // white, so such a draw still looks like a tree instead of a paper cut-out.
+            TreeTheme look = TreePalette.At(TreePalette.For(species)[0]);
+            TreeCells cells = TreeSwatches.For(species);
 
             var material = new Material(shader)
             {
-                name = source.name + "/tree#" + theme.ToString("x2") +
+                name = source.name + "/tree#" + species +
                        "@" + Quantise(shade).ToString("x2") + "~" + muteStep,
                 enableInstancing = true,
             };
@@ -275,6 +285,57 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static Color Colour(Rgb24 c) => new Color(c.R / 255f, c.G / 255f, c.B / 255f, 1f);
 
+        static readonly int BarkDeepId = Shader.PropertyToID("_BarkDeepColour");
+        static readonly int BarkWarmId = Shader.PropertyToID("_BarkWarmColour");
+        static readonly int LeafDeepId = Shader.PropertyToID("_LeafDeepColour");
+        static readonly int LeafFreshId = Shader.PropertyToID("_LeafFreshColour");
+
+        readonly Dictionary<int, MaterialPropertyBlock> _uniform = new Dictionary<int, MaterialPropertyBlock>();
+
+        /// <summary>
+        /// A property block in which <b>every</b> instance wears the same theme, for a draw whose
+        /// instances are all one colour.
+        ///
+        /// <para>That is the surround's case and not the board's. A skirt batch is built per tree
+        /// variant already — the surround samples at most <c>TerrainSkirt.TreeVariantSlots</c> kinds
+        /// however many the board carries — so its colours are per batch rather than per instance,
+        /// and the batch count does not grow with the palette either way.</para>
+        ///
+        /// <para><b>It is filled to the draw-call ceiling on purpose.</b> A property-block array is
+        /// indexed from zero by every draw call, not from the instance offset, so a batch submitted
+        /// in slices would read the front of the array for every slice. Filling it with identical
+        /// entries makes that correct rather than merely unlikely: any slice of any length reads the
+        /// same colour, so the surround can hold as many trees as it likes.</para>
+        /// </summary>
+        public MaterialPropertyBlock UniformProps(int theme, int muteStep)
+        {
+            int key = theme * 16 + muteStep;
+            if (_uniform.TryGetValue(key, out MaterialPropertyBlock cached)) return cached;
+
+            TreeTheme look = TreePalette.At(theme);
+            var props = new MaterialPropertyBlock();
+            Fill(props, BarkDeepId, look.Bark.Shaded, muteStep);
+            Fill(props, BarkWarmId, look.Bark.Lit, muteStep);
+            Fill(props, LeafDeepId, look.Leaf.Shaded, muteStep);
+            Fill(props, LeafFreshId, look.Leaf.Lit, muteStep);
+
+            _uniform.Add(key, props);
+            return props;
+        }
+
+        static readonly List<Vector4> Scratch = new List<Vector4>();
+
+        static void Fill(MaterialPropertyBlock props, int id, Rgb24 colour, int muteStep)
+        {
+            Color c = SkirtLayout.Mute(Colour(colour), muteStep);
+            Color value = QualitySettings.activeColorSpace == ColorSpace.Linear ? c.linear : c;
+
+            Scratch.Clear();
+            for (int i = 0; i < ChunkRenderer.MaxInstancesPerCall; i++)
+                Scratch.Add(new Vector4(value.r, value.g, value.b, 1f));
+            props.SetVectorArray(id, Scratch);
+        }
+
         /// <summary>
         /// How finely the depth shade splits the cache. The slice produces a shade per layer of
         /// drop, so there are only ever a handful of distinct values; quantising keeps a float
@@ -292,6 +353,7 @@ namespace Odyssey.Presentation.Rendering
             }
             _owned.Clear();
             _cache.Clear();
+            _uniform.Clear();
             _shader = null;
         }
     }

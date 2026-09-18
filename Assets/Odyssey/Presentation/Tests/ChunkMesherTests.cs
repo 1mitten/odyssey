@@ -214,8 +214,8 @@ namespace Odyssey.Tests.Presentation
             var codes = new HashSet<int>();
             foreach (InstanceBucket bucket in batch.Body) codes.Add(bucket.Tint);
 
-            Assert.That(codes, Does.Contain(TintCode.Tree(TreeLook.Theme(2, 2, TreeSpecies.Broadleaf))),
-                "the tree draws in its stand's colours, not in a stuff tint");
+            Assert.That(codes, Does.Contain(TintCode.Tree(TreeSpecies.Broadleaf)),
+                "the tree draws as a tree, not in a stuff tint");
             Assert.That(codes, Does.Contain(TintCode.Stuff(NaturalContent.StuffWood)),
                 "and the wall carries the wood tint, which is what browns it");
             // Not Does.Not.Contain: under the NUnit the Unity tier runs, that overload resolves to
@@ -225,8 +225,18 @@ namespace Odyssey.Tests.Presentation
 
             foreach (int code in codes)
                 if (TintCode.IsTree(code))
-                    Assert.That(TreePalette.At(TintCode.TreeValue(code)).Species,
-                        Is.EqualTo(TreeSpecies.Broadleaf), "a broadleaf wearing a conifer's colours");
+                    Assert.That(TintCode.TreeSpeciesOf(code),
+                        Is.EqualTo(TreeSpecies.Broadleaf), "a broadleaf drawn as a conifer");
+
+            // And its colours travel beside the matrix rather than in the code, which is what
+            // keeps a wood of two hundred colours to one draw call per species per chunk.
+            foreach (InstanceBucket bucket in batch.Body)
+                if (TintCode.IsTree(bucket.Tint))
+                {
+                    Assert.That(bucket.IsColoured, "a tree bucket carries per-instance colours");
+                    Assert.That(bucket.BarkDeep!.Count, Is.EqualTo(bucket.Count));
+                    Assert.That(bucket.LeafFresh!.Count, Is.EqualTo(bucket.Count));
+                }
         }
 
         [Test]

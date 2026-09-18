@@ -1,11 +1,12 @@
 # 21 — Tree colours
 
-**Status:** built 2026-09-18 on `claude/tree-colours` and revised twice the same day against the
-owner's playtests — §3a and §3b are those rounds and are the ones to read first. EditMode 1546
-total, 1534 passed, 0 failed; fast tier 645 Sim and 358 Hud. **Cost on the played board: 1758 draw
-calls to 2142, +21.8%**, instances unchanged at 44,200 — that is what a thoroughly mixed wood costs,
-against +3.2% when a stand was one colour, and `TreeLook.ThemesPerStand` is the knob it is bought
-with.
+**Status:** built 2026-09-18 on `claude/tree-colours` and revised three times the same day against
+the owner's playtests — §3a, §3b and §3c are those rounds and are the ones to read first.
+
+**Cost on the played board: nothing.** 1758 draw calls with the wood in two colours, 1758 with it in
+two hundred; instances unchanged at 44,200. That is §3c, and it is the third number this section has
+carried: +3.2% when a stand was one colour, +21.8% when the wood was thoroughly mixed, and zero once
+the colour stopped being a bucket key.
 
 **Read this before touching** `TreePalette`, `TreeLook`, `TreeSwatches`, `TreeMaterials` or
 `Assets/Odyssey/Presentation/Shaders/OdysseyTree.shader`.
@@ -104,17 +105,22 @@ and a chunk is 25 cells:
 
 Measured on a 200 x 200 board carrying 10,403 trees over 64 chunks, palette of 11:
 
-| | tree buckets per chunk | worst chunk | themes drawn |
+| | tree buckets per chunk | worst chunk | colours drawn |
 |---|---|---|---|
-| a colour rolled freely per tree | — | **122** | — |
-| a handful of 4, one slot bright — **shipped** | **18.08** | 31 | 150 of 240 |
+| **shipped** — the colour is per instance | **2.00** | 2 | 150 of 240 |
+| the same wood with the colour in the tint code | 18.08 | 31 | 150 of 240 |
 | a handful of 4, 240 themes, no reserved slot | 17.84 | 29 | 160 of 240 |
 | a handful of 4, 166 themes | 17.72 | 29 | 130 of 166 |
 | one colour per stand, 40-cell stands | 4.34 | 9 | 11 of 11 |
 | one colour per stand, 20-cell stands | 6.75 | 10 | |
 
-The middle three rows are the point: the table grew by 45% and the reserved bright slot went in for
-**0.36 buckets a chunk between them**. The length of this table has never been what a wood costs.
+The first two rows are the same board drawing the same 150 colours, and they are the whole of §3c.
+Everything below them is the history of trying to keep the *number of colours in a chunk* small,
+back when that number was the bill.
+
+**The rows below the first are therefore now a record rather than a constraint.** Stands, the
+handful and the reserved bright slot stay because the board looks better for them, not because they
+are affordable — any of them could be widened for nothing.
 
 Three numbers were chosen by measurement rather than by eye. The stand is **40 cells** because at 20
 a chunk overlaps about five squares and the wood cost half again as much for no more variety. The
@@ -212,6 +218,67 @@ at 240 themes the table was **one bark tone short of 255** — where it would ha
 and drawn one wood in another's colours. It now has twelve bits at bit 16, clear of the terrain,
 foliage, water and daylight markers, and `EveryThemeSurvivesTheTintCode` walks every index through
 the round trip and checks it trips none of them.
+
+## 3c. Making it free: the colour stops being a bucket key (2026-09-18)
+
+> make as performant as possible please
+
+**The whole bill came from one structural fact**, and every earlier round had worked around it
+rather than at it: drawing is bucketed per *(module, part, tint)* in a chunk, so while a tree's
+colour lived in its tint code the colour **was** a bucket key. Stands, handfuls and reserved slots
+were all ways of keeping the *number of colours standing in one chunk* small, because that number
+was the draw-call bill. The bill is gone because the premise is:
+
+- **The tint code now says only which of the two trees it is**, which is what decides the atlas
+  cells to repaint and so the material. `TintCode.Tree(TreeSpecies)`.
+- **The four colours travel beside the matrices**, in `InstanceBucket.BarkDeep` and its three
+  siblings, and are read out of an instancing buffer by `Odyssey/Tree` through
+  `UNITY_ACCESS_INSTANCED_PROP`.
+
+| | before | after |
+|---|---|---|
+| draw calls, played board | 2,142 | **1,758** — the same as a board with no colours at all |
+| tree buckets per chunk | 17.72 | **2.00**, one per species |
+| materials for 240 themes | 240-odd | **2** |
+| colours drawn on a 200-cell board | 150 | 150 |
+
+**The picture did not change, and that was checked rather than asserted.** The two contact sheets
+differ by 5.3% of channels — until you shoot the *same* code twice, which differs by 4.8%. The
+residual is the animated water and the anti-aliased silhouettes of ten thousand leaf cards, not the
+wood: sampled canopy, trunk, gold-tree and red-tree patches are identical to a tenth of a unit, and
+the whole-image mean matches to 0.01 of 255. The first attempt did change the picture — a bright
+band of far trees in the difference image — because the *surround* had not been converted with the
+board, which is exactly what `TerrainSkirt` exists to prevent.
+
+Three things a later session should not undo by tidying.
+
+**A property block's array is indexed from zero by every draw call**, not from the instance offset
+the call starts at. A bucket long enough to be split across two calls would hand the second call
+the colours of the first, so `SubmitColoured` copies each slice into a scratch block. It cannot
+happen today — a bucket is one module in one chunk, a chunk is 625 cells, one cell holds one tree —
+but "cannot happen" is a property of the board's dimensions rather than of the code, and the
+failure would be a patch of wood wearing its neighbour's colours, which nobody would read as a bug.
+
+**The surround takes the same problem from the other end.** A skirt batch is all one theme, so its
+colours are per batch — but a batch can be long, so its block is filled to the draw-call ceiling
+with identical entries. Any slice of any length then reads the same colour, which makes the offset
+question moot instead of merely unlikely.
+
+**A vector array is not a colour property, so the colour space is now ours to get right.**
+`Material.SetColor` converts a `Color` property into the active colour space; `SetVectorArray` hands
+its contents over untouched. `ChunkMesher.Colour` does the conversion that used to happen for free,
+and the reason the picture is identical is that it does it correctly.
+
+**And the bucket key had a latent overflow, found on the way.** `ChunkMesher.Key` packed the tint
+into twenty bits, which was enough while every tint was a small material index and silently stopped
+being enough when a tree code started carrying a value at bit 16: a code of fifteen million
+overflowed into the part field. Nothing was observably wrong, because the only modules with a tint
+that large had exactly one part — but wrong-only-by-luck is not a property to leave in a key. It
+gets thirty-two bits now.
+
+**What this buys beyond the draw calls** is that every constraint in §3a and §3b is now a *look*
+decision rather than a cost one. Stands, the handful of four, the reserved bright slot: all of them
+are kept because the board looks better for them, and any of them could be widened for nothing.
 
 ## 4. The palette
 

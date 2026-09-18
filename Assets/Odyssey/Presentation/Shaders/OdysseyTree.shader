@@ -67,6 +67,9 @@ Shader "Odyssey/Tree"
         _LeafFreshRect0("Leaf fresh rect 0", Vector) = (1, 1, 0, 0)
         _LeafFreshRect1("Leaf fresh rect 1", Vector) = (1, 1, 0, 0)
 
+        // Per *instance*, not per material — see the instancing buffer below. The values here are
+        // the fallback a non-instanced draw takes, and a material carries its species' first theme
+        // in them so that such a draw still looks like a tree.
         _BarkDeepColour("Bark deep colour", Color) = (1, 1, 1, 1)
         _BarkWarmColour("Bark warm colour", Color) = (1, 1, 1, 1)
         _LeafDeepColour("Leaf deep colour", Color) = (1, 1, 1, 1)
@@ -107,12 +110,27 @@ Shader "Odyssey/Tree"
             float4 _LeafDeepRect1;
             float4 _LeafFreshRect0;
             float4 _LeafFreshRect1;
-            float4 _BarkDeepColour;
-            float4 _BarkWarmColour;
-            float4 _LeafDeepColour;
-            float4 _LeafFreshColour;
             float _RemapStrength;
         CBUFFER_END
+
+        // **The four colours are per instance, and that is the whole performance story.**
+        //
+        // A bucket is one instanced draw of one (module, part, tint), so while the colour lived on
+        // the material it *was* a bucket key: every extra colour standing in a chunk cost a draw
+        // call, and a mixed wood cost 384 of them on the played board. Moving the colours here
+        // makes every tree in a chunk one draw again — the tint code carries only which species it
+        // is, the colours ride beside the matrices, and the palette can be any size at all for
+        // nothing.
+        //
+        // Written and read through UNITY_ACCESS_INSTANCED_PROP so that a draw *without* instancing
+        // still works: outside an instanced draw these resolve to the plain uniforms declared by
+        // the Properties block above, which a material fills with its species' first theme.
+        UNITY_INSTANCING_BUFFER_START(TreeProps)
+            UNITY_DEFINE_INSTANCED_PROP(float4, _BarkDeepColour)
+            UNITY_DEFINE_INSTANCED_PROP(float4, _BarkWarmColour)
+            UNITY_DEFINE_INSTANCED_PROP(float4, _LeafDeepColour)
+            UNITY_DEFINE_INSTANCED_PROP(float4, _LeafFreshColour)
+        UNITY_INSTANCING_BUFFER_END(TreeProps)
 
         TEXTURE2D(_Albedo_Map);     SAMPLER(sampler_Albedo_Map);
         TEXTURE2D(_Normal_Map);     SAMPLER(sampler_Normal_Map);
@@ -131,12 +149,19 @@ Shader "Odyssey/Tree"
 
         // The order of the four is irrelevant: the probe guarantees the slots are disjoint, and
         // TreeSwatches asserts it, so no fragment is ever inside two of them.
+        // Reads the instanced colours, so every caller must have run UNITY_SETUP_INSTANCE_ID first.
+        // Only the forward pass repaints; the shadow and depth passes sample alpha alone.
         float3 Repaint(float3 albedo, float2 uv)
         {
-            albedo = lerp(albedo, _BarkDeepColour.rgb,  _RemapStrength * InsidePair(uv, _BarkDeepRect0, _BarkDeepRect1));
-            albedo = lerp(albedo, _BarkWarmColour.rgb,  _RemapStrength * InsidePair(uv, _BarkWarmRect0, _BarkWarmRect1));
-            albedo = lerp(albedo, _LeafDeepColour.rgb,  _RemapStrength * InsidePair(uv, _LeafDeepRect0, _LeafDeepRect1));
-            albedo = lerp(albedo, _LeafFreshColour.rgb, _RemapStrength * InsidePair(uv, _LeafFreshRect0, _LeafFreshRect1));
+            float4 barkDeep  = UNITY_ACCESS_INSTANCED_PROP(TreeProps, _BarkDeepColour);
+            float4 barkWarm  = UNITY_ACCESS_INSTANCED_PROP(TreeProps, _BarkWarmColour);
+            float4 leafDeep  = UNITY_ACCESS_INSTANCED_PROP(TreeProps, _LeafDeepColour);
+            float4 leafFresh = UNITY_ACCESS_INSTANCED_PROP(TreeProps, _LeafFreshColour);
+
+            albedo = lerp(albedo, barkDeep.rgb,  _RemapStrength * InsidePair(uv, _BarkDeepRect0, _BarkDeepRect1));
+            albedo = lerp(albedo, barkWarm.rgb,  _RemapStrength * InsidePair(uv, _BarkWarmRect0, _BarkWarmRect1));
+            albedo = lerp(albedo, leafDeep.rgb,  _RemapStrength * InsidePair(uv, _LeafDeepRect0, _LeafDeepRect1));
+            albedo = lerp(albedo, leafFresh.rgb, _RemapStrength * InsidePair(uv, _LeafFreshRect0, _LeafFreshRect1));
             return albedo;
         }
 

@@ -4372,3 +4372,55 @@ the leaf — as it seems a bit dull still and needs brighten up"*.
   calls to **2142, +21.8%**, instances unchanged. **Not verified:** whether the cherry and flame
   canopies belong — they read as scarlet at the play camera, which is the most conspicuous thing on
   the board now, and they are the first rows to veto.
+
+### The colour was a bucket key, and it did not have to be (2026-09-18)
+
+The owner's answer to the mixed, brightened wood was *"make as performant as possible please"*. It
+cost 384 draw calls on the played board, +21.8%, and every round up to here had worked around the
+reason rather than at it.
+
+- **The reason is one structural fact.** Drawing is bucketed per *(module, part, tint)* in a chunk,
+  so while a tree's colour lived in its tint code the colour **was** a bucket key. Stands, handfuls
+  and reserved bright slots were all devices for keeping *the number of colours standing in one
+  chunk* small, because that number was the bill. Nothing about a colour requires it to be in the
+  key: the tint code now says only which of the two trees it is — which is what decides the atlas
+  cells to repaint, and so the material — and the four colours travel beside the matrices, read out
+  of an instancing buffer by `Odyssey/Tree`.
+
+- **The result is that a coloured wood is free.** 1,758 draw calls with the wood in two colours and
+  1,758 with it in two hundred; 17.72 tree buckets a chunk becomes **2.00**, one per species; 240
+  themes draw **2** materials instead of 240-odd. Every constraint in the two rounds before this is
+  now a *look* decision rather than a cost one, and stands and the bright slot are kept because the
+  board is better for them.
+
+- **The picture did not change, and that was checked rather than asserted.** The two contact sheets
+  differ by 5.3% of channels — which sounds like a lot until the *same* code shot twice differs by
+  4.8%. The residual is the animated water and the anti-aliased silhouettes of ten thousand leaf
+  cards: sampled canopy, trunk, gold-tree and red-tree patches are identical to a tenth of a unit,
+  and the whole-image mean matches to 0.01 of 255. **A control run is what turned an alarming
+  percentage into a floor.**
+
+- **The first attempt did change it, and the difference image said exactly where.** A bright band of
+  far trees across the horizon and nothing else: the *surround* had not been converted with the
+  board, so it had fallen back to one colour per species. That is precisely the fault `TerrainSkirt`
+  exists to prevent, and it took thirty seconds to find because the instrument was a picture of the
+  difference rather than a number.
+
+- **A property block's array is indexed from zero by every draw call**, not from the instance offset
+  the call starts at. A bucket split across two calls would hand the second the colours of the
+  first. The board slices into a scratch block; the surround, whose batches are each one theme,
+  fills its block to the draw-call ceiling with identical entries so that any slice reads the same
+  colour. Neither path can trigger on today's board — a chunk is 625 cells and a cell holds one tree
+  — and both are there because "cannot happen" is a property of the board's dimensions rather than
+  of the code, and the failure would be a patch of wood wearing its neighbour's colours.
+
+- **A vector array is not a colour property, so the colour space became ours to get right.**
+  `Material.SetColor` converts a `Color` property into the active colour space and `SetVectorArray`
+  hands its contents over untouched. The conversion that used to happen for free is now explicit in
+  `ChunkMesher.Colour`, and the identical sampled patches are the evidence it is right.
+
+- **And a latent overflow was found on the way.** `ChunkMesher.Key` packed the tint into twenty
+  bits — enough while every tint was a small material index, and silently not enough once a tree
+  code carried a value at bit 16: fifteen million overflowed into the part field. Nothing was
+  observably wrong, because the only modules with a tint that large had exactly one part. **Wrong
+  only by luck is not a property to leave in a key**; it has thirty-two bits now.
