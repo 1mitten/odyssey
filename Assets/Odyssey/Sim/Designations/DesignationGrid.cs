@@ -59,7 +59,8 @@ namespace Odyssey.Sim.Designations
         public DesignationKind At(int index) => (DesignationKind)_kinds[index];
 
         /// <summary>
-        /// Ticks of work already done on a cell's order.
+        /// Milliwork already done on a cell's order (thousandths of a tick; see
+        /// <see cref="Rates"/>).
         ///
         /// <para><b>On the cell, not on the job, and that is the point.</b> It used to live on the
         /// driver as a toil counter, so a miner who stopped for a meal, a sleep or a mental break
@@ -73,10 +74,10 @@ namespace Odyssey.Sim.Designations
         /// </summary>
         public int WorkDone(int index) => _work[index];
 
-        /// <summary>Add a tick of work and return the new total.</summary>
-        public int AddWork(int index, int ticks)
+        /// <summary>Add a payment of milliwork and return the new total.</summary>
+        public int AddWork(int index, int milliwork)
         {
-            _work[index] += ticks;
+            _work[index] += milliwork;
             return _work[index];
         }
 
@@ -92,7 +93,9 @@ namespace Odyssey.Sim.Designations
             if (_kinds[index] == 0) return 0f;
             int total = WorkFor(index);
             if (total <= 0) return 0f;
-            float done = (float)_work[index] / total;
+            // The ledger counts milliwork, the price ticks: scale the denominator so the
+            // fraction stays 0..1 at any rate (§2bb — the scale stops at this contract).
+            float done = (float)_work[index] / (total * Rates.Scale);
             return done < 0f ? 0f : done > 1f ? 1f : done;
         }
 
@@ -450,7 +453,9 @@ namespace Odyssey.Sim.Designations
             {
                 hash.Add(_cells[i]);
                 hash.Add(_kinds[_cells[i]]);
-                hash.Add(_work[_cells[i]]);
+                // Divided back to ticks: at the standard rate every ledger value is an exact
+                // multiple of the scale, so the hash reads what it always read.
+                hash.Add(_work[_cells[i]] / Rates.Scale);
             }
         }
 
@@ -481,8 +486,9 @@ namespace Odyssey.Sim.Designations
                 int work = reader.ReadInt();
                 if (index < 0 || index >= _kinds.Length || kind == 0) continue;
                 Set(index, (DesignationKind)kind);
-                // After Set, which zeroes it: a half-cut face survives a save.
-                _work[index] = work;
+                // After Set, which zeroes it: a half-cut face survives a save. Before format 5
+                // the ledger counted ticks.
+                _work[index] = Rates.FromSave(work, reader.FormatVersion);
             }
         }
 

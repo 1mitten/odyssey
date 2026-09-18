@@ -273,9 +273,11 @@ namespace Odyssey.Sim.Pawns
                 return JobStatus.Ongoing;
             }
 
-            ToilProgress++;
+            int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Cutting);
+            ToilProgress += rate;
             Work(ctx);
-            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
+            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks * Rates.Scale)
+                return JobStatus.Ongoing;
 
             designations.Clear(cell);
             int yield = ctx.Content.WoodPerTree;

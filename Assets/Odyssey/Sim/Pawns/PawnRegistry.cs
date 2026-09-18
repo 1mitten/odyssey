@@ -134,7 +134,10 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.HasPath)
                 {
                     nextCell = size.FromIndex(pawn.Path[pawn.PathIndex]);
-                    int cost = pawn.MoveStepCost > 0 ? pawn.MoveStepCost : MoveCost.Orthogonal;
+                    // Progress and step cost count thousandths together (Rates), so the ratio is
+                    // the one this publish has always given. The fallback scales with them.
+                    int cost = pawn.MoveStepCost > 0 ? pawn.MoveStepCost
+                        : MoveCost.Orthogonal * Rates.Scale;
                     movePercent = (int)((long)pawn.MoveProgress * 100 / cost);
                     if (movePercent < 0) movePercent = 0;
                     else if (movePercent > 100) movePercent = 100;
@@ -332,7 +335,7 @@ namespace Odyssey.Sim.Pawns
                     pawn.Memories.Add(new Memory { ThoughtIndex = reader.ReadInt(), ExpiryTick = reader.ReadInt() });
 
                 pawn.Destination = reader.ReadInt();
-                pawn.MoveProgress = reader.ReadInt();
+                pawn.MoveProgress = Rates.FromSave(reader.ReadInt(), reader.FormatVersion);
 
                 if (reader.ReadBool())
                 {
@@ -350,7 +353,7 @@ namespace Odyssey.Sim.Pawns
                     var driver = pawn.DriverPool[_ctx.Content.Jobs[job.DefIndex].driver];
                     driver.Begin(pawn, job);
                     driver.ToilIndex = reader.ReadInt();
-                    driver.ToilProgress = reader.ReadInt();
+                    driver.ToilProgress = Rates.FromSave(reader.ReadInt(), reader.FormatVersion);
                     pawn.CurrentJob = job;
                     pawn.Driver = driver;
                 }

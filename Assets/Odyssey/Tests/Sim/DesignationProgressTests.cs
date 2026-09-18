@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using NUnit.Framework;
+using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
@@ -50,7 +51,7 @@ namespace Odyssey.Tests.Sim
             int cell = FindMinable(colony);
 
             colony.Designations.Designate(Size.FromIndex(cell), DesignationKind.Mine);
-            colony.Designations.AddWork(cell, colony.Designations.WorkFor(cell) / 2);
+            colony.Designations.AddWork(cell, colony.Designations.WorkFor(cell) * Rates.Scale / 2);
             colony.World.Tick();
 
             ReadOnlySpan<OrderView> orders = colony.World.Views.Current.Orders;
@@ -77,7 +78,7 @@ namespace Odyssey.Tests.Sim
             int cell = FindMinable(colony);
 
             colony.Designations.Designate(Size.FromIndex(cell), DesignationKind.Mine);
-            colony.Designations.AddWork(cell, colony.Designations.WorkFor(cell) / 2);
+            colony.Designations.AddWork(cell, colony.Designations.WorkFor(cell) * Rates.Scale / 2);
             colony.World.Tick();
             Assert.That(colony.World.Views.Current.Orders.Length, Is.EqualTo(1),
                 "nothing was published, so the test below would pass for the wrong reason");

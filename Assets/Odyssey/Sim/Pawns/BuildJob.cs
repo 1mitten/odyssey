@@ -431,9 +431,10 @@ namespace Odyssey.Sim.Pawns
                 return JobStatus.Ongoing;
             }
 
-            ToilProgress++;
+            int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Construction);
+            ToilProgress += rate;
             Work(ctx);
-            if (sites.AddWork(cell, 1) < sites.WorkFor(cell)) return JobStatus.Ongoing;
+            if (sites.AddWork(cell, rate) < sites.WorkFor(cell) * Rates.Scale) return JobStatus.Ongoing;
 
             // The last hammer blow is rolled twice, and the two rolls are one question asked in
             // two halves: **does the thing stand at all**, and then **how well was it made**. Both

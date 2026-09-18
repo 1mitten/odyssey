@@ -196,11 +196,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Index of the next cell to step into. Always at least 1 on a live path.</summary>
         public int PathIndex { get; internal set; }
 
-        /// <summary>Cost units accumulated toward the next step.</summary>
+        /// <summary>Cost units accumulated toward the next step, in thousandths (Rates).</summary>
         public int MoveProgress { get; internal set; }
 
         /// <summary>
-        /// What the step now in progress costs, in the same units as <see cref="MoveProgress"/>.
+        /// What the step now in progress costs, in the same units as <see cref="MoveProgress"/> —
+        /// thousandths of the raw nav cost (Rates).
         ///
         /// <para><b>Derived, and deliberately outside the hash and the save.</b> The movement
         /// system recomputes it from the graph every tick it advances a pawn, so storing it would
@@ -211,9 +212,10 @@ namespace Odyssey.Sim.Pawns
         /// progress clamped to 100, which is exact for a flat cell at 100 units and wrong for
         /// everything dearer: a ladder down costs 400, so the drawn figure completed its whole
         /// descent in the first quarter of the step and then stood frozen at the bottom for the
-        /// other three — which is most of what "colonists float down slowly" was.</para>
+        /// other three — which is most of what "colonists float down slowly" was. Progress and
+        /// cost scale together, so the published ratio reads exactly what it always read.</para>
         /// </summary>
-        public int MoveStepCost { get; internal set; } = Pathing.MoveCost.Orthogonal;
+        public int MoveStepCost { get; internal set; } = Pathing.MoveCost.Orthogonal * Rates.Scale;
 
         /// <summary>Where the pawn is trying to get to, or -1.</summary>
         public int Destination { get; internal set; } = -1;
@@ -273,8 +275,35 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
         public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
 
-        /// <summary>Cost units retired per tick. The place a movement-speed modifier belongs.</summary>
-        public virtual int MovePerTick() => Content.Movement.movePerTick;
+        /// <summary>
+        /// Work this pawn discharges per tick on a work type, in thousandths of a
+        /// tick-at-standard-rate: 1,000 is the speed everything is tuned at today (design 17 §2).
+        ///
+        /// <para><b>The rate never changes what a thing costs; it changes how fast this pawn pays
+        /// for it.</b> The four drivers add this to the accumulator their work banks in, and the
+        /// comparison reads the cost × <see cref="Rates.Scale"/>, so a cell worked by two
+        /// colonists of different speed accumulates in a unit that means the same thing to both.
+        /// U42 answers a constant; U43 gives it the per-work-type curve, and the composition order
+        /// is fixed there: curve × condition, clamped.</para>
+        /// </summary>
+        public virtual int WorkRatePerMille(int workType) => Rates.Scale;
+
+        /// <summary>
+        /// Cost units this pawn retires per tick, in thousandths of a tick-at-standard-rate —
+        /// the place a movement-speed modifier belongs. Read off <c>movePerTick</c> content, so
+        /// today's 1 against a flat 100 stays exactly the walk it has always been; U44 composes
+        /// the innate factor and condition on top, in that order (design 17 §4a).
+        /// </summary>
+        public virtual int MoveRatePerMille() => Content.Movement.movePerTick * Rates.Scale;
+
+        /// <summary>
+        /// How the colonist is right now, as one scalar both rates read: 1,000 is well. One
+        /// computation, one floor, two consumers — a colonist in a bad way is slower at walking
+        /// and slower at working, and there is exactly one place to ask why. U42 answers a
+        /// constant; U44 lets starvation offset it, floored at 700 and ceilinged at 1,000 —
+        /// nothing may raise it above baseline (design 17 §4c).
+        /// </summary>
+        public virtual int ConditionPerMille() => Rates.Scale;
 
         /// <summary>
         /// How this pawn traverses. Taken from the current job and fixed for its whole life: a
@@ -528,8 +557,10 @@ namespace Odyssey.Sim.Pawns
 
             // Destination and move progress are simulation state; the path itself is not, and
             // hashing it would make a save/load resume look like a divergence for no reason.
+            // Both accumulators count thousandths (Rates), and the hash counts ticks: at the
+            // standard rate the division is exact, so the hash reads what it has always read.
             hash.Add(Destination);
-            hash.Add(MoveProgress);
+            hash.Add(MoveProgress / Rates.Scale);
 
             hash.Add(HeldReservations.Count);
             for (int i = 0; i < HeldReservations.Count; i++) hash.Add(HeldReservations[i]);
@@ -543,7 +574,7 @@ namespace Odyssey.Sim.Pawns
             CurrentJob.ContributeTo(ref hash);
             hash.Add(JobStartTick);
             hash.Add(Driver != null ? Driver.ToilIndex : -1);
-            hash.Add(Driver != null ? Driver.ToilProgress : -1);
+            hash.Add(Driver != null ? Driver.ToilProgress / Rates.Scale : -1);
         }
     }
 }

@@ -119,8 +119,9 @@ namespace Odyssey.Sim.Pawns
             // this driver does not need to.
             if (!designations.TryTakeApart(cell, out int building, out int stuff)) return JobStatus.Failed;
 
-            ToilProgress++;
-            if (designations.AddWork(cell, 1) < ConstructionContent.WorkToDeconstruct(building, stuff))
+            int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Construction);
+            ToilProgress += rate;
+            if (designations.AddWork(cell, rate) < ConstructionContent.WorkToDeconstruct(building, stuff) * Rates.Scale)
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);

@@ -89,7 +89,8 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Which toil is running. Saved.</summary>
         public int ToilIndex { get; internal set; }
 
-        /// <summary>Ticks accumulated inside the current toil. Saved.</summary>
+        /// <summary>Milliwork accumulated inside the current toil (thousandths of a tick).
+        /// Saved; see <see cref="Rates"/>.</summary>
         public int ToilProgress { get; internal set; }
 
         /// <summary>
@@ -248,7 +249,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         protected JobStatus Settle(PawnContext ctx)
         {
-            if (++ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks) return JobStatus.Ongoing;
+            ToilProgress += Rates.Scale;
+            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks * Rates.Scale)
+                return JobStatus.Ongoing;
             return JobStatus.Succeeded;
         }
 
@@ -305,14 +308,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         protected JobStatus LiftToil(PawnContext ctx, ColonyItem item)
         {
-            int total = ctx.Content.LiftTicks;
-            int grasp = ctx.Content.LiftGraspTicks;
+            int total = ctx.Content.LiftTicks * Rates.Scale;
+            int grasp = ctx.Content.LiftGraspTicks * Rates.Scale;
             if (grasp > total) grasp = total;
             if (grasp < 1) grasp = 1;
 
             if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Lift);
 
-            int elapsed = ++ToilProgress;
+            int elapsed = ToilProgress += Rates.Scale;
 
             if (elapsed < grasp)
             {

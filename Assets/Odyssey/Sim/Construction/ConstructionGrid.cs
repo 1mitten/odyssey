@@ -100,7 +100,8 @@ namespace Odyssey.Sim.Construction
         /// <summary>Units of material that have arrived.</summary>
         public int Delivered(int index) => _delivered[index];
 
-        /// <summary>Ticks of work applied. Banked on the cell, for the reason mining banks its own.</summary>
+        /// <summary>Milliwork applied (thousandths of a tick; see <see cref="Rates"/>). Banked on
+        /// the cell, for the reason mining banks its own.</summary>
         public int WorkDone(int index) => _work[index];
 
         /// <summary>Units of material this site is still waiting for. 0 once it is a frame.</summary>
@@ -123,7 +124,8 @@ namespace Odyssey.Sim.Construction
         {
             int total = WorkFor(index);
             if (total <= 0) return 0f;
-            float done = (float)_work[index] / total;
+            // Milliwork ledger against a tick price; the scale stops at this contract.
+            float done = (float)_work[index] / (total * Rates.Scale);
             return done < 0f ? 0f : done > 1f ? 1f : done;
         }
 
@@ -546,10 +548,10 @@ namespace Odyssey.Sim.Construction
             return _delivered[index];
         }
 
-        /// <summary>Add ticks of work and return the new total. Banked on the cell, never on the job.</summary>
-        public int AddWork(int index, int ticks)
+        /// <summary>Add a payment of milliwork and return the new total. Banked on the cell, never on the job.</summary>
+        public int AddWork(int index, int milliwork)
         {
-            _work[index] += ticks;
+            _work[index] += milliwork;
             return _work[index];
         }
 
@@ -1102,7 +1104,9 @@ namespace Odyssey.Sim.Construction
                 hash.Add(_stuff[index]);
                 hash.Add(_facing[index]);
                 hash.Add(_delivered[index]);
-                hash.Add(_work[index]);
+                // Divided back to ticks: at the standard rate every ledger value is an exact
+                // multiple of the scale, so the hash reads what it always read.
+                hash.Add(_work[index] / Rates.Scale);
             }
         }
 
@@ -1148,9 +1152,9 @@ namespace Odyssey.Sim.Construction
 
                 Set(index, building, stuff, facing);
                 // After Set, which zeroes both: a half-built wall survives a save, and so does the
-                // wood already carried to it.
+                // wood already carried to it. Before format 5 the ledger counted ticks.
                 _delivered[index] = delivered;
-                _work[index] = work;
+                _work[index] = Rates.FromSave(work, reader.FormatVersion);
             }
         }
 
@@ -1176,7 +1180,9 @@ namespace Odyssey.Sim.Construction
                     index, building, _stuff[index],
                     (ushort)_delivered[index],
                     (ushort)def.costCount,
-                    _work[index], WorkFor(index),
+                    // The contract is ticks: the ledger is divided back where it is published,
+                    // and the price was never scaled (§2bb — the scale stops at the contract).
+                    _work[index] / Rates.Scale, WorkFor(index),
                     _facing[index], (byte)def.footprint));
             }
         }

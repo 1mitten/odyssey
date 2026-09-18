@@ -410,8 +410,8 @@ namespace Odyssey.Sim.Pawns
         /// walk cycle covers about 2 m/s and anything faster blends the run clip in. Before that
         /// it was 10, roughly 54 km/h, and colonists visibly teleported around the map.
         ///
-        /// A movement-speed modifier belongs in <see cref="Pawn.MovePerTick"/>, not here; and a
-        /// pace between these integers wants the cost scale raised, not a fraction stored.
+        /// A movement-speed modifier belongs in <see cref="Pawn.MoveRatePerMille"/>, not here; and
+        /// a pace between these integers wants the cost scale raised, not a fraction stored.
         /// </summary>
         public int movePerTick = 1;
 
