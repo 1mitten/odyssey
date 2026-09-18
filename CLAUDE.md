@@ -545,6 +545,35 @@ rock, ore and sealed caverns beneath. `NaturalMapGenDef.MakeWooded()`, chosen by
 bare board (`MakeBarren()`) is the test baseline on which anything that is not grass is a bug. The
 ruined-city generator is still present and still tested, but it is not what the scene loads.
 
+**The cell search is 8-connected since 2026-09-18** (`docs/design/21-diagonal-movement.md` — read
+it before touching this line). The owner reported colonists looking "a bit square in movement";
+the route was never a staircase (that was measured and falsified in 2026-09-17) but a few long
+axis-aligned legs joined by right angles, which no drawn smoothing would have softened. A diagonal
+costs `MoveCost.Diagonal` 141 and is **refused unless both flanking cells are enterable** — the
+owner's rule, stricter than `d-04`, which is annotated there as overruled. Three things not to
+undo. **The corner rule is why the region graph is untouched**: a permitted diagonal joins cells
+already two orthogonal steps apart, so 8-connectivity adds no reachability anywhere, and all three
+golden `Generated` hashes held while only `Simulated` moved. **It does not keep rooms sealed** and
+must not be cited as doing so — the first version of that argument was wrong; what it buys is a
+colonist never drawn clipping a wall corner. And **the abstract heuristic is capped by the octile
+bound**, without which it over-estimates by 56% and the search walks a 30 x 30 diagonal in 53 steps
+and 12 turns, *worse* than the 60-and-5 it replaced; with it, 30 steps and 0 turns.
+`NavGrid.EnterCost(index, mode, diagonal)` is the one owner of a step's price and
+`OnlyOneFileDecidesWhatADiagonalCosts` enforces it. **Net faster**: 22-35% fewer cell expansions
+and 8-12% less mean time on the shipping two-stage path.
+
+**Colonists no longer walk like copies of one another** (`docs/design/22-walk-variance.md`,
+2026-09-18). Presentation only — no cell, no save, no hash, no golden moved. Per-colonist **build
+at ±3%** (the owner's number; `Blend` divides measured speed by it or feet skate, because
+`look.Speeds` is cached per look), a **procedural head-look** on newly bound Head and Neck bones
+(the pack's additive look clips exist and were declined: a layer mixer and a second animation path
+for two angles), and a small **sideways bow** off the chord so five colonists on one errand stop
+walking single file. The bow needs no walkability query — a 0.25 m cap in a 2.5 m cell keeps the
+figure clear of anything solid — and is taken off the **eased yaw, never the heading**, or a corner
+teleports it a third of a metre. Every dial has an off switch that restores the old behaviour
+exactly, with a test. It costs nothing measurable. **Per-colonist move *speed* is not this** — it is
+`U44` of the rates line and blocked on `U42`.
+
 **Movement is walk, stair, ladder and a one-block hop.** Climbing was removed as a mechanic (owner,
 2026-09-16): one block up into the column next door is a jump (`MoveCost.JumpUp` 135), one block
 down off it is a drop (`Drop` 50), and anything deeper wants a ladder, which is built. Every cell a
@@ -635,11 +664,13 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **641 Sim + 358 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17, on the merge of U29's floors into the orders strip, U40 and the
-  world-setup page: EditMode **1486 total, 1474 passed, 0 failed**; PlayMode **69 total, 64 passed,
-  0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure is main's 348
-  plus this branch's 10, so neither side lost a test to the merge.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **657 Sim + 358 Hud**, or **677 Sim**
+  with the Long tier's 20. Unity tier on 2026-09-18, on `claude/natural-movement`: EditMode
+  **1547 total, 1535 passed, 0 failed**; PlayMode **69 total, 64 passed, 0 failed** (the rest are
+  pre-existing `[Explicit]` or ignored rows).
+  **`PathingBenchmark`'s two `[Explicit]` assertions fail, and failed before the diagonal work** —
+  they claim the two-stage search beats the naive one and it does not on either arm. They run in no
+  tier and gate nothing; do not read them as green, and do not attribute them to diagonals.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -786,6 +817,22 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
   The depth comparison is still on disk if the question reopens: `Logs/water-depth-{72,50,30,15}-play.png`.
 
 ### Waiting on the owner
+
+- **Nobody has pressed Play on diagonal movement or on the walk variance** (2026-09-18), and this
+  is the one that most needs an eye: the whole line exists because of how something *looked*.
+  `Logs/walk-heading.txt` says a 30 x 30 diagonal is now 30 steps and 0 turns, which is the
+  objective half and the only half a test can reach. The questions a number cannot answer: whether
+  the routes stop reading as square; whether ±3% of build reads as different people or as nothing;
+  whether a head wandering ±38° every nine seconds reads as alive or as distracted; and whether the
+  0.25 m bow reads as natural or as drunk. Every dial is a `public static` property with a
+  `Reset()`, so they turn at the keyboard — `WalkVariance.Build`, `.Bow`, `.BowsPerCell`,
+  `LookAbout.YawDegrees`, `.PitchDegrees`, `.CyclesPerSecond`, `.NeckShare`. Setting any of them to
+  zero restores the previous behaviour exactly, and a test says so.
+- **The recorded frame times want re-taking on a quiet machine.** `CLAUDE.md` carries meadow
+  0.99 ms and city 1.56 ms; the 2026-09-18 runs read 2.31 and 3.07 with two editor GUIs, the CI
+  runner and another worktree's batch Unity all competing, and one run reported a 31 ms worst
+  frame. The dials-on against dials-off A/B is still valid (both arms equally contended, and
+  "off" came out *slower*), but the absolutes are not comparable to anything.
 
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`. A

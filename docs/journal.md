@@ -4161,3 +4161,102 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
   - **Verified:** fast tier 611 Sim and 349 Hud; EditMode **1443 total, 1432 passed, 0 failed**.
     **Not verified:** whether the downward scroll reads as falling rather than as a pattern sliding,
     which is the whole of B and cannot be judged in a still.
+
+- **Natural movement: colonists walk diagonally, and stop walking like copies, 2026-09-18.**
+  The owner played it and reported colonists *"a bit square in movement"*, asking about diagonal
+  movement, curving the walk over two tiles, stride variation, the head looking around, and body
+  language generally. Two units on `claude/natural-movement`:
+  `docs/design/21-diagonal-movement.md` and `22-walk-variance.md`.
+
+  - **The square was real and the obvious explanation was already falsified.** A 4-connected path
+    looks like it should be a staircase; it is not, and 2026-09-17's own measurement says so —
+    30 x 30 diagonal, **60 steps, 5 turns**, because every monotone path costs the same and the
+    tie-break buys long straight runs. So the route was a few long axis-aligned legs joined by
+    right angles, which is what reads as square and which drawn smoothing would not have touched:
+    five corners in sixty steps. `CLAUDE.md`'s **"do not 'fix' path smoothing on this theory"**
+    still stands. The route itself had to go diagonal.
+
+  - **It was designed in and never built.** `MoveCost.Diagonal = 141` had sat in the cost table
+    since it was written, commented *"Reserved. The MVP search is 4-connected"*, with **zero
+    references anywhere**. `PathFinder`'s own class comment named the places it would have to
+    land. This closed a gap rather than adding a feature.
+
+  - **The owner's corner rule shrank the unit to a quarter of its plan.** A diagonal is refused
+    unless **both** flanks are enterable — stricter than `d-04`, now annotated there as overruled.
+    The consequence was not foreseen: a permitted diagonal has both flanks open, so its two ends
+    were **already two orthogonal steps apart**. 8-connectivity therefore adds *no reachability
+    anywhere* — only cheaper routes. No 8-connected region flood, no block-corner zone, no
+    dirty-zone work, no district recompute; the plan had budgeted for all of it. **All three
+    golden `Generated` hashes held** and only `Simulated` moved, which is the evidence, because
+    `Generated` folds in `NavGraph.ContributeTo` and one changed link would have moved it.
+
+  - **The reason first written down for the corner rule was wrong, and the test that proved it is
+    kept.** The argument on the day was that only the strict reading keeps a walled room sealed.
+    It does not — if one flank is open, that flank *is* the way round — so neither reading can
+    seal or unseal anything. What it buys is the look: a colonist never drawn clipping through a
+    wall corner. Corrected in the design note and in the test file rather than quietly dropped.
+
+  - **The heuristic is where it nearly failed silently, and this is the reusable part.** The first
+    working build walked the same 30 x 30 diagonal in **53 steps with 12 turns** — *worse* than the
+    60-and-5 it replaced. Measured cause: the abstract region distance is a sum of orthogonally
+    priced links, so it answered **6,600** for a journey a diagonal does for **4,230**, a 56%
+    over-estimate that costs A* its admissibility. Before diagonals the same estimate was only 10%
+    over, which is why it had never shown. Capping it by the octile bound gives **30 steps, 0
+    turns**. **The prediction about the cap was wrong and measuring is what caught it:** the fear
+    was that it would throw away the abstract stage's whole benefit, and instead it made the
+    search *cheaper* — 3.5% shorter paths for 19% fewer expansions on rooms-and-doorways. An
+    over-estimating heuristic does not merely pick worse routes, it orders the open list badly.
+
+  - **Performance, because the owner asked for it and 4 to 8 neighbours demands an answer.** Arm C
+    of `PathingBenchmark`, 250x250x40, 1,800 requests, 4-connected against 8-connected: mean
+    **0.4249 to 0.3726 ms** and expansions **1,428,377 to 935,714** on rooms-and-doorways;
+    **0.6546 to 0.5995 ms** and **1,812,116 to 1,417,654** on noise. A third fewer expansions more
+    than pays for twice the neighbours. Separately, `Manhattan` re-derived the *goal's*
+    coordinates on every call for a value fixed per search; `CacheGoal` took 770.4 to 728.4 ms for
+    **identical expansions**, the signature of a change that alters cost per node and nothing else.
+    **`PathingBenchmark`'s own two assertions fail on both arms and failed before any of this** —
+    they are `[Explicit]`, they gate nothing, and nobody should read them as green.
+
+  - **Two tests that were not tests, both found by printing a number rather than by reading.**
+    `ForbidIntentTests` counted *stocked salvage* on a fixture with **nine stockpile cells, three
+    free, and two loose salvage** — a race for shelf space, not a test of forbidding. Diagonals
+    changed `PawnContext.Distance`, rations became the nearer haul and took all three slots, and
+    it failed with the colony hauling perfectly well and rather more of it; hauling was traced
+    (jobs given, 719 carried ticks, driver at its last toil, zero dropped paths) before the test
+    was touched. And two brand-new tests ran on an **empty board**, because the helper wrote
+    `cells.Flags` on a graph that already existed and called `Rebuild`, which rebuilds *dirty*
+    blocks — caught by reading the permitted-diagonal count as **1,936**, which is 22 x 22 x 4,
+    every candidate. Both now measure what they claim.
+
+  - **Walk variance is presentation only and nothing in it is in a cell, a save or the hash.**
+    Going in, the entire per-colonist variation in presentation was the gait clip's start phase and
+    the work stroke's period; all sixty-one colonists were drawn at exactly 1.4 and **no head bone
+    was bound at all**. Now: build at **±3%** (the owner's number over a more obvious 6%), with the
+    one divide in `Blend` that stops feet skating because `look.Speeds` is cached per look; a
+    **procedural** head-look on newly bound Head and Neck, chosen over the pack's real additive
+    look clips because those cost a layer mixer, an undocumented pose-grid convention and a second
+    animation path, for two angles; and a sideways **bow** off the chord so five colonists on one
+    errand stop walking single file. The bow needs no walkability query and that is arithmetic —
+    a 0.25 m cap in a 2.5 m cell leaves the figure half a metre clear of anything solid, and on a
+    diagonal the corner rule guarantees both flanks open.
+
+  - **Two faults in the variance found before anybody could see them.** `LookAbout`'s first curve
+    used rates of 2.3, 1.7 and 0.7, which do not complete over the phase, so every colonist
+    **snapped its head 8.9 degrees** once a cycle — caught by `TheCycleJoinsUpAtTheWrap`, and in
+    the game it would have read as a renderer glitch and never been traced to a sine. And the bow
+    accumulated on a *held* speed under a pause, sliding a paused colonist sideways;
+    `ObserveSpeed` deliberately does not read a stopped world as a measurement of nought
+    (`docs/lessons.md`, "absence of movement is not a measurement of nought"), which is exactly
+    what made that possible. Found by reading, not by a test.
+
+  - **Verified:** fast tier **677 Sim + 358 Hud**; EditMode **1,547 total, 1,535 passed, 0
+    failed**; PlayMode **69 total, 64 passed, 0 failed**. The variance costs nothing measurable —
+    `FrameTimeTests` with the dials off came out *slower* than with them on (meadow 2.47 against
+    2.31 ms), which is noise. **Those absolutes are not comparable to `CLAUDE.md`'s recorded 0.99
+    and 1.56 ms**: two editor GUIs, the CI runner and another worktree's batch Unity were all
+    competing, and one run reported a 31 ms worst frame. The A/B is valid because both arms were
+    equally contended; the baseline wants re-taking on a quiet machine.
+
+  - **Not verified, and it is the whole point:** nobody has pressed Play. `Logs/walk-heading.txt`
+    says 30 steps and 0 turns, which is the objective half. Whether a colony of five now reads as
+    moving naturally, and whether ±3%, ±38 degrees and 0.25 m are the right numbers, is taste.

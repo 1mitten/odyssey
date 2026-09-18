@@ -235,6 +235,35 @@ open.
 
 ---
 
+## NM — Natural movement (owner, 2026-09-18) — **both units done**
+
+The owner played the game and reported colonists looking *"a bit square in movement"*, asking about
+diagonal movement, curving the walk, stride variation, head movement and body language generally.
+Two separable causes, built as two units on `claude/natural-movement`.
+
+**Read `docs/design/21-diagonal-movement.md` and `docs/design/22-walk-variance.md` before touching
+either line.**
+
+**The numbering warning, since this table has now misled three sessions.** `U42`-`U45` are used
+**twice** in this file already — by the paving and ladder work (line 147 area) and by the WS rates
+line above. These are `U46` and `U47`, and the next free numbers are `U48` and `OQ-55`. **Check the
+code, not this table, before starting anything.**
+
+| Unit | Size | Depends on | State |
+|---|---|---|---|
+| **U46 Diagonal movement** | M | — | **Done 2026-09-18.** The cell search is 8-connected. `MoveCost.Diagonal = 141` had existed unused since the cost table was written; `PathFinder`'s own comment was the specification. The corner rule is the owner's: refused unless **both** flanks are enterable, stricter than `d-04` (annotated there as overruled). **The region graph did not change at all** — a permitted diagonal joins cells already two orthogonal steps apart, so 8-connectivity adds no reachability; all three golden `Generated` hashes held and only `Simulated` moved. The heuristic was where it nearly failed silently: the abstract estimate over-shot by 56% and the first build walked a 30x30 diagonal in 53 steps and 12 turns, *worse* than the 60-and-5 it replaced; capping it by the octile bound gives 30 steps and 0 turns. **Net faster**: 22-35% fewer cell expansions, 8-12% less mean time on the shipping two-stage path. |
+| **U47 Walk variance** | S | — | **Done 2026-09-18.** Per-colonist build at ±3% (the owner's number), a procedural head-look on newly-bound Head and Neck bones, and a sideways bow off the chord so colonists stop walking single file. Presentation only: no cell, no save, no hash, no golden moved. Costs nothing measurable — dials off measured *slower* than dials on, which is noise. Every dial has an off switch that restores the old behaviour exactly, with a test. |
+
+**What is not done, and is deliberately not:** diagonal hops and diagonal falls (`IsHop` and
+`IsFallStep` stay `dx + dz == 1`); an additive arm swing while walking, because the walk clip
+already swings the arms and the honest further lever is per-colonist **move speed**, which is
+`U44` of the WS line and blocked on `U42`.
+
+**The gate nobody has taken: the owner has not pressed Play on any of it.** `Logs/walk-heading.txt`
+says 30 steps and 0 turns, which is the objective half. Whether a colony of five now reads as
+moving naturally — and whether ±3%, a ±38° head-look and a 0.25 m bow are the right numbers — is
+taste, and taste is the owner's.
+
 ## Deferred: the rest of the look (recorded 2026-09-16, owner deferred)
 
 Pull request #50 landed the day/night cycle, the golden hour under it, the hill wood and the B17

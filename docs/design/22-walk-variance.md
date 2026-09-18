@@ -153,7 +153,33 @@ bows the same way — and it is invisible until fifty colonists are on screen at
 every load; how a person walks is not something a save has an opinion about, and leaving it out
 keeps the arithmetic callable from places that have no seed to hand.
 
-## 7. What only the owner can settle
+## 7. What it costs: nothing measurable
+
+The owner asked for this to be as fast as possible. Per figure per frame it adds two sines for the
+bow, four for the head-look, four `Pitch` calls over two bones, and one divide in `Blend` — at the
+64-figure ceiling, a few hundred trig calls, which is reasoning rather than a measurement.
+
+**Measured anyway, and the measurement is the interesting part.** `FrameTimeTests` in PlayMode, the
+same session, the only change being the dials set to zero (which *is* the old behaviour exactly, by
+§2's escape hatches):
+
+| | dials on | dials off |
+|---|---|---|
+| meadow, mean | 2.31 ms | 2.47 ms |
+| city, mean | 3.07 ms | 3.32 ms |
+
+**"Off" came out slower than "on", which is the useful result**: the difference is entirely machine
+noise and this work is free at colony scale. Both are inside the 5 ms budget and the assertion
+passed either way.
+
+**But do not read those absolute numbers as the game's frame time.** `CLAUDE.md` records meadow
+0.99 ms and city 1.56 ms on the same GPU at the same resolution. These runs were taken with **two
+editor GUIs, the self-hosted CI runner and another worktree's batch Unity all competing** — one of
+the first runs reported a 31 ms worst frame, which is the contention showing. The A/B above is
+valid because both arms were equally contended; the absolutes are not comparable to anything, and
+the recorded baseline wants re-taking on a quiet machine before anybody trusts a comparison.
+
+## 8. What only the owner can settle
 
 - Whether ±3% reads as different people or as nothing at all.
 - Whether a head that wanders ±38° every nine seconds reads as alive or as distracted.
