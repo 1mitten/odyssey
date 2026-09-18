@@ -154,11 +154,62 @@ written down for water: *"a slab has sides and an underside that water cannot af
 darker than all four of their neighbours turned four rounds of argument about screenshots into one
 number per experiment, and it was that number, not the pictures, that killed the three wrong fixes.
 
+### P9 — A shared buffer whose first use fixes its shape for every use after it
+
+A cache, a scratch list or a property block reused across callers is normally a pure saving. It stops
+being one the moment the API remembers something about the *first* call and applies it to the rest.
+`MaterialPropertyBlock.SetVectorArray` is exactly that: the length of an array is fixed by the first
+set and every later set is **capped to it**, with a warning and no exception. One block reused across
+buckets of different sizes therefore serves the first bucket correctly and every larger one with
+colours that were never written for it.
+
+**The tell is that the symptom depends on which thing was drawn first, not on the thing that looks
+wrong.** The trees repainted themselves; nothing about the trees had changed. It also comes and goes
+with a toggle that has no colour in it at all — see-through only decides *whether the shared block is
+used*, and that was enough to make a tree-colour bug out of a buffer-reuse bug.
+
+**Ask what the first call taught the object.** An array length, a capacity, a format, a keyword set,
+a texture size: anything the object latches. If the answer is "something", the shared thing must be
+used at one fixed shape — pad to it — or not be shared.
+
+**And treat a Unity warning in a render path as a bug report.** This one named the property, both
+sizes and the exact line, and it had been printing for as long as the feature existed.
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-18 — Selecting a colonist repainted the whole wood (P9, P5)
+
+*"A bug with the trees occurs when See through to selection/occlusion is set on. When I select a
+colonist the trees change colours all around, but when I come away or switch the setting off it goes
+back to the original colour."* With the console warning: `Property (_LeafDeepColour) exceeds previous
+array size (31 vs 25). Cap to previous size.` from `ChunkRenderer.SolidProps`.
+
+**It is one property block reused at two sizes.** A tree carries its four colours as per-instance
+data rather than as a tint, so a bucket's colours ride in a `MaterialPropertyBlock` beside its
+matrices. With see-through off, every bucket draws from **its own** block, written once at its own
+size — right, always. With it on, a bucket standing in a sight line is partitioned into a ghosted
+half and a solid half, and the solid half's colours are gathered into **one block shared by every
+bucket on the board**. That block's array length was fixed by the first partitioned bucket of the
+session, so from then on any bucket with more solid trees than that had its colours capped: the
+trees past the cap drew whatever was left in the array. Move the selection and a different bucket
+goes first, so the wood repaints itself. Nothing about trees, colour or the palette was involved.
+
+**Fixed:** `ChunkRenderer.WritePadded` pads every write to a shared block out to
+`MaxInstancesPerCall`, so the array is the same length every time and is never capped. The padding is
+never read — a draw of *n* instances indexes the first *n* entries. It is the fix
+`TreeMaterials.UniformProps` already used for the neighbouring reason (a block's array is indexed
+from zero by every draw call, not from the instance offset). The per-bucket blocks of
+`ChunkRenderer.PropsOf` are deliberately **not** padded: each is written once at its own size, they
+are not shared, and every tree on the board would pay the wider upload every frame.
+
+**Caught next time by:** `TreeColourBlockTests.ABiggerBucketAfterASmallerOneKeepsItsOwnColours`,
+which writes 25 then 31 through one block — the reported sizes — and asserts the array length does
+not move as well as that the colours come back. Asserting only the colours would pass on a block
+that had simply not been reused yet.
 
 ### 2026-09-18 — Every floor seam drew a dotted line, and it was the tile's own rim (P8)
 
