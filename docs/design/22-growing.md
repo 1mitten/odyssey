@@ -189,6 +189,28 @@ says what `Registry.Label` says it says — no literals in the six locked namesp
 that has already caught two. New job and item keys go through `icon-keys.csv` in the same
 commit, both `--check` gates with it.
 
+**What landed (2026-09-18, `0904381` + `c2e3c5e`).** All of the above, plus the decisions the
+code cannot show on its own:
+
+- **The zone lives where the sower stands.** A drag on the surface orders the air cell one
+  above each surface cell — the cell the crop occupies — and the lift belongs to the zone
+  tool alone (`DesignateDirector.OnTheWorkingLayer`); every other tool keeps the
+  anchor-layer rule it already had.
+- **The plant rides the intent as `A + 1`.** A zone intent's payload is one-based, because a
+  zero in `A` means "no payload" everywhere else; the presenter submits
+  `Director.Plant + 1`, and `GrowingZones.HandleDesignate` is the only place that subtracts.
+- **One rubber kills everything.** Cancel submits a third intent per cell, `CancelZone`, so
+  the zone dies the way an order and a building die, and the ground under it is untouched.
+- **The zone mode wears olive, not green.** `HudTheme.ZonesHue` colours both the Zones
+  category tier and the pinned strip action, because a pinned action's hue has one owner
+  each: `Good` already belongs to fell. The mode colour matching the category tile is the
+  same value in both places, not a coincidence to keep in step.
+- **The crop chip is drawn art, lit as a sub-type.** No pixel art exists for a crop and a
+  placeholder square is forbidden in the palette, so the carrot is a vector glyph. The
+  chosen crop wears the sub-type tier's own lit class — it is the zone tool's payload, not
+  a material. The tier is built in all three layouts, shown only while the zone tool wants
+  it, and Rows' PLANT heading dims rather than disappears so the panel never changes height.
+
 ## 8. Hooks: what is deliberately not here
 
 Each of these was considered and deferred, and each has a named landing place rather than a
