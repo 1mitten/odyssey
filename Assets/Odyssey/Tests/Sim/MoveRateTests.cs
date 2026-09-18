@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
@@ -292,6 +293,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.Asleep, Is.False, "she never woke");
             Assert.That(pawn.Cell, Is.EqualTo(Size.Index(colony.Start)),
                 "she woke somewhere other than where she fell");
+            Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.SleptOnGround),
+                Is.True, "she slept in the open and carries no thought of it");
         }
 
         [Test]
@@ -308,6 +311,8 @@ namespace Odyssey.Tests.Sim
             var beds = colony.Pawns.Items.Beds;
             Assert.That(beds, Does.Contain(pawn.Cell),
                 "she slept where she stood with a bed in reach");
+            Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.SleptOnGround),
+                Is.False, "a bed slept in is not the ground");
         }
 
         [Test]
@@ -347,6 +352,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(driver.Tick(colony.Pawns), Is.EqualTo(JobStatus.Ongoing));
             Assert.That(pawn.Asleep, Is.True, "down on the road and still awake");
             Assert.That(pawn.Cell, Is.Not.EqualTo(bed), "she made it to the bed after all");
+            Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.SleptOnGround),
+                Is.True, "she went down in the open and remembers nothing of it");
         }
 
         // ---- the seam to presentation ---------------------------------------------------------

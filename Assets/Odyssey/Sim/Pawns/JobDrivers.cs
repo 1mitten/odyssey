@@ -154,9 +154,16 @@ namespace Odyssey.Sim.Pawns
             {
                 // The collapse catches up with the walk as well as the departure: rest that runs
                 // out on the way to the bed drops the colonist where she is, and the bed waits
-                // for whoever holds it next (WS3, design 17 §4c).
+                // for whoever holds it next (WS3, design 17 §4c). She is about to sleep on the
+                // ground all the same, so she carries the ground's thought with her — the one
+                // toil 1 adds below when the giver found no bed at all, which is left to fire
+                // there so a collapse is remembered once, never twice. The bed stays reserved
+                // until the job ends: letting go here would need a second exit from the job, and
+                // the one-exit rule is worth more than the hour an unreserved bed would buy.
                 if (Pawn.Needs[NeedIndex.Rest] <= 0)
                 {
+                    if (Job.TargetCell >= 0)
+                        Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
                     NextToil();
                     return JobStatus.Ongoing;
                 }
