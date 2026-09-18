@@ -995,7 +995,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// than an order's mark, so the dirt texture underneath flattens into one patch; still no
         /// order's hue, so a field and an order never ask to be told apart by reading a
         /// tooltip.</summary>
-        public static readonly Color ZoneTintColour = new Color(0.28f, 0.17f, 0.07f, 0.62f);
+        /// <summary>The colour of a sown cell's seed specks - pale enough to read as seed against the dark soil, and nothing else on the board's floor is white.</summary>
+        public static readonly Color SeedSpeckColour = new Color(0.92f, 0.90f, 0.82f, 1f);
+
+        public static readonly Color ZoneTintColour = new Color(0.13f, 0.075f, 0.025f, 0.72f);
 
         /// <summary>
         /// Every growing-zone cell on a drawn layer, tinted.
@@ -1033,6 +1036,18 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef cell = size.FromIndex(zones[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
                 _renderer.DrawCellMark(cell, ZoneTintColour, inset: 0f);
+            }
+
+            // The seed the sower left (owner, 2026-09-18: "some kind of seed on the surface like
+            // speckled white tiny dots to indicate it's sown"). A sown cell is a dark tile until
+            // the sprout's first stage is big enough to read, so the sowing itself is invisible
+            // for the first hours; the specks are the feedback, one handful per planted cell.
+            System.ReadOnlySpan<PlantView> planted = snapshot.Plants;
+            for (int i = 0; i < planted.Length; i++)
+            {
+                CellRef cell = size.FromIndex(planted[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                _renderer.DrawSeedSpecks(cell, SeedSpeckColour);
             }
         }
 

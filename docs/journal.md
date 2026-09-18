@@ -5934,3 +5934,19 @@ an inset parameter and the zone passes nought: the whole tile, and neighbouring 
 one patch. And the brown went darker and more opaque (0.28, 0.17, 0.07 at 0.62), enough to
 flatten the dirt texture underneath into soil rather than dapple it. The order marks keep their
 inset and their own alpha band; only the field changed.
+
+### Deep soil, seed specks, and the pane that worked (2026-09-18)
+
+Three asks. The brown went much deeper (0.13, 0.075, 0.025 at 0.72) - dark enough to flatten the
+dirt texture into soil. The sown cell now carries six white seed flecks at hashed per-cell
+positions, drawn from the plant channel the crops ride: pale against the dark soil, deterministic
+so they sit still, shadowless so a fleck is not doubled by its own shadow. They are the sowing's
+feedback - a sown tile was a dark square until the sprout's first stage read.
+
+And the pane was right all along. The owner could not find the growing row, and the reproduction
+test - a real QueryCell for the ground a surface click lands on, a real pick, the real panel -
+found the row saying "Carrot - 0% grown" on its first run; only the test's own case-sensitive
+assertion failed. The likely reason a real click shows nothing is that a click landing on a
+colonist picks the colonist (the pick rule an earlier playtest fault fixed), and the sower stands
+exactly where you click right after sowing. The test now pins the row, the crop name and the
+ripeness so the join cannot silently break again.

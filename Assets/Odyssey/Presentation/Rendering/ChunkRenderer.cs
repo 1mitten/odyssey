@@ -1469,6 +1469,45 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
+        /// <summary>
+        /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to
+        /// indicate it's sown"). Six tiny flecks at deterministic positions hashed from the cell,
+        /// so they sit still frame to frame and every cell scatters differently; lifted just
+        /// clear of the ground the way a mark is, and cast no shadows — a shadow the size of the
+        /// fleck itself would double it.
+        /// </summary>
+        public void DrawSeedSpecks(CellRef cell, Color colour)
+        {
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            int index = _model.Index(cell.X, cell.Z, cell.Y);
+            Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
+            centre.y += MarkLift;
+
+            const int Specks = 6;
+            const float Size = 0.045f;
+            for (int i = 0; i < Specks; i++)
+            {
+                // A cheap per-cell-per-speck hash: the cell's own index twisted by the speck's,
+                // mapped to the cell's inner square. Deterministic, board-stable, and no two
+                // neighbouring cells repeat their handful.
+                uint h = (uint)(index * 747_796_405u + i * 289_133_645_3u);
+                h = (h ^ (h >> 13)) * 1_274_126_177u;
+                float ox = ((h & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 0.7f);
+                float oz = (((h >> 16) & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 0.7f);
+
+                Vector3 at = centre + new Vector3(ox, 0f, oz);
+                Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                    Matrix4x4.TRS(at, Quaternion.identity, new Vector3(Size, Size * 0.5f, Size)));
+            }
+        }
+
 
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
         const float MarkThickness = 0.04f;
