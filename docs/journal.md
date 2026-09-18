@@ -6356,3 +6356,6 @@ colonists at certain points and smoother is preferred and predictable."*
 - **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1777 total, 1763 passed,
   0 failed**; PlayMode **82 total, 75 passed, 0 failed** (scratch worktree, so the two portrait
   tests skip for want of the Synty junction).
+- **Re-verified on the merge with main** (head turning, the flush selection cursor), this time on
+  the real checkout with the packs: fast tier **730 + 438**, Long **21**, EditMode **1798 total,
+  1784 passed, 0 failed**, PlayMode **82 total, 77 passed, 0 failed**, both content gates clean.

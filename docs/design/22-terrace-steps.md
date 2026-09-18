@@ -284,6 +284,15 @@ and the gait hold now read.
 - **A ladder.** A vertical step has no ground distance to weigh against its rise; it climbs at the
   rate its connector's price sets, which is what a ladder is.
 
+### Still quantised: the ladder climb
+
+`PawnFigureDirector` drives the ladder climb pose from `MovePercent * 0.01`, which is the same whole
+percent that caused the hitch above. A ladder costs 540, so its pose advances in steps of a 5.4-tick
+percent — the identical fault, in the one animation nobody has watched since it was written
+(`21-ladders-and-climbing.md`). The fix is the same one line, reading `MovePerMille`; it is left
+alone here because it changes a pose that has never been looked at, and that wants its own playtest
+rather than a ride on this one.
+
 ## 5. Recorded hooks
 
 Things deliberately left for later, so the next session does not re-derive them:
