@@ -425,18 +425,15 @@ namespace Odyssey.Hud
         public const int ClockGap = 9;
 
         /// <summary>
-        /// Two lines of 13 px body text.
+        /// One line of 13 px body text.
         ///
-        /// <para>Fifty-two rather than the thirty-four the point size suggests, because UI
+        /// <para>Twenty-six rather than the seventeen the point size suggests, because UI
         /// Toolkit's line box for 13 px type measures about 26 px rather than 17 — measured on the
-        /// inspect pane's one-line empty state, which was the only text in the HUD left to size
-        /// itself, and which came out nine pixels taller than the model had allowed the whole
-        /// pane. Every other row in this layout declares its own height, so this is the only place
-        /// the renderer's metrics reach the arithmetic.</para>
+        /// inspect pane's one-line empty state.</para>
         /// </summary>
-        public const int AlertHeight = 52;
+        public const int AlertHeight = 26;
 
-        public const int AlertGap = 7;
+        public const int AlertGap = 4;
 
         /// <summary>The alerts panel's own label row and the gap under it.</summary>
         public const int AlertHeaderBlock = HeaderHeight + HeaderGap;

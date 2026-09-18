@@ -300,8 +300,16 @@ namespace Odyssey.Presentation.Ui
         {
             public VisualElement Root = null!;
             public HudGlyph Icon = null!;
+            public VisualElement Text = null!;
+            public Label Prefix = null!;
+            public Label Target = null!;
+            public Label Message = null!;
             public Label Lead = null!;
             public Label Detail = null!;
+            public VisualElement Dismiss = null!;
+            public int DismissKey;
+            public PawnId TargetPawn;
+            public CellRef? TargetCell;
             public string? LastLead;
         }
 

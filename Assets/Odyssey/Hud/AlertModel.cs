@@ -28,7 +28,16 @@ namespace Odyssey.Hud
         /// <summary>The symbolic key naming the condition, for the registry and later for art.</summary>
         public readonly string Key;
 
-        /// <summary>The actionable clause, in full ink.</summary>
+        /// <summary>The highlighted target name (e.g. "Wrenn" or "Colony").</summary>
+        public readonly string TargetName;
+
+        /// <summary>The message trailing the target (e.g. " is close to breaking").</summary>
+        public readonly string TargetSuffix;
+
+        /// <summary>Optional prefix before the target, if any.</summary>
+        public readonly string TargetPrefix;
+
+        /// <summary>The complete actionable lead string.</summary>
         public readonly string Lead;
 
         /// <summary>The qualifying detail, dimmed.</summary>
@@ -39,40 +48,73 @@ namespace Odyssey.Hud
         /// <summary>How many subjects the alert covers, for a test and for a tooltip.</summary>
         public readonly int Count;
 
+        /// <summary>The target pawn if this alert relates to a colonist, or None.</summary>
+        public readonly PawnId Pawn;
+
+        /// <summary>The target cell if this alert relates to a map location, or None.</summary>
+        public readonly CellRef? Cell;
+
+        /// <summary>Stable token identifying this alert for dismissal.</summary>
+        public readonly int DismissKey;
+
+        public AlertRow(
+            string key,
+            string targetName,
+            string targetSuffix,
+            AlertSeverity severity,
+            int count = 1,
+            PawnId pawn = default,
+            CellRef? cell = null,
+            string targetPrefix = "",
+            string detail = "")
+        {
+            Key = key;
+            TargetName = targetName;
+            TargetSuffix = targetSuffix;
+            TargetPrefix = targetPrefix;
+            Lead = string.IsNullOrEmpty(targetPrefix) ? targetName + targetSuffix : targetPrefix + targetName + targetSuffix;
+            Detail = detail;
+            Severity = severity;
+            Count = count;
+            Pawn = pawn;
+            Cell = cell;
+            DismissKey = ComputeDismissKey(key, pawn, cell);
+        }
+
         public AlertRow(string key, string lead, string detail, AlertSeverity severity, int count)
         {
             Key = key;
+            TargetName = lead;
+            TargetSuffix = string.Empty;
+            TargetPrefix = string.Empty;
             Lead = lead;
             Detail = detail;
             Severity = severity;
             Count = count;
+            Pawn = default;
+            Cell = null;
+            DismissKey = ComputeDismissKey(key, default, null);
+        }
+
+        public static int ComputeDismissKey(string key, PawnId pawn, CellRef? cell)
+        {
+            unchecked
+            {
+                int hash = (key != null ? key.GetHashCode() : 0) * 397;
+                hash = (hash * 397) ^ pawn.Value;
+                if (cell.HasValue)
+                {
+                    hash = (hash * 397) ^ cell.Value.X;
+                    hash = (hash * 397) ^ (cell.Value.Y << 10);
+                    hash = (hash * 397) ^ (cell.Value.Z << 20);
+                }
+                return hash;
+            }
         }
     }
 
     /// <summary>
     /// What the alerts panel says, read off the published frame and nothing else.
-    ///
-    /// <para><b>The panel was a placeholder and this is the smallest honest replacement.</b> It
-    /// used to print "No active alerts." above a sentence explaining that conditions arrive with
-    /// M2, which is a dev note sitting in a player-facing region; the acceptance criteria delete
-    /// both and say the panel is hidden outright when there is nothing to say. That only works if
-    /// something can put a line in it, so this raises the three conditions the frame can actually
-    /// support — a colonist starving, a colonist about to break, and a colony standing
-    /// idle.</para>
-    ///
-    /// <para><b>Every one has hysteresis, for the reason <c>AlertWatch</c> already gives about
-    /// chimes:</b> a need sitting on its threshold flaps either side of it for hours of game time,
-    /// and a panel that appears and disappears with the flapping is worse than no panel. A
-    /// condition raises at its threshold and clears only once it has recovered past a wider
-    /// re-arm band. Idle is different in kind — it is momentary rather than a level — so it is
-    /// sustained instead: a colony has to be idle continuously for <see cref="IdleSustain"/>
-    /// seconds before it is worth saying, which is what stops the panel blinking every time
-    /// somebody finishes a haul.</para>
-    ///
-    /// <para>Needs are read on the simulation's own 0–1000 scale, like every other need in this
-    /// assembly. <c>AlertWatch</c> in the audio director describes the same field as "0–100" and
-    /// thresholds at 12, which on the real scale is 1.2% — deep enough to be nearly dead. That is
-    /// its bug to fix, not this class's to copy.</para>
     /// </summary>
     public sealed class AlertModel
     {
@@ -102,23 +144,50 @@ namespace Odyssey.Hud
 
         readonly HashSet<int> _starving = new HashSet<int>();
         readonly HashSet<int> _breaking = new HashSet<int>();
+        readonly HashSet<int> _dismissed = new HashSet<int>();
 
         double _idleSince = -1.0;
 
-        // What the rows currently say. The panel refreshes four times a second and every line it
-        // holds is an interpolated string, so a model that rebuilt them on every pass would
-        // allocate for as long as an alert stood — which is exactly the condition ADR 0003's flip
-        // condition F1 forbids, and exactly when the player is least able to afford a hitch.
         int _wasStarving = -1;
         int _wasBreaking = -1;
         bool _wasIdle;
         int _wasColony = -1;
+        int _latchVersion;
+        int _wasLatchVersion = -1;
+        int _dismissVersion;
+        int _wasDismissVersion = -1;
+
+        /// <summary>Dismiss an active alert until its condition clears and re-occurs.</summary>
+        public void Dismiss(int dismissKey)
+        {
+            if (_dismissed.Add(dismissKey))
+            {
+                _dismissVersion++;
+                for (int i = 0; i < Rows.Count; i++)
+                {
+                    if (Rows[i].DismissKey == dismissKey)
+                    {
+                        Rows.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Dismiss all currently visible alerts.</summary>
+        public void DismissAll()
+        {
+            if (Rows.Count == 0) return;
+            for (int i = 0; i < Rows.Count; i++)
+                _dismissed.Add(Rows[i].DismissKey);
+            Rows.Clear();
+            _dismissVersion++;
+        }
+
+        public bool IsDismissed(int dismissKey) => _dismissed.Contains(dismissKey);
 
         /// <summary>
-        /// Recompute from a frame. <paramref name="seconds"/> is wall-clock, not ticks: an alert
-        /// that appeared for a third of a second at speed three and vanished again would be an
-        /// alert the player never read, and the sustain has to be measured in the time they are
-        /// actually looking at the screen.
+        /// Recompute from a frame. <paramref name="seconds"/> is wall-clock, not ticks.
         /// </summary>
         public void Refresh(WorldSnapshot snapshot, double seconds)
         {
@@ -132,76 +201,153 @@ namespace Odyssey.Hud
                 PawnView pawn = pawns[i];
                 int id = pawn.Id.Value;
 
-                if (Latch(_starving, id, pawn.Food, StarveAt, StarveClearAt)) starving++;
-                if (Latch(_breaking, id, pawn.Mood, BreakAt, BreakClearAt)) breaking++;
+                if (Latch(_starving, id, pawn.Food, StarveAt, StarveClearAt, ref _latchVersion))
+                {
+                    starving++;
+                }
+                else
+                {
+                    _dismissed.Remove(AlertRow.ComputeDismissKey(StarveKey, pawn.Id, default));
+                }
+
+                if (Latch(_breaking, id, pawn.Mood, BreakAt, BreakClearAt, ref _latchVersion))
+                {
+                    breaking++;
+                }
+                else
+                {
+                    _dismissed.Remove(AlertRow.ComputeDismissKey(BreakKey, pawn.Id, default));
+                }
+
                 if (pawn.JobDef < 0) idle++;
             }
 
-            // Anyone who left the frame leaves their latch behind; a colony of a dozen makes this
-            // a dozen comparisons a refresh, and the alternative is a set that grows for ever.
-            Forget(_starving, snapshot);
-            Forget(_breaking, snapshot);
+            Forget(_starving, snapshot, ref _latchVersion);
+            Forget(_breaking, snapshot, ref _latchVersion);
 
             if (idle > 0 && idle == pawns.Length)
             {
                 if (_idleSince < 0.0) _idleSince = seconds;
             }
-            else _idleSince = -1.0;
+            else
+            {
+                _idleSince = -1.0;
+                _dismissed.Remove(AlertRow.ComputeDismissKey(IdleKey, default, default));
+                for (int i = 0; i < pawns.Length; i++)
+                    _dismissed.Remove(AlertRow.ComputeDismissKey(IdleKey, pawns[i].Id, default));
+            }
 
             bool idleStands = _idleSince >= 0.0 && seconds - _idleSince >= IdleSustain;
 
-            // Nothing has changed, so the lines already in Rows are still the right lines. This
-            // is the whole of the allocation guard: the strings below are built once per genuine
-            // change of state rather than four times a second for as long as the alert stands.
             if (starving == _wasStarving && breaking == _wasBreaking &&
-                idleStands == _wasIdle && pawns.Length == _wasColony)
+                idleStands == _wasIdle && pawns.Length == _wasColony &&
+                _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
             _wasStarving = starving;
             _wasBreaking = breaking;
             _wasIdle = idleStands;
             _wasColony = pawns.Length;
+            _wasLatchVersion = _latchVersion;
+            _wasDismissVersion = _dismissVersion;
             Rows.Clear();
 
-            // Worst first, because the panel is read from the top and a player who reads one line
-            // should have read the one that matters most.
-            if (starving > 0)
-                Rows.Add(new AlertRow(
-                    StarveKey,
-                    starving == 1 ? "A colonist is starving" : $"{starving} colonists are starving",
-                    "no meal has been reached in time",
-                    AlertSeverity.Danger, starving));
+            // Worst first: Danger (starving), then Warning (breaking), then Notice (idle).
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (_starving.Contains(pawn.Id.Value))
+                {
+                    int dismissKey = AlertRow.ComputeDismissKey(StarveKey, pawn.Id, default);
+                    if (!_dismissed.Contains(dismissKey))
+                    {
+                        string name = ColonistNames.Of(snapshot, pawn.Id);
+                        Rows.Add(new AlertRow(
+                            StarveKey,
+                            name,
+                            " is starving",
+                            AlertSeverity.Danger,
+                            count: 1,
+                            pawn: pawn.Id));
+                    }
+                }
+            }
 
-            if (breaking > 0)
-                Rows.Add(new AlertRow(
-                    BreakKey,
-                    breaking == 1 ? "A colonist is close to breaking" : $"{breaking} colonists are close to breaking",
-                    "mood has fallen into the strained band",
-                    AlertSeverity.Warning, breaking));
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (_breaking.Contains(pawn.Id.Value))
+                {
+                    int dismissKey = AlertRow.ComputeDismissKey(BreakKey, pawn.Id, default);
+                    if (!_dismissed.Contains(dismissKey))
+                    {
+                        string name = ColonistNames.Of(snapshot, pawn.Id);
+                        Rows.Add(new AlertRow(
+                            BreakKey,
+                            name,
+                            " is close to breaking",
+                            AlertSeverity.Warning,
+                            count: 1,
+                            pawn: pawn.Id));
+                    }
+                }
+            }
 
             if (idleStands)
-                Rows.Add(new AlertRow(
-                    IdleKey,
-                    pawns.Length == 1 ? "The colonist has nothing to do" : "The colony has nothing to do",
-                    "give an order, or mark something to cut or mine",
-                    AlertSeverity.Notice, idle));
+            {
+                if (pawns.Length == 1)
+                {
+                    int dismissKey = AlertRow.ComputeDismissKey(IdleKey, pawns[0].Id, default);
+                    if (!_dismissed.Contains(dismissKey))
+                    {
+                        string name = ColonistNames.Of(snapshot, pawns[0].Id);
+                        Rows.Add(new AlertRow(
+                            IdleKey,
+                            name,
+                            " is idle",
+                            AlertSeverity.Notice,
+                            count: 1,
+                            pawn: pawns[0].Id));
+                    }
+                }
+                else
+                {
+                    int dismissKey = AlertRow.ComputeDismissKey(IdleKey, default, default);
+                    if (!_dismissed.Contains(dismissKey))
+                    {
+                        Rows.Add(new AlertRow(
+                            IdleKey,
+                            "Colony",
+                            " is idle",
+                            AlertSeverity.Notice,
+                            count: idle));
+                    }
+                }
+            }
         }
 
-        /// <summary>True while the condition stands for this subject.</summary>
-        static bool Latch(HashSet<int> raised, int id, int value, int at, int clearAt)
+        static bool Latch(HashSet<int> raised, int id, int value, int at, int clearAt, ref int version)
         {
             bool already = raised.Contains(id);
             if (value <= at)
             {
-                raised.Add(id);
+                if (!already)
+                {
+                    raised.Add(id);
+                    version++;
+                }
                 return true;
             }
             if (already && value < clearAt) return true;
-            raised.Remove(id);
+            if (already)
+            {
+                raised.Remove(id);
+                version++;
+            }
             return false;
         }
 
-        static void Forget(HashSet<int> raised, WorldSnapshot snapshot)
+        static void Forget(HashSet<int> raised, WorldSnapshot snapshot, ref int version)
         {
             if (raised.Count == 0) return;
             List<int>? gone = null;
@@ -209,7 +355,11 @@ namespace Odyssey.Hud
                 if (!snapshot.TryGetPawn(new PawnId(id), out _))
                     (gone ??= new List<int>()).Add(id);
             if (gone == null) return;
-            foreach (int id in gone) raised.Remove(id);
+            for (int i = 0; i < gone.Count; i++)
+            {
+                raised.Remove(gone[i]);
+                version++;
+            }
         }
     }
 }
