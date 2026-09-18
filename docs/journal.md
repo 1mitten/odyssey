@@ -4962,3 +4962,45 @@ being followed everywhere except in the file that states them.
   which of the two senses was cheaper to move — 12 journal references against a contained set of
   three planning documents — which is also what proved the built sense had to be the one that
   stayed.
+
+### The inspect pane resized under the pointer (2026-09-18)
+
+The owner, on the colonist card: *"When I click on tabs like skills/needs — it resizes every time —
+it needs to be at least a fixed size (IE the size of the skills tab) — so that it doesn't resize to
+the content of needs."*
+
+**The pane grows upward from a docked bottom edge, which is what turned a height into a jump.**
+`.inspect` sits at `bottom: 64px`, derived from the command bar, and `HudLayout.InspectHeight` added
+up the *active* tab's rows: Needs is 59 px (two rows of 25, one 9 px gap), Skills is 157 (seven rows
+of 19, six 4 px gaps). Because the bottom is pinned, all 98 px of the difference came off the top —
+the portrait, the name, the tab strip and the first row all moved, and the tab strip is precisely
+where the pointer is at the moment of the click. A pane docked to its *top* would have had the same
+arithmetic and not been worth a complaint.
+
+**Three questions were asked before any code was written, and the owner took the plainest option of
+each**: the height is the tallest tab that exists today rather than a guess at the seven disabled
+ones; a short tab's rows keep the position they already have, with the slack below them rather than
+spread through them; and the tile readout is left content-sized, because with no tab strip it cannot
+resize under the hand.
+
+**The number is derived, not typed.** `HudLayout.InspectTabBody` is `max` of the needs body and the
+skills body, computed from `SkillCatalogue.Rows` and a new `InspectNeeds`. A hand-set 160 would have
+read the same today and clipped the day a fourteenth skill was added — and the skills grid is
+already a computed seven rows precisely because it is the kind of list that grows.
+
+**`InspectHeight`'s row arguments now say only whether there is a body.** They still size a tile's
+readout. That is a deliberate asymmetry rather than an oversight, and the doc comment says so, since
+the next tidy-up would otherwise "unify" the three branches straight back into the bug.
+
+**The stylesheet is the second copy and it is held, not trusted.** `.inspect__tabbody` carries the
+same 157, and the row added to `HudStyleSheetTests`'s table pairs it with `HudLayout.InspectTabBody`
+— the same mechanism that already holds the pane's width, its bottom and its header. The fast tier
+parses the USS, so the two cannot drift without a red test in twenty seconds.
+
+**The test asserts the top edge, not the height.** Equal heights was the obvious assertion and it is
+the weaker one: the complaint is about a thing moving, so `TheColonistPaneIsTheSameHeightOnEveryTab`
+solves both tabs and compares `Y` first.
+
+Nobody has pressed Play on it. The open question a picture cannot answer is whether ninety-eight
+pixels of empty pane under three need bars reads as stable or as broken — and if it reads as broken,
+the answer is more needs, not a shorter box.
