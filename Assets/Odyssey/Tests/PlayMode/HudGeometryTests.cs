@@ -536,17 +536,22 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(nameLabel, Is.Not.Null);
                 Assert.That(jobLabel, Is.Not.Null);
 
-                // Twelve cycles of the eight-name pool, which is a colony of ninety-six. The
-                // interesting names are not the pool's own — they are the ones carrying the
-                // cycle number the model appends once the pool is exhausted, and a two-digit
-                // suffix is wider than a one-digit one. Stopping at the pool, or at one cycle,
+                // Every name in the pool, plus a cycle past the end of it.
+                //
+                // **It used to be ids 1 to 96**, which was twelve cycles of an eight-name pool and
+                // therefore both the whole pool and the widest cycle suffix. The pool is 244 now,
+                // so 96 would have measured the first 96 names and called it the widest — an
+                // arbitrary sample that happens to be whatever the CSV lists first. The bound is
+                // the pool's own length, and one cycle past it keeps the suffixed names in: a
+                // two-digit suffix draws wider than a one-digit one, and stopping at the pool
                 // would size the card for a colony that never grows.
+                int pool = ColonistNamePool.Names.Length;
                 float widestName = 0f;
                 string longestName = string.Empty;
-                for (int id = 1; id <= 96; id++)
+                for (int id = 1; id <= pool + 12; id++)
                 {
-                    // Seed zero reads the pool from the top, so this still walks every name the
-                    // pool holds — which is what the widest-name measurement is after (U40).
+                    // Seed zero reads the pool from the top, so this walks every name the pool
+                    // holds — which is what the widest-name measurement is after (U40).
                     string name = ColonistNames.Of(0u, new PawnId(id));
                     float w = Draws(nameLabel!, name);
                     if (w <= widestName) continue;

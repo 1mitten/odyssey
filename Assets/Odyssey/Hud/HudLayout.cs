@@ -245,8 +245,9 @@ namespace Odyssey.Hud
         /// rows — who this is, and what they are at — so the card is sized by the longer of them
         /// rather than by a number somebody liked.</para>
         ///
-        /// <para>Widest name row: the avatar (26) plus its gap (8) plus the longest name the pool
-        /// can produce. Widest activity row: the icon (17) plus its gap (6) plus the longest word
+        /// <para>Widest name row: the avatar plus its gap plus the longest name the pool
+        /// can produce — which is a fact about <c>docs/design/colonist-names.csv</c>, so adding a
+        /// long name to that file is a change to this number. Widest activity row: the icon (17) plus its gap (6) plus the longest word
         /// in <c>ui.status</c>. Both plus padding on each side. The figures are not taken on
         /// trust — <c>TheCardIsWideEnoughForItsRowsAndNoWider</c> asks the text engine what those
         /// strings really draw in the real face at the real size, and fails on either side with a
@@ -262,6 +263,16 @@ namespace Odyssey.Hud
         /// 16 + 52 + 8 + 50 = 126, which overtakes the activity row's 106 and becomes the width.
         /// The measured strings are the test's, not an estimate — 'Wrenn 10' draws 50 px and
         /// 'Deconstructing' 67.</para>
+        ///
+        /// <para><b>It stayed 126 when the name pool went from eight to 244</b>, and the reason is
+        /// worth writing down because the arithmetic ran the other way first. One name in the
+        /// owner's list — <i>Christopher</i> — draws 60 px where the old pool's widest drew 50, so
+        /// the card was re-derived to 136 exactly as §10.6 re-derived it for the avatar. Then the
+        /// fast tier measured what that cost: a full two-row strip at 1280 x 720 goes to
+        /// <b>20.19%</b> against a ceiling of 20, which would be the <i>fourth</i> raise of a
+        /// number that is the owner's to approve — spent on one name in 244. The card is back at
+        /// 126 and the pool carries <i>Chris</i> instead; putting the long name back and taking
+        /// the ceiling to 21% is the alternative, and it is the owner's to choose.</para>
         public const int CardWidth = 126;
 
         /// <summary>

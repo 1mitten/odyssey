@@ -39,7 +39,7 @@ namespace Odyssey.Hud
             "John", "Grace", "David", "Nora", "Luke", "Hazel", "Julian", "Zoey",
             "Dylan", "Riley", "Matthew", "Victoria", "Leo", "Lily", "Isaac", "Aurora",
             "Gabriel", "Violet", "Anthony", "Nova", "Jaxon", "Hannah", "Carter", "Emilia",
-            "Thomas", "Stella", "Charles", "Maya", "Christopher", "Willow", "Caleb", "Addison",
+            "Thomas", "Stella", "Charles", "Maya", "Chris", "Willow", "Caleb", "Addison",
             "Andrew", "Lucy", "Joshua", "Paisley", "Nathan", "Natalie", "Ryan", "Elena",
             "Adrian", "Naomi", "Christian", "Alice", "Aaron", "Sadie", "Eli", "Ruby",
             "Nolan", "Eva", "Hunter", "Ivy", "Silas", "Vesper", "Kael", "Wren",

@@ -107,8 +107,15 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Every name in the pool is one a roster card can hold, measured against the widest the
-        /// card budgets for. A 244-row CSV is a place a long name can arrive unnoticed.
+        /// Every name in the pool is well formed and none is absurdly long.
+        ///
+        /// <para><b>This is a coarse guard and says so, because characters are not pixels.</b> It
+        /// was written as "no name over twelve characters" and <i>Christopher</i> — eleven —
+        /// sailed through it and then failed
+        /// <c>HudGeometryTests.TheCardIsWideEnoughForItsRowsAndNoWider</c>, which asks the real
+        /// text engine what a string really draws. That test is the gate; this one only catches
+        /// the entries a 244-row CSV can gain without anybody noticing: a blank, a stray space, a
+        /// sentence pasted into the wrong column.</para>
         /// </summary>
         [Test]
         public void NoNameInThePoolIsLongerThanACardBudgetsFor()
@@ -118,7 +125,8 @@ namespace Odyssey.Tests.Hud
                 Assert.That(name, Is.Not.Empty);
                 Assert.That(name.Trim(), Is.EqualTo(name), $"'{name}' has stray whitespace");
                 Assert.That(name.Length, Is.LessThanOrEqualTo(12),
-                    $"'{name}' is longer than the roster card's name budget");
+                    $"'{name}' is far longer than any name the card was sized for — the pixel " +
+                    "measurement is HudGeometryTests', and this only catches the absurd");
             }
         }
 
