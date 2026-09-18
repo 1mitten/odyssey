@@ -2035,3 +2035,30 @@ with nothing asserting the two agree, is exactly the two-sources-of-truth trap t
 paying for elsewhere — and it would drift the first time the C# was tuned, silently, because its
 only test is a file nobody diffs. The technique is worth a page; the code is not worth a file.
 Reach for this only when the editor is genuinely blocked and the alternative is waiting.
+
+## One NUL byte in a source file makes git hide every diff of it
+
+`HudShell.Orders.cs` carried a sentinel written as a **literal NUL byte** inside a string —
+`string _ordersPaintedFor = "<NUL>";` rather than `"\0"`. C# compiles it, the value is identical,
+every test passes, and nothing in the editor looks wrong. But git classes any file containing a NUL
+as binary, so the file's entire history is `Bin 7775 -> 8672 bytes` with no diff at all.
+
+It surfaced on 2026-09-18 when a change to that file went into a pull request and the commit stat
+showed `Bin` beside five ordinary text files. A reviewer would have had nothing to read, and the
+review would have passed the one file that most needed looking at.
+
+- **The fix is the escape.** `"\0"` is the same string to the compiler and plain text to git. The
+  PlayMode tier gave the same 78 / 73 / 0 before and after, which is the check worth doing: the two
+  spellings must not differ.
+- **The old blob is still binary**, so the diff of the commit that *fixes* it is also unreadable —
+  one side of that diff still contains the NUL. Every commit after it is normal.
+- **Look for it whenever a `.cs`, `.uss` or `.json` shows as `Bin` in `git show --stat`.** A source
+  file has no business being binary, and the cause is almost always a control character somebody
+  typed as a byte where an escape was meant.
+
+`python -c "print(open(PATH,'rb').read().count(b'\x00'))"` answers it in one line.
+
+**And build the replacement bytes explicitly when fixing one.** The first attempt passed `"\0"`
+through a shell heredoc into a Python one-liner and the backslash was eaten somewhere on the way, so
+the "fix" wrote the NUL straight back and the file still had one. Concatenating `bytes([92])` and
+`b"0"` is ugly and cannot be misread by anything in between.
