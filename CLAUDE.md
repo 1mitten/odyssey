@@ -194,13 +194,19 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **681 Sim + 399 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **681 Sim + 403 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the build
-  botch merged with beds: EditMode **1638 total, 1625 passed, 0 failed**. PlayMode, last run the
-  same day: **74 total, 69 passed, 0 failed**. In both, the remainder are `[Explicit]` or ignored.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the fixed
+  inspect pane and the dimmed build categories: EditMode **1642 total, 1629 passed, 0 failed**.
+  PlayMode, the same day: **77 total, 72 passed, 0 failed**. In both, the remainder are
+  `[Explicit]` or ignored.
   PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
+  **PlayMode's previously recorded 74 was wrong, not superseded**: nothing under
+  `Assets/Odyssey/Tests/PlayMode` has changed since the commit it was recorded against, no
+  PlayMode test is parameterised, and this branch adds none. Three cases were miscounted or
+  mis-transcribed into this file; the figure above is measured. EditMode's 1638 was right and rose
+  by exactly the four tests this branch adds.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
   `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
