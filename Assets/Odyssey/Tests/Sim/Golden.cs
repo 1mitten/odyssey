@@ -200,6 +200,20 @@ namespace Odyssey.Tests.Sim
         /// The ruined city, which is still generated and still tested even though the scene does
         /// not load it. Its passes are the ones nothing else exercises.
         ///
+        /// <para><b>Re-baked twice on 2026-09-18, and the merge of the two is the interesting
+        /// part.</b> Both branches moved this one number for different reasons — the ladder shaft
+        /// rule on `main`, the rates work on its own branch — so the merge conflicted here and
+        /// <i>neither</i> side's value was right for the merged code. It was baked afresh, which is
+        /// the only honest resolution of a golden conflict: taking either side would have committed
+        /// a number nothing had produced.</para>
+        ///
+        /// <para>It came back as the rates branch's number exactly, which looks wrong and is not.
+        /// Connectors are <b>derived and not hashed</b> — the same rule that keeps support and the
+        /// region graph out — so the shaft rule moves a hash only where it changes what a pawn
+        /// actually <i>does</i>. On main's trajectory a colonist used one of the city's newly live
+        /// ladders inside the window; on the rates trajectory, with every work and move rate
+        /// shifted, none does. The ladder code is present in the merge — checked, not assumed.</para>
+        ///
         /// <para><b>Simulated re-baked 2026-09-18</b> for the ladder shaft rule, and the failure
         /// named its own cause: the board generated identically and only the run diverged. A ladder
         /// used to need a slab <i>directly above</i> it to register a connector at all, so every
@@ -216,7 +230,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 6021360912580352346UL,
+            Simulated = 9209903446312531288UL,
         };
     }
 }
