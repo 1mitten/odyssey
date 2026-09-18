@@ -1,6 +1,7 @@
 #nullable enable
 using System.IO;
 using NUnit.Framework;
+using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
@@ -217,7 +218,24 @@ namespace Odyssey.Tests.Sim
             JobDef fell = content.Jobs[JobIndex.Fell];
             Assert.That(fell.experiencePerWorkTick, Is.GreaterThan(0), "felling trains nothing");
             int perMille = content.Skills[SkillIndex.Cutting].gainPerMilleByPassion[cutter!.Passions[SkillIndex.Cutting]];
-            int expected = startingCutting[cutter.Id.Value] + fell.workTicks * (fell.experiencePerWorkTick * perMille / 1_000);
+
+            // How many swings the tree owes is WS2's question now: a swing banks the cutter's
+            // rate in milliwork and the face charges the standard price, and the rate is the
+            // curve at the level she has reached — which RISES as she learns, swing by swing.
+            // So the expected grant count comes from walking the same loop the driver runs:
+            // read the rate at the experience she has, bank it, pay the grant, repeat until the
+            // face is paid for. The grant itself is constant (passion, no soft cap in one tree);
+            // only its count moves.
+            int grant = fell.experiencePerWorkTick * perMille / 1_000;
+            int experience = startingCutting[cutter.Id.Value];
+            int swings = 0;
+            for (int milliwork = 0; milliwork < fell.workTicks * Rates.Scale; swings++)
+            {
+                milliwork += content.WorkTypes[WorkTypeIndex.Cutting]
+                    .WorkRatePerMille(content.Skills[SkillIndex.Cutting].Level(experience));
+                experience += grant;
+            }
+            int expected = startingCutting[cutter.Id.Value] + swings * grant;
 
             Assert.That(cutter.Skills[SkillIndex.Cutting], Is.EqualTo(expected));
             foreach (Pawn pawn in colony.Pawns.Pawns.All)

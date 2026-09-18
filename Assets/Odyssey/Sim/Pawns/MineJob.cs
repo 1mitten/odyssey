@@ -272,6 +272,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class MineJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Mining;
+
         /// <summary>
         /// The rock face, once the walk is over and the swings have started. Presentation turns
         /// this into a tool in the hands and an arm that comes down on it; before the walk ends it

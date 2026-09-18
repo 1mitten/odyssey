@@ -107,6 +107,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public virtual int WorkFocus => -1;
 
+        /// <summary>
+        /// The work type this driver discharges, as a <see cref="WorkTypeIndex"/> value — the
+        /// answer to "what is she working at" that the rate publisher asks every publish. The
+        /// default is hauling because it prices flat at today's speed (its def has no rate
+        /// skill), so a driver that never swings — eating, sleeping, idling — and is somehow
+        /// asked anyway reads as exactly the pace it always had.
+        /// </summary>
+        public virtual int WorkType => WorkTypeIndex.Haul;
+
         public virtual void Begin(Pawn pawn, Job job)
         {
             Pawn = pawn;

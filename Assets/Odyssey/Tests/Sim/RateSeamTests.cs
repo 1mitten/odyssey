@@ -108,15 +108,23 @@ namespace Odyssey.Tests.Sim
         // ---- the seam at rest --------------------------------------------------------------
 
         [Test]
-        public void AColonistUntouchedByAnyOfThisWorksAndWalksAtTodaysSpeed()
+        public void AColonistUntouchedByAnyOfThisPaysAtHerCurvesAndWalksAtTodaysSpeed()
         {
+            // WS1 pinned these at 1,000 because that was its done criterion; WS2 replaced the
+            // work answer with the def curve (design 17 §3b) at the colonist's own level — and a
+            // fresh colonist has no levels. Movement and condition are still WS3's to move.
             ColonyWorld colony = Board();
             var pawn = colony.Pawns.Pawns.Spawn(Size.Index(colony.Start));
 
-            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Haul), Is.EqualTo(Rates.Scale));
-            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Cutting), Is.EqualTo(Rates.Scale));
-            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Mining), Is.EqualTo(Rates.Scale));
-            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Construction), Is.EqualTo(Rates.Scale));
+            var content = ContentPack.Pawns();
+            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Haul), Is.EqualTo(Rates.Scale),
+                "hauling is flat, and still exactly today's speed");
+            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Cutting),
+                Is.EqualTo(content.WorkTypes[WorkTypeIndex.Cutting].WorkRatePerMille(0)));
+            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Mining),
+                Is.EqualTo(content.WorkTypes[WorkTypeIndex.Mining].WorkRatePerMille(0)));
+            Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Construction),
+                Is.EqualTo(content.WorkTypes[WorkTypeIndex.Construction].WorkRatePerMille(0)));
             Assert.That(pawn.MoveRatePerMille(), Is.EqualTo(Rates.Scale));
             Assert.That(pawn.ConditionPerMille(), Is.EqualTo(Rates.Scale));
         }

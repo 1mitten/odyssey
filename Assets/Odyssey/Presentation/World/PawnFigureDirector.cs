@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -1004,6 +1006,26 @@ namespace Odyssey.Presentation.World
         /// <summary>How much of a frame's measured speed the figure's smoothed speed takes.</summary>
         public const float SpeedSmoothing = 0.35f;
 
+        /// <summary>
+        /// How far the stroke clock moves in a frame, at the pawn's published rate: a thousandth
+        /// of the rate per mille of the frame's time. The whole of the WS2 stroke-clock change —
+        /// a fast worker visibly swings faster, a novice labours — and the reason it is a
+        /// multiplication by a published number, not a second mechanism, is design 17 §3d.
+        /// </summary>
+        public static float SwingAdvance(float deltaTime, int ratePerMille) =>
+            deltaTime * ratePerMille / Rates.Scale;
+
+        /// <summary>
+        /// The work rate the frame publishes for this colonist, or the standard rate when
+        /// nothing did — the frame may predate the aspect or the pawn may have gone missing
+        /// between frames, and a figure that cannot be told otherwise works at today's speed.
+        /// A scan, like every <c>TryGetPawnAspect</c> read; the figures on screen are tens.
+        /// </summary>
+        int WorkRateOf(PawnId id) =>
+            _frame != null && _frame.TryGetPawnAspect(id, RateAspects.Work, out int rate)
+                ? rate
+                : Rates.Scale;
+
         void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
             float frameTime, bool running)
         {
@@ -1028,7 +1050,14 @@ namespace Odyssey.Presentation.World
             // The swing's own clock, which runs only while there is work. Freezing it between
             // jobs rather than letting it free-run means a colonist's first blow at a new tree
             // is a first blow, not whatever part of a stroke the wall clock happened to be in.
-            if (pawn.Working && running) figure.SwingClock += deltaTime;
+            //
+            // Scaled by the rate the simulation says the pawn is paying at (design 17 §3d): a
+            // master visibly swings faster and a novice labours, and because BlowLanded fires
+            // off the stroke phase, the chips and the impact audio follow for free. Work stays
+            // continuous per tick in the simulation and the swing is scaled to match it — the
+            // two agree in aggregate without either owning the other.
+            if (pawn.Working && running)
+                figure.SwingClock += SwingAdvance(deltaTime, WorkRateOf(pawn.Id));
             else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
 
             // The one-shot gestures, started by a serial that has moved rather than by a state

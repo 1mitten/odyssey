@@ -276,22 +276,33 @@ namespace Odyssey.Sim.Pawns
         public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
 
         /// <summary>
-        /// Work this pawn discharges per tick on a work type, in thousandths of a
-        /// tick-at-standard-rate: 1,000 is the speed everything is tuned at today (design 17 §2).
+        /// The rate this pawn pays work at, in thousandths of a tick-at-standard-rate: 1,000 is
+        /// the speed everything is tuned at today (design 17 §2). <b>The rate never changes what
+        /// a thing costs; it changes how fast this pawn pays for it.</b> The four drivers add
+        /// this to the accumulator their work banks in, and the comparison reads the cost ×
+        /// <see cref="Rates.Scale"/>, so a cell worked by two colonists of different speed
+        /// accumulates in a unit that means the same thing to both.
         ///
-        /// <para><b>The rate never changes what a thing costs; it changes how fast this pawn pays
-        /// for it.</b> The four drivers add this to the accumulator their work banks in, and the
-        /// comparison reads the cost × <see cref="Rates.Scale"/>, so a cell worked by two
-        /// colonists of different speed accumulates in a unit that means the same thing to both.
-        /// U42 answers a constant; U43 gives it the per-work-type curve, and the composition order
-        /// is fixed there: curve × condition, clamped.</para>
+        /// <para>The value is the work type's def curve at her level of the skill that drives it,
+        /// times <see cref="ConditionPerMille"/>, floored at the def's floor. The composition
+        /// order is the reference's (design 17 §3e): curve first, then every multiplicative
+        /// factor, then the clamp — the floor is applied last so no future factor can price a
+        /// tick of work at nothing.</para>
         /// </summary>
-        public virtual int WorkRatePerMille(int workType) => Rates.Scale;
+        public virtual int WorkRatePerMille(int workType)
+        {
+            WorkTypeDef def = Content.WorkTypes[workType];
+            int curve = def.rateSkill < 0
+                ? Rates.Scale
+                : def.WorkRatePerMille(SkillLevel(def.rateSkill));
+            int rate = curve * ConditionPerMille() / 1_000;
+            return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
+        }
 
         /// <summary>
         /// Cost units this pawn retires per tick, in thousandths of a tick-at-standard-rate —
         /// the place a movement-speed modifier belongs. Read off <c>movePerTick</c> content, so
-        /// today's 1 against a flat 100 stays exactly the walk it has always been; U44 composes
+        /// today's 1 against a flat 100 stays exactly the walk it has always been; WS3 composes
         /// the innate factor and condition on top, in that order (design 17 §4a).
         /// </summary>
         public virtual int MoveRatePerMille() => Content.Movement.movePerTick * Rates.Scale;
@@ -299,8 +310,8 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// How the colonist is right now, as one scalar both rates read: 1,000 is well. One
         /// computation, one floor, two consumers — a colonist in a bad way is slower at walking
-        /// and slower at working, and there is exactly one place to ask why. U42 answers a
-        /// constant; U44 lets starvation offset it, floored at 700 and ceilinged at 1,000 —
+        /// and slower at working, and there is exactly one place to ask why. WS1 answered a
+        /// constant; WS3 lets starvation offset it, floored at 700 and ceilinged at 1,000 —
         /// nothing may raise it above baseline (design 17 §4c).
         /// </summary>
         public virtual int ConditionPerMille() => Rates.Scale;

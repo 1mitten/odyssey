@@ -183,6 +183,16 @@ namespace Odyssey.Sim.Pawns
                 // could only ever give the second. Reinterpreted rather than converted — an aspect
                 // carries an int and a seed is a uint, and every bit of it matters.
                 writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
+
+                // The rate she is paying work at right now (design 17 §3d), which is what the
+                // stroke clock is scaled by. Asked of the driver on the same terms as the view's
+                // Working above — a swing in place, not merely a job — because the clock only
+                // turns while the pawn is working, and outside those ticks the standard rate is
+                // the honest answer to a question nobody is asking.
+                writer.AddPawnAspect(pawn.Id, RateAspects.Work,
+                    workFocus >= 0 && pawn.Driver != null
+                        ? pawn.WorkRatePerMille(pawn.Driver.WorkType)
+                        : Rates.Scale);
             }
 
             var items = _ctx.Items.Items;

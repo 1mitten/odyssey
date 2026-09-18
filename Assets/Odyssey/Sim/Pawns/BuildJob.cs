@@ -277,6 +277,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class DeliverJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Construction;
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
             var sites = ctx.Construction;
@@ -381,6 +383,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class BuildJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Construction;
+
         /// <summary>
         /// The site, once the walk is over and the work has started, so presentation puts a hammer
         /// in the hands and turns the figure to face what it is building. -1 during the walk and

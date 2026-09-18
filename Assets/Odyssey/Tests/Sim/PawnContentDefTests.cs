@@ -81,7 +81,12 @@ namespace Odyssey.Tests.Sim
         // taken from a freshly loaded pack after the write-through in ConstructionTests' first
         // version had been found and removed: a fingerprint of a polluted database is the wrong
         // number to pin, and it is not the number a clean load produces.
-        const ulong ContentFingerprint = 11486946601781265446UL;
+        //
+        // Moved a sixth time, 2026-09-18, by WS2's curve: the three skilled work types gained the
+        // four rate integers each — rateSkill, workRateBasePerMille, workRateSlopePerLevel and
+        // workRateFloorPerMille — so a colonist pays work at her skill's pace and not at the flat
+        // speed everything was tuned at (design 17 §3a). Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 3060061624158536349UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

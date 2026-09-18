@@ -75,6 +75,8 @@ namespace Odyssey.Sim.Pawns
 
     public class DeconstructJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Construction;
+
         /// <summary>The wall being taken down, so the figure swings at it rather than at its own feet.</summary>
         public override int WorkFocus =>
             ToilIndex != 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;

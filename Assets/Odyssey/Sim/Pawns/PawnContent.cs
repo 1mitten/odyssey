@@ -371,6 +371,43 @@ namespace Odyssey.Sim.Pawns
             int chance = successBasePerMille + successSlopePerLevel * level;
             return chance < 0 ? 0 : chance > 1_000 ? 1_000 : chance;
         }
+
+        /// <summary>
+        /// The <see cref="SkillIndex"/> whose level drives this type's work rate, or -1 for none.
+        /// Hauling is the -1: a skill drives either rate or quality, and hauling has neither —
+        /// it is move speed and carrying capacity (design 17 §3a, and 15-skills §6 agrees).
+        /// </summary>
+        public int rateSkill = -1;
+
+        /// <summary>
+        /// Work rate at skill level 0, per mille of the speed everything is tuned at (design
+        /// 17 §3b). The default 1,000 is the flat rate a work type had before curves existed.
+        /// </summary>
+        public int workRateBasePerMille = 1_000;
+
+        /// <summary>Work rate added per level of <see cref="rateSkill"/>, per mille.</summary>
+        public int workRateSlopePerLevel;
+
+        /// <summary>
+        /// The lowest rate a pawn may pay at, per mille. The curve itself never reaches it —
+        /// the floor is what stops a future multiplier from pricing a tick of work at nothing
+        /// and turning every job into one the job system can never finish.
+        /// </summary>
+        public int workRateFloorPerMille = 100;
+
+        /// <summary>
+        /// The work rate of this type at a skill level, per mille: dead linear, no diminishing
+        /// returns anywhere — every diminishing return in this project is on <i>acquiring</i>
+        /// levels, which is machinery the skill Def already owns. The integers are INVENTED
+        /// (design 17 §3b): anchored on our own mean starting roll of 1.16 rather than the
+        /// reference's level 8, with the reference's relative character kept — mining steepest,
+        /// construction shallowest.
+        /// </summary>
+        public int WorkRatePerMille(int level)
+        {
+            int rate = workRateBasePerMille + workRateSlopePerLevel * level;
+            return rate < workRateFloorPerMille ? workRateFloorPerMille : rate;
+        }
     }
 
     public static class ItemIndex

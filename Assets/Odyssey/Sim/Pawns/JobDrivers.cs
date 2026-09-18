@@ -216,6 +216,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class FellJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Cutting;
+
         /// <summary>
         /// The tree, once the walk is over and the swings have started. Presentation turns this
         /// into an axe in the hands and an arm that comes down on it; before the walk ends it is
