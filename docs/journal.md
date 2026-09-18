@@ -5317,6 +5317,57 @@ The screenshots were what made the probe possible. "It doesn't respect the rotat
 between the cell, the facing and the drawing; two pictures of the same three beds before and after
 building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.
 
+## 2026-09-18 — "Sometimes" meant a race between two blueprints
+
+Three ladder reports from the same playtest. The value of the day was in what did *not* get built.
+
+**Report 2 was already done.** R, the turning ghost and the red refusal all landed in PR #110, which
+is the build the owner was playing when they asked for them. Fifteen minutes of checking
+`BuildShapes.Rotates`, the def and `OdysseyBootstrap.Refused` against the merge saved a unit of work
+on a feature that already existed. Verify before building is not a slogan here; it is the second time
+this week it has paid.
+
+**Report 1 was two complaints and one cause.** "Can't place a ladder under a slab" is the rule the
+owner asked for the day before and it stands — they chose refuse-and-say-nothing-more over
+auto-deconstructing the slab or allowing an inert ladder, when all three were put to them. "And has
+to be against the wall" sounded like a second bug and nothing in the code has ever asked for a
+neighbouring wall. It is the same rule seen from inside a roofed room: every cell there is under a
+slab, so the only cells that take a ladder are the ones past the slab's edge, which are the ones
+beside the wall. Confirmed by the owner rather than assumed.
+
+**Report 3's prime suspect was wrong, and the probe took one run to say so.** The standing theory —
+written into the design document the day before as the deferred migration — was `LadderArrivesAt`'s
+compatibility clause. It cannot be the cause on the board the owner played: **the wooded meadow
+generates no ladders and no connectors at all**, measured on three seeds. That single number
+redirected the whole hunt.
+
+What it actually was: **the shaft rule asked the built world, and a blueprint is not built.** Order a
+ladder, order a floor above it; each is legal on its own because neither exists yet. Both get built.
+That is the whole of "sometimes" — it depended on which job a colonist picked up. The fix is that the
+rule sees sites, and is asked again at `Raise`, because the rule spans two cells that are ordered
+separately and the other order can legitimately arrive later. Only that rule is re-asked, not the
+whole of `Allows`: a site with its own material hauled to it fails `needsClearCell`, and re-asking
+everything would have refused every bed whose wood had been delivered. A general fix would have
+introduced a worse bug than the one it closed.
+
+**The clause went anyway and cost nothing, which is worth recording because the plan said otherwise.**
+The owner accepted the save break; the plan said it meant stamping holes in worldgen and re-baking
+`Golden.City`. All three golden masters came back byte-identical — worldgen's ladders reach the nav as
+`StampedConnector`s and never consult `LadderArrivesAt` at all. The migration that had been deferred
+as expensive turned out not to exist. Measuring the consequence beat reasoning about it, again.
+
+**Two defects fell out that nobody had reported.** A shaft could only ever be one storey: a ladder is
+`blocking false` so a colonist can stand in it, and `SomethingUnderfoot` wants a *blocking* edifice,
+so the second ladder of a chain was refused and `LadderArrivesAt`'s own chain clause — written
+expressly for that case — was unreachable for anything a player built. Every test in `LadderTests`
+builds one ladder, so nothing had ever asked the question. And the first fix did not work: the
+connector was gated on `CellGrid.IsWalkable`, which cannot see that a connector is its own floor, so
+the chain built and the upper ladder silently had no connector. The pattern is the one this project
+keeps meeting — two correct rules that disagree about the same question — and the answer was the same
+as ever: one named owner for each half, `StandsOnSomething` for placement and `StandsOnAFooting` for
+the connector, with the difference between them written down.
+
+Both fixes were the owner's call, asked mid-unit rather than assumed, and both were told to go in.
 ### The candidate card lost its skills to a face, and nobody could see it (2026-09-18)
 
 The owner, playing the setup page: *"I'm not seeing the skills rolled randomly on the character
