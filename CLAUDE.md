@@ -189,6 +189,7 @@ this file.
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
 | The build cursor and its drag gesture | `docs/design/19-build-cursor.md` |
+| The white selection cursor sitting flush | `docs/design/23-flush-selection-cursor.md` |
 | Input cases, modality, live portraits | `docs/design/09-ui-and-input.md` |
 | Panels | `docs/design/10-ui-panel-catalogue.md` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
@@ -269,10 +270,8 @@ invisible where the game is played.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the
-  text-entry keyboard gate, colonist renaming and the starting kit, **before** they were merged over
-  roster pagination: EditMode **1740 total, 1726 passed, 0 failed**. The remainder are `[Explicit]`
-  or ignored. The merged tree's run is CI's, because an editor was open on the worktree.
-- **PlayMode, the same day: 82 total, 77 passed, 0 failed**, including
+  flush selection cursor on terrain, floors, water, and banks: EditMode **1752 total, 1738 passed, 0 failed** (12 added by `SelectionCursorTests`).
+  PlayMode, the same day: **82 total, 77 passed, 0 failed**.
   `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
   `TheRosterBarFollowsTheColonyIntoANewSession`.
   PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.

@@ -213,6 +213,18 @@ namespace Odyssey.Presentation.Rendering
             return (BankMesh.HeightAt(bank.Kind, localX, localZ) + 0.5f) * CellMetrics.SizeY;
         }
 
+        /// <summary>
+        /// A shear matrix in bank-local coordinates representing the slope of a straight bank.
+        /// The bank rises by SizeY (3.0 m) over SizeXZ (2.5 m) along local +z, centered at local y = 1.5 m.
+        /// </summary>
+        public static Matrix4x4 StraightBankShear()
+        {
+            var m = Matrix4x4.identity;
+            m.m12 = CellMetrics.SizeY / CellMetrics.SizeXZ;
+            m.m13 = CellMetrics.SizeY * 0.5f;
+            return m;
+        }
+
         // ------------------------------------------------------------------ the conditions
 
         /// <summary>

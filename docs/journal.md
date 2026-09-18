@@ -6000,3 +6000,22 @@ Three owner asks in one branch, and the first turned out to be the biggest.
   apart.
 - **Verified:** fast tier **724 Sim + 432 Hud**; EditMode **1740 total, 1726 passed, 0 failed**;
   PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
+- **The white selection cursor sitting flush on terrain, floors, water, and banks (2026-09-18).**
+  The white cursor bracket used to select cells and inspect info in the world previously failed to sit flush on sloped terrain:
+  part of the bracket stubs sank into the ground (obscured from view) while the opposite edges hovered high in the air.
+  - **Root causes in `ChunkRenderer.DrawFloorBracket`:**
+    1. Stubs were placed with `Quaternion.identity` (pure horizontal orientation) and only 5 mm initial clearance (`0.04m - 0.035m`), while ground mesh and floor slabs are rendered as sheared tangent planes via `GroundRelief.Drape(centre)`. On meadow slopes (~8°), an unrotated horizontal stub sinks up to ~7 cm into the rising ground.
+    2. Stubs sampled `GroundRelief.Lift` independently at each of the four cell corners. Because the ground relief is curved (sinusoids), four corner elevations disagree with the planar sheared mesh of the cell.
+    3. `DrawFloorBracket` ignored water surface elevation (`WaterLine.SurfaceAbove`) and bank ramps (`BankLayout.At`), drawing the bracket at the submerged cell floor or buried inside bank ramps.
+  - **The geometric solution (`docs/design/23-flush-selection-cursor.md`):**
+    - The eight stubs of a floor bracket (two per corner) are defined in cell-local coordinates and transformed by the surface's placement matrix:
+      `placement = GroundRelief.Drape(surfaceCentre)`.
+    - Because the stubs share the exact shear transformation `(m10 = slopeX, m12 = slopeZ)` as the terrain mesh, every point on the bottom face of every stub maintains an exact, uniform clearance of `FloorBracketBias = 0.008f` (8 mm) above the draped ground plane, completely eliminating ground clipping and z-fighting on any slope.
+    - Surface elevation resolution:
+      1. Water cells: `placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell) + Vector3.up * WaterLine.SurfaceAbove(_model, cell))` rests the cursor directly on the water surface.
+      2. Straight bank risers: `BankLayout.StraightBankShear()` shears the bracket stubs by `SizeY / SizeXZ = 1.2` along local Z, so stubs along Z tilt with the 1.2 ramp slope from lower terrace to upper terrace while X stubs remain horizontal across the ramp.
+      3. Corner bank risers: 4-corner rise values calculated from `BankMesh.HeightAt` lift corner stubs to conform to the inner/outer bank facets.
+      4. Solid blocks / edifices: `DrawCellHighlight` updated from `Lift` to `Drape`, ensuring upright cell selection boxes remain plumb and full height on slopes.
+  - **Asserted rather than looked at:** Added `Assets/Odyssey/Presentation/Tests/SelectionCursorTests.cs` verifying the 8-stub topology, exact 8 mm clearance on flat ground and ~8° slopes, straight bank shear slopes, corner rises, and water placement elevation.
+  - **Verified:** fast tier **724 Sim + 438 Hud**; EditMode **1752 total, 1738 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
