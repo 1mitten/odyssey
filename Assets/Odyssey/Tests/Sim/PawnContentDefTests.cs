@@ -74,7 +74,14 @@ namespace Odyssey.Tests.Sim
         // this number, so the merged content has a fingerprint neither of them ever computed. It
         // was taken by running the test against the merged pack rather than by picking a side,
         // which is the only thing that could have produced a correct answer here.
-        const ulong ContentFingerprint = 7500205209164907889UL;
+        //
+        // Moved a fifth time, 2026-09-17, by U26's last line: Work_Construction gained the two
+        // success-roll integers — successBasePerMille 850, successSlopePerLevel 50 — so a
+        // completed build rolls against the finishing builder's skill and can botch. The value was
+        // taken from a freshly loaded pack after the write-through in ConstructionTests' first
+        // version had been found and removed: a fingerprint of a polluted database is the wrong
+        // number to pin, and it is not the number a clean load produces.
+        const ulong ContentFingerprint = 11486946601781265446UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

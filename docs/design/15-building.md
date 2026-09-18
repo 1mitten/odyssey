@@ -149,6 +149,77 @@ not throw the morning away — the same argument, and the same shape, as mining'
 Presentation: `WorkStyle.Building` (the hammer) is reached through `IndexForJob`, which is what that
 style was written for and could not do until `JobHandle.Build` existed.
 
+## 4a. The last hammer blow is rolled
+
+**A completed build can botch.** When the final tick of work lands, `BuildJobDriver` rolls against
+the finishing builder's construction level: on success the wall goes up as before, on failure the
+banked work is thrown away, half the delivered material is lost, and **the site stands — a blueprint
+again**, waiting to be fed and built a second time.
+
+| | |
+|---|---|
+| Chance | `WorkTypeDef.SuccessPerMille(level)` = `successBasePerMille + successSlopePerLevel × level`, clamped to 0…1000 |
+| Shipped numbers | `Work_Construction`: base **850**, slope **50** a level — so a novice botches about one wall in seven, and a **level-3** builder never botches |
+| Seed | `DeterministicRandom.ForTick(worldSeed, cell ^ tick, PawnPurpose.BuildSuccess)` |
+| What a botch keeps | half the delivery, the odd unit by a second flip (`PawnPurpose.BuildBotchLoss`) |
+| Where it lands | `ConstructionGrid.Botch(cell, keep)` — sets work to 0 and delivery to what is kept |
+
+**The curve is re-anchored, not copied.** The reference's own numbers (a-04 §4) run 75% at skill 0
+to a certain 100% at skill **8**, and 8 is where *its* colonists sit. Ours start at an average of
+**1.16**, so a certainty ceiling at 8 would mean a colony that botches most of its walls for the
+whole early game. Certainty sits at **3** here for exactly the reason it sits at 8 there — just above
+where a starting colony actually is. This is the same re-anchoring rule the rates line follows
+(`17-rates-and-stats.md` §3b); the integers are invented and are the owner's to tune.
+
+**The finisher rolls, not the colonist who did the work.** A building records no author, so the level
+consulted is whoever happened to land the last tick. That is the reference's shape and it is kept
+**deliberately**, exploit and all: it is what lets a master rescue a novice's half-built wall by
+walking over and finishing it, which reads as a sensible thing for a colony to do rather than as a
+bug.
+
+**A botch loses material because otherwise it costs nothing.** The lost fraction is Odyssey's own
+number — the reference says only "some resources" and a-04 records that under *could not be
+determined*. Half is the deconstruct refund's arithmetic pointed the other way, so a botch costs what
+a demolition returns; and both ends want the same seeded flip on the odd unit rather than a rounding
+rule, or a five-wood wall would always round the same way.
+
+**Nothing in the world changes on a botch, and that is why `Botch` marks nothing dirty.** No wall
+appeared, so no chunk, no walkability and no support moved. The only state that moved is the site's
+two numbers, which the hash and the save already carry — so a botch replays from a seed, survives a
+save, and survives a reload. Both givers simply ask their questions again on the next scan: the
+deliverer first, because material is outstanding once more, then the builder. **A botch costs the
+colony work and material and never the order.**
+
+**Every other work type is certain.** `successBasePerMille` defaults to 1000 with a zero slope, which
+is the behaviour that existed before the roll — construction is the only work type that *completes* a
+thing, so it is the only one with a completion to roll.
+
+### 4a.1 Two rolls at the same instant, and the order they go in
+
+U26 left **two** rolls at the moment of completion and they arrived from two directions: the success
+roll above, and the **quality tier** that came with the bed (`20-beds.md` §6). The bed's status line
+recorded itself as "closing U26's outstanding success roll", which was a misreading corrected when
+the two merged — quality is the second roll, not the first, and neither subsumes the other.
+
+They compose in one order and it is not arbitrary:
+
+1. **Does it stand at all?** `PawnPurpose.BuildSuccess`, every building.
+2. **How well was it made?** `PawnPurpose.BuildQuality`, only where `BuildingDef.takesQuality` — a
+   bed does, a wall never does.
+
+**A botch never reaches the quality roll**, because a thing that was not built has no quality to
+have. The two draw from **separate salts**, so asking the first does not move the second's answer,
+and both read the *finishing* colonist's Construction level — the same exploitable property, kept
+deliberately at both ends for the same reason.
+
+**A botched bed is the one place the two features touch**, since a bed is the only thing that is both
+quality-bearing and two cells. It is safe for a reason worth writing down rather than rediscovering:
+a site's work and delivery live on the **head** cell only, the far cell being derived from the head's
+footprint and facing, and `Botch` is handed exactly the cell `Raise` would have been. So a botched
+bed keeps its item hold, stays one order, and still answers to either of its cells.
+`ABotchedBedRollsNoQualityAndKeepsBothItsCells` is the test, and it was checked against a build
+forced to *succeed* before being believed.
+
 ## 5. The contract
 
 `SiteView` carries **real counts and real ticks**, where `OrderView.Progress` is a quantised byte.
@@ -225,6 +296,21 @@ wood and asserts the site stays a blueprint for ever.
 
 **Both halves matter.** A test that has not been seen to fail is not evidence, and the whole feature
 once passed every test in the repository while doing nothing in the game (§7).
+
+**The botch (§4a) is four more.** `TheChanceRisesWithSkillAndStopsAtCertainty` pins the curve's
+*shape* without re-pinning its literals, which the content fingerprint already owns.
+`AFrameCanBeBotched` forces failure to certainty and watches one site through the whole thing — fed,
+botched, work thrown away, half the wood gone, **fed again** — because the claim is what a botch
+does, not how often. `TheSameSeedBotchesTheSameWay` runs one seed twice and compares the histories.
+`ABotchingColonyStillRaisesItsWall` runs the shipped curve with nothing overridden and proves the
+retry is not a wedge.
+
+**A test that retunes construction replaces the `WorkTypeDef`, never writes through it.** The Defs a
+content record's arrays point at are shared by every record in the process (`ContentPack`'s rule), so
+`WorkTypes[i].successBasePerMille = 1_000` silently retunes every test that runs afterwards. This was
+found the expensive way: the first version of these tests wrote through, and the content fingerprint
+pinned in `PawnContentDefTests` was then taken from the polluted database rather than from a clean
+load.
 
 ### By hand, in `Play.unity`
 

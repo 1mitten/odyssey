@@ -339,6 +339,38 @@ namespace Odyssey.Sim.Pawns
     {
         /// <summary>Position in the work tab, left to right. Lower scans first at equal priority.</summary>
         public int order;
+
+        /// <summary>
+        /// Per-mille chance that a <b>completed</b> piece of this work succeeds, at skill level 0.
+        /// Construction is the only work type that completes things and rolls; every other type
+        /// leaves this at the default, which is certainty — no roll, the behaviour before the
+        /// success roll existed.
+        ///
+        /// <para>U26's last line, and the reference's own shape (a-04 §4: a novice at 75% rising
+        /// to a certain 100%) re-anchored the way every reference curve here is: its certainty
+        /// sits at skill 8, where its colonists actually are, and ours sits three levels up from
+        /// zero, just above what our starting roll averages (1.16). The integers are INVENTED and
+        /// the owner's to tune at the keyboard.</para>
+        /// </summary>
+        public int successBasePerMille = 1_000;
+
+        /// <summary>
+        /// Points of that chance per skill level. With the shipped 850 + 50 a level: a novice
+        /// botches one wall in seven, a level-1 colonist one in ten, and a level-3 builder never
+        /// botches at all.
+        /// </summary>
+        public int successSlopePerLevel;
+
+        /// <summary>
+        /// The chance a builder of this level completes a build successfully, in thousandths,
+        /// floored at the base and ceilinged at certainty — no future content value can turn the
+        /// roll into a guarantee below level 0 or a lottery above it.
+        /// </summary>
+        public int SuccessPerMille(int level)
+        {
+            int chance = successBasePerMille + successSlopePerLevel * level;
+            return chance < 0 ? 0 : chance > 1_000 ? 1_000 : chance;
+        }
     }
 
     public static class ItemIndex
@@ -716,6 +748,25 @@ namespace Odyssey.Sim.Pawns
         public const uint StartingSkill = 0x5A82_7999;
 
         /// <summary>
+        /// Whether a completed build succeeds or botches (U26). Drawn from (world seed,
+        /// <b>cell index ^ tick</b>) for the same reason <see cref="DeconstructRefund"/> mixes the
+        /// tick in: success keyed on the cell alone would make every cell on the board permanently
+        /// a lucky one or an unlucky one — stable, discoverable, and then worth farming by
+        /// demolishing and re-ordering on the good cells. Keyed on both, it replays identically
+        /// from a seed, which is all determinism asks.
+        /// </summary>
+        public const uint BuildSuccess = 0xCC9E_2D51;
+
+        /// <summary>
+        /// The odd unit when a botched build keeps half of an odd delivery. Beside
+        /// <see cref="BuildSuccess"/> rather than sharing its salt, because two draws from one
+        /// stream are two answers the arithmetic has tied together. Both are MurmurHash3
+        /// constants — a different family from the xxHash primes above, for the same reason
+        /// <see cref="StartingSkill"/> stepped outside them.
+        /// </summary>
+        public const uint BuildBotchLoss = 0x1B87_3593;
+
+        /// <summary>
         /// The quality tier a bed finishes at (design 20 §6). Drawn from (world seed,
         /// <b>cell index ^ tick</b>) — the refund's shape, not the yield's, and for the refund's
         /// reason: quality is a property of the <i>moment</i> of completion, not of the cell. A
@@ -725,8 +776,10 @@ namespace Odyssey.Sim.Pawns
         /// demolishing the disappointments.
         ///
         /// <para>Chosen outside the xxHash prime family for the reason
-        /// <see cref="StartingSkill"/> records: all five primes are spent, and this is the
-        /// third constant to step outside it.</para>
+        /// <see cref="StartingSkill"/> records: all five primes are spent. It read "the third
+        /// constant to step outside it" when the bed landed; the success roll merged in beside it
+        /// with two more, so it is now the <b>fourth</b> — <see cref="StartingSkill"/>,
+        /// <see cref="BuildSuccess"/>, <see cref="BuildBotchLoss"/>, this.</para>
         /// </summary>
         public const uint BuildQuality = 0x7F4A_7C15;
     }

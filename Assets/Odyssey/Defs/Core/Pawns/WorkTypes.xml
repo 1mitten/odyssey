@@ -35,11 +35,19 @@
     It covers carrying material to a site as well as working at one. Delivery is not a
     haul that happens to help: a haul takes a thing to a stockpile because it is tidier
     there, and this takes a thing to a site because a wall cannot be built without it.
+
+    The two success numbers are the completion roll (U26): 850 in a thousand at level 0,
+    50 more a level, certain from level 3. A novice botches about one wall in seven and
+    loses the work and half the material; a builder the colony has grown never botches.
+    Anchored on our own roll the way the reference anchors on its own — its certainty is
+    at level 8 because that is where its colonists sit, ours is at 3 for the same reason.
   -->
   <WorkTypeDef>
     <defName>Work_Construction</defName>
     <label>construction</label>
     <order>0</order>
+    <successBasePerMille>850</successBasePerMille>
+    <successSlopePerLevel>50</successSlopePerLevel>
   </WorkTypeDef>
 
 </Defs>

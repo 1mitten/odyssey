@@ -435,6 +435,11 @@ namespace Odyssey.Tests.Sim
         public void AnOrderedWallIsFedWorkedAndRaised()
         {
             ColonyWorld colony = Board();
+            // This test is about the journey — order, delivery, work, a wall — and its wood
+            // arithmetic is exact, so the builder here never botches: the roll has its own tests
+            // below, and a wall in this file's journey raising on the first attempt is not one of
+            // the claims being made.
+            SuccessChance(colony, 1_000, 0);
             int cell = SiteBesideTheStart(colony);
             Assume.That(cell, Is.GreaterThanOrEqualTo(0));
 
@@ -490,6 +495,287 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.Wall), "the order still stands");
             Assert.That(colony.Construction.Delivered(cell), Is.EqualTo(0));
             Assert.That(colony.Construction.WorkDone(cell), Is.EqualTo(0), "and nobody worked at it");
+        }
+
+        // ---- the success roll -----------------------------------------------------------------
+        //
+        // U26's last line: a completed build rolls for success against the finishing builder's
+        // skill, and a failure — a botch — throws the work away and some of the material with it.
+        // The reference's shape (a-04 §4: 75% at skill 0 rising to a certain 100%), re-anchored on
+        // our own colonists the way every reference curve in this project is: its never-fail level
+        // sits at 8, where its colonists actually are, and ours sits at 3, just above the level our
+        // starting roll averages (1.16). The two integers are content, in WorkTypes.xml.
+
+        /// <summary>
+        /// Point this world's own record at a construction chance the test can reason about.
+        ///
+        /// <para><b>The element is replaced, never written through.</b> A record's arrays are its
+        /// own, but the Defs they point at are shared by every record in the process —
+        /// <c>ContentPack</c>'s own rule — so writing
+        /// <c>colony.Pawns.Content.WorkTypes[i].successBasePerMille = …</c> edits the database
+        /// itself and with it every test that runs afterwards. That is how this file's first
+        /// version failed: three tests, three different symptoms, one shared def somebody had
+        /// quietly retuned. A fresh def in this world's own array changes one world.</para>
+        /// </summary>
+        static void SuccessChance(ColonyWorld colony, int basePerMille, int slopePerLevel)
+        {
+            WorkTypeDef shipped = colony.Pawns.Content.WorkTypes[WorkTypeIndex.Construction];
+            colony.Pawns.Content.WorkTypes[WorkTypeIndex.Construction] = new WorkTypeDef
+            {
+                defName = shipped.defName,
+                label = shipped.label,
+                order = shipped.order,
+                successBasePerMille = basePerMille,
+                successSlopePerLevel = slopePerLevel,
+            };
+        }
+
+        /// <summary>
+        /// The curve's shape, without pinning its numbers a second time (the content fingerprint
+        /// owns the literals): a novice can fail, skill only ever helps, and a builder a colony can
+        /// reasonably grow never fails at all.
+        /// </summary>
+        [Test]
+        public void TheChanceRisesWithSkillAndStopsAtCertainty()
+        {
+            WorkTypeDef construction = Board().Pawns.Content.WorkTypes[WorkTypeIndex.Construction];
+
+            Assert.That(construction.SuccessPerMille(0), Is.LessThan(1_000),
+                "a novice can botch, which is the reason a roll exists");
+            Assert.That(construction.SuccessPerMille(0), Is.GreaterThan(0),
+                "and a novice is not certain to botch either");
+
+            int previous = 0;
+            for (int level = 0; level <= 20; level++)
+            {
+                int chance = construction.SuccessPerMille(level);
+                Assert.That(chance, Is.GreaterThanOrEqualTo(previous),
+                    $"level {level} is no worse a builder than the level below it");
+                previous = chance;
+            }
+
+            int neverFails = -1;
+            for (int level = 0; level <= 20; level++)
+                if (construction.SuccessPerMille(level) >= 1_000) { neverFails = level; break; }
+            Assert.That(neverFails, Is.GreaterThan(0).And.LessThanOrEqualTo(5),
+                "certainty arrives within reach of a starting colony");
+            Assert.That(construction.SuccessPerMille(20), Is.EqualTo(1_000), "and a master is certain");
+        }
+
+        /// <summary>
+        /// The whole failure, seen from the site: work banked on the cell is thrown away, half the
+        /// material is lost with the odd unit decided by a seeded flip, no wall appears, and the
+        /// order stands waiting to be fed again. Forced to certainty of failure, because the claim
+        /// is what a botch does and not how often.
+        /// </summary>
+        [Test]
+        public void AFrameCanBeBotched()
+        {
+            ColonyWorld colony = Board();
+            SuccessChance(colony, 0, 0);
+            int cell = SiteBesideTheStart(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, cell, ItemIndex.Wood, 20, JobDriver.DropSearchRadius);
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 20);
+            Assert.That(Order(colony, cell), Is.EqualTo(IntentRejection.None));
+
+            bool wasFed = false, botched = false, fedAgain = false;
+            int kept = -1;
+            for (int tick = 0; tick < 20_000; tick++)
+            {
+                colony.World.Tick();
+
+                if (colony.Grid.Edifice[cell] >= 0)
+                    Assert.Fail("a botched frame raised a wall anyway");
+
+                // Order matters: a site that is a frame *after* a botch is the re-feed, so it has
+                // to be tested before the plain "it is a frame" case, or the re-feed reads as the
+                // first delivery and nothing ever records it.
+                bool frame = colony.Construction.IsFrame(cell);
+                if (frame && botched) fedAgain = true;
+                else if (frame) wasFed = true;
+                else if (wasFed && !botched)
+                {
+                    // The frame had all five; without a botch nothing but a wall can end that.
+                    botched = true;
+                    kept = colony.Construction.Delivered(cell);
+                    Assert.That(colony.Construction.WorkDone(cell), Is.Zero,
+                        "a botch throws the banked work away");
+                }
+            }
+
+            Assert.That(wasFed, Is.True, "the wood was carried and the frame worked");
+            Assert.That(botched, Is.True, "the completion was rolled and failed");
+            Assert.That(fedAgain, Is.True, "the site is fed again afterwards — nothing wedged");
+            Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.Wall),
+                "the order still stands");
+            Assert.That(kept, Is.EqualTo(2).Or.EqualTo(3),
+                "half of five, the odd unit by the flip");
+            Assert.That(OnTheGround(colony, ItemIndex.Wood), Is.LessThan(20),
+                "the lost units are gone, not on the floor");
+        }
+
+        /// <summary>
+        /// The roll is a pure function of (world seed, cell, tick), so the same seed botches the
+        /// same way twice — the property that makes a botch survive a replay, a save and a reload.
+        /// </summary>
+        [Test]
+        public void TheSameSeedBotchesTheSameWay()
+        {
+            string EventsOf(uint seed)
+            {
+                ColonyWorld colony = Board(seed);
+                SuccessChance(colony, 500, 0);
+                int cell = SiteBesideTheStart(colony);
+                Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+                int pile = colony.Pawns.Items.NearestCellWithSpace(
+                    colony.Grid, cell, ItemIndex.Wood, 20, JobDriver.DropSearchRadius);
+                colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 20);
+                Order(colony, cell);
+
+                var events = new System.Text.StringBuilder();
+                bool wasFrame = false;
+                for (int tick = 0; tick < 12_000; tick++)
+                {
+                    colony.World.Tick();
+                    bool frame = colony.Construction.IsFrame(cell);
+                    if (!wasFrame && frame) events.Append($"fed@{tick};");
+                    if (wasFrame && !frame && colony.Grid.Edifice[cell] < 0)
+                        events.Append($"botched@{tick},kept{colony.Construction.Delivered(cell)};");
+                    if (colony.Grid.Edifice[cell] >= 0) { events.Append($"raised@{tick};"); break; }
+                    wasFrame = frame;
+                }
+                return events.ToString();
+            }
+
+            Assert.That(EventsOf(7u), Is.EqualTo(EventsOf(7u)),
+                "one seed, one history of botches");
+            Assert.That(EventsOf(7u), Does.Contain("fed@").Or.Contain("botched@"),
+                "the window saw a completion roll at all");
+        }
+
+        /// <summary>
+        /// On the shipped curve, with real content and no overriding: a colony that botches still
+        /// raises its wall, because the site survives its own botch and the work simply starts
+        /// again. The journey test above pins the never-botching arithmetic; this one proves the
+        /// retry is not a wedge.
+        /// </summary>
+        [Test]
+        public void ABotchingColonyStillRaisesItsWall()
+        {
+            ColonyWorld colony = Board();
+            int cell = SiteBesideTheStart(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, cell, ItemIndex.Wood, 20, JobDriver.DropSearchRadius);
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 20);
+            Assert.That(Order(colony, cell), Is.EqualTo(IntentRejection.None));
+
+            int raisedAt = -1;
+            for (int tick = 0; tick < 20_000 && raisedAt < 0; tick++)
+            {
+                colony.World.Tick();
+                if (colony.Grid.Edifice[cell] >= 0) raisedAt = tick;
+            }
+
+            Assert.That(raisedAt, Is.GreaterThanOrEqualTo(0),
+                "the wall went up, whatever was botched on the way");
+            Assert.That(OnTheGround(colony, ItemIndex.Wood), Is.LessThanOrEqualTo(15),
+                "five went into the wall and any botch took more");
+        }
+
+        /// <summary>
+        /// The one thing this merge made possible and neither branch could test alone: the success
+        /// roll and the quality tier are two rolls at the same instant, and <b>a botch must never
+        /// reach the quality roll</b>, because a thing that was not built has no quality to have.
+        ///
+        /// <para>A bed is the only thing in the game that is both quality-bearing and two cells, so
+        /// it is where the two features actually touch. The claim is about the <b>site</b>: a
+        /// botched bed raises nothing, stays one order, and still answers to <i>either</i> of its
+        /// cells afterwards — the far cell is derived from the head's footprint and facing, so a
+        /// botch that quietly dropped the head's row would strand it.</para>
+        /// </summary>
+        [Test]
+        public void ABotchedBedRollsNoQualityAndKeepsBothItsCells()
+        {
+            ColonyWorld colony = Board();
+            SuccessChance(colony, 0, 0);
+
+            int head = OpenBedFootprint(colony, out int second);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0), "somewhere near the start takes a bed");
+
+            // Ordered before the wood is put down, not after. A site holds its cells against items
+            // from the moment it is ordered, and the nearest space to the head is the footprint
+            // itself — so spawning first drops a pile on the bed's own cells and the order is then
+            // refused, which cost this test a run as a silent skip.
+            Assume.That(
+                colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing: 0),
+                Is.EqualTo(IntentRejection.None));
+
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, head, ItemIndex.Wood, 40, JobDriver.DropSearchRadius);
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 40);
+
+            bool wasFed = false, botched = false;
+            for (int tick = 0; tick < 30_000; tick++)
+            {
+                colony.World.Tick();
+
+                Assert.That(colony.Grid.Edifice[head], Is.LessThan(0),
+                    "a bed that botched every roll was raised anyway");
+                Assert.That(colony.Grid.Edifice[second], Is.LessThan(0),
+                    "and its far cell was raised anyway");
+
+                bool frame = colony.Construction.IsFrame(head);
+                if (frame) wasFed = true;
+                else if (wasFed) botched = true;
+            }
+
+            Assert.That(wasFed, Is.True, "the wood was carried to the bed");
+            Assert.That(botched, Is.True, "the completion was rolled and failed");
+            Assert.That(colony.Construction.At(head), Is.EqualTo(BuildingHandle.Bed),
+                "the order still stands");
+            Assert.That(colony.Construction.Count, Is.EqualTo(1),
+                "and it is still one order rather than two");
+            Assert.That(colony.Construction.SiteAt(Size.FromIndex(second)), Is.EqualTo(head),
+                "the far cell still names the site, so the footprint survived the botch");
+        }
+
+        /// <summary>
+        /// A cell near the start whose whole north-facing bed footprint is open, with the far cell
+        /// in <paramref name="second"/>. <see cref="BedTests"/> owns the careful version of this —
+        /// it also avoids cells a colonist has already reserved — and this one is deliberately the
+        /// plain question, because the bed here is never slept in.
+        /// </summary>
+        static int OpenBedFootprint(ColonyWorld colony, out int second)
+        {
+            CellRef start = colony.Start;
+            for (int radius = 1; radius < 8; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (System.Math.Abs(dx) != radius && System.Math.Abs(dz) != radius) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!Size.Contains(x, z, start.Y)) continue;
+
+                int head = Size.Index(x, z, start.Y);
+                if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
+                if (FellJobDriver.StandBeside(colony.Pawns, colony.Pawns.Pawns.All[0], head) < 0) continue;
+
+                int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
+                if (foot >= 0 && colony.Construction.Allows(foot, BuildingHandle.Bed))
+                {
+                    second = foot;
+                    return head;
+                }
+            }
+
+            second = -1;
+            return -1;
         }
     }
 }

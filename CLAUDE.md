@@ -87,12 +87,17 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 - **Beds, the first furniture, landed 2026-09-17** (`claude/beds`, design `20-beds.md`): a
   two-cell bed ordered from the Build palette, rotated with R (the game's first context key —
   the tool claims the slice-up press while a rotatable ghost is armed, design 09 §6 case 9),
-  built through the pipeline, finished at a rolled quality of five tiers (**closing U26's
-  outstanding success roll**; furniture carries quality, walls never do), ownable from the
+  built through the pipeline, finished at a rolled quality of five tiers (furniture carries
+  quality, walls never do), ownable from the
   pane's first interactive row, and slept in at its tier's own rest rate. One `PlacedEdifice`
   behind two `Edifice[]` slots, the second cell derived from the facing and never stored;
   **save format 4**. Placeholder art (three scaled boxes) stands in until real two-tile art
   exists; the room bonus is a seam. Nobody has pressed Play on any of it.
+  **It was recorded as "closing U26's outstanding success roll" and that was a misreading**,
+  corrected on the merge: U26 left **two** rolls at the moment of completion, and the quality tier
+  is the second. The first — whether the thing stands at all — is the botch, below, which was in
+  flight on another branch at the same time. Both now roll from the finishing colonist's
+  Construction level, success first, and **a botch never reaches the quality roll**.
   **`BuildingHandle.Bed` is 5, not 2** — U29's floor, U42's paving and U43's ladder reached
   main first and took 2, 3 and 4, and a handle position is a save contract. The renumbering's
   one silent casualty is the general lesson: **a hand-written table parallel to a handle set
@@ -174,7 +179,25 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   the placeholder square here; materials keep the game's own sprites, which is the one tier whose
   art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only
   thing anybody has looked at, and what found the three faults the tests could not see.
-  **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
+  **U26's last line is closed too: a completed build is rolled and can botch** (2026-09-18). When
+  the final tick of work lands, `BuildJobDriver` rolls against the **finishing** builder's
+  construction level — 850 in a thousand at level 0, 50 more a level, certain from level 3 — and a
+  failure throws the banked work away, loses half the delivered material and **leaves the site
+  standing as a blueprint again**, to be fed and built a second time. Design is
+  `docs/design/15-building.md` §4a. Four things not to undo by tidying. **The curve is re-anchored,
+  not copied**: the reference is certain at skill 8 because that is where *its* colonists sit, ours
+  is certain at 3 because our starting roll averages 1.16, and taking its numbers verbatim would
+  botch most of a colony's early walls. **The finisher rolls and that is deliberate** — a building
+  records no author, so a master can rescue a novice's half-built wall by finishing it. **`Botch`
+  marks nothing dirty on purpose**: no wall appeared, so no chunk, walkability or support moved, and
+  the only state that changed is the site's two numbers, which the save and the hash already carry —
+  a botch replays from a seed and survives a reload. And **a test that retunes construction must
+  replace the `WorkTypeDef`, never write through it**, because the Defs a content record points at
+  are shared by every record in the process; the first version of these tests wrote through, and the
+  content fingerprint was briefly pinned to a polluted database rather than to a clean load. No
+  golden moved — building is player-ordered and no golden scenario builds anything. **Nobody has
+  pressed Play on it**, so whether one botch in seven reads as bad luck or as a broken game is
+  unjudged. **Deconstruct landed the day before** and closed the line before it. A colonist
   walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
   seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
   generous one. **Only what we built**: `PlacedEdifice.Built` is set by `ConstructionGrid.Raise`
@@ -737,10 +760,10 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **645 Sim + 384 Hud**; Long tier **20**.
-  Unity tier on 2026-09-18, on the flat avatars: EditMode **1533 total, 1521 passed, 0 failed**;
-  PlayMode **74 total, 69 passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored
-  rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **649 Sim + 384 Hud**; Long tier **20**.
+  Unity tier on 2026-09-18, on the build botch merged with beds: EditMode **1638 total, 1625
+  passed, 0 failed**. PlayMode was last run the same day on the flat avatars: **74 total, 69
+  passed, 0 failed** (in both, the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
   are `ColonistAppearanceTests` arriving from the Unity tier with the appearance itself, which is
   what moving a Unity-free derivation into `Odyssey.Hud` buys.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
@@ -935,6 +958,13 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
   none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
   interface scale on a 1080p screen it is within pixels of the screen height and may want the
   first max-height-and-scroll any panel here has carried.
+- **Nobody has pressed Play on the build botch, and its two integers are invited tuning.** A novice
+  botches about one wall in seven and a level-3 builder never botches (`Work_Construction`'s
+  `successBasePerMille` 850 and `successSlopePerLevel` 50). Whether that reads as bad luck or as a
+  broken game cannot be judged from a test, and neither can whether a botched site quietly restarting
+  is legible on screen — nothing announces it, so a wall that takes twice as long looks like a slow
+  colonist. An alert or a mote is the obvious answer and is deliberately not built ahead of a
+  playtest.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
 - **The coloured wood has had two playtests; the rounds since the second have not been played.**
   They are `docs/design/21-tree-colours.md` §3a (the pale tree, and *"really mix them in

@@ -435,25 +435,66 @@ namespace Odyssey.Sim.Pawns
             Work(ctx);
             if (sites.AddWork(cell, 1) < sites.WorkFor(cell)) return JobStatus.Ongoing;
 
-            ConstructionGrid grid = sites;
+            // The last hammer blow is rolled twice, and the two rolls are one question asked in
+            // two halves: **does the thing stand at all**, and then **how well was it made**. Both
+            // read the finishing colonist's Construction level — the reference's own exploitable
+            // property, kept deliberately at both ends, because a building records no author and a
+            // master rescuing a novice's half-built wall reads as a sensible thing for a colony to
+            // do. They arrived from two directions (the success roll is U26's own last line; the
+            // quality tier came with the bed, design 20 §6) and neither subsumes the other.
+            //
+            // **Success is asked first, and a botch never reaches the quality roll**, because a
+            // thing that was not built has no quality to have. The two draw from separate salts,
+            // so asking one does not move the other's answer.
+            int tick = ctx.CurrentTick;
+            int chance = ctx.Content.WorkTypes[WorkTypeIndex.Construction]
+                .SuccessPerMille(Pawn.SkillLevel(SkillIndex.Construction));
+            var roll = DeterministicRandom.ForTick(ctx.Seed, cell ^ tick, PawnPurpose.BuildSuccess);
 
-            // The success roll U26 left open, landed by the bed (design 20 §6): once, at the
-            // moment of completion, from the finishing colonist's skill — a novice who did 99%
-            // of the work and a master who swung the last tick is the reference's own
-            // exploitable property, kept on purpose. Walls take no quality and roll nothing.
-            byte quality = 0;
-            if (ConstructionContent.BuildingAt(sites.At(cell)).takesQuality)
+            if (roll.NextInt(1_000) < chance)
             {
-                var rng = DeterministicRandom.ForTick(
-                    ctx.Seed, cell ^ ctx.CurrentTick, PawnPurpose.BuildQuality);
-                quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
+                ConstructionGrid grid = sites;
+
+                // Walls take no quality and roll nothing; a bed does.
+                byte quality = 0;
+                if (ConstructionContent.BuildingAt(sites.At(cell)).takesQuality)
+                {
+                    var rng = DeterministicRandom.ForTick(
+                        ctx.Seed, cell ^ tick, PawnPurpose.BuildQuality);
+                    quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
+                }
+
+                ctx.Defer(_ => grid.Raise(ctx, cell, quality));
+
+                // The wall goes up now; the builder straightens up before walking off.
+                NextToil();
+                return JobStatus.Ongoing;
             }
 
-            ctx.Defer(_ => grid.Raise(ctx, cell, quality));
+            // Botched. The work is lost, some of the material with it, and the job ends as a
+            // failure so the claim comes off and the scan can offer the site again — delivery
+            // first, because what is left is a blueprint once more.
+            sites.Botch(cell, KeptAfterABotch(ctx, sites, cell, tick));
+            return JobStatus.Failed;
+        }
 
-            // The wall goes up now; the builder straightens up before walking off.
-            NextToil();
-            return JobStatus.Ongoing;
+        /// <summary>
+        /// What a botched site keeps of its delivery: half, with the odd unit by a seeded coin
+        /// flip — the deconstruct refund's arithmetic pointed the other way, and for the same
+        /// reason both ends of it want the flip rather than a rounding rule. The reference wastes
+        /// only "some" of a botched build's materials and its own fraction is not written down
+        /// anywhere we could read (a-04, "Could not be determined"), so half is Odyssey's number:
+        /// a botch costs what a demolition refunds, which is at least an argument rather than a
+        /// guess.
+        /// </summary>
+        static int KeptAfterABotch(PawnContext ctx, ConstructionGrid sites, int cell, int tick)
+        {
+            int delivered = sites.Delivered(cell);
+            int half = delivered / 2;
+            if (delivered % 2 == 0) return half;
+
+            var rng = DeterministicRandom.ForTick(ctx.Seed, cell ^ tick, PawnPurpose.BuildBotchLoss);
+            return half + (rng.NextInt(2) == 0 ? 0 : 1);
         }
     }
 }
