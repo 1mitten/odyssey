@@ -1312,6 +1312,28 @@ namespace Odyssey.EditorTools
             Tuft(ModuleIds.GrassTuftB, "SM_Env_Grass_Med_Clump_02", 1.0f);
             Tuft(ModuleIds.GrassTuftC, "SM_Env_Grass_Tall_Clump_03", 1.0f);
 
+            // A crop's drawn stages: sprout, half-grown, mature, one row each, standing on the
+            // soil like a tuft does. The ids are the PlantDef's own module ids, so this table and
+            // the simulation read from one copy of the names.
+            //
+            // Pillow, and why: the fallback box for a pillow spans the unit cube with its scale
+            // reading directly in metres, so one row sizes both the art and the primitive a
+            // pack-less clone draws — and a rounded mound is the honest stand-in for a leafy
+            // plant, where a pillar would be a green stake. The per-stage scale keeps the real
+            // art near its authored size (measured 0.31/0.44/0.63 m across in the inventory) and
+            // the fallbacks a visible quarter/half/metre mound, so the stages still read without
+            // the packs.
+            void Crop(string id, string prefab, float size) => rows.Add(new ModuleEntry
+            {
+                moduleId = id, shape = ModuleShape.Pillow, prefabName = prefab,
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(size, size, size),
+            });
+
+            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 0.5f);
+            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 0.75f);
+            Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.0f);
+
             // Trees are the pieces that actually make this look like a place. Measured widths
             // decide the casting: the pines are 1.78–2.12 m and sit inside a 2.5 m cell, while the
             // broadleaf trees run 2.74–4.32 m. Tree_03 at 2.74 m is the closest fit, and a little

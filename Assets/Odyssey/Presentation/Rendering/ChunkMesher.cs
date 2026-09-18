@@ -67,6 +67,7 @@ namespace Odyssey.Presentation.Rendering
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
+                EmitCrop(batch, index, x, z, y);
             }
 
             batch.Version = _model.Version;
@@ -310,6 +311,33 @@ namespace Odyssey.Presentation.Rendering
                 AddBody(batch, module, tint, Matrix4x4.TRS(
                     at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
             }
+        }
+
+        /// <summary>
+        /// The crop standing in this cell, at its drawn stage, through the ordinary bucket
+        /// machinery — a crop is one more module per chunk, and inherits culling, the slice, the
+        /// depth shade and the single instanced submission with no code path of its own.
+        ///
+        /// <para>It stands at a point, so it is lifted rather than draped (see the class header's
+        /// split), at its own cell's floor — which for a zone cell is the ground surface, where
+        /// <see cref="GroundMesh"/> pins the turf's middle, so a sprout neither floats above the
+        /// field nor starts life buried.</para>
+        ///
+        /// <para>Foliage, not terrain, for the reason <see cref="EmitScatter"/> gives; and daylit
+        /// on the same terms as the ground it grows in, so a crop under a roof reads dimmer than
+        /// one in the open rather than glowing.</para>
+        /// </summary>
+        void EmitCrop(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            int module = _model.CropModule(index);
+            if (module == 0) return;
+
+            bool daylit = _model.OpenToTheSky(index, y);
+            int tint = TintCode.Daylit(TintCode.Foliage(0), daylit);
+
+            AddBody(batch, module, tint, Matrix4x4.TRS(
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
+                Quaternion.identity, Vector3.one));
         }
 
         /// <summary>
