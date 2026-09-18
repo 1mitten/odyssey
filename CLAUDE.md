@@ -16,6 +16,66 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - **Files outlive context.** Every phase produces files under `docs/`. Assume the next session knows nothing except what is written down.
 - British English in documentation. No multiplayer, ever. *Ramble* (Godot) is reference only, no code reuse.
 
+## Every finished piece of work ends with a handover
+
+**Owner rule, 2026-09-18:** *"could you put into each prompt — create a table of things to test
+after completing work, stipulate a distinct table to explain changes made and how to test as I keep
+losing track, and remind of the full folder."*
+
+The owner is the only person who can press Play, and they are usually holding several branches at
+once. A reply that ends in prose leaves them to work out where to go and what to look at. **So the
+last thing in any reply that finishes a piece of work is a handover: the folder, then two tables.**
+Not a summary of the conversation — the smallest thing somebody can act on cold.
+
+### 1. Where
+
+One line, before the tables: the **full path**, the branch, the PR, and whether the art is there.
+
+> **`D:\code\odyssey-review-111`** — branch `claude/colonist-card-skills`, PR #114. Synty
+> junctioned, packs imported. Press Play → New game.
+
+Always the absolute path. There are a dozen worktrees on that machine (`git worktree list`) and
+"the worktree" names none of them. Say if `Assets/Synty` is **not** junctioned, because without it
+everything draws as untextured primitives and the first report back will be about the art.
+
+### 2. What changed
+
+One row per change a player could notice. **What it was, what it is, and where the decision lives**
+— not the implementation.
+
+| Change | Was | Is | Where |
+|---|---|---|---|
+| Selection outline stands clear of the face | border drawn hard against the portrait | 8 px pad, card 65 → 80 | `18-colonist-select.md` §6b |
+
+Leave out anything invisible. A refactor with no player-facing effect belongs in the commit message,
+not in this table — it is one of the things that makes the list too long to read.
+
+### 3. What to test
+
+One row per question **only a person at the keyboard can answer**, with what a wrong answer would
+look like. This is the table that earns its keep: a test already says whether the geometry is right,
+so do not ask for that again.
+
+| Test | Look for | A wrong answer looks like |
+|---|---|---|
+| Pick a colonist without clicking each card | the three cards readable side by side | you still open each one to decide, so two skills is not enough |
+| Reroll | name, face and skills all change together on an unkept card | one of the three lags, or a kept card moves |
+
+Two rules for this table:
+
+- **Never ask for something a test proves.** If the fast tier or the Unity tier can answer it, it is
+  not a playtest item, and putting it there teaches the owner the list is padding.
+- **State what failure looks like.** *"Check the cards read well"* is not actionable; *"if you still
+  click each one to decide, two skills is not enough"* tells them what they are deciding and what to
+  say back.
+
+### The rest of the reply
+
+Say what is **still owed** and what is **blocked on them** — an unshot screenshot, a Unity run that
+cannot start because the editor is open, a merge waiting on review. And where more than one branch
+is in flight, give the **merge order and the reason**, because that is the thing most easily lost
+between sessions.
+
 ## The content wiki is a standing obligation
 
 `docs/wiki/` is the naming reference for the whole game: every commodity, item, building, command,
