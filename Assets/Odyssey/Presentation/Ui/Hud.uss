@@ -231,12 +231,11 @@
     align-content: flex-start;
 }
 
-/* Two rows and nothing else: who this is, and what they are doing. The three need bars came off
-   on 2026-09-17 (owner), and with them went most of the card's height — a card is a way of
-   finding somebody and saying what they are at, and the strip is the densest region on the
-   screen, so every pixel it does not spend buys another colonist on the bar. */
+/* Vertical layout: avatar at top with activity badge in bottom-right corner, name centered
+   directly below. Narrowed to 96 px so the top bar holds ~30% more colonists per row while
+   giving names 80 px of width (a 60% increase over the old 50 px budget). */
 .card {
-    width: 126px;
+    width: 96px;
     height: 89px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which
@@ -247,6 +246,7 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
+    align-items: center;
 }
 
 .card:hover { border-color: rgba(111, 211, 227, 0.55); }
@@ -262,10 +262,11 @@
     border-radius: 6px;
 }
 
-.card__top {
-    flex-direction: row;
-    align-items: center;
-    flex-grow: 1;
+.card__avatar-box {
+    width: 52px;
+    height: 52px;
+    align-self: center;
+    position: relative;
 }
 
 .card__avatar {
@@ -277,40 +278,31 @@
     align-items: center;
 }
 
-.card__names {
-    flex-grow: 1;
-    margin-left: 8px;
-    overflow: hidden;
+/* 17x17 px badge docked at the bottom-right of the avatar portrait. */
+.card__badge {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    width: 17px;
+    height: 17px;
+    background-color: rgba(12, 16, 20, 0.90);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+    justify-content: center;
+    align-items: center;
 }
 
-/* The one place in the HUD where text is allowed to be cut short: a colonist's own name, which
-   can be any length and belongs on a card of a fixed width. */
+/* The colonist's own name, placed directly below the portrait and centered. */
 .card__name {
     color: #eef3f6;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
     height: 19px;
-    -unity-text-align: middle-left;
-}
-
-/* Its own line, the full width of the card rather than the strip beside the avatar, and therefore
-   not truncated. The acceptance criteria allow an ellipsis on a colonist's name and on nothing
-   else, so the job label has to actually fit: 116 px holds every job this game has at 12 px, with
-   room for several more — 93 px of it since the icon took the left of the line, which still holds
-   the longest word the game has by a wide margin. */
-.card__jobrow {
-    flex-direction: row;
-    align-items: center;
-    height: 17px;
-}
-
-.card__job {
-    color: rgba(255, 255, 255, 0.50);
-    white-space: nowrap;
-    height: 17px;
-    margin-left: 6px;
-    -unity-text-align: middle-left;
+    width: 100%;
+    margin-top: 2px;
+    -unity-text-align: middle-center;
 }
 
 /* ---------------------------------------------------------------- A3/A4 clock and speed,

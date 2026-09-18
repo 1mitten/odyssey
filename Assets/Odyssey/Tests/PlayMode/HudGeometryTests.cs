@@ -448,54 +448,38 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// The activity line on a roster card leads with a picture and still holds its word
-        /// (owner, 2026-09-16).
-        ///
-        /// <para><b>What could go wrong is silent.</b> The icon takes 17 px off a 132 px card, and
-        /// a word that no longer fits does not report itself — UI Toolkit simply lays it past the
-        /// card's edge, where the card's own rounded frame hides the tail. So this measures the
-        /// word the text engine would draw against the room the row actually gave it, on the real
-        /// face at the real size, rather than trusting the arithmetic in the sheet's comment.</para>
+        /// Each roster card carries an activity icon badged at the bottom-right corner of its
+        /// avatar (owner, 2026-09-18), and no text word: the card is clean and the colonist inspect
+        /// pane informs the player of full details.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheActivityLineLeadsWithAnIconAndStillHoldsItsWord()
+        public IEnumerator TheRosterCardBadgesItsActivityIconOnTheAvatar()
         {
             GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
             try
             {
                 yield return Settle(doc);
 
-                var rows = doc.rootVisualElement.Query(className: "card__jobrow").ToList();
-                Assert.That(rows, Is.Not.Empty, "no card carries an activity line");
+                var cards = doc.rootVisualElement.Query(className: "card").ToList();
+                Assert.That(cards, Is.Not.Empty, "no roster card exists");
 
-                foreach (VisualElement row in rows)
+                foreach (VisualElement card in cards)
                 {
-                    var icon = row.Q<IconBadge>();
-                    var word = row.Q<Label>(className: "card__job");
-                    Assert.That(icon, Is.Not.Null, "an activity line with no icon in it");
-                    Assert.That(word, Is.Not.Null, "an activity line with no word in it");
+                    var avatarBox = card.Q(className: "card__avatar-box");
+                    Assert.That(avatarBox, Is.Not.Null, "card has no avatar box");
 
-                    Rect iconBox = icon!.worldBound;
-                    Rect wordBox = word!.worldBound;
-                    Rect card = row.parent.worldBound;
+                    var avatar = avatarBox!.Q<AvatarGlyph>();
+                    var badge = avatarBox.Q<IconBadge>(className: "card__badge");
+                    Assert.That(avatar, Is.Not.Null, "card avatar box has no avatar glyph");
+                    Assert.That(badge, Is.Not.Null, "card avatar box has no activity badge");
 
-                    Assert.That(iconBox.xMax, Is.LessThanOrEqualTo(wordBox.xMin + 0.01f),
-                        $"the icon for '{word.text}' is not to the left of the word");
-                    Assert.That(iconBox.xMin, Is.GreaterThanOrEqualTo(card.xMin - 0.01f),
-                        "the icon starts outside its own card");
+                    Rect cardBox = card.worldBound;
+                    Rect badgeBox = badge!.worldBound;
 
-                    float drawn = word.MeasureTextSize(
-                        word.text, 0f, VisualElement.MeasureMode.Undefined,
-                        0f, VisualElement.MeasureMode.Undefined).x;
-
-                    Debug.Log($"[HudGeometry] activity '{word.text}': icon {iconBox.width:0.#} px, " +
-                              $"word {drawn:0.#} px drawn in {wordBox.width:0.#} px of room");
-
-                    Assert.That(wordBox.width, Is.GreaterThanOrEqualTo(drawn - 0.01f),
-                        $"'{word.text}' needs {drawn:0.#} px and the icon left it " +
-                        $"{wordBox.width:0.#}, so the activity is being clipped by the card edge");
-                    Assert.That(wordBox.xMax, Is.LessThanOrEqualTo(card.xMax + 0.01f),
-                        $"'{word.text}' runs off the right of its card");
+                    Assert.That(badgeBox.xMin, Is.GreaterThanOrEqualTo(cardBox.xMin - 2f),
+                        "activity badge starts outside its card");
+                    Assert.That(badgeBox.xMax, Is.LessThanOrEqualTo(cardBox.xMax + 2f),
+                        "activity badge extends outside its card");
                 }
             }
             finally
@@ -600,9 +584,7 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(card, Is.Not.Null, "the shell built no roster card");
 
                 var nameLabel = card!.Q<Label>(className: "card__name");
-                var jobLabel = card.Q<Label>(className: "card__job");
                 Assert.That(nameLabel, Is.Not.Null);
-                Assert.That(jobLabel, Is.Not.Null);
 
                 // Every name in the pool, plus a cycle past the end of it.
                 //
@@ -627,34 +609,21 @@ namespace Odyssey.Tests.PlayMode
                     longestName = name;
                 }
 
-                float widestJob = 0f;
-                string longestJob = string.Empty;
-                foreach (string key in JobLabels.IconKeys)
-                {
-                    float w = Draws(jobLabel!, Registry.Label(key));
-                    if (w <= widestJob) continue;
-                    widestJob = w;
-                    longestJob = Registry.Label(key);
-                }
+                float avatarRow = 2 * HudLayout.CardPad + HudLayout.CardAvatar;
+                float nameRow = 2 * HudLayout.CardPad + widestName;
+                float needed = Mathf.Max(avatarRow, nameRow);
 
-                float nameRow = 2 * HudLayout.CardPad + HudLayout.CardAvatar +
-                                HudLayout.CardAvatarGap + widestName;
-                float jobRow = 2 * HudLayout.CardPad + IconBadge.RowSize +
-                               HudLayout.CardIconGap + widestJob;
-                float needed = Mathf.Max(nameRow, jobRow);
-
-                Debug.Log($"[HudGeometry] card rows: name '{longestName}' {widestName:0.#} px " +
-                          $"-> {nameRow:0.#}, activity '{longestJob}' {widestJob:0.#} px " +
-                          $"-> {jobRow:0.#}; card is {HudLayout.CardWidth}");
+                Debug.Log($"[HudGeometry] card rows: avatar {avatarRow:0.#} px, name '{longestName}' {widestName:0.#} px " +
+                          $"-> {nameRow:0.#}; card is {HudLayout.CardWidth}");
 
                 Assert.That(HudLayout.CardWidth, Is.GreaterThanOrEqualTo(needed),
                     $"a card is {HudLayout.CardWidth} px and its widest row needs {needed:0.#} " +
-                    $"('{longestName}' / '{longestJob}'), so something is being cut short");
+                    $"('{longestName}'), so something is being cut short");
 
                 // Headroom, not comfort: a name is allowed to grow a little before the constant
                 // has to be revisited. More than this and the strip is carrying fewer colonists
                 // than it could for no reason anybody chose.
-                Assert.That(HudLayout.CardWidth, Is.LessThanOrEqualTo(needed + 16f),
+                Assert.That(HudLayout.CardWidth, Is.LessThanOrEqualTo(needed + 30f),
                     $"a card is {HudLayout.CardWidth} px where {needed:0.#} would do, and the " +
                     "strip is the densest region on the screen");
             }

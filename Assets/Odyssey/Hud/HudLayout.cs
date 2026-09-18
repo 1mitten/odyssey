@@ -257,41 +257,23 @@ namespace Odyssey.Hud
         /// longer than the pool's does not break the card — but it does mean a card whose name is
         /// cut short, which is why the test's lower bound exists rather than only its upper.</para>
         /// </summary>
-        /// <para><b>126 x 89 since 2026-09-18</b>, when the owner asked for the in-game avatar to be
-        /// twice the size because it was hard to see. The avatar went 26 → 52 and the card is
-        /// re-derived from the same two rows rather than stretched: the name row is now
-        /// 16 + 52 + 8 + 50 = 126, which overtakes the activity row's 106 and becomes the width.
-        /// The measured strings are the test's, not an estimate — 'Wrenn 10' draws 50 px and
-        /// 'Deconstructing' 67.</para>
-        ///
-        /// <para><b>It stayed 126 when the name pool went from eight to 244</b> (owner,
-        /// 2026-09-18: *"remove any longer names for now"*). Sizing the card to the widest name
-        /// the owner's list can produce would have cost <see cref="CardWidth"/> ten pixels and the
-        /// coverage ceiling a fourth raise, 19.80% → 20.19% at the forced two-row strip; the
-        /// cheaper trade is to keep the card and let the pool fit it. <b>The budget is therefore a
-        /// constraint on content</b>, and <see cref="CardNameBudget"/> is what states it —
-        /// <c>NoNameInThePoolIsWiderThanTheCardBudgetsFor</c> measures every name in the real face
-        /// and names all of them at once, because the one thing this must not become is a name
-        /// removed per CI round.</para>
-        public const int CardWidth = 126;
+        /// <para><b>96 x 89 since 2026-09-18</b> (owner: name below portrait, activity word removed
+        /// and icon badged on portrait, card narrowed to reclaim bar width). Stacking the name below
+        /// the portrait leaves the full width of the card for the colonist's name minus horizontal
+        /// padding, widening the name budget from 50 to 80 px (a 60% increase) while fitting ~30%
+        /// more colonists per row on the top bar.</para>
+        public const int CardWidth = 96;
 
         /// <summary>
-        /// The room a card leaves for a colonist's name: the card less its padding, the avatar and
-        /// the gap after it.
+        /// The room a card leaves for a colonist's name: the card less its padding on each side.
         ///
-        /// <para>Derived rather than written down, and stated as a constant because it is a rule
-        /// about <c>docs/design/colonist-names.csv</c> rather than about the card: a name wider
-        /// than this does not fit, and the pool is what has to give. <b>Width is not length</b> —
-        /// <i>Christopher</i> is eleven characters and 60 px, <i>Alexander</i> nine and 52 — so
-        /// the check that enforces this has to ask the text engine, and a character-count proxy
-        /// in the fast tier passed both.</para>
+        /// <para>With the name placed below the portrait and the activity icon badged onto the
+        /// portrait corner, the name row spans the full interior width of the card.</para>
         /// </summary>
-        public const int CardNameBudget = CardWidth - 2 * CardPad - CardAvatar - CardAvatarGap;
+        public const int CardNameBudget = CardWidth - 2 * CardPad;
 
         /// <summary>
-        /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
-        /// avatar row takes the slack, so the gap between the two rows is what is left rather
-        /// than a fourth number to keep in step.
+        /// How tall a roster card is: top padding, the 52 px avatar, name gap, 19 px name row, bottom padding.
         /// </summary>
         public const int CardHeight = 89;
 
@@ -1423,6 +1405,13 @@ namespace Odyssey.Hud
         // ---------------------------------------------------------------- fitting
 
         /// <summary>
+        /// Clearance between the colonist strip and the corner panels (stores on the left, clock
+        /// on the right) so the strip sits centred with breathing room and keeps the resting HUD
+        /// within <see cref="CoverageCeiling"/> at small viewports.
+        /// </summary>
+        public const int StripClearance = 32;
+
+        /// <summary>
         /// The space the colonist strip may occupy.
         ///
         /// <para><b>It is not the gap between the two top corners, and that difference is a
@@ -1438,8 +1427,8 @@ namespace Odyssey.Hud
         public static float StripRoom(float width)
         {
             float centre = width * 0.5f;
-            float freeLeft = Edge + StoresWidth + Gap;
-            float freeRight = width - (Edge + RailWidth + RailToClock + ClockWidth) - Gap;
+            float freeLeft = Edge + StoresWidth + StripClearance;
+            float freeRight = width - (Edge + RailWidth + RailToClock + ClockWidth) - StripClearance;
             return 2f * Math.Min(centre - freeLeft, freeRight - centre);
         }
 

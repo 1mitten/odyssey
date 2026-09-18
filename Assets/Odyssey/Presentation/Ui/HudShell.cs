@@ -274,7 +274,6 @@ namespace Odyssey.Presentation.Ui
             public AvatarGlyph Avatar = null!;
             public Label Name = null!;
             public IconBadge JobIcon = null!;
-            public Label Job = null!;
 
             public PawnId LastId;
             public int LastJob = int.MinValue;
