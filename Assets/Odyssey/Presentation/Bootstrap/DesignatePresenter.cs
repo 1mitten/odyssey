@@ -234,6 +234,16 @@ namespace Odyssey.Presentation.Bootstrap
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolMine)) Arm(DesignateTool.Mine);
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolFell)) Arm(DesignateTool.Fell);
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolCancel)) Arm(DesignateTool.Cancel);
+
+            // The rotate key is the slice-up key, claimed by the tool while a rotatable thing is
+            // armed (owner's answer, design 20 §5): R turns the bed's ghost, PageUp is always
+            // slice-up, and R raises the slice whenever nothing rotatable is armed. The rig makes
+            // the same check on its side of the bargain, so the key is one or the other in any
+            // given frame and never both. There is no HotkeyAction for this on purpose — a second
+            // action on R is a clash the binding map refuses, and a context rule stated in two
+            // places is a rule one of them forgets; this claim is the one context this game has.
+            if (Director.RotatableArmed && keys.WasPressedThisFrame(hotkeys, HotkeyAction.SliceUp))
+                Director.Rotate();
         }
 
         /// <summary>Whether a tool is armed, for whoever is deciding what Escape means.</summary>
@@ -305,7 +315,8 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 for (int i = 0; i < cells.Count; i++)
                     world.Intents.Submit(new Intent(
-                        IntentKind.PlaceBuilding, cells[i], Director.Building, Director.Stuff));
+                        IntentKind.PlaceBuilding, cells[i], Director.Building, Director.Stuff,
+                        Director.Facing));
                 return;
             }
 

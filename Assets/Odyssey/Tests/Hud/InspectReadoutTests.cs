@@ -105,8 +105,10 @@ namespace Odyssey.Tests.Hud
 
         static CellDetail Detail(byte terrain = TerrainHandle.Grass, byte edifice = EdificeHandle.None,
             byte floorStuff = StuffHandle.None, byte support = 0,
-            ushort moveCost = 1000, ushort workToClear = 0) =>
-            new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear);
+            ushort moveCost = 1000, ushort workToClear = 0,
+            byte quality = 0, int owner = 0) =>
+            new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear,
+                quality, owner);
 
         /// <summary>The rows as one readable line, in order: "walk speed=33%" and friends.</summary>
         static string Rows(InspectModel model)
@@ -175,6 +177,157 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Title, Is.EqualTo("Conifer"));
             Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
             Assert.That(model.CellIconKey, Is.EqualTo("ui.terrain.tree.conifer"));
+        }
+
+        /// <summary>
+        /// A bed's own two facts, beside what it is (design 20 §8): how well it was made, and
+        /// whose it is. The owner row is said even where nobody owns the bed yet, because it is
+        /// the pane's one pickable fact — the actionable clause leads, the same rule a rock's
+        /// minable clause follows.
+        /// </summary>
+        [Test]
+        public void ABedSaysItsTierAndWhoseItIs()
+        {
+            WorldSnapshot frame = FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
+                    quality: QualityHandle.Decent, owner: 2));
+            InspectModel model = Looking(frame);
+
+            Assert.That(model.Title, Is.EqualTo("Bed"), "the bed's own icon key names it");
+            Assert.That(Rows(model), Is.EqualTo(
+                "quality=decent | owner=" + ColonistNames.Of(frame, new PawnId(2)) + " | walk speed=100%"));
+            Assert.That(model.BedUnderPane, Is.True, "the shell arms the owner row on this word");
+        }
+
+        /// <summary>
+        /// An unowned bed's owner row <b>names the action</b> rather than saying nothing with an
+        /// em dash.
+        ///
+        /// <para>It was a dash, and the dash is why the feature could not be found: the row has
+        /// been pickable since it was written and looked exactly like the facts above and below
+        /// it, so the owner's report was that there was no way to assign a bed at all
+        /// (2026-09-17). A row that is a control has to say so with the pointer still.</para>
+        /// </summary>
+        [Test]
+        public void AnUnownedBedOffersItsOwnerRowAsAnAction()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: QualityHandle.Normal)));
+
+            Assert.That(Rows(model), Is.EqualTo("quality=normal | owner=Assign… | walk speed=100%"));
+            Assert.That(model.BedUnderPane, Is.True);
+        }
+
+        /// <summary>
+        /// <b>The owner row stays pickable while the bed is held, not for one frame.</b>
+        ///
+        /// <para>This is the whole of the bug the owner reported three times across two sessions.
+        /// <c>Refresh</c> clears <see cref="InspectModel.BedUnderPane"/> every time, and it used to
+        /// be set inside the row rebuild — which <c>SetCellRows</c> skips whenever nothing about
+        /// the cell has changed. So the flag was true on the refresh that built the rows and false
+        /// on every refresh after it, while the row went on reading "Assign…" over a control the
+        /// shell had already disarmed. Clicking it did nothing, for ever.</para>
+        ///
+        /// <para>A pane is refreshed many times a second and a player clicks a good deal later
+        /// than that, so <b>the second refresh is the one that matters</b> and the first is the
+        /// only one the old code got right. Refreshing twice here is not belt-and-braces; it is
+        /// the test.</para>
+        /// </summary>
+        [Test]
+        public void ABedStaysAssignableAfterTheRowsHaveSettled()
+        {
+            WorldSnapshot frame = FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
+                    quality: QualityHandle.Normal));
+            InspectModel model = Looking(frame);
+
+            Assert.That(model.BedUnderPane, Is.True, "the first refresh never armed the row");
+
+            // Nothing has changed, so the rebuild is skipped — which is exactly when the flag used
+            // to be lost.
+            for (int i = 0; i < 5; i++) model.Refresh(frame);
+
+            Assert.That(model.BedUnderPane, Is.True,
+                "the owner row stopped being pickable while the same bed was still selected");
+            Assert.That(Rows(model), Does.Contain("owner=Assign…"),
+                "and it still says it is assignable, which is what made the fault invisible");
+        }
+
+        /// <summary>
+        /// And the flag goes away when the bed does, so the affordance cannot outlive its subject.
+        /// </summary>
+        [Test]
+        public void TheOwnerRowStopsBeingPickableWhenTheBedIsNoLongerHeld()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
+                    quality: QualityHandle.Normal)));
+            Assume.That(model.BedUnderPane, Is.True);
+
+            model.Refresh(FrameWith(Detail(terrain: TerrainHandle.Grass)));
+
+            Assert.That(model.BedUnderPane, Is.False, "a patch of grass is not a bed");
+        }
+
+        /// <summary>
+        /// Every tier a player can be shown carries the colour <see cref="HudTheme.Quality"/>
+        /// gives it, and Normal carries none.
+        ///
+        /// <para>The owner's specification is one colour per tier "anywhere quality is mentioned",
+        /// so the tier's colour travels on the row rather than being chosen by whatever draws it —
+        /// which is what makes a second surface naming a tier agree with this one for free.
+        /// Normal is explicitly <b>no change</b>, which is not the same as the body colour: it
+        /// means the surface keeps whatever it already had.</para>
+        /// </summary>
+        [Test]
+        public void AQualityTierCarriesItsOwnColourAndNormalCarriesNone()
+        {
+            for (byte tier = QualityHandle.Poor; tier <= QualityHandle.Epic; tier++)
+            {
+                InspectModel model = Looking(FrameWith(
+                    Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: tier)));
+
+                InspectRow row = model.CellRows[0];
+                Assert.That(row.Name, Is.EqualTo("quality"));
+                Assert.That(row.Tint?.Hex, Is.EqualTo(HudTheme.Quality(tier)?.Hex),
+                    $"tier {tier} must be drawn in the one colour the theme gives it");
+            }
+
+            Assert.That(HudTheme.Quality(QualityHandle.Normal), Is.Null,
+                "Normal is 'no change', so it names no colour for a surface to override with");
+            Assert.That(HudTheme.Quality(QualityHandle.Poor), Is.Not.Null);
+            Assert.That(HudTheme.Quality(QualityHandle.Epic), Is.Not.Null);
+        }
+
+        /// <summary>
+        /// Every tier that names a colour is readable in it, on the darkest panel the game draws.
+        /// A tier the player cannot read is worse than the uncoloured word it replaced.
+        /// </summary>
+        [Test]
+        public void EveryQualityColourIsReadableOnAPanel()
+        {
+            HudColour panel = HudContrast.Over(
+                HudTheme.PanelFill, HudContrast.Over(HudTheme.ScrimInk, new HudColour(255, 255, 255)));
+
+            for (byte tier = QualityHandle.Poor; tier <= QualityHandle.Epic; tier++)
+            {
+                if (HudTheme.Quality(tier) is not HudColour ink) continue;
+                Assert.That(HudContrast.Ratio(HudContrast.Over(ink, panel), panel),
+                    Is.GreaterThanOrEqualTo(HudContrast.BodyMinimum),
+                    $"{QualityLabels.Label(tier)} is not readable in its own colour");
+            }
+        }
+
+        /// <summary>The control for the two above: no quality, no bed facts, no pickable row.</summary>
+        [Test]
+        public void AWallSaysNothingAboutQualityOrOwners()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Wall)));
+
+            Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
+            Assert.That(model.BedUnderPane, Is.False,
+                "the pickable affordance cannot outlive the bed it described");
         }
 
         /// <summary>

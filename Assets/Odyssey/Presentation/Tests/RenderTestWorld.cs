@@ -96,6 +96,29 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// A bed the way <c>ConstructionGrid.Raise</c> leaves it: one record, two
+        /// <c>Edifice[]</c> slots pointing at it, the facing stored and the far cell derived —
+        /// the same derivation (<c>EdificeFootprint</c>'s, restated as the rig's own arithmetic
+        /// so this assembly need not reach into the simulation's).
+        /// </summary>
+        public RenderTestWorld Bed(int x, int z, int y, int facing, ushort stuff = CoreContent.StuffConcrete)
+        {
+            int head = Index(x, z, y);
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = head, Def = CoreContent.EdificeBed, Stuff = stuff, Built = true,
+                Facing = (byte)facing,
+            });
+            int handle = _edifices.Count - 1;
+            Grid.Edifice[head] = handle;
+
+            int fx = facing == 1 ? 1 : facing == 3 ? -1 : 0;
+            int fz = facing == 0 ? 1 : facing == 2 ? -1 : 0;
+            if (Size.Contains(x + fx, z + fz, y)) Grid.Edifice[Index(x + fx, z + fz, y)] = handle;
+            return this;
+        }
+
+        /// <summary>
         /// A board whose <c>x &lt; half</c> is <paramref name="rise"/> layers higher than the rest:
         /// a straight terrace step running the whole depth of the map, published and ready.
         ///

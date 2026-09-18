@@ -37,7 +37,10 @@ namespace Odyssey.Tests.Sim
 
         /// <summary>
         /// The building table as it stands. Update this only when you meant to change what can be
-        /// built, and say what moved in the commit message.
+        /// built, and say what moved in the commit message. Moved 2026-09-17 by the bed: the
+        /// table's third row, `Building_Bed` (footprint 2, passable, rotatable, takes quality) —
+        /// twice in one day, the second time for its edifice id: 10 is the conifer's, and the bed
+        /// moved to the next free id, 12.
         /// </summary>
         // U29 added Building_Floor: a slab at the cell's lower boundary, 4 stuff and 120 ticks,
         // and the `slab` field that tells Raise which of the two kinds of thing it is making.
@@ -46,7 +49,10 @@ namespace Odyssey.Tests.Sim
         // that IS floored and never asks the support rule, because it cannot fall.
         // U43 added Building_Ladder: an edifice like a wall, blocking false so it can be stood in,
         // 4 stuff and 90 ticks. It is the first buildable thing that goes up rather than sideways.
-        const ulong BuildingFingerprint = 7086526741654431591UL;
+        // U45 appended Building_Bed at handle 5 — two cells, rotatable, quality-bearing, 5 stuff
+        // and 180 ticks. It was written at handle 2 and moved here on the merge: the three above
+        // reached main first and a handle position is a save contract.
+        const ulong BuildingFingerprint = 14011408076065575136UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
@@ -54,6 +60,13 @@ namespace Odyssey.Tests.Sim
         /// in the commit message.
         /// </summary>
         const ulong StuffFingerprint = 5872933115437906559UL;
+
+        /// <summary>
+        /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140
+        /// per cent of a plain bed's rest — the owner's interview answers, 2026-09-17. Update this
+        /// only when the owner retunes a tier, and say which one moved.
+        /// </summary>
+        const ulong QualityFingerprint = 11231177996547656315UL;
 
         [Test]
         public void TheBuildingTableIsStillWhatItWas()
@@ -77,6 +90,17 @@ namespace Odyssey.Tests.Sim
                 "is what moved.");
         }
 
+        [Test]
+        public void TheQualityTableIsStillWhatItWas()
+        {
+            ulong actual = DefComparison.Fingerprint(QualityContent.Qualities, "Qualities");
+
+            Assert.That(actual, Is.EqualTo(QualityFingerprint),
+                "a quality tier's rest effectiveness moved. If the owner asked for it, set " +
+                $"QualityFingerprint to {actual}UL and name the tier in the commit message; if not, " +
+                "`git diff Assets/Odyssey/Sim/Construction` is what moved.");
+        }
+
         /// <summary>
         /// The load-bearing test of this row: the XML that ships beside the game says the same
         /// thing as the code that runs it, field by field, including the two new offset fields.
@@ -91,6 +115,8 @@ namespace Odyssey.Tests.Sim
                 ConstructionContent.Buildings, ConstructionContent.BuildingsFromDefs(defs), "Buildings"));
             differences.AddRange(DefComparison.Differences(
                 ConstructionContent.Stuffs, ConstructionContent.StuffsFromDefs(defs), "Stuffs"));
+            differences.AddRange(DefComparison.Differences(
+                QualityContent.Qualities, QualityContent.QualitiesFromDefs(defs), "Qualities"));
 
             Assert.That(differences, Is.Empty,
                 "the XML mirror and the code oracle have parted:" + Environment.NewLine +
@@ -151,6 +177,24 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(defs.Table<BuildingDef>().Count, Is.EqualTo(ConstructionContent.BuildingOrder.Length));
             Assert.That(defs.Table<ConstructionStuffDef>().Count, Is.EqualTo(ConstructionContent.StuffOrder.Length));
+            Assert.That(defs.Table<QualityDef>().Count, Is.EqualTo(QualityContent.QualityOrder.Length));
+        }
+
+        /// <summary>
+        /// The tier table the running game reads — the levels the owner chose, not a factor the
+        /// formula computes. Pinned beside the fingerprint for the same reason the wall's own
+        /// work numbers are.
+        /// </summary>
+        [Test]
+        public void TheTiersRestAtTheOwnersNumbers()
+        {
+            Assert.That(QualityContent.RestEffectiveness(QualityHandle.Poor), Is.EqualTo(85));
+            Assert.That(QualityContent.RestEffectiveness(QualityHandle.Normal), Is.EqualTo(100));
+            Assert.That(QualityContent.RestEffectiveness(QualityHandle.Decent), Is.EqualTo(112));
+            Assert.That(QualityContent.RestEffectiveness(QualityHandle.Uber), Is.EqualTo(125));
+            Assert.That(QualityContent.RestEffectiveness(QualityHandle.Epic), Is.EqualTo(140));
+            Assert.That(QualityContent.RestEffectiveness(QualityHandle.None), Is.EqualTo(100),
+                "tier 0 is \"takes no quality\" and answers a plain bed's rest, never an index error");
         }
     }
 }

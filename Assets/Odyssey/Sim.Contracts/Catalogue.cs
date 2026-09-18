@@ -105,7 +105,14 @@ namespace Odyssey.Sim.Contracts
         public const int TreeConifer = 10;
         public const int TreeBroadleaf = 11;
 
-        public const int Count = 12;
+        /// <summary>
+        /// The bed, and the first edifice id the interface names that no generator stamps: 12,
+        /// after the trees' ten and eleven. See <c>CoreContent.EdificeBed</c> for why it is a
+        /// literal and not an offset.
+        /// </summary>
+        public const int Bed = 12;
+
+        public const int Count = 13;
     }
 
     /// <summary>
@@ -139,7 +146,35 @@ namespace Odyssey.Sim.Contracts
         /// <c>Pathing.Connector</c> and connectors only ever came from worldgen.</para>
         /// </summary>
         public const int Ladder = 4;
-        public const int Count = 5;
+
+        /// <summary>
+        /// The first furniture: two cells, passable, rotatable, finished at a rolled quality
+        /// (docs/design/20-beds.md).
+        ///
+        /// <para><b>Five, not two.</b> The bed was written against a table that ended at the wall
+        /// and took the next number; U29's floor, U42's paving and U43's ladder reached main first
+        /// and took 2, 3 and 4. Handle order is the save contract and positions are append-only,
+        /// so the later branch is the one that moves — which is only safe because no save written
+        /// with a bed in it has ever left this branch.</para>
+        /// </summary>
+        public const int Bed = 5;
+        public const int Count = 6;
+    }
+
+    /// <summary>
+    /// The tier a quality-bearing thing finished at, as <see cref="Pawns.PlacedEdifice.Quality"/>
+    /// carries it. 0 is "takes no quality at all" — every wall, for ever. The five names are the
+    /// owner's (docs/design/20-beds.md §2).
+    /// </summary>
+    public static class QualityHandle
+    {
+        public const int None = 0;
+        public const int Poor = 1;
+        public const int Normal = 2;
+        public const int Decent = 3;
+        public const int Uber = 4;
+        public const int Epic = 5;
+        public const int Count = 6;
     }
 
     /// <summary>

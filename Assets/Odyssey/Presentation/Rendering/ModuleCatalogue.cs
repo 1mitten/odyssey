@@ -90,6 +90,16 @@ namespace Odyssey.Presentation.Rendering
         /// falls. See <see cref="WaterMesh.Fall"/>.
         /// </summary>
         WaterFall = 12,
+
+        /// <summary>
+        /// A pillow: a rounded box, smooth-shaded, spanning the unit box like every other stand-in.
+        ///
+        /// A shape of its own rather than a flag on <see cref="SolidBlock"/> because the two are
+        /// different meshes and a mesh is what a bucket is keyed by — the same argument
+        /// <see cref="GroundFace"/> makes. See <see cref="PillowMesh"/> for why a bed's pillow is
+        /// the one soft thing in the renderer.
+        /// </summary>
+        Pillow = 13,
     }
 
     /// <summary>
@@ -444,6 +454,22 @@ namespace Odyssey.Presentation.Rendering
         // Edifices worldgen places outside a template.
         public const string VaultWall = Prefix + "wall.vault";
         public const string UtilityTap = Prefix + "utility.tap";
+
+        /// <summary>
+        /// The bed. No catalogue row exists and none is owed yet: the id resolves to the plain
+        /// block placeholder, tinted by the stuff the bed was built of, and drawn by the mesher as
+        /// frame, mattress and pillow from scaled instances of it (design 20 §9) — the computed
+        /// swing's idiom, an honest stand-in rather than borrowed art. The day real two-cell bed
+        /// art lands, one row on this id upgrades every bed with no code change.
+        /// </summary>
+        public const string Bed = Prefix + "bed";
+
+        /// <summary>
+        /// The bed's pillow, which is a module of its own so it can be a different shape and a
+        /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
+        /// of: a stone bed has a white pillow, exactly as a wooden one does.
+        /// </summary>
+        public const string BedPillow = Prefix + "bed.pillow";
 
         /// <summary>
         /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every

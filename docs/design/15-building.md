@@ -194,6 +194,32 @@ colony work and material and never the order.**
 is the behaviour that existed before the roll — construction is the only work type that *completes* a
 thing, so it is the only one with a completion to roll.
 
+### 4a.1 Two rolls at the same instant, and the order they go in
+
+U26 left **two** rolls at the moment of completion and they arrived from two directions: the success
+roll above, and the **quality tier** that came with the bed (`20-beds.md` §6). The bed's status line
+recorded itself as "closing U26's outstanding success roll", which was a misreading corrected when
+the two merged — quality is the second roll, not the first, and neither subsumes the other.
+
+They compose in one order and it is not arbitrary:
+
+1. **Does it stand at all?** `PawnPurpose.BuildSuccess`, every building.
+2. **How well was it made?** `PawnPurpose.BuildQuality`, only where `BuildingDef.takesQuality` — a
+   bed does, a wall never does.
+
+**A botch never reaches the quality roll**, because a thing that was not built has no quality to
+have. The two draw from **separate salts**, so asking the first does not move the second's answer,
+and both read the *finishing* colonist's Construction level — the same exploitable property, kept
+deliberately at both ends for the same reason.
+
+**A botched bed is the one place the two features touch**, since a bed is the only thing that is both
+quality-bearing and two cells. It is safe for a reason worth writing down rather than rediscovering:
+a site's work and delivery live on the **head** cell only, the far cell being derived from the head's
+footprint and facing, and `Botch` is handed exactly the cell `Raise` would have been. So a botched
+bed keeps its item hold, stays one order, and still answers to either of its cells.
+`ABotchedBedRollsNoQualityAndKeepsBothItsCells` is the test, and it was checked against a build
+forced to *succeed* before being believed.
+
 ## 5. The contract
 
 `SiteView` carries **real counts and real ticks**, where `OrderView.Progress` is a quantised byte.

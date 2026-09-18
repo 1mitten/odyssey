@@ -265,6 +265,28 @@ namespace Odyssey.Presentation.World
             public float SwimClock;
 
             /// <summary>
+            /// How much of a sleeper this figure is, 0 standing and 1 flat out. Eased, so a
+            /// colonist lies down and gets up rather than snapping between the two.
+            /// </summary>
+            public float SleepWeight;
+
+            /// <summary>
+            /// Which way the body lies, head to foot. The bed's own facing where there is a bed,
+            /// and whatever the colonist was facing when it dropped where there is not.
+            /// </summary>
+            public Vector3 SleepAlong = Vector3.forward;
+
+            /// <summary>
+            /// Where the head goes in plan: the middle of the pillow, or the cell's own centre
+            /// stepped back half a body where there is no bed. The head rather than the middle,
+            /// because the head is the end that has to land somewhere exact.
+            /// </summary>
+            public Vector3 SleepHeadAt;
+
+            /// <summary>World height of the surface being lain on — a mattress top, or the ground.</summary>
+            public float SleepSurfaceY;
+
+            /// <summary>
             /// Degrees this figure is aiming its stroke below level, this frame.
             ///
             /// The style's <see cref="WorkStyle.Dip"/> when the work is a layer down and zero when

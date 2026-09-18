@@ -84,6 +84,36 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one-day run), switched on by the repository variable `UNITY_RUNNER=1`.
 - **M1 and M2 are done and reported** — `docs/milestones/M1-report.md`,
   `docs/milestones/M2-report.md`. Both went further than the plan asked.
+- **Beds, the first furniture, landed 2026-09-17** (`claude/beds`, design `20-beds.md`): a
+  two-cell bed ordered from the Build palette, rotated with R (the game's first context key —
+  the tool claims the slice-up press while a rotatable ghost is armed, design 09 §6 case 9),
+  built through the pipeline, finished at a rolled quality of five tiers (furniture carries
+  quality, walls never do), ownable from the
+  pane's first interactive row, and slept in at its tier's own rest rate. One `PlacedEdifice`
+  behind two `Edifice[]` slots, the second cell derived from the facing and never stored;
+  **save format 4**. Placeholder art (three scaled boxes) stands in until real two-tile art
+  exists; the room bonus is a seam. Nobody has pressed Play on any of it.
+  **It was recorded as "closing U26's outstanding success roll" and that was a misreading**,
+  corrected on the merge: U26 left **two** rolls at the moment of completion, and the quality tier
+  is the second. The first — whether the thing stands at all — is the botch, below, which was in
+  flight on another branch at the same time. Both now roll from the finishing colonist's
+  Construction level, success first, and **a botch never reaches the quality roll**.
+  **`BuildingHandle.Bed` is 5, not 2** — U29's floor, U42's paving and U43's ladder reached
+  main first and took 2, 3 and 4, and a handle position is a save contract. The renumbering's
+  one silent casualty is the general lesson: **a hand-written table parallel to a handle set
+  does not conflict when the handles move.** `BuildShapes` was untouched by main, merged in
+  silence with three entries, and the bed became a one-cell thing that could not be turned;
+  `RegistryTests.EveryBuildableHasAShapeOfItsOwn` is the length check whose absence allowed it.
+  **Reviewing that merge found three things both tiers were green over**, recorded in
+  `20-beds.md` §10a: four of the six ownership tests were never running (a helper raised a bed
+  without ordering one, and every one of them ended on an `Assume`, which reports
+  *Inconclusive* — so `dotnet test` prints `Passed!` and counts it in neither total); a fifth
+  ignored itself on every run since it was written, searching for solid ground one layer too
+  high; and **the build cursor knew nothing about beds**, drawing one cell-filling cube at the
+  head cell, so turning the ghost with R changed nothing visible. `BedShape` now owns the three
+  boxes and the mesher and both ghost paths ask it. `AssignBedOwner` joined
+  `PausedIntents.AppliesWhilePaused` in the same pass, because the pane that offers the choice
+  is one you open while paused.
 - **M3 is under way:** designations, felling, stockpiles and mining are in, and **U26
   building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
   stone, and colonists carry the material and raise it. Design, the test procedure and what

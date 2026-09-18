@@ -343,6 +343,21 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeUtilityTap = 9;
 
         /// <summary>
+        /// The first furniture. Not stamped by any generator — it arrives only by
+        /// <c>ConstructionGrid.Raise</c>, so a bed in the list is a bed a colonist built, and the
+        /// two cells it spans point at the one record (docs/design/20-beds.md §4).
+        ///
+        /// <para><b>12, not 10.</b> Ten and eleven are the trees' —
+        /// <c>NaturalContent.FirstEdifice</c> reserved them the day woodland landed — and the
+        /// first cut of the bed took 10 anyway, which would have drawn every bed as a conifer.
+        /// Spelled as a literal with this note rather than as
+        /// <c>NaturalContent.FirstEdifice + 2</c> because CoreContent does not depend on the
+        /// natural tables and a number that can be read beside the ones it must not collide with
+        /// is safer than an offset that has to be re-derived.</para>
+        /// </summary>
+        public const ushort EdificeBed = 12;
+
+        /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
         /// in code and the XML mirrored it, which meant every terrain was written twice.

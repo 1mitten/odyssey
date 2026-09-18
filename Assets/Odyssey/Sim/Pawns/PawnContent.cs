@@ -765,5 +765,22 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="StartingSkill"/> stepped outside them.
         /// </summary>
         public const uint BuildBotchLoss = 0x1B87_3593;
+
+        /// <summary>
+        /// The quality tier a bed finishes at (design 20 §6). Drawn from (world seed,
+        /// <b>cell index ^ tick</b>) — the refund's shape, not the yield's, and for the refund's
+        /// reason: quality is a property of the <i>moment</i> of completion, not of the cell. A
+        /// bed rebuilt on the same spot is a new bed and may finish better, where a rock mined
+        /// twice is not a thing that happens; keyed on the cell alone, every site on the board
+        /// would be permanently a "Decent" site, stable, discoverable and then farmable by
+        /// demolishing the disappointments.
+        ///
+        /// <para>Chosen outside the xxHash prime family for the reason
+        /// <see cref="StartingSkill"/> records: all five primes are spent. It read "the third
+        /// constant to step outside it" when the bed landed; the success roll merged in beside it
+        /// with two more, so it is now the <b>fourth</b> — <see cref="StartingSkill"/>,
+        /// <see cref="BuildSuccess"/>, <see cref="BuildBotchLoss"/>, this.</para>
+        /// </summary>
+        public const uint BuildQuality = 0x7F4A_7C15;
     }
 }

@@ -612,5 +612,124 @@ namespace Odyssey.Tests.Hud
             director.DragTo(to);
             return new List<CellRef>(director.Commit());
         }
+
+            // ---- the bed: one thing, two cells, one key claimed (design 20 section 5) -------------
+
+            /// <summary>A director with the build tool armed on the bed, as the palette leaves it.</summary>
+            static DesignateDirector BedArmed()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Bed);
+            return director;
+        }
+
+        [Test]
+        public void ABedIsPlacedOnePerClickWhateverTheDragDid()
+        {
+            var director = BedArmed();
+
+            Assert.That(director.Begin(At(10, 10)), Is.True);
+            director.DragTo(At(14, 18));
+            IReadOnlyList<CellRef> cells = director.Commit();
+
+            Assert.That(cells, Is.EqualTo(new[] { At(10, 10) }),
+                "a bed is one order about one cell; the facing — not the drag — says where the rest of it goes");
+        }
+
+        /// <summary>
+        /// The ghost is the thing's own footprint, turned by the facing, and where the pointer has
+        /// wandered since the press began is nothing to do with it.
+        /// </summary>
+        [Test]
+        public void TheBedsGhostIsItsFootprintNotTheDrag()
+        {
+            var director = BedArmed();
+            director.Begin(At(10, 10));
+            director.DragTo(At(13, 13));
+
+            // North, east, south, west: the span is the anchor plus the facing's own offset.
+            (int minX, int minZ, int maxX, int maxZ)[] spans =
+            {
+                (10, 10, 10, 11), (10, 10, 11, 10), (10, 9, 10, 10), (9, 10, 10, 10),
+            };
+
+            for (int facing = 0; facing < 4; facing++)
+            {
+                var (minX, minZ, maxX, maxZ) = spans[facing];
+                Assert.That(director.TryPreview(out CellRef min, out CellRef max), Is.True);
+                Assert.That(min, Is.EqualTo(At(minX, minZ)), $"facing {facing}: the low corner moved");
+                Assert.That(max, Is.EqualTo(At(maxX, maxZ)), $"facing {facing}: the high corner moved");
+                director.Rotate();
+            }
+        }
+
+        /// <summary>
+        /// The wall's own regression, run beside the bed's: what was true of the build box yesterday
+        /// is still true of it, because the bed's rules are the bed's.
+        /// </summary>
+        [Test]
+        public void AWallStillDragsABoxAndNeverClaimsTheRotateKey()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.SinglePlacement, Is.False);
+            Assert.That(director.RotatableArmed, Is.False,
+                "R stays the slice-up key while a wall is armed, exactly as it always was");
+
+            director.Rotate();
+            Assert.That(director.Facing, Is.EqualTo(0), "a thing that does not rotate never turns");
+
+            director.Begin(At(10, 10));
+            director.DragTo(At(12, 10));
+            Assert.That(director.TryPreview(out CellRef min, out CellRef max), Is.True);
+            Assert.That((min.X, min.Z, max.X, max.Z), Is.EqualTo((10, 10, 12, 10)));
+            Assert.That(director.Commit(), Is.EqualTo(new[]
+            {
+                At(10, 10), At(11, 10), At(12, 10),
+            }));
+        }
+
+        [Test]
+        public void ARotatableThingTurnsClockwiseAndComesBackToNorth()
+        {
+            var director = BedArmed();
+
+            Assert.That(director.RotatableArmed, Is.True);
+            for (int expected = 1; expected <= 3; expected++)
+            {
+                director.Rotate();
+                Assert.That(director.Facing, Is.EqualTo(expected));
+            }
+            director.Rotate();
+            Assert.That(director.Facing, Is.EqualTo(0), "four quarter turns are home again");
+        }
+
+        [Test]
+        public void PickingADifferentThingUpResetsTheFacing()
+        {
+            var director = BedArmed();
+            director.Rotate();
+            director.Rotate();
+            Assume.That(director.Facing, Is.EqualTo(2));
+
+            director.ArmBuild(BuildingHandle.Wall);
+            director.ArmBuild(BuildingHandle.Bed);
+            Assert.That(director.Facing, Is.EqualTo(0),
+                "a bed picked up after something else does not inherit a facing nothing showed");
+        }
+
+        [Test]
+        public void PuttingTheBedDownAndBackUpKeepsTheFacing()
+        {
+            var director = BedArmed();
+            director.Rotate();
+            Assume.That(director.Facing, Is.EqualTo(1));
+
+            director.ArmBuild(BuildingHandle.Bed); // down
+            director.ArmBuild(BuildingHandle.Bed); // up again
+            Assert.That(director.Facing, Is.EqualTo(1),
+                "the same thing picked up again keeps the turn, because the player is the one who made it");
+        }
     }
 }

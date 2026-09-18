@@ -166,6 +166,39 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// <see cref="BuildShapes"/> is parallel to <see cref="BuildingHandle"/> and must stay
+        /// exactly as long as it.
+        ///
+        /// <para><b>Written because its absence cost a merge.</b> That class's own remarks claimed
+        /// "the two tables are held together the same way the labels are — a test walks both", and
+        /// no such test existed. When the bed's handle moved from 2 to 5 to make room for the
+        /// floor, the deck plate and the ladder, this three-entry table was <i>not</i> a conflict
+        /// — main had never touched the file — so it merged in silence and the bed became a
+        /// one-cell thing that could not be turned. Three <c>DesignateDirector</c> tests failed
+        /// and none of them named the cause.</para>
+        ///
+        /// <para>A length check is the whole of what this assembly can assert: the real table is
+        /// <c>ConstructionContent</c>'s, in the simulation, which the interface may not reference
+        /// (ADR 0003). It is enough — a handle past the end of either array reads as one cell and
+        /// no rotation, which is exactly the silently wrong answer.</para>
+        /// </summary>
+        [Test]
+        public void EveryBuildableHasAShapeOfItsOwn()
+        {
+            Assert.That(BuildShapes.Cells.Length, Is.EqualTo(BuildingHandle.Count),
+                "a buildable the shape table does not cover is silently one cell wide");
+            Assert.That(BuildShapes.Rotates.Length, Is.EqualTo(BuildingHandle.Count),
+                "a buildable the rotation table does not cover silently cannot be turned");
+
+            // The bed is the one thing either table says anything but the default about, so it is
+            // named here rather than left to the lengths to imply.
+            Assert.That(BuildShapes.CellsOf(BuildingHandle.Bed), Is.EqualTo(2));
+            Assert.That(BuildShapes.CanRotate(BuildingHandle.Bed), Is.True);
+            Assert.That(BuildShapes.CellsOf(BuildingHandle.Wall), Is.EqualTo(1));
+            Assert.That(BuildShapes.CanRotate(BuildingHandle.Wall), Is.False);
+        }
+
+        /// <summary>
         /// The item, terrain and edifice tables the inspect pane reads, held to the same rule as
         /// the jobs: the length matches the contract's count and every key is a name the wiki
         /// knows. A table that is short is not a compile error — it is every pile of the missing

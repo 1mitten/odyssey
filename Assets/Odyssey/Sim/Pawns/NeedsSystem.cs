@@ -71,9 +71,16 @@ namespace Odyssey.Sim.Pawns
             if (pawn.Asleep)
             {
                 var rest = content.Needs[NeedIndex.Rest];
-                int effectiveness = IsBed(pawn.Cell) ? 100 : content.Kind.groundRestEffectiveness;
-                pawn.Needs[NeedIndex.Rest] =
-                    System.Math.Min(rest.max, pawn.Needs[NeedIndex.Rest] + pawn.RestGainPerInterval(effectiveness));
+                int effectiveness = RestEffectiveness(pawn.Cell);
+
+                // The interval this pawn is on, which is what spends the fractional part of the
+                // gain — see Pawn.RestGainPerInterval for why a tier is worth nothing without it.
+                // Derived from the tick and the id, exactly as the phase spreading above is, so it
+                // is a pure function of state the world already keeps.
+                int intervalIndex = (tick + pawn.Id.Value) / interval;
+                pawn.Needs[NeedIndex.Rest] = System.Math.Min(
+                    rest.max,
+                    pawn.Needs[NeedIndex.Rest] + pawn.RestGainPerInterval(effectiveness, intervalIndex));
             }
             else
             {
@@ -166,6 +173,23 @@ namespace Odyssey.Sim.Pawns
                 else high = mid - 1;
             }
             return false;
+        }
+
+        /// <summary>
+        /// How well a sleeping pawn recovers where it lies, in per cent: the ground at the
+        /// kind's own rate, a scenario's bed spot at a plain 100 as it always has, and a built
+        /// bed at the tier its finisher rolled (design 20 §7). The quality table is the single
+        /// source of the numbers — the hardcoded 100 the pane of glass used to carry is the one
+        /// thing this replaced.
+        /// </summary>
+        int RestEffectiveness(int cell)
+        {
+            if (!IsBed(cell)) return _ctx.Content.Kind.groundRestEffectiveness;
+
+            // No construction grid, no built beds: a rig that never wired one still has its
+            // scenario spots, and they are plain.
+            byte tier = _ctx.Construction != null ? _ctx.Construction.BedQualityAt(cell) : (byte)0;
+            return tier == 0 ? 100 : Construction.QualityContent.RestEffectiveness(tier);
         }
 
         static bool IsIdling(Pawn pawn)

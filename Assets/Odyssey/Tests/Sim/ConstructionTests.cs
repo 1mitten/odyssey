@@ -471,6 +471,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(placed.Def, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(placed.Stuff, Is.EqualTo(NaturalContent.StuffWood), "it remembers what it was made of");
             Assert.That(placed.CellIndex, Is.EqualTo(cell));
+            Assert.That(placed.Quality, Is.EqualTo(0),
+                "walls take no quality for ever — the finisher's roll is furniture's, not structure's");
 
             // Five went into the wall; the other fifteen are still the colony's.
             Assert.That(OnTheGround(colony, ItemIndex.Wood), Is.EqualTo(15));
@@ -684,6 +686,96 @@ namespace Odyssey.Tests.Sim
                 "the wall went up, whatever was botched on the way");
             Assert.That(OnTheGround(colony, ItemIndex.Wood), Is.LessThanOrEqualTo(15),
                 "five went into the wall and any botch took more");
+        }
+
+        /// <summary>
+        /// The one thing this merge made possible and neither branch could test alone: the success
+        /// roll and the quality tier are two rolls at the same instant, and <b>a botch must never
+        /// reach the quality roll</b>, because a thing that was not built has no quality to have.
+        ///
+        /// <para>A bed is the only thing in the game that is both quality-bearing and two cells, so
+        /// it is where the two features actually touch. The claim is about the <b>site</b>: a
+        /// botched bed raises nothing, stays one order, and still answers to <i>either</i> of its
+        /// cells afterwards — the far cell is derived from the head's footprint and facing, so a
+        /// botch that quietly dropped the head's row would strand it.</para>
+        /// </summary>
+        [Test]
+        public void ABotchedBedRollsNoQualityAndKeepsBothItsCells()
+        {
+            ColonyWorld colony = Board();
+            SuccessChance(colony, 0, 0);
+
+            int head = OpenBedFootprint(colony, out int second);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0), "somewhere near the start takes a bed");
+
+            // Ordered before the wood is put down, not after. A site holds its cells against items
+            // from the moment it is ordered, and the nearest space to the head is the footprint
+            // itself — so spawning first drops a pile on the bed's own cells and the order is then
+            // refused, which cost this test a run as a silent skip.
+            Assume.That(
+                colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing: 0),
+                Is.EqualTo(IntentRejection.None));
+
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, head, ItemIndex.Wood, 40, JobDriver.DropSearchRadius);
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 40);
+
+            bool wasFed = false, botched = false;
+            for (int tick = 0; tick < 30_000; tick++)
+            {
+                colony.World.Tick();
+
+                Assert.That(colony.Grid.Edifice[head], Is.LessThan(0),
+                    "a bed that botched every roll was raised anyway");
+                Assert.That(colony.Grid.Edifice[second], Is.LessThan(0),
+                    "and its far cell was raised anyway");
+
+                bool frame = colony.Construction.IsFrame(head);
+                if (frame) wasFed = true;
+                else if (wasFed) botched = true;
+            }
+
+            Assert.That(wasFed, Is.True, "the wood was carried to the bed");
+            Assert.That(botched, Is.True, "the completion was rolled and failed");
+            Assert.That(colony.Construction.At(head), Is.EqualTo(BuildingHandle.Bed),
+                "the order still stands");
+            Assert.That(colony.Construction.Count, Is.EqualTo(1),
+                "and it is still one order rather than two");
+            Assert.That(colony.Construction.SiteAt(Size.FromIndex(second)), Is.EqualTo(head),
+                "the far cell still names the site, so the footprint survived the botch");
+        }
+
+        /// <summary>
+        /// A cell near the start whose whole north-facing bed footprint is open, with the far cell
+        /// in <paramref name="second"/>. <see cref="BedTests"/> owns the careful version of this —
+        /// it also avoids cells a colonist has already reserved — and this one is deliberately the
+        /// plain question, because the bed here is never slept in.
+        /// </summary>
+        static int OpenBedFootprint(ColonyWorld colony, out int second)
+        {
+            CellRef start = colony.Start;
+            for (int radius = 1; radius < 8; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (System.Math.Abs(dx) != radius && System.Math.Abs(dz) != radius) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!Size.Contains(x, z, start.Y)) continue;
+
+                int head = Size.Index(x, z, start.Y);
+                if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
+                if (FellJobDriver.StandBeside(colony.Pawns, colony.Pawns.Pawns.All[0], head) < 0) continue;
+
+                int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
+                if (foot >= 0 && colony.Construction.Allows(foot, BuildingHandle.Bed))
+                {
+                    second = foot;
+                    return head;
+                }
+            }
+
+            second = -1;
+            return -1;
         }
     }
 }

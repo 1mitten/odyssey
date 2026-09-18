@@ -95,7 +95,27 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The largest species index a code can carry.</summary>
         public const int MaxTreeValue = (1 << 12) - 1;
 
+        /// <summary>
+        /// Bit 13 marks a code as <b>linen</b> — bedding, which is white whatever it lies on.
+        ///
+        /// <para>A bed is tinted by the stuff it was built of, and its pillow is not: a stone bed
+        /// has a white pillow exactly as a wooden one does (owner, 2026-09-17: "make the pillow
+        /// white"). That cannot be said by picking a stuff, because every stuff in the table is
+        /// something a colonist carries and none of them is cloth — so it is said the way foliage
+        /// and water already say the same kind of thing, with a bit of its own.</para>
+        ///
+        /// <para><b>Bit 13, not 12.</b> It was written as 12 and the tree took that on the way
+        /// past; the two are independent markers and a shared bit would have made every pillow a
+        /// tree. Nothing is stored in these codes, so moving one costs nothing but this sentence.</para>
+        /// </summary>
+        public const int LinenBase = 8192;
+
         public static int Stuff(int stuff) => stuff;
+
+        /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>
+        public static int Linen() => LinenBase;
+
+        public static bool IsLinen(int code) => (code & LinenBase) != 0;
 
         public static int Terrain(int terrain) => TerrainBase + terrain;
 

@@ -435,11 +435,17 @@ namespace Odyssey.Sim.Pawns
             Work(ctx);
             if (sites.AddWork(cell, 1) < sites.WorkFor(cell)) return JobStatus.Ongoing;
 
-            // The last hammer blow is rolled (U26): the finishing builder's skill decides whether
-            // the thing stands, exactly as it does in the reference — including the reference's
-            // exploitable property that the finisher rolls, not the colonist who did most of the
-            // work, because a building records no author. Kept deliberately; it is what lets a
-            // master rescue a novice's half-built wall by finishing it.
+            // The last hammer blow is rolled twice, and the two rolls are one question asked in
+            // two halves: **does the thing stand at all**, and then **how well was it made**. Both
+            // read the finishing colonist's Construction level — the reference's own exploitable
+            // property, kept deliberately at both ends, because a building records no author and a
+            // master rescuing a novice's half-built wall reads as a sensible thing for a colony to
+            // do. They arrived from two directions (the success roll is U26's own last line; the
+            // quality tier came with the bed, design 20 §6) and neither subsumes the other.
+            //
+            // **Success is asked first, and a botch never reaches the quality roll**, because a
+            // thing that was not built has no quality to have. The two draw from separate salts,
+            // so asking one does not move the other's answer.
             int tick = ctx.CurrentTick;
             int chance = ctx.Content.WorkTypes[WorkTypeIndex.Construction]
                 .SuccessPerMille(Pawn.SkillLevel(SkillIndex.Construction));
@@ -448,7 +454,17 @@ namespace Odyssey.Sim.Pawns
             if (roll.NextInt(1_000) < chance)
             {
                 ConstructionGrid grid = sites;
-                ctx.Defer(_ => grid.Raise(ctx, cell));
+
+                // Walls take no quality and roll nothing; a bed does.
+                byte quality = 0;
+                if (ConstructionContent.BuildingAt(sites.At(cell)).takesQuality)
+                {
+                    var rng = DeterministicRandom.ForTick(
+                        ctx.Seed, cell ^ tick, PawnPurpose.BuildQuality);
+                    quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
+                }
+
+                ctx.Defer(_ => grid.Raise(ctx, cell, quality));
 
                 // The wall goes up now; the builder straightens up before walking off.
                 NextToil();

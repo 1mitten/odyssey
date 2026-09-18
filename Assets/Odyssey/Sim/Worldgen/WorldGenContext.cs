@@ -137,6 +137,41 @@ namespace Odyssey.Sim.Worldgen
 
         /// <summary>Set when the damage pass knocks it out. The slot is kept so handles are stable.</summary>
         public bool Removed;
+
+        /// <summary>
+        /// The facing a rotatable thing was placed at, 0–3 (north, east, south, west). Stored at
+        /// placement and never inferred: the stairs infer theirs by scanning neighbours only
+        /// because worldgen had nowhere to put an answer, and placing is exactly where the answer
+        /// is known. Zero on everything that does not rotate — which is also north, so a bare
+        /// default is a one-cell thing that never cared.
+        ///
+        /// <para><b>The second cell is not stored.</b> A two-cell thing's other cell is always
+        /// this cell plus the facing offset, and the def's own footprint says whether there is
+        /// one, so <see cref="EdificeFootprint"/> derives it on demand and the record carries no
+        /// second index that could disagree with its facing. Both cells' <c>Edifice[]</c> slots
+        /// point at the one record — that is where "one bed, two cells" actually lives
+        /// (docs/design/20-beds.md §4).</para>
+        /// </summary>
+        public byte Facing;
+
+        /// <summary>
+        /// The tier the bed finished at, 1–5 (Poor, Normal, Decent, Uber, Epic), or 0 where the
+        /// thing takes no quality at all — which is every wall, for ever, exactly as the reference
+        /// splits it: furniture carries quality, structures do not (a-04 §3).
+        /// </summary>
+        public byte Quality;
+
+        /// <summary>
+        /// The <c>PawnId</c> of the colonist this bed belongs to, or 0 when it is nobody's — 0
+        /// being a value no pawn ever has, ids being 1-based.
+        ///
+        /// <para><b>Here and nowhere else.</b> Not on the pawn: a pawn's bed is found by scanning
+        /// beds, which the sleep chooser already does, and a second copy on the pawn is a second
+        /// thing to keep true. Ownership rides the edifice list into the save and the hash
+        /// (<c>EdificeSaveSection</c>), so it is written down by the same channel that writes the
+        /// bed itself down.</para>
+        /// </summary>
+        public int Owner;
     }
 
     public readonly struct SalvageDeposit

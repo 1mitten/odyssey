@@ -981,12 +981,15 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef cell = size.FromIndex(sites[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
-                // The mark first and underneath: a ghost seen from directly above is foreshortened
-                // to nothing, and the plate is what still says which cell.
-                _renderer.DrawCellOutline(cell, BuildOrderColour);
-                _renderer.DrawCellMark(cell, BuildOrderColour);
-
-                DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff);
+                // **The shape and the progress, and nothing else** (owner, 2026-09-18: "just the
+                // shape/outline of what is going to be built because it's difficult to visualize
+                // anything and just adds noise"). A waiting order used to carry a cell outline, a
+                // filled cell mark, the ghost and a progress bar — four overlapping things on one
+                // cell, three of which described the *cell* rather than the thing going in it.
+                //
+                // The two-cell mark went with them and needs no replacement: a bed's ghost spans
+                // both of its cells on its own, which is what makes the footprint legible now.
+                DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff, sites[i].Facing);
 
                 // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
                 // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
@@ -1014,7 +1017,24 @@ namespace Odyssey.Presentation.Bootstrap
         /// board for as long as it takes a colonist to walk over, and a colony of them at cursor
         /// weight would read as a finished town.</para>
         /// </summary>
-        void DrawSiteGhost(CellRef cell, int building, int stuff)
+        /// <summary>
+        /// Would the simulation refuse a cell of this run? Asked of the grid that will land the
+        /// order, never worked out here — the same rule the cursor has followed since the build
+        /// cursor was written, and the reason it cannot come to disagree with what happens on the
+        /// click.
+        ///
+        /// <para>Per cell rather than per run. A drag across a hillside is usually part legal, and
+        /// a whole run painted red because one end of it is rock says less than the cells
+        /// themselves do.</para>
+        /// </summary>
+        bool Refused(CellRef cell, int building)
+        {
+            ConstructionGrid? sites = _colony?.Construction;
+            if (sites == null || _grid == null) return false;
+            return !sites.Allows(_grid.Index(cell), building);
+        }
+
+        void DrawSiteGhost(CellRef cell, int building, int stuff, int facing = 0, bool refused = false)
         {
             if (_renderer == null || _model == null || _grid == null) return;
             if (!ConstructionContent.IsBuilding(building)) return;
@@ -1024,8 +1044,51 @@ namespace Odyssey.Presentation.Bootstrap
             ushort material = ConstructionContent.StuffAt(stuff).stuff;
             int module = GhostModuleFor(index, what, material);
 
-            Color tint = StuffPalette.For(material, overArt: true);
+            // Its own material when it can be built and red when it cannot — the ghost is the only
+            // thing drawn now, so it is also the only thing left to carry the refusal (owner,
+            // 2026-09-18). Green is deliberately still not used for yes: looking right IS yes.
+            Color tint = refused ? PreviewRefusedColour : StuffPalette.For(material, overArt: true);
             tint.a = SiteGhostAlpha;
+
+            DrawThingGhost(module, what, tint, cell, facing);
+        }
+
+        /// <summary>
+        /// The armed or waiting thing, drawn where it will stand — one module in a cell, or a
+        /// bed's own three boxes across the two cells its facing claims.
+        ///
+        /// <para><b>The bed is why this is not one line.</b> Every other buildable fills its cell,
+        /// so a module dropped on the cell floor is the whole picture. A bed is two cells long and
+        /// low, and drawn as a single cell-filling cube it said nothing about either — and turning
+        /// it with <b>R</b> changed nothing the player could see, because a cube looks the same
+        /// all four ways round. <c>BedShape</c> is the mesher's own geometry, asked here so the
+        /// ghost and the built thing cannot come to disagree.</para>
+        /// </summary>
+        void DrawThingGhost(int module, BuildingDef what, Color tint, CellRef cell, int facing)
+        {
+            if (_renderer == null) return;
+
+            if (what.edifice == CoreContent.EdificeBed)
+            {
+                Matrix4x4 root = BedShape.Root(cell.X, cell.Z, cell.Y, facing);
+                for (int part = 0; part < BedShape.PartCount; part++)
+                {
+                    // The pillow keeps its own module and its own colour in the ghost too, or the
+                    // cursor would promise a bed it is not about to build.
+                    bool pillow = BedShape.IsPillow(part);
+                    Color partTint = tint;
+                    if (pillow)
+                    {
+                        Color linen = StuffPalette.Linen;
+                        partTint = new Color(linen.r, linen.g, linen.b, tint.a);
+                    }
+
+                    _renderer.DrawGhost(
+                        pillow && _model != null ? _model.BedPillowModule : module,
+                        partTint, BedShape.Part(root, facing, part));
+                }
+                return;
+            }
 
             _renderer.DrawGhost(module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
@@ -1044,13 +1107,30 @@ namespace Odyssey.Presentation.Bootstrap
         /// instanced submission each is a cost worth bounding on a frame that is already drawing a
         /// preview every frame of a drag.</para>
         /// </summary>
-        void DrawRunGhosts(PreviewBox box, int building, int stuff)
+        void DrawRunGhosts(PreviewBox box, int building, int stuff, int facing)
         {
             if (box.Cells > MaxRunGhosts) return;
 
+            // A multi-cell thing is one ghost, not one per cell. Its preview box IS its footprint
+            // — the director draws the shape of the thing rather than the shape of the drag — so
+            // walking the box would stamp a whole bed in each of the two cells it occupies.
+            // The head is whichever end the facing points away from.
+            if (BuildShapes.CellsOf(building) > 1)
+            {
+                var head = new CellRef(
+                    facing == 3 ? box.Max.X : box.Min.X,
+                    facing == 2 ? box.Max.Z : box.Min.Z,
+                    box.Min.Y);
+                DrawSiteGhost(head, building, stuff, facing, Refused(head, building));
+                return;
+            }
+
             for (int z = box.Min.Z; z <= box.Max.Z; z++)
             for (int x = box.Min.X; x <= box.Max.X; x++)
-                DrawSiteGhost(new CellRef(x, z, box.Min.Y), building, stuff);
+            {
+                var at = new CellRef(x, z, box.Min.Y);
+                DrawSiteGhost(at, building, stuff, refused: Refused(at, building));
+            }
         }
 
         /// <summary>
@@ -1178,48 +1258,46 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            // Deconstruct is named rather than left to fall through. It fell through to the cancel
-            // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
-            // while the player was demolishing, and tuning the cancel colour would have silently
-            // re-tinted it.
-            Color tint = director.Tool switch
-            {
-                DesignateTool.Build => PreviewBuildColour,
-                DesignateTool.Mine => MineOrderColour,
-                DesignateTool.Fell => FellOrderColour,
-                DesignateTool.Deconstruct => DeconstructOrderColour,
-                _ => PreviewCancelColour,
-            };
-
-            // A build drag draws the wall, not the cells: one closed box over the whole run, and
-            // one per layer where the run steps up a riser (BuildPreview). The area tools keep
-            // their per-cell plate, because a mine order is read as paint on a face that is
-            // already there and a box round each cell would be a cage round the hillside.
+            // **A build drag draws the things, and only the things** (owner, 2026-09-18: "lets not
+            // print the cursor, just the shape/outline of what is going to be built because it's
+            // difficult to visualize anything and just adds noise").
+            //
+            // It used to draw a closed box over the whole run as well, one per layer where the run
+            // steps up a riser, and that box was itself the answer to an earlier report — the
+            // cursor being invisible. The two asks are not in conflict: what was missing then was
+            // any promise of *what* would be built, and the ghosts are that promise. Once they
+            // existed the box was a second outline of the same thing, drawn in a different colour,
+            // one cell bigger than the wall it contained.
+            //
+            // The area tools keep their per-cell plate (the owner's own call, same day): a mine
+            // order is paint on a face that is already there, so there is no thing to ghost.
             if (director.Tool == DesignateTool.Build)
             {
                 _previewLayer = min.Y;
                 _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
 
-                // Red when the simulation would refuse every last cell of it — see
-                // NothingHereWillBeBuilt. Green otherwise, unchanged, so a drag that does anything
-                // looks exactly as it did.
-                if (NothingHereWillBeBuilt(director.Building)) tint = PreviewRefusedColour;
-
-                // A wall is a box and a floor is a plate, because the cursor is the shape of the
-                // thing. See ChunkRenderer.DrawCellSpanPlate for why a cell-tall box drawn for a
-                // slab is not merely ugly: it hides the tile it is promising and gives no way to
-                // tell which of two layers it means.
                 for (int i = 0; i < _previewBoxes.Count; i++)
-                {
-                    PreviewBox box = _previewBoxes[i];
-                    if (_previewIsSlab) _renderer.DrawCellSpanPlate(box.Min, box.Max, tint);
-                    else _renderer.DrawCellSpanBox(box.Min, box.Max, tint);
-                    DrawRunGhosts(box, director.Building, director.Stuff);
-                }
+                    DrawRunGhosts(_previewBoxes[i], director.Building, director.Stuff, director.Facing);
 
                 return;
             }
+
+            // The order tools' own colours, below the build branch rather than above it, because
+            // build no longer has one: a ghost is tinted by its material or by its refusal, so a
+            // green arm here would be a colour nothing reads.
+            //
+            // Deconstruct is named rather than left to fall through. It fell through to the cancel
+            // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
+            // while the player was demolishing, and tuning the cancel colour would have silently
+            // re-tinted it.
+            Color tint = director.Tool switch
+            {
+                DesignateTool.Mine => MineOrderColour,
+                DesignateTool.Fell => FellOrderColour,
+                DesignateTool.Deconstruct => DeconstructOrderColour,
+                _ => PreviewCancelColour,
+            };
 
             for (int z = min.Z; z <= max.Z; z++)
             for (int x = min.X; x <= max.X; x++)
@@ -1282,27 +1360,22 @@ namespace Odyssey.Presentation.Bootstrap
             bool allowed = sites.Allows(cell, director.Building);
             BuildingDef what = ConstructionContent.BuildingAt(director.Building);
 
-            // **Never inside something, but never silent either.** StandingOn lifts a wall order
-            // over solid terrain and not over an edifice, so pointing a ladder at a wall resolves
-            // to the wall's own cell and the ghost was drawn inside it (owner, 2026-09-17: "the
-            // ladder placement does appear inside the walls, which is odd").
+            // **Inside something is still an answer, and now it is the thing itself in red**
+            // (owner, 2026-09-18: the ghost is the only thing drawn, so it is the only thing left
+            // to carry a refusal).
             //
-            // The first fix returned here and drew nothing at all, and the comment claimed the
-            // refusal still read "because the cursor is red". It did not: this is the only thing
-            // hover draws, so the pointer went blank over every wall and the player got no answer
-            // to "can I build here" — which is worse than the wrong answer it replaced, and is
-            // what "I couldn't build a floor" felt like from the other side of the screen.
+            // This spot has had three answers and the history is worth keeping, because two of
+            // them were wrong in opposite directions. StandingOn lifts a wall order over solid
+            // terrain but not over an edifice, so pointing a ladder at a wall resolves to the
+            // wall's own cell and the ghost was drawn *inside* it (owner, 2026-09-17: "the ladder
+            // placement does appear inside the walls, which is odd"). The first fix drew nothing
+            // at all, which was worse: hover draws one thing, so the pointer went blank over every
+            // wall and the player got no answer to "can I build here". The second drew a red cell
+            // box instead of the thing — correct, and one of the cell-shaped overlays this pass
+            // has just been asked to remove.
             //
-            // So the thing is not drawn and the refusal is. A plate for a slab and a box for an
-            // edifice, in the drag's own refused red, which is the shape and the colour the player
-            // already knows from dragging a run that will do nothing.
-            if (_grid.IsSolidTerrain(cell) || _grid.Edifice[cell] >= 0)
-            {
-                if (what.slab) _renderer.DrawCellSpanPlate(at, at, PreviewRefusedColour);
-                else _renderer.DrawCellSpanBox(at, at, PreviewRefusedColour);
-                return;
-            }
-
+            // So: draw the thing, in red. A red ladder standing in a wall is odd-looking and says
+            // exactly what is true — that is where the order would go, and it would be refused.
             ushort material = ConstructionContent.StuffAt(director.Stuff).stuff;
             int module = GhostModuleFor(cell, what, material);
 
@@ -1323,7 +1396,8 @@ namespace Odyssey.Presentation.Bootstrap
             tint.a = GhostAlpha;
 
             // Draped, like everything fixed to the grid, and placed where the mesher would put it.
-            _renderer.DrawGhost(module, tint, GroundRelief.Drape(CellMetrics.FloorCentre(at.X, at.Z, at.Y)));
+            // The facing is the director's, so R turns the thing under the pointer.
+            DrawThingGhost(module, what, tint, at, director.Facing);
 
             // Drawn — so if it still cannot be seen, it is being drawn somewhere the player is not
             // looking. The owner's own guess (2026-09-17: "maybe it's a depth issue?") is the one
@@ -1422,51 +1496,6 @@ namespace Odyssey.Presentation.Bootstrap
         bool _previewIsSlab;
 
         /// <summary>
-        /// Would this drag build nothing at all?
-        ///
-        /// <para><b>The answer to "nothing happens when I try to lay down a floor"</b> (owner,
-        /// 2026-09-17, with a console full of <c>4725 x PlaceBuilding: NotPermitted</c>). It was not
-        /// a fault: on the played meadow only 2,386 of 14,400 cells on the working layer will take
-        /// a slab, and within ten cells of the start it is <b>21 of 441</b> — the ground under your
-        /// feet has a floor already and open air over a drop has no support. Every one of those
-        /// refusals was correct, and the cursor was bright green over all of them.</para>
-        ///
-        /// <para><b>It asks the simulation rather than knowing the rule.</b>
-        /// <c>ConstructionGrid.Allows</c> is the same method <c>Place</c> calls a moment later, so
-        /// the cursor and the order cannot come to disagree — which is the fault this whole line of
-        /// work has now hit twice. <c>DesignatePresenter</c> deliberately filters nothing for the
-        /// same reason; this does not filter either, it only reports.</para>
-        ///
-        /// <para><b>Red only when not one cell would be built</b>, rather than whenever any cell
-        /// would be refused. A wall dragged across a meadow routinely covers a tree or a stream and
-        /// is expected to, and the run gesture was played and accepted as it is; turning it amber
-        /// for an ordinary drag would be re-tinting something nobody complained about. What has no
-        /// defence is a green cursor over an order that does nothing.</para>
-        ///
-        /// <para>Costs one <c>Allows</c> per cell of the box, on frames where a build drag is live.
-        /// It is a handful of array reads each and it stops at the first cell that can be built,
-        /// so the common case is one call.</para>
-        /// </summary>
-        bool NothingHereWillBeBuilt(int building)
-        {
-            ConstructionGrid? sites = _colony?.Construction;
-            if (sites == null || _grid == null) return false;
-
-            for (int i = 0; i < _previewBoxes.Count; i++)
-            {
-                PreviewBox box = _previewBoxes[i];
-                for (int z = box.Min.Z; z <= box.Max.Z; z++)
-                for (int x = box.Min.X; x <= box.Max.X; x++)
-                {
-                    if (!_grid.Contains(x, z, box.Min.Y)) continue;
-                    if (sites.Allows(_grid.Index(new CellRef(x, z, box.Min.Y)), building)) return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// The build cursor over a run that will build nothing.
         ///
         /// <para>The cancel cursor's own red at the build cursor's own alpha. Both halves are
@@ -1487,7 +1516,6 @@ namespace Odyssey.Presentation.Bootstrap
         /// used nowhere else on the board, and brighter than a placed order because it is following
         /// the pointer and has to be found instantly.
         /// </summary>
-        static readonly Color PreviewBuildColour = new Color(0.42f, 0.95f, 0.45f, 0.70f);
 
         /// <summary>The box being dragged with the cancel tool. Red, for the one tool that takes away.</summary>
         static readonly Color PreviewCancelColour = new Color(0.95f, 0.38f, 0.34f, 0.60f);
@@ -1665,6 +1693,27 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             int index = _model.Size.Index(cell.X, cell.Z, cell.Y);
+
+            // A bed is bracketed as the bed, not as the cell it was clicked in (owner,
+            // 2026-09-17: "it highlighted the entire cell instead of highlighting the bed"). It is
+            // two cells long and knee high, so a cell highlight is wrong about how big it is,
+            // which way it faces and where it ends — and it is the one edifice in the game that
+            // does not fill the cell it stands in. The head cell is what the bracket is measured
+            // from, whichever half was clicked, so either end selects the same box.
+            if (_model.EdificeDef(index) == CoreContent.EdificeBed)
+            {
+                int head = _model.BedHeadAt(index);
+                if (head >= 0)
+                {
+                    CellRef at = _model.Size.FromIndex(head);
+                    BedShape.WorldBounds(
+                        at.X, at.Z, at.Y, _model.BedFacing(head),
+                        out Vector3 centre, out Vector3 size);
+                    _renderer.DrawSelectionBracket(centre, size + Vector3.one * ItemCursorMargin, colour);
+                    return;
+                }
+            }
+
             if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
             {
                 _renderer.DrawCellHighlight(cell, colour);
