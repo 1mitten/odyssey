@@ -761,9 +761,9 @@ That rule is load-bearing; keep it.
 ### Tests and gates
 
 - **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **649 Sim + 384 Hud**; Long tier **20**.
-  Unity tier on 2026-09-18, on the build botch: EditMode **1569 total, 1557 passed, 0 failed**.
-  PlayMode was last run the same day on the flat avatars: **74 total, 69 passed, 0 failed** (in
-  both, the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
+  Unity tier on 2026-09-18, on the build botch merged with beds: EditMode **1638 total, 1625
+  passed, 0 failed**. PlayMode was last run the same day on the flat avatars: **74 total, 69
+  passed, 0 failed** (in both, the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
   are `ColonistAppearanceTests` arriving from the Unity tier with the appearance itself, which is
   what moving a Unity-free derivation into `Odyssey.Hud` buys.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
