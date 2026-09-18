@@ -308,6 +308,13 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   whether a 34 px button is the right size, whether the strip wants to sit lower, whether the
   six-pixel right-click threshold is right, and the **20% coverage ceiling**, which is the owner's
   to reverse.
+- **A floor is drawn as a sheet now, and the lip is the thing to look at.** The dotted line along
+  every floor seam was the tile's rim tying with its neighbour's top face on depth
+  (`docs/bug-patterns.md` P8), and it is gone — measured, 470 → 16 artefact pixels at the play
+  camera. The price is that a floor **over open air** has lost its 101 mm of drawn thickness, so a
+  balcony or a roof lip with no wall under it may read as paper seen edge-on. A floor on the ground
+  had 93 of those millimetres buried and is unchanged. If the lip is wrong, the fix is a fascia on
+  the face rather than a thicker plate.
 - **Nobody has pressed Play on the three HUD fixes of 2026-09-18.** The colonist pane is one height
   on every tab now, so Needs sits in a box sized for Skills with about ninety-eight pixels of slack
   below it — whether that reads as stable or as broken is the question, and if it is broken the

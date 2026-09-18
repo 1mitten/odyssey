@@ -275,11 +275,14 @@ namespace Odyssey.Presentation.Rendering
 
             // The same clearance a slab takes over the ground, taken again over the slab, and for
             // the same reason: two things at one height is the fault, not which of them is on top.
+            // Drawn as a sheet, for the same reason a built floor is: paving is one cell-sized plate
+            // per cell too, so its rim ties with its neighbour's top face and draws the same dotted
+            // grid across a pavement. CellMetrics.FloorTile owns it.
             Matrix4x4 at = cell.Model.Floor(cell.Index) != CoreContent.SlabNone
                 ? Matrix4x4.Translate(Vector3.up * CellMetrics.SlabLift) * cell.Drape
                 : cell.Drape;
 
-            sink.Roof(cell.Module, cell.Tint, at);
+            sink.Roof(cell.Module, cell.Tint, at * CellMetrics.FloorTile);
             return true;
         }
     }

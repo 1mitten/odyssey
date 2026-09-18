@@ -170,6 +170,26 @@ namespace Odyssey.EditorTools
                 model.RefreshAll(grid, result.Edifices);
                 PlayScene.Shoot(camera, middle, 80f, 45f, 30f, "Logs/seam-walls-flat-30m.png");
 
+                // 5. And the same again at the near range, because the artefact is a *pixel* one:
+                //    the disagreement between two sheared neighbours is 15 mm at its worst, which
+                //    is a tenth of a pixel at 30 m and two pixels at 14. A bisect shot at a range
+                //    where the thing cannot be seen answers nothing.
+                PlayScene.Shoot(camera, middle, 80f, 45f, 14f, "Logs/seam-walls-flat-14m.png");
+
+                // 6. The relief back on and the walls taken away, at the same near range. Shots 1
+                //    and 5 disagree by almost nothing, so whatever speckles this deck survives the
+                //    relief being switched off and is not the shear; this is the other half of the
+                //    bisect, and the two together say whether it is the wall top under the slab.
+                for (int w = 0; w < walls.Count; w++)
+                {
+                    grid.Edifice[walls[w]] = -1;
+                    grid.Flags[walls[w]] &= ~CellFlags.BlockingEdifice;
+                }
+
+                GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+                model.RefreshAll(grid, result.Edifices);
+                PlayScene.Shoot(camera, GroundRelief.Lift(middle), 80f, 45f, 14f, "Logs/seam-nowalls-14m.png");
+
                 RenderPipelineManager.beginCameraRendering -= hook;
                 hook = null;
 

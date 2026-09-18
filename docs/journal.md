@@ -5769,3 +5769,62 @@ Settled through Ground → Interview → Plan → Execute on branch `claude/inte
 - **Reconciled with `origin/main` to resolve name disconnection.** Merged PR #114, PR #115, and PR #111 into the branch. The old branch was generating names from the retired 8-name mockup array ("Wrenn", "Odile"...) while `origin/main` had moved to the generated 240-name pool (`ColonistNamePool.Names` in `ColonistNames.g.cs` from `docs/design/colonist-names.csv`). Reconciling ensures alerts, roster cards, inspect panels, and the start screen draw identical names from `ColonistNames.Of(snapshot, pawn.Id)`.
 - **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
 - **Gates verified:** Fast tier 721 Sim + 411 Hud passed; EditMode 1675 total, 1662 passed, 0 failed; PlayMode 80 total, 75 passed, 0 failed; both wiki checks clean (`build_wiki.py --check`, `emit_labels.py --check`).
+
+### The floor's dotted seam was the tile's own rim, and four placement fixes proved it was not placement (2026-09-18, branch `claude/grey-floor-layer`)
+
+The owner, with two screenshots of a wood slab field: *"you can see these slabs leave small
+artifacts/lines or gaps that don't even up … you can notice this when you look at the ground from
+certain angles — you see a slight issue with not being fully flush."*
+
+- **It reproduces headlessly, and that is most of the work.** `SlabFlushProbe` lays a wood floor on
+  the meadow — on the ground, which is what the owner is photographing — and shoots it at the play
+  camera's 48° and at a grazing 25°, with the relief on and off. The artefact is a **dotted dark
+  grid on the cell pitch**, dense at the low pitch and thinner at the play pitch. `SeamProbe`, which
+  already existed for the same report a day earlier, had only ever shot a deck floating in the air,
+  at 30 m, where the thing cannot be seen: its own comment says the mismatch is "about 2 mm, which
+  is under a tenth of a pixel at the camera the owner was using", and that is why a day's work had
+  come back "clean at every range".
+- **Pixels, not pictures.** Counting pixels a good deal darker than all four of their neighbours,
+  inside a box that holds nothing but floor, turned each experiment into one number. Every wrong
+  answer below was killed by that number in one run apiece, and three of them had looked plausible
+  in a screenshot.
+- **Four placement fixes, all measured, all wrong.** *The drape's shear*: the flat board draws the
+  same grid, so no. (The arithmetic is worth keeping: neighbouring tangent planes agree to 1.2 mm at
+  the middle of a shared edge and part by **15 mm at the corners** — the `GroundRelief.Period`
+  comment's 14 mm, not `SeamProbe`'s 2 mm, which was the mid-edge figure and the reason the shear
+  was cleared too early.) *The ground or a wall beneath it*: a deck two layers up in the air draws
+  it too. *Growing each tile so neighbours overlap*: 6 mm changed nothing and **200 mm changed
+  nothing**, which is the measurement that finally pointed at the answer. *Staggering alternate
+  tiles by a millimetre*: no change either, and for a reason worth writing down — a tie exposes the
+  rim by nothing and a stagger exposes it for real, so there is no value of it that helps.
+- **The art was measured too, because "it is the art" was the one hypothesis nobody had tested.**
+  `SlabTopFaceProbe` turns Read/Write on for the one model, measures, and turns it back off. The
+  piece is a plain box: 2.5000 × 2.5000 m, 40 vertices, its top face **flat to the micrometre** and
+  the full width of the piece. So the art is exact and two tiles do meet flush.
+- **Which leaves the rim, and the rim is the answer.** The top edge of a tile's rim *is* the
+  perimeter of its top face, so it ends exactly in the plane of the neighbour's top face. Equal
+  depth is a tie; a tie is decided per pixel; and a vertical face under a 72° sun comes back at four
+  tenths of the brightness of the deck. Sampling the dots confirmed it before any fix was written —
+  rgb(52, 36, 25) against rgb(139, 100, 65) beside it, the same hue at 0.37, which is wood in the
+  dark and not a hole, not the grass and not the sky.
+- **The fix is to stop drawing the rim.** `CellMetrics.FloorTile` squashes a floor plate to a sheet
+  about its own walking surface — a tenth of a millimetre — so the rim is degenerate on screen and
+  generates no fragments to win a tie with, and grows it 3 mm past its cell so two neighbours
+  overlap rather than share an edge. **470 → 16** at 48°, **884 → 35** at 25°, **73 → 3** on the
+  floating deck. Paving goes through the same matrix, because it is the same plate.
+- **The project had already written the argument down and not applied it to floors.**
+  `WorldRenderModel.ResolveTerrain`: *"Water is a surface, not a floor. It asks for a sheet rather
+  than the slab every other non-solid terrain gets, because a slab has sides and an underside that
+  water cannot afford to draw."* Every other non-solid terrain got the slab.
+- **What it costs, said plainly because nobody has pressed Play on it.** A floor over open air loses
+  101 mm of drawn thickness and its lip reads as paper seen edge-on; a floor on the ground had 93 of
+  those millimetres buried anyway. If the lip matters, the answer is a **fascia on the face** — the
+  idiom `ChunkMesher` already uses for walls — and that wants a panel module rather than a constant.
+- **Guards:** `ChunkMesherTests.AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn` asserts flat
+  **and** still a clearance above the cell floor plane, because squashing about zero is just as flat
+  and puts every floor back on the plane it z-fights (P7, written about this very constant a day
+  earlier). `.TwoNeighbouringFloorTilesOverlap` pins the knit. New pattern **P8** in
+  `docs/bug-patterns.md`: when an artefact tracks the cell pitch and survives the board going flat,
+  it is the piece's own edge and no amount of placement will move it.
+- **Verified:** fast tier 723 Sim + 411 Hud; EditMode **1712 total, 1698 passed, 0 failed**;
+  PlayMode **80 total, 75 passed, 0 failed**; both content checks current.

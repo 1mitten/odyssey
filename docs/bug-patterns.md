@@ -133,11 +133,69 @@ biases look like sloppiness and are usually the only thing standing between two 
 than in each row, and **assert both halves** — that the values agree, *and* that what they agree on
 is still clear of whatever the old margin was clearing.
 
+### P8 — A per-cell tile's own edge, and the four fixes that are all placement
+
+The board is drawn one instanced piece per cell, so every seam in the game is two pieces meeting on
+a line. When something shows along that line, the reflex is to reach for the **placement**: drape it,
+level it, lift it, overlap it, stagger it. Every one of those was tried on the floor seam of
+2026-09-18 and measured, and not one of them moved it, because the thing being drawn was the piece's
+own rim and the rim goes wherever the piece goes.
+
+**The tell is that the artefact tracks the cell pitch and survives the board going flat.** Relief off
+and it is still there; the ground taken out from under it and it is still there; the piece grown to
+overlap its neighbour by 200 mm and it is still there, on the same pitch.
+
+**Ask what is *at* the line, not where the line is.** A plate has a rim; a rim ends in the plane of
+the neighbour's top face; two surfaces at one depth is a tie and a tie is drawn by whoever wins. The
+answer was to stop drawing the rim, not to move it — the same answer `ResolveTerrain` had already
+written down for water: *"a slab has sides and an underside that water cannot afford to draw."*
+
+**And measure in pixels, because this class of fault is invisible in metres.** Counting pixels much
+darker than all four of their neighbours turned four rounds of argument about screenshots into one
+number per experiment, and it was that number, not the pictures, that killed the three wrong fixes.
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-18 — Every floor seam drew a dotted line, and it was the tile's own rim (P8)
+
+*"You can see these slabs leave small artifacts/lines or gaps that don't even up … you can notice
+this when you look at the ground from certain angles — you see a slight issue with not being fully
+flush."* Two screenshots: a wood slab field on the meadow at night, and a roof deck.
+
+**It is the tile's rim winning a depth tie.** A floor is drawn one instanced plate per cell, and the
+slab art is a plain box — measured, 2.5000 m across, its top face flat to the micrometre and the
+full width of the piece. So two tiles meet exactly, and the top edge of one tile's **rim** lies
+exactly in the plane of its neighbour's top face. Equal depth, so the rasteriser keeps whichever
+fragment it likes; a rim takes almost no light under a 72° sun, so where it wins it draws a dot of
+wood at four tenths the brightness of the deck. That is a dotted line along every seam and a dotted
+grid over every floor, worst at a low camera pitch.
+
+**Fixed:** `CellMetrics.FloorTile` draws a floor as a **sheet** rather than a plate — the rim
+squashed to a tenth of a millimetre about the walking surface, so it is degenerate on screen and
+generates no fragments to win with — and grows it 3 mm past its own cell
+(`CellMetrics.FloorKnit`) so two neighbours overlap rather than share an edge. Both the built floor
+(`ChunkMesher.EmitFloor`) and paving (`SurfaceContributor`) go through the one matrix. Measured on
+the meadow, counting pixels much darker than all four of their neighbours: at the play camera's 48°
+**470 → 16**, at a grazing 25° **884 → 35**, and on a floating deck at 14 m **73 → 3**.
+
+**What it costs, and it is real:** a floor over open air loses its 101 mm of drawn thickness and its
+lip reads as paper seen edge-on. A floor laid on the ground had 93 of those millimetres buried in
+the block beneath it, so nothing changes there. The fix that keeps the lip is to draw a floor's edge
+as a **fascia on the face**, the way a wall is already drawn on faces rather than as a cell; that
+wants a panel module of its own and is not done.
+
+**Caught next time by:** `ChunkMesherTests.AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn` and
+`.TwoNeighbouringFloorTilesOverlap`. The first asserts *both* halves on purpose (see P7): flat, and
+still a clearance above the cell floor plane, because squashing about zero instead is just as flat
+and drops every floor back on to the ground it z-fights.
+
+**Reproduced by `SlabFlushProbe`** (`scripts/unity.sh shot Odyssey.EditorTools.SlabFlushProbe.Run`)
+— a wood floor laid on the meadow, shot at 48° and 25°, relief on and off. `SlabTopFaceProbe`
+measures the art itself, turning Read/Write on for the one model and back off again.
 
 ### 2026-09-18 — The outer slabs were built first and fell (P1)
 
@@ -424,3 +482,10 @@ appearance instead.
   all about anything drawn on top of the floor.
 - **Every slab's top face is `CellMetrics.SlabLift` above the cell floor plane.** Two things at the
   same height z-fight; the clearance is why. Do not "tidy" it to zero.
+- **A floor is drawn as a sheet, not as a plate** (`CellMetrics.FloorTile`, `FloorSheet`,
+  `FloorKnit`). The plate's rim tied with its neighbour's top face and dotted every seam in the
+  colony. Do not "restore" the thickness without reading P8 — and if a floor's lip over open air
+  needs to look solid, that is a fascia on the face, not a thicker plate.
+- **The slab art itself is exact** — 2.5000 m across, flat on top to the micrometre, the top face
+  the full width of the piece, 40 vertices. Measured 2026-09-18 by `SlabTopFaceProbe`. A seam
+  artefact is not the art's size, shape or flatness.

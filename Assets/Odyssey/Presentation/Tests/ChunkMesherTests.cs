@@ -481,6 +481,90 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// A floor tile is drawn as a <b>sheet</b>, and the two halves of that both have to hold.
+        ///
+        /// <para>Closing the seam in metres was not enough: a floor plate's rim ends exactly in the
+        /// plane of its neighbour's top face, ties with it on depth, and wins enough pixels to draw
+        /// a dotted line of dark wood along every seam in the colony — the owner's report of
+        /// 2026-09-18, reproduced and measured by <c>SlabFlushProbe</c>. A rim with no height
+        /// generates no fragments to win with, which is the fix, and
+        /// <see cref="CellMetrics.FloorSheet"/> carries the argument and the numbers.</para>
+        ///
+        /// <para><b>Both halves, because the obvious way to undo this passes half of it.</b>
+        /// Squashing a floor about the wrong plane — zero rather than
+        /// <see cref="CellMetrics.SlabLift"/> — leaves it just as flat and drops every floor in the
+        /// game by eight millimetres, back on to the ground plane it z-fights with. So the height of
+        /// the walked-on surface is asserted as well as the flatness. This is exactly the shape of
+        /// P7 in <c>docs/bug-patterns.md</c>, which was written about this same constant.</para>
+        /// </summary>
+        [Test]
+        public void AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(6, 6, 3);
+            world.Slab(2, 2, 1).Slab(3, 2, 1).Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+            List<DrawnCorner> corners = Corners(batch.Roof);
+            Assert.That(corners, Is.Not.Empty, "there is a floor to check");
+
+            float low = float.MaxValue, high = float.MinValue;
+            for (int i = 0; i < corners.Count; i++)
+            {
+                low = Mathf.Min(low, corners[i].At.y);
+                high = Mathf.Max(high, corners[i].At.y);
+            }
+
+            Assert.That(high - low, Is.LessThan(0.001f),
+                "a floor tile must be drawn as a sheet. A plate's rim ties with its neighbour's " +
+                "top face on depth and draws a dotted line along every seam");
+
+            Assert.That(low, Is.EqualTo(CellMetrics.FloorCentre(2, 2, 1).y + CellMetrics.SlabLift)
+                    .Within(0.001f),
+                "and the sheet must stay where the walking surface was — a clearance above the " +
+                "cell floor plane, which is also the top of the block below. Squashed on to the " +
+                "plane itself it is just as flat and z-fights the ground it is laid on");
+        }
+
+        /// <summary>
+        /// Two neighbouring floor tiles must <b>overlap</b>, not abut. Two sheets that share an
+        /// edge exactly are only watertight if the rasteriser agrees to a bit about where that
+        /// edge is, and it does not — each tile is placed by its own matrix. See
+        /// <see cref="CellMetrics.FloorKnit"/>.
+        /// </summary>
+        [Test]
+        public void TwoNeighbouringFloorTilesOverlap()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(6, 6, 3);
+            world.Slab(2, 2, 1).Slab(3, 2, 1).Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            // Each tile measured against *its own* centre, because a grown tile's corner is on the
+            // far side of the boundary and cannot be told from its neighbour's by position alone.
+            int tiles = 0;
+            foreach (InstanceBucket bucket in batch.Roof)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Matrix4x4 m = bucket.Matrices[i];
+                Vector3 centre = m.GetColumn(3);
+                float reach = 0f;
+                for (int corner = 0; corner < 4; corner++)
+                    reach = Mathf.Max(reach, Mathf.Abs(m.MultiplyPoint3x4(new Vector3(
+                        (corner & 1) == 0 ? -0.5f : 0.5f, 0f,
+                        (corner & 2) == 0 ? -0.5f : 0.5f)).x - centre.x));
+
+                tiles++;
+                Assert.That(reach, Is.GreaterThan(CellMetrics.HalfXZ + CellMetrics.FloorKnit * 0.5f),
+                    "a floor tile must reach past its own cell, so that two neighbours overlap " +
+                    "rather than share an edge no rasteriser can agree about");
+            }
+
+            Assert.That(tiles, Is.EqualTo(2), "both tiles were drawn");
+        }
+
+        /// <summary>
         /// And a floor laid across rolling ground must not step either — the same fault, one
         /// surface down, and the one a player walks over rather than looks at.
         /// </summary>
