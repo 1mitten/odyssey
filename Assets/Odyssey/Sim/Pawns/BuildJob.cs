@@ -206,6 +206,18 @@ namespace Odyssey.Sim.Pawns
             // on the tick it started.
             if (!sites.IsFrame(site)) return false;
 
+            // A slab whose support is still only a plan is not ready to be built, however much
+            // wood is sitting on it. `AllowsSlab` accepts such a cell at order time so that a roof
+            // can be dragged in one gesture; that promise is about the finished roof and says
+            // nothing about the order the cells go up in. Without this the nearest-site scan could
+            // raise the far end of a bridge while its supports were still blueprints, and it fell
+            // on the tick it was finished — the owner's first report, and the rubble it left is
+            // what three sessions were spent looking at (`ConstructionGrid.SlabWouldStand`).
+            //
+            // It defers rather than refuses: the site stays, and becomes offerable the moment the
+            // neighbour holding it up goes up.
+            if (!sites.SlabWouldStand(site)) return false;
+
             // A thing a colonist is not skilled enough to make is not offered to it, rather
             // than offered and botched: the reference gates a few defs on a construction level
             // and a wall is not one of them, so this costs nothing today and is the hook the

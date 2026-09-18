@@ -139,6 +139,37 @@ is still clear of whatever the old margin was clearing.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-18 — The outer slabs were built first and fell (P1)
+
+*"The slab was placed on the top level but then the colonists tried to build the most outer slabs
+first which then landed a stone/steel looking tile 1 height below instead of where it was … could be
+silently resorting to a failure."*
+
+**The owner's first message, and every word of it was right.** Three sessions went on the *drawing*
+of the grey tile below before anybody measured the collapse that put it there. The row below is the
+drawing; this is the cause.
+
+**Cause (P1).** The support rule has two halves that disagree about *time*. `AllowsSlab` accepts a
+cell held up by slabs merely **ordered** around it (`SupportedByWhatIsPlanned`) — a promise about the
+*finished* roof, and the whole of why a roof can be dragged in one gesture. Nothing enforced an
+order of construction that honours it, and `BuildWorkGiver` hands out the **nearest** site. So the
+far end of a bridge was raised while its supports were still blueprints, stood on nothing, was taken
+by the solver, and `SupportSystem.Rubble` left debris in the floored cell below.
+
+**The owner's rule:** rubble is for construction that was *destroyed*, never for construction that
+never happened. A slab that cannot stand is not built yet.
+
+**Fix:** `ConstructionGrid.SlabWouldStand` — would it stand *now*, asked of the built world with no
+plans in it. `BuildWorkGiver.CanBuild` **defers** the site; `Raise` **keeps** it rather than
+cancelling, because unlike the shaft rule beside it this is a race and not a permanent illegality.
+`TheDraggedRunStillFinishes_BuiltFromTheWallOutward` guards the over-correction: the gate must defer
+and never refuse, or the far half of every dragged roof disappears.
+
+**The lesson is the expensive one.** The reporter described the mechanism correctly in their first
+sentence — outer slabs first, nothing built, tile appears below — and three sessions were spent
+explaining the *symptom's appearance* instead. **Read the report as a causal claim and test that
+claim first.**
+
 ### 2026-09-18 — The grey tile was rubble terrain drawn on top of a wood floor (P1, P5, P6)
 
 *"I can't seem to recreate this in a new game — could an old game cause problems?"*
