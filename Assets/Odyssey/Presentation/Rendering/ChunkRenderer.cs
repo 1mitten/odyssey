@@ -1138,7 +1138,17 @@ namespace Odyssey.Presentation.Rendering
         /// cells reads as a row rather than as one continuous sheet, and flat, so it never
         /// competes with the thing it is marking.</para>
         /// </summary>
-        public void DrawCellMark(CellRef cell, Color colour)
+        public void DrawCellMark(CellRef cell, Color colour) =>
+            DrawCellMark(cell, colour, inset: 0.22f);
+
+        /// <summary>
+        /// The same floor plate with the inset the caller names. An order's mark sits inset so it
+        /// reads as a mark ON the tile; a growing zone's cover wants the whole tile (owner,
+        /// 2026-09-18: "make the entire tile brown so they can look like one patch") - inset
+        /// plates drew a border of ground between them and a field read as separate squares
+        /// rather than one patch of soil.
+        /// </summary>
+        public void DrawCellMark(CellRef cell, Color colour, float inset)
         {
             Material material = BracketMaterial(colour);
             var rp = new RenderParams(material)
@@ -1154,9 +1164,8 @@ namespace Odyssey.Presentation.Rendering
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
             centre.y += solid ? CellMetrics.SizeY + MarkLift : MarkLift;
 
-            const float Inset = 0.22f;
             var size = new Vector3(
-                CellMetrics.SizeXZ - Inset * 2f, MarkThickness, CellMetrics.SizeXZ - Inset * 2f);
+                CellMetrics.SizeXZ - inset * 2f, MarkThickness, CellMetrics.SizeXZ - inset * 2f);
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));

@@ -5924,3 +5924,13 @@ cell's answer and a far cell's silence.
 Both were invisible to the fast tier, again: one lived in the terrain contributor chain, the
 other in a query path no fast test drove. The Unity tier caught the rename's leftover within a
 minute of being allowed to run.
+
+### One patch, darker (2026-09-18)
+
+The owner's eye again: the tiles read as separate squares, not one patch. Two causes, one
+commit. The cover plate was INSET — 0.22 m a side, the right inset for an order's mark and the
+wrong one for a field, drawing a border of textured ground between tiles — so DrawCellMark grew
+an inset parameter and the zone passes nought: the whole tile, and neighbouring tiles butt into
+one patch. And the brown went darker and more opaque (0.28, 0.17, 0.07 at 0.62), enough to
+flatten the dirt texture underneath into soil rather than dapple it. The order marks keep their
+inset and their own alpha band; only the field changed.
