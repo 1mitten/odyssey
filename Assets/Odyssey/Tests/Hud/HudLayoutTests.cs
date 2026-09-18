@@ -130,10 +130,13 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void EveryCardIsAtLeastAsTallAsTheFaceItCarries()
         {
+            // Plus the pad on both sides, since the owner played it: a card sized to exactly its
+            // face draws the selection outline hard against the portrait, which reads as the
+            // portrait's frame rather than the card's.
             Assert.That(HudLayout.ColonistCard,
-                Is.GreaterThanOrEqualTo(HudLayout.ColonistAvatar),
-                "a candidate card is shorter than its own avatar, so the faces overlap each other " +
-                "and the card's outline — which is exactly what the avatar doubling did to it");
+                Is.GreaterThanOrEqualTo(HudLayout.ColonistAvatar + 2 * HudLayout.ColonistCardPad),
+                "a candidate card does not clear its own avatar by the card's padding, so the " +
+                "faces overlap each other and the selection outline sits on the portrait");
 
             Assert.That(HudLayout.CardHeight, Is.GreaterThanOrEqualTo(HudLayout.CardAvatar),
                 "a roster card is shorter than its own avatar");

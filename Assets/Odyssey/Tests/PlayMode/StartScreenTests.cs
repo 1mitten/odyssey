@@ -754,16 +754,25 @@ namespace Odyssey.Tests.PlayMode
                         $"{next.yMin:0.#}");
                 }
 
-                // And the line the page exists for is actually on the card, with something in it.
-                var skills = cards[0].Q<Label>(className: "colonist__skills");
-                Assert.That(skills, Is.Not.Null,
-                    "the candidate card has no skills line — which is the state it was in between " +
-                    "U41 and 2026-09-18, with HudLayout.ColonistCardSkills and .colonist__skills " +
-                    "both still describing one");
-                Assert.That(skills!.text, Is.Not.Empty, "the skills line was never filled in");
+                // The card is identity alone by the owner's decision (2026-09-18): a name and age
+                // over an occupation, with the skills in the detail pane beside it. Both lines are
+                // asserted present and filled, because an empty one looks exactly like a refresh
+                // that never ran.
+                var name = cards[0].Q<Label>(className: "colonist__name");
+                var trade = cards[0].Q<Label>(className: "colonist__trade");
+                Assert.That(name, Is.Not.Null, "the candidate card has no name line");
+                Assert.That(trade, Is.Not.Null, "the candidate card has no occupation line");
+                Assert.That(name!.text, Is.Not.Empty, "the name was never filled in");
+                Assert.That(trade!.text, Is.Not.Empty, "the occupation was never filled in");
 
-                Debug.Log($"[StartScreen] candidate 0 skills line '{skills.text}' in a " +
-                          $"{cards[0].worldBound.height:0.#} px card");
+                // And the skills are in the pane beside them, under a heading of their own.
+                var headings = doc.rootVisualElement.Query<Label>(className: "setup__heading").ToList();
+                Assert.That(headings.Count, Is.EqualTo(2),
+                    "the detail pane should carry two section headings, Skills and Traits");
+
+                Debug.Log($"[StartScreen] card '{name.text}' / '{trade.text}' in a " +
+                          $"{cards[0].worldBound.height:0.#} px card, " +
+                          $"headings: {string.Join(", ", headings.ConvertAll(h => h.text))}");
             }
             finally
             {

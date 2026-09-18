@@ -5430,3 +5430,44 @@ are fast-tier tests rather than things discovered on screen.
 end: a constant nothing reads is not harmless.** Three of them here described the screen as designed
 while the screen had quietly become something else, and each of them would have been believed by the
 next session to read it. One of them was being asserted by a passing test.
+
+### The setup page, played twice in a day (2026-09-18)
+
+Five corrections after the owner played §6b's card, and the first of them takes §6b's own feature
+off again: *"from the left hand panels, no need to display any skills there — Name, Age, Occupation,
+and resize occupation accordingly to a bigger size."*
+
+**That is worth reading carefully, because it looks like a reversal and is not.** The original
+report was that nothing on the page varied by ability, so the roll looked broken. §6b answered it in
+two places at once: it put a skills line back on the card *and* it made the detail pane legible —
+two columns, real spacing, a bigger type step. Having played that, the owner kept the second and
+dropped the first. The report is still answered; the card is identity alone and the pane carries the
+numbers. **The card's skills line should not be restored as a fix for the original report**, and
+`18-colonist-select.md` §6c says so in place.
+
+**`SkillSummary` and its seven tests are deleted rather than left unused.** That is §6b's own lesson
+turned on §6b: three dead constants describing a line nothing drew are what made the first loss
+invisible, and leaving a ninth-tenths-finished formatter behind "in case" would have been the same
+mistake with fresher paint.
+
+**Two headings wanted two different answers to one request.** "Bigger bolder headings" arrived for
+section titles and for field captions in the same message. A section over a block on a full screen
+read at leisure is `HudTextRole.Name`, 19/600 — the one step of the scale that is both bigger and
+bolder than the body under it. A caption over a text field is `PanelLabel`, 11/600 upper and
+tracked, which is what the stores panel, the rail and the alerts list are already introduced by and
+reads unmistakably as a label rather than a value. Neither adds a rung to `HudType`.
+
+**A specificity trap, found by reading and not on screen.** Outlining every pressable row on the
+page needed `.setup .settings__row` — scoped, because that row is also the settings panel's and the
+Menu popover's, and a grid of outlines over a running world is noise. That selector is 0,2,0 and the
+green Start row's `.setup__commit` was 0,1,0, so **the grey border would have won and Start would
+have quietly stopped being green** — a change that undoes a change made an hour earlier, with
+nothing failing. Specificity beats order in USS as in CSS. The green rule is a descendant now too.
+
+**And the owner's sharpest note of the day was three words long:** *"not to reinvent"*. The page
+wanted a translucent backdrop; the first instinct was to pick a colour. It wears `.panel` and
+`.window` instead — the classes the settings panel, the Menu popover and the start screen's own
+panel are built from — so the fill, the border and the radius are tokens the sheet already pins and
+nothing about the colour is restated. `.setup` overrides only where it sits and how much air it
+keeps. **The general form: when a screen needs to look like the rest of the interface, wear the
+interface's classes rather than copy its values.** A copied value is a value that drifts.

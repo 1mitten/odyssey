@@ -817,6 +817,23 @@ namespace Odyssey.Hud
             SetupSkillColumns * (SetupSkillRowWidth + SkillColumnGap);
 
         /// <summary>
+        /// A section heading on the setup page — "Skills", "Traits" — at
+        /// <see cref="HudTextRole.Name"/>, which is the one step of the scale that is both bigger
+        /// and bolder than the body under it (owner, 2026-09-18: *"a bigger bolder heading"*).
+        ///
+        /// <para>A step of the existing scale rather than a rung added for this page. The
+        /// interface's other heading idiom — <see cref="HudTextRole.PanelLabel"/>, 11/600 upper
+        /// and tracked — is bolder but smaller, which is right over a panel glanced at beside a
+        /// running world and wrong on a full screen read at leisure. Field captions on this page
+        /// keep that idiom; sections get this one, so the two do not compete.</para>
+        /// </summary>
+        public const int SetupHeading = 26;
+
+        /// <summary>Above a section heading, so a heading belongs to what is under it rather than
+        /// floating between two blocks.</summary>
+        public const int SetupHeadingGap = 22;
+
+        /// <summary>
         /// The portrait and its record, down to the skills under them.
         ///
         /// <para>Owner, 2026-09-18: *"have more spacing on the main screen from the profile to the
@@ -997,22 +1014,6 @@ namespace Odyssey.Hud
         // ------------------------------------------------ the colonist screen (U40)
 
         /// <summary>
-        /// How many skills a candidate's card carries, best first — see
-        /// <see cref="SkillSummary.Line"/>, which is what applies it.
-        ///
-        /// <para>Thirteen skills times three cards is a screen of numbers nobody reads, and the
-        /// question a player is answering is "what are these three good at". Two is what
-        /// <see cref="ColonistCard"/>'s third line has room for, and the number lives here rather
-        /// than in the presenter so that the card's height and what is drawn in it cannot
-        /// disagree.</para>
-        ///
-        /// <para><b>It was read by nothing between U41 and 2026-09-18</b>, along with
-        /// <c>.colonist__skills</c> in the sheet, because the skills line was lost when the avatar
-        /// arrived — see <see cref="ColonistCard"/>.</para>
-        /// </summary>
-        public const int ColonistCardSkills = 2;
-
-        /// <summary>
         /// The face on a candidate card. The inspect header's size by specification
         /// (<c>docs/design/20-avatars.md</c> §3), named here rather than reached for directly so
         /// that <see cref="ColonistCard"/> and the presenter read one number and
@@ -1035,8 +1036,8 @@ namespace Odyssey.Hud
         /// 60 px face in it, thirteen pixels taller than its own box at a 53 px pitch. On
         /// `Logs/setup-page.png` the three faces visibly ran into one another and into the
         /// selection outline. The skills line had gone the same way, squeezed out to make room for
-        /// the trade, which is why <see cref="ColonistCardSkills"/> and <c>.colonist__skills</c>
-        /// were both still here describing a line nothing drew.</para>
+        /// the trade, and the constants describing that line were left behind reading by
+        /// nothing — which is how the loss was attributable rather than merely visible.</para>
         ///
         /// <para><b>The old comment's arithmetic was right and no longer applies.</b> Three lines
         /// came to 296 against the fixed body's 284 — true while the candidates had a screen of
@@ -1061,21 +1062,31 @@ namespace Odyssey.Hud
         /// name line, so the card and the record it opens are set the same way.</summary>
         public const int ColonistNameLine = 26;
 
-        /// <summary>The occupation, at <see cref="HudTextRole.Body"/>.</summary>
-        public const int ColonistTradeLine = 18;
-
-        /// <summary>What they are good at, at <see cref="HudTextRole.Row"/> — a step above the
-        /// trade above it, because it is the line the three are compared on.</summary>
-        public const int ColonistSkillLine = 20;
+        /// <summary>
+        /// The occupation, at <see cref="HudTextRole.Row"/>.
+        ///
+        /// <para>A step up and four pixels taller since the card stopped carrying skills (owner,
+        /// 2026-09-18: *"no need to display any skills there — Name, Age, Occupation, and resize
+        /// occupation accordingly to a bigger size"*). Two lines beside a 60 px face leave room
+        /// that a 13 px line does not use.</para>
+        /// </summary>
+        public const int ColonistTradeLine = 20;
 
         /// <summary>
         /// A candidate's card: the name, the occupation, and what this person is good at.
         ///
-        /// <para><b>Re-derived from its own rows on 2026-09-18, the way the roster card was</b>
-        /// (<c>docs/design/20-avatars.md</c> §10.6), and again the same day when the owner played
-        /// it: the three lines went up a step of the type scale each and the card gained
-        /// <see cref="ColonistCardPad"/> on every side. Eighty, and it must stay clear of the
-        /// 60 px face by that pad on both sides.</para>
+        /// <para><b>The face governs the height, and that is the point of writing it this
+        /// way.</b> Two lines of text come to 46 and the portrait to 60, so the card is the
+        /// portrait plus <see cref="ColonistCardPad"/> on both sides — 76 — and it cannot go back
+        /// to being shorter than the thing inside it however the text changes.</para>
+        ///
+        /// <para><b>It carried a third line for part of 2026-09-18</b>, the two best skills, put
+        /// back after the owner reported that the roll looked broken because nothing on a card
+        /// varied by ability. Playing that, they took it off again — *"from the left hand panels,
+        /// no need to display any skills there"* — because the detail pane beside the cards now
+        /// shows all thirteen in two columns with room to read them. **A later session should not
+        /// restore it as a fix for the original report**: the report was answered by the detail
+        /// pane, and the card is deliberately identity alone.</para>
         ///
         /// <para><b>§10.6 doubled the avatar and missed this card.</b> Its table re-derived the
         /// roster card 106 × 63 → 126 × 89 and the inspect header 38 → 60, and moved the strip
@@ -1084,8 +1095,8 @@ namespace Odyssey.Hud
         /// 60 px face in it, thirteen pixels taller than its own box at a 53 px pitch. On
         /// `Logs/setup-page.png` the three faces visibly ran into one another and into the
         /// selection outline. The skills line had gone the same way, squeezed out to make room for
-        /// the trade, which is why <see cref="ColonistCardSkills"/> and <c>.colonist__skills</c>
-        /// were both still here describing a line nothing drew.</para>
+        /// the trade, and the constants describing that line were left behind reading by
+        /// nothing — which is how the loss was attributable rather than merely visible.</para>
         ///
         /// <para><b>The old comment's arithmetic was right and no longer applies.</b> Three lines
         /// came to 296 against the fixed body's 284 — true while the candidates had a screen of
@@ -1093,8 +1104,7 @@ namespace Odyssey.Hud
         /// page, beside the seed and the board size, so the ceiling is the canvas and there are
         /// some seven hundred spare pixels under the cards at 1080p.</para>
         /// </summary>
-        public const int ColonistCard =
-            2 * ColonistCardPad + ColonistNameLine + ColonistTradeLine + ColonistSkillLine;
+        public const int ColonistCard = ColonistAvatar + 2 * ColonistCardPad;
 
         /// <summary>Between two candidate cards. Ten rather than six since the cards gained their
         /// own padding: a card with air inside it wants air around it, or the two runs of

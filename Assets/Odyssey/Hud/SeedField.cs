@@ -86,6 +86,14 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the board-size control.</summary>
         public const string SizeKey = "ui.newgame.size";
 
+        /// <summary>The heading over the candidate's skills grid (owner, 2026-09-18).</summary>
+        public const string SkillsKey = "ui.newgame.skills";
+
+        /// <summary>The heading over the traits block, which is empty until M7 fills it. The word
+        /// used to be part of the line itself — "Traits  —" — which is a label invented in C# and
+        /// is exactly what the registry exists to stop.</summary>
+        public const string TraitsKey = "ui.newgame.traits";
+
         /// <summary>
         /// Every key this screen can put on screen, so <c>RegistryTests</c> can hold it to the
         /// naming CSV the way it already holds the session table and the naming prompt. A label
@@ -99,6 +107,8 @@ namespace Odyssey.Hud
             TitleKey,
             ColonyKey,
             DefaultColonyKey,
+            SkillsKey,
+            TraitsKey,
             SizeKey,
         };
 

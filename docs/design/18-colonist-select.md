@@ -249,6 +249,51 @@ had quietly become something else, and each would have been trusted by the next 
 
 ---
 
+## 6c. The setup page, played (2026-09-18)
+
+Five corrections after the owner played §6b, and one of them reverses it.
+
+**The card is identity alone: name, age, occupation.** *"From the left hand panels, no need to
+display any skills there — Name, Age, Occupation, and resize occupation accordingly to a bigger
+size."* The skills line §6b put back came off again. **That is not §6b being undone, it is the
+report being answered somewhere better:** the complaint was that nothing on the page varied by
+ability, and the detail pane now shows all thirteen skills in two columns with room to read them.
+The occupation goes up a step to `Row` and the card is `ColonistAvatar + 2 × ColonistCardPad` — the
+face governs the height, so the card cannot go back to being shorter than the thing inside it.
+**`SkillSummary` and its tests are deleted rather than left unused**, which is §6b's own lesson
+applied to §6b: a constant nothing reads is the artefact that misleads the next session.
+**A later session should not restore the card's skills line as a fix for the original report.**
+
+**Traits are a section, not a line of the record.** They sat inside the name/trade/traits stack,
+where an empty traits row read as a third fact about the person rather than as the block M7 will
+fill. It is below the skills now, under a heading, and the word "Traits" moved from a C# literal
+(`"Traits  —"`) into the registry as `ui.newgame.traits`, with `ui.newgame.skills` beside it.
+
+**Sections get `Name`; field captions get `PanelLabel`.** The owner asked for bigger, bolder
+headings in two places at once and they want different answers. A section heading over a block on a
+full screen read at leisure is `HudTextRole.Name` — 19/600, the one step of the scale that is both
+bigger *and* bolder than the body under it. A caption over a text field is `PanelLabel` — 11/600,
+upper and tracked, the idiom the stores panel, the rail and the alerts list are already introduced
+by. Neither is a new rung: §6b's rule was that this page sits higher up the existing ladder rather
+than adding to it.
+
+**Every pressable row on the page is outlined**, in `PanelBorder`, so what can be clicked is visible
+without hovering it. **Scoped to `.setup`**, because `.settings__row` is also the settings panel's
+and the Menu popover's row and those are read over a running world where a grid of outlines is
+noise. **The trap it set, found by reading rather than on screen:** `.setup .settings__row` is
+specificity 0,2,0 and the green Start row's `.setup__commit` was 0,1,0, so the grey border would
+have won and Start would have quietly stopped being green. Specificity beats order; the green rule
+is a descendant now too.
+
+**The page is a panel, and it is the panel the game already has.** Owner: *"use the same
+transparency/translucent as the in game menus, not to reinvent."* The element wears `.panel` and
+`.window`, so the fill is `rgba(12, 16, 20, 0.96)` and the border and radius are the tokens
+`HudStyleSheetTests` already pins; `.setup` overrides only where it sits and how much air it keeps,
+inset 24 px so the border reads as a box around the interface rather than as a screen border.
+Nothing about the colour is restated anywhere.
+
+---
+
 ## 7. Not in this unit
 
 - **Portraits** (`U41`), and the §4.5 carve-out that comes with them.

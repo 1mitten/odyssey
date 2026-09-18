@@ -270,7 +270,15 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         VisualElement BuildSetupPage()
         {
+            // The same box the in-game menus are, not a new one (owner, 2026-09-18: "use the
+            // same transparency/translucent as the in game menus, not to reinvent"). `.panel` and
+            // `.window` are what the settings panel, the Menu popover and the start screen's own
+            // panel are built from, so the fill, the border and the radius all come from the
+            // tokens HudStyleSheetTests already pins; `.setup` only overrides where it sits and
+            // how much air it keeps inside.
             var page = new VisualElement { name = "setup" };
+            page.AddToClassList("panel");
+            page.AddToClassList("window");
             page.AddToClassList("setup");
             page.style.display = DisplayStyle.None;
 
@@ -294,7 +302,7 @@ namespace Odyssey.Presentation.Ui
             // picking one is cycling, not navigating.
             var size = new VisualElement();
             size.AddToClassList("setup__size");
-            size.Add(HudText.Make(Registry.Label(SeedField.SizeKey), HudTextRole.Meta,
+            size.Add(HudText.Make(Registry.Label(SeedField.SizeKey), HudTextRole.PanelLabel,
                 ussClass: "startscreen__seedcap"));
             _sizeLabel = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "setup__sizevalue");
             size.Add(_sizeLabel);
@@ -342,11 +350,27 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>A control with the quiet caption every figure in this interface is introduced
         /// by.</summary>
+        /// <summary>
+        /// A section heading on the setup page: bigger and bolder than the block under it, at a
+        /// step of the existing scale rather than a rung added for this screen. Named from the
+        /// registry, like every other word on this page.
+        /// </summary>
+        static Label SectionHeading(string key) =>
+            HudText.Make(Registry.Label(key), HudTextRole.Name, ussClass: "setup__heading");
+
+        /// <summary>What an empty section reads as. The traits block until M7 fills it.</summary>
+        const string EmptySection = "—";
+
         static VisualElement Captioned(string key, VisualElement control)
         {
             var wrap = new VisualElement();
             wrap.AddToClassList("setup__field");
-            wrap.Add(HudText.Make(Registry.Label(key), HudTextRole.Meta,
+            // PanelLabel: 11/600, upper and tracked — the caption the stores panel, the rail and
+            // the alerts list are all introduced by (owner, 2026-09-18: "make all the headers
+            // bolder for Colony name, seed, Board size"). Bolder than the meta line it replaces
+            // and unmistakably a label rather than a value, which is what a caption over a text
+            // field has to be.
+            wrap.Add(HudText.Make(Registry.Label(key), HudTextRole.PanelLabel,
                 ussClass: "startscreen__seedcap"));
             wrap.Add(control);
             return wrap;
@@ -388,15 +412,15 @@ namespace Odyssey.Presentation.Ui
                 var face = new AvatarGlyph(HudLayout.ColonistAvatar);
                 face.AddToClassList("colonist__face");
 
-                // A step up the scale each (owner, 2026-09-18: "make the fonts a bit bigger in
-                // general on the screen"). Steps of the existing scale rather than sizes of their
-                // own: this page is read at leisure with no world behind it, which is a reason to
-                // sit higher up HudType's ladder and not a reason to add rungs to it.
+                // Identity alone: who this is and what they used to be. The skills line this
+                // carried for part of 2026-09-18 came off after the owner played it — the detail
+                // pane beside the cards shows all thirteen now, so the card does not have to.
+                // Both lines sit a step up the scale, because the page is read at leisure with no
+                // world behind it.
                 var lines = new VisualElement();
                 lines.AddToClassList("colonist__lines");
                 lines.Add(HudText.Make(string.Empty, HudTextRole.Name, ussClass: "colonist__name"));
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Body, ussClass: "colonist__trade"));
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__skills"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__trade"));
 
                 card.Add(face);
                 card.Add(lines);
@@ -437,13 +461,18 @@ namespace Odyssey.Presentation.Ui
             record.AddToClassList("detail__lines");
             record.Add(_detailName);
             record.Add(_detailTrade);
-            record.Add(_detailTraits);
 
             var portrait = new VisualElement();
             portrait.AddToClassList("detail__record");
             portrait.Add(_detailFace);
             portrait.Add(record);
             _colonistDetail.Add(portrait);
+
+            // Sections, each under a heading of its own (owner, 2026-09-18). Traits used to sit
+            // inside the record above, as a third line beside the name and the trade, where it
+            // read as another fact about the person rather than as the block it will be once M7
+            // fills it. It is a section now, under the skills, with a heading the same weight.
+            _colonistDetail.Add(SectionHeading(SeedField.SkillsKey));
 
             // The same grid the inspect pane's Skills tab is, wearing a modifier: two columns
             // rather than however many fit the viewport, a taller and wider line, and a step up
@@ -457,6 +486,9 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < SkillCatalogue.ReadingOrder.Count; i++)
                 _detailSkillViews.Add(SkillLine(_detailSkills, "skill--setup",
                     HudTextRole.Row, HudTextRole.Body));
+
+            _colonistDetail.Add(SectionHeading(SeedField.TraitsKey));
+            _colonistDetail.Add(_detailTraits);
 
             screen.Add(_colonistDetail);
             return screen;
@@ -482,13 +514,7 @@ namespace Odyssey.Presentation.Ui
                 VisualElement lines = card[1];
 
                 HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Name);
-                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Body);
-
-                // The line the three cards are compared on. The rules — live skills only, nothing
-                // at zero, ties in reading order — are SkillSummary's, in Odyssey.Hud, so the fast
-                // tier holds them rather than the Unity tier.
-                HudText.Set((Label)lines[2],
-                    SkillSummary.Line(who.Skills, HudLayout.ColonistCardSkills), HudTextRole.Row);
+                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Row);
 
                 // The seed is the candidate's own and the id is the one this slot will occupy, so
                 // this is the face the colony goes on to give them — ColonistDraw.IdForSlot is
@@ -511,10 +537,10 @@ namespace Odyssey.Presentation.Ui
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
             _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
-            // Drawn now and empty until M7, by the owner's decision. It says "—" rather than
-            // nothing, because a row that is absent and a row that is empty look identical and
-            // only one of them is a promise.
-            HudText.Set(_detailTraits, "Traits  —", HudTextRole.Body);
+            // Empty until M7, by the owner's decision. It says "—" rather than nothing, because a
+            // section that is absent and one that is empty look identical and only one of them is
+            // a promise. The word "Traits" is the heading's now, not this line's.
+            HudText.Set(_detailTraits, EmptySection, HudTextRole.Body);
 
             for (int i = 0; i < current.Skills.Count && i < _detailSkillViews.Count; i++)
                 SetSkillLine(_detailSkillViews, i, current.Skills[i]);
