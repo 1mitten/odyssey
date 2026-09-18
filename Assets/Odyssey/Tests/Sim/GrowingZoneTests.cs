@@ -129,6 +129,47 @@ namespace Odyssey.Tests.Sim
             Assert.That(zones.Cells.Count, Is.EqualTo(3));
         }
 
+        /// <summary>
+        /// Folding two fields must leave every field recorded after them answering for itself.
+        ///
+        /// <para><b>Found by the PlayMode field benchmark, not by this tier</b> (U50): a field
+        /// painted across water and trees fragments into several zones, one stroke folds a
+        /// middle one, and the dissolve left every later zone wearing a stale slot — the next
+        /// stroke on one of its cells read past the end of the list and the session threw
+        /// forever after. The fast tier had only ever folded two zones, where the dissolved
+        /// one is the last and nothing sits behind it; four is the smallest that catches it.</para>
+        /// </summary>
+        [Test]
+        public void FoldingAFieldLeavesEveryFieldRecordedAfterItAnswering()
+        {
+            var (_, zones) = Meadow();
+
+            // Four fields with gaps between them, so nothing has joined: slots 0, 1, 2, 3.
+            zones.Designate(new CellRef(1, 3, Layer), PlantHandle.Carrot);
+            zones.Designate(new CellRef(3, 3, Layer), PlantHandle.Carrot);
+            zones.Designate(new CellRef(1, 6, Layer), PlantHandle.Carrot);
+            zones.Designate(new CellRef(6, 6, Layer), PlantHandle.Carrot);
+            Assert.That(zones.ZoneCount, Is.EqualTo(4));
+
+            // Touches the first two and folds them into one. The dissolve moves a later
+            // zone into the vacated slot — which is exactly the move that used to leave the
+            // zones after <em>that</em> pointing where no zone was.
+            zones.Designate(new CellRef(2, 3, Layer), PlantHandle.Carrot);
+            Assert.That(zones.ZoneCount, Is.EqualTo(3), "the fold left one field, not two");
+            Assert.That(zones.Cells.Count, Is.EqualTo(5), "four fields and the folding stroke");
+
+            Assert.That(zones.Designate(new CellRef(1, 6, Layer), PlantHandle.Carrot),
+                Is.EqualTo(IntentRejection.AlreadyInThatState),
+                "the field recorded after the fold still answers its own cell");
+            Assert.That(zones.Designate(new CellRef(6, 6, Layer), PlantHandle.Carrot),
+                Is.EqualTo(IntentRejection.AlreadyInThatState),
+                "and so does the last one, two slots behind the dissolve");
+
+            Assert.That(zones.Cancel(new CellRef(6, 6, Layer)), Is.EqualTo(IntentRejection.None),
+                "the last field's rubber still finds it");
+            Assert.That(zones.ZoneCount, Is.EqualTo(2));
+        }
+
         [Test]
         public void CancellingTheLastCellDissolvesTheZone()
         {

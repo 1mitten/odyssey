@@ -250,14 +250,22 @@ namespace Odyssey.Sim.Growing
         /// </summary>
         void Dissolve(Zone zone)
         {
+            // A swap, not a shift: List.RemoveAt would move every later zone down one and
+            // leave all but the first of them wearing a stale Id, with their cells pointing
+            // at slots that no longer hold them — a field painted over water fragments into
+            // several zones, one stroke folds them, and the next designate on a folded cell
+            // reads past the end of the list. Found by the PlayMode field benchmark (U50);
+            // the fast tier had never dissolved a zone that was not near the end.
             int slot = zone.Id;
-            _zones.RemoveAt(slot);
-            if (slot < _zones.Count)
+            int last = _zones.Count - 1;
+            if (slot != last)
             {
-                Zone moved = _zones[slot];
+                Zone moved = _zones[last];
+                _zones[slot] = moved;
                 moved.Id = slot;
                 for (int i = 0; i < moved.Cells.Count; i++) _zoneAt[moved.Cells[i]] = slot;
             }
+            _zones.RemoveAt(last);
         }
 
         // ---- sowing and growth ------------------------------------------------------------------
