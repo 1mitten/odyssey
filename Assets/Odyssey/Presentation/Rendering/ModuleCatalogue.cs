@@ -133,8 +133,15 @@ namespace Odyssey.Presentation.Rendering
         public bool baseAtY = true;
 
         /// <summary>
-        /// Sit the art's <b>highest</b> point on the placement height: the rule for anything that
-        /// is walked <i>on</i> rather than stood <i>in</i>.
+        /// Sit the art's <b>highest</b> point just above the placement height — by
+        /// <see cref="CellMetrics.SlabLift"/> — which is the rule for anything walked <i>on</i>
+        /// rather than stood <i>in</i>.
+        ///
+        /// <para><b>Just above, never on.</b> The cell's floor plane is also the top face of the
+        /// block filling the cell below, so a surface levelled exactly on to it is coplanar with
+        /// the ground and z-fights. <see cref="CellMetrics.SlabLift"/> holds the clearance and the
+        /// measurement behind it; it lives with this rule so that a future walked-on piece cannot
+        /// forget it.</para>
         ///
         /// <para><b>A floor slab is drawn at the cell's lower boundary</b>, which is the plane a
         /// colonist's feet are on, so the face that matters is the slab's <em>top</em> and not its

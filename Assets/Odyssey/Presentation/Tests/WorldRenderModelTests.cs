@@ -159,6 +159,13 @@ namespace Odyssey.Tests.Presentation
         /// <c>ResolvedModule.Bounds</c> is measured after placement, so this walks the real
         /// arithmetic. It also covers the street surfaces, which are walked on for the same reason
         /// and were 33 mm out for the same one.</para>
+        ///
+        /// <para><b>Two assertions and not one, because the first fix broke the second.</b>
+        /// Levelling the slabs on to the plane <em>exactly</em> made them coplanar with the terrain
+        /// block below — <c>FloorCentre</c> for cell y is that block's top face — and the owner's
+        /// board z-fought within the hour. "All the slabs agree" is necessary and is not enough:
+        /// they must agree at a height that clears the ground. A version of this test that checked
+        /// only the first would have passed the flicker through.</para>
         /// </summary>
         [Test]
         public void EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor()
@@ -180,11 +187,18 @@ namespace Odyssey.Tests.Presentation
                 // fallback's business and not this rule's.
                 if (!resolved.UsesArt || resolved.IsEmpty) continue;
 
-                Assert.That(resolved.Bounds.max.y, Is.EqualTo(0f).Within(0.001f),
+                Assert.That(resolved.Bounds.max.y, Is.EqualTo(CellMetrics.SlabLift).Within(0.001f),
                     $"{row.moduleId} ({row.prefabName}) draws its top face {resolved.Bounds.max.y:F3} m " +
-                    "off the cell floor, so it will not sit level with the slab in the next cell");
+                    "above the cell floor, so it will not sit level with the slab in the next cell");
                 checked_++;
             }
+
+            // And the clearance is not zero. CellMetrics.SlabLift carries the argument; this is
+            // here so that "level" can never again be achieved by levelling everything on to the
+            // one plane the ground below already occupies.
+            Assert.That(CellMetrics.SlabLift, Is.GreaterThan(0f),
+                "a slab flush with the cell floor plane is coplanar with the terrain block beneath " +
+                "it, and paving is laid on ground by definition");
 
             // Or the loop above passes by never running, which is how a rule quietly stops being
             // one: five buildable slabs and five street surfaces are in the committed catalogue.

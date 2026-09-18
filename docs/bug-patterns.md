@@ -113,6 +113,25 @@ whole of that hunt. `tools/dotnet/Odyssey.SaveProbe` loads one without Unity and
 **Reach for the file before the code** whenever a report says a thing "is" something — a wood floor,
 a stone tile, the top level. That is the player's name for what they see, not a reading of state.
 
+### P7 — The fix satisfies the test and breaks the thing the old value was quietly doing
+
+A number is found to be inconsistent and is normalised to the clean value — zero, the plane, the
+default. The inconsistency goes; so does a margin nobody had written down, because the old value was
+doing *two* jobs and only one of them was named.
+
+It slips through because the test written alongside the fix pins the property that was wrong and not
+the property that was right. Every slab's top face at +0.008 and +0.033 is a real fault, and
+levelling them all on to 0.000 fixes it — and satisfies "they all agree" perfectly while making
+every one of them coplanar with the ground beneath. The board flickered inside an hour.
+
+**The tell is a constant that becomes round.** When a fix moves a number to 0, to the plane, to
+flush, to exactly — ask what the old, unround value was keeping apart. Clearances, epsilons and
+biases look like sloppiness and are usually the only thing standing between two surfaces.
+
+**The fix**: give the margin a name and an owner (`CellMetrics.SlabLift`), put it in the rule rather
+than in each row, and **assert both halves** — that the values agree, *and* that what they agree on
+is still clear of whatever the old margin was clearing.
+
 ---
 
 ## The register
@@ -151,9 +170,18 @@ contrapositive was the whole answer and was sitting in the same paragraph.
   top 25 mm **proud** of the plank deck's — the opposite of what the screenshots looked like.
 
 **Fixed:** `ModuleEntry.topAtY` places a walked-on piece by its highest point, so every slab's top
-face is the cell's floor plane (0 ± 1 mm), pinned by
-`EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor`. The other two are reported and not fixed: both
-are design calls. 25 mm will not on its own make a street tile read as decking.
+face lands at one height, pinned by `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor`. The other
+two are reported and not fixed: both are design calls. 25 mm will not on its own make a street tile
+read as decking.
+
+**And the first fix was wrong, in a way worth its own line (P7).** Levelling the slabs on to the
+floor plane *exactly* made the owner's board z-fight within the hour — `FloorCentre` for cell y is
+also the top face of the block filling cell y−1, so a slab flush with the plane is coplanar with the
+ground paving is laid on. The plank deck's +0.008 was never slop; it was clearance.
+`CellMetrics.SlabLift` is that clearance and `topAtY` applies it, so the rule owns it rather than
+each row. **The first version of the test would have passed the flicker through**: it asserted the
+slabs agreed, and levelling them all on to the ground's own plane satisfies that perfectly. It now
+asserts they agree *and* that the shared height clears the ground.
 
 **Caught next time by:** `Odyssey.SaveProbe`. Load the file before arguing about the picture.
 

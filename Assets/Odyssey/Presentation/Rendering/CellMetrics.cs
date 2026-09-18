@@ -31,6 +31,27 @@ namespace Odyssey.Presentation.Rendering
 
         public static Vector3 FloorCentre(CellRef cell) => FloorCentre(cell.X, cell.Z, cell.Y);
 
+        /// <summary>
+        /// How far above its cell's floor plane a slab's walking surface sits: <b>8 mm of
+        /// clearance, and it is load-bearing.</b>
+        ///
+        /// <para><see cref="FloorCentre"/> for cell <c>y</c> is at <c>y * SizeY</c>, which is
+        /// exactly the <em>top face of the terrain block filling cell y-1</em>. So a slab whose top
+        /// face sits on the plane is coplanar with the ground it is laid on, and paving — whose
+        /// entire purpose is to be laid on ground that is already there — z-fights with it. That is
+        /// not a theory: levelling the slabs on to the plane did it across the owner's board within
+        /// the hour (2026-09-18, "there is all sorts of flickering happening to tiles now").</para>
+        ///
+        /// <para><b>8 mm because that is the number that already worked.</b> Before the slabs were
+        /// levelled, the plank deck happened to land at +0.008 through its prefab's own pivot and
+        /// had never flickered in any playtest; the street tile landed at +0.033 and was the 25 mm
+        /// step the levelling was for. The clearance is kept and the disagreement removed.</para>
+        ///
+        /// <para>Small enough not to read as a kerb — 8 mm against a 3 m layer — and applied to
+        /// every slab equally, so it cannot reintroduce the step it replaced.</para>
+        /// </summary>
+        public const float SlabLift = 0.008f;
+
         /// <summary>The centre of the cell volume. Used for bounds, never for placement.</summary>
         public static Vector3 Centre(int x, int z, int y) =>
             new Vector3(x * SizeXZ + HalfXZ, y * SizeY + SizeY * 0.5f, z * SizeXZ + HalfXZ);

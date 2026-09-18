@@ -1113,7 +1113,10 @@ namespace Odyssey.EditorTools
                 // the plank deck's top came out at +0.008 m and the street tile's at +0.033 m, so a
                 // stone floor stood 25 mm proud of the wood beside it on the same layer, and the
                 // owner reported a grey tile sitting at the wrong height in their deck. One rule
-                // with one owner now: every slab's top face is the cell's floor plane.
+                // with one owner now: every slab's top face is the same height.
+                //
+                // The clearance above the plane is topAtY's own, not a number repeated here —
+                // CellMetrics.SlabLift carries it and says why it cannot be zero.
                 centreXZ = true, baseAtY = false, topAtY = true,
             });
 

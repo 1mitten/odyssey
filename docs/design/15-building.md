@@ -685,29 +685,51 @@ reading rather than a measurement. It falls out on its own if the slab arts are 
 they are, clicking near the far edge of a grey plate should name the neighbour while clicking near
 the front edge names the plate.
 
-### A slab's top face is the cell's floor plane
+### Every slab's top face is at one height, 8 mm above the cell floor
 
 **Measured first, and the measurement corrected the guess.** From the screenshots the stone plate
 read as *recessed* into the deck. It is the opposite — `SlabHeightProbe`, against the real
 `ModuleLibrary`, with y = 0 the plane a colonist stands on:
 
 ```
-                                       before                      after
-odyssey.module.slab          top=+0.008  thickness 0.101    top= 0.000  thickness 0.101
-odyssey.module.slab.concrete top=+0.008                     top= 0.000
-odyssey.module.slab.deck     top=+0.008                     top= 0.000
-odyssey.module.slab.wood     top=+0.008                     top= 0.000
-odyssey.module.slab.stone    top=+0.033  thickness 0.033    top= 0.000  thickness 0.033
+                             before                 after
+odyssey.module.slab          top=+0.008  t 0.101    top=+0.008  t 0.101
+odyssey.module.slab.concrete top=+0.008             top=+0.008
+odyssey.module.slab.deck     top=+0.008             top=+0.008
+odyssey.module.slab.wood     top=+0.008             top=+0.008
+odyssey.module.slab.stone    top=+0.033  t 0.033    top=+0.008  t 0.033
 ```
 
-**The street tile stood 25 mm *proud* of the plank deck**, not below it, and the plank deck itself
-sat 8 mm proud of its own cell. Neither was on the plane, and the sunken look is the tile's own art
-— a raised cross inside a frame — rather than its placement.
+**The street tile stood 25 mm *proud* of the plank deck**, not below it, and the sunken look is the
+tile's own art — a raised cross inside a frame — rather than its placement. The deck's own +0.008
+was not an error and is now the height they all share; see the clearance below for why it is not 0.
 
 **The rule now has one owner.** `ModuleEntry.topAtY` places a piece by its **highest** point, which
 is the right question for anything walked *on*; `baseAtY` asks the opposite and keeps precedence, so
 every piece already placed correctly is untouched. `PlayScene.Slab` sets it, which covers the five
 buildable slab ids and the five street surfaces.
+
+#### And the clearance is load-bearing
+
+**Levelling the slabs on to the plane *exactly* made the board flicker** (owner, 2026-09-18, within
+the hour: *"there is all sorts of flickering happening to tiles now — maybe fighting layers?"*).
+They were right about the cause. `CellMetrics.FloorCentre` for cell *y* is at `y * SizeY`, which is
+**the top face of the terrain block filling cell y−1** — so a slab whose top face sits on the plane
+is coplanar with the ground, and paving, whose entire purpose is to be laid on ground that is
+already there, z-fights with it.
+
+The +0.008 the plank deck happened to carry was never slop. It was clearance, and taking it away is
+what the first fix did wrong.
+
+**`CellMetrics.SlabLift` is that clearance, and `topAtY` applies it** — the top face lands `SlabLift`
+*above* the placement height, never on it. It lives in the rule rather than in each row, or the next
+walked-on piece has to remember it. 8 mm because that is the number that had already never
+flickered, and 8 mm against a 3 m layer does not read as a kerb.
+
+**The test now pins both halves**, because the first version would have passed the flicker straight
+through: every slab agrees *and* they agree at a height that clears the ground. "All the slabs are
+level" is necessary and is not sufficient — levelling them all on to the one plane the ground
+already occupies satisfies it perfectly.
 
 **The old spelling was `baseAtY = false`, and it was only ever right by luck.** Its comment already
 said the intent exactly — *"the walking surface is the cell floor and the slab's own thickness hangs
@@ -715,9 +737,10 @@ below it"* — but "not base-at-Y" is not "top-at-Y": it is *no rule at all*, an
 on its artist's pivot. One prefab happened to be near enough and the other was not.
 
 **Pinned by `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor`**, which walks every `FloorSlab` row
-in the committed catalogue and asserts the resolved bounds' top is 0 ± 1 mm. It asks the *resolved*
-module, not the row, so it walks the real arithmetic rather than re-reading the flag; and it counts
-what it checked, because a rule whose loop never runs has quietly stopped being one.
+in the committed catalogue and asserts the resolved bounds' top is `CellMetrics.SlabLift` ± 1 mm. It
+asks the *resolved* module, not the row, so it walks the real arithmetic rather than re-reading the
+flag; and it counts what it checked, because a rule whose loop never runs has quietly stopped being
+one.
 
 **Regenerating the catalogue takes two commands, not one.**
 `PlayScene.RebuildCatalogue` rebuilds the rows and **drops the `appearance` block** — the 311 atlas
