@@ -109,13 +109,37 @@ namespace Odyssey.Tests.Hud
                 Is.LessThanOrEqualTo(HudLayout.StartListMax),
                 "the New game screen does not fit the region the load list already fits in");
 
-            // The colonist screen (U40) is much the fullest thing this box has had to hold — a
-            // caption, three cards and two rows — so this is where the fixed box is actually
-            // tested rather than merely respected.
-            Assert.That(HudLayout.ColonistScreenHeight,
-                Is.LessThanOrEqualTo(HudLayout.StartListMax),
-                "three colonist cards do not fit the fixed body, so the panel would have to grow " +
-                "and every row would move under the pointer on the way in");
+            // The candidate cards are deliberately NOT asserted here any more. They left the fixed
+            // box when U40's colonist screen became part of the full-viewport setup page, so
+            // measuring them against the load list's ceiling was asking whether a screen nobody
+            // draws fits a box it does not sit in. What they owe is the test below, and a measured
+            // one in StartScreenTests.
+        }
+
+        /// <summary>
+        /// A card is at least as tall as the face it carries.
+        ///
+        /// <para><b>The check whose absence cost the setup page a visible defect.</b> When the
+        /// avatar doubled on 2026-09-18 (<c>docs/design/20-avatars.md</c> §10.6) every card that
+        /// carries one was re-derived except the candidate card, which kept the 47 it was given
+        /// while <see cref="HudLayout.Avatar"/> was 30 and then drew a 60 px face in it. Nothing
+        /// failed: the sheet agreed with the model, the model agreed with itself, and the only
+        /// witness was three overlapping faces in `Logs/setup-page.png`. One line of arithmetic
+        /// that nobody thought to write down is the whole difference.</para>
+        /// </summary>
+        [Test]
+        public void EveryCardIsAtLeastAsTallAsTheFaceItCarries()
+        {
+            Assert.That(HudLayout.ColonistCard,
+                Is.GreaterThanOrEqualTo(HudLayout.ColonistAvatar),
+                "a candidate card is shorter than its own avatar, so the faces overlap each other " +
+                "and the card's outline — which is exactly what the avatar doubling did to it");
+
+            Assert.That(HudLayout.CardHeight, Is.GreaterThanOrEqualTo(HudLayout.CardAvatar),
+                "a roster card is shorter than its own avatar");
+
+            Assert.That(HudLayout.InspectHeader, Is.GreaterThanOrEqualTo(HudLayout.Avatar),
+                "the inspect header is shorter than the avatar it holds");
         }
 
         [Test]

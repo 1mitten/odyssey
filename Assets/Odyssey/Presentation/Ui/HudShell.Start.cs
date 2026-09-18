@@ -370,19 +370,24 @@ namespace Odyssey.Presentation.Ui
             {
                 int index = slot;
 
-                // The face, then the two lines about the person whose face it is. A row wrapping a
-                // column, which is the shape a roster card already is — the candidate row was a
+                // The face, then the three lines about the person whose face it is. A row wrapping
+                // a column, which is the shape a roster card already is — the candidate row was a
                 // plain column until avatars landed (docs/design/20-avatars.md §3).
+                //
+                // The third line is what the page is for: who these three are is a name and an
+                // occupation, but which of them you want is the skills, and until 2026-09-18 they
+                // were only in the detail pane and only for the card you had clicked.
                 var card = new VisualElement();
                 card.AddToClassList("colonist");
 
-                var face = new AvatarGlyph(HudLayout.Avatar);
+                var face = new AvatarGlyph(HudLayout.ColonistAvatar);
                 face.AddToClassList("colonist__face");
 
                 var lines = new VisualElement();
                 lines.AddToClassList("colonist__lines");
                 lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__name"));
                 lines.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__trade"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__skills"));
 
                 card.Add(face);
                 card.Add(lines);
@@ -462,6 +467,12 @@ namespace Odyssey.Presentation.Ui
 
                 HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Row);
                 HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Meta);
+
+                // The line the three cards are compared on. The rules — live skills only, nothing
+                // at zero, ties in reading order — are SkillSummary's, in Odyssey.Hud, so the fast
+                // tier holds them rather than the Unity tier.
+                HudText.Set((Label)lines[2],
+                    SkillSummary.Line(who.Skills, HudLayout.ColonistCardSkills), HudTextRole.Meta);
 
                 // The seed is the candidate's own and the id is the one this slot will occupy, so
                 // this is the face the colony goes on to give them — ColonistDraw.IdForSlot is

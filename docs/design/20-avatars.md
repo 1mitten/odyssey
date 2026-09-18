@@ -379,10 +379,22 @@ border around the portraits"*. Both done, and the first one cost more than it lo
 | Strip height share | 0.14 | **0.18** |
 | Top scrim | 170 | **192** |
 | Coverage ceiling | 0.19 | **0.20** |
+| Setup candidate card | 260 x 47 | **300 x 65**, added 2026-09-18 |
 
 **The card is re-derived, not stretched.** Its width is still the wider of its two rows, measured
 by the text engine: the name row becomes 16 + 52 + 8 + 50 = 126 and overtakes the activity row's
 106. `TheCardIsWideEnoughForItsRowsAndNoWider` passes with the card at exactly what it needs.
+
+**The candidate card was missed, and the last row of that table was added a month of commits late.**
+Every card carrying an avatar was re-derived here except the setup page's, which kept the 47 px it
+was given in §3 while `Avatar` was 30 — and then drew a 60 px face in it, thirteen pixels taller
+than its own box at a 53 px pitch, so the three faces ran into one another and over the selection
+outline. **Nothing failed**: `HudStyleSheetTests` pins `.colonist`'s height to `HudLayout.ColonistCard`
+and both moved together, which is to say neither moved. The check that was missing is one line of
+arithmetic — *a card is at least as tall as the face it carries* — and it is
+`HudLayoutTests.EveryCardIsAtLeastAsTallAsTheFaceItCarries` now, asked of this card, the roster card
+and the inspect header together. The full account, including the skills line the same omission cost,
+is `18-colonist-select.md` §6b.
 
 **Three things fell out of it, and each was a test rather than a discovery on screen.**
 

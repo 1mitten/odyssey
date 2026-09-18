@@ -1872,15 +1872,19 @@
 
 .colonists {
     flex-shrink: 0;
-    width: 260px;
+    width: 300px;
 }
 
 /* A row wrapping a column since avatars landed (docs/design/20-avatars.md §3): the face, then the
-   two lines about the person whose face it is. The same shape a roster card's identity row is. */
+   three lines about the person whose face it is — name, trade, and what they are good at. The same
+   shape a roster card's identity row is.
+
+   Sixty-five is the three lines, and it must not fall under the 60 px face: at 47 the faces ran
+   into one another and into the selection outline (HudLayout.ColonistCard). */
 .colonist {
     flex-direction: row;
     align-items: center;
-    height: 47px;
+    height: 65px;
     margin-bottom: 6px;
     padding: 0 8px;
     border-radius: 3px;
@@ -1902,8 +1906,10 @@
     overflow: hidden;
 }
 
+/* Dim rather than meta since the skills line arrived under it: three lines at two weights read as
+   a hierarchy, and an occupation is flavour where the line below it is the decision. */
 .colonist__trade {
-    color: rgba(255, 255, 255, 0.66);
+    color: rgba(255, 255, 255, 0.50);
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1916,11 +1922,16 @@
     overflow: hidden;
 }
 
-/* What they are good at, on one line: three cards of two lines each came to 296 against the fixed
-   body's 284. Measured by HudLayoutTests rather than found on screen. */
+/* What they are good at, on one line — "Mining 6 · Cutting 3", best first, nothing at zero. The
+   line the three cards are actually compared on, and the one the avatar squeezed out between U41
+   and 2026-09-18; the rules are SkillSummary's. Brighter than the trade above it, because an
+   occupation is flavour and this is the decision — the trade went dim rather than this going
+   brighter, because the theme has four text tokens and inventing a fifth is how a sheet drifts. */
 .colonist__skills {
     color: rgba(255, 255, 255, 0.66);
     white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row

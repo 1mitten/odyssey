@@ -5316,3 +5316,66 @@ tell you what the value actually is at the moment it is used.
 The screenshots were what made the probe possible. "It doesn't respect the rotation" is ambiguous
 between the cell, the facing and the drawing; two pictures of the same three beds before and after
 building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.
+
+### The candidate card lost its skills to a face, and nobody could see it (2026-09-18)
+
+The owner, playing the setup page: *"I'm not seeing the skills rolled randomly on the character
+generation screen — is that supposed to happen?"*
+
+**The roll was never the problem, and measuring it first is what kept this from becoming a hunt
+through `ColonistDraw`.** Three thousand draws off the same method the colony calls: only **2.6% of
+candidates have every live skill at zero**, the best skill is 3 or better on **70%** of them, and a
+sample deal reads `Hauling 5 · Cutting 8 · Mining 6 · Construction 2` beside `Hauling 1 · Mining 1`.
+Every card also takes a fresh `SeedEntry.Draw()` off machine entropy, so Reroll genuinely redeals.
+The simulation half was right all along.
+
+**The card was showing a name and an occupation.** An occupation is drawn from its own salt —
+deliberately, so that two facts about one person are not correlated — which means it tells a player
+**nothing about what that person can do**. So the page whose entire job is telling three people
+apart showed three names and three trades, and the skills were in the detail pane, for the one card
+you had clicked. Comparing candidates meant clicking each in turn and remembering.
+
+**Three dead artefacts said so, which is what made it attributable rather than merely visible.**
+`HudLayout.ColonistCardSkills = 2`, read by nothing, carrying a comment about keeping the card's
+height and its contents in step. `.colonist__skills` in the sheet, applied to no element.
+`HudLayout.ColonistScreenHeight`, modelling a caption and a standalone colonist screen that
+`BuildSetupPage` stopped drawing when the candidates joined the seed and the board size on one
+full-viewport page — and the fast tier was asserting that model fits `StartListMax`, a box this
+screen does not sit in.
+
+**The cause was the avatar doubling, and it left a second mark that was in plain sight.**
+`20-avatars.md` §10.6 took `Avatar` 30 → 60 and re-derived every card that carries one: the roster
+card 106 × 63 → 126 × 89, the inspect header 38 → 60, the strip share, the top scrim, the coverage
+ceiling. **The candidate card is not on that table.** It kept 47 and drew a 60 px face in it, at a
+53 px pitch — so on `Logs/setup-page.png` the three faces run into each other and over the selection
+outline, and the skills line had been squeezed out to make room for the trade.
+
+**Nothing failed, and the reason is worth keeping.** `HudStyleSheetTests` pins `.colonist`'s height
+to `HudLayout.ColonistCard`, so the sheet and the model agreed — because neither had moved. A
+consistency test between two copies of a number cannot notice that the number is wrong. The check
+that was missing is one line of arithmetic nobody thought to write: **a card is at least as tall as
+the face it carries.** It is `EveryCardIsAtLeastAsTallAsTheFaceItCarries` now, asked of all three
+cards at once, and `StartScreenTests.TheCandidateCardsDoNotRunIntoEachOther` asks the same of the
+laid-out elements, where a player would ask it.
+
+**What reading the code could not settle, and the picture did in one look.** Most of an hour went
+into the fixed box's arithmetic — three lines come to 296 against a body of 284, so a third line
+does not fit — and every bit of that was a correct answer to a question that had stopped applying.
+The screenshot showed the setup page occupying the top third of a 1080p canvas with some seven
+hundred empty pixels under the cards. The layout constants had modelled a screen that no longer
+existed, and *reading them more carefully would only have made the wrong model more convincing.*
+Run the shot first: `scripts/unity.sh test playmode -testFilter …PhotographTheSetupPage`.
+
+**The card is re-derived from its own rows**, the way §10.6 did the roster card: 29 name + 18 trade
++ 18 skills = 65, clear of the 60 px face. The column went 260 → 300, because a 60 px face and a
+third line left 176 px of text where §3 sized 206 and the page is the full viewport rather than the
+fixed box. The trade drops from `TextMeta` to `TextDim` so the three lines read as a hierarchy on
+the theme's four existing tokens rather than a fifth being invented — name, then what they can do,
+then what they used to be. `SkillSummary` in `Odyssey.Hud` owns the line's rules, so live-only,
+no-zeroes, ties-in-reading-order and the em dash for the one candidate in forty with nothing to show
+are fast-tier tests rather than things discovered on screen.
+
+**The general lesson, and it is the rates review's from the day before, arrived at from the other
+end: a constant nothing reads is not harmless.** Three of them here described the screen as designed
+while the screen had quietly become something else, and each of them would have been believed by the
+next session to read it. One of them was being asserted by a passing test.

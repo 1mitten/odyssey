@@ -948,42 +948,84 @@ namespace Odyssey.Hud
         // ------------------------------------------------ the colonist screen (U40)
 
         /// <summary>
-        /// How many skills a candidate's card carries, best first.
+        /// How many skills a candidate's card carries, best first — see
+        /// <see cref="SkillSummary.Line"/>, which is what applies it.
         ///
         /// <para>Thirteen skills times three cards is a screen of numbers nobody reads, and the
-        /// question a player is answering is "what are these three good at". Two fits the card
-        /// below with the name, and the number lives here rather than in the presenter so that
-        /// <see cref="ColonistCard"/> and what is actually drawn cannot disagree.</para>
+        /// question a player is answering is "what are these three good at". Two is what
+        /// <see cref="ColonistCard"/>'s third line has room for, and the number lives here rather
+        /// than in the presenter so that the card's height and what is drawn in it cannot
+        /// disagree.</para>
+        ///
+        /// <para><b>It was read by nothing between U41 and 2026-09-18</b>, along with
+        /// <c>.colonist__skills</c> in the sheet, because the skills line was lost when the avatar
+        /// arrived — see <see cref="ColonistCard"/>.</para>
         /// </summary>
         public const int ColonistCardSkills = 2;
 
         /// <summary>
-        /// A candidate's card: the name line, and <b>one</b> line under it carrying both skills.
-        ///
-        /// <para><b>One line and not one per skill, and the arithmetic is what decided it.</b> A
-        /// line each came to 296 against the body's 284 — the first thing that has not fitted the
-        /// fixed box since the owner fixed it, and the possibility `17-start-flow.md` §11.4a named
-        /// when it said U40 might find the box the wrong size. It is not: "Mining 6 · Cutting 3"
-        /// reads as one fact about a person rather than two, which is also how the design's own
-        /// sketch drew it, and the screen comes to 242 with room to spare.</para>
+        /// The face on a candidate card. The inspect header's size by specification
+        /// (<c>docs/design/20-avatars.md</c> §3), named here rather than reached for directly so
+        /// that <see cref="ColonistCard"/> and the presenter read one number and
+        /// <c>HudLayoutTests</c> can hold the card to it.
         /// </summary>
-        public const int ColonistCard = StartRow + StartSeedCaption;
+        public const int ColonistAvatar = Avatar;
+
+        /// <summary>
+        /// A candidate's card: the name, the occupation, and what this person is good at.
+        ///
+        /// <para><b>Re-derived from its own rows on 2026-09-18, the way the roster card was</b>
+        /// (<c>docs/design/20-avatars.md</c> §10.6) — 29 for the name, 18 for the trade and 18 for
+        /// the skills. Sixty-five, and it must not fall below <see cref="ColonistAvatar"/>, which
+        /// is the check whose absence caused this.</para>
+        ///
+        /// <para><b>§10.6 doubled the avatar and missed this card.</b> Its table re-derived the
+        /// roster card 106 × 63 → 126 × 89 and the inspect header 38 → 60, and moved the strip
+        /// share, the top scrim and the coverage ceiling with them. The candidate card was not on
+        /// it, so it kept the 47 it was given when <see cref="Avatar"/> was 30 — and then carried a
+        /// 60 px face in it, thirteen pixels taller than its own box at a 53 px pitch. On
+        /// `Logs/setup-page.png` the three faces visibly ran into one another and into the
+        /// selection outline. The skills line had gone the same way, squeezed out to make room for
+        /// the trade, which is why <see cref="ColonistCardSkills"/> and <c>.colonist__skills</c>
+        /// were both still here describing a line nothing drew.</para>
+        ///
+        /// <para><b>The old comment's arithmetic was right and no longer applies.</b> Three lines
+        /// came to 296 against the fixed body's 284 — true while the candidates had a screen of
+        /// their own inside the start panel. They do not: they are part of the full-viewport setup
+        /// page, beside the seed and the board size, so the ceiling is the canvas and there are
+        /// some seven hundred spare pixels under the cards at 1080p.</para>
+        /// </summary>
+        public const int ColonistCard = StartRow + 2 * StartSeedCaption;
 
         public const int ColonistCardGap = 6;
 
         /// <summary>
-        /// The colonist screen's content: a caption, three cards, and the two rows under them —
-        /// Reroll, then Start.
+        /// The column the three candidates stand in, beside the detail pane.
         ///
-        /// <para>Measured against <see cref="StartListMax"/> like the New game screen, because it
-        /// sits in the same region with the same row that goes back beneath it. <b>This is the
-        /// screen that tests whether the fixed box was the right call</b>, being much the fullest
-        /// thing it has had to hold, so the assertion is the point rather than a formality.</para>
+        /// <para><b>260 until 2026-09-18, and widened for the skills line.</b> The text column is
+        /// this less the card's own padding, the face and the gap after it — 300 − 16 − 60 − 8 =
+        /// 216, where 260 left 176. §3 of the avatar design sized it when the face was 30 and the
+        /// card carried two lines; a 60 px face took 30 px off the text and a third line put a
+        /// longer string on it. The page is the full viewport, not the fixed box, so the column is
+        /// free to grow — which is what that design said the lever was.</para>
         /// </summary>
-        public const float ColonistScreenHeight =
-            StartSeedCaption + StartRowGap                                      // Your colonists
-            + 3 * ColonistCard + 2 * ColonistCardGap + Gap                      // the three
-            + StartRow + StartRow;                                              // Reroll, Start
+        public const int ColonistColumnWidth = 300;
+
+        /// <summary>
+        /// The three cards and the two rows under them — Keep, then Reroll.
+        ///
+        /// <para><b>No caption, because none is drawn.</b> This used to carry
+        /// <c>StartSeedCaption + StartRowGap</c> for a "Your colonists" line and be measured
+        /// against <see cref="StartListMax"/>, both of which described U40's standalone colonist
+        /// screen. That screen is gone — <c>BuildSetupPage</c> draws the title, the board, the
+        /// people and the footer as one full-viewport page — so the fast tier was asserting that a
+        /// model of a screen nobody draws fitted a box it does not sit in. Whether the column
+        /// really fits is a question for the layout engine, and <c>StartScreenTests</c> asks it of
+        /// the laid-out elements.</para>
+        /// </summary>
+        public const float ColonistColumnHeight =
+            3 * ColonistCard + 2 * ColonistCardGap + Gap                        // the three
+            + StartRow + StartRow;                                              // Keep, Reroll
 
         /// <summary>
         /// How tall the content of one screen <i>would</i> be, for a given number of rows — which

@@ -197,6 +197,58 @@ useful record.
 
 ---
 
+## 6b. The card lost its skills to the avatar, and got them back (2026-09-18)
+
+**Reported by the owner as "I'm not seeing the skills rolled randomly on the character generation
+screen".** They are rolled, and rolled well — measured over 3,000 draws off `ColonistDraw.Roll`,
+only **2.6% of candidates have every live skill at zero** and the best skill is 3 or better on
+**70%** of them. Nothing was wrong with the roll. The card was not showing it.
+
+**What the card had become.** §5's sketch above is a name over `Mining 6 · Cutting 3`, and that is
+what `U40` built. `U41` put a face on the card (`20-avatars.md` §3) and the skills line was squeezed
+out to make room for the occupation — which is drawn from its own salt and therefore says **nothing
+about what anybody can do**. So the page whose whole job is telling three people apart showed three
+names and three trades, and the skills lived only in the detail pane, only for the card you had
+clicked. Comparing three candidates meant clicking each in turn and remembering.
+
+**Three artefacts survived, all describing a line nothing drew**, which is how the loss is
+attributable rather than merely visible: `HudLayout.ColonistCardSkills = 2`, read by nothing, whose
+own comment says it lives there "so that `ColonistCard` and what is actually drawn cannot
+disagree"; `.colonist__skills` in the sheet, applied to no element; and
+`HudLayout.ColonistScreenHeight`, modelling a caption and a standalone screen that `BuildSetupPage`
+has not drawn since the candidates joined the seed and the board size on one full-viewport page.
+The fast tier was asserting that last one fits `StartListMax` — a question about a box this screen
+does not sit in.
+
+**And the same omission had a second half that was plainly visible.** `20-avatars.md` §10.6 doubled
+`Avatar` 30 → 60 and re-derived every card carrying one: the roster card to 126 × 89, the inspect
+header to 60, with the strip share, the top scrim and the coverage ceiling moved to match. **The
+candidate card is not on that table.** It kept the 47 px it was given when the face was 30, and then
+drew a 60 px face in it — thirteen pixels taller than its own box, at a 53 px pitch. On
+`Logs/setup-page.png` the three faces run into one another and over the selection outline. Nothing
+failed: the sheet agreed with the model and the model agreed with itself.
+
+**The card is re-derived from its own rows**, the way §10.6 did it: 29 for the name, 18 for the
+trade, 18 for the skills — **65**, which is also clear of the 60 px face. The column went 260 → 300
+because a 60 px face and a third line left 176 px of text where §3 had sized 206; the page is the
+full viewport, so the column is free to grow, which is the lever that design named. The trade drops
+from `TextMeta` to `TextDim`, so the three lines read as a hierarchy on the theme's existing tokens
+rather than a fifth being invented: **name, then what they can do, then what they used to be.**
+
+**What holds it now.** `SkillSummary` in `Odyssey.Hud` owns the line's rules — live skills only,
+nothing at zero, ties in reading order, an em dash for the one candidate in forty with nothing to
+show — so they are fast-tier questions rather than things found on screen.
+`HudLayoutTests.EveryCardIsAtLeastAsTallAsTheFaceItCarries` is the arithmetic that was missing, and
+it asks the same of the roster card and the inspect header.
+`StartScreenTests.TheCandidateCardsDoNotRunIntoEachOther` asks it of the laid-out elements, which is
+the question a player actually asks, and asserts the skills line exists and is filled.
+
+**The lesson, and it is the same one as the rates review the day before:** a constant that nothing
+reads is not harmless. Three of them here described the screen as it was designed while the screen
+had quietly become something else, and each would have been trusted by the next session to read it.
+
+---
+
 ## 7. Not in this unit
 
 - **Portraits** (`U41`), and the §4.5 carve-out that comes with them.

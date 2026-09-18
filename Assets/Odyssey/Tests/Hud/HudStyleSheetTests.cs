@@ -257,6 +257,7 @@ namespace Odyssey.Tests.Hud
             (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
             (".startscreen__seedcap", "height", () => HudLayout.StartSeedCaption, "the seed's caption"),
             (".startscreen__seedrows", "margin-top", () => HudLayout.Gap, "the box to the rows under it"),
+            (".colonists", "width", () => HudLayout.ColonistColumnWidth, "the candidate column"),
             (".colonist", "height", () => HudLayout.ColonistCard, "a candidate's card"),
             (".colonist", "margin-bottom", () => HudLayout.ColonistCardGap, "card gap"),
             (".colonist__lines", "margin-left", () => HudLayout.ColonistAvatarGap, "face to name"),
