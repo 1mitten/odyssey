@@ -5910,3 +5910,13 @@ The owner: *"when many colonists are generated - the roster top bar stops genera
   - `HudModelTests.RosterSwapDirectlySwapsColonistPositions` asserts direct slot swapping.
   - `ViewStateTests.TheRosterOrderAndPageSurviveAStreamAndRestore` asserts save/load round-trip in PlayMode.
 - **Verified**: fast tier 723 Sim + 416 Hud; EditMode **1717 total, 1703 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### Roster single row, 6-card capacity, and fixed-position docked pager (2026-09-18)
+
+The owner: *"Should be one row with 6 on an more (no 2 rows or anthing - always one). The pagination control needs to stay in the exact same place but it moves around according to how many colonists on that page, also move this control flush next to the last possible 6th slot with little spacing and make sure it stays in fixed position"*.
+
+- **Single row strictly enforced**: `HudLayout.StripRows = 1`, `StripRowsAllowed(height) => 1`, and `StripRowsUsed(...) => 1`. The roster bar never wraps to two rows at any resolution.
+- **6-card capacity per page**: `HudLayout.StripCardsCap = 6` clamps `CardsPerRow(width)`. Colonies of 6 or fewer occupy a single row of up to 6 cards; colonies of 7 or more paginate across pages of 6 cards each.
+- **Stationary pagination control**: Previously, `_cardsHost` dynamically sized to the count of cards on the active page, causing the pager to shift horizontally whenever a page had fewer cards than the capacity (e.g. jumping left on a 1- or 2-colonist remainder page). Now, when paginated (`PageCount > 1`), `_cardsHost` locks to the exact width of 6 card slots (`6 * (CardWidth + CardGap) = 618 px`) with `Justify.FlexStart` and `flexShrink = 0`. As a result, the 6 card slots and the pagination toolbar remain in the exact same screen position regardless of how many cards are on that page.
+- **Flush docking with little spacing**: `.roster-pager` margin reduced to 0.5px (combined with card margin-right of 3.5px, providing a clean 4.0px gap flush next to the 6th slot). `HudLayout.PagerGap = 4`.
+- **Verified**: fast tier 723 Sim + 418 Hud; EditMode **1725 total, 1711 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
