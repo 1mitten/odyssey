@@ -244,6 +244,8 @@ namespace Odyssey.Presentation.World
             SwimmingFigures = 0;
             MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
+            MeasuredLookYaw = 0f;
+            LookingFigures = 0;
 
             for (int i = 0; i < _figures.Count; i++)
             {
@@ -266,6 +268,8 @@ namespace Odyssey.Presentation.World
                         ApplyClimbPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
+                    else
+                        ApplyLookAbout(figure);
                     continue;
                 }
 
@@ -401,6 +405,59 @@ namespace Odyssey.Presentation.World
         /// checkable by a test and only the application lives here — the bargain
         /// <see cref="ClimbPose"/> and <see cref="WorkSwing"/> already make.</para>
         /// </summary>
+        /// <summary>
+        /// A colonist looking about itself, laid over whatever the gait mixer produced.
+        ///
+        /// <para>Last of the four and deliberately so: it is the pose of a figure that has nothing
+        /// else to say with its body. Swimming, climbing, a gesture and work all write the spine
+        /// or the arms and all of them mean something; looking round is what is left, so it runs
+        /// only in the <c>else</c>.</para>
+        ///
+        /// <para><b>Eased in and out like every other weight here</b>, so a colonist that starts
+        /// felling does not snap its head back to centre — the swing takes over while the look is
+        /// still fading, which is what a person does.</para>
+        ///
+        /// <para><b>World-space axes</b>, for the reason stated at every other pose in this file:
+        /// sixty-one characters from four packs make no promise about a bone's local axes. The yaw
+        /// is about world up and the pitch about the figure's own right, so a colonist on a slope
+        /// looks level with the world rather than level with the hill.</para>
+        /// </summary>
+        void ApplyLookAbout(Figure figure)
+        {
+            float weight = Mathf.Clamp01(figure.LookWeight);
+            if (weight <= 0.001f || figure.Head == null) return;
+
+            Vector2 turn = LookAbout.At(HeldLookPhase ?? figure.LookPhase) * weight;
+
+            // The neck takes a share and the head the rest, so the turn comes from the whole
+            // column. All of it in the head alone is a skull swivelling on a fixed body.
+            float neckShare = Mathf.Clamp01(LookAbout.NeckShare);
+            Vector3 up = Vector3.up;
+            Vector3 right = figure.Transform.right;
+
+            if (figure.Neck != null)
+            {
+                Pitch(figure.Neck, up, turn.x * neckShare);
+                Pitch(figure.Neck, right, turn.y * neckShare);
+            }
+
+            Pitch(figure.Head, up, turn.x * (1f - neckShare));
+            Pitch(figure.Head, right, turn.y * (1f - neckShare));
+
+            MeasuredLookYaw = turn.x;
+            LookingFigures++;
+        }
+
+        /// <summary>How far the last posed figure turned its head, in degrees. A photograph cannot
+        /// say whether a head moved at all; this can. See <c>MeasuredBladeGap</c>.</summary>
+        public static float MeasuredLookYaw { get; private set; }
+
+        /// <summary>How many figures looked about in the last pass.</summary>
+        public static int LookingFigures { get; private set; }
+
+        /// <summary>Freeze the head-look at one phase, so a contact sheet can photograph it.</summary>
+        public static float? HeldLookPhase { get; set; }
+
         void ApplySwimPose(Figure figure)
         {
             float weight = Mathf.Clamp01(figure.SwimWeight);

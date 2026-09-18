@@ -266,6 +266,14 @@ namespace Odyssey.Presentation.World
             figure.LeftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
             figure.RightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
 
+            // Head and neck, which nothing bound until a colonist had to look about itself
+            // (2026-09-18). Two more lines of exactly the same shape as the fourteen above, which
+            // is the whole reason LookAbout is arithmetic over bones rather than an additive clip
+            // layer: the pack does ship A_HeadLook_Additive_Neut and using it would have meant a
+            // second animation path for two angles.
+            figure.Head = animator.GetBoneTransform(HumanBodyBones.Head);
+            figure.Neck = animator.GetBoneTransform(HumanBodyBones.Neck);
+
             // The legs, which nothing bound until the crouch needed them. ApplyClimbPose's own
             // comment records their absence as a deliberate limit rather than an oversight —
             // "legs would be better and are not available without binding four more bones, which

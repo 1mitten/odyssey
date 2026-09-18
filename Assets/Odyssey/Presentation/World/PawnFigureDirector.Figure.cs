@@ -109,6 +109,31 @@ namespace Odyssey.Presentation.World
             public Transform? LeftHand;
             public Transform? RightHand;
 
+            /// <summary>Head and neck, bound for <see cref="LookAbout"/>. Null on a non-Humanoid
+            /// rig, which simply never looks about.</summary>
+            public Transform? Head;
+            public Transform? Neck;
+
+            /// <summary>How large this figure is drawn against its catalogue row, from
+            /// <see cref="WalkVariance.StrideScale"/>. One when the dial is off. Blend divides
+            /// measured speed by it, or a bigger figure skates.</summary>
+            public float StrideScale = 1f;
+
+            /// <summary>How far this figure has walked, in drawn metres, ever.
+            ///
+            /// <para>The bow reads its phase from distance and not from a clock, because a
+            /// standing colonist must not drift and a clock would move it while it stood still
+            /// working.</para></summary>
+            public float Travelled;
+
+            /// <summary>The head-look cycle clock, in game seconds, and its eased weight.</summary>
+            public float LookClock;
+            public float LookWeight;
+
+            /// <summary>Where in its wander this figure is, 0 to 1. Derived in Pose, read in
+            /// ApplyLookAbout, never advanced there.</summary>
+            public float LookPhase;
+
             // The legs. Bound for the crouch; see BindWorkBones.
             public Transform? Hips;
             public Transform? LeftUpperLeg;

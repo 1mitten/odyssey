@@ -857,6 +857,62 @@ namespace Odyssey.Presentation.World
         }
 
 
+        /// <summary>
+        /// Nudge the figure sideways off the straight line between two cell centres.
+        ///
+        /// <para><b>Why:</b> five colonists on the same errand walk the same route, and drawn on
+        /// the exact chord they walk it in single file down one line, which is a large part of
+        /// what reads as mechanical.</para>
+        ///
+        /// <para><b>Off the eased yaw, not off the heading.</b> The heading is the raw step vector
+        /// and changes between one frame and the next at a corner; a quarter of a metre of offset
+        /// swung through ninety degrees in one frame is a third of a metre of teleport, which is
+        /// an order of magnitude more than the 25 mm an honest frame of walking carries — the
+        /// exact shape of the jolt that <c>WalkOnReliefTests</c> was written for. <c>figure.Yaw</c>
+        /// is already eased at <see cref="TurnDegreesPerSecond"/>, so the sideways direction turns
+        /// as slowly as the body does.</para>
+        ///
+        /// <para><b>And faded out three ways</b>, each closing a way it could look wrong. It goes
+        /// with <b>speed</b>, because this is a walking affectation and a colonist standing at a
+        /// workbench a quarter of a metre off its own cell is just misplaced. It goes with
+        /// <b>turning</b>, which is belt and braces over the eased yaw and is also true — nobody
+        /// wanders while cornering. And it goes with <b>work</b>, because <c>WorkStance.StandAt</c>
+        /// has already moved the figure deliberately and two offsets arguing is how a woodcutter
+        /// ends up beside its tree instead of at it.</para>
+        ///
+        /// <para>Nothing here is in a cell, the save or the hash. The pawn is on its cell
+        /// throughout, for picking, for the cursor and for every rule.</para>
+        /// </summary>
+        static Vector3 BowOf(Figure figure, float deltaTime, bool settled, bool running)
+        {
+            if (WalkVariance.Bow <= 0f || figure.Pawn < 0) return Vector3.zero;
+
+            // **Distance, not time.** A standing colonist must not drift, and the phase has to be
+            // continuous across a step boundary — which a function of how far it has come is, and
+            // a function of which cell it is in is not. Accumulated from the figure's own smoothed
+            // ground speed rather than by differencing its drawn position, because the drawn
+            // position already contains last frame's bow and would feed it back into itself.
+            // **Gated on the world running, not merely on the figure being settled.** Pausing
+            // does not zero the measured speed - ObserveSpeed deliberately holds its last answer
+            // rather than reading a stalled world as a measurement of nought, which is what keeps
+            // the stride under a pause (docs/lessons.md, "absence of movement is not a measurement
+            // of nought"). Accumulate on that held speed and a paused colonist slides quietly
+            // sideways for as long as the player leaves the game stopped. Found by reading rather
+            // than by a test; nothing on screen would have explained it.
+            if (settled && running) figure.Travelled += figure.Speed * deltaTime;
+
+            float moving = Mathf.Clamp01(figure.Speed / 0.6f);
+            float turning = 1f - Mathf.Clamp01(
+                Mathf.Abs(Mathf.DeltaAngle(figure.Yaw, figure.TargetYaw)) / 45f);
+            float free = 1f - Mathf.Clamp01(figure.WorkWeight) - Mathf.Clamp01(figure.SwimWeight);
+
+            float weight = moving * turning * Mathf.Clamp01(free);
+            if (weight <= 0.001f) return Vector3.zero;
+
+            float offset = WalkVariance.BowOffset(figure.Pawn, figure.Travelled) * weight;
+            return Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.right * offset;
+        }
+
         /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
         static void Pitch(Transform? bone, Vector3 axis, float degrees)
         {
@@ -1091,6 +1147,26 @@ namespace Odyssey.Presentation.World
                 : SwimPose.Settle(figure.SwimWeight, afloat, deltaTime);
             if (running && figure.SwimWeight > 0.001f) figure.SwimClock += deltaTime;
 
+            // The head-look, whose clock advances here for the reason 13-gestures.md §6 gives and
+            // then amends: exactly one place moves a clock, and in this codebase that place is
+            // Pose. ApplyLookAbout reads the phase and never touches it, so the pass that runs at
+            // the end of both Sync and Evaluate stays a pure re-derivation.
+            //
+            // Wanted only when the figure has nothing else to say with its body — the same four
+            // states the pose ladder in ApplyWorkPose arbitrates between, asked here as a weight
+            // so it eases rather than switches. A colonist taking up an axe lets its head come
+            // back to centre while the swing takes over, instead of snapping.
+            float attentive = figure.WorkWeight <= 0.001f
+                              && figure.SwimWeight <= 0.001f
+                              && figure.ClimbPhase < 0f
+                              && figure.Gesture == PawnGesture.None ? 1f : 0f;
+            figure.LookWeight = figure.Settled
+                ? LookAbout.Settle(figure.LookWeight, attentive, deltaTime)
+                : attentive;
+            if (running) figure.LookClock += deltaTime;
+            figure.LookPhase = LookAbout.Phase(
+                figure.LookClock, WalkVariance.LookRate(figure.Pawn), WalkVariance.LookPhase(figure.Pawn));
+
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
@@ -1181,8 +1257,6 @@ namespace Odyssey.Presentation.World
             if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
                 drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
 
-            figure.Transform.position = drawn;
-
             // Turn towards the heading rather than snapping to it.
             //
             // A pawn that sets off in a new direction used to change facing between one frame and
@@ -1194,6 +1268,12 @@ namespace Odyssey.Presentation.World
             figure.Yaw = settled
                 ? Mathf.MoveTowardsAngle(figure.Yaw, figure.TargetYaw, TurnDegreesPerSecond * deltaTime)
                 : figure.TargetYaw;
+
+            // The sideways wander, added before the position is written so that the footing below
+            // samples the slope where the figure actually ends up rather than a quarter of a metre
+            // away from it.
+            drawn += BowOf(figure, deltaTime, settled, running);
+            figure.Transform.position = drawn;
 
             // Stand on the ground rather than merely above it.
             //
@@ -1259,6 +1339,19 @@ namespace Odyssey.Presentation.World
             // shaft standing to attention until the legs were bound. Ground speed is a poor proxy
             // for what the legs are doing, and every pose that is not walking has to say so.
             speed *= 1f - Mathf.Clamp01(figure.SwimWeight);
+
+            // **A bigger colonist takes a bigger stride, so it needs less clip for the same
+            // ground.** look.Speeds were computed once, at the catalogue's own scale, by
+            // GroundSpeeds — which makes exactly this correction for the 1.4 the whole cast is
+            // drawn at. WalkVariance then gives each figure its own multiple of that, so the
+            // cached table is wrong for everyone by their own few per cent. Dividing the measured
+            // speed here is the same arithmetic as scaling every entry of the table and costs one
+            // divide instead of an array per figure.
+            //
+            // Leave it out and the blend picks a gait too slow for the speed and then plays it too
+            // fast, which is the skating GroundSpeeds' own comment warns about — and it would read
+            // as an animation fault rather than an arithmetic one.
+            if (figure.StrideScale > 0.01f) speed /= figure.StrideScale;
 
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
             for (int i = 0; i < look.Gaits.Length; i++)
@@ -1353,10 +1446,33 @@ namespace Odyssey.Presentation.World
             figure.WorkCentre = at;
             figure.SimPosition = at;
             figure.Transform.position = at;
+            figure.Travelled = 0f;
+            figure.LookWeight = 0f;
+            figure.LookClock = 0f;
             figure.GameObject.SetActive(true);
             Desynchronise(figure, pawn);
+            Rescale(figure, pawn);
             _byPawn[pawn.Value] = figure;
             return figure;
+        }
+
+        /// <summary>
+        /// Give this figure its own build, so a colony is not five copies of one body.
+        ///
+        /// <para>Applied at lease rather than at build, because a pooled figure is handed from one
+        /// pawn to the next and the size has to follow the person rather than the body. Keyed to
+        /// the id for the same reason <see cref="Desynchronise"/> is: a size that re-rolled every
+        /// time a colonist crossed a layer would have the colony pulsing.</para>
+        ///
+        /// <para><b>The gait blend has to be told</b>, and <c>Blend</c> is where that happens — the
+        /// look's gait speeds were measured at the catalogue scale, so a figure drawn larger
+        /// covers more ground per cycle and would otherwise be handed a clip too slow and played
+        /// too fast, which is the recipe for skating.</para>
+        /// </summary>
+        void Rescale(Figure figure, PawnId pawn)
+        {
+            figure.StrideScale = WalkVariance.StrideScale(pawn.Value);
+            figure.Transform.localScale = _looks[figure.Look]!.Scale * figure.StrideScale;
         }
 
         /// <summary>
