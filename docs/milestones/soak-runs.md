@@ -98,3 +98,93 @@ five colonists now eat 1.8 meals a day each, the vanilla figure, where before th
 Nothing sat at zero on any need on any seed, and no job failed.
 
 Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-18 — WS2, work speed follows the skill curve (9ae7682)
+
+Commit `9ae7682` (`claude/rates-and-stats`, WS2 of design 17). Same scenario and machine as the
+OQ-21 entry above — `Scenario_Bare`, 120 × 120 × 16, five colonists, no standing orders — run
+once, each seed freshly built and ticked 600,000 times.
+
+| Seed | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | wait | failed | Meals left | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 600,000 | passed | 1.9 s | 0.003 | 0.004 | 14 | 92 | 55 | 2,664 | 0 | 0 | 52 of 144 | `362b4c847c79cebb` |
+| 2 | 600,000 | passed | 2.0 s | 0.003 | 0.005 | 15 | 94 | 55 | 2,613 | 0 | 0 | 50 of 144 | `0e3ff437f26f5f8d` |
+| 3 | 600,000 | passed | 1.9 s | 0.003 | 0.004 | 13 | 93 | 55 | 2,590 | 0 | 0 | 51 of 144 | `ad58de4ae2cee30a` |
+
+**The economy is byte-for-byte the WS1 baseline's, and that is the measured result, not a stale
+run.** The comparison this entry exists for: every count and every hash equals the run captured
+at `f6beb56` before the curve landed. The reason is the same one the goldens gave — the slice
+runs no job whose pace a curve moves. Its tallies are haul, eat, sleep and wander; eating,
+sleeping and idling are needs-driven and rate-free, and hauling is the one work type with no
+rate skill, flat at 1,000 by the design's own rule that a skill drives either rate or quality.
+Mining, cutting and construction — the three the curve slows to 0.55–0.70× for a novice — are
+not designated in this scenario at all. The curve's effect on work speed is therefore proved by
+the exactness tests (`WorkRateTests`: the level-20 face in the curve's ratio of ticks, two
+miners of different skill emptying one cell together, the felling grant count walked along the
+rising curve) and will first show in soak when a slice carries standing orders. Wall time
+doubled against OQ-21 (1.0 → 1.9 s) with the same counts and the same work in them, and the
+per-tick mean reads 0.002 → 0.003 — both are machine noise at a cost this small, not the curve,
+which this run never asks anyone to swing a pickaxe fast or slow against.
+
+Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-18 — WS3, a pace of her own (a4413df)
+
+Commit `a4413df` (`claude/rates-and-stats`, WS3 of design 17). Same scenario and machine as the
+WS2 entry above — `Scenario_Bare`, 120 × 120 × 16, five colonists, no standing orders — run once,
+each seed freshly built and ticked 600,000 times.
+
+| Seed | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | wait | failed | Meals left | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 600,000 | passed | 2.0 s | 0.003 | 0.004 | 15 | 92 | 55 | 2,677 | 0 | 0 | 52 of 144 | `d6373d172e4f8cd7` |
+| 2 | 600,000 | passed | 2.0 s | 0.003 | 0.005 | 15 | 93 | 54 | 2,667 | 0 | 0 | 51 of 144 | `7f5abb4158e70db7` |
+| 3 | 600,000 | passed | 2.0 s | 0.003 | 0.004 | 13 | 92 | 54 | 2,776 | 0 | 0 | 52 of 144 | `085e7a6b0644f2d3` |
+
+**Every hash moved against WS2, and this time the movement is the measured result.** WS3 is the
+first change since the slice began that reaches `Pawn.MoveProgress`: each colonist now walks at a
+pace of her own, 850 to 1,150, where before every colonist walked in step at exactly 1,000. The
+wander count is up on all three seeds (2,664 → 2,677, 2,613 → 2,667, 2,590 → 2,776) — a quicker
+walker finishes a stroll in fewer ticks and fits more of them into the same ten days, and a
+colony of five different paces fits a different number of them per seed. The jobs that matter
+stay within a whisker of the baseline (haul, eat, sleep and meals left each move by at most one):
+eating and sleeping are needs-driven and only ride along on the length of a walk. Seed 1's extra
+haul is the same effect seen where it pays — one more salvage run fits into ten days when the
+average walker is a little quicker.
+
+**The comparison the unit's done criterion asks for — against a run with condition disabled — is
+vacuous here, and that is worth recording rather than manufacturing.** No need touched zero on
+any seed on any of the ten days ("longest at zero" is 0 / 0 / 0), so the starvation bar never
+grew, no collapse fired, and condition sat at its ceiling of 1,000 throughout: a
+condition-disabled run would be this run, tick for tick. The spiral the design worries about —
+the bar stepping both rates down, recovery by the same number, rest running out dropping the
+colonist where she stands — is proved by the exactness tests (`MoveRateTests`: the three bands
+against the bar, the ceiling that nothing may push past, the floor of 700 reaching both rates
+from one place, the collapse with the tired-still-walks control, the mid-walk collapse), and it
+will first show in soak when a slice runs a pantry that can empty.
+
+Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-18 — the WS1 baseline, run at last and matching what cited it (f6beb56)
+
+Commit `f6beb56` (`claude/rates-and-stats`, WS1 — the per-mille seam, before the curve or the
+pace landed). Same scenario and machine as the entries above — `Scenario_Bare`, 120 × 120 × 16,
+five colonists, no standing orders — run once per seed, each freshly built and ticked 600,000
+times, from a worktree checked out at the commit, CoreCLR, dotnet SDK 10.0.401. No need touched
+zero on any seed (0 / 0 / 0), as in every run since the pantry was sized.
+
+| Seed | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | wait | failed | Meals left | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 600,000 | passed | 2.0 s | 0.003 | 0.005 | 14 | 92 | 55 | 2,664 | 0 | 0 | 52 of 144 | `362b4c847c79cebb` |
+| 2 | 600,000 | passed | 2.2 s | 0.004 | 0.005 | 15 | 94 | 55 | 2,613 | 0 | 0 | 50 of 144 | `0e3ff437f26f5f8d` |
+| 3 | 600,000 | passed | 1.8 s | 0.003 | 0.004 | 13 | 93 | 55 | 2,590 | 0 | 0 | 51 of 144 | `ad58de4ae2cee30a` |
+
+**This entry corrects the WS2 entry above, which cited this run without the record holding it.**
+That entry's comparison — "every count and every hash equals the run captured at `f6beb56`" —
+pointed at a baseline that existed as a claim and not as a row, so a fresh-eyes review of the
+branch could not verify it from this file, and said so. The run has now been made good, and
+every count and every hash above equals the WS2 entry's table exactly: the byte-for-byte claim
+stands checked rather than trusted. The reason the WS2 entry records — the slice runs no job
+whose pace the curve moves — explains the equality from this side too, since nothing here asks
+anyone to swing an axe fast or slow.
+
+Nothing failed, so no row was added to the overnight queue by this run.

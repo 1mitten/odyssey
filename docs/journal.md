@@ -4963,6 +4963,80 @@ being followed everywhere except in the file that states them.
   three planning documents — which is also what proved the built sense had to be the one that
   stayed.
 
+### The rates landed, and the golden gate held three different ways (2026-09-18)
+
+WS1–WS3 of design 17 went in on `claude/rates-and-stats` as three commits: the seam (`f6beb56`),
+work speed from the skill curve plus the stroke clock (`9ae7682`), and innate pace, condition and
+collapse (`a4413df`). WS4 running stays held — the plan's standing rule, *do not invent an urgency
+model*, is still the right answer and needs no code to honour. What the unit taught:
+
+- **The design's "two saved integers" turned out to be four accumulators.** §2b closed with *"two
+  saved integers change scale, `_work[cell]` and `MoveProgress`, and nothing else does"* — and the
+  implementation deliberately broke that sentence: `Job.ToilProgress` counts milliwork too, and
+  `_work[cell]` lives in two grids (designations *and* construction). A rate must reach a surface
+  to be visible, and the toil accumulator is the one the driver's own pacing reads; leaving it in
+  ticks would have given the stroke clock a rate it could not apply. §2bb's rule — the scale is
+  internal, everything crossing the sim→UI contract stays in ticks — held exactly as audited:
+  `WorkToClear`'s ushort, `SiteView`'s seconds and `Fraction()`'s denominator all keep their units.
+
+- **WS1's done criterion was nothing, and the gate for nothing is everything else.** The suite
+  passed unedited — goldens, path checksums, HUD readouts, the one-day run — because
+  `cost × 1,000 / 1,000` reads back exact. The one test the unit added for itself is the control
+  the plan asked for: a rate of 500 provably takes twice as long, at both accumulators.
+
+- **WS2's goldens were a no-op, and the reason was written down instead of a re-bake faked.** The
+  regolden run printed the same three hashes it was fed. That is not luck: all three golden cases
+  are `ScenarioDef.Bare`, which runs no job the curve moves — haul prices flat by the design's own
+  rule that a skill drives either rate or quality, and nothing is mined, cut or built there. The
+  same reasoning made WS2's soak byte-for-byte the WS1 baseline's. The discipline is: a no-op
+  golden is only trustworthy when somebody can say *why* it was one.
+
+- **WS3's re-bake was the first real one, and it had the right shape.** All three `Simulated`
+  hashes moved and no `Generated` one did — the signature of a simulation change with the
+  generator untouched. That shape exists because the pace roll is keyed like passions and starting
+  skills but *drawn lazily on first read*: placement's dice never re-roll, so the generator's hash
+  cannot move. For the first time in the unit it is the colonists and not the hash that changed —
+  idle colonists crossing their boards at 850 to 1,150 instead of in step.
+
+- **Two facts about the skill system were found the slow way by test fixtures, and are now
+  written here so the next session finds them the fast way.** First, experience exactly 0 means
+  "not rolled yet": `RollStartingSkills` skips any skill whose experience is zero and would
+  overwrite a pin on the first tick — a level-0 pin must use experience 1. Second,
+  `DecayExperience` drops a level-20 pawn to level 19 on any loss, so a rate pinned "at level 20"
+  quietly became a rate at 19 halfway through a 2,556-tick walk — long fixtures must freeze decay.
+  Both look like flaky rates and are neither.
+
+- **"What is she working at" moved from the giver to the driver.** The rate publisher asks every
+  publish, and the answer had lived on `WorkGiver`; the driver now carries a virtual `WorkType`
+  defaulting to hauling — chosen so a driver that never swings (eating, sleeping) and is somehow
+  asked anyway reads as the one work type that prices flat.
+
+- **The work aspect's gate is Working, not merely "has a driver".** An adopted pawn takes a wander
+  job on tick one, and the first version published 777 for an "idle" colonist. Only
+  `workFocus >= 0 && Driver != null` gates `odyssey.pawn.rate.work`, because only the stroke clock
+  reads it. The move aspect is the opposite: a fact about the pawn wherever she stands, so it
+  publishes for everyone.
+
+- **Format 6 appends last and saves nothing it can recompute.** `StarvationSeverity` sits at the
+  very end of the pawn section so a v5 file reads positionally unchanged; the innate pace is
+  deliberately *not* saved — a pure function of seed and id is correct by construction on load,
+  and a saved copy would be a second thing to keep honest. The version-number test did its job:
+  the bump is a deliberate line in a diff, again.
+
+- **A fresh-eyes review of the branch found five things, and each fix is its own small commit.**
+  The mid-walk collapse went down without the ground's thought — a giver-side collapse remembered
+  it and a road collapse did not — so the walk toil's guard now adds it, once, and the bed stays
+  reserved until the job ends rather than gaining a second exit. The pace band and the work
+  curve's integers said nothing about being invented; they do now. WS2's soak had cited a baseline
+  run the record never held, and the review could not verify it from the file: the run has been
+  made at `f6beb56` at last and matches the table that cited it byte for byte, which is the
+  difference between a claim checked and a claim trusted. The seam's "costs no allocation" claim
+  is now a Long test on a working colony — 10.4 bytes a tick, with the dozen completed cells'
+  ~25 KB apiece of nav and support rebuilds measured, attributed to editing the world rather than
+  ticking it, and written into the test's comment. And the hash comment no longer promises exact
+  division: the toils that count plain ticks — eat, sleep, wait — divide to near nothing and reach
+  the hash through what their endings change.
+
 ### The inspect pane resized under the pointer (2026-09-18)
 
 The owner, on the colonist card: *"When I click on tabs like skills/needs — it resizes every time —
@@ -5544,6 +5618,144 @@ by character count — and passed an eleven-character name that then failed the 
 A proxy that does not fail where the real thing fails is not a cheap version of the gate; it is a
 second opinion nobody asked for, and it is worse than nothing when it is believed. That test now
 says out loud that it only catches the absurd and that `HudGeometryTests` is the gate.
+### The rates line, reviewed: one field carrying two units (2026-09-18)
+
+Five fixes off a fresh-eyes review of `WS1`–`WS3`, on a worktree built from the pull request head.
+Four of the five are one fault wearing different clothes, and the fifth is a comment that had been
+doing arithmetic on the wrong cadence.
+
+**`ToilProgress` was counting ticks in three drivers and thousandths in four.** `WS1` scaled the
+work toils so a rate could change how fast a colonist pays without changing what anything costs,
+and left the three toils no rate can speed up — eating, sleeping, standing down — on a bare `++`.
+Internally each was consistent, which is why nothing failed. Across the field they were not, and
+the field is saved and hashed. Two things followed. `Rates.FromSave` is told a format version and
+nothing else, so on a pre-format-5 file it multiplied *every* value by a thousand: right for a
+half-mined rock, wrong for a half-eaten meal, which then finished on the next tick. And
+`Pawn.ContributeTo` divided the field back, so eat, sleep and wait read zero for the whole of their
+length and reached the hash not at all. A toil with no rate now pays at exactly `Rates.Scale` a
+tick — the standard rate, said in the unit everybody else is speaking — and
+`ToilProgressHasOneUnitTests` fails the fast tier on any `ToilProgress++` left in the simulation.
+
+**The same division was costing the hash three decimal places everywhere else.** All four
+accumulators were hashed divided back to whole ticks. That was WS1's price for landing with no
+golden moving, and it was the right trade for one commit; WS3 then re-baked every `Simulated` value
+anyway and the division outlived its reason, leaving a blind spot a thousand milliwork wide — two
+runs could differ on a cell and agree until the difference happened to cross a tick boundary. A
+hash that is late to notice a divergence is the thing this hash exists not to be. Hashed whole now.
+
+**All three goldens moved, and that the run did not change was measured rather than argued.** With
+the other three fixes in place and only these two lines reverted, the table comes back to the
+values the branch committed, to the digit. So the colonists walked the same walks and swung the
+same swings; what moved is what the hash can notice about them. No `Generated` value moved, as none
+could — nothing here runs before the first tick.
+
+**`starvationPerInterval` was four times faster than every sentence describing it.** The comment
+read the needs cadence as 200 intervals a day. It is 400 — a 60,000-tick day over the 150-tick
+cadence — so at 2 per interval the bar filled in a day and a quarter where the Def, the field and
+the design all promised two and a half, and severe malnutrition arrived in the fourth day of not
+eating rather than the fifth. **Nothing had ever measured it:** every band test set
+`StarvationSeverity` by hand, so the only new Def integer with no test was the one that decides how
+long starvation takes to bite. It is 1 now, the arithmetic is written out beside it rather than
+summarised, and `TheBarFillsAtTheCadenceItsCommentClaims` holds the sum and the tick path together.
+No golden moved — no golden window lets a need reach zero — which is also why the WS3 soak's
+condition comparison was honestly vacuous.
+
+**A pace cached off a seed that arrives later.** `InnatePacePerMille` caches on first read, which is
+right; the seed it reads is restored by `PawnSeedSection`, which runs *after* the pawn section that
+made the pawn, and is rewritten again whenever a candidate is rerolled on the select screen.
+Nothing reads a pace that early today, so nothing was wrong — but this project has already rolled
+an entire colony from seed zero by exactly that route, when `PawnContext.Seed` was unset until the
+first tick. `RollSeed` is a property now and its setter drops the cache, which turns a live trap
+into a closed one for the cost of four lines.
+
+**And a colonist could collapse onto her own bed.** `SleepJobDriver` tested zero rest before it
+tested arrival, so a colonist whose rest ran out on the tick she stepped onto her bed took the
+collapse branch — and rest effectiveness is read off the cell while the thought was not, so she got
+the bed's rate and the mud's memory. Arrival wins: there is no walk left to cut short.
+
+**What the five have in common is that none of them could fail a test that existed.** Three were
+invisible because the thing they corrupted was only ever read back by the same code that wrote it;
+one was a comment; one needs a window a few ticks wide. The tests added here are the cheap general
+forms — a source scan for the unit, one arithmetic assertion beside one tick-driven one for the
+cadence, and a control apiece for the cache and the bed.
+
+### The rates branch catches up, and the goldens did not move (2026-09-18)
+
+`main` had gone twenty-two commits ahead, so `WS1`–`WS3` was merged up: the review fixes first, then
+`main`. Two conflicts, both the same append-collision in `CLAUDE.md` and `docs/journal.md`.
+
+**`Golden.cs` merged clean, which is the outcome to be suspicious of.** The last time these two
+lines of work met, the city hash conflicted and *neither side's value was right for the merged
+code*; a silent auto-merge is that same danger with nothing to flag it. So the three were run rather
+than trusted — with the two controls beside them, `TheHashActuallyDependsOnTheWorld` and
+`TheHashDependsOnHowLongItRan`, because a golden that passes because the hash has stopped depending
+on anything is worse than one that fails.
+
+All five pass, and the reason holds up to inspection. `main` touched `Golden.cs` not at all since the
+branch diverged, and its only change under `Assets/Odyssey/Sim` is `ConstructionGrid`: the new
+`RunLandsOn` for drag preview, and a rewrite of the ladder-under-slab placement rules. **Those are
+order-time rules, and no golden issues an order** — every case builds on `Scenario_Bare`, which has
+never given a standing order in its life. The first read of that diff was "purely additive", which
+was wrong: twenty lines were removed. The claim that survives is narrower and is the one that
+actually explains the result.
+
+**The counts were resolved by running them, not by adding them up.** 721 Sim + 409 Hud, Long 21 —
+the merge of a branch at 712 + 406 with a main at 694 + 409, which is not an arithmetic anybody
+should attempt in their head.
+
+### Chopping gets a skill of its own, found by a player feeling it work (2026-09-18)
+
+The owner, playing WS2: *"I noticed the chopping varied in speed — could we possibly add that to
+the skills in all the places it needs to be and assign one there?"*
+
+**Chopping had no skill on screen, and the axe work was levelling up Growing.** `SkillCatalogue`
+mapped the simulation's `Skill_Cutting` onto `ui.skill.growing`, on reasoning that was perfectly
+defensible when it was written: felling is plant work, the canon work type is "cut plants and clear
+growth", and growing was the only plant skill in the list. The consequence was that a colonist who
+spent a day with an axe got better at *Growing*, and a player looking for the number behind the
+speed they had just watched change found nothing called Chopping anywhere.
+
+**It was found from the far end, which is the interesting part.** Nothing was broken — the sim had a
+`cutting` skill all along, it was saved, hashed, and driving the rate correctly. What was missing
+was only the name, and a missing name is invisible until somebody has a reason to go looking. WS2
+gave them one: **a skill that does something is a skill people try to find.** For three milestones
+the mapping was harmless because no rate read a level; the day one did, it stopped being harmless.
+
+**The word is the owner's and the family now agrees.** The order says Chop, `ui.status.felling` says
+Chopping, and `ui.work.cutting` said *Cutting* until this change brought it along. Four surfaces,
+one word. **The key stays `cutting`** — `ui.skill.cutting` — because it matches the simulation's
+`SkillIndex.Cutting` and a key is a stable identifier rather than a label; three rows of that
+catalogue already do not spell their own labels.
+
+**Growing goes back to being unsimulated**, with the reason every disabled row must carry: nothing
+is planted yet. **The new row has no art** and says so in `icon-map.csv` rather than borrowing the
+seed-sack picture — a wrong icon is worse than an outlined square, because the square admits it.
+
+**Two tests changed and one got stronger.** The pair that pinned "felling is plant work and trains
+growing" now pin chopping's own row; the assertion that a borrowed row explains itself was replaced
+by one naming the live set outright — `ui.skill.mining` and `ui.skill.cutting`, each under its own
+name — because asserting a borrow that no longer exists would pin the very thing this removed. The
+grid is unmoved at seven rows: `(13+1)/2` and `(14+1)/2` are both 7, so nothing in the pane or the
+setup page had to be re-derived.
+
+**And the art gate caught the missing icon within one CI round.** Adding Chopping without a picture
+failed `TheSkillsTabSwitchesAndDrawsTheOwnersArt`, which asserts `drawn == All.Length - 1` — *every
+skill but social is cut from the owner's sheet*. Expected 13, drew 12. That is a self-maintaining
+rule rather than a count somebody has to remember to bump: **add a skill and you have added an
+obligation to draw it**, and the alternative was an outlined placeholder square sitting in the
+Skills tab indefinitely with nothing to report it.
+
+The owner supplied the tile the same afternoon, a 32 px framed action tile in sheet 06's own format.
+**It went in as a sheet of its own rather than into sheet 06**, and the reason is worth keeping: the
+icon map records which cells are *used by keys*, not which cells hold art, so an unmapped cell of
+somebody's sheet is not a free cell — pasting into one risks painting over art nobody has mapped
+yet. `09-supplied-tiles.png` is one cell wide and says in `sheets.csv` that it grows a column at a
+time, so the next one-off has somewhere to go that costs nothing to find.
+
+The pipeline then did the rest on its own terms: `detect` agreed with the registry, `export` wrote
+64 x 64 RGBA8 at nearest-neighbour scale 2, and **no other icon changed by a byte** — which is the
+check worth making after any export, because the tool rewrites all of them and a silently re-encoded
+sheet would be invisible in a diff of thirteen files.
 
 ### Interactive Alerts: subject selection, dismissals, and vertical alignment (2026-09-18)
 
@@ -5554,7 +5766,6 @@ Settled through Ground → Interview → Plan → Execute on branch `claude/inte
 - **Alert rows carry aligned dismiss 'X' buttons in a column.** Each row has an 18×18 px dismiss element with `HudGlyphKind.Close` aligned to the right edge. Dismissing suppresses the alert until the underlying need condition clears and later re-occurs (e.g. food climbing back above `StarveClearAt` removes the dismissed latch). `PointerDownEvent` and `ClickEvent` on dismiss call `StopPropagation()` so dismissing never triggers row selection.
 - **A panel-level Clear All button sits in the header.** An 'X' in the top right-hand corner of the Alerts panel header (using the standard `CloseButton` styling opposite the "Alerts" label) clears all currently visible alerts at once.
 - **Symbol vertical alignment and compact single-line height.** The alert symbol is vertically centered with the text (`align-items: center`). Single-line alert row height is updated to 26 px (`HudLayout.AlertHeight = 26`), matching UI Toolkit's 13 px text box, reducing HUD screen coverage and avoiding unnecessary multi-line row clamping.
-- **Reconciled with `origin/main` to resolve name disconnection.** Merged PR #114 and PR #115 into the branch. The old branch was generating names from the retired 8-name mockup array ("Wrenn", "Odile"...) while `origin/main` had moved to the generated 240-name pool (`ColonistNamePool.Names` in `ColonistNames.g.cs` from `docs/design/colonist-names.csv`). Reconciling ensures alerts, roster cards, inspect panels, and the start screen draw identical names from `ColonistNames.Of(snapshot, pawn.Id)`.
+- **Reconciled with `origin/main` to resolve name disconnection.** Merged PR #114, PR #115, and PR #111 into the branch. The old branch was generating names from the retired 8-name mockup array ("Wrenn", "Odile"...) while `origin/main` had moved to the generated 240-name pool (`ColonistNamePool.Names` in `ColonistNames.g.cs` from `docs/design/colonist-names.csv`). Reconciling ensures alerts, roster cards, inspect panels, and the start screen draw identical names from `ColonistNames.Of(snapshot, pawn.Id)`.
 - **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
-- **Gates verified:** Fast tier 694 Sim + 411 Hud passed; EditMode 1675 total, 1662 passed, 0 failed; PlayMode 80 total, 75 passed, 0 failed; both wiki checks clean (`build_wiki.py --check`, `emit_labels.py --check`).
-
+- **Gates verified:** Fast tier 721 Sim + 411 Hud passed; EditMode 1675 total, 1662 passed, 0 failed; PlayMode 80 total, 75 passed, 0 failed; both wiki checks clean (`build_wiki.py --check`, `emit_labels.py --check`).

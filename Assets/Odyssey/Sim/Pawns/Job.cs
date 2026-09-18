@@ -89,7 +89,16 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Which toil is running. Saved.</summary>
         public int ToilIndex { get; internal set; }
 
-        /// <summary>Ticks accumulated inside the current toil. Saved.</summary>
+        /// <summary>
+        /// Milliwork accumulated inside the current toil (thousandths of a tick). Saved and
+        /// hashed; see <see cref="Rates"/>.
+        ///
+        /// <para><b>Milliwork in every driver without exception.</b> A toil with no rate to
+        /// speed it up still advances by <see cref="Rates.Scale"/> a tick rather than by one:
+        /// the field is saved and hashed, so a driver counting plain ticks into it puts two
+        /// units in one number, which <see cref="Rates.FromSave"/> then cannot read and the
+        /// hash cannot see.</para>
+        /// </summary>
         public int ToilProgress { get; internal set; }
 
         /// <summary>
@@ -105,6 +114,15 @@ namespace Odyssey.Sim.Pawns
         /// and by then its heading is zero.
         /// </summary>
         public virtual int WorkFocus => -1;
+
+        /// <summary>
+        /// The work type this driver discharges, as a <see cref="WorkTypeIndex"/> value — the
+        /// answer to "what is she working at" that the rate publisher asks every publish. The
+        /// default is hauling because it prices flat at today's speed (its def has no rate
+        /// skill), so a driver that never swings — eating, sleeping, idling — and is somehow
+        /// asked anyway reads as exactly the pace it always had.
+        /// </summary>
+        public virtual int WorkType => WorkTypeIndex.Haul;
 
         public virtual void Begin(Pawn pawn, Job job)
         {
@@ -248,7 +266,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         protected JobStatus Settle(PawnContext ctx)
         {
-            if (++ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks) return JobStatus.Ongoing;
+            ToilProgress += Rates.Scale;
+            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks * Rates.Scale)
+                return JobStatus.Ongoing;
             return JobStatus.Succeeded;
         }
 
@@ -305,14 +325,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         protected JobStatus LiftToil(PawnContext ctx, ColonyItem item)
         {
-            int total = ctx.Content.LiftTicks;
-            int grasp = ctx.Content.LiftGraspTicks;
+            int total = ctx.Content.LiftTicks * Rates.Scale;
+            int grasp = ctx.Content.LiftGraspTicks * Rates.Scale;
             if (grasp > total) grasp = total;
             if (grasp < 1) grasp = 1;
 
             if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Lift);
 
-            int elapsed = ++ToilProgress;
+            int elapsed = ToilProgress += Rates.Scale;
 
             if (elapsed < grasp)
             {

@@ -4,9 +4,16 @@
   before hauling at equal priority: the orders that make work exist come before the order that
   tidies it up. Cutting is first of the two because felling is the shorter job and the wood is
   usually nearer.
+
+  The rate numbers are the work-speed curve (design 17 §3b): rate = base + slope × level, in
+  thousandths of the speed everything is tuned at. The integers are INVENTED: anchored on OUR
+  own starting roll (mean level 1.16) rather than the reference's level 8, with the reference's
+  relative character kept — mining steepest, construction shallowest, hauling flat, because a
+  skill drives either rate or quality and hauling has neither.
 -->
 <Defs>
 
+  <!-- No rateSkill: hauling has no speed stat at all, here and in the reference. -->
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
@@ -17,12 +24,18 @@
     <defName>Work_Cutting</defName>
     <label>cutting</label>
     <order>1</order>
+    <rateSkill>1</rateSkill>
+    <workRateBasePerMille>600</workRateBasePerMille>
+    <workRateSlopePerLevel>100</workRateSlopePerLevel>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Mining</defName>
     <label>mining</label>
     <order>2</order>
+    <rateSkill>2</rateSkill>
+    <workRateBasePerMille>550</workRateBasePerMille>
+    <workRateSlopePerLevel>105</workRateSlopePerLevel>
   </WorkTypeDef>
 
   <!--
@@ -41,6 +54,10 @@
     loses the work and half the material; a builder the colony has grown never botches.
     Anchored on our own roll the way the reference anchors on its own — its certainty is
     at level 8 because that is where its colonists sit, ours is at 3 for the same reason.
+
+    The rate numbers are the shallowest of the three curves on purpose: here skill buys
+    quality and a lower failure rate as well as throughput, where mining buys nothing
+    but speed.
   -->
   <WorkTypeDef>
     <defName>Work_Construction</defName>
@@ -48,6 +65,9 @@
     <order>0</order>
     <successBasePerMille>850</successBasePerMille>
     <successSlopePerLevel>50</successSlopePerLevel>
+    <rateSkill>3</rateSkill>
+    <workRateBasePerMille>700</workRateBasePerMille>
+    <workRateSlopePerLevel>75</workRateSlopePerLevel>
   </WorkTypeDef>
 
 </Defs>

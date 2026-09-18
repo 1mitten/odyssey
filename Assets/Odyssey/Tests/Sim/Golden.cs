@@ -107,6 +107,35 @@ namespace Odyssey.Tests.Sim
     /// is content and content cannot move a hash taken before the first tick. Only their
     /// <c>Simulated</c> numbers are new to both branches, which is the one place two changes could
     /// combine. Any other pattern would have meant something had come along uninvited.</para>
+    ///
+    /// <para><b>Moved an eighth time, 2026-09-18, in review, and this one is the hash seeing more
+    /// rather than the colony doing anything different.</b> Two things WS1 had left: the four
+    /// accumulators were hashed divided back to whole ticks, which threw away three decimal places
+    /// the moment a rate stopped being exactly 1,000; and the three toils with no rate — eat,
+    /// sleep, wait — still counted plain ticks into the same field the work toils counted
+    /// thousandths into, so they divided to zero and reached the hash not at all. Both are fixed
+    /// together, because they are one question about one field.</para>
+    ///
+    /// <para><b>That the run itself is unchanged was measured, not argued.</b> With the review's
+    /// other three fixes in place and only these two lines reverted, all three numbers come back
+    /// to the values this table held before — 5397578720920683558, 7046263050932287688 and
+    /// 9209903446312531288. So the colonists walked the same walks and swung the same swings;
+    /// what moved is what the hash is able to notice about them. All three <see cref="Case.Generated"/>
+    /// values are untouched, as they must be, since nothing here runs before the first tick.</para>
+    ///
+    /// <para><b>Moved a seventh time by WS3, and for the first time it is the colonists and not
+    /// the hash that changed.</b> Every colonist now walks at a pace of her own — rolled from her
+    /// seed and id inside ±15 per cent — and at a condition that starvation will learn to take
+    /// from; the composed rate reaches <c>Pawn.MoveProgress</c>, and mid-step milliwork values
+    /// differ the moment a colonist is not walking at exactly 1,000. Read the shape:
+    /// <b>all three <see cref="Case.Simulated"/> values moved and no <see cref="Case.Generated"/>
+    /// one did</b>, the signature of a simulation change with the generator untouched — the pace
+    /// roll is keyed the way passions and starting skills are, but it is <i>drawn lazily on first
+    /// read</i>, so placement's dice are exactly what they were. The golden windows hold no
+    /// standing orders, so what moved is the walks themselves: idle colonists crossing their
+    /// boards at 850 to 1,150 a tick instead of in step. WS2's rate work moved none of these by
+    /// the same reasoning recorded two entries down, and this entry is the re-bake the unit's row
+    /// promised would be deliberate.</para>
     /// </summary>
     public static class Golden
     {
@@ -162,7 +191,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7415324713255390796UL,
-            Simulated = 3128752858895027949UL,
+            Simulated = 16863583305294978295UL,
         };
 
         /// <summary>
@@ -179,12 +208,26 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 15662665231234558495UL,
-            Simulated = 3319942754904635200UL,
+            Simulated = 8598539094455010883UL,
         };
 
         /// <summary>
         /// The ruined city, which is still generated and still tested even though the scene does
         /// not load it. Its passes are the ones nothing else exercises.
+        ///
+        /// <para><b>Re-baked twice on 2026-09-18, and the merge of the two is the interesting
+        /// part.</b> Both branches moved this one number for different reasons — the ladder shaft
+        /// rule on `main`, the rates work on its own branch — so the merge conflicted here and
+        /// <i>neither</i> side's value was right for the merged code. It was baked afresh, which is
+        /// the only honest resolution of a golden conflict: taking either side would have committed
+        /// a number nothing had produced.</para>
+        ///
+        /// <para>It came back as the rates branch's number exactly, which looks wrong and is not.
+        /// Connectors are <b>derived and not hashed</b> — the same rule that keeps support and the
+        /// region graph out — so the shaft rule moves a hash only where it changes what a pawn
+        /// actually <i>does</i>. On main's trajectory a colonist used one of the city's newly live
+        /// ladders inside the window; on the rates trajectory, with every work and move rate
+        /// shifted, none does. The ladder code is present in the merge — checked, not assumed.</para>
         ///
         /// <para><b>Simulated re-baked 2026-09-18</b> for the ladder shaft rule, and the failure
         /// named its own cause: the board generated identically and only the run diverged. A ladder
@@ -202,7 +245,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 6021360912580352346UL,
+            Simulated = 8696720977944009509UL,
         };
     }
 }

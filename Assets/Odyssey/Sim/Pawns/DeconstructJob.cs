@@ -75,6 +75,8 @@ namespace Odyssey.Sim.Pawns
 
     public class DeconstructJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Construction;
+
         /// <summary>The wall being taken down, so the figure swings at it rather than at its own feet.</summary>
         public override int WorkFocus =>
             ToilIndex != 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
@@ -119,8 +121,9 @@ namespace Odyssey.Sim.Pawns
             // this driver does not need to.
             if (!designations.TryTakeApart(cell, out int building, out int stuff)) return JobStatus.Failed;
 
-            ToilProgress++;
-            if (designations.AddWork(cell, 1) < ConstructionContent.WorkToDeconstruct(building, stuff))
+            int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Construction);
+            ToilProgress += rate;
+            if (designations.AddWork(cell, rate) < ConstructionContent.WorkToDeconstruct(building, stuff) * Rates.Scale)
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);

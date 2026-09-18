@@ -57,6 +57,13 @@ window.ICON_SHEETS = {
   "cols": null,
   "file": "08-salvage-gear.png",
   "rows": null
+ },
+ "09": {
+  "cell_h": 32,
+  "cell_w": 32,
+  "cols": 1,
+  "file": "09-supplied-tiles.png",
+  "rows": 1
  }
 };
 window.ICON_MAP = {
@@ -1543,6 +1550,13 @@ window.ICON_MAP = {
   "q": "high",
   "r": 2,
   "s": "06"
+ },
+ "ui.skill.cutting": {
+  "c": 0,
+  "d": "a felling axe laid against split logs",
+  "q": "high",
+  "r": 0,
+  "s": "09"
  },
  "ui.skill.fabrication": {
   "c": 1,

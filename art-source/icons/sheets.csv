@@ -7,3 +7,4 @@ sheet,file,cols,rows,cell_w,cell_h,trim_mode,target_px,native_scale,source_note
 06,06-action-tiles.png,8,7,32,32,cell,64,1,"framed action tiles: verbs rather than items. Frames are part of the art, hence trim_mode=cell"
 07,07-anatomy.png,,,,,union,64,,"anatomy and butchery: organs, bone, hide, meat, skull, brain, eye"
 08,08-salvage-gear.png,,,,,union,64,,"modern salvage and survival gear: jerrycan, battery, solar panel, generator, med kit, radiation"
+09,09-supplied-tiles.png,1,1,32,32,cell,64,1,"tiles the owner supplied one at a time rather than as a sheet. Same 32 px framed-tile format as sheet 06, so it exports on exactly the same terms; it grows a column at a time"
