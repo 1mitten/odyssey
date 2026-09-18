@@ -5128,3 +5128,74 @@ built by the composition root wires the two together, and the fast tier compiles
 the known gap in `CLAUDE.md` about clicks, met where it can be met.
 
 Nobody has pressed Play on it.
+
+### Three reports, one play session: the dead layer, the levitating climber, and the ladder that had to go through the floor (2026-09-18)
+
+`docs/design/21-ladders-and-climbing.md` holds the rules. This is why they are those rules.
+
+**The cancel bug was not in the cancel tool, and the clarifying question is what found it.** The
+report was that a slab being built could not be cancelled. The follow-up — *did anything else on
+that layer respond?* — came back "only blueprints were dead", and the slab was over open air. That
+turns a tool bug into a picking bug in one sentence: the cancel path submits two intents per cell and
+had never been reached, because `SliceCameraRig` raises no event at all when the pick misses.
+`SlicePicker.Owner` knew an edifice, a floor, water and the block below; a site was none of them, and
+sites are drawn straight into the renderer outside the mirror the picker walks. Over open air that is
+fatal — nothing in the column — and over ground it merely answers with the cell one layer *down*,
+which is why cancelling from the layer below sometimes worked and made the whole thing look
+intermittent.
+
+**The levitation was one missing case in a comment that had aged badly.** The climb pose was already
+reached by a ladder step; every joint it moves is multiplied by `ClimbWeight`, which only rises while
+a face is found, and the face came from a scan for a *solid* neighbour. The comment beside it said
+the simulation refuses to lay a connector where there is no block, so a wall would always be found.
+True of a mined shaft. Never true of a built ladder — `RefreshLadder` asks for no wall at all. A
+ladder against slabs found nothing solid, the weight decayed to nought, and the figure rode the idle
+up through the air.
+
+**Two systems owned one plane, which is the fault this project has now had twice.** The mesher picked
+the ladder's face from the first occluding neighbour and fell back to north; the director scanned for
+solid in a different order and fell back to nothing. Where nothing occluded they disagreed
+completely: a ladder drawn on the north face and a colonist standing up straight beside it. It is
+`HopPriceHasOneOwnerTests` again, in presentation, and the answer is the same shape — one function on
+the mirror both read, and a test that measures the drawn yaw rather than reading the source.
+
+**The third report and the existing rule were the same arrangement seen from opposite sides.** A
+ladder registered a connector only when both ends were walkable, and walkable needs a floor — so the
+only ladder that had ever worked was one with a slab directly above it, which is precisely the
+"colonists go through the floor" the owner was reporting. Refusing the placement on its own would not
+have tightened ladders, it would have deleted them. So the shaft cell is open now, the ladder makes
+its own top standable, and you step off sideways on to the slab beside it. `NavGrid.RefreshFrom`
+already had the clause that makes it work — *a connector is its own floor* — written for shafts and
+waiting.
+
+**One deviation from the owner's answer, and it is not a softening.** They asked for no landing
+anywhere to be refused at placement. Only the topmost ladder of a chain needs a landing and a player
+builds a chain bottom-up, so demanding it at the order would refuse every ladder in a shaft except
+the last, in the only order they can be built. It is asked at the connector instead, where
+`RefreshLadder` already answers it again each time either end changes. The ladder is buildable and
+opens nothing until the landing arrives.
+
+**And the migration the plan worried about turned out not to exist.** The plan proposed stamping
+holes in worldgen and accepting a save break, and flagged it as the one irreversible decision. It was
+not needed: keeping "a real floor still counts" as one of the three ways a ladder may arrive makes
+the new rule a superset of the old one, so every stamped city ladder and every ladder in an old save
+keeps working. What the placement rule stops is any more being made. The cheapest fix and the
+conservative one turned out to be the same fix.
+
+**The golden master moved and named its own cause.** `Golden.City.Simulated` re-baked; `Generated`
+untouched, which is the evidence that no generator pass changed. City ladders standing under an open
+cell used to register nothing and now work, so the colony reaches places it could not. The meadow and
+the played board did not move, because neither has a ladder on it.
+
+**The photographs were the specification for the pose.** Five climbers from behind and one from the
+side: both hands on rungs *above the head*, the trailing one at chin height, the stepped knee drawn
+right up while the pushing leg stays nearly straight. The rock numbers say the lower hand hangs near
+the hip and the step is modest, which is right for stone and reads as a shrug on a ladder. Four
+numbers now branch on `Figure.OnLadder`; the pushing end of the cycle deliberately does not, because
+full stretch is full stretch either way and lifting both feet reads as hanging.
+
+Flushness needed no new number at all. `ClimbLean` already puts the body 0.30 m off the cell face,
+about a body's depth from the rungs — it had simply never been applied to a ladder, because the face
+was zero. Fixing the face fixed the lean with it.
+
+Nobody has pressed Play on any of it.

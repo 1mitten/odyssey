@@ -114,6 +114,7 @@ this file.
 | Colonist select | `docs/design/18-colonist-select.md` |
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
+| Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
@@ -194,14 +195,12 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **681 Sim + 406 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **683 Sim + 406 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the fixed
-  inspect pane, the dimmed build categories and the palette that closes on a selection: EditMode
-  **1645 total, 1632 passed, 0 failed**. The remainder are `[Explicit]` or ignored. **It has not
-  seen the order-closes-a-menu change**, which adds no EditMode test and whose Presentation code the
-  PlayMode run below compiled.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the ladder
+  and site-picking work: EditMode **1656 total, 1643 passed, 0 failed**. The remainder are
+  `[Explicit]` or ignored.
 - **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
   `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
   frame time is measured — never an editor `camera.Render()` loop.
@@ -253,6 +252,11 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **The coloured wood has had two playtests; the rounds since have not been played** — the cherry
   and flame canopies read as scarlet at the play camera and are the first to veto, and the measured
   tenth-of-a-stop the new shader costs was deliberately not papered over with a gain.
+- **Nobody has seen a colonist climb a ladder since the pose was written for one.** Four angles
+  branch on a ladder against a rock face and all four are invited tuning
+  (`docs/design/21-ladders-and-climbing.md` §3): whether they read as a ladder rather than a shrug,
+  whether a step of 0.46 of a leg is too big at the play camera, and whether arriving in an open
+  shaft cell and stepping sideways looks like arriving or like hovering.
 - **Nobody has seen the falls move.** Whether the streaks read as falling water or as a pattern
   sliding down a pane cannot be judged in a still, and stills are all anybody has looked at.
 - **The shallow stream reads pale at the play camera.** Raising the alpha is the obvious fix;
@@ -288,6 +292,12 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   why this line of work has had three silent failures.
 - **A hauler cannot climb a ladder**, so material cannot be carried up. Stairs (`U44`) are the next
   unit rather than a maybe.
+- **A ladder now needs a hole left in the floor above it** (2026-09-18,
+  `docs/design/21-ladders-and-climbing.md`). A ladder under an unbroken slab is refused at the order,
+  and so is a slab poured over a standing ladder: the shaft cell stays open and the colonist steps
+  off sideways on to the landing beside it. Nothing migrates — a real floor still counts, so old
+  saves and the city's own ladders are untouched — but a player who builds a full upper floor first
+  must deconstruct one slab before the ladder will go in.
 - **The scenario table is written twice** — `OdysseyBootstrap.ScenarioFor` and
   `SessionRoundTripTests.ScenarioByName` each map two `defName`s by hand. Not urgent (a scenario
   acts only at tick zero) and both copies say so.

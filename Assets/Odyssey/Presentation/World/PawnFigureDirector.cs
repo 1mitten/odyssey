@@ -156,6 +156,16 @@ namespace Odyssey.Presentation.World
         public Vector3? ForceClimbFace { get; set; }
 
         /// <summary>
+        /// Whether a forced climb is posed as a ladder or as a rock face. **Harness only**, and
+        /// meaningless without <see cref="ForceClimbFace"/>.
+        ///
+        /// <para>Here because the two poses are now different shapes — hands on rungs above the
+        /// head against hands spread on holds — so a contact sheet that could only photograph one
+        /// of them would be photographing half the question.</para>
+        /// </summary>
+        public bool ForceClimbLadder { get; set; }
+
+        /// <summary>
         /// Hold every climb at this point in its cycle rather than reading it off the step's own
         /// progress. **Harness only**, and the counterpart of <see cref="HeldGesturePhase"/>.
         /// </summary>
@@ -1120,10 +1130,22 @@ namespace Odyssey.Presentation.World
 
             // And WHAT it is climbing. A colonist goes up the edge of the block beside the hole,
             // not up the middle of the hole: drawn at the cell centre it is a person levitating
-            // through clear air, which is what the owner saw. The simulation now refuses to lay a
-            // connector where there is no block (MineWorkGiver's HasWallBeside), so this should
-            // always find one — and where it does not, the figure simply stays where it was, which
-            // is the behaviour before any of this existed.
+            // through clear air, which is what the owner saw.
+            //
+            // **A built ladder was the case this missed, and it was the case the owner reported
+            // again on 2026-09-18** ("when a colonist goes up a ladder they seem to levitate").
+            // The comment that stood here said the simulation refuses to lay a connector where
+            // there is no block, so a wall would always be found. That is true of a MINED SHAFT and
+            // was never true of a BUILT LADDER: ConstructionGrid.RefreshLadder asks for no wall at
+            // all, so a ladder run up through an open storey, or standing against slabs rather than
+            // rock, found nothing solid beside it. The face came back zero, the weight decayed to
+            // nought, every joint the climb pose moves is multiplied by that weight — and the
+            // figure rode the idle straight up through the air.
+            //
+            // So the ladder is asked first, and it is asked of the thing itself rather than of its
+            // surroundings: a ladder is what you climb, and where it is fixed is the model's to say
+            // (WorldRenderModel.LadderFacing). The solid-neighbour scan stays underneath it,
+            // unchanged, as the rule for a shaft cut out of rock.
             // Forced first, and completely: a harness that set only the direction would still be
             // waiting for a real vertical step to give it a phase, and there is never going to be
             // one on a board with no shaft in it.
@@ -1133,15 +1155,24 @@ namespace Odyssey.Presentation.World
                 figure.ClimbPhase = HeldClimbPhase ?? 0f;
                 figure.ClimbFace = ForceClimbFace.Value;
                 figure.LastClimbFace = figure.ClimbFace;
+                figure.OnLadder = ForceClimbLadder;
                 heading = figure.ClimbFace;
             }
             else if (figure.ClimbPhase >= 0f)
             {
                 CellRef lower = pawn.NextCell.Y < pawn.Cell.Y ? pawn.NextCell : pawn.Cell;
-                if (TryWallBeside(lower, out Vector3 toWall))
+                if (TryLadderBeside(lower, out Vector3 toLadder))
+                {
+                    figure.ClimbFace = toLadder;
+                    figure.LastClimbFace = toLadder;
+                    figure.OnLadder = true;
+                    heading = toLadder;
+                }
+                else if (TryWallBeside(lower, out Vector3 toWall))
                 {
                     figure.ClimbFace = toWall;
                     figure.LastClimbFace = toWall;
+                    figure.OnLadder = false;
 
                     // Face what you are climbing. This is also the only thing that gives a purely
                     // vertical step a bearing at all: PawnPose hands back none, deliberately, and

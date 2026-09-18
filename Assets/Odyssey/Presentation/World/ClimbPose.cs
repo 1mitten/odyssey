@@ -39,6 +39,21 @@ namespace Odyssey.Presentation.World
         public const float SteppedDrop = 0.68f;
 
         /// <summary>
+        /// The same, on a ladder: the stepped knee comes up a good deal higher.
+        ///
+        /// <para><b>Because a rung is not a hold.</b> On stone a climber steps to whatever edge
+        /// there is and the step is a modest one, which <see cref="SteppedDrop"/> describes. The
+        /// owner's side-on reference (2026-09-18) shows the ladder case plainly: the pushing leg is
+        /// nearly straight and the other knee is drawn right up in front of the chest, because the
+        /// rungs are a fixed distance apart and that distance is most of a shin. Posed at the
+        /// rock's 0.68 the same figure shuffles up a ladder in half-steps.</para>
+        ///
+        /// <para>The pushing end of the cycle is unchanged — <see cref="ExtendedDrop"/> is a leg at
+        /// nearly full extension either way, which is what the photograph shows too.</para>
+        /// </summary>
+        public const float LadderSteppedDrop = 0.46f;
+
+        /// <summary>
         /// The most of its leg a climber is ever asked for, as a fraction. Whatever else gives, the
         /// boot stays on the rock: see <see cref="Foothold"/>.
         /// </summary>
@@ -94,17 +109,19 @@ namespace Odyssey.Presentation.World
         /// by the lean, and the feet go wherever the body has arrived.</para>
         ///
         /// <paramref name="step"/> 0 is the pushing leg, 1 the stepped-up one.
+        /// <paramref name="steppedDrop"/> how deep the stepped end of the cycle is, as a fraction
+        /// of the leg: <see cref="SteppedDrop"/> on rock, <see cref="LadderSteppedDrop"/> on rungs.
         /// <paramref name="toRock"/> how far, and in which direction, the rock face stands from the
         /// figure — a distance and not a unit vector, because it is the lean that decides it.
         /// </summary>
         public static Vector3 Foothold(Vector3 hip, Vector3 toRock, Vector3 up, float legLength,
-            float step)
+            float step, float steppedDrop = SteppedDrop)
         {
             legLength = Mathf.Max(0f, legLength);
             if (legLength <= 0f) return hip;
 
             Vector3 down = up.sqrMagnitude > 1e-8f ? -up.normalized : Vector3.down;
-            float drop = Mathf.Lerp(ExtendedDrop, SteppedDrop, Mathf.Clamp01(step)) * legLength;
+            float drop = Mathf.Lerp(ExtendedDrop, steppedDrop, Mathf.Clamp01(step)) * legLength;
 
             // On to the rock first, and keep it: everything that gives, gives in the drop.
             float reach = toRock.magnitude;

@@ -102,6 +102,33 @@ namespace Odyssey.Tests.Presentation
             Assert.That(offset.y, Is.LessThan(0f), "and it should still be below the hip");
         }
 
+        /// <summary>
+        /// A rung is not a hold. The owner's side-on reference (2026-09-18) shows a ladder climber
+        /// with the pushing leg nearly straight and the other knee drawn right up in front of the
+        /// chest, because the rungs are a fixed distance apart and that distance is most of a shin.
+        /// Posed at the rock's step the same figure shuffles up in half-steps.
+        ///
+        /// <para>Both ends of the cycle are checked, because the pushing end must <em>not</em> have
+        /// moved: a climber at full stretch is at full stretch on either surface, and a ladder pose
+        /// that lifted both feet would read as somebody hanging rather than climbing.</para>
+        /// </summary>
+        [Test]
+        public void TheLadderStepComesUpHigherThanTheRockStep()
+        {
+            Vector3 hip = Vector3.up * 2f;
+
+            float rock = ClimbPose.Foothold(hip, ToRock, Vector3.up, 0.9f, 1f).y;
+            float rung = ClimbPose.Foothold(
+                hip, ToRock, Vector3.up, 0.9f, 1f, ClimbPose.LadderSteppedDrop).y;
+
+            Assert.That(rung, Is.GreaterThan(rock), "the stepped boot should be higher on a ladder");
+            Assert.That(rung, Is.LessThan(hip.y), "and still below the hip");
+
+            Assert.That(ClimbPose.Foothold(hip, ToRock, Vector3.up, 0.9f, 0f, ClimbPose.LadderSteppedDrop).y,
+                Is.EqualTo(ClimbPose.Foothold(hip, ToRock, Vector3.up, 0.9f, 0f).y).Within(1e-4f),
+                "the pushing leg is at full stretch on rock and on rungs alike");
+        }
+
         [Test]
         public void EveryFootholdIsBelowTheHip()
         {
