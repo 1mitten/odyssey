@@ -1,4 +1,6 @@
 #nullable enable
+using System;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
@@ -354,6 +356,112 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.Cell, Is.Not.EqualTo(bed), "she made it to the bed after all");
             Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.SleptOnGround),
                 Is.True, "she went down in the open and remembers nothing of it");
+        }
+
+        // ---- the seam costs nothing -------------------------------------------------------------
+
+        /// <summary>
+        /// WS1's seam turns every rate into an integer accumulator counted in thousandths (see
+        /// <c>Rates</c>), and the claim then was that the counting costs the tick nothing. Proven
+        /// here rather than asserted, on the same calibrated instrument
+        /// <see cref="PathAllocationTests"/> uses — a per-tick delegate slipping into the work
+        /// path is exactly how the tick's 64 bytes arrived once before.
+        ///
+        /// <para>The colony is at work, not at rest: the fixture designates the nearest dozen
+        /// rocks a miner can actually reach, and mining is the one job that writes WS1's
+        /// milliwork outside the pawns — <c>DesignationGrid.AddWork</c> — as well as running a
+        /// stroke clock, while the walks out to the faces feed the move accumulator the seam
+        /// introduced. An idle colony is already measured in PathAllocationTests; a working one
+        /// is where the per-mille path actually runs.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void AWorkingColonyCountsItsMilliworkWithoutAllocating()
+        {
+            // Long enough that the dozen completed cells' one-off costs amortise. Each mined
+            // cell rebuilds the navigation and support structures behind it and spawns its
+            // stone — the known cost of EDITING the world, not of ticking it, about 25 KB a
+            // cell and some 300 KB for the dozen this fixture finishes. Over this window the
+            // working tick reads about 10 bytes, within a whisker of the idle colony
+            // PathAllocationTests measures; the budget keeps out a 64-byte-per-tick delegate —
+            // the way this failed once before — with better than twice to spare.
+            const int Ticks = 30_000;
+            const double Budget = 24.0;
+
+            // Without this the test would pass most loudly on exactly the runtimes that cannot
+            // see the allocation it exists to forbid.
+            if (!PathAllocationTests.AccountingIsFineGrained())
+                Assert.Ignore("this runtime reports heap growth too coarsely for a per-tick budget");
+
+            ColonyWorld colony = ColonyWorld.Build(Size, 1u, ScenarioDef.Bare(), barren: true,
+                wooded: true);
+
+            // Warm-up: the world is up, needs falling, colonists wandering — everything but
+            // work, which is measured, not warmed.
+            colony.World.Tick(4_000);
+
+            // The orders the fixture can rely on, designated through the game's own seam: the
+            // nearest rocks a miner could actually get at, the stance checked with the work
+            // giver's own solver — MineJobTests' fixture, borrowed, where a marked cell is dug
+            // out inside twelve thousand ticks. A dozen rather than one, so nobody finishes
+            // the last of them before the window closes. The scenario's own outcrop orders
+            // reach only as far as the map put its rock, and a fixture that bets on that
+            // measures the map, not the tick. Placed only now, after the warm-up, so every
+            // stroke the window is here to measure lands inside it: WorkDone is cleared the
+            // moment an order is carried out, and an order finished during the warm-up would
+            // leave nothing to read.
+            Pawn first = colony.Pawns.Pawns.All[0];
+            var start = colony.Start;
+            var candidates = new List<(int distance, int index)>();
+            for (int i = 0; i < Size.CellCount; i++)
+            {
+                if (!colony.Designations.CanMine(i)) continue;
+                if (MineWorkGiver.StandToMine(colony.Pawns, first, i) < 0) continue;
+                var here = Size.FromIndex(i);
+                candidates.Add((Math.Abs(here.X - start.X) + Math.Abs(here.Z - start.Z)
+                    + Math.Abs(here.Y - start.Y) * 4, i));
+            }
+            candidates.Sort((a, b) => a.distance != b.distance
+                ? a.distance.CompareTo(b.distance)
+                : a.index.CompareTo(b.index));
+
+            int marked = 0;
+            foreach (var (_, index) in candidates)
+            {
+                if (marked >= 12) break;
+                if (colony.Designations.Designate(Size.FromIndex(index), DesignationKind.Mine)
+                    == IntentRejection.None)
+                    marked++;
+            }
+            Assert.That(marked, Is.GreaterThan(0),
+                "the fixture is wrong: the board has no reachable rock, so nothing can be worked");
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long before = GC.GetTotalMemory(false);
+            int gen0 = GC.CollectionCount(0);
+            int finishedBefore = colony.Jobs.CompletedOf(JobIndex.Mine);
+
+            colony.World.Tick(Ticks);
+
+            long after = GC.GetTotalMemory(false);
+            Assert.That(GC.CollectionCount(0), Is.EqualTo(gen0),
+                "a collection ran during the window; the figure would be a lower bound");
+            double perTick = (double)(after - before) / Ticks;
+            TestContext.WriteLine($"working colony: {perTick:F1} bytes per tick");
+
+            long workDone = 0;
+            var cells = colony.Designations.Cells;
+            for (int i = 0; i < cells.Count; i++) workDone += colony.Designations.WorkDone(cells[i]);
+            Assert.That(
+                colony.Jobs.CompletedOf(JobIndex.Mine) > finishedBefore || workDone > 0,
+                Is.True,
+                "the fixture is wrong: no order was worked inside the window, so it measured idling");
+
+            Assert.That(perTick, Is.LessThan(Budget),
+                "a working colony's tick started allocating. Look for a per-tick delegate, " +
+                "closure, boxed struct or list growth on the rate path — the stroke clocks in " +
+                "JobDrivers, DesignationGrid.AddWork, the mover's accumulator.");
         }
 
         // ---- the seam to presentation ---------------------------------------------------------
