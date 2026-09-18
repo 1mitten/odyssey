@@ -1,10 +1,11 @@
 # 21 — Tree colours
 
-**Status:** built 2026-09-18 on `claude/tree-colours`, and revised the same day after the owner
-played it — §3a is that round and is the one to read first. EditMode 1544 total, 1532 passed, 0
-failed; fast tier 645 Sim and 358 Hud. **Cost on the played board: 1758 draw calls to 2135,
-+21.4%**, instances unchanged at 44,200 — that is what a thoroughly mixed wood costs, against
-+3.2% when a stand was one colour, and `TreeLook.ThemesPerStand` is the knob it is bought with.
+**Status:** built 2026-09-18 on `claude/tree-colours` and revised twice the same day against the
+owner's playtests — §3a and §3b are those rounds and are the ones to read first. EditMode 1546
+total, 1534 passed, 0 failed; fast tier 645 Sim and 358 Hud. **Cost on the played board: 1758 draw
+calls to 2142, +21.8%**, instances unchanged at 44,200 — that is what a thoroughly mixed wood costs,
+against +3.2% when a stand was one colour, and `TreeLook.ThemesPerStand` is the knob it is bought
+with.
 
 **Read this before touching** `TreePalette`, `TreeLook`, `TreeSwatches`, `TreeMaterials` or
 `Assets/Odyssey/Presentation/Shaders/OdysseyTree.shader`.
@@ -105,10 +106,15 @@ Measured on a 200 x 200 board carrying 10,403 trees over 64 chunks, palette of 1
 
 | | tree buckets per chunk | worst chunk | themes drawn |
 |---|---|---|---|
-| a colour rolled freely per tree | — | **107** | — |
-| a handful of 4 per stand — **shipped** | **17.72** | 29 | 130 of 166 |
+| a colour rolled freely per tree | — | **122** | — |
+| a handful of 4, one slot bright — **shipped** | **18.08** | 31 | 150 of 240 |
+| a handful of 4, 240 themes, no reserved slot | 17.84 | 29 | 160 of 240 |
+| a handful of 4, 166 themes | 17.72 | 29 | 130 of 166 |
 | one colour per stand, 40-cell stands | 4.34 | 9 | 11 of 11 |
 | one colour per stand, 20-cell stands | 6.75 | 10 | |
+
+The middle three rows are the point: the table grew by 45% and the reserved bright slot went in for
+**0.36 buckets a chunk between them**. The length of this table has never been what a wood costs.
 
 Three numbers were chosen by measurement rather than by eye. The stand is **40 cells** because at 20
 a chunk overlaps about five squares and the wood cost half again as much for no more variety. The
@@ -118,8 +124,8 @@ it is what it costs. And the free per-tree roll is the row that says why a handf
 never grow again.
 
 The other end of the trade is the board, measured at the size the game actually loads:
-`ThePlayedBoardCarriesAWoodWorthLookingAt` reports **89 of the 166 themes on a 120-cell meadow**,
-against eleven before this round.
+`ThePlayedBoardCarriesAWoodWorthLookingAt` reports **89 of the 240 themes on a 120-cell meadow**,
+against eleven before these rounds.
 
 Everything here is a hash of the cell's own coordinates, for the reason `GroundLook` records: a
 chunk is re-meshed whenever anything in it changes, so a stream of random numbers would recolour
@@ -172,6 +178,40 @@ different mixtures. That is the one number that decides the bill: every step of 
 tree buckets in a chunk. The handful is drawn without replacement, by walking the species' rows
 from a hashed start at a hashed coprime stride, because four independent hashes would hand the same
 colour out twice about one stand in ten and quietly narrow the mixing.
+
+## 3b. Brightening it, and why adding bright colours did not (2026-09-18)
+
+> Yes we like it — but can we add some bright colours into the leaf, as it seems a bit dull still
+> and needs brighten up.
+
+**The ceiling that stopped the white tree was what was holding the wood down**, so the first job was
+to work out which way to move it. Re-reading the fault settles it: the two entries that caused it
+were not merely bright, they were bright **and nearly colourless** — #8F9779 is luminance 145 at a
+chroma of 30, #9CAF88 is 165 at 39. What reads as "white" is a *pale wash*, and a pale wash is high
+luminance with no colour left in it.
+
+So `MaxLeafLit` became a curve rather than a number: the allowance rises with chroma
+(`108 + 0.62 × chroma`, capped at 195). A saturated lime may be luminance 165 and a saturated gold
+175; a sage at chroma 30 is still held to 127, and the two originals are still rejected by 18 and 33
+points. Ten bright tones went in behind it — lime, spring yellow, emerald, golden, flame, cherry and
+a bright teal for broadleaves, a bright larch, jade and gold needle for conifers — taking the table
+from 166 to **240 themes**, which cost **0.12 buckets a chunk**: 17.72 to 17.84. That is the design's
+central claim holding under a 45% growth in the table.
+
+**And then the board came back warmer but no brighter, which is the lesson of this round.** Seven
+bright tones among twenty-one means a stand's handful of four draws about one on average and often
+draws none — the contact sheet's nearest stands had drawn coppers and rusts. **Adding a colour to a
+table dilutes it; it does not lift it.** What lifted it was reserving a slot: one of every stand's
+four is drawn from the bright subset, so every wood carries a bright note whatever else it drew. The
+handful is the same size, so it costs nothing — 18.08 buckets a chunk against 17.84 — and
+`EveryStandCarriesABrightLeaf` keeps the reservation, because a later session tidying
+`ThemesOfStand` would not otherwise know the slot was load-bearing.
+
+The tint code was widened in the same round. A theme index used to ride in the code's low byte, and
+at 240 themes the table was **one bark tone short of 255** — where it would have wrapped in silence
+and drawn one wood in another's colours. It now has twelve bits at bit 16, clear of the terrain,
+foliage, water and daylight markers, and `EveryThemeSurvivesTheTintCode` walks every index through
+the round trip and checks it trips none of them.
 
 ## 4. The palette
 

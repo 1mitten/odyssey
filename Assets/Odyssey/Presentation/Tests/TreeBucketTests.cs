@@ -89,7 +89,7 @@ namespace Odyssey.Tests.Presentation
                     if (!TintCode.IsTree(b.Tint)) continue;
                     here++;
                     instances += b.Count;
-                    themes.Add(TintCode.Value(b.Tint));
+                    themes.Add(TintCode.TreeValue(b.Tint));
                 }
 
                 treeBuckets += here;

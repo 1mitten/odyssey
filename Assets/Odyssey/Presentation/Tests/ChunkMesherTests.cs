@@ -225,7 +225,7 @@ namespace Odyssey.Tests.Presentation
 
             foreach (int code in codes)
                 if (TintCode.IsTree(code))
-                    Assert.That(TreePalette.At(TintCode.Value(code)).Species,
+                    Assert.That(TreePalette.At(TintCode.TreeValue(code)).Species,
                         Is.EqualTo(TreeSpecies.Broadleaf), "a broadleaf wearing a conifer's colours");
         }
 

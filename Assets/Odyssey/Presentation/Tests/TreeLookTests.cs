@@ -177,6 +177,37 @@ namespace Odyssey.Tests.Presentation
             }
         }
 
+        /// <summary>
+        /// Every wood carries a bright note, and that is a reserved slot rather than a probability.
+        ///
+        /// <para>Bright rows were added to the table first and it did not work: seven bright tones
+        /// among twenty-one means a handful of four draws one on average and often draws none, so
+        /// the board came back warmer and no brighter. Adding a colour to a table dilutes it; it
+        /// does not lift it. This is the test that keeps the reservation, because a later session
+        /// tidying <c>ThemesOfStand</c> would not otherwise know the slot was load-bearing.</para>
+        /// </summary>
+        [Test]
+        public void EveryStandCarriesABrightLeaf()
+        {
+            var handful = new int[TreeLook.ThemesPerStand];
+            int stands = 0;
+            for (int z = 0; z < Board; z += 5)
+            for (int x = 0; x < Board; x += 5)
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            {
+                int n = TreeLook.ThemesOfStand(TreeLook.Stand(x, z), species, handful);
+                bool bright = false;
+                for (int i = 0; i < n; i++)
+                    if (TreeToneRules.Luminance(TreePalette.At(handful[i]).Leaf.Lit)
+                        >= TreeToneRules.BrightLeaf) bright = true;
+
+                Assert.That(bright, $"{species} stand at {x},{z} has no bright leaf in its handful");
+                stands++;
+            }
+
+            TestContext.WriteLine($"{stands} stand draws checked, every one carries a bright leaf");
+        }
+
         [Test]
         public void ABoardCarriesAGreatManyOfTheThemes()
         {
@@ -280,24 +311,41 @@ namespace Odyssey.Tests.Presentation
                 $"{TreePalette.For(TreeSpecies.Broadleaf).Length}; " +
                 $"{TreePalette.Count} themes in all");
 
-            Assert.That(TreePalette.For(TreeSpecies.Conifer).Length, Is.GreaterThanOrEqualTo(24));
-            Assert.That(TreePalette.For(TreeSpecies.Broadleaf).Length, Is.GreaterThanOrEqualTo(48));
+            Assert.That(TreePalette.For(TreeSpecies.Conifer).Length, Is.GreaterThanOrEqualTo(48));
+            Assert.That(TreePalette.For(TreeSpecies.Broadleaf).Length, Is.GreaterThanOrEqualTo(120));
             Assert.That(TreePalette.For(TreeSpecies.Conifer).Length +
                         TreePalette.For(TreeSpecies.Broadleaf).Length,
                 Is.EqualTo(TreePalette.Count), "every theme belongs to exactly one species");
         }
 
         /// <summary>
-        /// The table must stay inside a byte, because a tint code carries the theme in its low one
-        /// and <c>TintCode.Value</c> masks 0xFF. Past 255 it would wrap in silence and draw one
-        /// wood in another's colours with nothing anywhere to report it — which is precisely the
-        /// class of fault this file exists to make loud.
+        /// The table must fit the field a tint code keeps it in, and every index in it must survive
+        /// the round trip without disturbing the markers that share the code.
+        ///
+        /// <para>The field was the low byte until 2026-09-18, when the palette reached 240 of a
+        /// possible 255 — one bark tone short of wrapping in silence and drawing one wood in
+        /// another's colours. Twelve bits at bit 16 is the room it has now, and this is what says
+        /// so out loud rather than leaving it to a comment.</para>
         /// </summary>
         [Test]
-        public void TheTableFitsInTheTintCode()
+        public void EveryThemeSurvivesTheTintCode()
         {
-            Assert.That(TreePalette.Count, Is.LessThanOrEqualTo(255),
-                "the palette outgrew the byte TintCode.Value reads it from; widen the code first");
+            Assert.That(TreePalette.Count, Is.LessThanOrEqualTo(TintCode.MaxTreeValue + 1),
+                "the palette outgrew the field TintCode.TreeValue reads it from; widen it first");
+
+            for (int theme = 0; theme < TreePalette.Count; theme++)
+            {
+                int code = TintCode.Tree(theme);
+                Assert.That(TintCode.TreeValue(code), Is.EqualTo(theme), "theme index round trip");
+                Assert.That(TintCode.IsTree(code), Is.True);
+                // The markers that share the code space. A theme index reaching down into them
+                // would make a tree answer yes to IsTerrain, and the renderer resolves foliage and
+                // water *before* it looks at trees.
+                Assert.That(TintCode.IsTerrain(code), Is.False, $"theme {theme} reads as terrain");
+                Assert.That(TintCode.IsFoliage(code), Is.False, $"theme {theme} reads as foliage");
+                Assert.That(TintCode.IsWater(code), Is.False, $"theme {theme} reads as water");
+                Assert.That(TintCode.IsDaylit(code), Is.False, $"theme {theme} reads as daylit");
+            }
         }
 
         [Test]
@@ -331,9 +379,11 @@ namespace Odyssey.Tests.Presentation
             foreach (TreeTone leaf in TreePalette.Leaves(species))
             {
                 float lit = TreeToneRules.Luminance(leaf.Lit);
-                Assert.That(lit, Is.LessThanOrEqualTo(TreeToneRules.MaxLeafLit),
-                    $"{species} leaf '{leaf.Name}' lit face is luminance {lit:0.0}, which over half " +
-                    "a tree reads as a pale, washed-out canopy");
+                float allowed = TreeToneRules.MaxLeafLit(leaf.Lit);
+                Assert.That(lit, Is.LessThanOrEqualTo(allowed),
+                    $"{species} leaf '{leaf.Name}' lit face is luminance {lit:0.0} at chroma " +
+                    $"{TreeToneRules.Chroma(leaf.Lit)}, which allows {allowed:0.0} — over half a " +
+                    "tree that reads as a pale, washed-out canopy");
             }
 
             foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
@@ -394,6 +444,40 @@ namespace Odyssey.Tests.Presentation
                     $"{species} leaf '{leaf.Name}' lit face is nearly grey");
                 Assert.That(TreeToneRules.Chroma(leaf.Shaded), Is.GreaterThanOrEqualTo(20),
                     $"{species} leaf '{leaf.Name}' shaded face is nearly grey");
+            }
+        }
+
+        /// <summary>
+        /// The owner's third note, as a test: <i>"can we add some bright colours into the leaf — it
+        /// seems a bit dull still"</i>.
+        ///
+        /// <para>Brightness is what the pale rule above constrains, so the two pull against each
+        /// other and the table has to be held at both ends or a later session tuning one will
+        /// quietly undo the other. The pack's own brightest canopy is luminance 110.9; this asks
+        /// for a real spread of tones well above it, which the pale rule permits only because they
+        /// are saturated.</para>
+        /// </summary>
+        [Test]
+        public void ThereAreGenuinelyBrightLeavesToDrawFrom()
+        {
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            {
+                TreeTone[] leaves = TreePalette.Leaves(species);
+                int bright = 0, brightest = 0;
+                foreach (TreeTone leaf in leaves)
+                {
+                    int lit = (int)TreeToneRules.Luminance(leaf.Lit);
+                    if (lit > 130) bright++;
+                    if (lit > brightest) brightest = lit;
+                }
+
+                TestContext.WriteLine(
+                    $"{species}: {bright} of {leaves.Length} leaf tones above luminance 130, " +
+                    $"brightest {brightest}");
+                Assert.That(bright, Is.GreaterThanOrEqualTo(3),
+                    $"{species} has too few bright canopies for a wood to lift");
+                Assert.That(brightest, Is.GreaterThanOrEqualTo(140),
+                    $"{species}'s brightest canopy is still below the pack's own by much");
             }
         }
 

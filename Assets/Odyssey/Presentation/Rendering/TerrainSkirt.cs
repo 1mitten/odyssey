@@ -264,7 +264,10 @@ namespace Odyssey.Presentation.Rendering
                 // in. Sampling it here is what makes the surround the same wood as the board:
                 // the tally is taken by frequency, so a board whose rim is mostly birch puts
                 // mostly birch in the ring outside it without anything having to be told.
-                long key = ((long)module << 20) | (uint)TintCode.Tree(TreeLook.ThemeFor(x, z, edifice));
+                // The tint takes the low thirty-two bits, not the low twenty it used to: a tree
+                // code carries its theme in bits 16 and up, so twenty bits would have thrown the
+                // theme away and made every tree out here the same colour.
+                long key = ((long)module << 32) | (uint)TintCode.Tree(TreeLook.ThemeFor(x, z, edifice));
                 treeCounts.TryGetValue(key, out int count);
                 treeCounts[key] = count + 1;
             }
@@ -314,8 +317,8 @@ namespace Odyssey.Presentation.Rendering
                 int share = Mathf.Max(1, Mathf.RoundToInt(pair.Value / (float)total * TreeVariantSlots));
                 for (int i = 0; i < share && slotModules.Count < TreeVariantSlots; i++)
                 {
-                    slotModules.Add((int)(pair.Key >> 20));
-                    slotTints.Add((int)(pair.Key & 0xFFFFF));
+                    slotModules.Add((int)(pair.Key >> 32));
+                    slotTints.Add((int)(pair.Key & 0xFFFFFFFFL));
                 }
             }
 
@@ -632,7 +635,7 @@ namespace Odyssey.Presentation.Rendering
             // the wood would change colour at the rim, which is the one thing the surround exists
             // to prevent.
             Material? painted = TintCode.IsTree(tintCode) && !part.IsFallback
-                ? _materials.Trees.For(part.Material, TintCode.Value(tintCode), 1f, muteStep)
+                ? _materials.Trees.For(part.Material, TintCode.TreeValue(tintCode), 1f, muteStep)
                 : null;
 
             return new Batch

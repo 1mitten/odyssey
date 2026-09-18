@@ -4330,3 +4330,45 @@ colours, really vary it up as much as possible … but also really mix them in t
 - **Verified:** EditMode **1544 total, 1532 passed, 0 failed**. **Not verified:** whether a wood
   this mixed is better than a wood in patches, and whether the plum and rust canopies belong on a
   board at all — they are the most distinctive rows in the table and the first to veto.
+
+### Adding bright colours did not brighten the wood (2026-09-18)
+
+The owner liked the mixed wood and asked for one more thing: *"can we add some bright colours into
+the leaf — as it seems a bit dull still and needs brighten up"*.
+
+- **The ceiling that stopped the white tree was what was holding the wood down**, so the first job
+  was to work out which way to move it rather than simply raising it. Re-reading the earlier fault
+  settles it: the two entries that caused it were not merely bright, they were bright **and nearly
+  colourless** — #8F9779 is luminance 145 at a chroma of 30, #9CAF88 is 165 at 39. What reads as
+  "white" is a *pale wash*, and a pale wash is high luminance with no colour left in it. So the
+  allowance became a curve rather than a number: `108 + 0.62 x chroma`, capped at 195. A saturated
+  lime may be 165 and a saturated gold 175; a sage at chroma 30 is still held to 127, and both
+  originals are still rejected, by 18 and 33 points.
+
+- **Ten bright tones went in and the table grew from 166 to 240 themes for 0.12 buckets a chunk** —
+  17.72 to 17.84. That is the design's central claim holding under a 45% growth in the table, which
+  is worth recording because it is the first time it has been tested by anything other than an
+  argument.
+
+- **And the board came back warmer and no brighter, which is the lesson.** Seven bright tones among
+  twenty-one means a stand's handful of four draws about one on average and often draws none; the
+  contact sheet's nearest stands had drawn coppers and rusts, and the play camera showed a maroon
+  wood. **Adding a colour to a table dilutes it; it does not lift it.** What lifted it was
+  *reserving a slot*: one of every stand's four is drawn from the bright subset, so every wood
+  carries a bright note whatever else it drew. The handful is the same size, so it is free —
+  18.08 buckets a chunk against 17.84 — and `EveryStandCarriesABrightLeaf` keeps the reservation,
+  because a later session tidying `ThemesOfStand` would not otherwise know the slot was
+  load-bearing.
+
+- **The tint code was widened in the same round, and it was closer than it looked.** A theme index
+  rode in the code's low byte, and at 240 themes the table was **one bark tone short of 255** —
+  where it would have wrapped in silence and drawn one wood in another's colours. It has twelve bits
+  at bit 16 now, clear of the terrain, foliage, water and daylight markers that live in the low
+  bits, and `EveryThemeSurvivesTheTintCode` walks every index through the round trip and checks it
+  trips none of them. The skirt's variant key had to widen with it: it packed the tint into twenty
+  bits, which would have thrown the theme away and drawn every tree outside the board in one colour.
+
+- **Verified:** EditMode **1546 total, 1534 passed, 0 failed**. Cost on the played board 1758 draw
+  calls to **2142, +21.8%**, instances unchanged. **Not verified:** whether the cherry and flame
+  canopies belong — they read as scarlet at the play camera, which is the most conspicuous thing on
+  the board now, and they are the first rows to veto.

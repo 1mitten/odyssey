@@ -12,12 +12,13 @@ namespace Odyssey.Presentation.Rendering
     /// owner's answer was <i>"but also really mix them in together"</i>. So a stand now draws
     /// <see cref="ThemesPerStand"/> themes per species out of the whole table and each tree picks
     /// one of them by its own hash. Neighbouring trees differ; neighbouring woods differ more,
-    /// because they drew different handfuls.</para>
+    /// because they drew different handfuls. <b>One slot of every handful is reserved for a bright
+    /// leaf</b>, which is what actually lifted the wood — see <see cref="ThemesOfStand"/>.</para>
     ///
     /// <para><b>Why a handful and not the whole table.</b> This is the performance argument and it
     /// is the only reason stands exist at all. Drawing is bucketed per <i>(module, part, tint)</i>
     /// inside a chunk, so the draw calls a wood costs are the number of distinct colours <b>in that
-    /// chunk</b>. A chunk of woodland holds about 160 trees and the table holds 166 themes, so a
+    /// chunk</b>. A chunk of woodland holds about 160 trees and the table holds 240 themes, so a
     /// colour rolled freely per tree would put essentially the whole table in every chunk — the
     /// bill would be the length of the table, and the table could never grow again. Dealing a stand
     /// a fixed handful caps a chunk at (stands it overlaps) x (two species) x this number, however
@@ -122,26 +123,55 @@ namespace Odyssey.Presentation.Rendering
         /// written into <paramref name="into"/>, which must be at least that long. Returns how many
         /// were written, which is fewer only if the palette itself is smaller.
         ///
-        /// <para>Drawn without replacement, by walking the species' rows from a hashed start at a
-        /// hashed stride. A stride sharing no factor with the row count visits every row before
-        /// repeating, so the handful is always distinct — four independent hashes would hand the
-        /// same colour out twice about one stand in ten and quietly narrow the mixing.</para>
+        /// <para><b>The bark and the leaf are drawn separately</b>, each without replacement by
+        /// walking its own table from a hashed start at a hashed stride. A stride sharing no factor
+        /// with the table's length visits every row before repeating, so the handful is always
+        /// distinct — four independent hashes would hand the same colour out twice about one stand
+        /// in ten and quietly narrow the mixing.</para>
+        ///
+        /// <para><b>And the first leaf of every stand is a bright one.</b> That is not a flourish;
+        /// it is the answer to the owner's *"add some bright colours into the leaf — it seems a bit
+        /// dull still"*, and adding bright rows to the table was tried first and did not work.
+        /// Seven bright tones among twenty-one means a handful of four draws about one on average
+        /// and often draws none, so the board came back warmer and no brighter: **adding a colour
+        /// to a table dilutes it, it does not lift it.** Reserving a slot makes every wood carry a
+        /// bright note, at no cost at all — the handful is the same size, so the buckets are the
+        /// same buckets.</para>
         /// </summary>
         public static int ThemesOfStand(int stand, TreeSpecies species, int[] into)
         {
-            int[] rows = TreePalette.For(species);
-            if (rows.Length == 0) return 0;
-            int want = ThemesPerStand < rows.Length ? ThemesPerStand : rows.Length;
+            TreeTone[] barks = TreePalette.Barks(species);
+            TreeTone[] leaves = TreePalette.Leaves(species);
+            if (barks.Length == 0 || leaves.Length == 0) return 0;
+
+            int want = ThemesPerStand;
             if (want > into.Length) want = into.Length;
             if (want <= 0) return 0;
 
             uint salt = species == TreeSpecies.Conifer ? SaltConifer : SaltBroadleaf;
             uint h = GroundScatter.Hash(stand, stand >> 16, salt);
-            int start = (int)(h % (uint)rows.Length);
-            int stride = Coprime((int)((h >> 8) % (uint)rows.Length), rows.Length);
+
+            int barkStart = (int)(h % (uint)barks.Length);
+            int barkStride = Coprime((int)((h >> 5) % (uint)barks.Length), barks.Length);
+            int leafStart = (int)((h >> 10) % (uint)leaves.Length);
+            int leafStride = Coprime((int)((h >> 18) % (uint)leaves.Length), leaves.Length);
+
+            int[] bright = TreePalette.BrightLeaves(species);
 
             for (int i = 0; i < want; i++)
-                into[i] = rows[(start + i * stride) % rows.Length];
+            {
+                int bark = (barkStart + i * barkStride) % barks.Length;
+                int leaf = (leafStart + i * leafStride) % leaves.Length;
+
+                // Slot zero is the reserved bright one. It is a slot rather than a coin flip so
+                // that a stand's mixture is the same every time it is asked for, which is what the
+                // whole file turns on.
+                if (i == 0 && bright.Length > 0)
+                    leaf = bright[(h >> 26) % (uint)bright.Length];
+
+                into[i] = TreePalette.ThemeOf(species, bark, leaf);
+            }
+
             return want;
         }
 

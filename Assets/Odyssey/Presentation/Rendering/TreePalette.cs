@@ -82,17 +82,51 @@ namespace Odyssey.Presentation.Rendering
         public const float MaxBarkStep = 2.20f;
 
         /// <summary>
-        /// The brightest a <b>leaf</b> tone's lit face may be, in luminance of 255.
+        /// The brightest a <b>leaf</b> tone's lit face may be — and it is a function of how
+        /// saturated the colour is, not a flat number.
         ///
-        /// The pack's own brightest canopy is 110.9. This allows a good deal above it and still
-        /// refuses the entries that produced the complaint: the old Silver Birch highlight
-        /// #8F9779 measures 145.2 and the old Mossy Birch #9CAF88 measures 150.6.
+        /// <para><b>Why it had to become a curve.</b> A flat ceiling of 132 stopped the pale tree,
+        /// and then stopped everything else too: the owner's next note was <i>"can we add some
+        /// bright colours into the leaf — it seems a bit dull still"</i>, and the ceiling was what
+        /// was holding the wood down. Re-reading the fault settles which way to move it. The two
+        /// entries that caused it were not merely bright, they were bright <em>and nearly
+        /// colourless</em> — the old Silver Birch highlight #8F9779 is luminance 145.2 at a chroma
+        /// of 30, and the old Mossy Birch #9CAF88 is 164.9 at 39. What reads as "white" is a pale
+        /// wash, and a pale wash is high luminance with no colour left in it.</para>
+        ///
+        /// <para>So the allowance rises with chroma. A saturated lime may be luminance 165 and a
+        /// saturated gold 175, because they are unmistakably a colour; a sage at chroma 30 is still
+        /// held to 127 and the two originals are still rejected, by 18 and 33 points. There is an
+        /// absolute cap as well, because past it a leaf is a light source whatever its hue.</para>
         /// </summary>
-        public const float MaxLeafLit = 132f;
+        public static float MaxLeafLit(Rgb24 lit) =>
+            System.Math.Min(LeafLitCap, LeafLitBase + LeafLitPerChroma * Chroma(lit));
+
+        /// <summary>The allowance for a colour with no chroma at all: just under the pack's own.</summary>
+        public const float LeafLitBase = 108f;
+
+        /// <summary>How much brighter each point of chroma buys.</summary>
+        public const float LeafLitPerChroma = 0.62f;
+
+        /// <summary>The brightest any leaf may be, however saturated.</summary>
+        public const float LeafLitCap = 195f;
 
         /// <summary>
-        /// The same for <b>bark</b>, and it is higher on purpose: a birch really does have a pale
-        /// trunk, and a trunk is a quarter of the mesh where a canopy is half of it.
+        /// The luminance at which a leaf tone counts as <b>bright</b>, which is a little above the
+        /// pack's own brightest canopy at 110.9.
+        ///
+        /// <para>It is a real threshold rather than a label: every stand is guaranteed one tone
+        /// from above it. Adding bright rows to the table alone did not brighten the wood — with
+        /// seven bright tones among twenty-one, a stand's handful of four drew one on average and
+        /// often drew none, and the contact sheet came back warmer but no brighter. Reliability is
+        /// the thing, not proportion.</para>
+        /// </summary>
+        public const float BrightLeaf = 130f;
+
+        /// <summary>
+        /// The same for <b>bark</b>, and it stays a flat number: a trunk is a cylinder of one
+        /// colour where a canopy is a cloud, and a pale birch trunk is a real thing rather than a
+        /// wash. Higher than the leaf base on purpose, and a quarter of the mesh rather than half.
         /// </summary>
         public const float MaxBarkLit = 150f;
 
@@ -134,8 +168,8 @@ namespace Odyssey.Presentation.Rendering
     /// file held eleven hand-written themes of four colours each, and the owner's answer to it was
     /// <i>"it all needs a much larger variation of bark and leaf colours, really vary it up as much
     /// as possible"</i>. Writing eighty themes by hand would be eighty chances to author a white
-    /// tree; writing fourteen leaf tones and eight bark tones gives <b>a hundred and twelve</b>
-    /// broadleaf combinations and fifty-four conifer ones from twenty-two lines anybody can read
+    /// tree; writing twenty-one leaf tones and eight bark tones gives <b>a hundred and sixty-eight</b>
+    /// broadleaf combinations and seventy-two conifer ones from thirty-five lines anybody can read
     /// down and correct.</para>
     ///
     /// <para><b>And it costs nothing.</b> The length of this table has never been what a wood costs
@@ -148,7 +182,7 @@ namespace Odyssey.Presentation.Rendering
     /// Birch's are each a row below, and the cross product contains their original pairings along
     /// with every other. Two of their canopies were **changed**, and that is the fault they
     /// reported: Silver Birch's highlight was #8F9779 and Mossy Birch's #9CAF88, which at luminance
-    /// 145 and 151 over half a tree are the pale, washed-out canopies the complaint names. They are
+    /// 145 and 165 over half a tree are the pale, washed-out canopies the complaint names. They are
     /// the same hues, taken down to where the art's own greens sit.</para>
     /// </summary>
     public static class TreePalette
@@ -194,6 +228,20 @@ namespace Odyssey.Presentation.Rendering
             new TreeTone("rust",         0x6E3B22, 0x8E4F2D),
             new TreeTone("plum",         0x4A2A33, 0x653B45),
             new TreeTone("old gold",     0x6E6A24, 0x8C8730),
+
+            // The bright rows, added 2026-09-18 on the owner's *"add some bright colours into the
+            // leaf … it seems a bit dull still"*. Every one of them clears the pale test by being
+            // **saturated** rather than by being allowed through: the chroma of these lit faces
+            // runs 141 to 189, against the 30 and 39 of the two entries that read as white. They
+            // are a third of the broadleaf table, so a stand's handful of four draws about one of
+            // them on average, which is what lifts a wood rather than repainting it.
+            new TreeTone("bright lime",  0x6F9A22, 0x92C62D),
+            new TreeTone("spring yellow",0x86A61E, 0xAFD52C),
+            new TreeTone("emerald",      0x1E8A4E, 0x2AB768),
+            new TreeTone("golden",       0xB08A16, 0xDFB222),
+            new TreeTone("flame",        0xA8501A, 0xD9701F),
+            new TreeTone("cherry",       0x94301F, 0xC24428),
+            new TreeTone("bright teal",  0x1C8C7A, 0x27B79E),
         };
 
         // -------------------------------------------------------------------- conifer
@@ -223,6 +271,12 @@ namespace Odyssey.Presentation.Rendering
             new TreeTone("deep teal",   0x17403C, 0x215953),
             new TreeTone("olive",       0x3B4B24, 0x526733),
             new TreeTone("rusty",       0x4A3A22, 0x66512F),
+
+            // Three bright needles, for the same reason. Conifers are the commoner tree on the
+            // board, so a wood lifted only in its broadleaves would still read dark.
+            new TreeTone("bright larch", 0x4E8A2A, 0x68B238),
+            new TreeTone("jade",         0x2C8F6B, 0x3BBB8C),
+            new TreeTone("gold needle",  0x8A7A22, 0xB5A12D),
         };
 
         // ------------------------------------------------------------------- the table
@@ -249,10 +303,11 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// How many themes there are.
         ///
-        /// <b>It must stay under 256.</b> A tint code carries this index in its low byte
-        /// (<c>TintCode.Value</c> masks 0xFF), so a table that grew past 255 would wrap silently
-        /// and draw one wood in another's colours with nothing anywhere reporting it.
-        /// <c>TreePaletteTests</c> is what stops that.
+        /// <para>A tint code carries this index in a twelve-bit field of its own
+        /// (<c>TintCode.TreeValue</c>), so the ceiling is 4,095. It used to be the low byte, and at
+        /// 240 themes this table came within one extra bark tone of wrapping silently and drawing
+        /// one wood in another's colours — which is why the field was widened rather than the
+        /// ceiling merely asserted. <c>TreePaletteTests</c> still asserts it.</para>
         /// </summary>
         public static int Count => Themes.Length;
 
@@ -261,6 +316,48 @@ namespace Odyssey.Presentation.Rendering
 
         static readonly int[] ConiferThemes = IndicesOf(TreeSpecies.Conifer);
         static readonly int[] BroadleafThemes = IndicesOf(TreeSpecies.Broadleaf);
+
+        static readonly int[] ConiferBright = BrightIndices(ConiferLeaves);
+        static readonly int[] BroadleafBright = BrightIndices(BroadleafLeaves);
+
+        /// <summary>
+        /// The theme index for one bark against one leaf. The table is a cross product laid out
+        /// bark-major within each species, so this is arithmetic rather than a search — which is
+        /// what lets <c>TreeLook</c> choose a bark and a leaf separately and still hand the mesher
+        /// a single small number.
+        /// </summary>
+        public static int ThemeOf(TreeSpecies species, int bark, int leaf)
+        {
+            TreeTone[] barks = Barks(species);
+            TreeTone[] leaves = Leaves(species);
+            if (barks.Length == 0 || leaves.Length == 0) return 0;
+
+            int b = ((bark % barks.Length) + barks.Length) % barks.Length;
+            int l = ((leaf % leaves.Length) + leaves.Length) % leaves.Length;
+            int within = b * leaves.Length + l;
+            return species == TreeSpecies.Conifer
+                ? within
+                : ConiferBarks.Length * ConiferLeaves.Length + within;
+        }
+
+        /// <summary>
+        /// Which leaf tones of this species are bright, as indices into <see cref="Leaves"/>.
+        /// Every stand is dealt one of these; see <see cref="TreeToneRules.BrightLeaf"/>.
+        /// </summary>
+        public static int[] BrightLeaves(TreeSpecies species) =>
+            species == TreeSpecies.Conifer ? ConiferBright : BroadleafBright;
+
+        static int[] BrightIndices(TreeTone[] leaves)
+        {
+            int n = 0;
+            for (int i = 0; i < leaves.Length; i++)
+                if (TreeToneRules.Luminance(leaves[i].Lit) >= TreeToneRules.BrightLeaf) n++;
+            var found = new int[n];
+            n = 0;
+            for (int i = 0; i < leaves.Length; i++)
+                if (TreeToneRules.Luminance(leaves[i].Lit) >= TreeToneRules.BrightLeaf) found[n++] = i;
+            return found;
+        }
 
         /// <summary>The rows a tree of this species may be dealt, as indices into the table.</summary>
         public static int[] For(TreeSpecies species) =>

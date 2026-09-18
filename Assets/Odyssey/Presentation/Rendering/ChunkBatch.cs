@@ -78,6 +78,21 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int TreeBase = 4096;
 
+        /// <summary>
+        /// Where a tree's theme index sits in the code: bits 16 and up, twelve of them.
+        ///
+        /// <para>It is <b>not</b> in the low byte the other code spaces use, and that is deliberate
+        /// twice over. A theme index above 255 would have wrapped there in silence and drawn one
+        /// wood in another's colours — the palette reached 240 of a possible 255 the day the owner
+        /// asked for brighter leaves, one bark tone short of the wall. And the low bits are where
+        /// the terrain, foliage, water and daylight markers live, so a theme index big enough to
+        /// reach bit 8 would have made <c>IsTerrain</c> answer yes about a tree.</para>
+        /// </summary>
+        public const int TreeShift = 16;
+
+        /// <summary>The largest theme index a code can carry.</summary>
+        public const int MaxTreeValue = (1 << 12) - 1;
+
         public static int Stuff(int stuff) => stuff;
 
         public static int Terrain(int terrain) => TerrainBase + terrain;
@@ -85,7 +100,13 @@ namespace Odyssey.Presentation.Rendering
         public static int Foliage(int variant) => FoliageBase + variant;
 
         /// <summary>A tree wearing one of <see cref="TreePalette"/>'s themes.</summary>
-        public static int Tree(int theme) => TreeBase + theme;
+        public static int Tree(int theme) => TreeBase | (theme << TreeShift);
+
+        /// <summary>
+        /// The theme index out of a tree code. <see cref="Value"/> is the wrong reader for one —
+        /// it masks the low byte, where a tree keeps nothing at all.
+        /// </summary>
+        public static int TreeValue(int code) => (code >> TreeShift) & MaxTreeValue;
 
         /// <summary>Water is terrain as well, so it keeps the terrain bit and its palette entry.</summary>
         public static int Water(int terrain) => WaterBase + TerrainBase + terrain;

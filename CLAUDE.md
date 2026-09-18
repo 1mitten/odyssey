@@ -598,10 +598,12 @@ measured before it was built** (`TreeSwatchProbe`): every cluster on every tree 
 reports a texel deviation of **0**, which is the only reason replacing a colour inside a rectangle
 throws no art away. And **nothing here is saved, hashed or visible to the simulation** — no Def
 moved and no golden hash moved — because a tree's colour is drawing, in exactly the sense a
-colonist's face is. **Cost on the played board: 1758 draw calls to 2135, +21.4%**, instances
+colonist's face is. **Cost on the played board: 1758 draw calls to 2142, +21.8%**, instances
 unchanged at 44,200 — that is what a thoroughly mixed wood costs, against +3.2% when a stand was one
 colour, and `TreeLook.ThemesPerStand` is the one knob it is bought with. The played meadow now draws
-**89 of 166 themes** where it drew eleven. **Open, and the owner's:** the palette itself, and one measured fidelity gap —
+**89 of 240 themes** where it drew eleven. **One slot of every stand's handful is reserved for a
+bright leaf**, and that reservation is load-bearing: adding bright rows to the table alone left the
+board warmer and no brighter, because adding a colour to a table dilutes it rather than lifting it. **Open, and the owner's:** the palette itself, and one measured fidelity gap —
 `Odyssey/Tree` draws a tree about a tenth darker in sRGB than the pack's own shader does, which is
 two different lighting implementations rather than a bug, and emission, the normal map and
 screen-space occlusion were each tested and each ruled out (§6 of the design).
@@ -857,14 +859,14 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
   interface scale on a 1080p screen it is within pixels of the screen height and may want the
   first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
-- **The coloured wood has had one playtest and one revision, and the revision has not been
-  played.** Round one produced the pale-tree report and *"really mix them in together"*, both now
-  in (`docs/design/21-tree-colours.md` §3a). Three calls are the owner's: **the 21.4% draw calls a
-  mixed wood costs** — one knob, `TreeLook.ThemesPerStand`, and turning it down to 3 or 2 gets most
-  of it back; **the tones we added**, especially the plum and rust canopies, which are the most
-  distinctive and the first to veto; and **the measured tenth-of-a-stop the new shader costs**
-  (§6), which is two lighting implementations disagreeing and was deliberately not papered over
-  with a gain.
+- **The coloured wood has had two playtests and the second revision has not been played.** The
+  rounds are `docs/design/21-tree-colours.md` §3a (the pale tree, and *"really mix them in
+  together"*) and §3b (*"add some bright colours into the leaf"*). Three calls are the owner's:
+  **the 21.8% draw calls a mixed wood costs** — one knob, `TreeLook.ThemesPerStand`, and turning it
+  down to 3 or 2 gets most of it back; **the strongest of the new tones**, the cherry and flame
+  canopies, which now read as scarlet at the play camera and are the first to veto; and **the
+  measured tenth-of-a-stop the new shader costs** (§6), which is two lighting implementations
+  disagreeing and was deliberately not papered over with a gain.
 - **Nobody has seen the falls move.** They draw correctly now and carry downward-scrolling
   streaks and foam at the foot, but **whether that reads as falling water or as a pattern sliding
   down a pane cannot be judged in a still**, and stills are all anybody has looked at

@@ -319,7 +319,7 @@ namespace Odyssey.Presentation.Rendering
                 // means there was no shader or no art, and the fallback is exactly what a tree
                 // drew before this feature existed.
                 Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
-                    ? _materials.Trees.For(part.Material, TintCode.Value(bucket.Tint), shade)
+                    ? _materials.Trees.For(part.Material, TintCode.TreeValue(bucket.Tint), shade)
                     : null;
                 Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
                     foliage: TintCode.IsFoliage(bucket.Tint),
@@ -465,7 +465,9 @@ namespace Odyssey.Presentation.Rendering
                 // primitive there is no atlas to repaint and the tint is the only colour there
                 // is, so a stand-in box takes the theme's canopy and a clone without the packs
                 // gets a green wood instead of a grey one.
-                tint = fallback ? TreeMaterials.Colour(TreePalette.At(value).Leaf.Lit) : Color.white;
+                tint = fallback
+                    ? TreeMaterials.Colour(TreePalette.At(TintCode.TreeValue(tintCode)).Leaf.Lit)
+                    : Color.white;
                 emission = Color.black;
             }
             else if (TintCode.IsTerrain(tintCode))
