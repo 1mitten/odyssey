@@ -477,7 +477,7 @@ namespace Odyssey.Presentation.Ui
                 }
                 if (view.LastJob != model.JobDef)
                 {
-                    HudText.Set(view.Job, JobLabels.Label(model.JobDef), HudTextRole.Meta);
+                    view.LastJob = model.JobDef;
                     // A same-key call does nothing, so a colonist moving between two jobs that
                     // read as idle retargets nothing at all.
                     view.JobIcon.SetKey(JobLabels.IconKey(model.JobDef));
@@ -485,19 +485,7 @@ namespace Odyssey.Presentation.Ui
 
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
-
-                // The layer is deliberately not on the card any more (spec): the depth rail states
-                // it once and the inspect pane states it again for whoever is selected. It stays
-                // in the tooltip, where it costs no pixels — and is rebuilt only when it would
-                // read differently, because building a string every refresh is what ADR 0003's
-                // flip condition F1 forbids.
-                if (view.LastJob != model.JobDef || view.LastLayer != model.Layer)
-                {
-                    view.LastJob = model.JobDef;
-                    view.LastLayer = model.Layer;
-                    view.Root.tooltip =
-                        $"{model.Name} — {JobLabels.Label(model.JobDef)}, layer {model.Layer}. Click to select.";
-                }
+                view.LastLayer = model.Layer;
             }
         }
 
@@ -513,44 +501,26 @@ namespace Odyssey.Presentation.Ui
             ring.style.display = DisplayStyle.None;
             card.Add(ring);
 
-            var top = new VisualElement();
-            top.AddToClassList("card__top");
+            var avatarBox = new VisualElement { pickingMode = PickingMode.Ignore };
+            avatarBox.AddToClassList("card__avatar-box");
 
-            // The colonist's own face (docs/design/20-avatars.md). It replaced a People-coloured
-            // tile with the first letter of the name on it — which was honest while nothing could
-            // draw a person, and stopped being so the day something could. The letter said less
-            // than the name beside it already did.
+            // The colonist's own face (docs/design/20-avatars.md).
             var avatar = new AvatarGlyph(HudLayout.CardAvatar);
             avatar.AddToClassList("card__avatar");
+            avatarBox.Add(avatar);
 
-            var names = new VisualElement();
-            names.AddToClassList("card__names");
-            Label name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
-            names.Add(name);
-
-            top.Add(avatar);
-            top.Add(names);
-            card.Add(top);
-
-            // The job goes on its own line under the avatar row, not in the strip beside the
-            // avatar. The whole width of the card is what lets it be a full word: an ellipsis is
-            // allowed on a colonist's name and on nothing else.
-            //
-            // The icon leads the word rather than replacing it (owner, 2026-09-17). Uncategorised,
-            // because the spec gives a colour of its own only to stores and the command bar; here
-            // it takes the ink of the word beside it, which is what makes the line read as one
-            // thing. It is not hidden where a key has no art: the slot is always occupied, so the
-            // word does not shift sideways as a colonist changes job, and the outlined square
-            // says a picture belongs there — which is true, and is the same thing it says
-            // everywhere else in the HUD.
-            var jobRow = new VisualElement { pickingMode = PickingMode.Ignore };
-            jobRow.AddToClassList("card__jobrow");
+            // The activity icon badged at the bottom-right corner of the portrait (owner, 2026-09-18).
+            // Uncategorised, taking the dim text ink.
             var jobIcon = new IconBadge(JobLabels.IconKey(-1), IconBadge.RowSize);
+            jobIcon.AddToClassList("card__badge");
             jobIcon.Inherit(HudTokens.TextDim);
-            Label job = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "card__job");
-            jobRow.Add(jobIcon);
-            jobRow.Add(job);
-            card.Add(jobRow);
+            avatarBox.Add(jobIcon);
+
+            card.Add(avatarBox);
+
+            // Name placed directly below the portrait, centered across the card's full width.
+            Label name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
+            card.Add(name);
 
             // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
             // turns it on or off without moving the camera, and while shift is held a drag across
@@ -577,7 +547,7 @@ namespace Odyssey.Presentation.Ui
             return new CardView
             {
                 Root = card, Ring = ring, Avatar = avatar, Name = name,
-                JobIcon = jobIcon, Job = job,
+                JobIcon = jobIcon,
             };
         }
 

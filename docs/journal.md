@@ -5770,6 +5770,32 @@ Settled through Ground → Interview → Plan → Execute on branch `claude/inte
 - **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
 - **Gates verified:** Fast tier 721 Sim + 411 Hud passed; EditMode 1675 total, 1662 passed, 0 failed; PlayMode 80 total, 75 passed, 0 failed; both wiki checks clean (`build_wiki.py --check`, `emit_labels.py --check`).
 
+### Roster Top Bar: vertical layout, badged activity icon, and widened name budget (2026-09-18)
+
+Settled through Ground → Interview → Plan → Execute on branch `claude/roster-card-layout`.
+
+The owner: *"We need to rearrange the roster top bar - the name of the person should appear directly below the portrait, remove the word of their activity and leave the icon. This icon would be displayed maybe right of the name to indicate what activity is taken place - or whatever you suggest - this would allow longer names to be used with the width reclaimed back from this change. Interview and clarify for details"*
+
+**The old geometry constrained names to a 50 px box.** The previous card (126 × 89 px) placed the 52 × 52 px avatar on the left and the colonist's name on the right. With 8 px padding on each side, a 52 px face, and an 8 px gap, only `126 - 16 - 52 - 8 = 50 px` remained for the name (`CardNameBudget`). Longer names in `colonist-names.csv` had to be culled or truncated to fit. Beneath that row sat a full-width activity line with a 17 px icon and a text word (e.g. "Chopping", "Deconstructing").
+
+**The vertical arrangement reclaims both top-bar capacity and name width:**
+- **Vertical stacking:** Avatar sits at the top of the card inside `.card__avatar-box` (52 × 52 px). The colonist's name sits directly below the avatar, centered horizontally (`-unity-text-align: middle-center`).
+- **Activity icon badge on avatar corner:** Rather than competing with the name for horizontal space on the name row, the 17 × 17 px activity icon (`.card__badge`) is docked as an overlay badge in the bottom-right corner of the avatar box (`position: absolute; right: -2px; bottom: -2px`). This frees 100% of the row beneath the avatar exclusively for the colonist's name.
+- **Activity text word removed & clean presentation:** Per the interview decision, the visible text word for the activity is removed from the card, and verbose hover tooltips are suppressed. The colonist inspect card informs the player of all job, need, and layer details on click.
+- **Card narrowed from 126 px to 96 px (`HudLayout.CardWidth = 96`):**
+  - **Reclaimed screen width:** The top bar fits ~30% more colonists per row (12 cards vs 9 at 1080p; 5 vs 4 at 720p).
+  - **Expanded name budget:** `CardNameBudget` is now `CardWidth - 2 * CardPad = 96 - 16 = 80 px` — a **60% increase** over the previous 50 px budget. Names up to ~14 characters fit comfortably without truncation.
+  - **Height maintained at 89 px (`HudLayout.CardHeight = 89`):** 8 px top pad + 52 px avatar + 2 px gap + 19 px name + 8 px bottom pad = 89 px.
+- **`StripClearance` (32 px) added to `StripRoom`:** Narrowing cards to 96 px allowed 6 cards to squeeze into 1280 × 720, crowding within 26 px of the clock and pushing resting HUD coverage to 20.63% (over the 20.00% ceiling). Adding a 32 px clearance margin ensures breathing room between the centered strip and the corner columns, capping 720p to 5 cards (508 px wide, 4.90% coverage), which keeps total resting coverage at **19.63%**, strictly preserving `HudLayout.CoverageCeiling = 0.20f`.
+- **Tests updated:**
+  - `HudStyleSheetTests`: token checks updated for `.card`, `.card__avatar`, `.card__avatar-box`, and `.card__badge` against `HudLayout`.
+  - `HudGeometryTests`: `TheActivityLineLeadsWithAnIconAndStillHoldsItsWord` replaced by `TheRosterCardBadgesItsActivityIconOnTheAvatar`; `TheCardIsWideEnoughForItsRowsAndNoWider` updated to verify avatar row and 80 px name row on a 96 px card.
+- **Gates verified:**
+  - Fast tier: 742 Sim + 411 Hud passed.
+  - Unity EditMode: 1706 total, 1692 passed, 0 failed.
+  - Unity PlayMode: 80 total, 75 passed, 0 failed.
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
 ### The floor's dotted seam was the tile's own rim, and four placement fixes proved it was not placement (2026-09-18, branch `claude/grey-floor-layer`)
 
 The owner, with two screenshots of a wood slab field: *"you can see these slabs leave small
