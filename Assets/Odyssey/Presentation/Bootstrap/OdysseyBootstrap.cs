@@ -747,6 +747,29 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The debug menu's day skip: spend this many real ticks right now, in one synchronous
+        /// batch, and let the next frame's normal loop redraw what moved. About a fifth of a
+        /// second for a whole day (the ten-day soak runs in under two), so it lands as one hitch
+        /// rather than a freeze.
+        ///
+        /// <para><b>Why a method on the root and not an intent.</b> Ticking is this class's one
+        /// job and the intent bus is drained <i>inside</i> a tick — a skip sent through it would
+        /// ask the world to re-enter its own tick, and a warp is not state for the simulation to
+        /// author anyway; it is the tester spending the same ticks the clock would have spent.
+        /// Every tick skipped is an ordinary tick: colonists walk, eat, sow and harvest through
+        /// it, the hash is taken at the same boundaries, and it works while paused, because the
+        /// paused branch only refuses the <em>clock</em>, not the world. The crop's four-day
+        /// wait is what this exists to skip (docs/design/22-growing.md §9): a day a press, and
+        /// the stage changes arrive at the same hour of the day each time.</para>
+        /// </summary>
+        public void DebugSkipTicks(int count)
+        {
+            if (_world == null || count <= 0) return;
+            _world.Tick(count);
+            _daylight?.Apply(_world.CurrentTick);
+        }
+
+        /// <summary>
         /// The scene's own key light, when the inspector field is empty.
         ///
         /// <para>Found rather than created, because the scene builder already places a sun and a

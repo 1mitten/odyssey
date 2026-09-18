@@ -47,6 +47,14 @@ namespace Odyssey.Presentation.Ui
                 () => GiveResource(ItemIndex.Stone)));
             _debugPanel.Add(DebugActionRow(GiveFoodKey, "Adds 50 meals near the camera",
                 () => GiveResource(ItemIndex.Meal)));
+            _debugPanel.Add(DebugActionRow(SkipDayKey,
+                "Spends one whole game day of ticks at once (about a fifth of a second). "
+                    + "The crop's stage changes arrive at the same hour each press; works while paused",
+                SkipDay));
+            _debugPanel.Add(DebugActionRow(RipenCropsKey,
+                "Brings every standing crop to ripeness at once, daylight window and all - "
+                    + "the harvest half without the four-day wait",
+                RipenCrops));
 
             VisualElement eventRow = DebugActionRow(InvokeEventKey,
                 "No repeatable event system exists yet — only a one-time scenario at tick zero",
@@ -126,6 +134,24 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
+        /// A day a press. The day's length is read from the content rather than written here, so
+        /// a retuned calendar does not leave this row skipping some other amount.
+        /// </summary>
+        void SkipDay()
+        {
+            var colony = _boot!.Colony;
+            if (colony == null) return;
+            _boot.DebugSkipTicks(colony.Pawns.Content.DayTicks);
+        }
+
+        void RipenCrops()
+        {
+            var world = _boot!.World;
+            if (world == null || _directors == null) return;
+            world.Intents.Submit(new Intent(IntentKind.DebugRipen, DebugAnchorCell(world)));
+        }
+
+        /// <summary>
         /// Where a debug spawn or grant lands: the selected colonist's cell, since that is the one
         /// point on the board the player has already told the HUD they are looking at; failing
         /// that, the middle of the active slice layer, which is always in bounds.
@@ -145,5 +171,7 @@ namespace Odyssey.Presentation.Ui
         const string GiveStoneKey = "ui.debug.givestone";
         const string GiveFoodKey = "ui.debug.givefood";
         const string InvokeEventKey = "ui.debug.invokeevent";
+        const string SkipDayKey = "ui.debug.skipday";
+        const string RipenCropsKey = "ui.debug.ripen";
     }
 }

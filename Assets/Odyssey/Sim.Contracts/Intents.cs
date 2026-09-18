@@ -99,6 +99,16 @@ namespace Odyssey.Sim.Contracts
         /// second way for one to appear.
         /// </summary>
         GiveResource,
+
+        /// <summary>
+        /// Debug-menu-only: bring every standing crop to ripeness at once, daylight window and
+        /// all. <see cref="Intent.Cell"/> and the payloads are unused — the ask is the whole
+        /// field, because the menu is testing the harvest half and the four-day wait is the
+        /// thing being skipped, not the thing being simulated. Refused with
+        /// <see cref="IntentRejection.AlreadyInThatState"/> when nothing stands, so an empty
+        /// board says "nothing to ripen" rather than quietly succeeding.
+        /// </summary>
+        DebugRipen,
     }
 
     /// <summary>

@@ -327,6 +327,28 @@ namespace Odyssey.Sim.Growing
             return _plants[_cropAt[index] - 1].StageOfTicks(_growthAt[index]);
         }
 
+        /// <summary>
+        /// Bring every standing crop to ripeness in one step, window and all. The debug menu's
+        /// harvest test: the four-day wait is the thing being skipped, not the thing being
+        /// simulated, so this writes the same end state the growth system would have reached —
+        /// and marks the same re-meshes it would have marked, on the stage changes and nothing
+        /// else. Refused when nothing stands, so the row can say why it did nothing.
+        /// </summary>
+        public IntentRejection RipenAll()
+        {
+            if (_planted.Count == 0) return IntentRejection.AlreadyInThatState;
+            for (int i = 0; i < _planted.Count; i++)
+            {
+                int index = _planted[i];
+                PlantDef def = _plants[_cropAt[index] - 1];
+                int before = def.StageOfTicks(_growthAt[index]);
+                _growthAt[index] = def.growTicks;
+                if (def.StageOfTicks(_growthAt[index]) != before)
+                    _chunks?.MarkDirty(_grid.Size.FromIndex(index));
+            }
+            return IntentRejection.None;
+        }
+
         // ---- the intent seam ---------------------------------------------------------------------
 
         /// <summary><c>DesignateZone(cell, A = PlantHandle + 1)</c> — one-based, as a designation's kind is, so that nought means "not set".</summary>
@@ -339,14 +361,15 @@ namespace Odyssey.Sim.Growing
         /// <summary><c>CancelZone(cell)</c>.</summary>
         public IntentRejection HandleCancel(Intent intent) => Cancel(intent.Cell);
 
-        /// <summary>Register everything this grid is: hashed state, saved state, a snapshot channel, two intents.</summary>
+        /// <summary>Register everything this grid is: hashed state, saved state, a snapshot channel, two intents — and the debug menu's ripen, which owns crops and so lives here.</summary>
         public SimWorldBuilder Attach(SimWorldBuilder builder)
         {
             return builder
                 .AddTickable(_ => this)
                 .AddSnapshotContributor(this)
                 .AddIntentHandler(IntentKind.DesignateZone, HandleDesignate)
-                .AddIntentHandler(IntentKind.CancelZone, HandleCancel);
+                .AddIntentHandler(IntentKind.CancelZone, HandleCancel)
+                .AddIntentHandler(IntentKind.DebugRipen, _ => RipenAll());
         }
 
         // ---- ITickable: registration only, so the hash and the save see the zones ---------------

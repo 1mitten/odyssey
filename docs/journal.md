@@ -5826,3 +5826,16 @@ sorted cell list, not zone records, which is exactly why only a cancel after a f
 And `Harvested` now re-asks after its defer, as `Sowed` always had: a crop cancelled between
 the swing that earned the edit and the boundary that lands it yields nothing rather than
 carrots for a field the player erased.
+
+### The debug menu learns to skip the wait (2026-09-18)
+
+The growing zone shipped with a four-day wait nobody can test at the keyboard, and the owner
+asked for the debug rows that skip it. Two, deliberately not one: **Skip one day** spends the
+day's own ticks through the composition root's batch tick — real simulation, hash taken at the
+same boundaries, works while paused, one fifth of a second a press — and **Ripen crops** wraps
+`RipenAll` behind an intent refused as AlreadyInThatState on an empty board, the harvest half
+without the window. What was weighed and rejected on the way: a growth-rate multiplier (new
+hashed or silently unhashed state, either wrong), a fourth speed tier (breaks the frame budget
+for a tester's problem), and ripen alone (never shows the stages moving). The warp is a method
+on the root rather than an intent for the reason the re-entrancy note records: the bus drains
+inside a tick, so a skip through it would ask the world to re-enter its own tick.

@@ -451,6 +451,8 @@ ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario 
 ui.debug.givewood,Give wood,ui.debug,M3,"Adds 50 wood near the camera"
 ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
 ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
+ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
+ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
 ui.debug.invokeevent,Invoke event,ui.debug,M3,"No repeatable event system exists yet"
 ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
 ui.settings.volume.master,Master volume,ui.settings,M3,"Everything at once"

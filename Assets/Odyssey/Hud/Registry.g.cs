@@ -190,6 +190,8 @@ namespace Odyssey.Hud
             { "ui.debug.givewood", "Give wood" },
             { "ui.debug.invokeevent", "Invoke event" },
             { "ui.debug.panel", "Debug" },
+            { "ui.debug.ripen", "Ripen crops" },
+            { "ui.debug.skipday", "Skip one day" },
             { "ui.debug.spawnpawn", "Spawn colonist" },
             { "ui.health.anaesthetic", "Anaesthetic" },
             { "ui.health.arm", "Arm" },
