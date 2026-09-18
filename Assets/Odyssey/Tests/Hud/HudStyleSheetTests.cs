@@ -113,6 +113,10 @@ namespace Odyssey.Tests.Hud
             (".colonist__name", "color", () => HudTheme.TextPrimary, "text primary"),
             (".colonist__skills", "color", () => HudTheme.TextMeta, "text meta"),
 
+            // Dim, a step under the skills line above the card's three lines read as a hierarchy:
+            // the name, then what they can do, then what they used to be.
+            (".colonist__trade", "color", () => HudTheme.TextDim, "text dim"),
+
             // The naming prompt, and the project's first text field.
             (".field .unity-base-text-field__input", "color", () => HudTheme.TextPrimary, "text primary"),
             (".field .unity-base-text-field__input", "border-color", () => HudTheme.PanelBorder, "panel border"),
@@ -123,6 +127,12 @@ namespace Odyssey.Tests.Hud
             (".prompt__answer--armed", "color", () => HudTheme.Accent, "accent"),
             (".prompt__note", "color", () => HudTheme.TextDim, "text dim"),
             (".prompt__note--warn", "color", () => HudTheme.Warn, "warn"),
+
+            // The way in. The only green row in the game, so that Back and Start — which read
+            // identically otherwise — cannot be confused for one another (owner, 2026-09-18).
+            (".setup__commit", "background-color", () => HudTheme.Good.WithAlpha(0.15f), "good, filled"),
+            (".setup__commit", "border-color", () => HudTheme.Good.WithAlpha(0.45f), "good, outlined"),
+            (".setup__commit .settings__label", "color", () => HudTheme.Good, "good"),
         };
 
         [Test]
@@ -260,6 +270,18 @@ namespace Odyssey.Tests.Hud
             (".colonists", "width", () => HudLayout.ColonistColumnWidth, "the candidate column"),
             (".colonist", "height", () => HudLayout.ColonistCard, "a candidate's card"),
             (".colonist", "margin-bottom", () => HudLayout.ColonistCardGap, "card gap"),
+            (".colonist", "padding", () => HudLayout.ColonistCardPad, "card padding"),
+            (".colonist__name", "height", () => HudLayout.ColonistNameLine, "the name line"),
+            (".colonist__trade", "height", () => HudLayout.ColonistTradeLine, "the trade line"),
+            (".colonist__skills", "height", () => HudLayout.ColonistSkillLine, "the skills line"),
+
+            // The setup page's own skills grid: two columns, set clear of the record above it.
+            (".skills--setup", "max-width", () => HudLayout.SetupSkillsWidth, "two columns of skills"),
+            (".skills--setup", "margin-top", () => HudLayout.SetupSkillsGap, "record to skills"),
+            (".skill--setup", "width", () => HudLayout.SetupSkillRowWidth, "a setup skill line"),
+            (".skill--setup", "height", () => HudLayout.SetupSkillRow, "a setup skill line"),
+            (".skill", "width", () => HudLayout.SkillRowWidth, "a skill line"),
+            (".skill", "margin-right", () => HudLayout.SkillColumnGap, "skill column gap"),
             (".colonist__lines", "margin-left", () => HudLayout.ColonistAvatarGap, "face to name"),
             (".detail__lines", "margin-left", () => HudLayout.DetailAvatarGap, "portrait to record"),
 

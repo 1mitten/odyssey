@@ -317,8 +317,13 @@ namespace Odyssey.Presentation.Ui
             back.AddToClassList("setup__inline");
             footer.Add(back);
 
+            // Green, and the only green row in the game (owner, 2026-09-18: "make the start button
+            // green at the button so it's easy to know what to click"). Back and Start sit side by
+            // side and read identically otherwise, so the colour is what says which of the two is
+            // the way in. HudTheme.Good, the token the interface already means "this is fine" by.
             _startCommit = SeedRow(SeedField.StartKey, () => _menu.Start());
             _startCommit.AddToClassList("setup__inline");
+            _startCommit.AddToClassList("setup__commit");
             footer.Add(_startCommit);
 
             page.Add(footer);
@@ -383,11 +388,15 @@ namespace Odyssey.Presentation.Ui
                 var face = new AvatarGlyph(HudLayout.ColonistAvatar);
                 face.AddToClassList("colonist__face");
 
+                // A step up the scale each (owner, 2026-09-18: "make the fonts a bit bigger in
+                // general on the screen"). Steps of the existing scale rather than sizes of their
+                // own: this page is read at leisure with no world behind it, which is a reason to
+                // sit higher up HudType's ladder and not a reason to add rungs to it.
                 var lines = new VisualElement();
                 lines.AddToClassList("colonist__lines");
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__name"));
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__trade"));
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__skills"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Name, ussClass: "colonist__name"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Body, ussClass: "colonist__trade"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__skills"));
 
                 card.Add(face);
                 card.Add(lines);
@@ -436,11 +445,18 @@ namespace Odyssey.Presentation.Ui
             portrait.Add(record);
             _colonistDetail.Add(portrait);
 
+            // The same grid the inspect pane's Skills tab is, wearing a modifier: two columns
+            // rather than however many fit the viewport, a taller and wider line, and a step up
+            // the type scale (owner, 2026-09-18). Capping the container is what holds it to two —
+            // it is a wrapping row in a pane that grows, so at 1920 it had been laying thirteen
+            // skills out four across and filling the page edge to edge.
             _detailSkills = new VisualElement();
             _detailSkills.AddToClassList("skills");
+            _detailSkills.AddToClassList("skills--setup");
             _colonistDetail.Add(_detailSkills);
             for (int i = 0; i < SkillCatalogue.ReadingOrder.Count; i++)
-                _detailSkillViews.Add(SkillLine(_detailSkills));
+                _detailSkillViews.Add(SkillLine(_detailSkills, "skill--setup",
+                    HudTextRole.Row, HudTextRole.Body));
 
             screen.Add(_colonistDetail);
             return screen;
@@ -465,14 +481,14 @@ namespace Odyssey.Presentation.Ui
                 Candidate who = select.Cards[slot];
                 VisualElement lines = card[1];
 
-                HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Row);
-                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Meta);
+                HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Name);
+                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Body);
 
                 // The line the three cards are compared on. The rules — live skills only, nothing
                 // at zero, ties in reading order — are SkillSummary's, in Odyssey.Hud, so the fast
                 // tier holds them rather than the Unity tier.
                 HudText.Set((Label)lines[2],
-                    SkillSummary.Line(who.Skills, HudLayout.ColonistCardSkills), HudTextRole.Meta);
+                    SkillSummary.Line(who.Skills, HudLayout.ColonistCardSkills), HudTextRole.Row);
 
                 // The seed is the candidate's own and the id is the one this slot will occupy, so
                 // this is the face the colony goes on to give them — ColonistDraw.IdForSlot is
@@ -490,7 +506,7 @@ namespace Odyssey.Presentation.Ui
 
             Candidate current = select.Current;
             HudText.Set(_detailName, current.NameAndAge, HudTextRole.Name);
-            HudText.Set(_detailTrade, current.Occupation, HudTextRole.Meta);
+            HudText.Set(_detailTrade, current.Occupation, HudTextRole.Body);
             PawnId shown = ColonistDraw.IdForSlot(select.Selected);
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
             _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
@@ -498,7 +514,7 @@ namespace Odyssey.Presentation.Ui
             // Drawn now and empty until M7, by the owner's decision. It says "—" rather than
             // nothing, because a row that is absent and a row that is empty look identical and
             // only one of them is a promise.
-            HudText.Set(_detailTraits, "Traits  —", HudTextRole.Meta);
+            HudText.Set(_detailTraits, "Traits  —", HudTextRole.Body);
 
             for (int i = 0; i < current.Skills.Count && i < _detailSkillViews.Count; i++)
                 SetSkillLine(_detailSkillViews, i, current.Skills[i]);

@@ -1836,6 +1836,35 @@
     flex-grow: 1;
 }
 
+/* Two columns rather than however many fit the viewport (owner, 2026-09-18), and set clear of the
+   record above it. The grid is a wrapping row in a pane that grows, so at 1920 it had laid thirteen
+   skills out four across and filled the page edge to edge; the cap is what holds it to two and
+   leaves the right-hand half for whatever comes. Derived in HudLayout.SetupSkillsWidth. */
+.skills--setup {
+    max-width: 636px;
+    margin-top: 24px;
+}
+
+/* Wider and taller than the inspect pane's line, at a step up the type scale: this screen is read
+   at leisure with no world behind it. */
+.skill--setup {
+    width: 300px;
+    height: 24px;
+}
+
+/* The way in, and the only green row in the game. Back and Start sit side by side and read
+   identically otherwise, so the colour is what says which is which. */
+.setup__commit {
+    background-color: rgba(127, 201, 140, 0.15);
+    border-width: 1px;
+    border-color: rgba(127, 201, 140, 0.45);
+    border-radius: 3px;
+}
+
+.setup__commit .settings__label { color: #7fc98c; }
+
+.setup__commit:hover { background-color: rgba(127, 201, 140, 0.24); }
+
 /* The one being read, beside the three. */
 .setup__detail {
     flex-grow: 1;
@@ -1872,7 +1901,7 @@
 
 .colonists {
     flex-shrink: 0;
-    width: 300px;
+    width: 340px;
 }
 
 /* A row wrapping a column since avatars landed (docs/design/20-avatars.md §3): the face, then the
@@ -1884,9 +1913,9 @@
 .colonist {
     flex-direction: row;
     align-items: center;
-    height: 65px;
-    margin-bottom: 6px;
-    padding: 0 8px;
+    height: 80px;
+    margin-bottom: 10px;
+    padding: 8px;
     border-radius: 3px;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
@@ -1910,6 +1939,7 @@
    a hierarchy, and an occupation is flavour where the line below it is the decision. */
 .colonist__trade {
     color: rgba(255, 255, 255, 0.50);
+    height: 18px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1917,6 +1947,7 @@
 
 .colonist__name {
     color: #eef3f6;
+    height: 26px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1929,6 +1960,7 @@
    brighter, because the theme has four text tokens and inventing a fifth is how a sheet drifts. */
 .colonist__skills {
     color: rgba(255, 255, 255, 0.66);
+    height: 20px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;

@@ -778,6 +778,55 @@ namespace Odyssey.Hud
 
         public const int SkillRowGap = 4;
 
+        /// <summary>One skill line's width in the inspect pane's grid, pinned here so the setup
+        /// page's own grid can be derived from it rather than from a second literal.</summary>
+        public const int SkillRowWidth = 256;
+
+        /// <summary>Between two columns of skills.</summary>
+        public const int SkillColumnGap = 18;
+
+        // ---------------------------------- the setup page's own skills grid (owner, 2026-09-18)
+
+        /// <summary>
+        /// How many columns of skills the setup page's detail pane shows.
+        ///
+        /// <para><b>Two, by the owner's instruction</b> — *"use the space to make 2 columns of
+        /// skills rather than 4 as we'll likely have to bring something in in the future"*. The
+        /// grid is a wrapping row in a pane that grows, so at 1920 it had been laying thirteen
+        /// skills out four across and filling the screen edge to edge; capping the container is
+        /// what holds it to two and leaves the right-hand half of the page for whatever comes.
+        /// The count is the owner's decision about the page, not an arithmetic consequence of
+        /// what fits, so it is a constant rather than a division.</para>
+        /// </summary>
+        public const int SetupSkillColumns = 2;
+
+        /// <summary>A skill line on the setup page: wider and taller than the inspect pane's,
+        /// because this is a screen read at leisure rather than glanced at over a running
+        /// world.</summary>
+        public const int SetupSkillRowWidth = 300;
+
+        /// <summary>The row's height at the setup page's larger type step.</summary>
+        public const int SetupSkillRow = 24;
+
+        /// <summary>
+        /// The grid's ceiling, derived rather than written down: the columns the owner asked for,
+        /// each a row wide plus the gap after it. The trailing gap is absorbed by the grid's own
+        /// negative right margin, exactly as the inspect pane's is.
+        /// </summary>
+        public const int SetupSkillsWidth =
+            SetupSkillColumns * (SetupSkillRowWidth + SkillColumnGap);
+
+        /// <summary>
+        /// The portrait and its record, down to the skills under them.
+        ///
+        /// <para>Owner, 2026-09-18: *"have more spacing on the main screen from the profile to the
+        /// skills below it as it looks too close and untidy"*. The record's three lines ended
+        /// flush against the first row of the grid, so the name, the trade, the traits and
+        /// thirteen skills read as one undifferentiated stack rather than as a heading over a
+        /// table.</para>
+        /// </summary>
+        public const int SetupSkillsGap = 24;
+
         /// <summary>
         /// How many needs the colonist body draws: Food, Rest and Mood, the three the model
         /// carries and the three <c>HudShell.SetNeed</c> fills by index.
@@ -995,9 +1044,62 @@ namespace Odyssey.Hud
         /// page, beside the seed and the board size, so the ceiling is the canvas and there are
         /// some seven hundred spare pixels under the cards at 1080p.</para>
         /// </summary>
-        public const int ColonistCard = StartRow + 2 * StartSeedCaption;
+        /// <summary>
+        /// Breathing room inside a candidate card, all four sides.
+        ///
+        /// <para><b>The selection outline's, really</b> (owner, 2026-09-18: *"there needs to be
+        /// spacing with the selection cursor as it sits directly around the mini profile"*). A
+        /// card sized to exactly its contents draws <c>.colonist--on</c>'s border hard against the
+        /// face, which reads as the outline belonging to the portrait rather than to the card. The
+        /// pad is what puts daylight between them, and
+        /// <c>HudLayoutTests.EveryCardIsAtLeastAsTallAsTheFaceItCarries</c> holds the card to
+        /// <see cref="ColonistAvatar"/> <i>plus two of these</i> rather than merely to the face.</para>
+        /// </summary>
+        public const int ColonistCardPad = 8;
 
-        public const int ColonistCardGap = 6;
+        /// <summary>The name and age, at <see cref="HudTextRole.Name"/> — the detail pane's own
+        /// name line, so the card and the record it opens are set the same way.</summary>
+        public const int ColonistNameLine = 26;
+
+        /// <summary>The occupation, at <see cref="HudTextRole.Body"/>.</summary>
+        public const int ColonistTradeLine = 18;
+
+        /// <summary>What they are good at, at <see cref="HudTextRole.Row"/> — a step above the
+        /// trade above it, because it is the line the three are compared on.</summary>
+        public const int ColonistSkillLine = 20;
+
+        /// <summary>
+        /// A candidate's card: the name, the occupation, and what this person is good at.
+        ///
+        /// <para><b>Re-derived from its own rows on 2026-09-18, the way the roster card was</b>
+        /// (<c>docs/design/20-avatars.md</c> §10.6), and again the same day when the owner played
+        /// it: the three lines went up a step of the type scale each and the card gained
+        /// <see cref="ColonistCardPad"/> on every side. Eighty, and it must stay clear of the
+        /// 60 px face by that pad on both sides.</para>
+        ///
+        /// <para><b>§10.6 doubled the avatar and missed this card.</b> Its table re-derived the
+        /// roster card 106 × 63 → 126 × 89 and the inspect header 38 → 60, and moved the strip
+        /// share, the top scrim and the coverage ceiling with them. The candidate card was not on
+        /// it, so it kept the 47 it was given when <see cref="Avatar"/> was 30 — and then carried a
+        /// 60 px face in it, thirteen pixels taller than its own box at a 53 px pitch. On
+        /// `Logs/setup-page.png` the three faces visibly ran into one another and into the
+        /// selection outline. The skills line had gone the same way, squeezed out to make room for
+        /// the trade, which is why <see cref="ColonistCardSkills"/> and <c>.colonist__skills</c>
+        /// were both still here describing a line nothing drew.</para>
+        ///
+        /// <para><b>The old comment's arithmetic was right and no longer applies.</b> Three lines
+        /// came to 296 against the fixed body's 284 — true while the candidates had a screen of
+        /// their own inside the start panel. They do not: they are part of the full-viewport setup
+        /// page, beside the seed and the board size, so the ceiling is the canvas and there are
+        /// some seven hundred spare pixels under the cards at 1080p.</para>
+        /// </summary>
+        public const int ColonistCard =
+            2 * ColonistCardPad + ColonistNameLine + ColonistTradeLine + ColonistSkillLine;
+
+        /// <summary>Between two candidate cards. Ten rather than six since the cards gained their
+        /// own padding: a card with air inside it wants air around it, or the two runs of
+        /// whitespace read as one and the cards stop being separate objects.</summary>
+        public const int ColonistCardGap = 10;
 
         /// <summary>
         /// The column the three candidates stand in, beside the detail pane.
@@ -1008,8 +1110,14 @@ namespace Odyssey.Hud
         /// card carried two lines; a 60 px face took 30 px off the text and a third line put a
         /// longer string on it. The page is the full viewport, not the fixed box, so the column is
         /// free to grow — which is what that design said the lever was.</para>
+        ///
+        /// <para>340 since the same day's type step: the text column is this less the card's own
+        /// padding on both sides, the face and the gap after it — 340 − 16 − 60 − 8 = 256, which
+        /// is where a name at <see cref="HudTextRole.Name"/> and a skills line at
+        /// <see cref="HudTextRole.Row"/> want to be rather than where a 12 px meta line was
+        /// comfortable.</para>
         /// </summary>
-        public const int ColonistColumnWidth = 300;
+        public const int ColonistColumnWidth = 340;
 
         /// <summary>
         /// The three cards and the two rows under them — Keep, then Reroll.
