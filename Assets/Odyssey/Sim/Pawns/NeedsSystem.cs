@@ -67,6 +67,19 @@ namespace Odyssey.Sim.Pawns
             // ---- food: always falls, even asleep -------------------------------------------
             Fall(pawn, NeedIndex.Food);
 
+            // Starvation severity: the bar that fills while the pantry is empty and drains while
+            // it is not, by the same number (WS3, design 17 §4c). Recovery being symmetric is
+            // one of the three brakes on the starvation spiral — no point of no return — and it
+            // is why this is an offset to condition rather than a second hunger bar: the food
+            // need refills in a meal, the bar takes days, and the gap between those two speeds
+            // is the difference between having missed lunch and having been starving.
+            if (pawn.Needs[NeedIndex.Food] <= 0)
+                pawn.StarvationSeverity = System.Math.Min(
+                    1_000, pawn.StarvationSeverity + content.Kind.starvationPerInterval);
+            else if (pawn.StarvationSeverity > 0)
+                pawn.StarvationSeverity = System.Math.Max(
+                    0, pawn.StarvationSeverity - content.Kind.starvationPerInterval);
+
             // ---- rest: falls awake, recovers asleep, scaled by what is under the pawn -------
             if (pawn.Asleep)
             {

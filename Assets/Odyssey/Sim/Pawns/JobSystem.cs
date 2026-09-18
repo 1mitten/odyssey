@@ -521,6 +521,17 @@ namespace Odyssey.Sim.Pawns
 
         static bool TrySleep(Pawn pawn, PawnContext ctx, Job job)
         {
+            // Zero rest is a collapse, not a journey (WS3, design 17 §4c): a body that has run
+            // out goes down where it stands, however comfortable the bed it was walking towards.
+            // Tiredness below the threshold but above zero is still a walk — the control that
+            // keeps this from becoming every colonist sleeping in the mud.
+            if (pawn.Needs[NeedIndex.Rest] <= 0)
+            {
+                job.Reset(JobIndex.Sleep);
+                job.TargetCell = -1;
+                return true;
+            }
+
             var beds = ctx.Items.Beds;
             int own = -1;
             int bestBed = -1;

@@ -113,8 +113,16 @@ namespace Odyssey.Sim.Pawns
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
 
-            ToilProgress++;
-            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
+            // Eating is not work and no rate touches it, but the counter it advances is shared
+            // with the toils that are: ToilProgress has one unit, and the unit is milliwork. A
+            // bare ++ here left the same saved, hashed field counting ticks in this driver and
+            // thousandths in the four that swing — which made Rates.FromSave wrong for an older
+            // file caught mid-meal (it scaled a tick count by a thousand and the meal finished on
+            // the next tick), and left this toil contributing nothing to the state hash for its
+            // whole length. A toil that has no rate pays at exactly the standard one.
+            ToilProgress += Rates.Scale;
+            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks * Rates.Scale)
+                return JobStatus.Ongoing;
 
             var need = ctx.Content.Needs[NeedIndex.Food];
             int nutrition = ctx.Content.Items[item.DefIndex].nutrition;
@@ -152,6 +160,29 @@ namespace Odyssey.Sim.Pawns
         {
             if (ToilIndex == 0)
             {
+                // The collapse catches up with the walk as well as the departure: rest that runs
+                // out on the way to the bed drops the colonist where she is, and the bed waits
+                // for whoever holds it next (WS3, design 17 §4c). She is about to sleep on the
+                // ground all the same, so she carries the ground's thought with her — the one
+                // toil 1 adds below when the giver found no bed at all, which is left to fire
+                // there so a collapse is remembered once, never twice. The bed stays reserved
+                // until the job ends: letting go here would need a second exit from the job, and
+                // the one-exit rule is worth more than the hour an unreserved bed would buy.
+                //
+                // A colonist already standing on her bed is not collapsing on the way to it —
+                // she has arrived, and the walk this branch exists to cut short is over. Without
+                // the cell test she took the ground's thought while sleeping in her own bed,
+                // because rest effectiveness is read off the cell and the thought was not: the
+                // bed's rate and the mud's memory, on the one tick where her rest reached zero
+                // as she arrived.
+                if (Pawn.Needs[NeedIndex.Rest] <= 0 && Pawn.Cell != Job.TargetCell)
+                {
+                    if (Job.TargetCell >= 0)
+                        Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
+                    NextToil();
+                    return JobStatus.Ongoing;
+                }
+
                 if (Job.TargetCell < 0 || Pawn.Cell == Job.TargetCell)
                 {
                     NextToil();
@@ -164,7 +195,11 @@ namespace Odyssey.Sim.Pawns
             }
 
             Pawn.Asleep = true;
-            ToilProgress++;
+            // Milliwork, like every other toil: nothing reads this counter — the wake threshold
+            // is what ends a sleep — but it is saved and hashed, and one field with two units is
+            // what made a mid-sleep load and the sleeping half of the hash wrong. See the eat
+            // toil above for the whole of that argument.
+            ToilProgress += Rates.Scale;
             if (Pawn.Needs[NeedIndex.Rest] < ctx.Content.Kind.wakeThreshold) return JobStatus.Ongoing;
 
             if (Job.TargetCell < 0) Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
@@ -197,8 +232,10 @@ namespace Odyssey.Sim.Pawns
         public override JobStatus Tick(PawnContext ctx)
         {
             int duration = Job.WorkTicks > 0 ? Job.WorkTicks : ctx.Content.Jobs[Job.DefIndex].workTicks;
-            ToilProgress++;
-            return ToilProgress >= duration ? JobStatus.Succeeded : JobStatus.Ongoing;
+            // Milliwork, for the reason the eat toil above states: a stand-down has no rate, so
+            // it pays at exactly the standard one, and the counter keeps one unit.
+            ToilProgress += Rates.Scale;
+            return ToilProgress >= duration * Rates.Scale ? JobStatus.Succeeded : JobStatus.Ongoing;
         }
     }
 }
@@ -216,6 +253,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class FellJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Cutting;
+
         /// <summary>
         /// The tree, once the walk is over and the swings have started. Presentation turns this
         /// into an axe in the hands and an arm that comes down on it; before the walk ends it is
@@ -273,9 +312,11 @@ namespace Odyssey.Sim.Pawns
                 return JobStatus.Ongoing;
             }
 
-            ToilProgress++;
+            int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Cutting);
+            ToilProgress += rate;
             Work(ctx);
-            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
+            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks * Rates.Scale)
+                return JobStatus.Ongoing;
 
             designations.Clear(cell);
             int yield = ctx.Content.WoodPerTree;

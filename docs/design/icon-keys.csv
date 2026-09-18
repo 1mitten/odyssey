@@ -66,6 +66,7 @@ ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extrac
 ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it
 ui.skill.cooking,Cooking,ui.skill,M2,"Meal quality, and food poisoning avoided"
 ui.skill.growing,Growing,ui.skill,M2,Yield and harvest speed
+ui.skill.cutting,Chopping,ui.skill,M2,"Felling trees. How fast the axe comes down, and how fast the trunk goes over"
 ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
 ui.skill.crafting,Crafting,ui.skill,M2,Bench work and item quality
 ui.skill.fabrication,Fabrication,ui.skill,M2,Advanced production. Gates the best gear
@@ -112,7 +113,7 @@ ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
 ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
 ui.work.mining,Mining,ui.work,M7,"Dig, and clear rubble"
 ui.work.salvaging,Salvaging,ui.work,M7,Strip shells and extract salvage
-ui.work.cutting,Cutting,ui.work,M7,Cut plants and clear growth
+ui.work.cutting,Chopping,ui.work,M7,Fell trees and clear growth
 ui.work.hauling,Hauling,ui.work,M7,Move things to storage
 ui.work.cleaning,Cleaning,ui.work,M7,Clear filth from rooms
 ui.work.research,Research,ui.work,M7,Work the research bench

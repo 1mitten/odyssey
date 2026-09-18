@@ -371,6 +371,43 @@ namespace Odyssey.Sim.Pawns
             int chance = successBasePerMille + successSlopePerLevel * level;
             return chance < 0 ? 0 : chance > 1_000 ? 1_000 : chance;
         }
+
+        /// <summary>
+        /// The <see cref="SkillIndex"/> whose level drives this type's work rate, or -1 for none.
+        /// Hauling is the -1: a skill drives either rate or quality, and hauling has neither —
+        /// it is move speed and carrying capacity (design 17 §3a, and 15-skills §6 agrees).
+        /// </summary>
+        public int rateSkill = -1;
+
+        /// <summary>
+        /// Work rate at skill level 0, per mille of the speed everything is tuned at (design
+        /// 17 §3b). The default 1,000 is the flat rate a work type had before curves existed.
+        /// </summary>
+        public int workRateBasePerMille = 1_000;
+
+        /// <summary>Work rate added per level of <see cref="rateSkill"/>, per mille.</summary>
+        public int workRateSlopePerLevel;
+
+        /// <summary>
+        /// The lowest rate a pawn may pay at, per mille. The curve itself never reaches it —
+        /// the floor is what stops a future multiplier from pricing a tick of work at nothing
+        /// and turning every job into one the job system can never finish.
+        /// </summary>
+        public int workRateFloorPerMille = 100;
+
+        /// <summary>
+        /// The work rate of this type at a skill level, per mille: dead linear, no diminishing
+        /// returns anywhere — every diminishing return in this project is on <i>acquiring</i>
+        /// levels, which is machinery the skill Def already owns. The integers are INVENTED
+        /// (design 17 §3b): anchored on our own mean starting roll of 1.16 rather than the
+        /// reference's level 8, with the reference's relative character kept — mining steepest,
+        /// construction shallowest.
+        /// </summary>
+        public int WorkRatePerMille(int level)
+        {
+            int rate = workRateBasePerMille + workRateSlopePerLevel * level;
+            return rate < workRateFloorPerMille ? workRateFloorPerMille : rate;
+        }
     }
 
     public static class ItemIndex
@@ -410,10 +447,23 @@ namespace Odyssey.Sim.Pawns
         /// walk cycle covers about 2 m/s and anything faster blends the run clip in. Before that
         /// it was 10, roughly 54 km/h, and colonists visibly teleported around the map.
         ///
-        /// A movement-speed modifier belongs in <see cref="Pawn.MovePerTick"/>, not here; and a
-        /// pace between these integers wants the cost scale raised, not a fraction stored.
+        /// A movement-speed modifier belongs in <see cref="Pawn.MoveRatePerMille"/>, not here; and
+        /// a pace between these integers wants the cost scale raised, not a fraction stored.
         /// </summary>
         public int movePerTick = 1;
+
+        /// <summary>
+        /// The band a colonist's innate pace rolls in, per mille of the standard walk (WS3,
+        /// design 17 §4b). The integers are INVENTED, but the top of the band is not free taste:
+        /// it is bounded by the drawn walk cycle, which covers about 2 m/s where
+        /// <see cref="movePerTick"/> 1 is 1.5 m/s, so anything past about 1,333 would visibly
+        /// jog while ostensibly walking. ±15 per cent keeps every colonist inside a walk —
+        /// roughly the true spread of human walking pace — and everything faster is reserved for
+        /// a deliberate run, which is held (§4f) until the game has something worth running from.
+        /// </summary>
+        public int innatePaceMinPerMille = 850;
+
+        public int innatePaceMaxPerMille = 1_150;
 
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;
@@ -440,6 +490,26 @@ namespace Odyssey.Sim.Pawns
         /// colonist and a long run measures nothing but mental breaks.
         /// </summary>
         public int joyGainPerInterval = 8;
+
+        /// <summary>
+        /// Starvation severity gained per needs interval while the food need is at zero, and
+        /// lost per interval while it is not (WS3, design 17 §4c). INVENTED: the design pins the
+        /// three offsets and the floor and nothing about the bar's speed.
+        ///
+        /// <para><b>The cadence is what sets this number, and it is 400 intervals a day</b> —
+        /// 60,000 tick day over the 150-tick needs cadence. One per interval is 400 per mille a
+        /// day, so a bar that fills in two and a half days of an empty pantry: the food need
+        /// reaches zero at hour 72, the first band about fifteen hours later, and the worst band
+        /// in the fifth day of not eating. That is the gentle, recoverable slope the design
+        /// argues for, and recovery is symmetric by the same number, so one meal arrests the bar
+        /// rather than merely stopping it.</para>
+        ///
+        /// <para>It was 2, on a comment that read the cadence as 200 intervals a day and so
+        /// described a bar filling four times slower than it did. The arithmetic is written out
+        /// above rather than summarised, because it is the sentence that was wrong, and
+        /// <c>TheBarFillsAtTheCadenceItsCommentClaims</c> is the test that now holds it.</para>
+        /// </summary>
+        public int starvationPerInterval = 1;
 
         /// <summary>
         /// Odds, per cent, that a freshly spawned colonist of this kind has a minor or a major
@@ -782,5 +852,18 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="BuildSuccess"/>, <see cref="BuildBotchLoss"/>, this.</para>
         /// </summary>
         public const uint BuildQuality = 0x7F4A_7C15;
+
+        /// <summary>
+        /// A colonist's innate walking pace (design 17 §4b). Drawn from (world seed, pawn id),
+        /// the same shape as <see cref="Passion"/> and <see cref="StartingSkill"/> and for the
+        /// same reason: a seed deals the same people every load, a pace is a fact about the
+        /// person and not about the moment, and sharing a salt with another pawn roll would tie
+        /// one colonist's walk to another colonist's temper by coincidence of arithmetic.
+        ///
+        /// <para>The fifth constant outside the spent xxHash family: SHA-256's first round
+        /// constant, reached for the same reason the MurmurHash3 constants were — the primes are
+        /// gone and distinct families read as the discipline they are.</para>
+        /// </summary>
+        public const uint MovePace = 0x428A_2F98;
     }
 }

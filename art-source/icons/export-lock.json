@@ -17,6 +17,10 @@
    "scale": 2,
    "size": 64
   },
+  "ui.skill.cutting": {
+   "scale": 2,
+   "size": 64
+  },
   "ui.skill.fabrication": {
    "scale": 2,
    "size": 64
