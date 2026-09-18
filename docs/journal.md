@@ -4962,3 +4962,63 @@ being followed everywhere except in the file that states them.
   which of the two senses was cheaper to move — 12 journal references against a contained set of
   three planning documents — which is also what proved the built sense had to be the one that
   stayed.
+
+### The rates landed, and the golden gate held three different ways (2026-09-18)
+
+WS1–WS3 of design 17 went in on `claude/rates-and-stats` as three commits: the seam (`f6beb56`),
+work speed from the skill curve plus the stroke clock (`9ae7682`), and innate pace, condition and
+collapse (`a4413df`). WS4 running stays held — the plan's standing rule, *do not invent an urgency
+model*, is still the right answer and needs no code to honour. What the unit taught:
+
+- **The design's "two saved integers" turned out to be four accumulators.** §2b closed with *"two
+  saved integers change scale, `_work[cell]` and `MoveProgress`, and nothing else does"* — and the
+  implementation deliberately broke that sentence: `Job.ToilProgress` counts milliwork too, and
+  `_work[cell]` lives in two grids (designations *and* construction). A rate must reach a surface
+  to be visible, and the toil accumulator is the one the driver's own pacing reads; leaving it in
+  ticks would have given the stroke clock a rate it could not apply. §2bb's rule — the scale is
+  internal, everything crossing the sim→UI contract stays in ticks — held exactly as audited:
+  `WorkToClear`'s ushort, `SiteView`'s seconds and `Fraction()`'s denominator all keep their units.
+
+- **WS1's done criterion was nothing, and the gate for nothing is everything else.** The suite
+  passed unedited — goldens, path checksums, HUD readouts, the one-day run — because
+  `cost × 1,000 / 1,000` reads back exact. The one test the unit added for itself is the control
+  the plan asked for: a rate of 500 provably takes twice as long, at both accumulators.
+
+- **WS2's goldens were a no-op, and the reason was written down instead of a re-bake faked.** The
+  regolden run printed the same three hashes it was fed. That is not luck: all three golden cases
+  are `ScenarioDef.Bare`, which runs no job the curve moves — haul prices flat by the design's own
+  rule that a skill drives either rate or quality, and nothing is mined, cut or built there. The
+  same reasoning made WS2's soak byte-for-byte the WS1 baseline's. The discipline is: a no-op
+  golden is only trustworthy when somebody can say *why* it was one.
+
+- **WS3's re-bake was the first real one, and it had the right shape.** All three `Simulated`
+  hashes moved and no `Generated` one did — the signature of a simulation change with the
+  generator untouched. That shape exists because the pace roll is keyed like passions and starting
+  skills but *drawn lazily on first read*: placement's dice never re-roll, so the generator's hash
+  cannot move. For the first time in the unit it is the colonists and not the hash that changed —
+  idle colonists crossing their boards at 850 to 1,150 instead of in step.
+
+- **Two facts about the skill system were found the slow way by test fixtures, and are now
+  written here so the next session finds them the fast way.** First, experience exactly 0 means
+  "not rolled yet": `RollStartingSkills` skips any skill whose experience is zero and would
+  overwrite a pin on the first tick — a level-0 pin must use experience 1. Second,
+  `DecayExperience` drops a level-20 pawn to level 19 on any loss, so a rate pinned "at level 20"
+  quietly became a rate at 19 halfway through a 2,556-tick walk — long fixtures must freeze decay.
+  Both look like flaky rates and are neither.
+
+- **"What is she working at" moved from the giver to the driver.** The rate publisher asks every
+  publish, and the answer had lived on `WorkGiver`; the driver now carries a virtual `WorkType`
+  defaulting to hauling — chosen so a driver that never swings (eating, sleeping) and is somehow
+  asked anyway reads as the one work type that prices flat.
+
+- **The work aspect's gate is Working, not merely "has a driver".** An adopted pawn takes a wander
+  job on tick one, and the first version published 777 for an "idle" colonist. Only
+  `workFocus >= 0 && Driver != null` gates `odyssey.pawn.rate.work`, because only the stroke clock
+  reads it. The move aspect is the opposite: a fact about the pawn wherever she stands, so it
+  publishes for everyone.
+
+- **Format 6 appends last and saves nothing it can recompute.** `StarvationSeverity` sits at the
+  very end of the pawn section so a v5 file reads positionally unchanged; the innate pace is
+  deliberately *not* saved — a pure function of seed and id is correct by construction on load,
+  and a saved copy would be a second thing to keep honest. The version-number test did its job:
+  the bump is a deliberate line in a diff, again.
