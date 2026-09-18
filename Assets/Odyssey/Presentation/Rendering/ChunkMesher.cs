@@ -4,6 +4,7 @@ using Odyssey.Presentation.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
+using Odyssey.Hud;
 
 namespace Odyssey.Presentation.Rendering
 {
@@ -489,6 +490,17 @@ namespace Odyssey.Presentation.Rendering
             // a brown multiply, so that a wooden wall stopped coming out as cream plaster, every
             // tree on the board would have been multiplied brown with it. A natural edifice takes
             // no stuff tint at all.
+            //
+            // A tree takes a tint of its own instead: which stand of wood it grows in, which is
+            // what decides its four colours. TreeLook has the argument for why the stand and not
+            // the tree — in short, that this code is a bucket key and a colour per tree would
+            // multiply the tree buckets in every chunk by the length of the palette.
+            if (NaturalContent.IsTree(def))
+            {
+                EmitTree(batch, module, def, x, z, y);
+                return;
+            }
+
             int tint = TintCode.Stuff(def >= NaturalContent.FirstEdifice
                 ? CoreContent.StuffNone
                 : _model.EdificeStuff(index));
@@ -675,6 +687,52 @@ namespace Odyssey.Presentation.Rendering
 
         // ------------------------------------------------------------- buckets
 
+        /// <summary>
+        /// A tree: one bucket per species per chunk, however many colours stand in it.
+        ///
+        /// <para>The four colours travel beside the matrix rather than in the tint code, which is
+        /// the whole reason a wood of two hundred colours costs what a wood of one costs. See
+        /// <c>InstanceBucket.BarkDeep</c> and the instancing buffer in <c>Odyssey/Tree</c>.</para>
+        ///
+        /// <para>A tree is drawn draped like everything else fixed to the grid, and it takes the
+        /// same lift a pillar does, so this is the ordinary body path with a colour attached.</para>
+        /// </summary>
+        void EmitTree(ChunkBatch batch, int module, ushort def, int x, int z, int y)
+        {
+            TreeSpecies species = TreeLook.SpeciesOf(def);
+            TreeTheme theme = TreePalette.At(TreeLook.Theme(x, z, species));
+            Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
+
+            var parts = _model.Library[module].Parts;
+            int tint = TintCode.Tree(species);
+            for (int p = 0; p < parts.Length; p++)
+            {
+                InstanceBucket bucket = BucketFor(batch.Body, _bodyIndex, module, p, tint);
+                bucket.Add(placement * parts[p].Local,
+                    Colour(theme.Bark.Shaded), Colour(theme.Bark.Lit),
+                    Colour(theme.Leaf.Shaded), Colour(theme.Leaf.Lit));
+                batch.InstanceCount++;
+            }
+        }
+
+        /// <summary>
+        /// A palette colour as the shader wants it: the bytes divided down, with no colour-space
+        /// conversion.
+        ///
+        /// <para>Unconverted for the reason <c>ColonistMaterials.Colour</c> records — the tables are
+        /// authored in sRGB hex and the project renders linear, and <c>Material.SetColor</c> is what
+        /// converts a <c>Color</c> property. <b>A vector array is not a colour property</b>, so the
+        /// conversion that used to happen for free has to happen here, and it is why this returns
+        /// the linear value rather than the raw bytes: <c>MaterialPropertyBlock.SetVectorArray</c>
+        /// hands its contents to the shader untouched.</para>
+        /// </summary>
+        static Vector4 Colour(Rgb24 c)
+        {
+            var srgb = new Color(c.R / 255f, c.G / 255f, c.B / 255f, 1f);
+            Color value = QualitySettings.activeColorSpace == ColorSpace.Linear ? srgb.linear : srgb;
+            return new Vector4(value.r, value.g, value.b, 1f);
+        }
+
         void AddBody(ChunkBatch batch, int module, int tint, in Matrix4x4 placement) =>
             Add(batch.Body, _bodyIndex, batch, module, tint, placement);
 
@@ -687,20 +745,36 @@ namespace Odyssey.Presentation.Rendering
             var parts = _model.Library[module].Parts;
             for (int p = 0; p < parts.Length; p++)
             {
-                long key = Key(module, p, tint);
-                if (!lookup.TryGetValue(key, out int slot))
-                {
-                    slot = list.Count;
-                    list.Add(new InstanceBucket { Module = module, Part = p, Tint = tint });
-                    lookup.Add(key, slot);
-                }
-                list[slot].Add(placement * parts[p].Local);
+                BucketFor(list, lookup, module, p, tint).Add(placement * parts[p].Local);
                 batch.InstanceCount++;
             }
         }
 
+        static InstanceBucket BucketFor(List<InstanceBucket> list, Dictionary<long, int> lookup,
+            int module, int part, int tint)
+        {
+            long key = Key(module, part, tint);
+            if (!lookup.TryGetValue(key, out int slot))
+            {
+                slot = list.Count;
+                list.Add(new InstanceBucket { Module = module, Part = part, Tint = tint });
+                lookup.Add(key, slot);
+            }
+            return list[slot];
+        }
+
+        /// <summary>
+        /// The bucket's identity as one number.
+        ///
+        /// <para><b>The tint gets thirty-two bits, and it used to get twenty.</b> That was enough
+        /// while every tint was a small material index, and it silently stopped being enough when a
+        /// tree code started carrying a value at bit 16: a code of fifteen million overflowed into
+        /// the part field. Nothing was observably wrong, because the only modules with a tint that
+        /// large had exactly one part — but "wrong only by luck" is not a property to leave in a
+        /// key.</para>
+        /// </summary>
         static long Key(int module, int part, int tint) =>
-            ((long)module << 40) | ((long)part << 20) | (uint)tint;
+            ((long)module << 44) | ((long)part << 32) | (uint)tint;
 
         static long KeyOf(InstanceBucket bucket) => Key(bucket.Module, bucket.Part, bucket.Tint);
     }

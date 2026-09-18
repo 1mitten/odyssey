@@ -83,6 +83,9 @@ namespace Odyssey.Presentation.Rendering
             public Bounds Bounds;
             public bool CastsShadow;
 
+            /// <summary>The four tree colours, when this batch is a tree. Null for everything else.</summary>
+            public MaterialPropertyBlock? Props;
+
             public void Add(in Matrix4x4 matrix)
             {
                 if (Count == Matrices.Length)
@@ -107,8 +110,8 @@ namespace Odyssey.Presentation.Rendering
         /// that differ in whether they cast — a fault that renders perfectly and looks like a
         /// lighting bug.
         /// </summary>
-        readonly Dictionary<(int Sector, int Mute, int Part, int Tint, bool Shadow, bool Foliage), Batch> _index =
-            new Dictionary<(int, int, int, int, bool, bool), Batch>();
+        readonly Dictionary<(int Sector, int Mute, int Part, int Tint, bool Shadow, bool Foliage, int Theme), Batch> _index =
+            new Dictionary<(int, int, int, int, bool, bool, int), Batch>();
 
         public TerrainSkirt(WorldRenderModel model, MaterialCache materials)
         {
@@ -182,14 +185,14 @@ namespace Odyssey.Presentation.Rendering
             Built = true;
 
             if (!Survey(out int surfaceLayer, out ushort terrain, out int treeDensity,
-                    out int[] treeModules, out int[] treeTints))
+                    out int[] treeModules, out int[] treeThemes))
                 return;
 
             SurfaceLayer = surfaceLayer;
             MeasuredTreeDensity = treeDensity;
 
             BuildGround(terrain);
-            BuildTrees(treeModules, treeTints);
+            BuildTrees(treeModules, treeThemes);
         }
 
         // ------------------------------------------------------------- survey
@@ -204,13 +207,13 @@ namespace Odyssey.Presentation.Rendering
         /// map is every column of it and on a varied one is the level the rim mostly sits at.
         /// </summary>
         bool Survey(out int surfaceLayer, out ushort terrain, out int treeDensityPerMille,
-            out int[] treeModules, out int[] treeTints)
+            out int[] treeModules, out int[] treeThemes)
         {
             surfaceLayer = 0;
             terrain = 0;
             treeDensityPerMille = 0;
             treeModules = Array.Empty<int>();
-            treeTints = Array.Empty<int>();
+            treeThemes = Array.Empty<int>();
 
             GridSize size = _model.Size;
             if (size.SizeX <= 0 || size.SizeZ <= 0 || size.SizeY <= 0) return false;
@@ -260,7 +263,16 @@ namespace Odyssey.Presentation.Rendering
                 trees++;
                 int module = _model.EdificeModule(above);
                 if (module == 0) continue;
-                long key = ((long)module << 20) | (uint)TintCode.Stuff(_model.EdificeStuff(above));
+                // The tree's own tint, which since TreePalette is which stand of wood it grows
+                // in. Sampling it here is what makes the surround the same wood as the board:
+                // the tally is taken by frequency, so a board whose rim is mostly birch puts
+                // mostly birch in the ring outside it without anything having to be told.
+                // The tint takes the low thirty-two bits, not the low twenty it used to: a tree
+                // code carries its theme in bits 16 and up, so twenty bits would have thrown the
+                // theme away and made every tree out here the same colour.
+                // The theme, not the tint code: the code says only which species a tree is now,
+                // and what the surround has to mirror is which *colours* the board is wearing.
+                long key = ((long)module << 32) | (uint)TreeLook.ThemeFor(x, z, edifice);
                 treeCounts.TryGetValue(key, out int count);
                 treeCounts[key] = count + 1;
             }
@@ -276,7 +288,7 @@ namespace Odyssey.Presentation.Rendering
                 }
 
             treeDensityPerMille = (int)(trees * 1000L / surfaceCells);
-            SampleTreeVariants(treeCounts, trees, out treeModules, out treeTints);
+            SampleTreeVariants(treeCounts, trees, out treeModules, out treeThemes);
             return true;
         }
 
@@ -296,27 +308,27 @@ namespace Odyssey.Presentation.Rendering
         /// an even mixture of the kinds that happen to exist.
         /// </summary>
         static void SampleTreeVariants(Dictionary<long, int> counts, int total,
-            out int[] modules, out int[] tints)
+            out int[] modules, out int[] themes)
         {
             modules = Array.Empty<int>();
-            tints = Array.Empty<int>();
+            themes = Array.Empty<int>();
             if (counts.Count == 0 || total <= 0) return;
 
             var slotModules = new List<int>(TreeVariantSlots);
-            var slotTints = new List<int>(TreeVariantSlots);
+            var slotThemes = new List<int>(TreeVariantSlots);
 
             foreach (var pair in counts)
             {
                 int share = Mathf.Max(1, Mathf.RoundToInt(pair.Value / (float)total * TreeVariantSlots));
                 for (int i = 0; i < share && slotModules.Count < TreeVariantSlots; i++)
                 {
-                    slotModules.Add((int)(pair.Key >> 20));
-                    slotTints.Add((int)(pair.Key & 0xFFFFF));
+                    slotModules.Add((int)(pair.Key >> 32));
+                    slotThemes.Add((int)(pair.Key & 0xFFFFFFFFL));
                 }
             }
 
             modules = slotModules.ToArray();
-            tints = slotTints.ToArray();
+            themes = slotThemes.ToArray();
         }
 
         // ------------------------------------------------------------- ground
@@ -479,7 +491,7 @@ namespace Odyssey.Presentation.Rendering
 
         // -------------------------------------------------------------- trees
 
-        void BuildTrees(int[] treeModules, int[] treeTints)
+        void BuildTrees(int[] treeModules, int[] treeThemes)
         {
             if (treeModules.Length == 0 || TreeDensityPercent <= 0) return;
 
@@ -513,14 +525,15 @@ namespace Odyssey.Presentation.Rendering
                 var bounds = new Bounds(foot + local.center, local.size);
 
                 int sector = SectorOf(x, z, treeModules.Length, tree.Variant);
-                Add(_trees, resolved, treeTints[tree.Variant], tree.MuteStep, sector,
-                    castsShadow: tree.CastsShadow, foliage: false, placement, bounds);
+                int theme = treeThemes[tree.Variant];
+                Add(_trees, resolved, TintCode.Tree(TreePalette.At(theme).Species), tree.MuteStep,
+                    sector, castsShadow: tree.CastsShadow, foliage: false, placement, bounds, theme);
             }
 
             // Counted before the far wood is added, so the two numbers are separable in the log
             // and in a milestone report. Order matters: the far count is the difference.
             TreeInstances = CountOf(_trees);
-            BuildFarTrees(treeModules, treeTints, standY, board);
+            BuildFarTrees(treeModules, treeThemes, standY, board);
             FarTreeInstances = CountOf(_trees) - TreeInstances;
         }
 
@@ -541,7 +554,7 @@ namespace Odyssey.Presentation.Rendering
         /// key and is what the desaturation ramp would have given them anyway. And they cast no
         /// shadow at all, which they could not do regardless with a 50 m shadow distance.</para>
         /// </summary>
-        void BuildFarTrees(int[] treeModules, int[] treeTints, float standY,
+        void BuildFarTrees(int[] treeModules, int[] treeThemes, float standY,
             SkirtLayout.SkirtRect board)
         {
             if (!HillTrees) return;
@@ -568,8 +581,10 @@ namespace Odyssey.Presentation.Rendering
                 var bounds = new Bounds(foot + local.center, local.size);
 
                 int sector = FarSectorOf(tree.X, tree.Z, variants, tree.Variant);
-                Add(_trees, resolved, treeTints[tree.Variant], SkirtLayout.MuteSteps, sector,
-                    castsShadow: false, foliage: false, placement, bounds);
+                int theme = treeThemes[tree.Variant];
+                Add(_trees, resolved, TintCode.Tree(TreePalette.At(theme).Species),
+                    SkirtLayout.MuteSteps, sector,
+                    castsShadow: false, foliage: false, placement, bounds, theme);
             }
 
         }
@@ -595,15 +610,18 @@ namespace Odyssey.Presentation.Rendering
         // ------------------------------------------------------------ batches
 
         void Add(List<Batch> into, ResolvedModule resolved, int tintCode, int muteStep, int sector,
-            bool castsShadow, bool foliage, in Matrix4x4 placement, in Bounds bounds)
+            bool castsShadow, bool foliage, in Matrix4x4 placement, in Bounds bounds, int theme = -1)
         {
             ModulePart[] parts = resolved.Parts;
             for (int p = 0; p < parts.Length; p++)
             {
-                var key = (sector, muteStep, p, tintCode, castsShadow, foliage);
+                // The theme is part of the key as well as the tint code, because a tree code names
+                // only its species: two themes of one species would otherwise share a batch and the
+                // surround would go back to being one colour.
+                var key = (sector, muteStep, p, tintCode, castsShadow, foliage, theme);
                 if (!_index.TryGetValue(key, out Batch? batch))
                 {
-                    batch = NewBatch(parts[p], tintCode, muteStep, castsShadow, foliage, bounds);
+                    batch = NewBatch(parts[p], tintCode, muteStep, castsShadow, foliage, bounds, theme);
                     _index.Add(key, batch);
                     into.Add(batch);
                 }
@@ -617,18 +635,29 @@ namespace Odyssey.Presentation.Rendering
         }
 
         Batch NewBatch(ModulePart part, int tintCode, int muteStep, bool castsShadow, bool foliage,
-            in Bounds bounds)
+            in Bounds bounds, int theme)
         {
             ChunkRenderer.ResolveColour(tintCode, part.IsFallback, 1f, out Color tint, out Color emission);
             tint = SkirtLayout.Mute(tint, muteStep);
             emission = SkirtLayout.Mute(emission, muteStep);
 
+            // A tree out here is repainted exactly as one on the board is, haze and all — see
+            // ChunkRenderer.DrawBuckets for why a tree cannot take a single tint. Without this
+            // the wood would change colour at the rim, which is the one thing the surround exists
+            // to prevent.
+            Material? painted = TintCode.IsTree(tintCode) && !part.IsFallback
+                ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(tintCode), 1f, muteStep)
+                : null;
+
             return new Batch
             {
                 Mesh = part.Mesh,
                 Submesh = part.Submesh,
-                Material = _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
+                Material = painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
                     foliage: foliage),
+                Props = painted != null && theme >= 0
+                    ? _materials.Trees.UniformProps(theme, muteStep)
+                    : null,
                 Bounds = bounds,
                 CastsShadow = castsShadow,
             };
@@ -687,6 +716,7 @@ namespace Odyssey.Presentation.Rendering
                     shadowCastingMode = CastShadows && batch.CastsShadow
                         ? ShadowCastingMode.On
                         : ShadowCastingMode.Off,
+                    matProps = batch.Props,
                 };
 
                 int drawn = 0;

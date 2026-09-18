@@ -4321,3 +4321,267 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     one, so that picture had gone on showing the drawn fallback after the portraits landed. It was
     the owner asking whether the roster used the portraits that found it.
 
+
+
+### The wood was two colours, and one of them was nobody's choice (2026-09-18)
+
+The owner played the meadow and said the world reads dull, naming the trees: *"they need to be a
+variety of colours — mix in different shades brown and variation into this list"*, with a table of
+six themes of four colours each, and *"bake it and make it performant"*.
+
+- **The dullness was the consequence of a fix, not an oversight.** A tree draws with **no tint at
+  all**, and `ChunkMesher.EmitEdifice` says why in place: a tree is placed with
+  `NaturalContent.StuffWood` because that is what it is *made of*, not what it was *built from*, so
+  when wood became a brown multiply on 2026-09-17 — to stop a wooden wall drawing as cream plaster
+  — every tree on the board would have gone brown with it. Refusing the stuff tint was right. The
+  side effect nobody wrote down is that it left a tree with no colour lever whatsoever, so the
+  board's whole woodland was whatever two colours PolygonGeneric happened to ship.
+
+- **A tint could not have been the answer even if one had been available.** Measured before
+  anything was built (`TreeSwatchProbe`, `Logs/tree-swatches.txt`): each tree is **one mesh, one
+  submesh, one material**, and the trunk and the canopy are different flat cells of the same
+  4096 × 4096 atlas. `_BaseColor` — the lever every other module in the game is coloured with —
+  multiplies both at once, so browning the bark browns the leaves. That is the same conflation the
+  stuff tint already refuses to make, arriving from the other direction.
+
+- **The three ways to give one mesh two colours, and why the third won.** Recolouring the atlas per
+  theme is out on memory and the number is off the file rather than estimated: 4096 × 4096 is
+  64 MB uncompressed and this wants about a dozen. Shifting UVs onto neighbouring cells needs spare
+  cells nobody owns. Repainting the cells in the fragment shader costs four rectangle tests and no
+  memory at all — and it is legitimate here for exactly the reason it was legitimate for colonists:
+  the probe reports a **maximum texel deviation of 0** inside every cluster of every tree mesh in
+  the pack. The cells really are flat, so replacing the colour inside one throws no art away. Had a
+  canopy come back carrying a gradient, this would have been the wrong mechanism and the design
+  would have had to settle for a multiply.
+
+- **`Odyssey/Tree` is `Odyssey/Character` minus the ink hull, and the two are deliberately not
+  merged.** The hull exists because skinned meshes are missing from the depth texture the outline
+  pass reads; a tree is ordinary instanced geometry that pass inks perfectly well, and a second,
+  closer line of its own would ink every tree twice. The shared half is thirty lines of rectangle
+  arithmetic, and one include for both would have to fix one set of property names — which means
+  renaming the character's, in a feature the owner has already judged.
+
+- **The whole design is the performance question, and the first answer measured badly.** Drawing is
+  bucketed per *(module, part, tint)* in a chunk, so a tree's colour **is** a bucket key and a draw
+  call is what it costs. A chunk of woodland holds about 160 trees, so a colour rolled per tree
+  saturates the palette in nearly every chunk: measured worst chunk **11 of 11 themes**. Dealing a
+  colour to a *stand* of trees instead was the plan, and at the first stand size tried — 20 cells,
+  chosen by eye against the 25-cell chunk — it measured **6.75 buckets a chunk, worst 10**. A
+  saving that thin would not have been worth the feature. The bill is (stands overlapping a chunk)
+  × 2 species, and a 25-cell chunk overlaps about five 20-cell squares; at 40 cells it overlaps
+  two, and the same board measures **4.34 a chunk, worst 9**. The number was moved by the
+  measurement, not by the argument that produced it.
+
+- **And nothing was given up for it.** The obvious cost of wide stands is a small board carrying
+  few colours, so it is measured at the size the game actually loads rather than inferred from the
+  200-cell fixture: a 120-cell meadow shows **all eleven themes**.
+
+- **Stands are cellular, not a quantised grid.** One line shorter and it draws colour boundaries
+  with ruler-straight edges running the full width of the board, which nothing in a landscape does
+  and which reads at once as a bug. Each stand square sows one jittered site and a tree joins the
+  nearest, so a boundary is the bisector of two arbitrary points and wanders; the test measures
+  that as "a boundary crosses 196 of 200 columns" rather than the 5 a grid would give.
+
+- **Everything is a hash of the cell's own coordinates**, as `GroundLook` already required of the
+  ground: a chunk is re-meshed whenever anything in it changes, so a stream of random numbers would
+  recolour the wood every time a colonist felled a tree twenty metres away. Nothing here is saved,
+  hashed or visible to the simulation, no Def moved and **no golden hash moved**.
+
+- **The surround came free and had to be asked for anyway.** `TerrainSkirt` already samples the
+  board's trees by frequency to decide what grows outside the rim, so pointing that sample at the
+  new tint code makes the ring outside the board the same wood as the board. Without it the wood
+  would have changed colour exactly at the rim, which is the one thing the surround exists to
+  prevent. Its distance haze desaturates a tint, so it had to be applied to all four colours and
+  joined the material key.
+
+- **Cost of the third Unity run: `Does.Not.Contain(x)` resolves to the string overload** under
+  Unity's NUnit, so a negated membership assertion against a `HashSet<int>` is a compile error
+  while the *positive* `Does.Contain(x)` two lines above is fine. `docs/lessons.md` has it beside
+  `Assert.Multiple` and `Has.Count`.
+
+- **The draw-call bill on the real board is +57 of 1758, or 3.2%**, instances unchanged at 44,200
+  (`TreeCheck`, wooded 120 x 120). The first run of that sheet reported **the same number three
+  times over**, and the reason is worth keeping: switching the tree *materials* off still leaves the
+  mesher splitting a chunk's trees into a bucket per stand, so the "before" column was the feature
+  measured against itself. A before that is not a before reads exactly like a free feature.
+
+- **And the fidelity control failed, which is what it was for.** With the repaint strength at zero —
+  our shader drawing the pack's own colours — a tree comes out about **a tenth darker in sRGB**
+  than `Synty/Generic_Standard` draws it, with the meadow beside it identical to the last digit.
+  Three explanations were tested and all three died: **emission** (carried across now; changed the
+  picture by nothing, because `_Emission_Color` is black), **the normal map** (the `flat` column,
+  forced to zero, is identical to `plain` *byte for byte*, so the map contributes nothing at this
+  distance), and **screen-space occlusion**, which is on at 0.4 and applied through a keyword —
+  `CompareShaders` prints both keyword sets and **both declare it**. What is left is that the pack's
+  shader is a Shader Graph carrying a built-in target as well as a URP one and ours calls
+  `UniversalFragmentPBR` directly, and closing that means reverse-engineering the graph, which is
+  the licensed-content line. **Not compensated for**: a gain on `_BaseColor` would cancel most of
+  it, but the correction is not uniform (blue wants 1.24 where red wants 1.12) and a fudge factor
+  fitted to two rectangles of one frame is the kind of number this project distrusts on principle.
+  The brightness lever is the palette, and the palette is one table.
+
+- **Verified:** EditMode 1533 total, 0 failed after the pin was moved to the measured figure;
+  fast tier 645 Sim and 358 Hud.
+  **Not verified:** whether any of it looks good. `scripts/unity.sh shot
+  Odyssey.EditorTools.TreeCheck.Run` writes `Logs/tree-{pack,plain,themed}-{play,wood,close}.png`,
+  where `pack` is the wood as the game drew it before and `plain` is our shader with the repaint at
+  zero — the fidelity control that separates "our shader draws a Synty tree differently" from "the
+  palette is wrong". Design, the owner's table and the five themes we added are
+  `docs/design/21-tree-colours.md`.
+
+### The pale tree was a mapping fault, and a wood is a mixture (2026-09-18)
+
+The owner played the coloured wood and sent two notes: *"there was a shorter tree that was
+white/pale leaves that looked odd"*, and *"it all needs a much larger variation of bark and leaf
+colours, really vary it up as much as possible … but also really mix them in together"*.
+
+- **The white tree was not a badly chosen colour; it was a colour put in the wrong place.** The
+  owner's table is authored as a deep colour plus a *fresh leaf / highlight*, which reads as a small
+  bright accent on a mass of the deep colour — and I took that at face value. The mesh is the other
+  way round, and the probe had already said so: the broadleaf's **upper** canopy cell is **49.9%**
+  of its vertices and the lower 24.3%. Whatever goes on top *is* the tree. Silver Birch's highlight
+  #8F9779 and Mossy Birch's #9CAF88 measure luminance 145 and 151, and over half a tree that is a
+  pale sage tree. The shorter tree is the broadleaf, 6.15 m against the pine's 9.47 m, which is what
+  makes the report land on exactly the right mesh.
+
+- **The fix is a change of concept rather than of numbers.** A colour is now **two faces of one
+  colour**, lit and shaded, and the distance between them is taken from the art: the pack's own two
+  canopy greens are a step of **1.21** in luminance, on both meshes. `TreeToneRules` holds that
+  band, a brightness ceiling a little above the art's own brightest canopy, and a chroma floor,
+  because a sage highlight is pale *and* nearly colourless and a colourless canopy reads as a dead
+  tree. Three tests enforce them, so this particular fault cannot come back.
+
+- **Bark needed a band of its own, and that was found rather than decided.** Holding trunks to the
+  canopy's band failed six entries, three of them the owner's — Scots Pine at 2.13, Redwood at 1.79,
+  Ancient Oak at 1.58 — which looked like the owner's table being wrong. Measuring the pack's own
+  trunk pair settled it the other way: trunk #554B40 at luminance 77.9 against the branch-stub cell
+  #9B7E5A at 130.6 is a step of **1.68**. A trunk is a cylinder with a lit side and a canopy is a
+  cloud of leaves that has no such thing. **A rule derived from one kind of surface is a rule about
+  that surface.**
+
+- **"Vary it up as much as possible" is a cross product, not a longer list.** Eleven hand-written
+  four-colour themes became fourteen leaf tones against eight barks for broadleaves and nine against
+  six for conifers: **166 themes out of twenty-two readable lines**. Writing 166 themes by hand
+  would have been 166 more chances to author a white tree. The owner's six survive as the tones they
+  were built from, and the cross product contains their original pairings along with every other.
+  It costs nothing, because the length of this table was never what a wood costs.
+
+- **"Really mix them in together" is the part that does cost, and it is one number.** A stand used
+  to deal one colour, which is what made a wood of uniform patches. A stand now deals a handful —
+  `ThemesPerStand`, four — and each tree picks one by its own hash, so neighbours differ while two
+  woods are different mixtures. Every step of that number multiplies the tree buckets in a chunk, so
+  it is bought with draw calls and nothing else. The handful is drawn without replacement by walking
+  the species' rows at a hashed coprime stride: four independent hashes would hand the same colour
+  out twice about one stand in ten and narrow the mixing with nothing to show for it.
+
+- **Unverified at the time of writing, and the reason is worth recording.** The Unity tier could not
+  run: the owner had the editor open on this very worktree, which is what `check_project_lock` is
+  for, and killing it would have taken the project out from under somebody looking at it. The tone
+  tables were checked outside Unity instead, by parsing the C# table and applying the same
+  arithmetic the tests do — all 37 tones inside their bands, 166 themes — which is a control on the
+  numbers and not on the code.
+
+- **What the mixing cost, measured on the board the game loads**: 1758 draw calls to **2135, +21.4%**,
+  instances unchanged at 44,200. Structurally that is 4.34 tree buckets a chunk becoming **17.72**,
+  worst chunk 9 becoming 29 — against **107** in the worst chunk for a colour rolled freely per
+  tree, which is the row that says why a handful exists at all. The played meadow now draws **89 of
+  166 themes** where it drew eleven, and 75.6% of neighbouring trees are a different colour from
+  each other. It is one knob: `ThemesPerStand` at 3 or 2 gets most of the 21% back.
+
+- **Verified:** EditMode **1544 total, 1532 passed, 0 failed**. **Not verified:** whether a wood
+  this mixed is better than a wood in patches, and whether the plum and rust canopies belong on a
+  board at all — they are the most distinctive rows in the table and the first to veto.
+
+### Adding bright colours did not brighten the wood (2026-09-18)
+
+The owner liked the mixed wood and asked for one more thing: *"can we add some bright colours into
+the leaf — as it seems a bit dull still and needs brighten up"*.
+
+- **The ceiling that stopped the white tree was what was holding the wood down**, so the first job
+  was to work out which way to move it rather than simply raising it. Re-reading the earlier fault
+  settles it: the two entries that caused it were not merely bright, they were bright **and nearly
+  colourless** — #8F9779 is luminance 145 at a chroma of 30, #9CAF88 is 165 at 39. What reads as
+  "white" is a *pale wash*, and a pale wash is high luminance with no colour left in it. So the
+  allowance became a curve rather than a number: `108 + 0.62 x chroma`, capped at 195. A saturated
+  lime may be 165 and a saturated gold 175; a sage at chroma 30 is still held to 127, and both
+  originals are still rejected, by 18 and 33 points.
+
+- **Ten bright tones went in and the table grew from 166 to 240 themes for 0.12 buckets a chunk** —
+  17.72 to 17.84. That is the design's central claim holding under a 45% growth in the table, which
+  is worth recording because it is the first time it has been tested by anything other than an
+  argument.
+
+- **And the board came back warmer and no brighter, which is the lesson.** Seven bright tones among
+  twenty-one means a stand's handful of four draws about one on average and often draws none; the
+  contact sheet's nearest stands had drawn coppers and rusts, and the play camera showed a maroon
+  wood. **Adding a colour to a table dilutes it; it does not lift it.** What lifted it was
+  *reserving a slot*: one of every stand's four is drawn from the bright subset, so every wood
+  carries a bright note whatever else it drew. The handful is the same size, so it is free —
+  18.08 buckets a chunk against 17.84 — and `EveryStandCarriesABrightLeaf` keeps the reservation,
+  because a later session tidying `ThemesOfStand` would not otherwise know the slot was
+  load-bearing.
+
+- **The tint code was widened in the same round, and it was closer than it looked.** A theme index
+  rode in the code's low byte, and at 240 themes the table was **one bark tone short of 255** —
+  where it would have wrapped in silence and drawn one wood in another's colours. It has twelve bits
+  at bit 16 now, clear of the terrain, foliage, water and daylight markers that live in the low
+  bits, and `EveryThemeSurvivesTheTintCode` walks every index through the round trip and checks it
+  trips none of them. The skirt's variant key had to widen with it: it packed the tint into twenty
+  bits, which would have thrown the theme away and drawn every tree outside the board in one colour.
+
+- **Verified:** EditMode **1546 total, 1534 passed, 0 failed**. Cost on the played board 1758 draw
+  calls to **2142, +21.8%**, instances unchanged. **Not verified:** whether the cherry and flame
+  canopies belong — they read as scarlet at the play camera, which is the most conspicuous thing on
+  the board now, and they are the first rows to veto.
+
+### The colour was a bucket key, and it did not have to be (2026-09-18)
+
+The owner's answer to the mixed, brightened wood was *"make as performant as possible please"*. It
+cost 384 draw calls on the played board, +21.8%, and every round up to here had worked around the
+reason rather than at it.
+
+- **The reason is one structural fact.** Drawing is bucketed per *(module, part, tint)* in a chunk,
+  so while a tree's colour lived in its tint code the colour **was** a bucket key. Stands, handfuls
+  and reserved bright slots were all devices for keeping *the number of colours standing in one
+  chunk* small, because that number was the bill. Nothing about a colour requires it to be in the
+  key: the tint code now says only which of the two trees it is — which is what decides the atlas
+  cells to repaint, and so the material — and the four colours travel beside the matrices, read out
+  of an instancing buffer by `Odyssey/Tree`.
+
+- **The result is that a coloured wood is free.** 1,758 draw calls with the wood in two colours and
+  1,758 with it in two hundred; 17.72 tree buckets a chunk becomes **2.00**, one per species; 240
+  themes draw **2** materials instead of 240-odd. Every constraint in the two rounds before this is
+  now a *look* decision rather than a cost one, and stands and the bright slot are kept because the
+  board is better for them.
+
+- **The picture did not change, and that was checked rather than asserted.** The two contact sheets
+  differ by 5.3% of channels — which sounds like a lot until the *same* code shot twice differs by
+  4.8%. The residual is the animated water and the anti-aliased silhouettes of ten thousand leaf
+  cards: sampled canopy, trunk, gold-tree and red-tree patches are identical to a tenth of a unit,
+  and the whole-image mean matches to 0.01 of 255. **A control run is what turned an alarming
+  percentage into a floor.**
+
+- **The first attempt did change it, and the difference image said exactly where.** A bright band of
+  far trees across the horizon and nothing else: the *surround* had not been converted with the
+  board, so it had fallen back to one colour per species. That is precisely the fault `TerrainSkirt`
+  exists to prevent, and it took thirty seconds to find because the instrument was a picture of the
+  difference rather than a number.
+
+- **A property block's array is indexed from zero by every draw call**, not from the instance offset
+  the call starts at. A bucket split across two calls would hand the second the colours of the
+  first. The board slices into a scratch block; the surround, whose batches are each one theme,
+  fills its block to the draw-call ceiling with identical entries so that any slice reads the same
+  colour. Neither path can trigger on today's board — a chunk is 625 cells and a cell holds one tree
+  — and both are there because "cannot happen" is a property of the board's dimensions rather than
+  of the code, and the failure would be a patch of wood wearing its neighbour's colours.
+
+- **A vector array is not a colour property, so the colour space became ours to get right.**
+  `Material.SetColor` converts a `Color` property into the active colour space and `SetVectorArray`
+  hands its contents over untouched. The conversion that used to happen for free is now explicit in
+  `ChunkMesher.Colour`, and the identical sampled patches are the evidence it is right.
+
+- **And a latent overflow was found on the way.** `ChunkMesher.Key` packed the tint into twenty
+  bits — enough while every tint was a small material index, and silently not enough once a tree
+  code carried a value at bit 16: fifteen million overflowed into the part field. Nothing was
+  observably wrong, because the only modules with a tint that large had exactly one part. **Wrong
+  only by luck is not a property to leave in a key**; it has thirty-two bits now.

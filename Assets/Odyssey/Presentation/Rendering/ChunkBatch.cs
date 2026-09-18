@@ -62,11 +62,56 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int DaylitBase = 2048;
 
+        /// <summary>
+        /// Bit 12 marks a code as a tree, whose colour is four colours rather than one.
+        ///
+        /// <para>Every other code in this space resolves to a single tint that multiplies whatever
+        /// is underneath. A tree cannot: it is one mesh with one material, and the pack paints its
+        /// trunk and its canopy from different cells of the same atlas, so one multiply browns the
+        /// leaves along with the bark. It is drawn by <c>TreeMaterials</c> against
+        /// <c>Odyssey/Tree</c>, with the four colours handed over per instance, rather than by
+        /// <c>ResolveColour</c> against <c>MaterialCache</c>.</para>
+        ///
+        /// <para>It earns a bit of its own for the reason foliage and water did: the bucket key
+        /// already <em>is</em> the whole material identity, and which cache a bucket wants is
+        /// exactly the kind of thing that integer is for.</para>
+        /// </summary>
+        public const int TreeBase = 4096;
+
+        /// <summary>
+        /// Where a tree's <b>species</b> sits in the code: bits 16 and up, clear of the terrain,
+        /// foliage, water and daylight markers that live in the low bits.
+        ///
+        /// <para><b>It used to be the theme, and moving it out is what made a coloured wood free.</b>
+        /// A bucket is one instanced draw of one (module, part, tint), so while the colour lived in
+        /// this code it <em>was</em> a bucket key: every extra colour standing in a chunk cost a
+        /// draw call, and a thoroughly mixed wood cost 384 of them on the played board. The colours
+        /// are per-instance data now (<c>InstanceBucket.BarkDeep</c> and its three siblings), and
+        /// all this has to say is which of the two trees it is — because that is what decides which
+        /// atlas cells are repainted, and so which material draws it.</para>
+        /// </summary>
+        public const int TreeShift = 16;
+
+        /// <summary>The largest species index a code can carry.</summary>
+        public const int MaxTreeValue = (1 << 12) - 1;
+
         public static int Stuff(int stuff) => stuff;
 
         public static int Terrain(int terrain) => TerrainBase + terrain;
 
         public static int Foliage(int variant) => FoliageBase + variant;
+
+        /// <summary>A tree of this species. Its colours travel per instance, not in the code.</summary>
+        public static int Tree(TreeSpecies species) => TreeBase | ((int)species << TreeShift);
+
+        /// <summary>
+        /// The species out of a tree code. <see cref="Value"/> is the wrong reader for one — it
+        /// masks the low byte, where a tree keeps nothing at all.
+        /// </summary>
+        public static TreeSpecies TreeSpeciesOf(int code) =>
+            ((code >> TreeShift) & MaxTreeValue) == (int)TreeSpecies.Conifer
+                ? TreeSpecies.Conifer
+                : TreeSpecies.Broadleaf;
 
         /// <summary>Water is terrain as well, so it keeps the terrain bit and its palette entry.</summary>
         public static int Water(int terrain) => WaterBase + TerrainBase + terrain;
@@ -76,6 +121,9 @@ namespace Odyssey.Presentation.Rendering
         public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
 
         public static bool IsWater(int code) => (code & WaterBase) != 0;
+
+        /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
+        public static bool IsTree(int code) => (code & TreeBase) != 0;
 
         /// <summary>Is this bucket open to the sky, and so exempt from the depth shade?</summary>
         public static bool IsDaylit(int code) => (code & DaylitBase) != 0;
@@ -101,12 +149,66 @@ namespace Odyssey.Presentation.Rendering
         public Matrix4x4[] Matrices = new Matrix4x4[16];
         public int Count;
 
-        public void Clear() => Count = 0;
+        /// <summary>
+        /// The four colours of each instance, parallel to <see cref="Matrices"/> — or null for
+        /// every bucket that is not a tree, which is nearly all of them.
+        ///
+        /// <para>This is what took a coloured wood off the draw-call bill. A colour on the material
+        /// is a bucket key and costs a draw call per distinct colour in a chunk; a colour beside
+        /// the matrix costs nothing at all, so the palette is free to be any size. They are four
+        /// separate lists rather than one interleaved array because that is the shape
+        /// <c>MaterialPropertyBlock.SetVectorArray</c> takes — and <b>lists rather than arrays</b>
+        /// because that overload uploads exactly as many entries as the list holds. An array would
+        /// upload its whole capacity, which doubles: a bucket of 600 trees would hand over 1,024
+        /// vectors and trip Unity's 1,023 ceiling for a bucket that is nowhere near it.</para>
+        /// </summary>
+        public List<Vector4>? BarkDeep;
+        public List<Vector4>? BarkWarm;
+        public List<Vector4>? LeafDeep;
+        public List<Vector4>? LeafFresh;
+
+        /// <summary>
+        /// The block handed to the draw, built once when the renderer first needs it rather than
+        /// once a frame. <see cref="Clear"/> drops it, because a re-meshed chunk's colours are new.
+        /// </summary>
+        public MaterialPropertyBlock? Props;
+
+        /// <summary>True when this bucket carries per-instance colours.</summary>
+        public bool IsColoured => BarkDeep != null;
+
+        public void Clear()
+        {
+            Count = 0;
+            Props = null;
+            BarkDeep?.Clear();
+            BarkWarm?.Clear();
+            LeafDeep?.Clear();
+            LeafFresh?.Clear();
+        }
 
         public void Add(in Matrix4x4 matrix)
         {
             if (Count == Matrices.Length) System.Array.Resize(ref Matrices, Matrices.Length * 2);
             Matrices[Count++] = matrix;
+        }
+
+        /// <summary>Add an instance that carries its own four colours.</summary>
+        public void Add(in Matrix4x4 matrix, in Vector4 barkDeep, in Vector4 barkWarm,
+            in Vector4 leafDeep, in Vector4 leafFresh)
+        {
+            if (BarkDeep == null)
+            {
+                BarkDeep = new List<Vector4>(Matrices.Length);
+                BarkWarm = new List<Vector4>(Matrices.Length);
+                LeafDeep = new List<Vector4>(Matrices.Length);
+                LeafFresh = new List<Vector4>(Matrices.Length);
+            }
+
+            Add(matrix);
+            BarkDeep.Add(barkDeep);
+            BarkWarm!.Add(barkWarm);
+            LeafDeep!.Add(leafDeep);
+            LeafFresh!.Add(leafFresh);
         }
     }
 

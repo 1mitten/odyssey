@@ -312,7 +312,17 @@ namespace Odyssey.Presentation.Rendering
 
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
-                Material material = _materials.Get(part.Material, tint, emission, ghost, alpha,
+
+                // A tree is the one bucket whose colour is not a tint: it is four colours painted
+                // into four cells of the pack atlas, which needs its own shader and its own cache.
+                // Everything else — and a ghosted tree, which is drawn by the translucent stand-in
+                // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
+                // means there was no shader or no art, and the fallback is exactly what a tree
+                // drew before this feature existed.
+                Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                    ? _materials.Trees.For(part.Material, TintCode.TreeSpeciesOf(bucket.Tint), shade)
+                    : null;
+                Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
                     foliage: TintCode.IsFoliage(bucket.Tint),
                     water: TintCode.IsWater(bucket.Tint));
 
@@ -352,10 +362,20 @@ namespace Odyssey.Presentation.Rendering
                 // Grass is never in the way, and it is nearly every instance on the board. Leaving
                 // foliage out of the partition is what keeps the cost of this feature confined to
                 // the things that can actually hide a person.
+                // The per-instance colours of a tree, which is what lets every colour in a chunk
+                // share one draw. Built once per meshing rather than once a frame, and only when
+                // the material that reads them is the one actually drawing.
+                bool coloured = painted != null && bucket.IsColoured;
+
                 int faded = sight && !foliage ? Partition(bucket) : 0;
                 if (faded == 0)
                 {
-                    Submit(rp, part, bucket.Matrices, bucket.Count);
+                    if (coloured)
+                        SubmitColoured(rp, part, bucket.Matrices, bucket.Count,
+                            bucket.BarkDeep!, bucket.BarkWarm!, bucket.LeafDeep!, bucket.LeafFresh!,
+                            PropsOf(bucket));
+                    else
+                        Submit(rp, part, bucket.Matrices, bucket.Count);
                     InstancesDrawn += bucket.Count;
                     continue;
                 }
@@ -373,7 +393,15 @@ namespace Odyssey.Presentation.Rendering
                     shadowCastingMode = ShadowCastingMode.Off,
                 };
                 Submit(ghostParams, part, _faded, faded);
-                Submit(rp, part, _solid, bucket.Count - faded);
+                // The solid half is a *filtered* subsequence, so its colours have to be gathered in
+                // the same order — which Partition does as it splits, into scratch lists that are
+                // reused. The ghosted half needs none: it is drawn by the translucent stand-in,
+                // which has no atlas to repaint.
+                if (coloured)
+                    SubmitColoured(rp, part, _solid, bucket.Count - faded,
+                        _solidBarkDeep, _solidBarkWarm, _solidLeafDeep, _solidLeafFresh, SolidProps());
+                else
+                    Submit(rp, part, _solid, bucket.Count - faded);
                 InstancesDrawn += bucket.Count;
                 InstancesFaded += faded;
             }
@@ -404,15 +432,139 @@ namespace Odyssey.Presentation.Rendering
                 _solid = new Matrix4x4[size];
             }
 
+            bool coloured = bucket.IsColoured;
+            if (coloured)
+            {
+                _solidBarkDeep.Clear();
+                _solidBarkWarm.Clear();
+                _solidLeafDeep.Clear();
+                _solidLeafFresh.Clear();
+            }
+
             int fadedCount = 0;
             int solidCount = 0;
             for (int i = 0; i < bucket.Count; i++)
             {
                 Matrix4x4 m = bucket.Matrices[i];
-                if (Sight.Blocks(SightLines.Place(local, m * unplace))) _faded[fadedCount++] = m;
-                else _solid[solidCount++] = m;
+                if (Sight.Blocks(SightLines.Place(local, m * unplace)))
+                {
+                    _faded[fadedCount++] = m;
+                    continue;
+                }
+
+                _solid[solidCount++] = m;
+                if (!coloured) continue;
+                _solidBarkDeep.Add(bucket.BarkDeep![i]);
+                _solidBarkWarm.Add(bucket.BarkWarm![i]);
+                _solidLeafDeep.Add(bucket.LeafDeep![i]);
+                _solidLeafFresh.Add(bucket.LeafFresh![i]);
             }
             return fadedCount;
+        }
+
+        readonly System.Collections.Generic.List<Vector4> _sliceBarkDeep = new System.Collections.Generic.List<Vector4>();
+        readonly System.Collections.Generic.List<Vector4> _sliceBarkWarm = new System.Collections.Generic.List<Vector4>();
+        readonly System.Collections.Generic.List<Vector4> _sliceLeafDeep = new System.Collections.Generic.List<Vector4>();
+        readonly System.Collections.Generic.List<Vector4> _sliceLeafFresh = new System.Collections.Generic.List<Vector4>();
+        MaterialPropertyBlock? _sliceProps;
+
+        /// <summary>
+        /// Submit instances that carry their own colours, in draw calls of at most
+        /// <see cref="MaxInstancesPerCall"/>.
+        ///
+        /// <para><b>Why this is not just <see cref="Submit"/> with a block attached.</b> A property
+        /// block's array is indexed from zero by <em>every</em> draw call, not from the instance
+        /// offset the call starts at — so a run of instances split across two calls would hand the
+        /// second call the colours of the first. Whole runs take the block they already have; a run
+        /// long enough to split copies each slice into a scratch block instead.</para>
+        ///
+        /// <para>The split cannot happen today: a bucket is one module in one chunk, a chunk is 625
+        /// cells, and one cell holds one tree. It is here because "cannot happen today" is a
+        /// property of the board's dimensions rather than of this code, and the failure it would
+        /// produce — a patch of wood wearing its neighbour's colours — is one nobody would read as
+        /// a bug.</para>
+        /// </summary>
+        void SubmitColoured(RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count,
+            System.Collections.Generic.List<Vector4> barkDeep,
+            System.Collections.Generic.List<Vector4> barkWarm,
+            System.Collections.Generic.List<Vector4> leafDeep,
+            System.Collections.Generic.List<Vector4> leafFresh,
+            MaterialPropertyBlock whole)
+        {
+            if (count <= MaxInstancesPerCall)
+            {
+                rp.matProps = whole;
+                Submit(rp, part, matrices, count);
+                return;
+            }
+
+            int drawn = 0;
+            while (drawn < count)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, count - drawn);
+                _sliceProps ??= new MaterialPropertyBlock();
+                Slice(_sliceProps, BarkDeepId, _sliceBarkDeep, barkDeep, drawn, n);
+                Slice(_sliceProps, BarkWarmId, _sliceBarkWarm, barkWarm, drawn, n);
+                Slice(_sliceProps, LeafDeepId, _sliceLeafDeep, leafDeep, drawn, n);
+                Slice(_sliceProps, LeafFreshId, _sliceLeafFresh, leafFresh, drawn, n);
+
+                rp.matProps = _sliceProps;
+                if (SubmitToGpu)
+                    Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, matrices, n, drawn);
+                DrawCalls++;
+                drawn += n;
+            }
+        }
+
+        static void Slice(MaterialPropertyBlock props, int id,
+            System.Collections.Generic.List<Vector4> scratch,
+            System.Collections.Generic.List<Vector4> source, int from, int count)
+        {
+            scratch.Clear();
+            for (int i = 0; i < count; i++) scratch.Add(source[from + i]);
+            props.SetVectorArray(id, scratch);
+        }
+
+        static readonly int BarkDeepId = Shader.PropertyToID("_BarkDeepColour");
+        static readonly int BarkWarmId = Shader.PropertyToID("_BarkWarmColour");
+        static readonly int LeafDeepId = Shader.PropertyToID("_LeafDeepColour");
+        static readonly int LeafFreshId = Shader.PropertyToID("_LeafFreshColour");
+
+        readonly System.Collections.Generic.List<Vector4> _solidBarkDeep = new System.Collections.Generic.List<Vector4>();
+        readonly System.Collections.Generic.List<Vector4> _solidBarkWarm = new System.Collections.Generic.List<Vector4>();
+        readonly System.Collections.Generic.List<Vector4> _solidLeafDeep = new System.Collections.Generic.List<Vector4>();
+        readonly System.Collections.Generic.List<Vector4> _solidLeafFresh = new System.Collections.Generic.List<Vector4>();
+        MaterialPropertyBlock? _solidProps;
+
+        /// <summary>
+        /// The bucket's own colours, as a block the draw can take. Kept on the bucket, so a chunk
+        /// that nothing has changed pays for this once rather than once a frame.
+        /// </summary>
+        static MaterialPropertyBlock PropsOf(InstanceBucket bucket)
+        {
+            if (bucket.Props != null) return bucket.Props;
+
+            var props = new MaterialPropertyBlock();
+            props.SetVectorArray(BarkDeepId, bucket.BarkDeep);
+            props.SetVectorArray(BarkWarmId, bucket.BarkWarm);
+            props.SetVectorArray(LeafDeepId, bucket.LeafDeep);
+            props.SetVectorArray(LeafFreshId, bucket.LeafFresh);
+            bucket.Props = props;
+            return props;
+        }
+
+        /// <summary>
+        /// The same for the solid half of a partitioned bucket, which changes every frame the
+        /// camera or the selection moves and so is rebuilt into one reused block.
+        /// </summary>
+        MaterialPropertyBlock SolidProps()
+        {
+            _solidProps ??= new MaterialPropertyBlock();
+            _solidProps.SetVectorArray(BarkDeepId, _solidBarkDeep);
+            _solidProps.SetVectorArray(BarkWarmId, _solidBarkWarm);
+            _solidProps.SetVectorArray(LeafDeepId, _solidLeafDeep);
+            _solidProps.SetVectorArray(LeafFreshId, _solidLeafFresh);
+            return _solidProps;
         }
 
         void Submit(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
@@ -445,6 +597,24 @@ namespace Odyssey.Presentation.Rendering
                 // Odyssey/Water and the palette entry *is* its colour. The alpha is carried
                 // through untouched below, because for water it is the opacity.
                 tint = StuffPalette.TerrainSolid(value);
+                emission = Color.black;
+            }
+            else if (TintCode.IsTree(tintCode))
+            {
+                // Over real art this is not what colours the tree — TreeMaterials repaints the
+                // atlas's bark and canopy cells separately, which one multiply cannot do — and
+                // white is what the tree drew before any of this existed, so a missing shader
+                // degrades to the pack's own wood rather than to something wrong. Over a
+                // primitive there is no atlas to repaint and the tint is the only colour there
+                // is, so a stand-in box takes the theme's canopy and a clone without the packs
+                // gets a green wood instead of a grey one.
+                // The first theme of the species, because over a primitive there is no atlas to
+                // repaint and no instancing buffer to read: a clone without the packs draws its
+                // whole wood in one colour per species, which is a green box rather than a grey one.
+                tint = fallback
+                    ? TreeMaterials.Colour(TreePalette.At(
+                        TreePalette.For(TintCode.TreeSpeciesOf(tintCode))[0]).Leaf.Lit)
+                    : Color.white;
                 emission = Color.black;
             }
             else if (TintCode.IsTerrain(tintCode))
