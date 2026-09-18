@@ -35,6 +35,7 @@ namespace Odyssey.Tests.Presentation
             // it — so the name is the contract, and a typo on either side is a figure that
             // always works at today's speed and nothing else ever wrong.
             Assert.That(RateAspects.Work, Is.EqualTo(AspectKey.Of("odyssey.pawn.rate.work")));
+            Assert.That(RateAspects.Move, Is.EqualTo(AspectKey.Of("odyssey.pawn.rate.move")));
         }
 
         [Test]

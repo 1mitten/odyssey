@@ -86,7 +86,12 @@ namespace Odyssey.Tests.Sim
         // four rate integers each — rateSkill, workRateBasePerMille, workRateSlopePerLevel and
         // workRateFloorPerMille — so a colonist pays work at her skill's pace and not at the flat
         // speed everything was tuned at (design 17 §3a). Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 3060061624158536349UL;
+        //
+        // Moved a seventh time, the same day, by WS3's movement: MovementDef gained the two innate
+        // pace bounds — 850 to 1,150, capped by the walk cycle's 2 m/s — and PawnKindDef gained
+        // starvationPerInterval, the speed of the bar that starving fills and eating drains
+        // (design 17 §4b, §4c). Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 7457751015177459969UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

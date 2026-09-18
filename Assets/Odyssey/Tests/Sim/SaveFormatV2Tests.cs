@@ -34,17 +34,18 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// Three since U38, which added the two natural-board flags to the recipe. The number is
-        /// asserted rather than merely read so that a bump is always a deliberate line in a diff —
-        /// that is the whole reason this test exists, and it did its job on the way to 3.
+        /// Six since WS3, which grew the pawn a starvation severity bar. The number is asserted
+        /// rather than merely read so that a bump is always a deliberate line in a diff — that is
+        /// the whole reason this test exists, and it did its job on the way to 3.
         /// </summary>
         [Test]
-        public void TheFormatVersionIsFive()
+        public void TheFormatVersionIsSix()
         {
             // 2 was U36's recipe header; 3 U38's barren/wooded recipe flags; 4 the beds' edifice
             // record (facing, quality, owner) and a construction site's facing byte; 5 U42's
-            // milliwork accumulators (Rates). See WorldSave.CurrentFormatVersion.
-            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(5));
+            // milliwork accumulators (Rates); 6 WS3's starvation severity on the pawn. See
+            // WorldSave.CurrentFormatVersion.
+            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(6));
         }
 
         [Test]
@@ -62,7 +63,7 @@ namespace Odyssey.Tests.Sim
             var (restored, restoredCounter) = Build();
             var header = WorldSave.Load(restored, stream, new[] { restoredCounter });
 
-            Assert.That(header.FormatVersion, Is.EqualTo(5));
+            Assert.That(header.FormatVersion, Is.EqualTo(6));
             Assert.That(header.Recipe.Map, Is.EqualTo(MapType.Natural));
             Assert.That(header.Recipe.Scenario, Is.EqualTo("Scenario_Bare"));
             Assert.That(header.Recipe.ColonyName, Is.EqualTo("Meridian"));

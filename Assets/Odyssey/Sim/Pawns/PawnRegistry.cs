@@ -193,6 +193,12 @@ namespace Odyssey.Sim.Pawns
                     workFocus >= 0 && pawn.Driver != null
                         ? pawn.WorkRatePerMille(pawn.Driver.WorkType)
                         : Rates.Scale);
+
+                // And the rate she walks at (design 17 §5) — pace and condition composed. Unlike
+                // the work rate this is a fact about the pawn wherever she stands, so it
+                // publishes for every colonist and not only a working one: whatever draws a
+                // colonist's pace wants to be able to ask it of an idle one.
+                writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
             }
 
             var items = _ctx.Items.Items;
@@ -279,6 +285,11 @@ namespace Odyssey.Sim.Pawns
 
                 writer.Write(pawn.HeldReservations.Count);
                 for (int r = 0; r < pawn.HeldReservations.Count; r++) writer.Write(pawn.HeldReservations[r]);
+
+                // Last in the section on purpose (WS3): a v5 file ends here, so the field sits
+                // where an older reader stops rather than where it would shift every read after
+                // it. Format 6, see WorldSave's version history.
+                writer.Write(pawn.StarvationSeverity);
             }
         }
 
@@ -375,6 +386,11 @@ namespace Odyssey.Sim.Pawns
                     _ctx.Reservations.Reserve(pawn.Id, key);
                     pawn.HeldReservations.Add(key);
                 }
+
+                // Last in the section from format 6 on; a v5 file simply ends here, and a
+                // colonist from one had never been starving by a definition that did not exist.
+                if (reader.FormatVersion >= 6)
+                    pawn.StarvationSeverity = reader.ReadInt();
 
                 _byId[pawn.Id.Value] = _pawns.Count;
                 _pawns.Add(pawn);

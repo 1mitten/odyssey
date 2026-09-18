@@ -13,15 +13,17 @@ using Odyssey.Sim.Worldgen.Natural;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The rate seam (U42, design 17 §2): a rate is per mille, the accumulator scales, and the
+    /// The rate seam (WS1, design 17 §2): a rate is per mille, the accumulator scales, and the
     /// content does not.
     ///
-    /// <para><b>The unit's done criterion is that nothing changes</b>, and the gate for that is
+    /// <para><b>The unit's done criterion was that nothing changes</b>, and the gate for that was
     /// everything else in the suite — the golden masters, the path checksums and the HUD readout
-    /// tests passing unedited while these run. What can be proved here is the shape: the seam
-    /// answers 1,000 everywhere on a fresh colonist, a rate of 500 provably takes twice as long
-    /// at both accumulators, the published fraction reads banked milliwork against a cost in
-    /// ticks, and a number written by an older save is read at the scale it was written in.</para>
+    /// tests passing unedited while these ran. What can be proved here is the shape: a rate of
+    /// 500 provably takes twice as long at both accumulators, the published fraction reads
+    /// banked milliwork against a cost in ticks, and a number written by an older save is read
+    /// at the scale it was written in. WS2 replaced the work answer with the def curve and WS3
+    /// gave movement a pace of its own, so the one test that pinned a fresh colonist at 1,000
+    /// everywhere now pins her at her own pace instead.</para>
     /// </summary>
     public class RateSeamTests
     {
@@ -111,8 +113,9 @@ namespace Odyssey.Tests.Sim
         public void AColonistUntouchedByAnyOfThisPaysAtHerCurvesAndWalksAtTodaysSpeed()
         {
             // WS1 pinned these at 1,000 because that was its done criterion; WS2 replaced the
-            // work answer with the def curve (design 17 §3b) at the colonist's own level — and a
-            // fresh colonist has no levels. Movement and condition are still WS3's to move.
+            // work answer with the def curve (design 17 §3b) at the colonist's own level, and
+            // WS3 gave movement a pace of her own — so the movement answer is now the pace she
+            // was rolled, at a condition that is still baseline.
             ColonyWorld colony = Board();
             var pawn = colony.Pawns.Pawns.Spawn(Size.Index(colony.Start));
 
@@ -125,7 +128,8 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(content.WorkTypes[WorkTypeIndex.Mining].WorkRatePerMille(0)));
             Assert.That(pawn.WorkRatePerMille(WorkTypeIndex.Construction),
                 Is.EqualTo(content.WorkTypes[WorkTypeIndex.Construction].WorkRatePerMille(0)));
-            Assert.That(pawn.MoveRatePerMille(), Is.EqualTo(Rates.Scale));
+            Assert.That(pawn.MoveRatePerMille(), Is.EqualTo(pawn.InnatePacePerMille()),
+                "her own pace, at a condition that has nothing to take off it");
             Assert.That(pawn.ConditionPerMille(), Is.EqualTo(Rates.Scale));
         }
 

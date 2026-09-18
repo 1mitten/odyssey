@@ -152,6 +152,15 @@ namespace Odyssey.Sim.Pawns
         {
             if (ToilIndex == 0)
             {
+                // The collapse catches up with the walk as well as the departure: rest that runs
+                // out on the way to the bed drops the colonist where she is, and the bed waits
+                // for whoever holds it next (WS3, design 17 §4c).
+                if (Pawn.Needs[NeedIndex.Rest] <= 0)
+                {
+                    NextToil();
+                    return JobStatus.Ongoing;
+                }
+
                 if (Job.TargetCell < 0 || Pawn.Cell == Job.TargetCell)
                 {
                     NextToil();

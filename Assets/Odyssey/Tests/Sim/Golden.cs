@@ -107,6 +107,20 @@ namespace Odyssey.Tests.Sim
     /// is content and content cannot move a hash taken before the first tick. Only their
     /// <c>Simulated</c> numbers are new to both branches, which is the one place two changes could
     /// combine. Any other pattern would have meant something had come along uninvited.</para>
+    ///
+    /// <para><b>Moved a seventh time by WS3, and for the first time it is the colonists and not
+    /// the hash that changed.</b> Every colonist now walks at a pace of her own — rolled from her
+    /// seed and id inside ±15 per cent — and at a condition that starvation will learn to take
+    /// from; the composed rate reaches <c>Pawn.MoveProgress</c>, and mid-step milliwork values
+    /// differ the moment a colonist is not walking at exactly 1,000. Read the shape:
+    /// <b>all three <see cref="Case.Simulated"/> values moved and no <see cref="Case.Generated"/>
+    /// one did</b>, the signature of a simulation change with the generator untouched — the pace
+    /// roll is keyed the way passions and starting skills are, but it is <i>drawn lazily on first
+    /// read</i>, so placement's dice are exactly what they were. The golden windows hold no
+    /// standing orders, so what moved is the walks themselves: idle colonists crossing their
+    /// boards at 850 to 1,150 a tick instead of in step. WS2's rate work moved none of these by
+    /// the same reasoning recorded two entries down, and this entry is the re-bake the unit's row
+    /// promised would be deliberate.</para>
     /// </summary>
     public static class Golden
     {
@@ -162,7 +176,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7415324713255390796UL,
-            Simulated = 3128752858895027949UL,
+            Simulated = 5397578720920683558UL,
         };
 
         /// <summary>
@@ -179,7 +193,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 15662665231234558495UL,
-            Simulated = 3319942754904635200UL,
+            Simulated = 7046263050932287688UL,
         };
 
         /// <summary>
@@ -195,7 +209,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 10435990758459796433UL,
+            Simulated = 9209903446312531288UL,
         };
     }
 }

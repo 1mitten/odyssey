@@ -80,6 +80,18 @@ namespace Odyssey.Sim.Pawns
 
         public int[] Needs { get; }
 
+        /// <summary>
+        /// How long she has been starving, 0..1000 (WS3, design 17 §4c) — the severity bar the
+        /// design describes when it says food at zero stops being a need and becomes a condition
+        /// with a name. Grown by <see cref="NeedsSystem"/> while the food need is at zero and
+        /// drained by the same number while it is not, so one meal arrests the bar rather than
+        /// merely stopping it; the bands it steps through are <see cref="StarvationOffsetPerMille"/>'s.
+        ///
+        /// <para><b>Saved.</b> A colonist reloaded mid-starvation is still starving, and how far
+        /// gone is the whole of the answer to "how much time have I got".</para>
+        /// </summary>
+        public int StarvationSeverity { get; set; }
+
         /// <summary>Displayed mood, 0..1000. Drifts toward <see cref="MoodTarget"/>.</summary>
         public int Mood { get; set; }
 
@@ -300,21 +312,82 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Cost units this pawn retires per tick, in thousandths of a tick-at-standard-rate —
-        /// the place a movement-speed modifier belongs. Read off <c>movePerTick</c> content, so
-        /// today's 1 against a flat 100 stays exactly the walk it has always been; WS3 composes
-        /// the innate factor and condition on top, in that order (design 17 §4a).
+        /// Cost units this pawn retires per tick, in thousandths of the tuned speed — the place
+        /// a movement-speed modifier belongs. Composed in the design's fixed order (design 17
+        /// §4a): the pace she was rolled with, then condition, with load and health to arrive
+        /// later in the same product. The terrain's own price is not here and must never be —
+        /// the planner already charges the cell being entered, and a pawn factor in the step
+        /// cost would count it twice (§4g).
         /// </summary>
-        public virtual int MoveRatePerMille() => Content.Movement.movePerTick * Rates.Scale;
+        public virtual int MoveRatePerMille() =>
+            Content.Movement.movePerTick * Rates.Scale
+                * InnatePacePerMille() / 1_000
+                * ConditionPerMille() / 1_000;
+
+        /// <summary>
+        /// The pace this colonist was dealt, per mille of the standard walk, rolled once from
+        /// her seed and her id on the <see cref="PawnPurpose.MovePace"/> stream — the same shape
+        /// as her passions and starting skills, so a seed deals the same people every load.
+        /// Movement's alone: a colonist who walks quickly is not thereby a quicker carpenter.
+        /// Cached on first read, both because the band needs no arithmetic twice and because a
+        /// per-tick roll would be an allocation on every step of every walk.
+        /// </summary>
+        public virtual int InnatePacePerMille()
+        {
+            if (_innatePacePerMille == 0)
+            {
+                var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.MovePace);
+                var movement = Content.Movement;
+                _innatePacePerMille = movement.innatePaceMinPerMille
+                    + rng.NextInt(movement.innatePaceMaxPerMille - movement.innatePaceMinPerMille + 1);
+            }
+
+            return _innatePacePerMille;
+        }
+
+        int _innatePacePerMille;
 
         /// <summary>
         /// How the colonist is right now, as one scalar both rates read: 1,000 is well. One
         /// computation, one floor, two consumers — a colonist in a bad way is slower at walking
         /// and slower at working, and there is exactly one place to ask why. WS1 answered a
-        /// constant; WS3 lets starvation offset it, floored at 700 and ceilinged at 1,000 —
-        /// nothing may raise it above baseline (design 17 §4c).
+        /// constant; WS3 lets starvation offset it, in the three bands of
+        /// <see cref="StarvationOffsetPerMille"/>.
+        ///
+        /// <para>The clamps are the point of writing the method this way. The ceiling is the
+        /// reference's asymmetry and is worth keeping for ever: <b>nothing may raise condition
+        /// above baseline</b> — being dulled slows you, being alert never speeds you up — and a
+        /// future factor that pushes up is clamped here rather than trusted not to exist. The
+        /// floor is ours and stands in for the downed state we do not have: the reference lets
+        /// consciousness fall until the colonist drops, and on the day health builds that
+        /// threshold, the floor gives way to it.</para>
         /// </summary>
-        public virtual int ConditionPerMille() => Rates.Scale;
+        public virtual int ConditionPerMille()
+        {
+            int condition = Rates.Scale - StarvationOffsetPerMille();
+            if (condition > Rates.Scale) condition = Rates.Scale;
+            if (condition < ConditionFloorPerMille) condition = ConditionFloorPerMille;
+            return condition;
+        }
+
+        /// <summary>Condition cannot fall below this, in per mille — 0.7 of herself, however bad
+        /// it gets, until a health system replaces the floor with a threshold (design 17 §4c).</summary>
+        public const int ConditionFloorPerMille = 700;
+
+        /// <summary>
+        /// The offset starvation applies to <see cref="ConditionPerMille"/>, read off the
+        /// severity bar in thirds: −100 minor, −200 moderate, −300 severe. The offsets are the
+        /// design's table (§4c); the bar's thirds as the band edges are ours, chosen so a missed
+        /// meal is not immediately a penalty and the worst band is reached on the fifth day of
+        /// not eating — gentle, recoverable, and legible at a glance on the bar itself.
+        /// </summary>
+        public virtual int StarvationOffsetPerMille()
+        {
+            if (StarvationSeverity >= 750) return 300;
+            if (StarvationSeverity >= 500) return 200;
+            if (StarvationSeverity >= 250) return 100;
+            return 0;
+        }
 
         /// <summary>
         /// How this pawn traverses. Taken from the current job and fixed for its whole life: a

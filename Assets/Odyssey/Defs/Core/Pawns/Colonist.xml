@@ -41,6 +41,16 @@
   <MovementDef>
     <defName>Movement_Colonist</defName>
     <movePerTick>1</movePerTick>
+    <!--
+      The band a colonist's innate pace rolls in (WS3, design 17 §4b): rolled once per colonist
+      from her seed and her id, so a seed deals the same walkers every load. +-15 per cent is
+      bounded by the drawing, not by taste — the walk cycle covers about 2 m/s and movePerTick 1
+      is 1.5 m/s, so anything past roughly 1,333 would visibly jog while ostensibly walking.
+      Everything faster is reserved for a run, which is held until the game has something worth
+      running from.
+    -->
+    <innatePaceMinPerMille>850</innatePaceMinPerMille>
+    <innatePaceMaxPerMille>1150</innatePaceMaxPerMille>
     <layerChangeEstimate>300</layerChangeEstimate>
   </MovementDef>
 
@@ -61,6 +71,15 @@
       run measures nothing but mental breaks.
     -->
     <joyGainPerInterval>8</joyGainPerInterval>
+    <!--
+      Starvation severity per needs interval (WS3, design 17 §4c): gained while the food need is
+      at zero, lost at the same rate while it is not, so one meal arrests the bar rather than
+      merely stopping it. INVENTED: the design pins the three offsets, the floor and the demand
+      that recovery be symmetric, and nothing about the bar's speed. Two of a thousand is a fifth
+      of the bar a day — with the runway at about seventy-two hours, the first band arrives
+      somewhere past hour eighty and the worst on the fifth day of not eating.
+    -->
+    <starvationPerInterval>2</starvationPerInterval>
     <!--
       Odds, per cent, that a freshly spawned colonist has a minor or a major passion for any one
       skill; the rest are none. ASSUMED: nothing in docs/research has measured how the reference

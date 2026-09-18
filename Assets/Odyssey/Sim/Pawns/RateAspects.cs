@@ -19,5 +19,12 @@ namespace Odyssey.Sim.Pawns
         /// working, because a figure that runs no stroke clock has no rate to publish.
         /// </summary>
         public static readonly AspectKey Work = AspectKey.Of("odyssey.pawn.rate.work");
+
+        /// <summary>
+        /// The rate the pawn walks at, per mille (design 17 §5) — pace and condition composed. A
+        /// fact about the pawn wherever she stands, unlike the tile readout's "walk speed",
+        /// which is a fact about the cell and keeps the phrase.
+        /// </summary>
+        public static readonly AspectKey Move = AspectKey.Of("odyssey.pawn.rate.move");
     }
 }

@@ -452,6 +452,19 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int movePerTick = 1;
 
+        /// <summary>
+        /// The band a colonist's innate pace rolls in, per mille of the standard walk (WS3,
+        /// design 17 §4b). The bounds are not free taste: the top of the band is bounded by the
+        /// drawn walk cycle, which covers about 2 m/s where <see cref="movePerTick"/> 1 is
+        /// 1.5 m/s, so anything past about 1,333 would visibly jog while ostensibly walking.
+        /// ±15 per cent keeps every colonist inside a walk — roughly the true spread of human
+        /// walking pace — and everything faster is reserved for a deliberate run, which is held
+        /// (§4f) until the game has something worth running from.
+        /// </summary>
+        public int innatePaceMinPerMille = 850;
+
+        public int innatePaceMaxPerMille = 1_150;
+
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;
     }
@@ -477,6 +490,17 @@ namespace Odyssey.Sim.Pawns
         /// colonist and a long run measures nothing but mental breaks.
         /// </summary>
         public int joyGainPerInterval = 8;
+
+        /// <summary>
+        /// Starvation severity gained per needs interval while the food need is at zero, and
+        /// lost per interval while it is not (WS3, design 17 §4c). INVENTED: the design pins the
+        /// three offsets and the floor and nothing about the bar's speed. Two of a thousand
+        /// gives a fifth of the bar per in-game day — food gone at hour seventy-two, the first
+        /// effect somewhere past hour eighty, severe on the fifth day of not eating — which is
+        /// the gentle slope the design argues for: recovery is symmetric by the same number, so
+        /// one meal arrests the bar rather than merely stopping it.
+        /// </summary>
+        public int starvationPerInterval = 2;
 
         /// <summary>
         /// Odds, per cent, that a freshly spawned colonist of this kind has a minor or a major
@@ -819,5 +843,18 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="BuildSuccess"/>, <see cref="BuildBotchLoss"/>, this.</para>
         /// </summary>
         public const uint BuildQuality = 0x7F4A_7C15;
+
+        /// <summary>
+        /// A colonist's innate walking pace (design 17 §4b). Drawn from (world seed, pawn id),
+        /// the same shape as <see cref="Passion"/> and <see cref="StartingSkill"/> and for the
+        /// same reason: a seed deals the same people every load, a pace is a fact about the
+        /// person and not about the moment, and sharing a salt with another pawn roll would tie
+        /// one colonist's walk to another colonist's temper by coincidence of arithmetic.
+        ///
+        /// <para>The fifth constant outside the spent xxHash family: SHA-256's first round
+        /// constant, reached for the same reason the MurmurHash3 constants were — the primes are
+        /// gone and distinct families read as the discipline they are.</para>
+        /// </summary>
+        public const uint MovePace = 0x428A_2F98;
     }
 }
