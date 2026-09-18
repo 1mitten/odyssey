@@ -1091,15 +1091,63 @@ namespace Odyssey.Presentation.Rendering
         readonly Matrix4x4[] _floorMatrices = new Matrix4x4[8];
 
         /// <summary>
+        /// Bias above the floor surface in metres, so the bracket does not z-fight with the ground mesh.
+        /// </summary>
+        public const float FloorBracketBias = 0.008f;
+
+        /// <summary>
+        /// The eight bars of a floor bracket in the placement's own space: two along the horizontal
+        /// axes at each of the four corners of a cell.
+        ///
+        /// <para>Separated from the draw so the geometry can be asserted rather than looked at.</para>
+        /// </summary>
+        public static int FloorBracketEdges(Matrix4x4 place, Matrix4x4[] into, float[]? cornerRises = null)
+        {
+            float half = CellMetrics.HalfXZ;
+            float length = Mathf.Max(CellMetrics.SizeXZ * BracketStub, BracketThickness);
+            int n = 0;
+
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float sx = (corner & 1) == 0 ? -1f : 1f;
+                float sz = (corner & 2) == 0 ? -1f : 1f;
+                float rise = cornerRises != null && corner < cornerRises.Length ? cornerRises[corner] : 0f;
+                float y = BracketThickness * 0.5f + FloorBracketBias + rise;
+
+                // Along X: extends inward from sx * half towards 0
+                var offsetX = new Vector3(
+                    sx * (half - length * 0.5f),
+                    y,
+                    sz * (half - BracketThickness * 0.5f));
+                var scaleX = new Vector3(length, BracketThickness, BracketThickness);
+                into[n++] = place * ScaledAt(offsetX, scaleX);
+
+                // Along Z: extends inward from sz * half towards 0
+                var offsetZ = new Vector3(
+                    sx * (half - BracketThickness * 0.5f),
+                    y,
+                    sz * (half - length * 0.5f));
+                var scaleZ = new Vector3(BracketThickness, BracketThickness, length);
+                into[n++] = place * ScaledAt(offsetZ, scaleZ);
+            }
+
+            return n;
+        }
+
+        /// <summary>
         /// The cursor for a cell with nothing in it: four corners on the floor, two stubs each.
         ///
-        /// Selecting empty ground has to show *something*, because a click with no visible
-        /// answer reads as a click that was ignored — but a three-metre cube over bare grass says
-        /// there is a thing there when there is not. A flat ring says "this square", which is all
-        /// that is true, and it is the natural shape for the build and dig designations that will
-        /// land on empty ground later.
+        /// <para>Draped rather than lifted, so the ring lies along the same tangent plane the ground
+        /// or floor slab does and the stubs stay flush above the surface without cutting into it on
+        /// a slope.</para>
         /// </summary>
-        public void DrawFloorBracket(CellRef cell, Color colour)
+        public void DrawFloorBracket(CellRef cell, Color colour) =>
+            DrawFloorBracket(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour);
+
+        /// <summary>
+        /// The cursor placed at an explicit surface transform, for water and banks.
+        /// </summary>
+        public void DrawFloorBracket(Matrix4x4 placement, Color colour, float[]? cornerRises = null)
         {
             Material material = BracketMaterial(colour);
             var rp = new RenderParams(material)
@@ -1109,29 +1157,7 @@ namespace Odyssey.Presentation.Rendering
                 receiveShadows = false,
             };
 
-            // A few centimetres up, or the ring z-fights with the ground it is drawn on.
-            Vector3 centre = CellMetrics.FloorCentre(cell) + Vector3.up * 0.04f;
-            float half = CellMetrics.SizeXZ * 0.5f;
-            float length = Mathf.Max(CellMetrics.SizeXZ * BracketStub, BracketThickness);
-            int n = 0;
-
-            for (int corner = 0; corner < 4; corner++)
-            {
-                float sx = (corner & 1) == 0 ? -1f : 1f;
-                float sz = (corner & 2) == 0 ? -1f : 1f;
-                // Each corner at its own height: the cell under the cursor is tilted, so a ring
-                // drawn at one height would sink into the ground on one side and hover on the
-                // other - which is exactly the tell that the cursor and the ground disagree.
-                var at = GroundRelief.Lift(
-                    new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half));
-
-                _floorMatrices[n++] = Matrix4x4.TRS(
-                    at - new Vector3(sx * length * 0.5f, 0f, 0f), Quaternion.identity,
-                    new Vector3(length, BracketThickness, BracketThickness));
-                _floorMatrices[n++] = Matrix4x4.TRS(
-                    at - new Vector3(0f, 0f, sz * length * 0.5f), Quaternion.identity,
-                    new Vector3(BracketThickness, BracketThickness, length));
-            }
+            int n = FloorBracketEdges(placement, _floorMatrices, cornerRises);
 
             if (SubmitToGpu)
                 Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _floorMatrices, n);
@@ -1142,7 +1168,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The bracket cursor around one whole cell.</summary>
         public void DrawCellHighlight(CellRef cell, Color colour) =>
             DrawSelectionBracket(
-                GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
+                GroundRelief.Drape(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
                 new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ),
                 colour);
 
@@ -1607,7 +1633,10 @@ namespace Odyssey.Presentation.Rendering
                 GroundRelief.Drape(centre) * Matrix4x4.Scale(size));
         }
 
-        public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
+        public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour) =>
+            DrawSelectionBracket(Matrix4x4.Translate(centre), size, colour);
+
+        public void DrawSelectionBracket(Matrix4x4 place, Vector3 size, Color colour)
         {
             // Translucent, and emissive so it does not go dim with the light: a cursor has to be
             // findable at a glance without becoming the brightest thing on the board. The alpha
@@ -1633,9 +1662,9 @@ namespace Odyssey.Presentation.Rendering
                     (corner & 4) == 0 ? -1f : 1f);
 
                 var at = new Vector3(
-                    centre.x + sign.x * half.x,
-                    centre.y + sign.y * half.y,
-                    centre.z + sign.z * half.z);
+                    sign.x * half.x,
+                    sign.y * half.y,
+                    sign.z * half.z);
 
                 for (int axis = 0; axis < 3; axis++)
                 {
@@ -1651,7 +1680,7 @@ namespace Odyssey.Presentation.Rendering
                     Vector3 position = at;
                     position[axis] -= sign[axis] * length * 0.5f;
 
-                    _bracketMatrices[n++] = Matrix4x4.TRS(position, Quaternion.identity, scale);
+                    _bracketMatrices[n++] = place * ScaledAt(position, scale);
                 }
             }
 

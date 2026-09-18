@@ -1838,6 +1838,40 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            if (WaterLine.IsWater(_model, cell))
+            {
+                float lift = WaterLine.SurfaceAbove(_model, cell);
+                Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell) + Vector3.up * lift);
+                _renderer.DrawFloorBracket(placement, colour);
+                return;
+            }
+
+            BankLayout.Bank bank = BankLayout.At(_model, cell);
+            if (bank.Exists)
+            {
+                if (bank.Kind == BankMesh.Kind.Straight)
+                {
+                    Matrix4x4 placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell)) *
+                                          Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)) *
+                                          BankLayout.StraightBankShear();
+                    _renderer.DrawFloorBracket(placement, colour);
+                }
+                else
+                {
+                    Matrix4x4 place = GroundRelief.Drape(CellMetrics.FloorCentre(cell)) *
+                                      Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f));
+                    var cornerRises = new float[4];
+                    for (int k = 0; k < 4; k++)
+                    {
+                        float localX = ((k & 1) == 0 ? -1f : 1f) * 0.5f;
+                        float localZ = ((k & 2) == 0 ? -1f : 1f) * 0.5f;
+                        cornerRises[k] = (BankMesh.HeightAt(bank.Kind, localX, localZ) + 0.5f) * CellMetrics.SizeY;
+                    }
+                    _renderer.DrawFloorBracket(place, colour, cornerRises);
+                }
+                return;
+            }
+
             _renderer.DrawFloorBracket(cell, colour);
         }
 

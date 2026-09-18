@@ -6000,6 +6000,87 @@ Three owner asks in one branch, and the first turned out to be the biggest.
   apart.
 - **Verified:** fast tier **724 Sim + 432 Hud**; EditMode **1740 total, 1726 passed, 0 failed**;
   PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
+- **The white selection cursor sitting flush on terrain, floors, water, and banks (2026-09-18).**
+  The white cursor bracket used to select cells and inspect info in the world previously failed to sit flush on sloped terrain:
+  part of the bracket stubs sank into the ground (obscured from view) while the opposite edges hovered high in the air.
+  - **Root causes in `ChunkRenderer.DrawFloorBracket`:**
+    1. Stubs were placed with `Quaternion.identity` (pure horizontal orientation) and only 5 mm initial clearance (`0.04m - 0.035m`), while ground mesh and floor slabs are rendered as sheared tangent planes via `GroundRelief.Drape(centre)`. On meadow slopes (~8°), an unrotated horizontal stub sinks up to ~7 cm into the rising ground.
+    2. Stubs sampled `GroundRelief.Lift` independently at each of the four cell corners. Because the ground relief is curved (sinusoids), four corner elevations disagree with the planar sheared mesh of the cell.
+    3. `DrawFloorBracket` ignored water surface elevation (`WaterLine.SurfaceAbove`) and bank ramps (`BankLayout.At`), drawing the bracket at the submerged cell floor or buried inside bank ramps.
+  - **The geometric solution (`docs/design/23-flush-selection-cursor.md`):**
+    - The eight stubs of a floor bracket (two per corner) are defined in cell-local coordinates and transformed by the surface's placement matrix:
+      `placement = GroundRelief.Drape(surfaceCentre)`.
+    - Because the stubs share the exact shear transformation `(m10 = slopeX, m12 = slopeZ)` as the terrain mesh, every point on the bottom face of every stub maintains an exact, uniform clearance of `FloorBracketBias = 0.008f` (8 mm) above the draped ground plane, completely eliminating ground clipping and z-fighting on any slope.
+    - Surface elevation resolution:
+      1. Water cells: `placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell) + Vector3.up * WaterLine.SurfaceAbove(_model, cell))` rests the cursor directly on the water surface.
+      2. Straight bank risers: `BankLayout.StraightBankShear()` shears the bracket stubs by `SizeY / SizeXZ = 1.2` along local Z, so stubs along Z tilt with the 1.2 ramp slope from lower terrace to upper terrace while X stubs remain horizontal across the ramp.
+      3. Corner bank risers: 4-corner rise values calculated from `BankMesh.HeightAt` lift corner stubs to conform to the inner/outer bank facets.
+      4. Solid blocks / edifices: `DrawCellHighlight` updated from `Lift` to `Drape`, ensuring upright cell selection boxes remain plumb and full height on slopes.
+  - **Asserted rather than looked at:** Added `Assets/Odyssey/Presentation/Tests/SelectionCursorTests.cs` verifying the 8-stub topology, exact 8 mm clearance on flat ground and ~8° slopes, straight bank shear slopes, corner rises, and water placement elevation.
+  - **Verified:** fast tier **724 Sim + 438 Hud**; EditMode **1752 total, 1738 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+- **Colonist head turning and procedural gaze (2026-09-18, on `claude/colonist-head-turn`).**
+  Colonists previously maintained rigid, forward-locked heads throughout all activities — chopping trees, mining rock, hauling, climbing ladders, and wandering across the meadow.
+  - **Architecture & Seams:**
+    - Presentation-only procedural kinematics (`Assets/Odyssey/Presentation/World/HeadLookKinematics.cs` and `PawnFigureDirector.cs`), completely decoupled from simulation and determinism (`Odyssey.Sim` untouched, zero hash impact).
+    - Transforms applied directly to `Neck` and `Head` bones immediately following `Graph.Evaluate()` in `PawnFigureDirector.ApplyGazePose(deltaTime)`. Runs cleanly on top of `PlayableGraph` without requiring `OnAnimatorIK`.
+    - World-axis rotation application (`rot * bone.rotation` around `chest.up` and `chest.right`): bone rotations are applied around chest reference frame axes rather than arbitrary local bone orientations, ensuring cross-rig consistency across all Synty models.
+    - Reference frame decoupling from Chest/Spine: yaw and pitch are calculated relative to the colonist's upper torso orientation, ensuring that terrain slopes, locomotion leans, and crouch animations do not produce unnatural axial roll.
+  - **Anatomical 30/70 Partition & Limits:**
+    - Distributed 30% to `Neck` and 70% to `Head` (research `e-06-head-look-kinematics.md`). Low-poly character meshes have minimal neck topology; applying 100% to head causes severe mesh twisting/pinching, while rotating neck alone produces a stiff robotic column. 30/70 gives natural cervical curvature without polygon collapse.
+    - Clamped to natural anatomical limits: yaw $\pm 60^\circ$, pitch down $-40^\circ$ (depression), pitch up $+35^\circ$ (elevation).
+    - Cubic smoothstep rear hemisphere attenuation: targets beyond $60^\circ$ yaw attenuate to 0 weight by $95^\circ$, preventing backward neck-snapping when a target moves behind the character.
+    - Smooth damping via `Mathf.SmoothDampAngle` ($300^\circ$/s max speed, 0.12s smooth time) produces organic saccadic head movement.
+  - **6-Tier Pre-emptive Gaze Arbiter:**
+    1. `SleepLock` (Tier 6): When asleep or in a bed, gaze weight immediately drops to 0, leaving the sleeper pose natural and resting.
+    2. `LadderTraversal` (Tier 5): Climbing pawns look up ($+30^\circ$ pitch) when ascending or down ($-35^\circ$ pitch) when descending.
+    3. `WorkFocus` (Tier 4): Working pawns dynamically track `WorkCentre` in world space, actively looking at the tree trunk while chopping, rock face while mining, or ground crop while sowing/harvesting.
+    4. `SocialPassing` (Tier 3): Detects oncoming colonists within 6 m (~2.5 cells) and turns gaze toward the passing colonist's head for 1.3 s with a 20 s cooldown.
+    5. `AmbientWander` (Tier 2): Idle and walking pawns occasionally look around ($\pm 15^\circ$ to $\pm 35^\circ$ yaw, $\pm 8^\circ$ pitch) for 1.2–1.8 s.
+    6. `PathForward` (Tier 1): Default forward-facing gaze (3.0–6.0 s dwell), with job-specific posture pitch offsets (hauling/delivering carries $-12^\circ$ downward tilt; eating carries $-25^\circ$ downward gaze).
+  - **Zero Allocations & Deterministic Cadence:**
+    - `LookGazeState` is a pure struct stored inline in `PawnFigureDirector.Figure` (0 B GC.Alloc).
+    - Cadence and ambient glance angles are derived from lightweight pseudo-random hashing seeded by pawn ID and state timers, completely independent of `UnityEngine.Random`.
+  - **Tests & Verification:**
+    - Unit test suite in `Assets/Odyssey/Presentation/Tests/HeadLookKinematicsTests.cs` (15 tests covering look-at trigonometry, reference frames, rear attenuation, limits, 30/70 partition, head-only fallback, ladder angles, hauling/eating posture offsets, and smooth neutral return).
+    - Fast tier: **724 Sim + 438 Hud passed**.
+    - EditMode: **1767 total, 1753 passed, 0 failed**.
+    - PlayMode: **82 total, 77 passed, 0 failed**.
+    - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
+- **Head turning refinement: pure cervical axial swivel and felling target elevation (2026-09-18, on `claude/colonist-head-turn`).**
+  Owner PlayMode testing reported two distinct visual issues: (1) heads tilting in strange ways instead of cleanly swivelling left/right sat on the neck, and (2) colonists chopping trees looking down at the ground rather than at the tree trunk.
+  - **Root Causes:**
+    1. Using `refFrame = Chest` coupled with a 30% rotation on `Neck` rotated the head around an oblique axis whenever the chest leaned during walking or swung during an axe stroke, forcing the skull into an eccentric cone and inducing severe ear-to-shoulder roll (lateral flexion).
+    2. Odyssey cell origins are at floor level ($Y = 0$). Colonists have eye height at $Y \approx 1.4$ m. Directing `WorkFocus` at `figure.WorkCentre` aimed at the dirt roots 2.5 m away ($\approx -35^\circ$ pitch), pulling the head down to its maximum chin-chest depression limit.
+  - **Refined Kinematics & Fixes (`docs/research/e-07-head-axial-rotation-and-felling-gaze.md`):**
+    1. **Pure Head-Only Rotation Sat on Neck (0% Neck, 100% Head):** The `Neck` bone remains static as a stable mounting post. Rotation is applied solely to the `Head` bone around the neck's longitudinal cervical axis (`neck.up` in world space) for yaw and transverse condyle axis (`neck.right`) for pitch. This produces clean left/right looking around sat on the neck with mathematically $0.0^\circ$ ear-to-shoulder roll.
+    2. **Felling & Mining Work Target Elevation (+1.30m):** `TargetWorldPosition` during `WorkFocus` is elevated by $+1.30$ m above cell base floor level (`figure.WorkCentre + Vector3.up * 1.30f`). This brings the gaze to near-level ($\approx -2.3^\circ$), keeping the colonist focused directly on the tree trunk notch and foliage.
+  - **Tests & Verification:**
+    - Updated `Assets/Odyssey/Presentation/Tests/HeadLookKinematicsTests.cs`: verified Neck remains untouched (`Quaternion.identity`), Head receives 100% of yaw and pitch with exact $0.0^\circ$ roll, and felling target elevation yields $-2.3^\circ \pm 1.0^\circ$ pitch.
+    - Fast tier: **724 Sim + 438 Hud passed**.
+    - EditMode: **1767 total, 1753 passed, 0 failed**.
+    - PlayMode: **82 total, 77 passed, 0 failed**.
+    - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
+- **Head turning: eliminating ear-to-shoulder roll with orthonormal LookRotation (2026-09-18, on `claude/colonist-head-turn`).**
+  Owner testing identified that while walking around and chopping, colonist heads were rolling (lateral tilt) rather than cleanly yawing left/right and pitching up/down: *"the head is rolling, - it needs to yaw to look left and right and pitch up and down slightly. When walking around"*.
+  - **Empirical Diagnosis & Root Causes:**
+    1. **Additive Multiplication on Swaying/Pitched Bones:** `ApplyAdditiveRotation` previously used `head.rotation = headRot * head.rotation`. In locomotion clips (walk/run), the pelvis and spine sway laterally with each step. In work poses (felling/mining), the spine is pitched and twisted by the diagonal axe swing (`SwingAxis` has 30° tilt). Multiplying an incremental rotation onto an already-swayed/twisted bone compounded with the torso tilt, converting horizontal yaw into diagonal ear-to-shoulder roll.
+    2. **Un-yawed Pitch Axis Cross-Product:** Applying yaw and pitch via separate Euler-style factors (`yawRot * pitchRot`) without turning the pitch axis with the yaw produced cross-axis roll proportional to $\sin(\text{yaw}) \times \sin(\text{pitch})$ whenever both angles were active.
+    3. **Double Application in Test/Editor Loops:** `PawnFigureDirector` runs `ApplyGazePose` in both `Sync` and `Evaluate`. Because the Synty locomotion clips do not key the `Head` bone, `Graph.Evaluate` never reset the head rotation between the two passes, causing additive angles to double within a single frame in editor harnesses.
+  - **The Orthonormal Solution (`HeadLookKinematics.ApplyAdditiveRotation`):**
+    - Head orientation is computed from the smoothed gaze angles as an **absolute orientation** rather than an incremental delta:
+      1. Construct the gaze direction in body space: `localDir = Quaternion.Euler(-pitch, yaw, 0f) * Vector3.forward`.
+      2. Transform to world space: `worldDir = referenceFrame.TransformDirection(localDir)`.
+      3. Align the head via `Quaternion.LookRotation(worldDir, yawAxis)`.
+    - By construction, `Quaternion.LookRotation(worldDir, yawAxis)` forces the head's local upright to align strictly with the body's upright (`figure.Transform.up`), guaranteeing **mathematically $0.0^\circ$ ear-to-shoulder roll** regardless of spine bending or torso tilt.
+    - Because the target orientation is absolute, running across both `Sync` and `Evaluate` produces the identical rotation and **cannot accumulate or drift**.
+    - During ambient wandering and walking, the head turns cleanly left and right in pure yaw, nodding slightly in pitch, with zero lateral tilt.
+    - During chopping and mining, the head faces squarely at the tree trunk/rock face at chest level ($+1.30$ m) with level ears, confirmed visually in contact sheets `Logs/swing-impact.png` and `Logs/swing-4.png`.
+  - **Verified:** fast tier **724 Sim + 438 Hud passed**; EditMode **1767 total, 1753 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content gates clean.
+
+
 
 ### Nothing grows at the foot of a terrace step (2026-09-18, branch `claude/terrace-foot-guard`)
 
