@@ -5982,3 +5982,14 @@ to ripe that what looks pickable nearly is.
 And "absolutely no change in the carrots": the catalogue was right on disk and stale in the
 owner's session - her editor held the project while the rebuild was blocked, so she played the
 previous asset. A fresh open has the bigger, sunk, five-to-a-plot carrots.
+
+### A day of play, closed out (2026-09-18, evening)
+
+The first play day on the growing zone: nine looks, six fixes, and every one of them a thing no
+contact sheet had said. The kneel replaced the chop; the green became brown became one whole-tile
+patch of near-black; the ground went mesh, mesh, terrain; the seeds learned to appear under the
+kneel and nowhere else; the big carrot learned to arrive nearly ripe; and the pane learned to say
+how many a plot grows. The catalogue taught its lesson twice - a rebuild wipes the swatch
+classifier's work unless the classifier runs behind it - and the fast tier's blind spot (it
+compiles neither Presentation nor Editor) cost the owner two Safe Mode dialogs before the batch
+compile became the gate it should always have been.

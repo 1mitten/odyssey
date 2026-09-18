@@ -219,10 +219,11 @@ honest caveats attached. First, the measured field is **young**: five colonists 
 the sowing queue across a board-wide band in ten days, so 537 of 2,041 cells carried a crop and
 none had ripened when the frames were taken — the crop meshes and the tint are what was measured,
 and a fully ripe field is the same three meshes at a later bucket, not a fourth thing. Second,
-**crops cost about one draw call each** in the current renderer: the field sits at 2,630 draw
-calls against the meadow's 1,540, and that per-crop cost, not the growth pass (O(planted) every
-250 ticks, unmeasurable at 0.006 ms a tick in the soak), is the scaling thing to watch when the
-first real farm goes in. Both caveats are recorded rather than papered over; the soak-run ledger
+**a field's cost is buckets, not plants**: each crop species×stage×daylight is one instanced
+bucket per chunk, so a plot drawing its five plants multiplies instances fivefold and adds no
+draw calls — the 2,630 draws against the meadow's 1,540 was measured at one plant a cell and is
+unchanged by the yield. What scales with a real farm is the instance count and the growth pass's
+O(planted) every 250 ticks (0.006 ms a tick in the soak), neither of which has shown in a frame. Both caveats are recorded rather than papered over; the soak-run ledger
 (`docs/milestones/soak-runs.md`, 2026-09-18) holds the sim-side numbers.
 
 ## 7. UI
