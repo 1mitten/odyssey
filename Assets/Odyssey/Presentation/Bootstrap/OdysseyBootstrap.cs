@@ -830,6 +830,12 @@ namespace Odyssey.Presentation.Bootstrap
             // this is worth: a tree fading a sixtieth of a second late is not observable, and
             // placing the figures first would mean drawing the world after the people in it.
             UpdateSightLines(_world.Views.Current, movePerTick);
+
+            // The crop mirror, for the same reason: the meshed world must already know a crop
+            // ripened this tick before the dirty chunk the simulation marked is rebuilt, or the
+            // field would redraw one stage behind what the orders and the figures show.
+            _model.UpdateCrops(_world.Views.Current.Plants);
+
             _renderer.Render(activeLayer, slice);
 
             // Figures first, because what they take is what the instanced pass must leave alone.
@@ -852,6 +858,7 @@ namespace Odyssey.Presentation.Bootstrap
                     _tickAlpha, movePerTick, _figures?.Drawn);
 
             DrawStandingOrders(_world.Views.Current);
+            DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
@@ -939,6 +946,51 @@ namespace Odyssey.Presentation.Bootstrap
 
                 if (orders[i].Progress > 0)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
+            }
+        }
+
+        /// <summary>The colour a growing zone is tinted in — a field green, darker and cooler
+        /// than the felling mark's pale yellow-green, so a planted area and an order never ask to
+        /// be told apart by reading a tooltip. Alpha in the same translucent band as the orders:
+        /// the soil has to show through, and a tint nobody can see is worse than none.</summary>
+        public static readonly Color ZoneTintColour = new Color(0.24f, 0.62f, 0.28f, 0.32f);
+
+        /// <summary>
+        /// Every growing-zone cell on a drawn layer, tinted.
+        ///
+        /// <para>The interim overlay until the crisp-bordered region shader of
+        /// <c>09-ui-and-input.md</c> §4.6 — the same debt the stockpiles carry, and the same
+        /// answer: paint the cells the player set aside so a field reads as one thing and not as
+        /// a mystery patch of short carrots.</para>
+        ///
+        /// <para><b>A cell mark, not a cell shade, and the geometry is why.</b>
+        /// <see cref="ChunkRenderer.DrawCellShade"/> fills its cell's whole volume, which is right
+        /// for a deconstruct order standing in the wall it is taking apart — and on a zone cell,
+        /// which is open air above the soil, it would draw a three-metre glass box standing over
+        /// every row of the field. <see cref="ChunkRenderer.DrawCellMark"/>'s plate sits at the
+        /// floor of that air cell, which is the ground surface: paint on the field, where the
+        /// player's eye already is.</para>
+        ///
+        /// <para>Filtered to the drawn band rather than the active layer, for the reason
+        /// <see cref="DrawStandingOrders"/> gives: the zone was painted where the player could
+        /// see, and that is where it must be drawn.</para>
+        /// </summary>
+        void DrawZones(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+
+            System.ReadOnlySpan<ZoneView> zones = snapshot.Zones;
+            if (zones.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+
+            for (int i = 0; i < zones.Length; i++)
+            {
+                CellRef cell = size.FromIndex(zones[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                _renderer.DrawCellMark(cell, ZoneTintColour);
             }
         }
 
