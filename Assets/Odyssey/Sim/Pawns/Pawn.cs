@@ -641,8 +641,11 @@ namespace Odyssey.Sim.Pawns
 
             // Destination and move progress are simulation state; the path itself is not, and
             // hashing it would make a save/load resume look like a divergence for no reason.
-            // Both accumulators count thousandths (Rates), and the hash counts ticks: at the
-            // standard rate the division is exact, so the hash reads what it has always read.
+            // Both accumulators count thousandths (Rates) and the hash reads them divided back
+            // to whole units: exact while a rate stands at the tuning speed, quantised under
+            // the per-pawn ones, and the toils that count plain ticks — eat, sleep, wait —
+            // read near zero for most of their length, reaching the hash through what their
+            // endings change instead.
             hash.Add(Destination);
             hash.Add(MoveProgress / Rates.Scale);
 
