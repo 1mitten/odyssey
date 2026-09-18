@@ -257,6 +257,7 @@ namespace Odyssey.Hud
             { "ui.keys.fell", "Chop tool" },
             { "ui.keys.forward", "Camera forward" },
             { "ui.keys.frame", "Frame the map" },
+            { "ui.keys.growzone", "Growing zone tool" },
             { "ui.keys.left", "Camera left" },
             { "ui.keys.mine", "Mine tool" },
             { "ui.keys.pause", "Pause" },
