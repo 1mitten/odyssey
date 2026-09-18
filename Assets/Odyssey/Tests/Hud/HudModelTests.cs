@@ -315,6 +315,52 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// <b>Loading another colony gives the same slot a different person, and the card has to
+        /// say so.</b>
+        ///
+        /// <para>The owner, 2026-09-18: <i>"the colonist info card and the roster top bar names
+        /// don't match up ... maybe to do with loading and saving another game"</i>. Every colony
+        /// numbers its pawns from one, so the first slot holds <c>PawnId(1)</c> in every game there
+        /// has ever been. The roster card is a slot that re-reads itself only when the colonist in
+        /// it changes, and it was asking the id alone — so after a load nothing had changed by that
+        /// test, the name and face were never rewritten, and the bar went on showing the colony the
+        /// player had left while the inspect pane, which reads afresh, showed the present one.</para>
+        ///
+        /// <para>This is the model half, which is where the fix belongs: the card publishes the
+        /// seed its name came from, so the view compares a person rather than a number. The view
+        /// half is one <c>||</c> in <c>HudShell.RefreshStrip</c> and cannot be reached from this
+        /// tier.</para>
+        /// </summary>
+        [Test]
+        public void TheSameIdInAnotherColonyIsAnotherColonist()
+        {
+            RosterCard First(uint rollSeed)
+            {
+                var snapshot = Frame.Write();
+                var id = new PawnId(1);
+                snapshot.AddPawn(new PawnView(id, new CellRef(1, 1, 1), 600, 600, 600, JobHandle.Haul));
+                snapshot.AddPawnAspect(new PawnAspect(
+                    id, AspectKey.Of(ColonistNames.RollSeedAspect), unchecked((int)rollSeed)));
+
+                var roster = new RosterModel();
+                roster.Refresh(snapshot, selected: PawnId.None);
+                return roster.Cards[0];
+            }
+
+            RosterCard before = First(12345u);
+            RosterCard after = First(98765u);
+
+            Assert.That(after.Id, Is.EqualTo(before.Id),
+                "the premise: a new colony reuses the same small pawn ids, which is why the id " +
+                "alone cannot be what a roster slot keys on");
+            Assert.That(after.Name, Is.Not.EqualTo(before.Name),
+                "and the two are different people, because a name is the seed and the id together");
+            Assert.That(after.Seed, Is.Not.EqualTo(before.Seed),
+                "so the card must publish the seed its name came from. Without it the strip has " +
+                "nothing to notice, and keeps the previous colony's names and faces after a load");
+        }
+
+        /// <summary>
         /// The bands are read against the scale the simulation actually publishes.
         ///
         /// Everything about mood in the interface was wrong until 2026-09-16 and none of it was

@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
@@ -893,6 +894,115 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(colony.World.ComputeStateHash().Value, Is.EqualTo(before),
                 "asking changed nothing");
+        }
+
+        // ---- a roof ordered in one drag is built in an order that works ----------------------
+
+        /// <summary>
+        /// <b>A slab whose support is still only a plan is not handed out as a job.</b>
+        ///
+        /// <para><c>AllowsSlab</c> accepts a cell that would stand once the slabs <em>ordered</em>
+        /// around it are built, which is what lets a roof be dragged in one gesture
+        /// (<c>SupportedByWhatIsPlanned</c>). Nothing then made the colony build them in an order
+        /// that honours it. A colonist takes the nearest site, so the far end of a bridge could be
+        /// raised while the cells meant to hold it up were still blueprints — and it stood on
+        /// nothing and fell on the tick it was finished.</para>
+        ///
+        /// <para><b>This is the owner's first report, and it was right</b> (2026-09-18): <i>"the
+        /// slab was placed on the top level but then the colonists tried to build the most outer
+        /// slabs first which then landed a stone/steel looking tile 1 height below instead of where
+        /// it was"</i>. The grey tile below was the rubble a collapse leaves
+        /// (<c>SupportSystem.Rubble</c>), and three sessions were spent on the rubble's *drawing*
+        /// before anybody measured the collapse that produced it.</para>
+        ///
+        /// <para><b>The rule, set by the owner:</b> a slab that cannot stand is simply not built
+        /// yet — it waits for its support — and it never leaves rubble. Rubble is for construction
+        /// that was destroyed, not for construction that never happened.</para>
+        /// </summary>
+        [Test]
+        public void ASlabHeldUpOnlyByBlueprintsIsNotOfferedAsAJobYet()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "a walkable ground cell to build from");
+
+            // A wall, and the slab layer above it: the one real source of support on this board.
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            // A run of slabs marching away from the wall, ordered as one drag would order them.
+            // The far end is accepted only because the nearer ones are planned.
+            CellRef at = Size.FromIndex(Above(ground));
+            var run = new List<int>();
+            for (int step = 0; step < 4; step++)
+            {
+                int cell = Size.Index(at.X + step, at.Z, at.Y);
+                if (colony.Construction.Place(Size.FromIndex(cell), BuildingHandle.Floor, StuffHandle.Wood)
+                    != IntentRejection.None) break;
+                run.Add(cell);
+            }
+
+            Assume.That(run.Count, Is.GreaterThanOrEqualTo(3),
+                "the drag must reach past the wall's own support for this to say anything");
+
+            // The far end, which nothing built is holding up.
+            int far = run[run.Count - 1];
+            Assume.That(colony.Pawns.Support!.SupportIfSlabAt(far), Is.Zero,
+                "the premise: the far cell's support is entirely a plan");
+
+            Assert.That(colony.Construction.SlabWouldStand(far), Is.False,
+                "a slab held up only by blueprints cannot be built yet");
+            Assert.That(colony.Construction.SlabWouldStand(run[0]), Is.True,
+                "the cell on the wall can be built now, so the run is not simply refused");
+        }
+
+        /// <summary>
+        /// And the whole run still gets built — the gate defers, it does not refuse.
+        ///
+        /// <para>The failure this guards is the obvious over-correction: refusing an unsupported
+        /// slab outright would take the far half of every dragged roof away from the player, which
+        /// is the thing <c>SupportedByWhatIsPlanned</c> exists to prevent. Each cell becomes
+        /// buildable as its neighbour goes up, so the run completes from the wall outward.</para>
+        /// </summary>
+        [Test]
+        public void TheDraggedRunStillFinishes_BuiltFromTheWallOutward()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            CellRef at = Size.FromIndex(Above(ground));
+            var run = new List<int>();
+            for (int step = 0; step < 4; step++)
+            {
+                int cell = Size.Index(at.X + step, at.Z, at.Y);
+                if (colony.Construction.Place(Size.FromIndex(cell), BuildingHandle.Floor, StuffHandle.Wood)
+                    != IntentRejection.None) break;
+                run.Add(cell);
+            }
+
+            Assume.That(run.Count, Is.GreaterThanOrEqualTo(3));
+
+            // Build them nearest-to-the-wall first, which is the order the gate permits, and check
+            // that each one unlocks the next rather than the run stalling half-built.
+            for (int i = 0; i < run.Count; i++)
+            {
+                Assert.That(colony.Construction.SlabWouldStand(run[i]), Is.True,
+                    $"cell {i} of the run should be buildable once cell {i - 1} is up");
+                colony.Construction.Raise(colony.Pawns, run[i]);
+                colony.World.Tick();
+
+                Assert.That(colony.Grid.Floor[run[i]], Is.EqualTo(CoreContent.SlabBuilt),
+                    $"cell {i} went up and stayed up");
+            }
+
+            // And nothing fell, so nothing left a mess: rubble is for destruction.
+            for (int i = 0; i < run.Count; i++)
+                Assert.That(colony.Grid.Terrain[run[i]], Is.Not.EqualTo(CoreContent.TerrainRubble),
+                    "a run built in a legal order leaves no rubble anywhere");
         }
     }
 }

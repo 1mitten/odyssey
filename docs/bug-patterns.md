@@ -30,7 +30,8 @@ Every occurrence so far:
 | Which face is a ladder on? | `ChunkMesher.EmitLadder` (fell back north), `TryWallBeside` (fell back to nothing) | figure climbed through the air |
 | Does this thing rotate? | the Defs, and `BuildShapes.Rotates` | R did the other of its two jobs, silently |
 | Which cells does a bed claim? | the simulation's guard, and the ghost | ghost drew legal, click did nothing |
-| **What layer does a run land on?** | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | **a deck with a hole in it** |
+| What layer does a run land on? | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | a deck with a hole in it |
+| **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -92,11 +93,234 @@ The cheap discriminators, in order:
 3. **Does the art resolve?** A per-cell fallback (`SlabModuleFor` → group slab) can draw one material
    two ways. Check the catalogue has real art for the material before blaming anything else.
 
+**And when all three come back clean, read what they proved.** They exclude the *drawing*; they say
+nothing about what the player actually ordered. Three sessions ran these, got three clean answers,
+and invented a renderer fault anyway (P6).
+
+### P6 — Excluding every way it could go wrong, without asking whether it went wrong
+
+A report is assumed and then defended. Every mechanism that could corrupt the thing is excluded, one
+by one, correctly — and the conclusion drawn is that the mechanism must be more exotic, rather than
+that **the thing was never what the report called it**.
+
+The tell is a clean exclusion that nobody turns around. "A wood floor cannot draw as stone" is also
+"a cell drawing as stone is not a wood floor", and the second reading ends the hunt in a minute. The
+grey tile cost three sessions to the first reading.
+
+**The fix is a habit, not a check: name the player's action, and go and read it.** The owner's save
+files hold the order, the material and the kind of every cell, and they were on the same disk for the
+whole of that hunt. `tools/dotnet/Odyssey.SaveProbe` loads one without Unity and prints them.
+
+**Reach for the file before the code** whenever a report says a thing "is" something — a wood floor,
+a stone tile, the top level. That is the player's name for what they see, not a reading of state.
+
+### P7 — The fix satisfies the test and breaks the thing the old value was quietly doing
+
+A number is found to be inconsistent and is normalised to the clean value — zero, the plane, the
+default. The inconsistency goes; so does a margin nobody had written down, because the old value was
+doing *two* jobs and only one of them was named.
+
+It slips through because the test written alongside the fix pins the property that was wrong and not
+the property that was right. Every slab's top face at +0.008 and +0.033 is a real fault, and
+levelling them all on to 0.000 fixes it — and satisfies "they all agree" perfectly while making
+every one of them coplanar with the ground beneath. The board flickered inside an hour.
+
+**The tell is a constant that becomes round.** When a fix moves a number to 0, to the plane, to
+flush, to exactly — ask what the old, unround value was keeping apart. Clearances, epsilons and
+biases look like sloppiness and are usually the only thing standing between two surfaces.
+
+**The fix**: give the margin a name and an owner (`CellMetrics.SlabLift`), put it in the rule rather
+than in each row, and **assert both halves** — that the values agree, *and* that what they agree on
+is still clear of whatever the old margin was clearing.
+
+### P8 — A per-cell tile's own edge, and the four fixes that are all placement
+
+The board is drawn one instanced piece per cell, so every seam in the game is two pieces meeting on
+a line. When something shows along that line, the reflex is to reach for the **placement**: drape it,
+level it, lift it, overlap it, stagger it. Every one of those was tried on the floor seam of
+2026-09-18 and measured, and not one of them moved it, because the thing being drawn was the piece's
+own rim and the rim goes wherever the piece goes.
+
+**The tell is that the artefact tracks the cell pitch and survives the board going flat.** Relief off
+and it is still there; the ground taken out from under it and it is still there; the piece grown to
+overlap its neighbour by 200 mm and it is still there, on the same pitch.
+
+**Ask what is *at* the line, not where the line is.** A plate has a rim; a rim ends in the plane of
+the neighbour's top face; two surfaces at one depth is a tie and a tie is drawn by whoever wins. The
+answer was to stop drawing the rim, not to move it — the same answer `ResolveTerrain` had already
+written down for water: *"a slab has sides and an underside that water cannot afford to draw."*
+
+**And measure in pixels, because this class of fault is invisible in metres.** Counting pixels much
+darker than all four of their neighbours turned four rounds of argument about screenshots into one
+number per experiment, and it was that number, not the pictures, that killed the three wrong fixes.
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-18 — Every floor seam drew a dotted line, and it was the tile's own rim (P8)
+
+*"You can see these slabs leave small artifacts/lines or gaps that don't even up … you can notice
+this when you look at the ground from certain angles — you see a slight issue with not being fully
+flush."* Two screenshots: a wood slab field on the meadow at night, and a roof deck.
+
+**It is the tile's rim winning a depth tie.** A floor is drawn one instanced plate per cell, and the
+slab art is a plain box — measured, 2.5000 m across, its top face flat to the micrometre and the
+full width of the piece. So two tiles meet exactly, and the top edge of one tile's **rim** lies
+exactly in the plane of its neighbour's top face. Equal depth, so the rasteriser keeps whichever
+fragment it likes; a rim takes almost no light under a 72° sun, so where it wins it draws a dot of
+wood at four tenths the brightness of the deck. That is a dotted line along every seam and a dotted
+grid over every floor, worst at a low camera pitch.
+
+**Fixed:** `CellMetrics.FloorTile` draws a floor as a **sheet** rather than a plate — the rim
+squashed to a tenth of a millimetre about the walking surface, so it is degenerate on screen and
+generates no fragments to win with — and grows it 3 mm past its own cell
+(`CellMetrics.FloorKnit`) so two neighbours overlap rather than share an edge. Both the built floor
+(`ChunkMesher.EmitFloor`) and paving (`SurfaceContributor`) go through the one matrix. Measured on
+the meadow, counting pixels much darker than all four of their neighbours: at the play camera's 48°
+**470 → 16**, at a grazing 25° **884 → 35**, and on a floating deck at 14 m **73 → 3**.
+
+**What it costs, and it is real:** a floor over open air loses its 101 mm of drawn thickness and its
+lip reads as paper seen edge-on. A floor laid on the ground had 93 of those millimetres buried in
+the block beneath it, so nothing changes there. The fix that keeps the lip is to draw a floor's edge
+as a **fascia on the face**, the way a wall is already drawn on faces rather than as a cell; that
+wants a panel module of its own and is not done.
+
+**Caught next time by:** `ChunkMesherTests.AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn` and
+`.TwoNeighbouringFloorTilesOverlap`. The first asserts *both* halves on purpose (see P7): flat, and
+still a clearance above the cell floor plane, because squashing about zero instead is just as flat
+and drops every floor back on to the ground it z-fights.
+
+**Reproduced by `SlabFlushProbe`** (`scripts/unity.sh shot Odyssey.EditorTools.SlabFlushProbe.Run`)
+— a wood floor laid on the meadow, shot at 48° and 25°, relief on and off. `SlabTopFaceProbe`
+measures the art itself, turning Read/Write on for the one model and back off again.
+
+### 2026-09-18 — The outer slabs were built first and fell (P1)
+
+*"The slab was placed on the top level but then the colonists tried to build the most outer slabs
+first which then landed a stone/steel looking tile 1 height below instead of where it was … could be
+silently resorting to a failure."*
+
+**The owner's first message, and every word of it was right.** Three sessions went on the *drawing*
+of the grey tile below before anybody measured the collapse that put it there. The row below is the
+drawing; this is the cause.
+
+**Cause (P1).** The support rule has two halves that disagree about *time*. `AllowsSlab` accepts a
+cell held up by slabs merely **ordered** around it (`SupportedByWhatIsPlanned`) — a promise about the
+*finished* roof, and the whole of why a roof can be dragged in one gesture. Nothing enforced an
+order of construction that honours it, and `BuildWorkGiver` hands out the **nearest** site. So the
+far end of a bridge was raised while its supports were still blueprints, stood on nothing, was taken
+by the solver, and `SupportSystem.Rubble` left debris in the floored cell below.
+
+**The owner's rule:** rubble is for construction that was *destroyed*, never for construction that
+never happened. A slab that cannot stand is not built yet.
+
+**Fix:** `ConstructionGrid.SlabWouldStand` — would it stand *now*, asked of the built world with no
+plans in it. `BuildWorkGiver.CanBuild` **defers** the site; `Raise` **keeps** it rather than
+cancelling, because unlike the shaft rule beside it this is a race and not a permanent illegality.
+`TheDraggedRunStillFinishes_BuiltFromTheWallOutward` guards the over-correction: the gate must defer
+and never refuse, or the far half of every dragged roof disappears.
+
+**The lesson is the expensive one.** The reporter described the mechanism correctly in their first
+sentence — outer slabs first, nothing built, tile appears below — and three sessions were spent
+explaining the *symptom's appearance* instead. **Read the report as a causal claim and test that
+claim first.**
+
+### 2026-09-18 — The grey tile was rubble terrain drawn on top of a wood floor (P1, P5, P6)
+
+*"I can't seem to recreate this in a new game — could an old game cause problems?"*
+
+**The fourth answer, and the one that holds.** The owner's own question was the right one. The save
+from the photographed session:
+
+```
+the-lost-buckets-day-3.odyssey   Floor=Built/Wood 95, Paved/Wood 20   <- no stone on the board
+                                 terrain Rubble 8                      <- eight cells
+```
+
+Eight rubble cells; eight grey plates in the screenshot. `PlayScene` registers
+`Slab(ModuleIds.Terrain("Rubble"), "SM_Env_Ground_Tile_Half_03")`, so rubble **terrain** draws as a
+grey street tile — the same art family as the stone slab, which is why three sessions kept
+recognising it as one.
+
+**Cause (P1).** "A floor hides what is beneath it" has one owner and a second site that never asks
+it. `ChunkMesher.EmitScatter` obeys it — *"a built floor, a stamped deck and a deck plate all
+equally hide what is beneath"* — and `SurfaceContributor` does not, so a cell holding both a surface
+terrain and a floor slab draws both, coplanar. **A collapse guarantees that cell exists**:
+`SupportSystem.Rubble` writes into `FirstFloorAtOrBelow`, which has a floor by definition.
+
+**Why the pane and the picture disagreed, and the pane was right.** `CellDetailContributor` reads
+`FloorStuff`; the floor really was wood. The grey on top of it was not a floor and has no
+`FloorStuff` to report. Three sessions explained a *floor* — stale mirror, hole one layer down,
+stone paving — and the answer was a second thing drawn in the same place.
+
+**Fix:** rubble on a floor is lifted `CellMetrics.SlabLift` on to it rather than hidden. Hiding was
+shorter and wrong: rubble refuses to be built on until cleared, so an invisible one is a cell that
+rejects orders with nothing on screen to say why. Pinned by
+`RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt`, which meshes the same cell twice — with and
+without a floor under the rubble — because an instance matrix carries its prefab's normalisation and
+the relief varies with x and z, so nothing else isolates the lift.
+
+**Caught next time by:** asking `Odyssey.SaveProbe` first. It reports terrain as well as floors now,
+for exactly this reason.
+
+### 2026-09-18 — The grey tile was stone paving all along (P5, P6) — *wrong, superseded*
+
+> The row above is the real cause. Stone paving is real and two older saves hold it, but the board
+> the owner photographed has no stone slab on it at all. Kept because the reasoning below is a clean
+> example of P6 and was still not enough.
+
+*"The slab was placed on the top level but then the colonists tried to build the most outer slabs
+first which then landed a stone/steel looking tile 1 height below instead of where it was … you can
+see it thinks this stone slab is a wood floor as well."*
+
+**This is the third report of the same tile and it overturns the previous two rows**, which is the
+row worth reading. The screenshot the last one asked for arrived: grey plates **coplanar with an
+unbroken wood deck**, which the "surface one cell down" answer said was impossible.
+
+**Cause:** the grey plates are **stone paving**. Measured by loading the owner's own saves
+(`tools/dotnet/Odyssey.SaveProbe`): `timmy-test` holds 11 `Paved`/Stone beside 20 `Paved`/Wood and 31
+`Built`/Wood, with stone at (72–75, 57, L11) touching wood at the same z. Every mixed deck in the
+folder mixes *materials*, never layers, and the stone cells are always `SlabPaved` — the **Paving**
+tool — and never `SlabBuilt`.
+
+**Why three sessions missed it.** The three checks in the previous row are all *true*, and all three
+answer one question — *can a wood floor draw as stone?* Not one asks **was it ever wood?** The
+contrapositive was the whole answer and was sitting in the same paragraph.
+
+**Three separate faults, none of them the renderer** (`15-building.md`):
+
+- Two palette tiles both mean "floor" — `Paving` (filed under *Structure* **and** *Floors*) and
+  `Slab` — and `BuildPalette._lastMaterial` is keyed **per sub-type**, so they remember different
+  materials and nothing on either tile says which.
+- `InspectModel.DescribeCellAt` titles a floor by `FloorStuff` alone, so paving and a structural
+  floor are the same sentence and the word *paving* is never printed.
+- Both slab catalogue rows carried `baseAtY: 0`, which is *no* placement rule rather than the one
+  its own comment described, so each art landed on its artist's pivot. Measured: the street tile's
+  top 25 mm **proud** of the plank deck's — the opposite of what the screenshots looked like.
+
+**Fixed:** `ModuleEntry.topAtY` places a walked-on piece by its highest point, so every slab's top
+face lands at one height, pinned by `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor`. The other
+two are reported and not fixed: both are design calls. 25 mm will not on its own make a street tile
+read as decking.
+
+**And the first fix was wrong, in a way worth its own line (P7).** Levelling the slabs on to the
+floor plane *exactly* made the owner's board z-fight within the hour — `FloorCentre` for cell y is
+also the top face of the block filling cell y−1, so a slab flush with the plane is coplanar with the
+ground paving is laid on. The plank deck's +0.008 was never slop; it was clearance.
+`CellMetrics.SlabLift` is that clearance and `topAtY` applies it, so the rule owns it rather than
+each row. **The first version of the test would have passed the flicker through**: it asserted the
+slabs agreed, and levelling them all on to the ground's own plane satisfies that perfectly. It now
+asserts they agree *and* that the shared height clears the ground.
+
+**Caught next time by:** `Odyssey.SaveProbe`. Load the file before arguing about the picture.
+
+**And a trap found on the way out:** `PlayScene.RebuildCatalogue` silently drops the `appearance`
+block — 311 atlas swatch rectangles clothing the 61 colonists — so `CharacterSwatches.Classify` must
+run after it. The rebuild exits zero and keeps all 138 rows and every prefab reference, so the loss
+shows up in nothing but a line count.
 
 ### 2026-09-18 — A dragged floor built a ring and left a hole (P1, P4)
 
@@ -130,6 +354,10 @@ same refresh. Nothing goes stale.
 
 **So the grey was a different surface one cell down**, seen through the hole the bug above left — and
 still there after the floor above it was removed, because it was never the floor being removed.
+
+> **Superseded, 2026-09-18.** The conclusion was wrong: the grey was stone paving on the *same*
+> layer. See the row at the top of this register. The three exclusions above all still hold; what
+> was missing was the question *was it ever wood?*, and the answer was in the save file.
 
 **Worth keeping** because two separate reports and a deconstruction test all pointed at a renderer
 fault that did not exist. The probe is committed; next time this is one command.
@@ -190,3 +418,74 @@ fix cannot be mistaken for a no-op.
 reading would not have.
 
 **And check the fix is even in the player's build** before hunting a second cause.
+
+---
+
+## Runbook: a tile that looks wrong
+
+**Written 2026-09-18, after one grey tile cost four rounds.** Three of those rounds produced
+confident wrong answers reasoned from screenshots — a stale render mirror, a hole one layer down,
+stone paving — while the file that answered it sat on the same disk throughout. This is the order to
+work in when the next "that tile looks wrong" arrives.
+
+**Do not start by reading the renderer.** That is what was done three times.
+
+### 1. Get the save, not the screenshot
+
+Ask for a save, by name. A screenshot is an argument about pixels; a save is the state.
+
+```
+dotnet run --project tools/dotnet/Odyssey.SaveProbe                  # the usual folder
+dotnet run --project tools/dotnet/Odyssey.SaveProbe -- "<path>"      # one file
+```
+
+No Unity, about a second, and it prints every **floor** (kind and material), every **item** (by kind
+and layer) and every **terrain** on the board. Saves live at
+`%USERPROFILE%\AppData\LocalLow\Unity Technologies\com_unity_template_urp-blank\Saves`.
+
+### 2. Ask what is *in* the cell before asking why it is *drawn* that way
+
+A cell can hold more than one drawable thing at once, and the report will name only the one the
+player recognises. The grey tile was **a wood floor and rubble terrain in the same cell**: the pane
+said "Wood floor" and was telling the truth, and the grey on top of it was not a floor at all and had
+no material to report.
+
+| The report says | Check, in this order |
+|---|---|
+| a floor is the wrong material | `Floor=` and `Stuff=` for that cell — **and** `terrain` for the same cell |
+| something is at the wrong height | both things drawn there, before any placement code |
+| something appears/disappears/flickers | two things at one height: coplanar geometry, not a shader |
+| it only happens in an old game | what the old game has that a new one does not — `terrain` and items are where that lives |
+
+### 3. Turn the clean exclusions around
+
+"A wood floor cannot draw as stone" is also "**a cell drawing as stone is not a wood floor**". Three
+sessions proved the first and never read the second. When every mechanism is excluded and the
+symptom persists, the thing is not what the report calls it (**P6**).
+
+### 4. Read the reporter's causal claim and test *that* first
+
+The owner's first sentence was *"the colonists tried to build the most outer slabs first which then
+landed a stone/steel looking tile 1 height below"*. That is the mechanism, exactly, and it was
+testable headlessly in the fast tier from the first minute. Four rounds went on the tile's
+appearance instead.
+
+### 5. Known-good facts, so they are not re-derived
+
+- **Grey cross-hatched plate** = `SM_Env_Ground_Tile_Half_01/02/03`, used by `slab.stone` **and** by
+  the Pavement / CrackedPavement / **Rubble** terrains. Seeing one does not mean a stone floor.
+- **Rubble comes from a collapse** (`SupportSystem.Rubble`) and lands in a cell that **has a floor by
+  definition**, so floor-plus-terrain in one cell is normal, not corruption.
+- **Rubble is clearable** — `clearable: true`, 90 ticks, cleared with the **Mine** order. Rubble
+  already in a save stays until somebody clears it; a fix stops new ones and does not tidy old ones.
+- **The pane titles a floor by `FloorStuff` alone** — it never says "paving", and it says nothing at
+  all about anything drawn on top of the floor.
+- **Every slab's top face is `CellMetrics.SlabLift` above the cell floor plane.** Two things at the
+  same height z-fight; the clearance is why. Do not "tidy" it to zero.
+- **A floor is drawn as a sheet, not as a plate** (`CellMetrics.FloorTile`, `FloorSheet`,
+  `FloorKnit`). The plate's rim tied with its neighbour's top face and dotted every seam in the
+  colony. Do not "restore" the thickness without reading P8 — and if a floor's lip over open air
+  needs to look solid, that is a fascia on the face, not a thicker plate.
+- **The slab art itself is exact** — 2.5000 m across, flat on top to the micrometre, the top face
+  the full width of the piece, 40 vertices. Measured 2026-09-18 by `SlabTopFaceProbe`. A seam
+  artefact is not the art's size, shape or flatness.

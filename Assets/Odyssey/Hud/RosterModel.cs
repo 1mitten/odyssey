@@ -13,6 +13,23 @@ namespace Odyssey.Hud
     public struct RosterCard
     {
         public PawnId Id;
+        /// <summary>
+        /// The seed this colonist was rolled from — the other half of who they are.
+        ///
+        /// <para><b>An id alone does not identify a person across games</b>, and the roster bar is
+        /// the one place that matters, because its cards are slots that re-read themselves only
+        /// when the colonist in them changes. Every colony numbers its pawns from one, so slot 0
+        /// holds <c>PawnId(1)</c> in every game there has ever been; load a different colony and
+        /// the id has not changed while everything derived from the seed — the name, the face, the
+        /// age, the occupation — has. Published here so the decision is made against the model
+        /// rather than by each view reaching back into the frame for it.</para>
+        ///
+        /// <para>The owner met it twice. First as blank portraits on start and load, fixed for the
+        /// picture alone with a generation counter; then as <i>"the colonist info card and the
+        /// roster top bar names don't match up"</i> (2026-09-18), which is the same fault wearing
+        /// the name and the face instead. The inspect pane reads afresh every time, which is why it
+        /// is always the one telling the truth and why this keeps looking like a roster problem.</para>
+        /// </summary>
         public uint Seed;
         public string Name;
         public int Mood;        // 0..1000, the simulation's own scale, as food and rest are
@@ -134,6 +151,9 @@ namespace Odyssey.Hud
                     if (selected[s] == id) { isSelected = true; break; }
                 }
 
+                // Read once and used twice: the name is a function of it, and the view keys the
+                // slot on it. Two readings of one thing is how the bar and the card came to
+                // disagree in the first place.
                 uint seed = ColonistNames.RollSeedOf(snapshot, pawn.Id);
 
                 Cards.Add(new RosterCard

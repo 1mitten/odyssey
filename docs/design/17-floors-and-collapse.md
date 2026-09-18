@@ -361,3 +361,70 @@ layer — and stay decorative caps on stamped ruins.
 primitive wearing the stuff's own tint, which is exactly what `ModuleIds.WallCore` does today, so a
 built floor is visible and judgeable the moment it is raised. The row is an upgrade, not a
 dependency.
+
+---
+
+## A slab is not built until it can stand
+
+**2026-09-18. The owner's first report, finally measured.** *"The slab was placed on the top level
+but then the colonists tried to build the most outer slabs first which then landed a stone/steel
+looking tile 1 height below instead of where it was."* Every word of that is what happens, and three
+sessions were spent on the *drawing* of the grey tile before anybody measured the collapse that put
+it there.
+
+**The two halves of the support rule disagreed about time.** `AllowsSlab` accepts a cell held up by
+slabs merely *ordered* around it — `SupportedByWhatIsPlanned`, which is the whole of why a roof can
+be dragged in one gesture instead of ring by ring. That is a promise about the **finished** roof. It
+says nothing about the order the cells go up in, and nothing enforced one. `BuildWorkGiver` hands a
+colonist the **nearest** site, so the far end of a bridge could be raised while every cell meant to
+hold it up was still a blueprint. It stood on nothing, the solver took it on the next settle, and
+`SupportSystem.Rubble` left debris in the floored cell below.
+
+So the player saw: no slab where they ordered one, and a grey tile a storey down. Silently.
+
+### The rule, set by the owner
+
+> *"Can we make the rule — that rubble doesn't happen in this scenario — you just can't build it. But
+> if part of the construction was deconstructed or destroyed, then rubble would make sense."*
+
+**Rubble is for construction that was destroyed, never for construction that never happened.** A
+slab that cannot stand is not built *yet*; it waits.
+
+### How it is enforced
+
+`ConstructionGrid.SlabWouldStand(cell)` is the one owner: *would this slab stand if it were finished
+now*, asked of the **built** world only, with no plans in it. It answers true for anything that is
+not a slab, and for paving, which is laid on ground that is already there and is held up by whatever
+holds that ground up.
+
+Two callers, deliberately with different consequences:
+
+| Caller | When | What it does |
+|---|---|---|
+| `BuildWorkGiver.CanBuild` | before a job is offered | **defers** — the site is not offered, and becomes offerable the moment its neighbour goes up |
+| `ConstructionGrid.Raise` | at the moment of truth | **keeps the site** and does not raise |
+
+**`Raise` keeps the site rather than cancelling it, and that is the one place this differs from the
+shaft rule beside it.** A shaft violation is permanent — the floor above exists and the ladder can
+never be legal there — so that rule refunds and clears. This is a *race*: support was lost between
+the job starting and the last blow landing, and the cell is very likely to be legal again as soon as
+somebody builds the neighbour that was always planned. Cancelling would take the far half of every
+dragged roof away from the player, which is exactly what `SupportedByWhatIsPlanned` exists to
+prevent. The work already done stays done, so the retry is free.
+
+**The gate defers; it must never refuse.** `TheDraggedRunStillFinishes_BuiltFromTheWallOutward` is
+the guard against the obvious over-correction: it walks a four-cell run outward from a wall and
+asserts each cell becomes buildable as its neighbour goes up, that each stays up once built, and
+that **no cell anywhere ends with rubble on it**.
+
+### Still open
+
+- **Rubble looks nothing like rubble** (owner, same day). `SM_Env_Ground_Tile_Half_03` is a *street*
+  tile, which is why three sessions read it as somebody's paving. The packs hold real debris —
+  `SM_Env_Rock_Pile_01`–`07` and `SM_Env_Rock_Small_Pile_01`–`02` in PolygonNatureBiomes. **Not a
+  prefab swap:** rubble is registered as `ModuleShape.FloorSlab` and a pile is a prop, so it would
+  move from the roof list to the body list and change how it behaves under the slice. Worth doing,
+  wants its own look.
+- **Nothing announces a collapse.** The owner's instinct was right — *"could be silently resorting
+  to a failure"* — and it was. With this fix the unsupported-new-slab case is gone, but a genuine
+  collapse of a built structure is still silent, and the alerts panel is the place for it.

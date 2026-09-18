@@ -5796,3 +5796,100 @@ The owner: *"We need to rearrange the roster top bar - the name of the person sh
   - Unity PlayMode: 80 total, 75 passed, 0 failed.
   - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
 
+### The floor's dotted seam was the tile's own rim, and four placement fixes proved it was not placement (2026-09-18, branch `claude/grey-floor-layer`)
+
+The owner, with two screenshots of a wood slab field: *"you can see these slabs leave small
+artifacts/lines or gaps that don't even up … you can notice this when you look at the ground from
+certain angles — you see a slight issue with not being fully flush."*
+
+- **It reproduces headlessly, and that is most of the work.** `SlabFlushProbe` lays a wood floor on
+  the meadow — on the ground, which is what the owner is photographing — and shoots it at the play
+  camera's 48° and at a grazing 25°, with the relief on and off. The artefact is a **dotted dark
+  grid on the cell pitch**, dense at the low pitch and thinner at the play pitch. `SeamProbe`, which
+  already existed for the same report a day earlier, had only ever shot a deck floating in the air,
+  at 30 m, where the thing cannot be seen: its own comment says the mismatch is "about 2 mm, which
+  is under a tenth of a pixel at the camera the owner was using", and that is why a day's work had
+  come back "clean at every range".
+- **Pixels, not pictures.** Counting pixels a good deal darker than all four of their neighbours,
+  inside a box that holds nothing but floor, turned each experiment into one number. Every wrong
+  answer below was killed by that number in one run apiece, and three of them had looked plausible
+  in a screenshot.
+- **Four placement fixes, all measured, all wrong.** *The drape's shear*: the flat board draws the
+  same grid, so no. (The arithmetic is worth keeping: neighbouring tangent planes agree to 1.2 mm at
+  the middle of a shared edge and part by **15 mm at the corners** — the `GroundRelief.Period`
+  comment's 14 mm, not `SeamProbe`'s 2 mm, which was the mid-edge figure and the reason the shear
+  was cleared too early.) *The ground or a wall beneath it*: a deck two layers up in the air draws
+  it too. *Growing each tile so neighbours overlap*: 6 mm changed nothing and **200 mm changed
+  nothing**, which is the measurement that finally pointed at the answer. *Staggering alternate
+  tiles by a millimetre*: no change either, and for a reason worth writing down — a tie exposes the
+  rim by nothing and a stagger exposes it for real, so there is no value of it that helps.
+- **The art was measured too, because "it is the art" was the one hypothesis nobody had tested.**
+  `SlabTopFaceProbe` turns Read/Write on for the one model, measures, and turns it back off. The
+  piece is a plain box: 2.5000 × 2.5000 m, 40 vertices, its top face **flat to the micrometre** and
+  the full width of the piece. So the art is exact and two tiles do meet flush.
+- **Which leaves the rim, and the rim is the answer.** The top edge of a tile's rim *is* the
+  perimeter of its top face, so it ends exactly in the plane of the neighbour's top face. Equal
+  depth is a tie; a tie is decided per pixel; and a vertical face under a 72° sun comes back at four
+  tenths of the brightness of the deck. Sampling the dots confirmed it before any fix was written —
+  rgb(52, 36, 25) against rgb(139, 100, 65) beside it, the same hue at 0.37, which is wood in the
+  dark and not a hole, not the grass and not the sky.
+- **The fix is to stop drawing the rim.** `CellMetrics.FloorTile` squashes a floor plate to a sheet
+  about its own walking surface — a tenth of a millimetre — so the rim is degenerate on screen and
+  generates no fragments to win a tie with, and grows it 3 mm past its cell so two neighbours
+  overlap rather than share an edge. **470 → 16** at 48°, **884 → 35** at 25°, **73 → 3** on the
+  floating deck. Paving goes through the same matrix, because it is the same plate.
+- **The project had already written the argument down and not applied it to floors.**
+  `WorldRenderModel.ResolveTerrain`: *"Water is a surface, not a floor. It asks for a sheet rather
+  than the slab every other non-solid terrain gets, because a slab has sides and an underside that
+  water cannot afford to draw."* Every other non-solid terrain got the slab.
+- **What it costs, said plainly because nobody has pressed Play on it.** A floor over open air loses
+  101 mm of drawn thickness and its lip reads as paper seen edge-on; a floor on the ground had 93 of
+  those millimetres buried anyway. If the lip matters, the answer is a **fascia on the face** — the
+  idiom `ChunkMesher` already uses for walls — and that wants a panel module rather than a constant.
+- **Guards:** `ChunkMesherTests.AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn` asserts flat
+  **and** still a clearance above the cell floor plane, because squashing about zero is just as flat
+  and puts every floor back on the plane it z-fights (P7, written about this very constant a day
+  earlier). `.TwoNeighbouringFloorTilesOverlap` pins the knit. New pattern **P8** in
+  `docs/bug-patterns.md`: when an artefact tracks the cell pitch and survives the board going flat,
+  it is the piece's own edge and no amount of placement will move it.
+- **Verified:** fast tier 723 Sim + 411 Hud; EditMode **1712 total, 1698 passed, 0 failed**;
+  PlayMode **80 total, 75 passed, 0 failed**; both content checks current.
+
+### The roster bar kept the last colony's names, and the guard for it had to be driven through the real shell (2026-09-18)
+
+The owner: *"the colonist info card and the roster top bar names don't match up? there has been a
+mix up?"*, and then the sentence that solved it — *"maybe to do with loading and saving another
+game?"*
+
+- **A pawn id is not a person.** Every colony numbers its pawns from one, so the first roster slot
+  holds `PawnId(1)` in every game there has ever been. A roster card is a slot that re-reads itself
+  only when the colonist in it changes, and it asked `view.LastId != model.Id`. Load another colony
+  and that is false, so the name and the face — both read once, both derived from the roll seed —
+  were never rewritten. The inspect pane reads afresh every frame, so it was right, and the two
+  disagreed on screen.
+- **This is the *third* time the same fault has been fixed, each time for one thing.** A few hours
+  earlier the same slot logic left the bar's portraits blank on start and on load;
+  `CardView.LastPortraits` fixed the picture with a generation counter and its comment spells the
+  cause out in full — *"a new colony's pawn ids start at the same small numbers, so the slot's id
+  had not changed"*. The name and the face were sitting two lines above it and were not looked at.
+  Answering *is this the same person* would have covered *do the pictures still exist*; answering
+  only the second did not.
+- **The fix is one `||` and a published seed.** `RosterCard.Seed` carries the roll seed the name was
+  made from, so the view compares a person rather than a number, and the model reads the seed once
+  and uses it twice instead of the frame being asked the same question in two places.
+- **The guard had to be a PlayMode test, and proving that was the point.** Every unit test of
+  `RosterModel` passed throughout — the model always had the right names. The fault was entirely in
+  the view, so `HudGeometryTests.TheRosterBarFollowsTheColonyIntoANewSession` builds the real shell,
+  reads the labels the bar is actually drawing, tears the session down and builds another (which is
+  `LoadSession`'s own first two lines), and reads them again. **Run against the bug it fails with
+  the owner's report in its message**: the bar saying `Spudgun` where the frame says `Ivy`. A guard
+  that has not been seen to fail is not a guard, and this project has shipped one of those before
+  (P7).
+- **And the Unity tier's only red was not this branch's work at all.**
+  `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor` skips catalogue rows whose art is missing and
+  then asserts ten rows were checked — two reasonable halves that together require `Assets/Synty`,
+  which the self-hosted runner has not got. It had failed every CI run on the branch since it was
+  written and looked like the branch's own doing. It now asks the library whether *anything* has art
+  before demanding the count. `docs/lessons.md` has it, under the rule it broke.
+- **Verified:** fast tier 723 Sim + 412 Hud; EditMode **1713 total, 1699 passed, 0 failed**;
+  PlayMode **81 total, 76 passed, 0 failed**; both content checks current.

@@ -296,6 +296,24 @@ namespace Odyssey.Presentation.Ui
             public IconBadge JobIcon = null!;
 
             public PawnId LastId;
+            /// <summary>
+            /// The seed the colonist in this slot was rolled from, beside their id.
+            ///
+            /// <para><b>Because the id alone does not say who somebody is, and the owner saw this
+            /// one too</b> (2026-09-18: *"the colonist info card and the roster top bar names don't
+            /// match up ... maybe to do with loading and saving another game"*). Every colony
+            /// numbers its pawns from one, so loading a different game leaves this slot holding the
+            /// same id it had — and the name and face, which are read once per colonist and come
+            /// from the seed, were never rewritten. The bar went on showing the previous colony's
+            /// people while the inspect pane, which reads afresh, showed the present one's.</para>
+            ///
+            /// <para>Exactly the fault <see cref="LastPortraits"/> was added for a few hours
+            /// earlier, and the reason both exist rather than one is worth keeping: that fix asked
+            /// *do the pictures still exist*, which is a question about the studio, and this one
+            /// asks *is this the same person*, which is a question about the colonist. Answering
+            /// the second properly would have covered the first, and did not, because only the
+            /// portrait was looked at.</para>
+            /// </summary>
             public uint LastSeed;
             public int LastJob = int.MinValue;
             public int LastLayer = int.MinValue;
