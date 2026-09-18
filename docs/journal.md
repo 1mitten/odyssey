@@ -4161,6 +4161,167 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
   - **Verified:** fast tier 611 Sim and 349 Hud; EditMode **1443 total, 1432 passed, 0 failed**.
     **Not verified:** whether the downward scroll reads as falling rather than as a pattern sliding,
     which is the whole of B and cannot be judged in a still.
+- **Flat avatars: a colonist's face beside their name, 2026-09-18** (`claude/flat-avatars`, `U41`).
+  Design and the owner's seven decisions: `docs/design/20-avatars.md`. The owner asked for the
+  profile next to the person's name, and for **one** avatar to serve both character selection and
+  the roster bar â€” which chose the technology before anybody argued about it.
+  - **The plan's row was the wrong unit, and the replacement was cheaper.** `U41 Portraits` asked
+    for three 3D portraits rendered once per roll, cached and released, "under a test that fails if
+    more than a fixed number of render textures are alive at once", with `09-ui-and-input.md` Â§4.5
+    amended in the same commit. Composed flat avatars have no render textures, so that test has
+    nothing to count â€” **and Â§4.5 needed no amendment at all**, because it already *prescribes*
+    composed flat avatars for M2â€“M7 and refused only live portraits. The carve-out the plan promised
+    was an exception to a rule we were about to obey.
+  - **Two of the four sites already had an avatar slot drawing a placeholder**, which is why this
+    was M and not L: the roster card had a People-coloured tile with the name's first letter on it,
+    and the inspect header an outlined square keyed `ui.pawn.colonist` â€” a key `icon-map.csv`
+    records as a gap with the note *"a human figure. No sheet contains one, and this is the
+    most-used icon in the HUD."* That note is the whole reason the avatar is drawn rather than cut
+    from a sheet: there is no sheet.
+  - **The colour half had existed since M1 without anybody noticing it was an avatar recipe.**
+    `ColonistAppearance` is a look index plus skin, hair and two garment colours as `Rgb24`, integer
+    arithmetic over four independent hash streams. It was feeding a 3D character's atlas.
+    `ColonistFace` calls it rather than deriving the colours again â€” the `NavGraph.HopCost` rule â€”
+    and that is what forced the move into `Odyssey.Hud`, since Presentation depends on Hud and
+    never back.
+  - **The design corrected itself before any code was written.** Â§6 first left
+    `ColonistAppearanceBook` in Presentation "because it touches the module catalogue", and Â§7 two
+    paragraphs later promised the seed-fallback rule as a **fast-tier** test, which a Presentation
+    class cannot be. The catalogue turned out to be one convenience constructor counting the
+    colonist family; it is `AppearanceBooks.For` now and the rest went down, taking **eleven tests
+    from the Unity tier into the fast one**.
+  - **The contact sheet earned itself on its first run** (the owner's decision 6: a picture before a
+    playtest). Two numbers in the drawing were wrong and no test could have said so. The three
+    builds were 5.0, 6.3 and 7.6 half-units against a flare of 2.4, which put every bust between
+    14.8 and 20.0 units wide in a 24-unit box â€” three builds that were one build; they are 11.8,
+    15.0 and 18.2 now. The *long* and *ponytail* crowns reached 0.62 of the head's radius and read
+    as sideburns.
+  - **There is no face on the avatar, and that is a limit rather than a stage.** Our own measurement
+    of our own pixel art (`Logs/skill-icons.png`) is that it loses its grooves at 17 px and goes to
+    noise at 16; a roster card's avatar is 26. Two dots and a line at that size read as damage. It
+    is a silhouette portrait, which is also what lets one drawing serve 26, 30 and 64 px unaltered.
+  - **`Painter2D.Arc` is not used, and the reason is worth keeping.** Its angles are measured in the
+    element's own space, where y runs down, so every "over the top of the head" would have been
+    written back to front and drawn as a chin. The crowns are sampled into polygons at sixteen steps
+    a half-turn, under a tenth of a pixel of chord error at 64 px.
+  - **The last step was the one that could have made the whole feature a lie.** The card was keyed
+    on `RollSeed` from the start; the figure in the world was still dealt from a world-level cast
+    seed, so the person chosen on the setup screen and the person who walked around were two
+    different people. `ColonistAppearanceBook.For` takes the pawn's seed now, with zero falling back
+    to the book's â€” the compatibility path for a save written before U40, not a guard. **The cache
+    is checked against the seed as well as the pawn**, because a figure leased before the aspect
+    arrived would otherwise wear the fallback for the rest of the session; that one is a test.
+  - **Two inspector switches would have quietly become decorative**, which is worse than removing
+    them, because somebody would tick one and believe it. `randomCastEachSession` and
+    `colonistLookSeed` now set `ColonistAppearanceBook.Pinned`, dealing the whole colony from one
+    number and overruling the pawns â€” which is what both were always for, judging the palette over
+    many colonists at once. Their tooltips say that ticking one means the people you chose are not
+    the people you get.
+  - **`Odyssey.Editor` did not reference `Odyssey.Hud`**, and 380 green fast-tier tests could not
+    know: the project did not compile. `docs/lessons.md`'s standing warning, happening again, and
+    the reason the Unity run came before the commit rather than after it.
+  - **The roster card's initial letter took two exemptions with it** â€” the `.card__initial` rule
+    with its stylesheet anchor, and the carve-out in `NoLabelIsAThreeLetterPlaceholder` that let a
+    one-letter label through. A rule that shrinks as the interface improves is the right shape for
+    that rule.
+  - **Verified:** fast tier 645 Sim and 384 Hud; EditMode **1533 total, 1521 passed, 0 failed**;
+    PlayMode **74 total, 69 passed, 0 failed**. All three gates the design named as its own check on
+    itself â€” card geometry, the allocation budget, the coverage ceiling â€” pass unedited. Nothing is
+    saved, nothing is hashed, **no golden moved**. **Not verified:** whether a colonist reads as a
+    person at 26 px, whether any skin and garment pair comes out as one muddy value there, and
+    whether the 64 px portrait belongs where it has been put. `Logs/avatars.png` and
+    `Logs/setup-page.png` are what those questions get answered from.
+
+- **Rendered portraits, 2026-09-18** (`claude/flat-avatars`, `docs/design/20-avatars.md` Â§10). The
+  owner played the flat avatars and reported: *"the colonists look nothing like their profile
+  picture."* They were right, and the fault was in the design rather than in the drawing.
+  - **I had matched the palette and invented the person, and defended it in a comment.**
+    `ColonistFace.Of` passed `lookCount: 1` to `ColonistAppearance.Of`, throwing away `Look` â€”
+    *which of the sixty-one Synty characters this colonist is* â€” on the stated grounds that "an
+    index into the catalogue's 3D colonist meshes means nothing to a drawing". It is the single
+    most identity-bearing fact about a colonist. The colours did land (of 61 rows, 55 classify
+    `Full`), so skin tone and garment hue matched while hair, build and clothing shape were all
+    invented from unrelated salts. A colonist in a helmet was given a ponytail.
+  - **Â§4.5 did not have to be overturned to fix it.** It refuses *fifty live render-textured
+    portraits at 15 Hz while the world draws* and names a cached atlas as the graduation path.
+    Nothing here is live: a portrait is rendered the first time an appearance is asked for and never
+    again. The plan's original `U41 Portraits` row was closer to right than the unit that replaced
+    it, and its leak test â€” which Â§9 said had nothing to count â€” now counts **one**.
+  - **The cache is keyed on the appearance, not the pawn**, which is the whole performance story.
+    Two colonists who genuinely look alike share one picture; a colony of twenty-six with a dozen
+    distinct appearances is twelve renders for the session. **One `RenderTexture` exists for the
+    entire game**, reused and read back into a 128Â² texture per appearance â€” 64 kB each, so a full
+    roster is under 1.7 MB.
+  - **The rig is off except during the render call.** A directional light is global in URP, so a
+    portrait light would otherwise fall on the world. The alternatives were a spare layer, a
+    rendering-layer mask (a project settings change) or lighting the portrait with whatever time of
+    day it happened to be taken at and freezing it there. The render is synchronous, so enabling
+    the rig, calling `Render` and disabling it again costs nothing and needs none of that.
+  - **No animator and no `PlayableGraph`**, unlike `PawnFigureDirector.Create` â€” a portrait does not
+    walk. A side effect worth having: a look whose *gaits* are missing, which `LooksFrom` drops
+    outright, can still be photographed.
+  - **`Logs/portraits.png` caught two faults, neither visible at 30 px and neither findable by a
+    test.** The crop anchored on `body.max.y`, which is the top of whatever the character is
+    *wearing*, so every bare head framed correctly and every hat-wearer was cut off at the chin â€”
+    the pattern is the signature of exactly that fault and is why one image diagnosed it. It
+    anchors on the **head bone** now; every pack character is a valid Mecanim humanoid, and the
+    animator does not need to be enabled to read its bone map. And the key light was `Euler(28,
+    200, 0)` against a camera looking the other way: aimed at the backs of their heads, which read
+    as a murky render rather than as a backwards light.
+  - **`randomCastEachSession` now defaults off, and the portraits are what closed it.** The switch
+    overrules every pawn's own seed, the setup page photographs its candidates *before* a colony
+    exists, and the pin is applied when the world is built â€” so with it on, pressing Start dealt
+    three different people from the three on the cards. That is the owner's original complaint
+    reappearing by construction. What the switch was *for* is now the contact sheet, which shows
+    twenty-four at once without pressing Play.
+  - **The drawn avatar is not wasted.** It is the fallback where `Assets/Synty` is absent, chosen by
+    the idiom `IconBadge` already uses â€” art present suppresses the paint â€” so a clone without the
+    packs is still correct, and the portrait tests ignore themselves with that reason on a runner
+    that has none.
+  - **Verified:** fast tier 645 Sim and 384 Hud; EditMode **1536 total, 1524 passed, 0 failed**;
+    PlayMode **76 total, 71 passed, 0 failed**. **Not verified:** whether a 128 px render reads at
+    26 px on a roster card, whether the head-bone framing suits all sixty-one bodies rather than the
+    twenty-four on the sheet, and whether one key light flatters the cast or wants a fill.
+
+- **The in-game avatar doubles, and takes four other numbers with it, 2026-09-18**
+  (`docs/design/20-avatars.md` Â§10.6). The owner, having seen the portraits: *"can we make the
+  in-game avatar profile twice as big as it's hard to see"*, then *"put a white border around the
+  portraits"*.
+  - **26 â†’ 52 on a roster card and 30 â†’ 60 in the inspect header**, and the card is re-derived
+    rather than stretched: its width is still the wider of its two rows as the text engine measures
+    them, and the name row's 16 + 52 + 8 + 50 = 126 overtakes the activity row's 106. 126 Ã— 89.
+  - **The strip would have quietly halved the roster at 1080p.** Two rows cost
+    `2 Ã— (CardHeight + CardGap)`, and the old 0.14 height share is 151 px there â€” two 63 px cards,
+    or one 89 px card. Nothing reports that: the back row simply stops being drawn. `StripHeightShare`
+    is 0.18, which is 194 px at 1080 and still deliberately one row at 720.
+  - **The top scrim stopped reaching under the strip** â€” 185 px of two-row cards against a 170 px
+    gradient, which is a colonist's name standing on bare meadow. 192.
+  - **A tile's header must not follow a colonist's.** `InspectHeader` is the avatar's height now,
+    and the tile readout shared that constant â€” but a tile's slot holds an `IconBadge`, and this
+    interface draws icons at 17, 16 and 30 and no other size. Following would have minted a fourth
+    icon size and stood a five-fact readout on a header two thirds the height of its own body.
+    `InspectHeaderNarrow` stays at 38.
+  - **The coverage ceiling went 19% â†’ 20%.** A two-row strip at 1280 Ã— 720 goes 3.81% â†’ 5.07% and
+    the HUD to 19.80%. Two qualifications: that is the forced worst case rather than what the game
+    draws there, since 1280 Ã— 720 is allowed one row and the *resting* measurement never left the
+    old 19%; and the lever used on the previous two occasions is gone â€” both clamped the region
+    instead of raising the ceiling, and clamping here means showing fewer colonists, when the card
+    is this size precisely because the owner asked for the face in it to be legible. Recorded as
+    theirs to reverse, with the cheapest reversal named: every pixel of avatar is four of card.
+  - **Every one of those four was a failing test rather than something seen on screen**, which is
+    the argument for the anchor tests stated better than the tests themselves state it. A change
+    that looked like two constants came back with three consequences and a budget.
+  - **The frame is 0.88 white at two pixels**, not pure white at one: a photograph has soft edges,
+    and a hard white rectangle round it reads as a cut-out pasted on the card, while one pixel at
+    52 reads as an artefact of the render rather than as an edge somebody chose. Set on
+    `AvatarGlyph` rather than per site, so the setup page carries it too.
+  - **Verified:** fast tier 645 Sim and 384 Hud; EditMode **1536 total, 1524 passed, 0 failed**;
+    PlayMode **76 total, 71 passed, 0 failed**. `Logs/hud-shot.png` now photographs the HUD with the
+    catalogue assigned, which it never did before â€” the rig built a bootstrap by hand and never had
+    one, so that picture had gone on showing the drawn fallback after the portraits landed. It was
+    the owner asking whether the roster used the portraits that found it.
+
+
 
 ### The wood was two colours, and one of them was nobody's choice (2026-09-18)
 

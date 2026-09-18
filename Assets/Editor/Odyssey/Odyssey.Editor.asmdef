@@ -2,6 +2,7 @@
     "name": "Odyssey.Editor",
     "rootNamespace": "Odyssey.EditorTools",
     "references": [
+        "Odyssey.Hud",
         "Odyssey.Sim",
         "Odyssey.Sim.Contracts",
         "Odyssey.Presentation",

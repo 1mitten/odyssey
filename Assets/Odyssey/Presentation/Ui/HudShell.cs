@@ -146,6 +146,10 @@ namespace Odyssey.Presentation.Ui
         Label _inspectMeta = null!;
         Label _inspectState = null!;
         IconBadge _inspectAvatar = null!;
+
+        // The colonist half of that slot: a drawn face rather than a keyed badge, because no icon
+        // key describes a particular person (docs/design/20-avatars.md).
+        AvatarGlyph _inspectFace = null!;
         readonly List<NeedView> _needs = new List<NeedView>();
         readonly List<SkillLineView> _skills = new List<SkillLineView>();
         readonly List<Label> _tabChips = new List<Label>();
@@ -267,7 +271,7 @@ namespace Odyssey.Presentation.Ui
         {
             public VisualElement Root = null!;
             public VisualElement Ring = null!;
-            public Label Initial = null!;
+            public AvatarGlyph Avatar = null!;
             public Label Name = null!;
             public IconBadge JobIcon = null!;
             public Label Job = null!;

@@ -1,23 +1,37 @@
 #nullable enable
 using System.Collections.Generic;
 using NUnit.Framework;
-using Odyssey.Presentation.Rendering;
-using UnityEngine;
+using Odyssey.Hud;
 
-namespace Odyssey.Presentation.Tests
+namespace Odyssey.Tests.Hud
 {
     /// <summary>
     /// What a colonist looks like, and the one invariant that had no test at all.
     ///
-    /// The appearance itself is pure arithmetic and could in principle live in the fast tier; it
-    /// sits here because <c>Odyssey.Presentation</c> references UnityEngine, and a new assembly
-    /// definition is a compile-graph change for the whole project in exchange for running a
-    /// handful of pure tests thirty seconds earlier. The derivation is written Unity-free
-    /// (<see cref="Rgb24"/>, integers, no <c>Random</c>) so that move stays a file move.
+    /// The appearance itself is pure arithmetic and used to live in <c>Odyssey.Presentation</c>
+    /// beside the renderers, where it could only be proved by a Unity run. **It moved on
+    /// 2026-09-18 and this file came with it**, which is what the note left here always said it
+    /// would be: a file move, because the derivation is written Unity-free (<see cref="Rgb24"/>,
+    /// integers, no <c>Random</c>). What forced it was the flat avatar
+    /// (<c>docs/design/20-avatars.md</c>) — the HUD cannot draw a colonist's colours from an
+    /// assembly it does not reference, and the dependency runs Presentation → Hud and never back.
     /// </summary>
     public class ColonistAppearanceTests
     {
         const int Faces = 61;
+
+        /// <summary>
+        /// A pawn with no roll seed of its own, which the book reads as "use the world's".
+        ///
+        /// <para><b>Every test in this class is now about that path, and deliberately so.</b> A
+        /// colonist is dealt from their own <c>RollSeed</c> since 2026-09-18
+        /// (<c>docs/design/20-avatars.md</c> §5), and this file's subject is the world-level cast:
+        /// the same world dealing the same people, two worlds dealing different ones, the streams
+        /// being independent. All of that is still true of the fallback, and the fallback is what a
+        /// colony saved before U40 gets — so these are not tests that were quietly retargeted at a
+        /// dead branch, they are the tests for the branch those colonies take.</para>
+        /// </summary>
+        const uint NoRollSeed = 0u;
 
         [Test]
         public void TheSameWorldDealsTheSamePersonForEver()
@@ -29,7 +43,7 @@ namespace Odyssey.Presentation.Tests
             var tuesday = new ColonistAppearanceBook(20260916u, Faces);
 
             for (int id = 1; id <= 500; id++)
-                Assert.That(tuesday.For(id), Is.EqualTo(monday.For(id)), $"pawn {id}");
+                Assert.That(tuesday.For(id, NoRollSeed), Is.EqualTo(monday.For(id, NoRollSeed)), $"pawn {id}");
         }
 
         [Test]
@@ -44,7 +58,7 @@ namespace Odyssey.Presentation.Tests
 
             int differences = 0;
             for (int id = 1; id <= 5; id++)
-                if (!a.For(id).Equals(b.For(id))) differences++;
+                if (!a.For(id, NoRollSeed).Equals(b.For(id, NoRollSeed))) differences++;
 
             Assert.That(differences, Is.GreaterThanOrEqualTo(4),
                 "two worlds should not open on nearly the same five people");
@@ -64,7 +78,7 @@ namespace Odyssey.Presentation.Tests
             {
                 var book = new ColonistAppearanceBook(seed, Faces);
                 var faces = new HashSet<int>();
-                for (int id = 1; id <= 5; id++) faces.Add(book.For(id).Look);
+                for (int id = 1; id <= 5; id++) faces.Add(book.For(id, NoRollSeed).Look);
                 Assert.That(faces.Count, Is.GreaterThanOrEqualTo(3),
                     $"seed {seed} opened with {faces.Count} distinct faces among five colonists");
             }
@@ -84,7 +98,7 @@ namespace Odyssey.Presentation.Tests
 
             for (int id = 1; id <= 4000; id++)
             {
-                ColonistAppearance a = book.For(id);
+                ColonistAppearance a = book.For(id, NoRollSeed);
                 allHair.Add(a.Hair.Packed);
                 if (!byCloth.TryGetValue(a.Cloth.Packed, out HashSet<uint>? hairs))
                     byCloth[a.Cloth.Packed] = hairs = new HashSet<uint>();
@@ -108,7 +122,7 @@ namespace Odyssey.Presentation.Tests
 
             for (int id = 1; id <= 2000; id++)
             {
-                ColonistAppearance a = book.For(id);
+                ColonistAppearance a = book.For(id, NoRollSeed);
                 skin.Add(a.Skin.Packed);
                 hair.Add(a.Hair.Packed);
                 cloth.Add(a.Cloth.Packed);
@@ -127,7 +141,7 @@ namespace Odyssey.Presentation.Tests
             var book = new ColonistAppearanceBook(99u, Faces);
             for (int id = 1; id <= 500; id++)
             {
-                ColonistAppearance a = book.For(id);
+                ColonistAppearance a = book.For(id, NoRollSeed);
                 int first = a.Cloth.R + a.Cloth.G + a.Cloth.B;
                 int second = a.Cloth2.R + a.Cloth2.G + a.Cloth2.B;
                 Assert.That(second, Is.LessThan(first), $"pawn {id}");
@@ -141,14 +155,14 @@ namespace Odyssey.Presentation.Tests
             // editor: adding a hair colour must not give every colonist different trousers.
             var book = new ColonistAppearanceBook(31337u, Faces);
             var clothBefore = new List<uint>();
-            for (int id = 1; id <= 200; id++) clothBefore.Add(book.For(id).Cloth.Packed);
+            for (int id = 1; id <= 200; id++) clothBefore.Add(book.For(id, NoRollSeed).Cloth.Packed);
 
             // The clothing stream does not consult the hair table's length, so a hypothetical
             // change to it cannot move these. Asserted by deriving with a different face count,
             // which is the one length that legitimately *does* move the body and nothing else.
             var wider = new ColonistAppearanceBook(31337u, Faces + 7);
             for (int id = 1; id <= 200; id++)
-                Assert.That(wider.For(id).Cloth.Packed, Is.EqualTo(clothBefore[id - 1]),
+                Assert.That(wider.For(id, NoRollSeed).Cloth.Packed, Is.EqualTo(clothBefore[id - 1]),
                     $"pawn {id} changed clothes because the catalogue grew");
         }
 
@@ -158,17 +172,17 @@ namespace Odyssey.Presentation.Tests
             // The seam for the appearance panel that does not exist yet. Nothing in the game calls
             // this; the test is what keeps the shape honest until something does.
             var book = new ColonistAppearanceBook(5u, Faces);
-            ColonistAppearance derived = book.For(3);
+            ColonistAppearance derived = book.For(3, NoRollSeed);
             var chosen = new ColonistAppearance(1, Rgb24.FromHex(0x112233), Rgb24.FromHex(0x445566),
                                                 Rgb24.FromHex(0x778899), Rgb24.FromHex(0xAABBCC));
 
             book.Override(3, chosen);
-            Assert.That(book.For(3), Is.EqualTo(chosen));
+            Assert.That(book.For(3, NoRollSeed), Is.EqualTo(chosen));
             Assert.That(book.OverrideCount, Is.EqualTo(1));
-            Assert.That(book.For(4), Is.Not.EqualTo(chosen), "an override must not leak to a neighbour");
+            Assert.That(book.For(4, NoRollSeed), Is.Not.EqualTo(chosen), "an override must not leak to a neighbour");
 
             book.ClearOverride(3);
-            Assert.That(book.For(3), Is.EqualTo(derived));
+            Assert.That(book.For(3, NoRollSeed), Is.EqualTo(derived));
             Assert.That(book.OverrideCount, Is.Zero);
         }
 
@@ -178,7 +192,7 @@ namespace Odyssey.Presentation.Tests
             // A clone with no licensed packs has exactly one colonist row, and a modulus by one
             // must not be an edge case anywhere.
             var book = new ColonistAppearanceBook(12345u, 1);
-            for (int id = 1; id <= 50; id++) Assert.That(book.For(id).Look, Is.Zero);
+            for (int id = 1; id <= 50; id++) Assert.That(book.For(id, NoRollSeed).Look, Is.Zero);
         }
 
         [Test]
@@ -189,8 +203,69 @@ namespace Odyssey.Presentation.Tests
             // other number rather than collapsing everybody onto one face.
             var book = new ColonistAppearanceBook(0u, Faces);
             var faces = new HashSet<int>();
-            for (int id = 1; id <= 50; id++) faces.Add(book.For(id).Look);
+            for (int id = 1; id <= 50; id++) faces.Add(book.For(id, NoRollSeed).Look);
             Assert.That(faces.Count, Is.GreaterThan(10));
+        }
+
+        [Test]
+        public void AColonistIsDealtFromTheirOwnRollSeed()
+        {
+            // The change that makes a select screen honest (docs/design/20-avatars.md §5). Two
+            // colonists in one world, rolled from two seeds, must not be dealt the world's cast.
+            var book = new ColonistAppearanceBook(20260918u, Faces);
+
+            Assert.That(book.For(1, 4242u), Is.Not.EqualTo(book.For(1, NoRollSeed)),
+                "a pawn with a seed of its own was still dealt the world's");
+            Assert.That(book.For(1, 4242u), Is.EqualTo(new ColonistAppearanceBook(1u, Faces).For(1, 4242u)),
+                "the same roll seed gave two answers in two worlds, so a colonist chosen on the " +
+                "setup screen is not the colonist the colony builds");
+        }
+
+        [Test]
+        public void ACacheFilledBeforeTheSeedArrivedIsNotKeptForEver()
+        {
+            // The one real hazard in caching this. A figure can be leased before the frame
+            // carrying the aspect has been handed over, and the fallback answer would then be
+            // this colonist's face for the rest of the session.
+            var book = new ColonistAppearanceBook(7u, Faces);
+
+            ColonistAppearance early = book.For(2, NoRollSeed);
+            ColonistAppearance proper = book.For(2, 99u);
+
+            Assert.That(proper, Is.Not.EqualTo(early));
+            Assert.That(book.For(2, 99u), Is.EqualTo(proper), "the second answer is not cached either");
+            Assert.That(book.For(2, NoRollSeed), Is.EqualTo(early), "the fallback stopped answering");
+        }
+
+        [Test]
+        public void APinnedCastOverrulesEveryPawnsOwnSeed()
+        {
+            // The two development switches, which would otherwise have become inspector fields
+            // that quietly do nothing the day a face started following the pawn.
+            var book = new ColonistAppearanceBook(7u, Faces) { Pinned = 31337u };
+            var pinned = new ColonistAppearanceBook(31337u, Faces);
+
+            for (int id = 1; id <= 20; id++)
+                Assert.That(book.For(id, 4242u), Is.EqualTo(pinned.For(id, NoRollSeed)), $"pawn {id}");
+
+            // And taking the pin off gives the pawns back, rather than leaving the pinned answer
+            // in the cache — the same hazard the fallback has.
+            book.Pinned = 0u;
+            Assert.That(book.For(1, 4242u), Is.Not.EqualTo(pinned.For(1, NoRollSeed)));
+        }
+
+        [Test]
+        public void AnOverrideBeatsASeedOfEitherKind()
+        {
+            // The appearance panel's seam, which must keep winning: a player-chosen face is not a
+            // derivation to be recomputed when a seed turns up.
+            var book = new ColonistAppearanceBook(7u, Faces);
+            var chosen = new ColonistAppearance(3, Rgb24.FromHex(0xC89870), Rgb24.FromHex(0x3B2A1E),
+                                                Rgb24.FromHex(0x4A4F55), Rgb24.FromHex(0x2A2D31));
+
+            book.Override(5, chosen);
+            Assert.That(book.For(5, NoRollSeed), Is.EqualTo(chosen));
+            Assert.That(book.For(5, 12345u), Is.EqualTo(chosen));
         }
 
         [Test]
@@ -200,115 +275,6 @@ namespace Odyssey.Presentation.Tests
             Assert.That(Rgb24.FromHex(0x000000).Scaled(55), Is.EqualTo(Rgb24.FromHex(0x000000)));
             Assert.That(Rgb24.FromHex(0xFFFFFF).Scaled(100), Is.EqualTo(Rgb24.FromHex(0xFFFFFF)));
             Assert.That(Rgb24.FromHex(0x8040C0).Packed, Is.EqualTo(0x8040C0u));
-        }
-    }
-
-    /// <summary>
-    /// The invariant <c>ColonistLook</c>'s header has always warned about, which until now nothing
-    /// asserted: <b>the two drawers of colonists must deal the same face to the same pawn.</b>
-    ///
-    /// <para>They did not. The instanced renderer sized its lottery from every colonist row in the
-    /// catalogue, while the figure director dropped rows whose prefab or gaits were missing and
-    /// <i>compacted the survivors</i> — so with anything missing, look <c>i</c> meant a different
-    /// body to each of them, and every colonist would change identity on crossing the figure cap.
-    /// It was invisible because either all four packs are installed or none are.</para>
-    /// </summary>
-    public class ColonistLookAgreementTests
-    {
-        static ModuleCatalogue CatalogueOf(int colonistRows, params int[] holes)
-        {
-            var catalogue = ScriptableObject.CreateInstance<ModuleCatalogue>();
-            var rows = new List<ModuleEntry>();
-
-            // A non-colonist row first, so a family lookup that accidentally counted everything
-            // would be caught rather than happening to agree.
-            rows.Add(new ModuleEntry { moduleId = "odyssey.module.wall.panel" });
-
-            for (int i = 0; i < colonistRows; i++)
-                rows.Add(new ModuleEntry
-                {
-                    moduleId = ModuleIds.Colonist(i),
-                    // A hole is a row whose art did not resolve, which on a clone without the
-                    // packs is every row. prefab is already null; the holes array only records
-                    // which ones the assertions below expect to be unusable.
-                    prefabName = System.Array.IndexOf(holes, i) >= 0 ? string.Empty : "SM_Chr_Test_" + i,
-                });
-
-            catalogue.SetEntries(rows);
-            return catalogue;
-        }
-
-        [Test]
-        public void TheBookCountsEveryColonistRowIncludingTheUnusableOnes()
-        {
-            ModuleCatalogue catalogue = CatalogueOf(12, holes: new[] { 3, 7 });
-            try
-            {
-                var book = new ColonistAppearanceBook(1u, catalogue);
-                Assert.That(book.LookCount, Is.EqualTo(12),
-                    "the lottery must run over the catalogue's rows, not over the ones with art");
-            }
-            finally { Object.DestroyImmediate(catalogue); }
-        }
-
-        [Test]
-        public void TheFigureDirectorsIndexSpaceIsTheCatalogueFamily()
-        {
-            // The compaction bug, stated directly. LookCount is the size of the index space and
-            // must equal the family size even when nothing in it resolved to art — which, in a
-            // test with no licensed packs, is every row.
-            ModuleCatalogue catalogue = CatalogueOf(12);
-            var parent = new GameObject("figures");
-            try
-            {
-                var director = new World.PawnFigureDirector(catalogue, parent.transform, 0);
-                var book = new ColonistAppearanceBook(1u, catalogue);
-
-                Assert.That(director.LookCount, Is.EqualTo(book.LookCount));
-                Assert.That(director.LookCount, Is.EqualTo(12));
-
-                // No prefabs resolve in a test, so nothing is drawable and every pawn falls
-                // through to the baked path. That is the designed degradation, not a failure.
-                Assert.That(director.UsableLookCount, Is.Zero);
-                Assert.That(director.Enabled, Is.False);
-            }
-            finally
-            {
-                Object.DestroyImmediate(parent);
-                Object.DestroyImmediate(catalogue);
-            }
-        }
-
-        [Test]
-        public void AMissingRowDoesNotReDealTheColony()
-        {
-            // The consequence that made the old behaviour dangerous rather than merely untidy.
-            // Whatever the catalogue can and cannot realise, a pawn's face is the same number —
-            // so installing three packs of four changes what one colonist can be drawn as, and
-            // changes nobody else at all.
-            ModuleCatalogue whole = CatalogueOf(12);
-            ModuleCatalogue holed = CatalogueOf(12, holes: new[] { 5 });
-            try
-            {
-                var before = new ColonistAppearanceBook(77u, whole);
-                var after = new ColonistAppearanceBook(77u, holed);
-                for (int id = 1; id <= 300; id++)
-                    Assert.That(after.For(id), Is.EqualTo(before.For(id)), $"pawn {id}");
-            }
-            finally
-            {
-                Object.DestroyImmediate(whole);
-                Object.DestroyImmediate(holed);
-            }
-        }
-
-        [Test]
-        public void ABookWithNoCatalogueStillAnswersEveryPawn()
-        {
-            // The no-packs path: one face, no art, no figures, and nothing that throws.
-            var book = new ColonistAppearanceBook(3u, (ModuleCatalogue?)null);
-            Assert.That(book.LookCount, Is.EqualTo(1));
-            for (int id = 1; id <= 20; id++) Assert.That(book.For(id).Look, Is.Zero);
         }
     }
 }

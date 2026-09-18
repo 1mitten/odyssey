@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Odyssey.Hud;
 using Odyssey.Presentation.Rendering;
 using UnityEngine;
 

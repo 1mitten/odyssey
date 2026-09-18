@@ -1,7 +1,7 @@
 #nullable enable
 using System;
 
-namespace Odyssey.Presentation.Rendering
+namespace Odyssey.Hud
 {
     /// <summary>A colour as three bytes. Deliberately not <c>UnityEngine.Color</c>.</summary>
     /// <remarks>
