@@ -635,5 +635,73 @@ namespace Odyssey.Tests.PlayMode
                 Object.Destroy(root);
             }
         }
+
+        /// <summary>
+        /// A candidate row holds its occupation beside the face, measured with the real text
+        /// engine rather than estimated (<c>docs/design/20-avatars.md</c> §3, §7).
+        ///
+        /// <para><b>Why this is a test at all.</b> The avatar took 38 px out of a 244 px row — the
+        /// 30 px face and its gap — and the design settled the question with arithmetic: the
+        /// longest of the registry's 174 occupations is 21 characters, which "fits with room". An
+        /// arithmetic claim about text is a guess about a font. The rule it would break is one of
+        /// the interface's oldest: <b>a colonist's own name may be cut short and nothing else
+        /// may</b>, so a trade that overflows is a fault rather than an inelegance.</para>
+        ///
+        /// <para>If it ever fails the lever is <c>.colonists</c>, which is 260 px on a page that
+        /// is the whole viewport — not the avatar, and not the rule.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ACandidateRowHoldsItsTradeBesideTheFace()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+                Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
+
+                VisualElement? row = doc.rootVisualElement.Q(className: "colonist");
+                var trade = row?.Q<Label>(className: "colonist__trade");
+                var name = row?.Q<Label>(className: "colonist__name");
+                Assert.That(trade, Is.Not.Null, "the candidate row has no trade line");
+                Assert.That(name, Is.Not.Null);
+
+                // The column the text actually gets: the row, less its own side padding, less the
+                // face and the gap after it. Measured off the laid-out element rather than
+                // recomputed from constants, so a change to any of them is felt here.
+                var lines = row!.Q(className: "colonist__lines");
+                Assert.That(lines, Is.Not.Null, "the candidate row has no text column");
+                float room = lines!.worldBound.width;
+                Assert.That(room, Is.GreaterThan(1f), "the row has not been laid out yet");
+
+                float widest = 0f;
+                string longest = string.Empty;
+                foreach (string key in ColonistIdentity.Occupations)
+                {
+                    string label = Registry.Label(key);
+                    float w = trade!.MeasureTextSize(label, 0f, VisualElement.MeasureMode.Undefined,
+                                                     0f, VisualElement.MeasureMode.Undefined).x;
+                    if (w <= widest) continue;
+                    widest = w;
+                    longest = label;
+                }
+
+                Debug.Log($"[StartScreen] widest trade '{longest}' {widest:0.#} px in " +
+                          $"{room:0.#} px beside a {HudLayout.Avatar} px face " +
+                          $"({ColonistIdentity.Occupations.Count} occupations)");
+
+                Assert.That(widest, Is.LessThanOrEqualTo(room),
+                    $"'{longest}' needs {widest:0.#} px and the row leaves {room:0.#} beside the " +
+                    "face, so a trade is being cut short — and only a name may be");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
     }
 }

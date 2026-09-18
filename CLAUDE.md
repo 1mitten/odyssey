@@ -595,10 +595,87 @@ have.
 **Colonists are 61 Synty characters, recoloured — not dressed.** No modular body exists in any
 pack (a character is one skinned mesh from scalp to boots with one material), so clothing, hair and
 skin are repainted by rewriting the atlas swatch rectangles each vertex is already mapped to
-(`Odyssey/Character`, `ColonistMaterials`). Appearance derives from the world seed and the pawn id,
-so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachSession` defaults
-on** while the palette is being judged, which means pressing Play deals new faces each time; switch
-it off for a stable cast.
+(`Odyssey/Character`, `ColonistMaterials`). **Appearance derives from the pawn's own `RollSeed`
+and its id since 2026-09-18** — the same seed the name, age, trade and skills come from, so
+rerolling a candidate on the setup screen changes the face too and the person you chose is the
+person who walks around. It used to be the world's cast seed, which no card could know.
+`OdysseyBootstrap.randomCastEachSession` and `colonistLookSeed` still work but they are now an
+**override**: either one sets `ColonistAppearanceBook.Pinned` and deals the whole colony from one
+number, overruling the pawns. **`randomCastEachSession` therefore defaults off since 2026-09-18** —
+the setup page photographs its candidates before a colony exists and the pin is applied when the
+world is built, so with it on, pressing Start dealt three different people from the three on the
+cards. Judging the palette is `Logs/portraits.png` now, which shows twenty-four at once.
+
+**A colonist's portrait is the actual character, rendered once and cached** (`PortraitStudio`,
+`docs/design/20-avatars.md` §10) — head and shoulders at 128 px, **keyed on the
+`ColonistAppearance` rather than on the pawn**, so two colonists who look alike share one picture
+and a colony of twenty-six with a dozen distinct appearances costs twelve renders for the session.
+**One `RenderTexture` exists for the whole game**, reused and read back. The rig sits far under the
+board and is switched off except during the synchronous render call, which is what keeps a
+portrait's own light out of the world's frame without a spare layer or a rendering-layer mask.
+`09-ui-and-input.md` §4.5 still holds: it refused *live* portraits at 15 Hz and named a cached atlas
+as the graduation path. **The drawn avatar is the fallback where the licensed packs are absent**, so
+a clone without `Assets/Synty` is still correct. The framing anchors on the **head bone**, not on
+the top of the silhouette — anything else cuts a hat-wearer off at the chin, which is what
+`Logs/portraits.png` showed.
+
+**The in-game avatar is twice the size it was, and framed in white** (owner, 2026-09-18) — 26 → 52
+on a roster card, 30 → 60 in the inspect header, with a 2 px `HudTheme.AvatarBorder`. **That is not
+a one-line change and §10.6 of the design is the list**: the card is re-derived to 126 × 89 from its
+own measured rows; `StripHeightShare` went 0.14 → 0.18 because two rows of the taller card do not
+fit 1080p's old budget and **the strip would silently have stopped drawing the second row**; the top
+scrim went 170 → 192 to keep reaching under it; `InspectHeaderNarrow` was split off at 38 so a
+*tile's* readout does not follow a portrait and mint a fourth icon size; and the **coverage ceiling
+went 19% → 20%**, which is the forced two-row worst case at 1280 × 720 (19.80%) rather than the
+resting one, and **is the owner's to reverse**.
+
+**Every colonist has a composed flat avatar, drawn** (`U41`, 2026-09-18) — on the roster card, in
+the inspect header, and on both halves of the world-setup page. `ColonistFace` in `Odyssey.Hud` is
+the recipe (four colours plus one of eight crowns and one of three builds) and `AvatarGlyph` paints
+it as four `Painter2D` layers in `HudGlyph`'s 24-unit box. **The colours are
+`ColonistAppearance.Of`'s, the same call the 3D figure is painted from**, which is why that class
+and its book moved down into `Odyssey.Hud`; `AppearanceBooks.For` is the one line left behind,
+because counting the catalogue's colonist family is Unity. **There is deliberately no face** — no
+eyes, no mouth: our pixel art goes to noise by 16–17 px and a card avatar is 26, so it is a
+silhouette portrait, which is what lets one drawing serve 26, 30 and 64 px. Nothing is saved or
+hashed and no golden moved. Design and the owner's seven decisions: `docs/design/20-avatars.md`
+— **read §7a before changing any of the shape numbers**, they were measured off
+`Logs/avatars.png` rather than chosen. `Logs/setup-page.png` is the other picture.
+
+**The wood is coloured by stands, and mixed within them** (owner, 2026-09-18: *"they need to be a
+variety of colours … the world feels dull"*, then *"really vary it up as much as possible … but also
+really mix them in together"*). Every tree on the board used to draw in the one green over the
+one brown PolygonGeneric shipped, and that was the side effect of a correct fix — a tree takes **no
+stuff tint**, deliberately, because it is *made* of wood rather than *built* from it, which left it
+with no colour lever at all. It has one now: `TreePalette` holds eleven themes of four colours (the
+owner's six verbatim, five of ours), `Odyssey/Tree` repaints the atlas's bark and canopy cells
+separately — one mesh, one material, so a `_BaseColor` multiply would brown the leaves along with
+the bark — and `TreeMaterials` caches one material per colour actually drawn. Design and every
+measured number: `docs/design/21-tree-colours.md`; **read it before touching this line.**
+Four things not to undo by tidying. **A stand deals a handful of colours and each tree picks one**,
+and the size of that handful (`TreeLook.ThemesPerStand`) is the one number that decides what the
+feature costs: a tree's colour is a bucket key, a chunk of woodland holds 160 trees, and a colour
+rolled freely per tree would put essentially the whole table in every chunk. **A colour is two faces
+of one colour, lit and shaded — not a mass and an accent**, and getting that backwards is what made
+the pale tree the owner reported: the probe measures the broadleaf's *upper* canopy cell at 49.9% of
+the mesh, so a colour authored as a highlight was painted over half a tree. `TreeToneRules` holds
+the bands that stop it happening again, every one measured off the pack (leaf step 1.21, **bark step
+1.68** — bark has a band of its own and that was found, not decided). **The swatch mechanism was
+measured before it was built** (`TreeSwatchProbe`): every cluster on every tree mesh in the pack
+reports a texel deviation of **0**, which is the only reason replacing a colour inside a rectangle
+throws no art away. And **nothing here is saved, hashed or visible to the simulation** — no Def
+moved and no golden hash moved — because a tree's colour is drawing, in exactly the sense a
+colonist's face is. **The played meadow draws 89 of 240 themes where it drew eleven, and it costs
+nothing**: 1758 draw calls with the wood in two colours, 1758 with it in two hundred. That is
+because **a tree's colour is per-instance data and not part of its tint code** — a tint code is a
+bucket key, so while the colour lived there every colour standing in a chunk was a draw call, and
+the same wood cost 17.72 buckets a chunk against 2.00 now. **One slot of every stand's handful is
+reserved for a bright leaf**, and that reservation is load-bearing: adding bright rows to the table
+alone left the board warmer and no brighter, because adding a colour to a table dilutes it rather
+than lifting it. **Open, and the owner's:** the palette itself, and one measured fidelity gap —
+`Odyssey/Tree` draws a tree about a tenth darker in sRGB than the pack's own shader does, which is
+two different lighting implementations rather than a bug, and emission, the normal map and
+screen-space occlusion were each tested and each ruled out (§6 of the design).
 
 **The floor above you is drawn, and the cut-away is opt-in** (owner, 2026-09-17). The active layer
 used to be drawn roofless always, so a floor built one layer up was invisible and — because a
@@ -660,11 +737,12 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **641 Sim + 358 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17, on the merge of U29's floors into the orders strip, U40 and the
-  world-setup page: EditMode **1486 total, 1474 passed, 0 failed**; PlayMode **69 total, 64 passed,
-  0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure is main's 348
-  plus this branch's 10, so neither side lost a test to the merge.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **645 Sim + 384 Hud**; Long tier **20**.
+  Unity tier on 2026-09-18, on the flat avatars: EditMode **1533 total, 1521 passed, 0 failed**;
+  PlayMode **74 total, 69 passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored
+  rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
+  are `ColonistAppearanceTests` arriving from the Unity tier with the appearance itself, which is
+  what moving a Unity-free derivation into `Odyssey.Hud` buys.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -815,6 +893,13 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`. A
   sheet cannot say whether night is playable or whether the light steps at speed 3.
+- **The avatars and the portraits are photographed, not played** (`Logs/portraits.png`,
+  `Logs/avatars.png`, `Logs/setup-page.png`). The owner's *"they look nothing like their profile
+  picture"* is answered — the portrait is the character — so what is left is whether a **128 px
+  render reads at 26 px** on a roster card, where it is downscaled almost five to one; whether the
+  head-bone framing suits every one of the sixty-one bodies or only the twenty-four on the sheet;
+  and whether the one key light flatters the cast or wants a fill. The **drawn** avatar behind it
+  is judged separately and only matters on a machine with no packs.
 - **The rest of the icon art.** **Nineteen keys draw real art** as of 2026-09-17: the four
   commodities, three activity icons on the roster card (`ui.status.felling`, `.mining`,
   `.building`), and twelve of the thirteen skills, cut from **sheet 06** by
@@ -851,6 +936,13 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
   interface scale on a 1080p screen it is within pixels of the screen height and may want the
   first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
+- **The coloured wood has had two playtests; the rounds since the second have not been played.**
+  They are `docs/design/21-tree-colours.md` §3a (the pale tree, and *"really mix them in
+  together"*), §3b (*"add some bright colours into the leaf"*) and §3c (the colour stops being a
+  bucket key, so the wood costs no draw calls at all). Two calls are the owner's: **the strongest
+  of the new tones**, the cherry and flame canopies, which read as scarlet at the play camera and
+  are the first to veto; and **the measured tenth-of-a-stop the new shader costs** (§6), which is
+  two lighting implementations disagreeing and was deliberately not papered over with a gain.
 - **Nobody has seen the falls move.** They draw correctly now and carry downward-scrolling
   streaks and foam at the foot, but **whether that reads as falling water or as a pattern sliding
   down a pane cannot be judged in a still**, and stills are all anybody has looked at

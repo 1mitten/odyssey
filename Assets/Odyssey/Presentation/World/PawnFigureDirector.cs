@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -718,7 +719,18 @@ namespace Odyssey.Presentation.World
 
         ColonistAppearanceBook? _appearances;
 
-        int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value);
+        /// <summary>The frame being drawn, held for the length of <see cref="Sync"/>.</summary>
+        WorldSnapshot? _frame;
+
+        /// <summary>
+        /// The seed this colonist was rolled from, or zero before a frame has arrived — which the
+        /// book reads as "fall back to the world's cast seed", the same answer a save written
+        /// before U40 gets.
+        /// </summary>
+        uint RollSeedOf(PawnId pawn) =>
+            _frame == null ? 0u : ColonistNames.RollSeedOf(_frame, pawn);
+
+        int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value, RollSeedOf(pawn));
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -780,6 +792,13 @@ namespace Odyssey.Presentation.World
         {
             Drawn.Clear();
             FastestSpeed = 0f;
+
+            // The frame is kept for the length of the sync, because a colonist's appearance is now
+            // dealt from their own roll seed and that seed is a pawn aspect — which only a
+            // snapshot carries (docs/design/20-avatars.md §5). Leasing, repainting and the
+            // can-we-draw-this-one test all need it, and they are called from half a dozen places
+            // down the stack rather than from here.
+            _frame = snapshot;
 
             // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
             //
@@ -1384,7 +1403,7 @@ namespace Odyssey.Presentation.World
             if (Materials == null || figure.Skins.Length == 0) return;
 
             AppearanceCells? cells = CellsFor(figure.Look);
-            ColonistAppearance look = Appearances.For(pawn.Value);
+            ColonistAppearance look = Appearances.For(pawn.Value, RollSeedOf(pawn));
 
             for (int i = 0; i < figure.Skins.Length; i++)
             {

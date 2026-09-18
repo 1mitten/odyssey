@@ -65,6 +65,11 @@ larger there. Two that bit:
   `IReadOnlyList<T>.Count` the way the newer one does. It works on `List<T>`, which is why some
   uses in the same file passed and others did not — the rule is about the *declared* type, not the
   object. Write `Assert.That(thing.Count, Is.EqualTo(n))`.
+- **`Does.Not.Contain(x)` resolves to the string overload** (2026-09-18, a third Unity run). Under
+  Unity's NUnit the negated form only offers `Does.Not.Contain(string)`, so against a
+  `HashSet<int>` it is `CS1503: cannot convert from 'int' to 'string'` — and the *positive*
+  `Does.Contain(x)` on the same collection two lines above compiles perfectly well, which makes the
+  error read as nonsense. Write `Assert.That(set.Contains(x), Is.False)`.
 
 The general rule: **the fast tier proves behaviour, the Unity tier proves the code exists in the
 form Unity accepts**, and that includes the test code. Neither of these is catchable by reading;

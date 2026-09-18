@@ -217,7 +217,16 @@ namespace Odyssey.Hud
 
         public const float TopScrimAlpha = 0.72f;
         public const float BottomScrimAlpha = 0.78f;
-        public const int TopScrimHeight = 170;
+        /// <summary>
+        /// How far the top scrim reaches down the screen.
+        ///
+        /// <para><b>170 until 2026-09-18</b>, when the avatar doubled and took a two-row strip from
+        /// 133 px to 185. A scrim that stops short of the strip is a roster card's text standing
+        /// on bare world at the bottom edge, which is the one thing this gradient exists to
+        /// prevent — and <c>TheScrimsAreTheHeightsTheThemeDeclares</c> is what caught it, rather
+        /// than somebody noticing a hard-to-read name on a bright meadow.</para>
+        /// </summary>
+        public const int TopScrimHeight = 192;
         public const int BottomScrimHeight = 200;
 
         /// <summary>
@@ -263,6 +272,51 @@ namespace Odyssey.Hud
 
         /// <summary>The width of the neutral square drawn where a real glyph does not exist yet.</summary>
         public const float PlaceholderStroke = 1.6f;
+
+        // ------------------------------------------------------------------ avatars
+
+        /// <summary>
+        /// The hull a flat avatar's figure is drawn on (<c>docs/design/20-avatars.md</c>).
+        ///
+        /// <para><b>It is a contrast guarantee, not a style.</b> The tile behind the figure is that
+        /// colonist's own garment colour and the head is their own skin, and the palettes are 14
+        /// garments against 7 skins — so some pair of them is close, and on that one colonist the
+        /// head would dissolve into the background. Drawing the silhouette once in ink underneath
+        /// the colours means no pair can ever do that, without this file inventing a rule about
+        /// which colours may sit together.</para>
+        ///
+        /// <para>The same ink the scrims use, because it is already the game's answer to "darker
+        /// than everything". The world inks its own figures for the same reason at a different
+        /// scale (<c>ColonistMaterials.AdoptInkFrom</c>).</para>
+        /// </summary>
+        public static readonly HudColour AvatarInk = ScrimInk.WithAlpha(0.55f);
+
+        /// <summary>
+        /// The frame around an avatar (owner, 2026-09-18: *"put a white border around the
+        /// portraits"*).
+        ///
+        /// <para><b>Not quite white.</b> 0.88 alpha rather than 1.0, because a rendered portrait
+        /// is a photograph with soft edges and a hard pure-white rectangle around it reads as a
+        /// cut-out pasted on the card. At this alpha it frames without outshouting the face, and
+        /// it is still the brightest thing on the card by some way — brighter than
+        /// <see cref="TextPrimary"/>, which is the name beside it.</para>
+        /// </summary>
+        public static readonly HudColour AvatarBorder = new HudColour(255, 255, 255, 0.88f);
+
+        /// <summary>
+        /// How thick that frame is. Two rather than one: the avatar is 52 px on a card and 60 in
+        /// the inspect header, and a single pixel at that size reads as an artefact of the
+        /// rendering rather than as a deliberate edge — which is the same reason the armed
+        /// banner's border is three (<see cref="ArmedBorderWidth"/>) and not one.
+        /// </summary>
+        public const int AvatarBorderWidth = 2;
+
+        /// <summary>
+        /// How far the ink hull stands out past the figure, in the 24-unit design box — so it is
+        /// 0.76 px on a 26 px card avatar and 1.87 px on the 64 px one, which keeps a separation
+        /// that reads at the small size from becoming an outline that draws itself at the large.
+        /// </summary>
+        public const float AvatarInkWidth = 0.7f;
 
         // ------------------------------------------------------------------ build palette
 

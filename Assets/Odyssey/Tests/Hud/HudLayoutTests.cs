@@ -505,7 +505,9 @@ namespace Odyssey.Tests.Hud
             Assert.That(HudLayout.InspectNarrowWidth * 2, Is.EqualTo(HudLayout.InspectWidth),
                 "narrow is half, by definition, and the definition is load-bearing");
 
-            float chrome = HudLayout.Frame + HudLayout.Pad + HudLayout.InspectHeader +
+            // The narrow header: a tile's slot is an icon and stayed at 38 when the colonist's
+            // became a 60 px portrait (2026-09-18).
+            float chrome = HudLayout.Frame + HudLayout.Pad + HudLayout.InspectHeaderNarrow +
                            HudLayout.InspectHeaderGap + HudLayout.Pad;
             Assert.That(HudLayout.InspectHeight(0, 0, cellRows: 5),
                 Is.EqualTo(chrome + 5 * HudLayout.CellRow + 4 * HudLayout.CellRowGap));
