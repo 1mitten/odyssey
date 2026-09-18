@@ -6047,4 +6047,4 @@ because they get clipped by this façaded terrain."* The design is
   is chosen. Walking is untouched on purpose: the cell is the take-off cell for the hop, and the
   bank is drawn there to make that hop legible.
 - **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1756 total, 1742 passed,
-  0 failed**.
+  0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
