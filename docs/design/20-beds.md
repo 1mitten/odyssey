@@ -382,6 +382,34 @@ decision 4 states as unchanged, so it has been left alone and pinned by a test t
 figures out loud. If a night in a bed should feel more decisive than a quarter again, that one
 integer in `Colonist.xml` is the lever.
 
+### Why Assign did nothing, three times (2026-09-18)
+
+The owner reported being unable to give a bed to a colonist on 2026-09-17, again after the row was
+restyled, and again after it was made a button with a glyph. **Two independent faults were stacked
+on each other, and fixing either alone would still have looked broken.**
+
+1. **The affordance lived for one frame.** `InspectModel.Refresh` clears `_bedUnderPane` every
+   time; it was set inside `SetCellRows`, which returns early whenever nothing about the cell has
+   changed. So it was true on the refresh that built the rows and false ever after, while the row
+   went on reading "Assign…" over a control the shell had already disarmed. It is now set from the
+   cell detail *before* the early return, which is where a fact about the held cell belongs.
+2. **The picker would have opened in the corner.** A popover shown this frame has not been laid
+   out, so its height is NaN — and NaN written to `style.bottom` is not ignored, it drops the
+   element to (0, 0). Measured: the picker at the top-left of the screen against the row at
+   y = 1095 that raised it. It is placed on `GeometryChangedEvent` now, and `PlacePopover` declines
+   to write a position it cannot compute.
+
+**Neither was findable by reading**, which is the part worth keeping. Both earlier attempts changed
+things that were genuinely wrong — the row did not look like a control, and the picker did use the
+command bar's geometry — and neither was the reason Assign did nothing. What found them was
+`BedOwnerPickerTests`: a PlayMode fixture that sends a real `ClickEvent` to the real row and then
+asserts on the world. It took four runs; two of those failures were the fixture's own and are
+recorded in `lessons.md` as well.
+
+**The standing note in `CLAUDE.md` that "nothing tests that a click reaches the game" is about the
+input system**, whose presses a PlayMode test cannot fake. A UI Toolkit event is not subject to
+that, and this path had been testable all along.
+
 ### A sleeper is a position, not a motion (owner, 2026-09-18)
 
 *"When they are sleeping — they should be static and not animated. Still in that position."*

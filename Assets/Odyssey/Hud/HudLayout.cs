@@ -1296,6 +1296,44 @@ namespace Odyssey.Hud
             return Math.Max(0f, Math.Min(buttonLeft, widest));
         }
 
+        /// <summary>
+        /// Where a popover's bottom edge goes when it is raised by <b>a row inside a panel</b>
+        /// rather than by a button on the command bar: sitting on top of that row.
+        ///
+        /// <para><b>Why the bar's own <see cref="PopoverBottom"/> is wrong for it.</b> That
+        /// constant pins a popover flush to the command bar, which is right for every popover the
+        /// bar raises and exactly wrong for one raised 300 px up the screen — the panel opens at
+        /// the bottom of the window, detached from the control that asked for it, and on this
+        /// screen it lands on top of the very pane the row is in. The owner clicked Assign twice
+        /// over two sessions and reported nothing happening; a popover that opens somewhere you
+        /// are not looking and covers what you clicked is indistinguishable from one that does not
+        /// open at all.</para>
+        ///
+        /// <para>Above the row rather than below it, because a popover below would cover the rows
+        /// under the one being answered — and those rows are the readout the choice is about.
+        /// Flipped under the row only when there is not the height for it above, and clamped so
+        /// that a long list never hangs off the top of the screen.</para>
+        ///
+        /// <para>All four arguments are measured downward from the top, the way a laid-out panel
+        /// reports itself; the answer is measured upward from the bottom, the way USS wants it.
+        /// That inversion is the whole reason this is arithmetic in a testable place rather than
+        /// two lines at the call site.</para>
+        /// </summary>
+        public static float PopoverBottomFor(
+            float anchorTop, float anchorHeight, float popoverHeight, float screenHeight)
+        {
+            if (screenHeight <= 0f) return 0f;
+
+            float above = screenHeight - anchorTop;
+            float below = screenHeight - (anchorTop + anchorHeight) - popoverHeight;
+
+            // Above unless the top of the screen is in the way, and never below zero: a popover
+            // pushed off the bottom is as lost as one pushed off the top.
+            float wanted = above + popoverHeight <= screenHeight ? above : below;
+            float highest = Math.Max(0f, screenHeight - popoverHeight);
+            return Math.Max(0f, Math.Min(wanted, highest));
+        }
+
         // ---------------------------------------------------------------- acceptance
 
         /// <summary>

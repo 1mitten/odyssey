@@ -1902,3 +1902,51 @@ Where a hash feeds a small modulus, use a full avalanche (murmur3's `fmix32`: sh
 shift-xor, multiply, shift-xor) so the low bits carry the whole input. And test the *distribution
 over consecutive ids*, because consecutive is what a colony actually has — a test over scattered
 ids would have passed.
+
+## A single-assembly compile check cannot see an assembly boundary
+
+With the editor open on a worktree (and so the project locked against a batch run), the Presentation
+assembly can be compile-checked by pointing `dotnet build` at the sources with `LangVersion 9` —
+Unity's own — and referencing Unity's DLLs plus `Library/ScriptAssemblies`. That catches the thing
+the fast tier cannot: a construct that compiles under `latest` and not under 9.
+
+**It does not catch anything about assembly boundaries**, because it compiles every Odyssey source
+into one assembly. It reported clean on a PlayMode test that then failed in Unity twice over: a
+field that is `private` to `HudShell` looked reachable, and a type visible in the merged assembly
+was not visible across the real asmdef reference set. Treat it as a language-version gate, not as a
+substitute for `scripts/unity.sh`.
+
+The other half of the lesson: **a test written for a private field is usually asking the wrong
+question.** The fix was not to widen `HudShell._inspect` but to wait for the *row* to appear in the
+panel — which is what a player actually has, and a stronger assertion than the flag behind it.
+
+## A flag cleared every refresh and set only on the change path lives for one frame
+
+The bed's owner row submitted an intent and never fired, three reports across two sessions. The
+cause was two lines a long way apart in `InspectModel`: `Refresh` cleared `_bedUnderPane` **every
+time**, and it was set inside `SetCellRows` — which returns early whenever nothing about the cell
+has changed. So the flag was true on the refresh that built the rows and false on every refresh
+after it, while the row went on reading "Assign…" over a control the shell had already disarmed.
+
+**A pane refreshes many times a second and a player clicks a good deal later than that**, so the
+only frame the old code got right was the one nobody could click in. Two consequences worth
+carrying:
+
+- **Derive an affordance from the state it describes, not from the work that displayed it.** The
+  flag is a fact about the cell being held; it belongs before the early return, beside the data it
+  is read from.
+- **Test the second refresh.** A test that refreshes once and asserts passes over this bug
+  completely. `ABedStaysAssignableAfterTheRowsHaveSettled` refreshes five times, and the control
+  run — old code restored — fails on exactly that one.
+
+## NaN written to a USS position is not ignored; it moves the element to the corner
+
+Same feature, second fault, found in the same run. A popover shown on the current frame has not
+been laid out, so `resolvedStyle.height` and `worldBound.height` both answer NaN. Feeding that
+through placement arithmetic gives `style.bottom = NaN`, and the element lands at (0, 0) — measured
+as a picker at the top-left of the screen against the row at y = 1095 that raised it.
+
+`schedule.Execute` is not the fix: it can run before layout resolves, which is what it did here.
+**`GeometryChangedEvent` is the event that fires when the size exists**, so placement belongs
+there, and the placement call should decline to write a position it cannot compute rather than
+writing a NaN.

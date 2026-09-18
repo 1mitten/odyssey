@@ -219,6 +219,57 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// <b>The owner row stays pickable while the bed is held, not for one frame.</b>
+        ///
+        /// <para>This is the whole of the bug the owner reported three times across two sessions.
+        /// <c>Refresh</c> clears <see cref="InspectModel.BedUnderPane"/> every time, and it used to
+        /// be set inside the row rebuild — which <c>SetCellRows</c> skips whenever nothing about
+        /// the cell has changed. So the flag was true on the refresh that built the rows and false
+        /// on every refresh after it, while the row went on reading "Assign…" over a control the
+        /// shell had already disarmed. Clicking it did nothing, for ever.</para>
+        ///
+        /// <para>A pane is refreshed many times a second and a player clicks a good deal later
+        /// than that, so <b>the second refresh is the one that matters</b> and the first is the
+        /// only one the old code got right. Refreshing twice here is not belt-and-braces; it is
+        /// the test.</para>
+        /// </summary>
+        [Test]
+        public void ABedStaysAssignableAfterTheRowsHaveSettled()
+        {
+            WorldSnapshot frame = FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
+                    quality: QualityHandle.Normal));
+            InspectModel model = Looking(frame);
+
+            Assert.That(model.BedUnderPane, Is.True, "the first refresh never armed the row");
+
+            // Nothing has changed, so the rebuild is skipped — which is exactly when the flag used
+            // to be lost.
+            for (int i = 0; i < 5; i++) model.Refresh(frame);
+
+            Assert.That(model.BedUnderPane, Is.True,
+                "the owner row stopped being pickable while the same bed was still selected");
+            Assert.That(Rows(model), Does.Contain("owner=Assign…"),
+                "and it still says it is assignable, which is what made the fault invisible");
+        }
+
+        /// <summary>
+        /// And the flag goes away when the bed does, so the affordance cannot outlive its subject.
+        /// </summary>
+        [Test]
+        public void TheOwnerRowStopsBeingPickableWhenTheBedIsNoLongerHeld()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
+                    quality: QualityHandle.Normal)));
+            Assume.That(model.BedUnderPane, Is.True);
+
+            model.Refresh(FrameWith(Detail(terrain: TerrainHandle.Grass)));
+
+            Assert.That(model.BedUnderPane, Is.False, "a patch of grass is not a bed");
+        }
+
+        /// <summary>
         /// Every tier a player can be shown carries the colour <see cref="HudTheme.Quality"/>
         /// gives it, and Normal carries none.
         ///

@@ -650,6 +650,9 @@ namespace Odyssey.Presentation.Ui
         VisualElement? _bedPicker;
         VisualElement? _bedPickerRows;
 
+        /// <summary>The row the picker was raised by, so a re-place after layout knows where to go.</summary>
+        VisualElement? _bedPickerAnchor;
+
         /// <summary>
         /// Raise the colonist picker over the owner row, or put it down if it is already up.
         ///
@@ -674,6 +677,11 @@ namespace Odyssey.Presentation.Ui
                 _bedPickerRows.AddToClassList("bedowner__rows");
                 _bedPicker.Add(_bedPickerRows);
                 _hud.Add(_bedPicker);
+
+                // Placed again whenever its size changes, which is the only moment its height is
+                // knowable: a popover shown this frame has not been laid out, so the placement
+                // arithmetic has nothing to work with and the first attempt does nothing.
+                _bedPicker.RegisterCallback<GeometryChangedEvent>(_ => PlaceBedPicker());
             }
 
             if (_bedPicker.style.display == DisplayStyle.Flex)
@@ -690,8 +698,24 @@ namespace Odyssey.Presentation.Ui
                 _bedPickerRows.Add(BedPickerRow(
                     ColonistNames.Of(frame, pawns[i].Id), pawns[i].Id.Value));
 
+            _bedPickerAnchor = anchor;
             _bedPicker.style.display = DisplayStyle.Flex;
-            PlacePopover(_bedPicker, anchor);
+            PlaceBedPicker();
+        }
+
+        /// <summary>
+        /// Put the picker against the row that raised it, as far as the current layout allows.
+        ///
+        /// <para>Called on open and again on every <c>GeometryChangedEvent</c>, because on the
+        /// frame it opens the popover has no height and the placement cannot be computed at all.
+        /// It is safe to call repeatedly: the arithmetic is a pure function of the two rects, so
+        /// once the size settles the answer stops changing and the event stops firing.</para>
+        /// </summary>
+        void PlaceBedPicker()
+        {
+            if (_bedPicker == null || _bedPickerAnchor == null) return;
+            if (_bedPicker.style.display.value != DisplayStyle.Flex) return;
+            PlacePopover(_bedPicker, _bedPickerAnchor, onTheBar: false);
         }
 
         void CloseBedPicker()

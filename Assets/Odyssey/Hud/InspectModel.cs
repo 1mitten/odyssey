@@ -541,6 +541,16 @@ namespace Odyssey.Hud
             }
             int orderPercent = (progress * 100 + 127) / 255;
 
+            // **Set before the early return, not inside the rebuild.** This is a fact about the
+            // cell the pane is holding, not about whether the rows happened to change — and it was
+            // written as the latter, which armed the affordance for exactly one frame and then
+            // killed it. `Refresh` clears it every time; `SetCellRows` returns here whenever
+            // nothing has moved; so the second refresh after a bed was selected cleared the flag,
+            // took this return, and never set it again. The row went on reading "Assign…" for ever
+            // over a control that was dead, and the owner reported being unable to assign a bed
+            // three times across two sessions before a test could say why (BedOwnerPickerTests).
+            _bedUnderPane = detail.EdificeQuality > 0;
+
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
                 && _cellRowsFloor == detail.FloorStuff
@@ -578,7 +588,6 @@ namespace Odyssey.Hud
             // clause leads.
             if (detail.EdificeQuality > 0)
             {
-                _bedUnderPane = true;
                 Row(n++, "quality", QualityLabels.Label(detail.EdificeQuality),
                     HudTheme.Quality(detail.EdificeQuality));
 

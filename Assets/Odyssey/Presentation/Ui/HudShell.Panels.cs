@@ -205,15 +205,39 @@ namespace Odyssey.Presentation.Ui
         /// and the interface scale moves them again. The arithmetic itself is
         /// <see cref="HudLayout.PopoverLeft"/>, in the assembly the fast tier can read.</para>
         /// </summary>
-        void PlacePopover(VisualElement popover, VisualElement anchor)
+        void PlacePopover(VisualElement popover, VisualElement anchor, bool onTheBar = true)
         {
             float screen = _hud.resolvedStyle.width;
             float width = popover.resolvedStyle.width;
             if (float.IsNaN(width) || width <= 1f) width = popover.worldBound.width;
 
             Rect button = anchor.worldBound;
-            popover.style.left = HudLayout.PopoverLeft(button.xMin, width, screen);
-            popover.style.bottom = HudLayout.PopoverBottom;
+            if (!float.IsNaN(width)) popover.style.left = HudLayout.PopoverLeft(button.xMin, width, screen);
+
+            if (onTheBar)
+            {
+                popover.style.bottom = HudLayout.PopoverBottom;
+                return;
+            }
+
+            // Raised by a row inside a panel, so it sits on that row rather than on the command
+            // bar three hundred pixels below it. See HudLayout.PopoverBottomFor.
+            //
+            // **Placed only once it has a size, and left alone until then.** An element shown this
+            // frame has not been laid out yet, so both of these answer NaN — and a NaN written to
+            // `bottom` is not ignored, it drops the popover into the top-left corner of the screen.
+            // Measured: picker at (0, 0) against a row at y = 1095, with `bottom` reading NaN. The
+            // caller re-places it on GeometryChangedEvent, which is the event that fires when the
+            // size it needs finally exists.
+            float height = popover.resolvedStyle.height;
+            if (float.IsNaN(height) || height <= 1f) height = popover.worldBound.height;
+            if (float.IsNaN(height) || height <= 1f) return;
+
+            float panel = _hud.resolvedStyle.height;
+            if (float.IsNaN(panel) || panel <= 1f) return;
+
+            popover.style.bottom = HudLayout.PopoverBottomFor(
+                button.yMin, button.height, height, panel);
         }
 
         // ============================================================ scrims

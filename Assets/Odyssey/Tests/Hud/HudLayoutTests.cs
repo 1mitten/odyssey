@@ -335,6 +335,40 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// A popover raised by a <b>row inside a panel</b> sits on that row, not on the command
+        /// bar at the bottom of the screen.
+        ///
+        /// <para>Written because the bed's owner picker used the bar's own constant. The row is
+        /// most of the way up a 1080 px screen and the popover opened at the bottom of it —
+        /// detached from the control that asked for it and lying on top of the pane the row is in.
+        /// The owner clicked Assign across two sessions and reported nothing happening both times,
+        /// which is what a popover you are not looking at is indistinguishable from.</para>
+        /// </summary>
+        [Test]
+        public void APopoverRaisedByARowSitsOnThatRow()
+        {
+            const float screen = 1080f;
+
+            // A row 700 px down the screen: its top is 380 px up from the bottom, and a popover
+            // that tall or less sits there.
+            Assert.That(HudLayout.PopoverBottomFor(700f, 20f, 150f, screen), Is.EqualTo(380f),
+                "the popover's bottom edge meets the row's top edge");
+
+            // Nothing about the answer is the command bar's, which is the whole point.
+            Assert.That(HudLayout.PopoverBottomFor(700f, 20f, 150f, screen),
+                Is.Not.EqualTo(HudLayout.PopoverBottom));
+
+            // Too tall to fit above: it flips under the row rather than hanging off the top.
+            Assert.That(HudLayout.PopoverBottomFor(100f, 20f, 600f, screen), Is.EqualTo(360f),
+                "under the row, with its own height below the row's bottom edge");
+
+            // And a popover taller than the screen starts at the bottom rather than below it.
+            Assert.That(HudLayout.PopoverBottomFor(100f, 20f, 2000f, screen), Is.EqualTo(0f));
+            Assert.That(HudLayout.PopoverBottomFor(700f, 20f, 150f, 0f), Is.EqualTo(0f),
+                "a screen that has not been laid out yet answers zero rather than a negative");
+        }
+
+        /// <summary>
         /// A popover lines up with the button that raised it, and is pushed back on to the screen
         /// rather than hanging off it.
         /// </summary>
