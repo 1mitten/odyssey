@@ -1811,3 +1811,28 @@ a slot between the two, and at the top edge that slot is a line of sight onto wh
 a hairline of lit ground along the brow of every waterfall. Close it by extending the sheet *into*
 the surface it hangs from, and lengthen it by the same amount or it stops short at the bottom, which
 is the half-right version of the fix.
+
+## A test world built after the NavGraph is a test world with no walls in it
+
+`NavGraph.Rebuild()` rebuilds **dirty** blocks. Writing `cells.Flags[i] |= CellFlags.SolidTerrain`
+straight onto a `CellGrid` that a `NavGraph` has already been constructed from marks nothing dirty,
+so `Rebuild()` has nothing to do and not one wall reaches the nav grid. The test then runs on open
+ground and passes for the wrong reason.
+
+This cost a diagnosis on 2026-09-18. Two new tests in `DiagonalMovementTests` scattered 30% solid
+cells and then asserted things about which diagonal steps were permitted. Both passed. Both were
+also passing under a *deliberately broken* corner rule, which is what gave it away — and the
+confirming measurement was the count of permitted diagonals coming back as **1,936**, which is
+exactly 22 × 22 × 4: every candidate on the board, i.e. nothing was blocked anywhere.
+
+**The fix is ordering, not a call:** fill the `CellGrid` first, then construct the `NavGraph`, then
+`Rebuild()`. `NavWorld.SetSolid` is the other correct route, because it calls `nav.MarkDirty(index)`
+for you — which is precisely why every older test in `PathingTests` uses it and never had this
+problem.
+
+**The general form, and the reason this is here rather than in a design note:** a fixture that
+silently produces a *simpler* world than the one it claims will make tests pass, and a test that
+passes for the wrong reason is worse than one that fails. Assert something about the fixture
+itself — a count of the thing under test, non-zero — so the vacuous case is a failure rather than
+a green tick. `WalkOnReliefTests.TheFieldIsOnAtAll` exists for exactly this reason, and this is the
+same trap in a different fixture.
