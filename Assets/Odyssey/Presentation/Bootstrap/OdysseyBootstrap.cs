@@ -821,6 +821,27 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The other half of the day skip (owner, 2026-09-19): skipping a WHOLE day lands where
+        /// you started, and everything that happened in between - the harvest above all -
+        /// happened inside the warp, unseen, so a field that ripes and ripes-again reads as
+        /// "seeds back down before a harvest I never watched". Skipping to MORNING hands the
+        /// clock back with a whole day ahead of it: the crops finish, the harvesters walk, the
+        /// sowers kneel, all at watchable speed, and the skip-a-day row stays for the long haul.
+        /// Morning is a sixth past midnight, ahead of the growth window's 15,000, so the day is
+        /// seen whole.
+        /// </summary>
+        public void DebugSkipToMorning()
+        {
+            if (_world == null || Colony == null) return;
+            int day = Colony.Pawns.Content.DayTicks;
+            int morning = day / 6;
+            int now = _world.CurrentTick % day;
+            int skip = (morning - now + day) % day;
+            if (skip == 0) skip = day;
+            DebugSkipTicks(skip);
+        }
+
+        /// <summary>
         /// The scene's own key light, when the inspector field is empty.
         ///
         /// <para>Found rather than created, because the scene builder already places a sun and a

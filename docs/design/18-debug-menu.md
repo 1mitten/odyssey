@@ -26,7 +26,8 @@ because the two cannot be open together.
 | Developer overlay | Toggles the frame-time/draw-call readout, drawn at `fontSize` 56 (roughly six times the original default) and anchored to the bottom of the screen rather than the top-left, so it clears the HUD's top-left ledger regardless of size | `SettingsDirector.DeveloperOverlay` (unchanged; only the row moved) |
 | Spawn colonist | Adds one colonist near the camera, with no scenario and no starting kit | `IntentKind.SpawnPawn` → `PawnRegistry.HandleSpawnPawn` |
 | Give wood / Give stone / Give food | Adds 50 units of the resource near the camera | `IntentKind.GiveResource` → `ColonyItems.HandleGiveResource` |
-| Skip one day | Spends one whole game day of ticks in one synchronous batch (~0.2 s), then hands the clock back. Works while paused | `OdysseyBootstrap.DebugSkipTicks` — the composition root's own batch tick, not an intent: ticking is the root's one job and the bus is drained *inside* a tick |
+| Skip one day | Spends one whole game day of ticks in one synchronous batch (~0.2 s), then hands the clock back. Works while paused |
+| Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn | `OdysseyBootstrap.DebugSkipTicks` — the composition root's own batch tick, not an intent: ticking is the root's one job and the bus is drained *inside* a tick |
 | Ripen crops | Brings every standing crop to ripeness at once, daylight window and all — the harvest half without the four-day wait | `IntentKind.DebugRipen` → `GrowingZones.RipenAll`, refused with AlreadyInThatState when nothing stands |
 
 "Near the camera" is the selected colonist's cell if one is selected, else the middle of the active

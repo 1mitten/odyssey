@@ -192,6 +192,7 @@ namespace Odyssey.Hud
             { "ui.debug.panel", "Debug" },
             { "ui.debug.ripen", "Ripen crops" },
             { "ui.debug.skipday", "Skip one day" },
+            { "ui.debug.skipmorning", "Skip to morning" },
             { "ui.debug.spawnpawn", "Spawn colonist" },
             { "ui.health.anaesthetic", "Anaesthetic" },
             { "ui.health.arm", "Arm" },

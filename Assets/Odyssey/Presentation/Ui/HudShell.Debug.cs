@@ -51,6 +51,10 @@ namespace Odyssey.Presentation.Ui
                 "Spends one whole game day of ticks at once (about a fifth of a second). "
                     + "The crop's stage changes arrive at the same hour each press; works while paused",
                 SkipDay));
+            _debugPanel.Add(DebugActionRow(SkipMorningKey,
+                "Skips the night and hands back the clock at dawn, with a whole watchable day "
+                    + "ahead: the harvest happens on screen, not inside the skip",
+                () => _boot!.DebugSkipToMorning()));
             _debugPanel.Add(DebugActionRow(RipenCropsKey,
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
@@ -172,6 +176,7 @@ namespace Odyssey.Presentation.Ui
         const string GiveFoodKey = "ui.debug.givefood";
         const string InvokeEventKey = "ui.debug.invokeevent";
         const string SkipDayKey = "ui.debug.skipday";
+        const string SkipMorningKey = "ui.debug.skipmorning";
         const string RipenCropsKey = "ui.debug.ripen";
     }
 }

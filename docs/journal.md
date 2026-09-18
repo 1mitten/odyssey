@@ -6225,3 +6225,14 @@ alive as a shell of itself holding the lock, the exact shape lessons.md's first 
 stuck process was cleared (a batch shell with no results and no editor behind it), the tiers re-ran
 clean, and the runner will pick up the pushes when it next polls. The lesson's cost this time was
 half an hour of "close the editor" aimed at nobody.
+### The warp hid the harvest, the sink buried the sprouts (2026-09-19)
+
+Two evening plays, two lessons. Skipping a whole day lands where you started, and everything in
+between happened inside the warp - so a field that ripens and is reaped reads as "seeds back down
+before a harvest I never saw". The debug menu gains Skip to morning: the night goes in one press
+and the day is handed back whole, watchable, harvesters and all. And the carrot sink was the
+STAGE's to carry, not the cell's: a 0.15 m sink on a hand-tall stage-one sprout put whole plots
+underground, and five carrots a tile drew as one - young plants sit on the soil now, only the
+mature root insets. The third ask, the small click area, was the pile eating the tile: an item
+lying in a field now carries the field's growing row in its own pane, so the tile answers
+wherever on it the click lands.

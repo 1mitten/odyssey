@@ -1353,8 +1353,12 @@ namespace Odyssey.EditorTools
             // into the ground to be pulled out"): scale 1.4 with a quarter-metre of the root
             // below the soil line, so the mature carrot reads as sitting IN the field rather
             // than on it. Both apply per plant, so a plot's whole yield sinks alike.
-            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 1.4f, sink: 0.15f);
-            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 1.4f, sink: 0.2f);
+            // The sink is the STAGE's, not the cell's: a stage-one sprout is barely a hand tall,
+            // and the first cut sank it 0.15 m under the soil it had just broken - whole plots
+            // showed one carrot where five grew (owner, 2026-09-19). Young plants sit on the
+            // ground; only the mature root insets, there to be pulled.
+            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 1.4f, sink: 0f);
+            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 1.4f, sink: 0.05f);
             Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.4f, sink: 0.25f);
 
 

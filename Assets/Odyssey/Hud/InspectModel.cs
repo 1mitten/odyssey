@@ -282,6 +282,7 @@ namespace Odyssey.Hud
             if (Subject == InspectSubject.Item)
             {
                 bool found = false;
+                ThingView atThing = default;
                 var things = snapshot.Things;
                 for (int i = 0; i < things.Length; i++)
                 {
@@ -293,10 +294,29 @@ namespace Odyssey.Hud
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
                     SetPosition(thing.Cell);
                     Layer = thing.Cell.Y;
+                    atThing = thing;
                     found = true;
                     break;
                 }
                 if (!found) Subtitle = "item · no longer present";
+
+                // A pile lying in a field carries the field's answer (owner, 2026-09-19: the
+                // click area that mattered was the tile, and the pile ate it - the only clear
+                // ground to click was between the plants). The query the picker asked was for
+                // this very cell, so its detail is already in the frame.
+                CellRows.Clear();
+                if (found && snapshot.TryGetCellDetail(
+                        snapshot.Size.Index(atThing.Cell), out CellDetail under))
+                {
+                    if (under.ZonePlant != byte.MaxValue)
+                    {
+                        string plant = Registry.Label(BuildLabels.PlantKey(under.ZonePlant));
+                        string howMany = under.ZoneYield > 1 ? plant + " × " + under.ZoneYield : plant;
+                        Row(0, "growing", under.CropGrowth == ushort.MaxValue
+                            ? howMany + " — awaiting its seed"
+                            : howMany + " — " + under.CropGrowth / 10 + "% grown");
+                    }
+                }
                 return;
             }
 
