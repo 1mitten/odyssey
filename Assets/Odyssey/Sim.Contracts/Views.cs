@@ -416,6 +416,66 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One cell of a growing zone, planted or waiting for its seed.
+    ///
+    /// <para>Sparse and whole-world, exactly as <see cref="OrderView"/> is and for the same
+    /// reason: zones are tens to thousands of cells on a board of millions, and a zone on layer
+    /// three must draw when layer three is the slice. The overlay this feeds is a tint, not
+    /// geometry; what stands planted in the cell rides <see cref="PlantView"/>, which is a
+    /// different row because a crop can be asked about without its zone and a zone cell exists
+    /// before anything is in it.</para>
+    /// </summary>
+    public readonly struct ZoneView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What the zone grows here, as a <see cref="PlantHandle"/> value.</summary>
+        public readonly byte Plant;
+
+        public ZoneView(int cellIndex, byte plant)
+        {
+            CellIndex = cellIndex;
+            Plant = plant;
+        }
+    }
+
+    /// <summary>
+    /// One standing crop: a planted cell, what grows there, and how far it has got.
+    ///
+    /// <para><b>Quantised growth, and it is not <see cref="SiteView"/>'s argument repeated.</b>
+    /// A site is asked questions in a pane; a crop is only ever <i>looked</i> at, and what reads
+    /// is whether the row is sprouting, half-grown or ripe — which is <see cref="Stage"/>, a
+    /// bucket with three answers. The growth byte rides along so a later progress ring needs no
+    /// contract change, quantised like <see cref="OrderView.Progress"/> because a picture is
+    /// what it is for; the tick-true counter stays in the simulation, where the arithmetic is
+    /// done.</para>
+    /// </summary>
+    public readonly struct PlantView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What is growing, as a <see cref="PlantHandle"/> value.</summary>
+        public readonly byte Plant;
+
+        /// <summary>The drawn stage, 1–3: sprout, half-grown, mature. Harvestability is not this —
+        /// it is the simulation's own rule, and the giver, not the picture, decides.</summary>
+        public readonly byte Stage;
+
+        /// <summary>How far through growing, 0–255 quantised.</summary>
+        public readonly byte Growth;
+
+        public PlantView(int cellIndex, byte plant, byte stage, byte growth)
+        {
+            CellIndex = cellIndex;
+            Plant = plant;
+            Stage = stage;
+            Growth = growth;
+        }
+    }
+
+    /// <summary>
     /// The answer to "what is this cell": one row, published for the one cell the interface has
     /// asked about and for no other.
     ///
@@ -511,6 +571,8 @@ namespace Odyssey.Sim.Contracts
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
         SiteView[] _sites = Array.Empty<SiteView>();
+        ZoneView[] _zones = Array.Empty<ZoneView>();
+        PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
@@ -566,6 +628,12 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many building sites <see cref="Sites"/> holds.</summary>
         public int SiteCount { get; private set; }
 
+        /// <summary>How many growing-zone cells the world holds, anywhere in it.</summary>
+        public int ZoneCount { get; private set; }
+
+        /// <summary>How many planted cells are standing.</summary>
+        public int PlantCount { get; private set; }
+
         /// <summary>How many aspects every feature published this frame, over all pawns.</summary>
         public int AspectCount { get; private set; }
 
@@ -590,6 +658,15 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
         public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
+
+        /// <summary>
+        /// Every growing-zone cell in the world, in cell-index order. Empty when the world has no
+        /// zones. See <see cref="ZoneView"/>.
+        /// </summary>
+        public ReadOnlySpan<ZoneView> Zones => new ReadOnlySpan<ZoneView>(_zones, 0, ZoneCount);
+
+        /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
+        public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
 
         /// <summary>
         /// Everything features published about pawns this frame, in the order they published it.
@@ -675,6 +752,8 @@ namespace Odyssey.Sim.Contracts
             SliceCellCount = 0;
             OrderCount = 0;
             SiteCount = 0;
+            ZoneCount = 0;
+            PlantCount = 0;
 
             AspectCount = 0;
             CellDetailCount = 0;
@@ -709,6 +788,18 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _sites, SiteCount + 1);
             _sites[SiteCount++] = view;
+        }
+
+        internal void AddZone(in ZoneView view)
+        {
+            Grow(ref _zones, ZoneCount + 1);
+            _zones[ZoneCount++] = view;
+        }
+
+        internal void AddPlant(in PlantView view)
+        {
+            Grow(ref _plants, PlantCount + 1);
+            _plants[PlantCount++] = view;
         }
 
         internal void AddPawnAspect(in PawnAspect aspect)
