@@ -5893,3 +5893,20 @@ game?"*
   before demanding the count. `docs/lessons.md` has it, under the rule it broke.
 - **Verified:** fast tier 723 Sim + 412 Hud; EditMode **1713 total, 1699 passed, 0 failed**;
   PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
+
+### Roster top bar pagination and slot reordering (2026-09-18)
+
+The owner: *"when many colonists are generated - the roster top bar stops generating profile cards - I suggest a small toolbar control that sits alongside the right hand side of the roster bar which is effectively pages of colonists to display - so you switch between the pages of colonists to the maximum or maybe suggest a better way to handle many colonists - also take into account when you say click on an alert to go to a person, the profile switches to that page. Also if you could make it so if you right click and hold on a roster profile card you can drag and drop them between slots and it will swap them"*.
+
+- **Overflow pagination**: When the colony size exceeds the capacity of the roster bar (computed via `CardsPerRow(width) * StripRowsAllowed(height)`), the roster now pages across colonists rather than truncating them or overflowing into adjacent regions.
+- **The pager toolbar**: Docked cleanly alongside the right-hand edge of the card matrix. Features `< [page] / [total] >` controls with `ChevronLeft` and `ChevronRight` vector glyphs drawn via `Painter2D` in `HudGlyph`. It hides automatically (`display: none`) when all colonists fit on a single page. Mouse wheel over the strip cycles through pages.
+- **Steady-state zero GC**: Following ADR 0003, page labels cache last-seen page indices and rebuild their string text only on page transitions.
+- **Selection synchronization**: Selecting a colonist in the 3D world, clicking an alert, or navigating to a colonist flips the roster bar to the page containing that colonist's profile card, without resetting manual page navigation during steady state.
+- **Direct slot swapping on right-click drag-and-drop**: Holding right-click and dragging a card shows a semi-transparent drag ghost following the cursor, highlights target cards with `.card--drag-target`, and directly swaps positions (A ↔ B) upon release. Edge hover paging allows dragging across page boundaries.
+- **Persistence across save/load**: Custom colonist order and the active roster page persist in `ViewStateSection` (version 2) under the `"view"` save key, isolated from simulation hash determinism.
+- **Guards**:
+  - `HudModelTests.RosterPaginationClampsAndSlicesCorrectly` asserts pagination mathematics.
+  - `HudModelTests.RosterEnsurePageForSwitchesActivePage` asserts selection synchronization.
+  - `HudModelTests.RosterSwapDirectlySwapsColonistPositions` asserts direct slot swapping.
+  - `ViewStateTests.TheRosterOrderAndPageSurviveAStreamAndRestore` asserts save/load round-trip in PlayMode.
+- **Verified**: fast tier 723 Sim + 416 Hud; EditMode **1717 total, 1703 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
