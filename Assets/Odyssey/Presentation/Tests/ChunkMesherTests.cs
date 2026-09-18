@@ -563,6 +563,75 @@ namespace Odyssey.Tests.Presentation
             Assert.That(Instances(batch.Body), Is.EqualTo(first), "a rebuild must replace, not append");
             Assert.That(batch.Body.Count, Is.EqualTo(buckets), "bucket arrays are reused across rebuilds");
         }
+
+        /// <summary>
+        /// <b>Rubble on a floor is drawn on top of it, not inside it.</b>
+        ///
+        /// <para>A surface terrain and a floor slab can share a cell, and a collapse guarantees
+        /// they will: <c>SupportSystem.Rubble</c> picks <c>FirstFloorAtOrBelow</c>, so the cell it
+        /// drops debris into <em>has a floor by definition</em>. Both are drawn — the slab by
+        /// <c>EmitFloor</c>, the surface by <c>SurfaceContributor</c> — and before this they were
+        /// drawn at the same height.</para>
+        ///
+        /// <para><b>The owner met it as a grey tile in a wooden deck</b> (2026-09-18) and it cost
+        /// three sessions, because every explanation offered was about the floor: the pane reads
+        /// <c>FloorStuff</c> and honestly said "Wood floor", and the save holds no stone slab
+        /// anywhere on the board. The grey was the rubble terrain drawn over the deck.</para>
+        ///
+        /// <para><b>The same cell in two worlds, rather than two cells in one.</b> An instance's
+        /// matrix carries its prefab's own normalisation, and the ground relief varies with x and
+        /// z, so neither "the two instances in this cell" nor "this cell against its neighbour"
+        /// isolates the lift. Meshing the identical cell with and without a floor under the rubble
+        /// holds both of those constant and leaves exactly the change being tested.</para>
+        /// </summary>
+        [Test]
+        public void RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt()
+        {
+            ChunkBatch bare = MeshLayer(new RenderTestWorld(6, 6, 3)
+                .Solid(2, 2, 0)
+                .Surface(2, 2, 1, CoreContent.TerrainRubble)
+                .Publish(), 1);
+
+            ChunkBatch floored = MeshLayer(new RenderTestWorld(6, 6, 3)
+                .Solid(2, 2, 0)
+                .Slab(2, 2, 1, NaturalContent.StuffWood)
+                .Surface(2, 2, 1, CoreContent.TerrainRubble)
+                .Publish(), 1);
+
+            List<float> onGround = HeightsIn(bare, 2, 2, 1);
+            List<float> onFloor = HeightsIn(floored, 2, 2, 1);
+
+            Assert.That(onGround.Count, Is.EqualTo(1), "rubble on bare ground is one tile");
+            Assert.That(onFloor.Count, Is.EqualTo(2),
+                "a floored cell holds the slab the player built and the debris lying on it, and " +
+                "both are things to draw");
+
+            float wanted = onGround[0] + CellMetrics.SlabLift;
+            Assert.That(onFloor, Has.Some.EqualTo(wanted).Within(0.001f),
+                $"the rubble should be drawn at {wanted:F3}, one clearance above where it sits on " +
+                "bare ground. Drawn at the same height as the slab it lies on, it z-fights — which " +
+                "is what the owner reported as a grey tile appearing in a wooden deck");
+        }
+
+        /// <summary>The heights of every roof instance standing in one cell.</summary>
+        static List<float> HeightsIn(ChunkBatch batch, int x, int z, int y)
+        {
+            var heights = new List<float>();
+            Vector3 centre = CellMetrics.FloorCentre(x, z, y);
+
+            foreach (InstanceBucket bucket in batch.Roof)
+            {
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    Vector3 at = bucket.Matrices[i].GetColumn(3);
+                    if (Mathf.Abs(at.x - centre.x) > 0.01f) continue;
+                    if (Mathf.Abs(at.z - centre.z) > 0.01f) continue;
+                    heights.Add(at.y);
+                }
+            }
+
+            return heights;
+        }
     }
 
     /// <summary>
@@ -816,75 +885,6 @@ namespace Odyssey.Tests.Presentation
         {
             var slice = new SliceSettings { above = AboveMode.Xray };
             Assert.That(slice.AlphaAbove(5, 2), Is.LessThan(slice.AlphaAbove(5, 1)));
-        }
-
-        /// <summary>
-        /// <b>Rubble on a floor is drawn on top of it, not inside it.</b>
-        ///
-        /// <para>A surface terrain and a floor slab can share a cell, and a collapse guarantees
-        /// they will: <c>SupportSystem.Rubble</c> picks <c>FirstFloorAtOrBelow</c>, so the cell it
-        /// drops debris into <em>has a floor by definition</em>. Both are drawn — the slab by
-        /// <c>EmitFloor</c>, the surface by <c>SurfaceContributor</c> — and before this they were
-        /// drawn at the same height.</para>
-        ///
-        /// <para><b>The owner met it as a grey tile in a wooden deck</b> (2026-09-18) and it cost
-        /// three sessions, because every explanation offered was about the floor: the pane reads
-        /// <c>FloorStuff</c> and honestly said "Wood floor", and the save holds no stone slab
-        /// anywhere on the board. The grey was the rubble terrain drawn over the deck.</para>
-        ///
-        /// <para><b>The same cell in two worlds, rather than two cells in one.</b> An instance's
-        /// matrix carries its prefab's own normalisation, and the ground relief varies with x and
-        /// z, so neither "the two instances in this cell" nor "this cell against its neighbour"
-        /// isolates the lift. Meshing the identical cell with and without a floor under the rubble
-        /// holds both of those constant and leaves exactly the change being tested.</para>
-        /// </summary>
-        [Test]
-        public void RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt()
-        {
-            ChunkBatch bare = MeshLayer(new RenderTestWorld(6, 6, 3)
-                .Solid(2, 2, 0)
-                .Surface(2, 2, 1, CoreContent.TerrainRubble)
-                .Publish(), 1);
-
-            ChunkBatch floored = MeshLayer(new RenderTestWorld(6, 6, 3)
-                .Solid(2, 2, 0)
-                .Slab(2, 2, 1, NaturalContent.StuffWood)
-                .Surface(2, 2, 1, CoreContent.TerrainRubble)
-                .Publish(), 1);
-
-            List<float> onGround = HeightsIn(bare, 2, 2, 1);
-            List<float> onFloor = HeightsIn(floored, 2, 2, 1);
-
-            Assert.That(onGround.Count, Is.EqualTo(1), "rubble on bare ground is one tile");
-            Assert.That(onFloor.Count, Is.EqualTo(2),
-                "a floored cell holds the slab the player built and the debris lying on it, and " +
-                "both are things to draw");
-
-            float wanted = onGround[0] + CellMetrics.SlabLift;
-            Assert.That(onFloor, Has.Some.EqualTo(wanted).Within(0.001f),
-                $"the rubble should be drawn at {wanted:F3}, one clearance above where it sits on " +
-                "bare ground. Drawn at the same height as the slab it lies on, it z-fights — which " +
-                "is what the owner reported as a grey tile appearing in a wooden deck");
-        }
-
-        /// <summary>The heights of every roof instance standing in one cell.</summary>
-        static List<float> HeightsIn(ChunkBatch batch, int x, int z, int y)
-        {
-            var heights = new List<float>();
-            Vector3 centre = CellMetrics.FloorCentre(x, z, y);
-
-            foreach (InstanceBucket bucket in batch.Roof)
-            {
-                for (int i = 0; i < bucket.Count; i++)
-                {
-                    Vector3 at = bucket.Matrices[i].GetColumn(3);
-                    if (Mathf.Abs(at.x - centre.x) > 0.01f) continue;
-                    if (Mathf.Abs(at.z - centre.z) > 0.01f) continue;
-                    heights.Add(at.y);
-                }
-            }
-
-            return heights;
         }
     }
 }
