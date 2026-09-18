@@ -4920,3 +4920,45 @@ interesting one was not a conflict in the text sense at all.
 - **And it was made to fail before it was believed.** Forced to certain *success*, the assertion
   "a bed that botched every roll was raised anyway" fires. A test that has not been seen to fail is
   not evidence, and a test that can silently skip has already proved it can lie.
+
+### CLAUDE.md had eaten itself, and four unit numbers meant two things (2026-09-18)
+
+Two tidying jobs that turned out to be the same fault: the project's own record-keeping rules were
+being followed everywhere except in the file that states them.
+
+- **`CLAUDE.md` was 1,097 lines and 95,738 characters, and 982 of those lines were one section.**
+  Its own opening paragraph says to update *Current status* and **append the reasoning to this
+  file** rather than growing it. Every session since has instead written the reasoning into the
+  status section, which is read into every session's context — so the cost of the narrative was
+  being paid on every single turn, for ever, by every agent. It is 326 lines and 27,480 characters
+  now, a 71% cut, with *Current status* at 206.
+
+- **Nothing was thrown away without checking where else it lived**, because "it is surely in the
+  journal" is exactly the assumption that loses things. Measured rather than assumed: of the 257
+  distinct code identifiers the old section named, **243 appear in the journal, a design document
+  or a plan**, and the remaining 14 are all live symbols in the C# — where the code is the
+  authority and a prose mention is a copy. Of 38 measurements, 37 survive; the one that did not,
+  the shoreline jitter's 31 mm, is in `20-swimming-and-water.md` and in this file, and its *open
+  question* was put back into the owner list by hand. An exact-phrase comparison had said 206
+  claims were unique to `CLAUDE.md`, which is what a phrase comparison always says when the same
+  fact is written twice in different words; it was the wrong instrument and nearly the wrong
+  conclusion.
+
+- **What replaced the narrative is a table of where to read.** The single most useful thing the old
+  section did was warn a session off breaking something — "read this before touching that line",
+  "do not undo this by tidying". Those pointers survive as an index from each live line to its
+  design document, which is where the warnings already are in full. The status section's job is
+  what is true *now*; the journal's is why.
+
+- **`U42`–`U45` each named two different units.** Paving, the ladder, stairs and beds hold those
+  numbers in M3, three of them built; the four rates units in §WS were written with the same four
+  numbers. "U42 is done" was true and false at once depending on which table you had open, and the
+  rates seam is the one unit whose whole done criterion is *that nothing changes* — the worst
+  possible thing to believe is already built. The rates units are now `WS1`–`WS4`. **The built ones
+  kept their numbers** because this file records them that way and this file is not rewritten;
+  entries above dated on or before 2026-09-17 still say `U42`–`U45` and mean paving and ladders.
+
+- **The collision was found by counting references, not by reading.** It surfaced while sizing
+  which of the two senses was cheaper to move — 12 journal references against a contained set of
+  three planning documents — which is also what proved the built sense had to be the one that
+  stayed.

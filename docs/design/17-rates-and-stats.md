@@ -502,9 +502,9 @@ reached: fleeing, a mental break, an emergency job, a drafted order.
 
 **Parked by the owner, 2026-09-17** — asked what should make a colonist run, the answer was *"not
 sure yet"*, which is the right answer to a question about a game that has no danger in it yet.
-**So `U45` is held rather than scheduled**, and the rule that holds while it is held: **do not
+**So `WS4` is held rather than scheduled**, and the rule that holds while it is held: **do not
 invent an urgency model.** The capability costs nothing to keep available — it is a multiplier on a
-rate that will already exist after `U44`, and the gait blend already does the rest — so nothing is
+rate that will already exist after `WS3`, and the gait blend already does the rest — so nothing is
 lost by waiting until there is something worth running from.
 
 ### 4g. The trap: do not double-count terrain
@@ -530,7 +530,7 @@ reverse.**
   same words would put two different meanings of "walk speed" in one interface, which is §4g's
   double-counting trap in its user-facing form. **The cell keeps the phrase** (it was there first
   and it is the more surprising fact), and the pawn's own figure wants different words — *pace*,
-  or the stat name from `ui.stat.moveSpeed`. Decide it when `U44` writes the row, and do not let
+  or the stat name from `ui.stat.moveSpeed`. Decide it when `WS3` writes the row, and do not let
   the two meet unlabelled.
 - **Two work estimates stop being exact** (§2bb): *"minable — about 12s of work"* on a tile and
   *"about 12s left"* on a build site. Both are computed from a work total in ticks and have been
@@ -571,7 +571,7 @@ curves move with it.
    them later costs a re-bake, not a rewrite.
 2. **Condition bites** (§4c) — *"if exhausted, starving etc, all has an effect"*. Taken further
    than this design first proposed: condition multiplies **both** the work rate and the move rate,
-   from one shared method. The soak comparison is `U44`'s done criterion, because that is where a
+   from one shared method. The soak comparison is `WS3`'s done criterion, because that is where a
    starvation spiral would show up.
 
    **One part of this needs the owner's veto rather than their approval.** Follow-up research
@@ -582,7 +582,7 @@ curves move with it.
    not. That is still "exhaustion has an effect", but it is not the effect the answer literally
    asked for, so: **say if you want the slowdown as well and it goes back in** — it is one row of
    a table either way.
-3. **Running is parked** (§4f) — *"not sure yet"*. `U45` is held, and the standing rule while it is
+3. **Running is parked** (§4f) — *"not sure yet"*. `WS4` is held, and the standing rule while it is
    held is that nobody invents an urgency model to fill the gap.
 
 ### Still open
@@ -590,7 +590,7 @@ curves move with it.
 - **Whether mining should feel different from building at all.** The reference says yes and says it
   loudly — 61× novice to master on mining, 6.8× on construction. The proposal keeps that ordering
   at a quarter of the spread. Not a blocker: it is the same eight integers as question 1, and the
-  answer will come from playing `U43`.
+  answer will come from playing `WS2`.
 - **Starting colonists** (§3b). Anchoring the curve is the alternative to re-weighting the roll; if
   `U40`'s three candidate cards turn out to look samey, the roll is the knob, not the curve.
 

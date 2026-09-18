@@ -790,6 +790,31 @@ it byte for byte in about ten seconds, and the `.meta` files come with it, so th
 `guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
 possible**, so do not "tidy" `odyssey-audio` into a junction as well.
 
+**And `odyssey-audio` is no longer a spare copy — it is the live one** (measured 2026-09-18, and
+this paragraph used to imply otherwise). The links now run in a **chain**: the five junctioned
+worktrees point at `D:\code\odyssey\Assets\Synty`, and *that* is itself a junction pointing at
+`D:\code\odyssey-audio\Assets\Synty`, which holds the only real directory — 15,868 files, 1.54 GB,
+eight packs. The main checkout does not own its own art.
+
+Two consequences, and the second is the dangerous one:
+
+- **Everything dies at one remove.** `rmdir` on the main checkout's `Assets\Synty` unlinks only that
+  hop, but it also cuts the five worktrees that point through it, because their target stops
+  resolving. Any recursive delete of the main checkout's `Assets` follows the chain into
+  `odyssey-audio` and takes the real packs with it.
+- **The only real copy is sitting inside a worktree that looks disposable.** `odyssey-audio` is on
+  `claude/audio-framework`, which is **merged into main and behind it** — exactly the profile of a
+  branch somebody tidies up without thinking. `git worktree remove` on it, or a recursive delete of
+  `D:\code\odyssey-audio`, destroys 1.54 GB of licensed art that is gitignored and recoverable only
+  by re-importing the `.unitypackage` files.
+
+**Check before pruning any worktree**, with the `LinkType` command above, or:
+`Get-Item <path>\Assets\Synty -Force | Select Attributes, Target` — a `ReparsePoint` is a link and
+safe to `rmdir`, anything else is the real thing. The arrangement wants inverting when somebody has
+a quiet moment: the real directory belongs in the **main checkout**, with every worktree and
+`odyssey-audio` junctioned to it, so that the packs live where the project does and every worktree
+is genuinely disposable.
+
 ## Per-cell geometry cracks where a continuous field does not
 
 Written after giving earth its own mesh (`GroundMesh`, `06-rendering-and-camera.md` §2c). The
@@ -1983,3 +2008,30 @@ Where a thing has a life cycle, the invariant belongs at the **transition every 
 through** — here `ConstructionGrid.Set`, which is the one place a site is written, so ordering,
 replacing, cancelling and raising all run through it. Two guards at the ends read as thorough and
 are not.
+
+## A generated asset can be regenerated outside Unity, but do not keep the replica
+
+The editor holds the project lock whenever the owner is doing visual work, and the sections above
+cover how to keep *compiling* and even *running* game code through it. They do not cover the case
+where the thing you need is an **asset the editor generates** — `Assets/Editor/Odyssey/AudioSetup.cs`
+synthesises the audio beds into `.wav` files, so no amount of compile-checking produces one.
+
+It can be done: on 2026-09-17 the bed synthesis was reimplemented in Python and reproduced the
+committed `water.wav` **byte for byte**, which is the only acceptable standard of proof here — an
+asset that is merely "close" is a silent change to something nobody will listen to again. Two
+things made it exact, and both are the whole difficulty:
+
+- **Everything stays `float32`, in the C#'s own evaluation order.** The committed asset is the
+  generator's output and the generator is float32 end to end, so a replica that computes in double
+  and rounds at the end diverges in the low bits. Even `math.pi` has to be narrowed to float32
+  before use.
+- **The random source has to be the same generator, not merely seeded the same.** .NET's legacy
+  `Random` is a specific subtractive lagged-Fibonacci with its own constants (`MBIG`, `MSEED`);
+  seeding a Mersenne Twister identically gets you nothing.
+
+**The replica was then deleted rather than committed, deliberately.** The generator is checked in as
+C# and the assets it produced are checked in beside it; a second implementation in another language,
+with nothing asserting the two agree, is exactly the two-sources-of-truth trap this project keeps
+paying for elsewhere — and it would drift the first time the C# was tuned, silently, because its
+only test is a file nobody diffs. The technique is worth a page; the code is not worth a file.
+Reach for this only when the editor is genuinely blocked and the alternative is waiting.
