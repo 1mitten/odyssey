@@ -363,10 +363,14 @@ namespace Odyssey.Sim.Pathing
             int stamp = ++_cellStampValue;
             _cellHeap.Clear();
 
+            // Decompose the goal once. Every heuristic call below needs its x, z and y, and the
+            // 8-connected search asks far more often than the 4-connected one did.
+            CacheGoal(goal);
+
             _cellG[start] = 0;
             _cellFrom[start] = -1;
             _cellStamp[start] = stamp;
-            int h0 = CellHeuristic(start, goal, rstamp);
+            int h0 = CellHeuristic(start, rstamp);
             _cellHeap.Push(h0, h0, start, start);
 
             int budget = options.MaxCellNodes;
@@ -535,7 +539,7 @@ namespace Odyssey.Sim.Pathing
             _cellG[n] = ng;
             _cellFrom[n] = from;
             _cellStamp[n] = stamp;
-            int h = CellHeuristic(n, goal, rstamp);
+            int h = CellHeuristic(n, rstamp);
             _cellHeap.Push(ng + h, h, n, n);
         }
 
@@ -556,7 +560,7 @@ namespace Odyssey.Sim.Pathing
             }
         }
 
-        int CellHeuristic(int cell, int goal, int rstamp)
+        int CellHeuristic(int cell, int rstamp)
         {
             if (rstamp != 0)
             {
@@ -564,7 +568,7 @@ namespace Odyssey.Sim.Pathing
                 if (r >= 0 && (_regionStamp[r] == rstamp || _regionStamp[r] == -rstamp))
                 {
                     int d = _regionG[r];
-                    if (d == 0) return Manhattan(cell, goal);
+                    if (d == 0) return HeuristicToGoal(cell);
 
                     // **Capped by the straight-line bound, and that cap is what made diagonals
                     // worth having.** The abstract distance is a sum of region link costs, and
@@ -589,13 +593,13 @@ namespace Odyssey.Sim.Pathing
                     // and re-expands. The fear was that capping it would throw away the abstract
                     // stage's whole benefit — the case where the goal is one layer down and the
                     // stair is sixty cells away, where a straight-line guess is useless. It does
-                    // not, because Manhattan carries LayerChangeHint for exactly that case, and
+                    // not, because the straight-line bound carries LayerChangeHint for that case, and
                     // both benchmark worlds are six layers deep.
-                    return Math.Min(d, Manhattan(cell, goal));
+                    return Math.Min(d, HeuristicToGoal(cell));
                 }
             }
 
-            return Manhattan(cell, goal);
+            return HeuristicToGoal(cell);
         }
 
         /// <summary>
@@ -619,20 +623,35 @@ namespace Odyssey.Sim.Pathing
             return hi * MoveCost.Orthogonal + lo * MoveCost.DiagonalExtra;
         }
 
-        int Manhattan(int a, int b)
+        /// <summary>
+        /// The goal, decomposed once per search instead of once per heuristic call.
+        ///
+        /// <para>The heuristic is the hottest arithmetic in the unit — it runs on every relaxation,
+        /// and the 8-connected search relaxes twice as many neighbours as the 4-connected one did.
+        /// It used to take both cells as indices and divide both apart, four integer divisions a
+        /// call, when one of the two is fixed for the whole search. Hoisted 2026-09-18 with the
+        /// diagonals, and measured rather than assumed: see <c>21-diagonal-movement.md</c> §9.</para>
+        /// </summary>
+        int _goalX, _goalZ, _goalY;
+
+        void CacheGoal(int goal)
+        {
+            _goalY = goal / _layerStride;
+            int rem = goal - _goalY * _layerStride;
+            _goalZ = rem / _sizeX;
+            _goalX = rem - _goalZ * _sizeX;
+        }
+
+        /// <summary>The octile-plus-layers estimate from this cell to the cached goal.</summary>
+        int HeuristicToGoal(int a)
         {
             int ay = a / _layerStride;
             int arem = a - ay * _layerStride;
             int az = arem / _sizeX;
             int ax = arem - az * _sizeX;
 
-            int by = b / _layerStride;
-            int brem = b - by * _layerStride;
-            int bz = brem / _sizeX;
-            int bx = brem - bz * _sizeX;
-
-            return Octile(Math.Abs(ax - bx), Math.Abs(az - bz))
-                   + Math.Abs(ay - by) * LayerChangeHint;
+            return Octile(Math.Abs(ax - _goalX), Math.Abs(az - _goalZ))
+                   + Math.Abs(ay - _goalY) * LayerChangeHint;
         }
 
         void Reconstruct(int start, int goal)

@@ -148,3 +148,48 @@ vacuous again.
 - **Nobody has pressed Play.** `Logs/walk-heading.txt` says 30 steps and 0 turns, which is the
   objective half. Whether a colony of five now reads as moving naturally is the other half, and it
   is why `22-walk-variance.md` exists.
+
+## 9. Performance — measured, because doubling the branching factor demands it
+
+The owner asked for this line to be as fast as possible, and the worry is the obvious one: the
+horizontal branching factor went from four to eight, so every expansion now does twice the
+neighbour work.
+
+**It is a net win, on the path the game actually runs.** `PathingBenchmark`, 250 × 250 × 40,
+1,800 recorded requests, arm C — "two-stage + district check", which is the shipping configuration:
+
+| | 4-connected | 8-connected | |
+|---|---|---|---|
+| **Rooms and doorways**, mean | 0.4249 ms | **0.3726 ms** | −12.3% |
+| cell expansions | 1,428,377 | **935,714** | −34.5% |
+| worst request | 3.328 ms | 3.732 ms | +12% |
+| **35% noise**, mean | 0.6546 ms | **0.5995 ms** | −8.4% |
+| cell expansions | 1,812,116 | **1,417,654** | −21.8% |
+| worst request | 12.953 ms | **9.316 ms** | −28% |
+
+A third fewer expansions more than pays for twice the neighbours per expansion. The cause is §6: an
+admissible heuristic orders the open list properly and stops re-expanding, and the cap is what made
+it admissible. **The one number that went the wrong way is the structured world's worst single
+request, +0.4 ms** — still inside the 6,000-node per-request budget, and the noise world's worst
+came *down* by a quarter.
+
+**Two smaller things fell out of the same runs.**
+
+`Manhattan` re-derived the **goal's** x, z and y on every call — four integer divisions per
+heuristic, on the hottest arithmetic in the unit, for a value fixed for the whole search. Hoisted
+into `CacheGoal`, called once in `SearchCells`. Measured on its own, with everything else held:
+**770.4 → 728.4 ms** on the structured world, **identical cell expansions**, which is the signature
+of a change that alters cost per node and nothing else. `CellHeuristic` lost its `goal` parameter in
+the same change, so nothing can pass it a goal the cache does not know about.
+
+The searches that used to **fail** now succeed: `ok` went 1,799 → 1,800 on structured and
+1,796 → 1,797 on noise. That is not new connectivity — `district_unreachable` is 0 in both, and §4
+says why it cannot be. It is the better heuristic finding, inside the same node budget, a path the
+old one gave up on.
+
+**One honest caveat.** `PathingBenchmark`'s two assertions — that the two-stage search beats the
+naive one — **fail on both arms and failed before any of this**: on the 4-connected baseline,
+naive is 0.128 ms against two-stage's 0.655 ms on noise. They are `[Explicit]`, so they run in no
+tier and blocked nothing, and they are not this unit's to fix; but nobody should read them as
+green. What this section claims is the *relative* change, measured with the same harness on both
+sides, and that claim is unaffected.
