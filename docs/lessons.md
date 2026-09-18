@@ -1983,3 +1983,24 @@ Where a thing has a life cycle, the invariant belongs at the **transition every 
 through** — here `ConstructionGrid.Set`, which is the one place a site is written, so ordering,
 replacing, cancelling and raising all run through it. Two guards at the ends read as thorough and
 are not.
+
+## An empty guid in a committed .meta fails Unity one file away from the truth
+
+The first Unity editmode run on the growing branch failed with `CS0246: 'SowJobDriver' could not
+be found` in `PawnRegistry.cs` — pointing at the file that *references* the missing type, while
+the file that *declares* it sat in the same folder, correct namespace, correct classes, and was
+not mentioned anywhere in the log. The cause: five `.meta` files written by script across four
+earlier commits carried `guid: ` — empty. Unity cannot give an asset an identity without a guid,
+and its import failure surfaces as a compile error about the referencing file, never about the
+meta.
+
+Two things made it cheap to walk past. The fast tier is green without ever reading a `.meta`, so
+"tests pass" said nothing about asset identity; and the error text named the wrong file, so the
+first instinct was to check `using` directives. The audit that finds it is one line: every file
+added under `Assets/` must have a `.meta` whose `guid:` line is non-empty — and the audit must
+run on the branch, because nothing else ever reads those bytes. Generated metas need a real
+`uuid4().hex`, not the template with the value left blank.
+
+*(Also worth its sentence: `git diff main -- Assets/` from a worktree lists files main has and
+the worktree does not, so a naive "missing meta" audit reports phantom files. Test the `.cs`
+exists before blaming its `.meta`.)*
