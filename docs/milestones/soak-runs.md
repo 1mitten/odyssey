@@ -163,3 +163,28 @@ from one place, the collapse with the tired-still-walks control, the mid-walk co
 will first show in soak when a slice runs a pantry that can empty.
 
 Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-18 — the WS1 baseline, run at last and matching what cited it (f6beb56)
+
+Commit `f6beb56` (`claude/rates-and-stats`, WS1 — the per-mille seam, before the curve or the
+pace landed). Same scenario and machine as the entries above — `Scenario_Bare`, 120 × 120 × 16,
+five colonists, no standing orders — run once per seed, each freshly built and ticked 600,000
+times, from a worktree checked out at the commit, CoreCLR, dotnet SDK 10.0.401. No need touched
+zero on any seed (0 / 0 / 0), as in every run since the pantry was sized.
+
+| Seed | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | wait | failed | Meals left | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 600,000 | passed | 2.0 s | 0.003 | 0.005 | 14 | 92 | 55 | 2,664 | 0 | 0 | 52 of 144 | `362b4c847c79cebb` |
+| 2 | 600,000 | passed | 2.2 s | 0.004 | 0.005 | 15 | 94 | 55 | 2,613 | 0 | 0 | 50 of 144 | `0e3ff437f26f5f8d` |
+| 3 | 600,000 | passed | 1.8 s | 0.003 | 0.004 | 13 | 93 | 55 | 2,590 | 0 | 0 | 51 of 144 | `ad58de4ae2cee30a` |
+
+**This entry corrects the WS2 entry above, which cited this run without the record holding it.**
+That entry's comparison — "every count and every hash equals the run captured at `f6beb56`" —
+pointed at a baseline that existed as a claim and not as a row, so a fresh-eyes review of the
+branch could not verify it from this file, and said so. The run has now been made good, and
+every count and every hash above equals the WS2 entry's table exactly: the byte-for-byte claim
+stands checked rather than trusted. The reason the WS2 entry records — the slice runs no job
+whose pace the curve moves — explains the equality from this side too, since nothing here asks
+anyone to swing an axe fast or slow.
+
+Nothing failed, so no row was added to the overnight queue by this run.
