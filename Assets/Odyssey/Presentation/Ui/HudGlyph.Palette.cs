@@ -371,6 +371,22 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(12, 12), p(16.5f, 8));
                     return;
 
+                // Stockpile: a crate with its lid seam. The tools in this category answer "where
+                // things go" — the crate is the where, and the seam is what says box rather
+                // than slab.
+                case HudGlyphKind.ToolStockpile:
+                    Rect(painter, p(4, 7), p(20, 19));
+                    Polyline(painter, true, p(4, 11), p(20, 11));
+                    return;
+
+                // Dumping: a down arrow onto the same soil line the zone tool plants over —
+                // the one says grow here, this says throw here.
+                case HudGlyphKind.ToolDumping:
+                    Polyline(painter, true, p(12, 4), p(12, 13));
+                    Polyline(painter, true, p(8, 9.5f), p(12, 13.5f), p(16, 9.5f));
+                    Polyline(painter, true, p(5, 19), p(19, 19));
+                    return;
+
                 // A carrot: a tapered root with its top left on. The plant tier's chip shows the
                 // crop itself, the same way the material tier shows the stuff — and it is drawn
                 // rather than an IconBadge for the reason the rest of this panel is: no sheet in
@@ -487,6 +503,8 @@ namespace Odyssey.Presentation.Ui
             { PaletteTools.Deconstruct, HudGlyphKind.ToolDeconstruct },
             { PaletteTools.Cancel, HudGlyphKind.ToolCancel },
             { PaletteTools.GrowZone, HudGlyphKind.ToolGrowZone },
+            { "ui.arch.tool.stockpile", HudGlyphKind.ToolStockpile },
+            { "ui.arch.tool.dumping", HudGlyphKind.ToolDumping },
             { "ui.terrain.carrot", HudGlyphKind.PlantCarrot },
         };
 
