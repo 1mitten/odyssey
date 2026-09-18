@@ -5415,3 +5415,29 @@ names without a gendered figure would make the game look *more* wrong, not less 
 no expectation for a face to fail. The column is in the CSV because it cannot be re-derived cheaply
 later and because the wiki is where the owner corrects it; it is **not** generated into C#, since a
 constant nothing reads is the artefact this project keeps being bitten by.
+
+**And the pool cost ten pixels a card, after two rounds of getting it wrong.** The Unity tier
+failed on `TheCardIsWideEnoughForItsRowsAndNoWider`'s **lower** bound — the roster card budgets
+50 px for a name and *Christopher* draws 60 — which is the bound that exists for exactly this and
+which `CardWidth`'s own comment had predicted in words a month earlier.
+
+The first answer was to shorten that one name, on the reasoning that it was the only entry over ten
+characters. **The next run named *Alexander*: nine characters, 52 px, where *Christopher* is eleven
+and 60.** Character count does not predict width, which is a sentence I had written into a test
+comment on the previous commit and then immediately acted against. "Trim the long ones" is not a
+rule anybody can apply — it is guessing until CI stops complaining, one round at a time, against a
+list that is the owner's content rather than ours.
+
+So the card is sized once to the widest name the pool can produce, which terminates, and the
+coverage ceiling goes 20% → 21% (the forced two-row strip at 1280 × 720, 19.80% → 20.19%). **The
+fourth raise of a number that is the owner's**, and it is recorded beside the other three with what
+it buys: no colonist's name is cut short on the roster. The reversal is cheaper than the avatar's —
+ten of the 136 pixels are the name budget, so putting the ceiling back is a content decision about
+accepting an ellipsis on the longest few names, which is the one thing on a card this interface
+already permits to be cut short.
+
+**The reusable half is about proxies.** A fast-tier test cannot measure text, so it guarded the pool
+by character count — and passed an eleven-character name that then failed the pixel measurement.
+A proxy that does not fail where the real thing fails is not a cheap version of the gate; it is a
+second opinion nobody asked for, and it is worse than nothing when it is believed. That test now
+says out loud that it only catches the absurd and that `HudGeometryTests` is the gate.

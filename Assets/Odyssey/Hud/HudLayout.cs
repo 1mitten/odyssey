@@ -264,16 +264,21 @@ namespace Odyssey.Hud
         /// The measured strings are the test's, not an estimate — 'Wrenn 10' draws 50 px and
         /// 'Deconstructing' 67.</para>
         ///
-        /// <para><b>It stayed 126 when the name pool went from eight to 244</b>, and the reason is
-        /// worth writing down because the arithmetic ran the other way first. One name in the
-        /// owner's list — <i>Christopher</i> — draws 60 px where the old pool's widest drew 50, so
-        /// the card was re-derived to 136 exactly as §10.6 re-derived it for the avatar. Then the
-        /// fast tier measured what that cost: a full two-row strip at 1280 x 720 goes to
-        /// <b>20.19%</b> against a ceiling of 20, which would be the <i>fourth</i> raise of a
-        /// number that is the owner's to approve — spent on one name in 244. The card is back at
-        /// 126 and the pool carries <i>Chris</i> instead; putting the long name back and taking
-        /// the ceiling to 21% is the alternative, and it is the owner's to choose.</para>
-        public const int CardWidth = 126;
+        /// <para><b>136 the same day, when the name pool went from eight to 244.</b> The pool
+        /// stopped being eight names this project invented and became 244 the owner supplied, and
+        /// the widest of them — <i>Christopher</i> — draws 60 px where the old pool's widest drew
+        /// 50. The name row is 16 + 52 + 8 + 60, and the card is re-derived rather than stretched,
+        /// exactly as §10.6 did it for the avatar.</para>
+        ///
+        /// <para><b>Trimming the pool to fit was tried first and abandoned, and the reason is the
+        /// useful part.</b> One name looked like the whole problem, so it was shortened — and the
+        /// next run named <i>Alexander</i>, nine characters and 52 px, where <i>Christopher</i> is
+        /// eleven and 60. <b>Character count does not predict width</b>, so "trim the long ones"
+        /// is not a rule anybody can apply; it is guessing until the test stops complaining, one
+        /// CI round at a time, against a list that is the owner's content rather than ours. Sizing
+        /// the card once to the widest name the pool can produce is the only version of this that
+        /// terminates.</para>
+        public const int CardWidth = 136;
 
         /// <summary>
         /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
@@ -1525,7 +1530,22 @@ namespace Odyssey.Hud
         /// <para><b>It is the owner's to reverse</b>, exactly as the orders strip's one per cent
         /// is. The cheapest reversal is the avatar: every pixel of it is four pixels of card area
         /// and the card is what the strip is made of.</para>
+        ///
+        /// <para><b>0.21 since the name pool, 2026-09-18, and this one buys the least of the
+        /// four.</b> The pool went from eight invented names to 244 the owner supplied, and the
+        /// widest of them no longer fits a card sized for the old eight, so
+        /// <see cref="CardWidth"/> went 126 → 136 and the forced two-row strip at 1280 x 720 went
+        /// <b>19.80% → 20.19%</b>. What it buys is that no colonist's name is cut short on the
+        /// roster — which is worth saying plainly, because the alternative was editing names out
+        /// of the owner's own list until the arithmetic fitted, and the measurement above shows
+        /// why that does not terminate: width is not length.</para>
+        ///
+        /// <para><b>The reversal here is cheaper than the avatar's.</b> Ten of the 136 are the
+        /// name budget, so putting the ceiling back is a matter of accepting an ellipsis on the
+        /// longest few names — the one thing on a card this interface already allows to be cut
+        /// short (see <see cref="CardWidth"/>). That is a content decision rather than a layout
+        /// one, and it is the owner's.</para>
         /// </summary>
-        public const float CoverageCeiling = 0.20f;
+        public const float CoverageCeiling = 0.21f;
     }
 }

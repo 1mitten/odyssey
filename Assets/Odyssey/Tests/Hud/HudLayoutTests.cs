@@ -11,7 +11,7 @@ namespace Odyssey.Tests.Hud
     ///
     /// <para>Each of these was a sentence in a specification that nothing could check: "no two HUD
     /// panels overlap at 1280x720, 1920x1080 or 2560x1440", "total HUD coverage at or under the
-    /// ceiling with nothing selected" (18% as specified, 19% since the orders strip — see
+    /// ceiling with nothing selected" (18% as specified, 21% since the name pool — see
     /// <see cref="HudLayout.CoverageCeiling"/>), "every command-bar item has a visible hotkey; nothing
     /// is cut off at the right edge", "body text at 4.5:1 or better against the scrim over the
     /// brightest terrain in the game". They are testable here because the geometry, the palette

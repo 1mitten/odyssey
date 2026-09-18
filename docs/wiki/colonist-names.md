@@ -29,7 +29,7 @@ Ordinary given names, the register most of a colony is drawn in.
 | **Gabriel** | m | **Violet** | f | **Anthony** | m | **Nova** | f |
 | **Jaxon** | m | **Hannah** | f | **Carter** | m | **Emilia** | f |
 | **Thomas** | m | **Stella** | f | **Charles** | m | **Maya** | f |
-| **Chris** | m | **Willow** | f | **Caleb** | m | **Addison** | any |
+| **Christopher** | m | **Willow** | f | **Caleb** | m | **Addison** | any |
 | **Andrew** | m | **Lucy** | f | **Joshua** | m | **Paisley** | f |
 | **Nathan** | m | **Natalie** | f | **Ryan** | m | **Elena** | f |
 | **Adrian** | m | **Naomi** | f | **Christian** | m | **Alice** | f |
