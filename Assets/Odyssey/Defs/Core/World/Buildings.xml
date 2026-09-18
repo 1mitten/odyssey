@@ -140,6 +140,15 @@
     <label>ladder</label>
     <edifice>7</edifice>
     <blocking>false</blocking>
+    <!--
+      rotates since 2026-09-18 (owner: the built ladder's "position or placement is not respected",
+      clarified as the right cell with the ladder on the wrong side). A ladder fixed to a wall
+      still hugs that wall - which side it is on is physics, not preference - but a free-standing
+      one had nowhere to take its answer from and fell back to north, which is a ladder standing in
+      mid-air facing an arbitrary way. Now R turns it and the stored facing is what a free-standing
+      ladder uses. See WorldRenderModel.LadderFacing, which owns the whole rule.
+    -->
+    <rotates>true</rotates>
     <costCount>4</costCount>
     <workToBuild>90</workToBuild>
     <minSkill>0</minSkill>

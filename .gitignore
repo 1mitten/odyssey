@@ -88,3 +88,4 @@ __pycache__/
 # Agent scratch. Working notes, one-off scripts and merge intermediates from a session, kept out
 # of the tree on purpose: anything in here that turned out to matter belongs in docs/ instead.
 /.zcode/
+tools/dotnet/*/TestResults/

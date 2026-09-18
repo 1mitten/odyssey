@@ -653,8 +653,10 @@ namespace Odyssey.Presentation.Rendering
 
         void EmitLadder(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
-            int wall = FirstOccludingDirection(x, z, y);
-            int facing = wall >= 0 ? Directions.Opposite(wall) : Directions.North;
+            // The face is the model's to decide, not the mesher's: the figure director has to hang
+            // a climbing colonist on this exact plane, and while the rule lived here the two
+            // disagreed wherever nothing occluded. See WorldRenderModel.LadderFacing.
+            int facing = _model.LadderFacing(index);
             AddBody(batch, module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f)));

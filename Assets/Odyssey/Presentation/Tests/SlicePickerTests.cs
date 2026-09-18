@@ -436,5 +436,86 @@ namespace Odyssey.Tests.Presentation
             Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
                 "the slab is drawn in this cell and owns its floor, water below it or not");
         }
+
+        /// <summary>
+        /// **The owner's report of 2026-09-18, as a test.** A slab ordered into open air — a
+        /// platform being built out at height — could not be cancelled, selected or hovered: the
+        /// cancel tool did not even mark the cell. It was never the cancel tool. The picker knew an
+        /// edifice, a floor, water and the block below, and a site was none of those, so over open
+        /// air the ray found nothing in the entire column and the whole layer went dead to every
+        /// tool at once.
+        /// </summary>
+        [Test]
+        public void ASlabOrderedIntoOpenAirIsPickedInTheCellItWasOrderedIn()
+        {
+            var world = new RenderTestWorld(8, 8, 4)
+                .Publish()
+                .Site(4, 4, 2, BuildingHandle.Floor);
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 2, out CellRef cell);
+
+            Assert.That(hit, Is.True, "a waiting order is a thing, and nothing else is in this column");
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 2)));
+        }
+
+        /// <summary>
+        /// The other half of the same report, and the reason it read as intermittent: over ground
+        /// the ray fell through the site to the block underneath and handed back the cell one layer
+        /// *down*, so the order cancelled from the layer below and not from its own.
+        /// </summary>
+        [Test]
+        public void ASiteOverGroundIsPickedInItsOwnCellAndNotTheBlockBelow()
+        {
+            var world = new RenderTestWorld(8, 8, 4)
+                .Solid(4, 4, 0, NaturalContent.TerrainSubsoil)
+                .Publish()
+                .Site(4, 4, 1);
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
+                "the order stands in this cell; the ground below it is not what was clicked");
+        }
+
+        /// <summary>
+        /// A covering is laid on a surface that already has a floor, so the site rule has to sit
+        /// above the floor rule or paving could never be cancelled — the click would answer with
+        /// the slab the paving is going on top of. Same cell either way; what differs is that the
+        /// answer is a *thing*, which is what wins the tie against bare ground.
+        /// </summary>
+        [Test]
+        public void APavingOrderIsPickedOverTheSlabItIsBeingLaidOn()
+        {
+            var world = new RenderTestWorld(8, 8, 4)
+                .Solid(4, 4, 0, NaturalContent.TerrainSubsoil)
+                .Slab(4, 4, 1)
+                .Publish()
+                .Site(4, 4, 1, BuildingHandle.DeckPlate);
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)));
+        }
+
+        /// <summary>
+        /// The half of ADR 0006 that was load-bearing, pinned now that sites are pickable: a site
+        /// is an order that exists, and it still may not drag a click off the layers drawn solid.
+        /// A site above the band is as untouchable as a wall above it.
+        /// </summary>
+        [Test]
+        public void ASiteOnALayerTheSliceDoesNotDrawIsStillNotPicked()
+        {
+            var world = new RenderTestWorld(8, 8, 6)
+                .Publish()
+                .Site(4, 4, 4);
+
+            // The four-argument form searches the active layer alone, which is what every caller
+            // did before the band existed and is the tightest statement of the rule.
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
+
+            Assert.That(hit, Is.False, $"a site four layers up is not on the slice, got {cell}");
+        }
     }
 }

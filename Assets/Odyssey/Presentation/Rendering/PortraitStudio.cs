@@ -150,12 +150,26 @@ namespace Odyssey.Presentation.Rendering
         /// Forget every picture and release the rig. The session's teardown, and the way an
         /// appearance panel would ask for everybody to be photographed again.
         /// </summary>
+        /// <summary>
+        /// Bumped every time the pictures are thrown away, so anything holding one can tell that
+        /// what it holds has been destroyed.
+        ///
+        /// <para><b>The roster bar needed this and its absence was a reported bug</b> (2026-09-18:
+        /// the pictures gone on start and on load, present on the colonist card). A card re-reads
+        /// itself when the colonist in its slot changes — and a new colony reuses the same small
+        /// pawn ids, so on a load nothing about the slot changed while every texture under it had
+        /// just been destroyed. An id cannot answer "does this picture still exist"; a generation
+        /// can, and it costs one integer.</para>
+        /// </summary>
+        public int Generation { get; private set; }
+
         public void Clear()
         {
             foreach (KeyValuePair<ColonistAppearance, Texture2D?> row in _cache)
                 if (row.Value != null) UnityEngine.Object.Destroy(row.Value);
 
             _cache.Clear();
+            Generation++;
         }
 
         public void Dispose()
