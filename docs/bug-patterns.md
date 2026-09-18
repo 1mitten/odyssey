@@ -1,0 +1,192 @@
+# Bug patterns
+
+**What this is for.** `docs/lessons.md` records operational lessons — the things that waste an hour
+of *tooling* time. This file records the **bugs themselves**: what the symptom looked like, what it
+actually was, how it was found, and the check that would catch the next one of its kind. It exists
+because this project keeps meeting the *same three or four faults wearing different clothes*, and a
+session that recognises the pattern fixes in an hour what took a day the first time.
+
+**Read the patterns first, then the register.** If a report matches a pattern, go straight to the
+measurement that pattern names — do not start by reading code.
+
+**Add to it whenever a bug is fixed.** One row in the register, and a new pattern only when the fault
+genuinely does not fit an existing one.
+
+---
+
+## The patterns
+
+### P1 — One rule, two owners
+
+**By far the most common fault in this codebase.** Two pieces of code answer the same question,
+agree today, and drift apart tomorrow. It always fails *silently*, because each copy is correct on
+its own terms and no test that exercises one exercises the other.
+
+Every occurrence so far:
+
+| The question | The two owners | How it showed |
+|---|---|---|
+| What does a hop cost? | cell search, region graph, mover | pinned by `HopPriceHasOneOwnerTests` |
+| Which face is a ladder on? | `ChunkMesher.EmitLadder` (fell back north), `TryWallBeside` (fell back to nothing) | figure climbed through the air |
+| Does this thing rotate? | the Defs, and `BuildShapes.Rotates` | R did the other of its two jobs, silently |
+| Which cells does a bed claim? | the simulation's guard, and the ghost | ghost drew legal, click did nothing |
+| **What layer does a run land on?** | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | **a deck with a hole in it** |
+
+**The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
+walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
+
+**The trap:** an assembly boundary (ADR 0003) forces some tables to be duplicated — `BuildShapes`,
+`BuildLabels`. Those are allowed, but only with a test that walks the copy against the original
+(`BuildShapesAgreementTests`, `RegistryTests`).
+
+### P2 — The rule asks the built world, and misses the order
+
+A rule that reads `_grid.Edifice` / `_grid.Floor` sees only what **exists**. Sites — blueprints —
+are invisible to it, so two individually legal orders combine into an illegal building.
+
+**The tell is the word "sometimes"** in a report. If the outcome depends on which job a colonist
+happened to pick up, suspect this immediately.
+
+**The fix**: the rule consults sites as well as built things (`LadderHereOrOrdered`,
+`FloorHereOrOrdered`), *and* is asked again at the moment of truth in `Raise`, because a rule that
+spans two separately-ordered cells can be invalidated after it was checked.
+
+**Do not re-ask the whole of `Allows` at `Raise`** — a site with its own material hauled to it fails
+`needsClearCell`, so that would refuse every bed whose wood had been delivered. Re-ask the one rule
+that can go stale.
+
+### P3 — A compatibility clause that keeps the bug alive
+
+A clause kept so old data still works ("a real floor still counts") silently preserves exactly the
+behaviour a new rule was written to forbid. New ones cannot be made; the old ones go on misbehaving.
+
+**Ask what it is actually holding up, by measurement, before paying to migrate.** The ladder clause
+was believed to require worldgen changes, a golden re-bake and a save break. Measured: **all three
+golden masters were byte-identical**, because worldgen's ladders reach the nav as `StampedConnector`s
+and never consult the rule at all. The expensive migration did not exist.
+
+### P4 — A conditional rule applied per cell across a dragged run
+
+A lift, a snap or a default that is *conditional* will resolve differently for different cells of one
+drag, splitting a single gesture across two layers or two states. The player gave one order and got
+two outcomes.
+
+**The fix**: resolve it **once per run** and apply that answer to every cell, and make the preview ask
+the same owner. See `ConstructionGrid.RunLayerFor`.
+
+**Every existing construction test placed one cell by hand**, which is exactly why none of them could
+see it. When a mechanic has a drag gesture, test the *drag*.
+
+### P5 — The symptom is in presentation, the cause is one layer away
+
+"It looks wrong" reports are ambiguous between the cell, the data and the drawing. Before hunting a
+renderer bug, establish **which of the three** is wrong, because the fix lives in a different file for
+each.
+
+The cheap discriminators, in order:
+
+1. **Do the pane and the renderer read the same field?** If yes, they cannot disagree about a cell,
+   and the thing on screen is a *different cell* than the one being described.
+2. **Does the mirror track the grid?** Drive `WorldRenderModel` directly and print grid-vs-mirror
+   after each edit (`StaleFloorProbe`). Staleness is then proven or excluded in one run.
+3. **Does the art resolve?** A per-cell fallback (`SlabModuleFor` → group slab) can draw one material
+   two ways. Check the catalogue has real art for the material before blaming anything else.
+
+---
+
+## The register
+
+Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-18 — A dragged floor built a ring and left a hole (P1, P4)
+
+*"I specified wooden slabs to be built only on that floor but then it constructed stone/steel floor
+on the floor below."*
+
+**Cause:** the slab lift is per cell and conditional. Over a walled room the perimeter cells sit over
+walls and lift to the storey above; the interior cells sit over open air and do not. Measured: twelve
+cells `None` at L12 and four `NotPermitted` at L11, **from one box**. And the drag's ghosts were
+stamped at the box's own layer with no lift at all, so the preview could never have shown it.
+
+**Fix:** `ConstructionGrid.RunLayerFor` owns a run's layer; the order and the preview both ask it.
+The highest cell of the run wins — anchoring on the first cell touched would refuse the whole run for
+a player who starts the drag in mid-air. The lift is idempotent, so handing lifted cells back to
+`Place` is safe, and a test pins that.
+
+**Caught next time by:** `FloorRunTests`, which is about a *run*, and which pins the two-layer fault
+itself so the fix cannot be mistaken for a no-op.
+
+### 2026-09-18 — The grey floor that would not deconstruct (P5) — *not a bug*
+
+*"It claims it to be a wood floor for the one that looks like a stone floor"*, then *"I deconstructed
+them, wood appeared, the game thought they were gone, and the steel/stone floors were still
+visible."*
+
+**Cause:** nothing. Three checks excluded every candidate — the pane and the mesher read one field
+(`_grid.FloorStuff`, mirrored on adjacent lines by `CopyCell`); the stuff ids match on both sides
+(wood 4, stone 5); both slab arts resolve to real prefabs so the per-cell group fallback never fires.
+`StaleFloorProbe` then measured the mirror: module 0 → 134 on build, **134 → 0 on removal**, in the
+same refresh. Nothing goes stale.
+
+**So the grey was a different surface one cell down**, seen through the hole the bug above left — and
+still there after the floor above it was removed, because it was never the floor being removed.
+
+**Worth keeping** because two separate reports and a deconstruction test all pointed at a renderer
+fault that did not exist. The probe is committed; next time this is one command.
+
+### 2026-09-18 — Two legal orders made an illegal ladder (P2, P3)
+
+*"Sometimes the colonists climb up the ladder where there is wall or slab directly above."*
+
+**Cause:** the shaft rule asked the built world. Order the ladder, order the floor above it — each
+legal on its own because neither exists yet — and both get built. The prime suspect (the P3
+compatibility clause) was **wrong**, and one number killed it: the played meadow generates *no*
+ladders and no connectors at all, on three seeds.
+
+**Fix:** `ShaftRulePermits` owns the whole question, sees sites, and is asked again at `Raise`.
+
+**Two defects fell out of the hunt, neither reported:**
+
+- **A shaft could only ever be one storey.** A ladder is `blocking false` so a colonist can stand in
+  it, and `SomethingUnderfoot` wants a *blocking* edifice — so the second ladder of a chain was
+  refused and `LadderArrivesAt`'s own chain clause was unreachable. The first fix was not enough:
+  the connector was gated on `CellGrid.IsWalkable`, which cannot see that *a connector is its own
+  floor*, so the chain built and the upper ladder silently had none (`StandsOnAFooting`). And the
+  fan-out had to reach **upwards**, or pulling the bottom ladder out leaves the upper one on air.
+- **Roofing over a working shaft closed it silently.** Refused now.
+
+**Caught next time by:** `LadderTests` — the blueprint race in both orders, the chain, the chain's
+teardown, and the roofed shaft.
+
+### 2026-09-18 — A bed built through a wall (P1)
+
+`Raise` derived the far cell from `_facing[cell]`, called `Clear(cell)`, then read the facing *again*
+out of the slot it had just zeroed. Every rotatable thing was recorded facing north.
+
+**It hid because only the drawing was wrong** — the cells were derived before the clear and were
+always right, so the footprint guard still worked and no simulation test could see it.
+
+**Three tests had a clear shot and all three missed**: one passed on the difference between two beds'
+*cells* rather than their facings; one tested the refusal path, which was never broken; and every
+other bed test places facing 0, which is also what a lost facing looks like.
+
+---
+
+## The method, which is the real lesson
+
+**Measure, do not read.** Reading the code has been wrong on every hard bug in this project, and
+wrong in a specific way: each part *is* correct, and the fault is in the gap between two of them.
+Three sessions read the bed placement path end to end and concluded correctly about every line; ten
+lines of throwaway test printing *asked → got* found it on the first run.
+
+The probe is the tool. Write it, run it, delete it — or keep it beside `StoneFloorProbe` and
+`StaleFloorProbe` if the question will be asked again.
+
+**Pin the fault, not just the fix.** A test that only asserts the correct outcome passes on a board
+where the bug cannot arise. `TheLiftOnItsOwnSendsOneBoxToTwoLayers` asserts the *two layers*, so the
+fix cannot be mistaken for a no-op.
+
+**One number can kill a theory.** "The meadow has no connectors at all" ended a hunt that a day of
+reading would not have.
+
+**And check the fix is even in the player's build** before hunting a second cause.
