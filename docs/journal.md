@@ -4232,3 +4232,54 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     whether the 64 px portrait belongs where it has been put. `Logs/avatars.png` and
     `Logs/setup-page.png` are what those questions get answered from.
 
+- **Rendered portraits, 2026-09-18** (`claude/flat-avatars`, `docs/design/20-avatars.md` Â§10). The
+  owner played the flat avatars and reported: *"the colonists look nothing like their profile
+  picture."* They were right, and the fault was in the design rather than in the drawing.
+  - **I had matched the palette and invented the person, and defended it in a comment.**
+    `ColonistFace.Of` passed `lookCount: 1` to `ColonistAppearance.Of`, throwing away `Look` â€”
+    *which of the sixty-one Synty characters this colonist is* â€” on the stated grounds that "an
+    index into the catalogue's 3D colonist meshes means nothing to a drawing". It is the single
+    most identity-bearing fact about a colonist. The colours did land (of 61 rows, 55 classify
+    `Full`), so skin tone and garment hue matched while hair, build and clothing shape were all
+    invented from unrelated salts. A colonist in a helmet was given a ponytail.
+  - **Â§4.5 did not have to be overturned to fix it.** It refuses *fifty live render-textured
+    portraits at 15 Hz while the world draws* and names a cached atlas as the graduation path.
+    Nothing here is live: a portrait is rendered the first time an appearance is asked for and never
+    again. The plan's original `U41 Portraits` row was closer to right than the unit that replaced
+    it, and its leak test â€” which Â§9 said had nothing to count â€” now counts **one**.
+  - **The cache is keyed on the appearance, not the pawn**, which is the whole performance story.
+    Two colonists who genuinely look alike share one picture; a colony of twenty-six with a dozen
+    distinct appearances is twelve renders for the session. **One `RenderTexture` exists for the
+    entire game**, reused and read back into a 128Â² texture per appearance â€” 64 kB each, so a full
+    roster is under 1.7 MB.
+  - **The rig is off except during the render call.** A directional light is global in URP, so a
+    portrait light would otherwise fall on the world. The alternatives were a spare layer, a
+    rendering-layer mask (a project settings change) or lighting the portrait with whatever time of
+    day it happened to be taken at and freezing it there. The render is synchronous, so enabling
+    the rig, calling `Render` and disabling it again costs nothing and needs none of that.
+  - **No animator and no `PlayableGraph`**, unlike `PawnFigureDirector.Create` â€” a portrait does not
+    walk. A side effect worth having: a look whose *gaits* are missing, which `LooksFrom` drops
+    outright, can still be photographed.
+  - **`Logs/portraits.png` caught two faults, neither visible at 30 px and neither findable by a
+    test.** The crop anchored on `body.max.y`, which is the top of whatever the character is
+    *wearing*, so every bare head framed correctly and every hat-wearer was cut off at the chin â€”
+    the pattern is the signature of exactly that fault and is why one image diagnosed it. It
+    anchors on the **head bone** now; every pack character is a valid Mecanim humanoid, and the
+    animator does not need to be enabled to read its bone map. And the key light was `Euler(28,
+    200, 0)` against a camera looking the other way: aimed at the backs of their heads, which read
+    as a murky render rather than as a backwards light.
+  - **`randomCastEachSession` now defaults off, and the portraits are what closed it.** The switch
+    overrules every pawn's own seed, the setup page photographs its candidates *before* a colony
+    exists, and the pin is applied when the world is built â€” so with it on, pressing Start dealt
+    three different people from the three on the cards. That is the owner's original complaint
+    reappearing by construction. What the switch was *for* is now the contact sheet, which shows
+    twenty-four at once without pressing Play.
+  - **The drawn avatar is not wasted.** It is the fallback where `Assets/Synty` is absent, chosen by
+    the idiom `IconBadge` already uses â€” art present suppresses the paint â€” so a clone without the
+    packs is still correct, and the portrait tests ignore themselves with that reason on a runner
+    that has none.
+  - **Verified:** fast tier 645 Sim and 384 Hud; EditMode **1536 total, 1524 passed, 0 failed**;
+    PlayMode **76 total, 71 passed, 0 failed**. **Not verified:** whether a 128 px render reads at
+    26 px on a roster card, whether the head-bone framing suits all sixty-one bodies rather than the
+    twenty-four on the sheet, and whether one key light flatters the cast or wants a fill.
+

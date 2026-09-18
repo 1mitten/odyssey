@@ -102,8 +102,8 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
         public bool skirtHillTrees = true;
 
-        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. This overrules each colonist's own roll seed, so the people you picked on the setup screen will not be the people you get — it is for judging the palette, not for playing. Off, every colonist looks the way their roll says, and a given world is the same people on every load. colonistLookSeed overrides it.")]
-        public bool randomCastEachSession = true;
+        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. This overrules each colonist's own roll seed, so the people you picked on the setup screen will NOT be the people you get — it is for judging the palette, not for playing. Off, every colonist looks the way their roll says, and a given world is the same people on every load. colonistLookSeed overrides it.")]
+        public bool randomCastEachSession;
 
         [Tooltip("Pin one cast. 0 follows the switch above; any other value deals the whole colony that cast every time, overruling each colonist's own roll seed, and the log prints the value used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
@@ -505,9 +505,18 @@ namespace Odyssey.Presentation.Bootstrap
             // **And the world seed is pinned in the scene**, which is the part that matters here:
             // with `seed` fixed at 1, "the same world deals the same people" means the same twelve
             // people every single time you press Play. That is right for a saved colony and wrong
-            // for looking at what the palette does, which is what the owner is doing now — so the
-            // roll is back, behind a switch, defaulting on while the look is being judged. Turning
-            // it off restores the stable cast exactly, and it is what a real saved game will want.
+            // for looking at what the palette does, which is what the owner was doing then — so the
+            // roll came back behind a switch, defaulting on while the look was being judged.
+            //
+            // **That default is off since 2026-09-18**, and the portraits are what closed it. A
+            // colonist is dealt from their own roll seed now, and the setup page photographs the
+            // three candidates *before* a colony exists — so a session-wide roll, which is applied
+            // as a pin when the world is built, would deal three different people the moment you
+            // pressed Start. That is the owner's original complaint ("the colonists look nothing
+            // like their profile picture") reappearing in a new form, and by construction rather
+            // than by accident. The switch is still here and still does what it says; judging the
+            // palette is now `Logs/portraits.png`, which shows more of the cast at once than
+            // pressing Play repeatedly ever did.
             //
             // None of it enters the simulation and none of it is saved: nothing is stored, because
             // the same inputs are re-derived. See ColonistAppearance.

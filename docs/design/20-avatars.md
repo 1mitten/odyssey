@@ -353,6 +353,18 @@ second time on this unit. Two faults, neither visible at 30 px and neither finda
   looking the other way; the whole cast came out dim and flat and it read as "the render is murky"
   rather than as a light aimed backwards. `Euler(24, -22, 0)` at 1.6.
 
+### 10.4a `randomCastEachSession` now defaults off, and the portrait is why
+
+The switch overrules every pawn's own seed (§5). The setup page photographs three candidates
+**before a colony exists**, and the pin is applied when the world is built — so with the switch on,
+pressing Start dealt three different people than the three on the cards. That is the owner's
+original complaint reappearing, this time by construction rather than by accident, and it would
+have been found by playing it rather than by any test here.
+
+It is still available and still does exactly what it says. What it was *for* — looking at a lot of
+the palette quickly — is now `Logs/portraits.png`, which shows twenty-four at once and does not
+require pressing Play at all.
+
 ### 10.5 What it does not change
 
 The drawn avatar stays, as the fallback with no licensed packs, and `AvatarGlyph` chooses between

@@ -576,8 +576,23 @@ rerolling a candidate on the setup screen changes the face too and the person yo
 person who walks around. It used to be the world's cast seed, which no card could know.
 `OdysseyBootstrap.randomCastEachSession` and `colonistLookSeed` still work but they are now an
 **override**: either one sets `ColonistAppearanceBook.Pinned` and deals the whole colony from one
-number, overruling the pawns. That is for judging the palette over many colonists at once, and it
-means the people you picked are not the people you get — leave both off to play.
+number, overruling the pawns. **`randomCastEachSession` therefore defaults off since 2026-09-18** —
+the setup page photographs its candidates before a colony exists and the pin is applied when the
+world is built, so with it on, pressing Start dealt three different people from the three on the
+cards. Judging the palette is `Logs/portraits.png` now, which shows twenty-four at once.
+
+**A colonist's portrait is the actual character, rendered once and cached** (`PortraitStudio`,
+`docs/design/20-avatars.md` §10) — head and shoulders at 128 px, **keyed on the
+`ColonistAppearance` rather than on the pawn**, so two colonists who look alike share one picture
+and a colony of twenty-six with a dozen distinct appearances costs twelve renders for the session.
+**One `RenderTexture` exists for the whole game**, reused and read back. The rig sits far under the
+board and is switched off except during the synchronous render call, which is what keeps a
+portrait's own light out of the world's frame without a spare layer or a rendering-layer mask.
+`09-ui-and-input.md` §4.5 still holds: it refused *live* portraits at 15 Hz and named a cached atlas
+as the graduation path. **The drawn avatar is the fallback where the licensed packs are absent**, so
+a clone without `Assets/Synty` is still correct. The framing anchors on the **head bone**, not on
+the top of the silhouette — anything else cuts a hat-wearer off at the chin, which is what
+`Logs/portraits.png` showed.
 
 **Every colonist has a composed flat avatar, drawn** (`U41`, 2026-09-18) — on the roster card, in
 the inspect header, and on both halves of the world-setup page. `ColonistFace` in `Odyssey.Hud` is
@@ -808,15 +823,13 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`. A
   sheet cannot say whether night is playable or whether the light steps at speed 3.
-- **The flat avatars are drawn and photographed, not played** (`Logs/avatars.png`,
-  `Logs/setup-page.png`). Three questions no test can answer. Does a colonist read as a *person* at
-  26 px, or only as a coloured blob that happens to differ from its neighbour? Fourteen garments
-  against seven skins is 98 pairs and **some of them will be one muddy value at that size** — the
-  ink hull under the figure is what stops the head vanishing, and whether it is enough is a
-  judgement. And does the 64 px portrait belong beside the record on the setup page, or does the
-  choosing screen want it larger? A fourth, if you disagree with the design at all: **the avatar
-  has no face** — no eyes, no mouth — which §4 argues is a limit rather than a stage, and is the
-  one decision here worth overturning early if you want it overturned.
+- **The avatars and the portraits are photographed, not played** (`Logs/portraits.png`,
+  `Logs/avatars.png`, `Logs/setup-page.png`). The owner's *"they look nothing like their profile
+  picture"* is answered — the portrait is the character — so what is left is whether a **128 px
+  render reads at 26 px** on a roster card, where it is downscaled almost five to one; whether the
+  head-bone framing suits every one of the sixty-one bodies or only the twenty-four on the sheet;
+  and whether the one key light flatters the cast or wants a fill. The **drawn** avatar behind it
+  is judged separately and only matters on a machine with no packs.
 - **The rest of the icon art.** **Nineteen keys draw real art** as of 2026-09-17: the four
   commodities, three activity icons on the roster card (`ui.status.felling`, `.mining`,
   `.building`), and twelve of the thirteen skills, cut from **sheet 06** by
