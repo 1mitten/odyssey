@@ -77,7 +77,7 @@ namespace Odyssey.Sim.Pawns
             // `out` was: an optional growing-zone parameter is how a caller forgets one, and a
             // forgetful build is a paint tool that silently does nothing. Reached through
             // `pawns.Growing` by the sowing giver and the save.
-            var growing = new GrowingZones(pawns.Cells, ContentPack.Plants());
+            var growing = new GrowingZones(pawns.Cells, ContentPack.Plants(), pawns.Chunks);
             pawns.Growing = growing;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is

@@ -111,6 +111,11 @@ namespace Odyssey.Tests.Sim
             CellRef at = colony.Grid.Size.FromIndex(index);
             int chunk = chunks.ChunkIndexOfCell(at);
 
+            // The fixture's sowing dirties the chunk itself, and rightly: a crop appearing is a
+            // drawn change. Cleared here so what this test reads is what the growth pass alone
+            // marks.
+            chunks.ClearDirty(chunk);
+
             colony.World.Tick(250);
             Assert.That(chunks.IsDirty(chunk), Is.False,
                 "sprout to slightly taller sprout re-meshes nothing: a field at noon draws as the meadow beside it");

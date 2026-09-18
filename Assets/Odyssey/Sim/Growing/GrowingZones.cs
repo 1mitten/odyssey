@@ -56,6 +56,18 @@ namespace Odyssey.Sim.Growing
         /// <summary>Every planted cell, ascending — the growth scan and the planting channel.</summary>
         readonly List<int> _planted = new List<int>();
 
+        /// <summary>
+        /// The chunk sink to tell when a crop appears or vanishes, or null for a headless run.
+        ///
+        /// <para>Held here rather than left to the callers of <see cref="Sow"/> and
+        /// <see cref="Uproot"/> because a crop's remesh has more than two callers and one of them
+        /// — cancelling a zone — has no context to mark from: the intent handlers take a bare
+        /// <see cref="Intent"/>, so a driver-side mark would have left the cancel path silently
+        /// drawing a crop the simulation had already taken out of the world. The grid is the same
+        /// object the renderer's mirror holds, exactly as <see cref="Pawns.PawnContext"/>.Chunks is.</para>
+        /// </summary>
+        readonly ChunkGrid? _chunks;
+
         /// <summary>One contiguous patch of one crop. <see cref="Id"/> is its slot in <see cref="_zones"/> and is kept true by every edit, because <see cref="_zoneAt"/> points at it.</summary>
         sealed class Zone
         {
@@ -64,10 +76,11 @@ namespace Odyssey.Sim.Growing
             public readonly List<int> Cells = new List<int>();
         }
 
-        public GrowingZones(CellGrid grid, PlantDef[] plants)
+        public GrowingZones(CellGrid grid, PlantDef[] plants, ChunkGrid? chunks = null)
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _plants = plants ?? throw new ArgumentNullException(nameof(plants));
+            _chunks = chunks;
             int count = grid.Size.CellCount;
             _zoneAt = new int[count];
             _cropAt = new byte[count];
@@ -252,7 +265,14 @@ namespace Odyssey.Sim.Growing
         // The job side (U47) calls Sow and Uproot; the growth system calls Advance. Both write
         // the same three arrays the intents write, so the crop's state has one home.
 
-        /// <summary>Put a seed of the zone's plant in this zoned cell, growth from nothing.</summary>
+        /// <summary>
+        /// Put a seed of the zone's plant in this zoned cell, growth from nothing.
+        ///
+        /// <para>This, not the sowing driver, tells the renderer: the crop is now in the world,
+        /// and who changed the world owns the remesh mark — the same settlement U29 reached for
+        /// the support solver. A mark from here covers every route in, including ones with no
+        /// context to mark from, at the price of an idempotent extra mark from the driver's route.</para>
+        /// </summary>
         public void Sow(int index)
         {
             int slot = _zoneAt[index];
@@ -262,15 +282,22 @@ namespace Odyssey.Sim.Growing
             _cropAt[index] = (byte)(_zones[slot].Plant + 1);
             _growthAt[index] = 0;
             _planted.Insert(~_planted.BinarySearch(index), index);
+            _chunks?.MarkDirty(_grid.Size.FromIndex(index));
         }
 
-        /// <summary>Take the crop out of this cell, roots and all: harvested or its zone cancelled.</summary>
+        /// <summary>
+        /// Take the crop out of this cell, roots and all: harvested or its zone cancelled.
+        ///
+        /// <para>The mark lives here for the same reason <see cref="Sow"/>'s does, and the cancel
+        /// route is the one that cannot do without it.</para>
+        /// </summary>
         public void Uproot(int index)
         {
             if (_cropAt[index] == 0) return;
             _cropAt[index] = 0;
             _growthAt[index] = 0;
             _planted.RemoveAt(_planted.BinarySearch(index));
+            _chunks?.MarkDirty(_grid.Size.FromIndex(index));
         }
 
         /// <summary>

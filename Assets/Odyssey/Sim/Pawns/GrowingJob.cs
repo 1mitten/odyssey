@@ -179,9 +179,10 @@ namespace Odyssey.Sim.Pawns
             // The zone can have been dissolved in the same tick the swing landed — cancelling a
             // one-cell field while the sower was mid-stroke. Sow refuses a cell in no zone, and
             // refusing quietly here is the honest end of a job whose ground vanished under it.
+            // Sow itself tells the renderer: who changed the world owns the remesh mark, and the
+            // cancel route has no context to mark from.
             if (zones.ZonePlantAt(cell) < 0 || zones.IsPlanted(cell)) return;
             zones.Sow(cell);
-            ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
         }
     }
 
@@ -256,8 +257,8 @@ namespace Odyssey.Sim.Pawns
         {
             var zones = ctx.Growing;
             if (zones == null) return;
+            // Uproot tells the renderer itself — the same mark a zone cancel rides.
             zones.Uproot(cell);
-            ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
 
             // Where the crop stood, or the nearest cell nearby that can take the yield — the
             // felling argument again: a row cut at once should gather into a few stacks, and
