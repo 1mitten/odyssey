@@ -49,6 +49,28 @@ namespace Odyssey.Sim.Pawns
         public int salvage = 8;
 
         /// <summary>
+        /// Piles of stone and of wood laid out beside the food, and how much is in each.
+        ///
+        /// <para><b>Zero by default, so <see cref="Bare"/> is untouched.</b> The golden table
+        /// builds on Bare, and a starting kit that moved it would re-bake three hashes to say
+        /// nothing about the simulation. These are a <see cref="Playtest"/> concern: what a player
+        /// can build with before anybody has swung an axe.</para>
+        ///
+        /// <para>Both stack to 75 (<c>Items.xml</c>), so a full pile is one square rather than a
+        /// scatter — the same reason the meals go out in piles rather than singly.</para>
+        /// </summary>
+        public int stonePiles = 0;
+
+        /// <inheritdoc cref="stonePiles"/>
+        public int stonePerPile = 75;
+
+        /// <inheritdoc cref="stonePiles"/>
+        public int woodPiles = 0;
+
+        /// <inheritdoc cref="stonePiles"/>
+        public int woodPerPile = 75;
+
+        /// <summary>
         /// Every tree within this many cells of the start is marked for felling before the first
         /// tick, on the start layer. Zero marks nothing.
         /// </summary>
@@ -124,12 +146,25 @@ namespace Odyssey.Sim.Pawns
         ///
         /// <para>No golden moves: the golden table builds on <see cref="Bare"/>, which has had no
         /// orders since it was written.</para>
+        ///
+        /// <para><b>The starting kit is a building kit now, not a pantry</b> (owner, 2026-09-18:
+        /// *"don't start the game with any scrap and only 3 meal piles, but a couple piles of
+        /// stone and wood"*). It was 144 meals and eight pieces of scrap and nothing to build
+        /// with, which is the wrong shape for a colony sim's first hour: food was a non-question
+        /// for a fortnight, the only hauling job on the board was scrap nobody had a use for, and
+        /// a player who wanted to put up a wall had to fell a tree first. It is now 36 meals —
+        /// three or four days, so food becomes a question rather than an emergency — no scrap at
+        /// all, and 150 each of stone and wood, which is a hut and a few floors without waiting on
+        /// anybody's axe. <b>The numbers live here and only here</b>, and they are invited tuning:
+        /// nothing else in the game reads them and nothing derives from them.</para>
         /// </summary>
         public static ScenarioDef Playtest() =>
             new ScenarioDef
             {
                 defName = "Scenario_Playtest", label = "playtest",
                 startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0,
+                mealPiles = 3, salvage = 0,
+                stonePiles = 2, woodPiles = 2,
             };
 
         /// <summary>
@@ -331,21 +366,28 @@ namespace Odyssey.Sim.Pawns
             public readonly int Beds;
             public readonly int StockpileCells;
             public readonly int Salvage;
+
+            /// <summary>Piles of stone and wood laid out, counted together: what the colony can
+            /// build with before it has worked for anything.</summary>
+            public readonly int MaterialPiles;
+
             public readonly int SpotsFound;
 
-            public Result(int colonists, int meals, int beds, int stockpileCells, int salvage, int spotsFound)
+            public Result(int colonists, int meals, int beds, int stockpileCells, int salvage,
+                int materialPiles, int spotsFound)
             {
                 Colonists = colonists;
                 Meals = meals;
                 Beds = beds;
                 StockpileCells = stockpileCells;
                 Salvage = salvage;
+                MaterialPiles = materialPiles;
                 SpotsFound = spotsFound;
             }
 
             public override string ToString() =>
                 $"{Colonists} colonists, {Meals} meals, {Beds} beds, {StockpileCells} stockpile cells, " +
-                $"{Salvage} salvage, from {SpotsFound} spots";
+                $"{Salvage} salvage, {MaterialPiles} material piles, from {SpotsFound} spots";
         }
 
         /// <summary>
@@ -554,13 +596,18 @@ namespace Odyssey.Sim.Pawns
         {
             var storeys = new Storeys(grid, pawns.Nav, start);
             storeys.Want(ColonistStorey, scenario.colonists);
-            storeys.Want(scenario.mealLayerOffset, scenario.mealPiles);
+            // The material piles sit on the food's storey and come out of the same budget: they are
+            // the same kind of thing — a pile on the ground the colony wakes up beside — and asking
+            // for their spots separately would be a second answer to "which floor does the colony
+            // start on" that nothing keeps in step with the first.
+            storeys.Want(scenario.mealLayerOffset,
+                scenario.mealPiles + scenario.stonePiles + scenario.woodPiles);
             storeys.Want(scenario.bedLayerOffset, scenario.beds);
             storeys.Want(scenario.stockpileLayerOffset, scenario.stockpileCells);
             storeys.Search();
 
             List<int> home = storeys.On(ColonistStorey);
-            if (storeys.Found == 0) return new Result(0, 0, 0, 0, 0, 0);
+            if (storeys.Found == 0) return new Result(0, 0, 0, 0, 0, 0, 0);
 
             var rng = DeterministicRandom.ForTick(seed, 0, purpose: 0xC0101);
 
@@ -591,6 +638,15 @@ namespace Odyssey.Sim.Pawns
                 pawns.Items.Spawn(ItemIndex.Meal, spot, stack: scenario.mealsPerPile);
                 placedMeals++;
             }
+
+            // Stone and wood, in full stacks beside the food. Placed before the beds so that a
+            // cramped start spends its spots on the things a player reaches for first; the storey
+            // search is ordered, so "before" here is a priority and not a coincidence.
+            int placedMaterials = 0;
+            placedMaterials += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
+                ItemIndex.Stone, scenario.stonePiles, scenario.stonePerPile);
+            placedMaterials += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
+                ItemIndex.Wood, scenario.woodPiles, scenario.woodPerPile);
 
             int placedBeds = 0;
             for (int i = 0; i < scenario.beds; i++)
@@ -632,7 +688,39 @@ namespace Odyssey.Sim.Pawns
                 }
             }
 
-            return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage, storeys.Found);
+            return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage,
+                placedMaterials, storeys.Found);
+        }
+
+        /// <summary>
+        /// Lay out <paramref name="piles"/> stacks of one item on a storey, one stack a cell, and
+        /// say how many went down.
+        ///
+        /// <para><b>A pile is clamped to the item's own stack limit, here, because nothing below
+        /// does it.</b> <c>ColonyItems.Spawn</c> checks the limit when a cell already holds
+        /// something and does not check it at all when the cell is empty — so a scenario asking
+        /// for 200 stone would lay down a single stack of 200 that no hauler could ever carry and
+        /// no stockpile could ever take back apart. A pile is not split across cells either: a
+        /// scenario that wants 150 stone says two piles of 75, which is what the field pair is
+        /// for.</para>
+        /// </summary>
+        static int PlacePiles(PawnContext pawns, Storeys storeys, int layerOffset,
+            int item, int piles, int perPile)
+        {
+            if (piles <= 0 || perPile <= 0) return 0;
+
+            int limit = pawns.Items.Content.Items[item].stackLimit;
+            int stack = perPile < limit ? perPile : limit;
+
+            int placed = 0;
+            for (int i = 0; i < piles; i++)
+            {
+                int spot = storeys.Next(layerOffset);
+                if (spot < 0) break;
+                pawns.Items.Spawn(item, spot, stack: stack);
+                placed++;
+            }
+            return placed;
         }
     }
 }

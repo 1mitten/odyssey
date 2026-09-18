@@ -237,6 +237,18 @@ namespace Odyssey.Presentation.Ui
         /// the colony's directors, and for harness scenes that build no world.</summary>
         HotkeyDirector? _hotkeysFallback;
 
+        /// <summary>
+        /// The binding map, the colony's once there is one.
+        ///
+        /// <para>An accessor rather than the expression written wherever it is wanted: the shell
+        /// reads it to draw a keycap, to poll the palette key and — since the text fields take the
+        /// keyboard — to shut the game's keys off while somebody types. Three copies of a
+        /// null-coalesce that has to pick the *same* director every time is how a gate comes to be
+        /// set on one object and read on another.</para>
+        /// </summary>
+        internal HotkeyDirector Hotkeys() =>
+            _directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
+
         /// <summary>Our own copy of the panel settings, so that changing the interface scale does
         /// not write to the committed asset. See <see cref="ApplyUiScale"/>.</summary>
         PanelSettings? _panelCopy;

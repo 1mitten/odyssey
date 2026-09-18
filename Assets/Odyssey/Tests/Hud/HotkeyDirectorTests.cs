@@ -282,5 +282,79 @@ namespace Odyssey.Tests.Hud
             Assert.That(hotkeys.Key(HotkeyAction.SliceUp, 1), Is.EqualTo(HudKey.None));
             Assert.That(hotkeys.LoadConflicts, Is.Empty);
         }
+
+        // ------------------------------------------------- whose keys these are right now
+
+        /// <summary>
+        /// Typing into a text field takes the game's keys away from the game (owner, 2026-09-18:
+        /// *"when you type in during a save game the in game controls still work and can cause
+        /// confusion"*). Every poller asks this one question, so this is the whole of the rule.
+        /// </summary>
+        [Test]
+        public void ATextFieldWithTheKeyboardShutsTheGamesKeysOff()
+        {
+            var hotkeys = new HotkeyDirector();
+            var field = new object();
+
+            Assert.That(hotkeys.GameKeysLive, Is.True, "nothing is happening, so the keys are the player's");
+
+            hotkeys.BeginTyping(field);
+            Assert.That(hotkeys.Typing, Is.True);
+            Assert.That(hotkeys.GameKeysLive, Is.False);
+
+            hotkeys.EndTyping(field);
+            Assert.That(hotkeys.GameKeysLive, Is.True);
+        }
+
+        /// <summary>
+        /// Focus moves as a blur and a focus and nothing promises which arrives first. A bool
+        /// would be cleared by the field being left after the field being entered had set it, and
+        /// the gate would stand open with a cursor blinking on screen.
+        /// </summary>
+        [Test]
+        public void AFieldThatHasAlreadyLostTheKeyboardCannotGiveItBack()
+        {
+            var hotkeys = new HotkeyDirector();
+            var first = new object();
+            var second = new object();
+
+            hotkeys.BeginTyping(first);
+            hotkeys.BeginTyping(second);   // focus arrives before the blur
+            hotkeys.EndTyping(first);      // and the blur is late
+
+            Assert.That(hotkeys.GameKeysLive, Is.False, "the field still being typed in lost the keyboard");
+
+            hotkeys.EndTyping(second);
+            Assert.That(hotkeys.GameKeysLive, Is.True);
+        }
+
+        [Test]
+        public void AWaitingRebindSlotAlsoShutsTheGamesKeysOff()
+        {
+            var hotkeys = new HotkeyDirector();
+            hotkeys.Listen(HotkeyAction.Pause, 0);
+
+            Assert.That(hotkeys.GameKeysLive, Is.False,
+                "a key offered to a rebind must not also arm a tool");
+
+            hotkeys.CancelListen();
+            Assert.That(hotkeys.GameKeysLive, Is.True);
+        }
+
+        /// <summary>
+        /// A screen that closes without its field ever being blurred would otherwise leave the
+        /// gate shut — a game that has quietly stopped answering its own keys, which is the worse
+        /// half of the bug the gate was built to fix.
+        /// </summary>
+        [Test]
+        public void TheKeyboardCanBeTakenBackFromWhoeverHoldsIt()
+        {
+            var hotkeys = new HotkeyDirector();
+            hotkeys.BeginTyping(new object());
+
+            hotkeys.StopTyping();
+
+            Assert.That(hotkeys.GameKeysLive, Is.True);
+        }
     }
 }

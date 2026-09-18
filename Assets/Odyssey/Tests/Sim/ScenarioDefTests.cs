@@ -300,15 +300,57 @@ namespace Odyssey.Tests.Sim
                 "the rest of the colony should be unaffected by a storey that could not be filled");
         }
 
+        /// <summary>
+        /// Bare is the measurement baseline and has not moved.
+        ///
+        /// <para><b>This test used to say the two scenarios differed only in their orders.</b>
+        /// They differ in the starting kit as well since 2026-09-18, and the reason the old
+        /// assertion is not simply relaxed is that its real job was to stop Bare drifting: the
+        /// golden table and the ten-day soak build on Bare, so an edit to the field defaults —
+        /// which is how the kit would most naturally have been changed — re-bakes three hashes
+        /// without anybody meaning to. So the numbers are pinned outright here instead of being
+        /// pinned to Playtest's, which are now free to be tuned.</para>
+        /// </summary>
         [Test]
-        public void BareGivesTheSameColonyAndNoOrders()
+        public void BareIsTheBaselineAndGivesNoOrders()
         {
             ColonyWorld bare = Wooded(ScenarioDef.Bare());
-            ColonyWorld playtest = Wooded(ScenarioDef.Playtest());
 
             Assert.That(bare.Designations.Count, Is.Zero, "a bare scenario gave an order");
-            Assert.That(bare.Placement.ToString(), Is.EqualTo(playtest.Placement.ToString()),
-                "the two scenarios are meant to differ only in their orders");
+            Assert.That(bare.Placement.Meals, Is.EqualTo(12), "the baseline's pantry moved");
+            Assert.That(bare.Placement.Salvage, Is.EqualTo(8), "the baseline's salvage moved");
+            Assert.That(bare.Placement.MaterialPiles, Is.Zero,
+                "the baseline was given a building kit, which re-bakes every golden");
+        }
+
+        /// <summary>
+        /// What a player starts with (owner, 2026-09-18): three meal piles, no scrap, and a couple
+        /// of piles each of stone and wood. Asserted on the placement rather than on the def, so
+        /// that a kit the map has nowhere to put fails here rather than in a playtest.
+        /// </summary>
+        [Test]
+        public void PlaytestStartsWithABuildingKitAndNoScrap()
+        {
+            ColonyWorld playtest = Wooded(ScenarioDef.Playtest());
+
+            Assert.That(playtest.Designations.Count, Is.Zero, "the playtest scenario gave an order");
+            Assert.That(playtest.Placement.Meals, Is.EqualTo(3), playtest.Placement.ToString());
+            Assert.That(playtest.Placement.Salvage, Is.Zero, "a new colony was given scrap");
+            Assert.That(playtest.Placement.MaterialPiles, Is.EqualTo(4), playtest.Placement.ToString());
+
+            int stone = 0, wood = 0;
+            foreach (var item in playtest.Pawns.Items.Items)
+            {
+                if (item.Cell < 0) continue;
+                if (item.DefIndex == ItemIndex.Stone) stone += item.Stack;
+                else if (item.DefIndex == ItemIndex.Wood) wood += item.Stack;
+            }
+
+            // A full stack apiece, and the assertion is on the total rather than on the pile count
+            // because the thing a player cares about is how much there is to build with — and
+            // because an unclamped pile would pass a count and fail this.
+            Assert.That(stone, Is.EqualTo(150), "stone to build with");
+            Assert.That(wood, Is.EqualTo(150), "wood to build with");
         }
     }
 }

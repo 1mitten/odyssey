@@ -71,6 +71,13 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // A text field has the keyboard, so Escape belongs to it: it backs out of the name
+            // being typed, not out of whatever is open behind the prompt. The field registers for
+            // the key itself (HudShell.TakesTheKeyboard), which is why this is a return rather
+            // than a call — the alternative is this component knowing which field is focused and
+            // what backing out of it means, which is the prompt's business and not its.
+            if (hotkeys != null && hotkeys.Typing) return;
+
             if (!keys.escapeKey.wasPressedThisFrame) return;
 
             // One key, one rule, one place. The order itself is the director's and is tested

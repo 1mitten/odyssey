@@ -99,6 +99,17 @@ namespace Odyssey.Hud
 
         readonly Candidate[] _cards = new Candidate[Slots];
         readonly bool[] _locked = new bool[Slots];
+
+        /// <summary>
+        /// The name the player typed over a slot, or null where they have not.
+        ///
+        /// <para>Beside the card rather than in it, because <see cref="Candidate"/> is what a roll
+        /// produced and a typed name is not: a card that carried its own new name would have to be
+        /// rebuilt to rename somebody, and the roll and the rename would become one field with two
+        /// writers.</para>
+        /// </summary>
+        readonly string?[] _given = new string?[Slots];
+
         readonly Func<uint, int, Candidate> _roll;
 
         /// <summary>
@@ -147,6 +158,73 @@ namespace Odyssey.Hud
         /// <summary>The candidate whose detail is showing.</summary>
         public Candidate Current => _cards[Selected];
 
+        /// <summary>
+        /// The name the player typed over this slot, or null where they have taken the one they
+        /// were dealt. What <see cref="ChosenNames"/> carries into the colony.
+        /// </summary>
+        public string? GivenName(int slot) =>
+            slot >= 0 && slot < Slots ? _given[slot] : null;
+
+        /// <summary>What this slot is called on screen: the typed name where there is one, the
+        /// dealt one otherwise.</summary>
+        public string DisplayName(int slot) =>
+            slot >= 0 && slot < Slots ? _given[slot] ?? _cards[slot].Name : string.Empty;
+
+        /// <summary>"Wrenn, 34" for a slot, with the typed name where there is one — the line at
+        /// the top of a card and of the detail beside it.</summary>
+        public string DisplayNameAndAge(int slot)
+        {
+            if (slot < 0 || slot >= Slots) return string.Empty;
+
+            int age = _cards[slot].Age;
+            string name = DisplayName(slot);
+            return age > 0 ? name + ", " + age : name;
+        }
+
+        /// <summary>
+        /// Name this one yourself, or — with a name that cleans to nothing — stop, which puts the
+        /// dealt name back.
+        ///
+        /// <para><b>Cleaned here rather than at the keyboard</b>, by the same
+        /// <see cref="ColonistNameBook"/> that will hold it once the colony exists: the rule about
+        /// what a name may be has one owner, so the card, the roster and the save cannot come to
+        /// disagree about whether trailing spaces count.</para>
+        /// </summary>
+        /// <returns>Whether anything changed, so a presenter echoing every keystroke does not
+        /// redraw three cards on the ones that altered nothing.</returns>
+        public bool Rename(int slot, string? typed)
+        {
+            if (slot < 0 || slot >= Slots) return false;
+
+            string clean = ColonistNameBook.Clean(typed);
+            string? held = _given[slot];
+            if (clean.Length == 0)
+            {
+                if (held == null) return false;
+                _given[slot] = null;
+            }
+            else
+            {
+                if (held == clean) return false;
+                _given[slot] = clean;
+            }
+
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// The three typed names, in slot order, null where the dealt name stands — what the
+        /// composition root writes into <see cref="ColonistNames.Book"/> once the colony's pawns
+        /// exist.
+        /// </summary>
+        public string?[] ChosenNames()
+        {
+            var names = new string?[Slots];
+            for (int i = 0; i < Slots; i++) names[i] = _given[i];
+            return names;
+        }
+
         /// <summary>How many are locked, which is what tells a presenter that Reroll would do
         /// nothing.</summary>
         public int LockedCount
@@ -182,6 +260,7 @@ namespace Odyssey.Hud
             if (seeds == null) throw new ArgumentNullException(nameof(seeds));
 
             for (int i = 0; i < Slots; i++) _locked[i] = false;
+            for (int i = 0; i < Slots; i++) _given[i] = null;
             for (int i = 0; i < Slots; i++) _cards[i] = DrawUnused(seeds, i);
             Selected = 0;
             Changed?.Invoke();
@@ -193,9 +272,17 @@ namespace Odyssey.Hud
             if (seeds == null) throw new ArgumentNullException(nameof(seeds));
             if (!CanReroll) return;
 
+            // A typed name goes with the person it was given to (owner, 2026-09-18). A reroll
+            // deals a different face, different skills and a different name into the slot, so a
+            // name left standing over it would be the player's word attached to somebody they
+            // have never seen — the same reason §2 decision 2 moved the dealt name off the slot
+            // and on to the roll. A locked slot keeps both, which is what locking means.
             for (int i = 0; i < Slots; i++)
                 if (!_locked[i])
+                {
+                    _given[i] = null;
                     _cards[i] = DrawUnused(seeds, i);
+                }
 
             Changed?.Invoke();
         }

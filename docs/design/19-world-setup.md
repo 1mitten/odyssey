@@ -231,3 +231,90 @@ colony-name field, and a map-size control.
   is a different conversation.
 - **Occupation biasing the skill roll.** Decision 5 defers it to when traits arrive, which is also
   when it becomes interesting.
+
+---
+
+## 10. Naming a colonist (2026-09-18)
+
+Owner, 2026-09-18: *"ability to rename your colonist on creation by clicking on the name,
+displaying a cursor and allowing entry of min 1 character and the maximum specified for the
+game."*
+
+### 10.1 The name is the control
+
+Click the name on a card and the name becomes a box with the current name in it, selected. There is
+no pencil, no caption and no second row: the thing you want to change is the thing you click, which
+is the same gesture the board-size control on this page already uses. Clicking it also **shows**
+that card, because a player editing somebody's name is looking at that person.
+
+**One box, moved.** Three fields would be three things that can hold focus, three that can be left
+with a half-typed name in them, and three the refresh has to keep in step with a reroll. Moving one
+makes "only one name is being typed at a time" true by construction rather than by care.
+
+The box goes on the **end** of the card's line stack with the name label hidden, not in the label's
+place: the refresh reaches for `lines[0]` and `lines[1]` by position, so a box inserted at the front
+would shift both and the refresh would write the name into the occupation.
+
+### 10.2 What a name may be
+
+**Sixteen characters**, trimmed, with runs of blank collapsed to single spaces and control
+characters dropped. The number is about the narrowest place a name is drawn rather than about
+names: the roster strip and the docked bars are the densest region in the interface, and a name that
+elides *there* is a colonist the player cannot tell apart at a glance, which is the whole reason for
+naming one. The colony's own field takes 32 because a colony's name is drawn once, on a screen with
+room.
+
+The cut comes **after** the trim and cannot leave a space on the end — sixteen characters of which
+the last is blank would otherwise be a fifteen-character name with an invisible tail, unequal to the
+same name typed the other way round.
+
+**There is no minimum, and that is a deliberate reading of the request.** "Min 1 character" is what
+the box enforces by refusing to be a name at all when it is empty: an empty box means *no name of
+their own*, and puts the dealt name back. A colonist with no name is the one outcome that must not
+be reachable, and forbidding an empty box would instead have meant a player who clears it is stuck
+until they type something.
+
+### 10.3 A rename belongs to the person, not to the slot
+
+A reroll deals a different face, different skills and a different name into the slot, so a typed
+name left standing over it would be the player's word attached to somebody they have never seen.
+**Reroll forgets the name of whoever it rerolled**; a locked card keeps its person *and* their name,
+which is what locking already means. This is `18-colonist-select.md` §2 decision 2 applied to the
+typed name for the same reason it was applied to the dealt one.
+
+Escape puts back what the slot was called when the edit began. Every keystroke commits, so there is
+no state where the box and the card disagree about who this is, and no way to lose a name by
+clicking the wrong thing next.
+
+### 10.4 How it survives into the game, and into a save
+
+Every other identity a colonist has — their pool name, their face, their age, their trade — is
+*derived* from a roll seed the simulation already saves, which is what lets the game carry a whole
+cast in four bytes a head. **A typed name cannot be derived from anything.** It is the first piece
+of colonist identity that has to be written down.
+
+- `ColonistNameBook` holds the exceptions by `PawnId`, and `ColonistNames.Of` answers from it
+  before it reads the pool. Empty in every colony where the player took the three they were dealt,
+  and an empty book costs one integer compare per figure per frame.
+- `ColonistNames.Rolled` is the pool's answer with the book skipped. The select screen deals from
+  it, because slot 0's `PawnId` is the same 1 the *last* colony's first colonist had — and a freshly
+  dealt stranger arriving in somebody else's name is the kind of wrong that reads as the feature
+  working.
+- `ColonistNameSection` writes the book into the save beside the camera pose. It is an `ISaveable`
+  and deliberately **not** an `IStateHashable`, on `ViewStateSection`'s argument exactly: what a
+  colonist is called is not a fact about the colony, and two colonies that tick identically must
+  compare equal whether or not somebody typed a name over one of them. The book is cleared when a
+  colony is built, not in the section's `Apply`, because `Apply` only runs for a file that carries
+  the section.
+- The bootstrap **checks the roll seed** before placing a name. Which pawn a slot becomes is
+  `ColonistDraw.IdForSlot`'s to say, but it rests on `ColonyScenario.Place` spawning the chosen
+  colonists first and in order — a contract two files away from where it is relied on. A mismatch
+  is reported rather than putting somebody's name on a stranger.
+
+### 10.5 Not in this unit
+
+- **Renaming in the running game.** The roster card is the obvious home and the book would need
+  nothing new; it is left out because the owner asked for it *on creation* and an in-game rename
+  wants its own answer about where the control lives.
+- **Naming the colony's people after the colony**, surnames, or any collision rule between a typed
+  name and a dealt one. Two colonists called Ada is the player's business.

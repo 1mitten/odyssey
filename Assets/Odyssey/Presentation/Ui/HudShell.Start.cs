@@ -68,6 +68,23 @@ namespace Odyssey.Presentation.Ui
         readonly List<SkillLineView> _detailSkillViews = new List<SkillLineView>();
 
         /// <summary>
+        /// The box a colonist is renamed in — one, moved to whichever card is being edited.
+        ///
+        /// <para><b>One widget rather than three.</b> Three fields would be three things that can
+        /// hold focus, three that can be left with a half-typed name in them, and three that the
+        /// refresh has to keep in step with a reroll. Moving one is a single <c>Add</c> in UI
+        /// Toolkit, and it makes "only one name is being typed at a time" true by construction
+        /// instead of by care.</para>
+        /// </summary>
+        TextField _renameBox = null!;
+
+        /// <summary>Which card the box is in, or -1 when nobody is being renamed.</summary>
+        int _renameSlot = -1;
+
+        /// <summary>What the slot was called when the edit began, so Escape can put it back.</summary>
+        string? _renameWas;
+
+        /// <summary>
         /// Roll one candidate for the select screen — the presenter's half of U40's seam.
         ///
         /// <para>It calls <c>ColonistDraw</c>, which is the same roll the colony runs, so the card
@@ -117,7 +134,10 @@ namespace Odyssey.Presentation.Ui
                 rows.Add(row);
             }
 
-            return new Candidate(seed, ColonistNames.Of(seed, id),
+            // Rolled, not Of: Of would answer from the name book, and slot 0's PawnId is the same
+            // 1 the last colony's first colonist had — so a freshly dealt stranger would arrive
+            // wearing the name somebody typed in a game that is already over.
+            return new Candidate(seed, ColonistNames.Rolled(seed, id),
                 ColonistIdentity.Age(seed, id), ColonistIdentity.Occupation(seed, id), rows);
         }
         readonly Dictionary<string, VisualElement> _startRowByKey = new Dictionary<string, VisualElement>();
@@ -344,12 +364,50 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>A text field of this interface's one restyled kind, named so a test can drive
         /// the control a player drives rather than the director behind it.</summary>
-        static TextField Field(string name, int maxLength, System.Action<string> typed)
+        TextField Field(string name, int maxLength, System.Action<string> typed,
+            System.Action? escape = null)
         {
             var field = new TextField { name = name, isDelayed = false, maxLength = maxLength };
             field.AddToClassList("field");
             field.RegisterValueChangedCallback(change => typed(change.newValue));
+            TakesTheKeyboard(field, escape);
             return field;
+        }
+
+        /// <summary>
+        /// This field gets the keyboard while it has the focus, and the game's keys do not.
+        ///
+        /// <para><b>Every text field in the game goes through here</b> — the colony's name, the
+        /// seed, a colonist's name, the name of a save. Unity's focus cannot do this by itself:
+        /// the game's keys are <i>polled</i> from <c>Keyboard.current</c> in six components that
+        /// never see a UI event, so a focused field and a camera that pans on W are two systems
+        /// reading the same keyboard and neither knows about the other (owner, 2026-09-18).</para>
+        ///
+        /// <para>Escape goes with it. While a field has the keyboard, Escape leaves the field
+        /// rather than unwinding the screen behind it — otherwise the one key a player reaches for
+        /// to abandon a half-typed name would disarm their build tool instead.</para>
+        /// </summary>
+        /// <param name="escape">
+        /// What Escape does, when leaving the field is not enough on its own. The save prompt
+        /// passes its Cancel, because a player pressing Escape over a modal means the modal and
+        /// not the cursor in it; the setup page's fields pass nothing, because there is nothing
+        /// behind them to close.
+        /// </param>
+        void TakesTheKeyboard(TextField field, System.Action? escape = null)
+        {
+            field.RegisterCallback<FocusInEvent>(_ => Hotkeys().BeginTyping(field));
+            field.RegisterCallback<FocusOutEvent>(_ => Hotkeys().EndTyping(field));
+            field.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Escape) return;
+                evt.StopPropagation();
+
+                // Before the blur, not after. Leaving the field is what ends an edit, so a handler
+                // that ran afterwards would be handed a field nobody is editing any more — which
+                // is exactly how the colonist rename's Escape came to revert nothing at all.
+                escape?.Invoke();
+                field.Blur();
+            });
         }
 
         /// <summary>A control with the quiet caption every figure in this interface is introduced
@@ -423,7 +481,23 @@ namespace Odyssey.Presentation.Ui
                 // world behind it.
                 var lines = new VisualElement();
                 lines.AddToClassList("colonist__lines");
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Name, ussClass: "colonist__name"));
+
+                Label name = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "colonist__name");
+
+                // The name is the control that renames this person (owner, 2026-09-18: *"ability
+                // to rename your colonist on creation by clicking on the name"*). Clicking it
+                // shows the card as well, because a player editing a name is looking at that
+                // person — and StopPropagation so the card below does not also take the click and
+                // count it as a second gesture.
+                name.RegisterCallback<ClickEvent>(evt =>
+                {
+                    evt.StopPropagation();
+                    _menu.Colonists!.Select(index);
+                    BeginRename(index);
+                });
+                name.tooltip = "Click to name them yourself";
+
+                lines.Add(name);
                 lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__trade"));
 
                 card.Add(face);
@@ -432,6 +506,27 @@ namespace Odyssey.Presentation.Ui
                 _colonistCards.Add(card);
                 _colonistFaces.Add(face);
             }
+
+            // Built once and parked: it lives in whichever card is being edited and nowhere at
+            // all the rest of the time. Field() is what gives it the interface's one restyled
+            // look, its length limit, and — the part that matters here — the keyboard, so that
+            // typing a name does not also drive the game behind the page.
+            //
+            // The name is committed on every keystroke rather than on the way out, so there is no
+            // state in which the box and the card disagree about who this is — and no way to lose
+            // a name by clicking the wrong thing next. Escape is what backs out, and it puts back
+            // what the slot was called when the edit began.
+            _renameBox = Field("colonistname", ColonistNameBook.MaxLength,
+                text => _menu.Colonists?.Rename(_renameSlot, text),
+                escape: RevertRename);
+            _renameBox.AddToClassList("colonist__namebox");
+            _renameBox.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
+                evt.StopPropagation();
+                _renameBox.Blur(); // committing is what every keystroke already did
+            });
+            _renameBox.RegisterCallback<FocusOutEvent>(_ => EndRename());
 
             var rows = new VisualElement();
             rows.AddToClassList("colonists__rows");
@@ -506,6 +601,76 @@ namespace Odyssey.Presentation.Ui
         /// one being <i>read</i> wears <c>colonist--on</c>, which is a different question and needs
         /// a different mark.</para>
         /// </summary>
+        /// <summary>
+        /// Put the box over this card's name, with the name in it and selected.
+        ///
+        /// <para><b>The box goes on the end of the line stack and the label is hidden, rather than
+        /// the box being put where the label was.</b> <see cref="RefreshColonists"/> reaches for
+        /// <c>lines[0]</c> and <c>lines[1]</c> by position — a box inserted at the front would
+        /// shift both, and the refresh would write the name into the trade and cast the box to a
+        /// Label on the next frame.</para>
+        ///
+        /// <para>Selected, not just focused: the name already in the box is the one being replaced
+        /// nine times in ten, and a player who has to clear it first has been given a chore rather
+        /// than a cursor.</para>
+        /// </summary>
+        void BeginRename(int slot)
+        {
+            ColonistSelect? select = _menu.Colonists;
+            if (select == null || slot < 0 || slot >= _colonistCards.childCount) return;
+            if (_renameSlot == slot) return;
+
+            EndRename();
+
+            _renameSlot = slot;
+            _renameWas = select.GivenName(slot);
+
+            VisualElement lines = _colonistCards[slot][1];
+            lines[0].style.display = DisplayStyle.None;
+            lines.Add(_renameBox);
+
+            _renameBox.SetValueWithoutNotify(select.DisplayName(slot));
+            _renameBox.Focus();
+            _renameBox.SelectAll();
+        }
+
+        /// <summary>
+        /// Take the box away and show the name again. Nothing is committed here — every keystroke
+        /// already was — so this is only the undoing of <see cref="BeginRename"/>, and it is safe
+        /// to call when nobody is being renamed.
+        /// </summary>
+        void EndRename()
+        {
+            if (_renameSlot < 0) return;
+
+            int slot = _renameSlot;
+            _renameSlot = -1;
+            _renameWas = null;
+
+            _renameBox.RemoveFromHierarchy();
+            if (slot < _colonistCards.childCount)
+                _colonistCards[slot][1][0].style.display = DisplayStyle.Flex;
+
+            RefreshColonists();
+        }
+
+        /// <summary>
+        /// Escape: put back what this slot was called before the edit, and leave the box.
+        ///
+        /// <para>Runs after the blur, so <see cref="EndRename"/> has already cleared the slot —
+        /// which is why the slot is read here before anything else touches it. Renaming to what
+        /// it was is how the revert is done, rather than a separate undo path, because
+        /// <c>ColonistSelect.Rename</c> is where the rule about what a name may be lives.</para>
+        /// </summary>
+        void RevertRename()
+        {
+            int slot = _renameSlot;
+            string? was = _renameWas;
+            if (slot < 0) return;
+
+            _menu.Colonists?.Rename(slot, was);
+        }
+
         void RefreshColonists()
         {
             ColonistSelect? select = _menu.Colonists;
@@ -517,7 +682,9 @@ namespace Odyssey.Presentation.Ui
                 Candidate who = select.Cards[slot];
                 VisualElement lines = card[1];
 
-                HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Name);
+                // The display name, not the card's: a colonist the player has renamed is called
+                // what the player called them everywhere on this page.
+                HudText.Set((Label)lines[0], select.DisplayNameAndAge(slot), HudTextRole.Name);
                 HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Row);
 
                 // The seed is the candidate's own and the id is the one this slot will occupy, so
@@ -529,13 +696,14 @@ namespace Odyssey.Presentation.Ui
                 _colonistFaces[slot].SetPortrait(_boot!.Portraits.For(who.Seed, willBe));
                 card.EnableInClassList("row--armed", select.IsLocked(slot));
                 card.EnableInClassList("colonist--on", select.Selected == slot);
+                string called = select.DisplayName(slot);
                 card.tooltip = select.IsLocked(slot)
-                    ? who.Name + " is kept through a reroll"
-                    : "Show " + who.Name;
+                    ? called + " is kept through a reroll"
+                    : "Show " + called;
             }
 
             Candidate current = select.Current;
-            HudText.Set(_detailName, current.NameAndAge, HudTextRole.Name);
+            HudText.Set(_detailName, select.DisplayNameAndAge(select.Selected), HudTextRole.Name);
             HudText.Set(_detailTrade, current.Occupation, HudTextRole.Body);
             PawnId shown = ColonistDraw.IdForSlot(select.Selected);
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
@@ -801,6 +969,11 @@ namespace Odyssey.Presentation.Ui
             MapSizes.Choice size = MapSizes.At(choice.Size);
             _boot!.BuildSession(choice.Seed, null, choice.Colonists, choice.Name,
                 new GridSize(size.X, size.Z, size.Y));
+
+            // After the build, because a name belongs to a colonist and there were none until the
+            // line above. The seeds go with the names so the bootstrap can check it is naming the
+            // person the player was looking at rather than whoever landed in that slot.
+            _boot.NameColonists(choice.Names, choice.Colonists);
         }
 
         // ============================================================ naming a save
@@ -833,6 +1006,21 @@ namespace Odyssey.Presentation.Ui
             _promptField = new TextField { isDelayed = false };
             _promptField.AddToClassList("field");
             _promptField.RegisterValueChangedCallback(change => OnNameTyped(change.newValue));
+
+            // The keyboard is this field's while it has the focus, and Escape closes the prompt
+            // rather than merely leaving the box: over a modal, Escape means the modal.
+            TakesTheKeyboard(_promptField, () => _prompt.Cancel());
+
+            // Return is the Confirm row, not a second route to saving: `SavePrompt.Confirm` holds
+            // the whole rule — an unusable name does nothing, and a name that collides arms rather
+            // than overwrites — so the key presses the button rather than deciding anything.
+            _promptField.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter) return;
+                evt.StopPropagation();
+                _prompt.Confirm();
+            });
+
             _promptModal.Panel.Add(_promptField);
 
             _promptNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "prompt__note");
@@ -902,7 +1090,16 @@ namespace Odyssey.Presentation.Ui
         void RefreshSavePrompt()
         {
             _promptModal.Show(_prompt.Showing);
-            if (!_prompt.Showing) return;
+
+            // The prompt has gone, so the keyboard comes back whether or not the field was ever
+            // blurred. Hiding an element does not reliably raise a focus event, and a gate left
+            // shut is a game that has quietly stopped answering its own keys — the worse half of
+            // the bug this gate was built to fix.
+            if (!_prompt.Showing)
+            {
+                Hotkeys().EndTyping(_promptField);
+                return;
+            }
 
             HudText.Set(_promptConfirmLabel, Registry.Label(_prompt.ActionKey), HudTextRole.Row);
             _promptConfirm.EnableInClassList("prompt__answer--off", !_prompt.CanConfirm);

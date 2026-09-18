@@ -177,6 +177,9 @@ this file.
 | The debug menu | `docs/design/18-debug-menu.md` |
 | The start screen, saving, loading | `docs/design/17-start-flow.md` |
 | Colonist select | `docs/design/18-colonist-select.md` |
+| Naming a colonist, the setup page | `docs/design/19-world-setup.md` §10 |
+| What a colony starts with | `docs/design/22-starting-kit.md` |
+| Text entry taking the keyboard | `docs/design/09-ui-and-input.md` §6a |
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
@@ -261,13 +264,13 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **721 Sim + 409 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **724 Sim + 432 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the
-  blueprint-race shaft rule and the one-layer run rule: EditMode **1670 total, 1657 passed, 0
-  failed**. The remainder are `[Explicit]` or ignored.
-- **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
+  text-entry keyboard gate, colonist renaming and the starting kit: EditMode **1740 total, 1726
+  passed, 0 failed**. The remainder are `[Explicit]` or ignored.
+- **PlayMode, the same day: 81 total, 76 passed, 0 failed**, including
   `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
   frame time is measured — never an editor `camera.Render()` loop.
   **Its previously recorded 74 was wrong, not superseded**: nothing under
@@ -294,6 +297,15 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 
 ### Waiting on the owner
 
+- **Nobody has played the new starting kit** (2026-09-18, `docs/design/22-starting-kit.md`): 36
+  meals, no scrap, 150 each of stone and wood. Five integers in one method with nothing deriving
+  from them, and explicitly invited tuning. The question a test cannot answer is whether three or
+  four days of food reads as tension or as anxiety — and if the colony is starving before anybody
+  has built anything, the answer is more meals rather than faster growing.
+- **Nobody has renamed a colonist at the keyboard** (`19-world-setup.md` §10). Whether clicking the
+  name is a discoverable way to rename somebody without a pencil or a caption, and whether sixteen
+  characters is the right ceiling — it was picked for the roster strip, which is the narrowest place
+  a name is drawn, not for the card where it is typed.
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`.
 - **The avatars and portraits are photographed, not played** — whether a 128 px render reads at

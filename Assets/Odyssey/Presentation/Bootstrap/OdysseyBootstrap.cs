@@ -350,6 +350,51 @@ namespace Odyssey.Presentation.Bootstrap
             BuildSession(seedOverride, from, colonists, null, null);
 
         /// <summary>
+        /// Give the colonists the names the player typed on the setup page, in slot order. Null,
+        /// an empty list, or a null entry all mean "keep the name you were dealt".
+        ///
+        /// <para><b>A call of its own rather than a sixth parameter on <see cref="BuildSession"/>,
+        /// and it has to run after it</b>: a name belongs to a colonist, and there are no
+        /// colonists until the colony is built. It is also the only part of the start flow that is
+        /// purely interface — the request carries seeds because the simulation rolls people from
+        /// them, and it carries no names because the simulation has none.</para>
+        ///
+        /// <para><b>The seed is checked, not trusted.</b> Which pawn a slot becomes is
+        /// <c>ColonistDraw.IdForSlot</c>'s to say — the rule that file exists to state once — but
+        /// it rests on <c>ColonyScenario.Place</c> spawning the chosen colonists first and in
+        /// order, which is two files away from here. So each name is placed only on a pawn whose
+        /// roll seed is the one that slot was dealt, and a mismatch is reported rather than
+        /// putting somebody's name on a stranger.</para>
+        /// </summary>
+        public void NameColonists(IReadOnlyList<string?>? names, IReadOnlyList<uint>? seeds = null)
+        {
+            if (names == null || _colony == null) return;
+
+            for (int slot = 0; slot < names.Count; slot++)
+            {
+                string? typed = names[slot];
+                if (string.IsNullOrEmpty(typed)) continue;
+
+                PawnId id = ColonistDraw.IdForSlot(slot);
+                Pawn? pawn = _colony.Pawns.Pawns.Get(id);
+                if (pawn == null)
+                {
+                    Debug.LogWarning($"[Odyssey] no colonist in slot {slot} to call \"{typed}\"");
+                    continue;
+                }
+                if (seeds != null && slot < seeds.Count && pawn.RollSeed != seeds[slot])
+                {
+                    Debug.LogWarning(
+                        $"[Odyssey] slot {slot} was dealt seed {seeds[slot]} but pawn {id.Value} rolled " +
+                        $"{pawn.RollSeed}; \"{typed}\" is not being given to somebody else");
+                    continue;
+                }
+
+                ColonistNames.Book.Rename(id, typed);
+            }
+        }
+
+        /// <summary>
         /// Build a session, optionally on a seed and a shape that are not the scene's (U38).
         ///
         /// <para><b>Both overrides exist for one caller each.</b> <paramref name="seedOverride"/>
@@ -482,6 +527,12 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (colony.Placement.Colonists == 0)
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {colony.Placement}");
+
+            // Nobody in this colony has a name of their own yet. Emptied here rather than in
+            // ColonistNameSection.Apply, because Apply only runs for a file that carries the
+            // section — so a colony whose people were never renamed would open wearing the last
+            // colony's names, which is the same trap the view section records for the camera.
+            ColonistNames.Book.Clear();
             if (colony.MarkedForWork > 0)
                 Debug.Log($"[Odyssey] {scenarioDef}: {colony.MarkedForWork} cells marked for work before the first " +
                           $"tick — trees within {scenarioDef.startingFellRadius} cells of the start, and the nearest " +
@@ -1998,7 +2049,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (cameraRig != null && Directors != null)
                 _view.Capture(cameraRig, Directors, _world.GameSpeed);
 
-            WorldSave.SaveToFile(path, _world, WithView(_colony.SaveComponents), CurrentRecipe());
+            // The same bargain the view makes, for the same reason: names are read once, at the
+            // moment of writing, rather than tracked.
+            _names.Capture(ColonistNames.Book);
+
+            WorldSave.SaveToFile(path, _world, WithPresentationState(_colony.SaveComponents), CurrentRecipe());
 
             // Bound by writing it, so the next Save goes here rather than somewhere new.
             BoundSavePath = path;
@@ -2018,7 +2073,14 @@ namespace Odyssey.Presentation.Bootstrap
         ViewStateSection _view = new ViewStateSection();
 
         /// <summary>
-        /// The simulation's save components plus the one this assembly owns.
+        /// The names the player typed, for the session being saved or loaded right now. Replaced
+        /// on every load for the reason <see cref="_view"/> gives — a section kept across sessions
+        /// would still be holding the last colony's names when it opens a save that has none.
+        /// </summary>
+        ColonistNameSection _names = new ColonistNameSection();
+
+        /// <summary>
+        /// The simulation's save components plus the ones this assembly owns.
         ///
         /// <para><b>The view section is Presentation's, and that is why it is appended here rather
         /// than living in <c>ColonyWorld.SaveComponents</c>.</b> Sim cannot see a camera and must
@@ -2031,12 +2093,17 @@ namespace Odyssey.Presentation.Bootstrap
         /// <para>A headless caller that passes only the simulation's own components is unaffected
         /// in both directions: it writes no view section, and <c>WorldSave.Load</c> skips one it
         /// was not given a handler for.</para>
+        ///
+        /// <para>The colonist names are here on the same argument and the same terms
+        /// (<see cref="ColonistNameSection"/>). This method was called <c>WithView</c> while there
+        /// was one of them.</para>
         /// </summary>
-        IReadOnlyList<ISaveable> WithView(IReadOnlyList<ISaveable> components)
+        IReadOnlyList<ISaveable> WithPresentationState(IReadOnlyList<ISaveable> components)
         {
-            var all = new List<ISaveable>(components.Count + 1);
+            var all = new List<ISaveable>(components.Count + 2);
             all.AddRange(components);
             all.Add(_view);
+            all.Add(_names);
             return all;
         }
 
@@ -2064,15 +2131,18 @@ namespace Odyssey.Presentation.Bootstrap
             TeardownSession();
             BuildSession(null, header);
 
-            // A fresh one, so that a save with no view section cannot be restored using the view
-            // of whatever was open before it. See the field.
+            // Fresh ones, so that a save with no view or name section cannot be restored using the
+            // view — or the people — of whatever was open before it. See the fields.
             _view = new ViewStateSection();
+            _names = new ColonistNameSection();
 
             // The colony was built from the header, so this cannot mismatch; if it ever does, the
             // exception from WorldSave says which of seed or size disagreed, and that is a fault
             // in the rebuild above rather than in the file.
             using (var stream = System.IO.File.OpenRead(path))
-                WorldSave.Load(_world!, stream, WithView(_colony!.SaveComponents));
+                WorldSave.Load(_world!, stream, WithPresentationState(_colony!.SaveComponents));
+
+            _names.Apply(ColonistNames.Book);
 
             // A loaded colony is bound to the file it came out of, so Save puts it back where the
             // player found it. This is the half that makes Save mean "save" rather than "save a

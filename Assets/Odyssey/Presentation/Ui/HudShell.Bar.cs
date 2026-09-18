@@ -139,11 +139,12 @@ namespace Odyssey.Presentation.Ui
 
             // The colony's map when there is one, defaults when there is not, so the key
             // works in a harness scene with no world behind the shell.
-            HotkeyDirector hotkeys = _directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
+            HotkeyDirector hotkeys = Hotkeys();
 
             // A key offered to a slot in the settings panel belongs to the rebind, not to
-            // the palette it might be being bound to.
-            if (hotkeys.Listening != null) return;
+            // the palette it might be being bound to — and a key typed into a text field
+            // belongs to the field. One question, asked by every poller.
+            if (!hotkeys.GameKeysLive) return;
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.BuildPalette))
                 SetBuildPalette(!BuildPaletteOpen);

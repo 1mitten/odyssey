@@ -92,6 +92,43 @@ namespace Odyssey.Hud
         /// </summary>
         public static string Of(uint rollSeed, PawnId id)
         {
+            // A colonist the player named answers with that name and nothing else. The count is
+            // checked rather than the dictionary because the book is empty in most colonies and
+            // this is asked per figure per frame: an empty book costs one integer compare, and
+            // the paragraph below about allocating nothing stays true.
+            if (Book.Count > 0)
+            {
+                string? given = Book.Given(id);
+                if (given != null) return given;
+            }
+
+            return Rolled(rollSeed, id);
+        }
+
+        /// <summary>
+        /// The colonists the player has named themselves, which <see cref="Of(uint, PawnId)"/>
+        /// answers from before it reads the pool.
+        ///
+        /// <para><b>One book, held by the one place a name is decided.</b> It could have been a
+        /// field on <c>HudDirectors</c> and passed to every caller, and that was rejected: naming
+        /// is asked for in seven places across two assemblies, and a parameter seven callers may
+        /// forget is a rule with seven owners — the fault pattern this project keeps meeting. The
+        /// composition root clears it when a colony starts or loads, which is the whole of its
+        /// lifetime.</para>
+        /// </summary>
+        public static ColonistNameBook Book { get; } = new ColonistNameBook();
+
+        /// <summary>
+        /// The name the pool gives this roll — what a colonist is called before anybody renames
+        /// them, and what the select screen deals.
+        ///
+        /// <para>Separate from <see cref="Of(uint, PawnId)"/> because the select screen is naming
+        /// <i>candidates</i>, and a candidate in slot 0 shares <see cref="PawnId"/> 1 with the
+        /// colonist the last game named: asking <see cref="Of(uint, PawnId)"/> there would deal a
+        /// fresh stranger already wearing somebody else's name.</para>
+        /// </summary>
+        public static string Rolled(uint rollSeed, PawnId id)
+        {
             if (!id.IsValid) return "nobody";
 
             // The seed chooses where in the pool the colony starts reading; the id says how far
