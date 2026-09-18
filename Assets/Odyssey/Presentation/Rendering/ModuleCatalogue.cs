@@ -502,13 +502,6 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemCoal = Prefix + "item.coal";
         public const string ItemCarrots = Prefix + "item.carrots";
 
-        /// <summary>
-        /// The tilled rows a growing zone's ground wears — the farm pack's own dirt-rows patch,
-        /// one per zoned cell. A zone is authored state that changes no terrain, so this is drawn
-        /// from the zone channel the way a crop is drawn from the plant channel, and never
-        /// written into the grid.
-        /// </summary>
-        public const string ZoneDirtRows = Prefix + "zone.dirtrows";
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.

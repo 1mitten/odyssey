@@ -5893,3 +5893,15 @@ colouring brown. The brown comes from the tint table rather than a texture: the 
 with the bare-earth terrain tint, the same brown the board's own dirt wears, so a field matches
 the ground it sits on whichever board that is. Unrotated, unscaled, at the floor centre, one per
 cell — the seams between cells are the field.
+
+### The ground is the tile (2026-09-18)
+
+Second look at the dirt: the tile mesh would not sit clean on the cell, and re-clicking read as
+piling more dirt. Both faults were the same fault — a mesh laid over the ground is a thing with
+its own size and its own edges, and the owner named the way out while offering it: "browning/
+dirting the tile up instead". So the field is now the terrain quad itself re-looked: a zoned
+cell's ground draws as bare earth, the same dirt material and tint the board's own earth wears.
+Seamless by construction — one quad per cell, the cell IS the tile — and boolean by
+construction: there is nothing to stack, and an unzoned cell reverts to grass. The mesh route's
+remains are gone whole: emitter, module id, catalogue row (the last is unreachable dead data in
+the committed asset until the next rebuild rewrites it out).

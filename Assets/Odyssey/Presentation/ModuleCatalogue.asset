@@ -2014,35 +2014,6 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
-  - moduleId: odyssey.module.zone.dirtrows
-    shape: 13
-    prefab: {fileID: 1792054803756928, guid: d7fd0f034fb608643a24ead27702c3a3, type: 3}
-    prefabName: SM_Env_Dirt_01
-    centreXZ: 1
-    baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
-    yaw: 0
-    scale: {x: 1, y: 1, z: 1}
-    materialOnly: 0
-    material: {fileID: 0}
-    materialName: 
-    materialTilesPerCell: 0
-    flattenNormalMap: 0
-    poseClip: {fileID: 0}
-    poseClipName: 
-    poseClipTime: 0
-    locomotion: []
-    appearance:
-      skin: []
-      hair: []
-      cloth: []
-      cloth2: []
-      skinVerts: 0
-      hairVerts: 0
-      clothVerts: 0
-      cloth2Verts: 0
-      totalVerts: 0
-      quality: 0
   - moduleId: odyssey.module.tree.conifer
     shape: 4
     prefab: {fileID: 6131553767378768855, guid: ae12f1ba847c6f74281e7a9a7b0ac7fd, type: 3}

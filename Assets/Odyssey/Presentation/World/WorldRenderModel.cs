@@ -86,12 +86,6 @@ namespace Odyssey.Presentation.World
         /// </summary>
         readonly bool[] _zoned;
 
-        /// <summary>
-        /// The dirt-rows module, resolved once at construction. Zero until the catalogue row
-        /// ships, in which case the field keeps its grass and its tint and nothing else changes.
-        /// </summary>
-        readonly int _zoneGroundModule;
-
         /// <summary>The zoned cells <see cref="UpdateZones"/> last stamped, ascending — the merge twin of the next snapshot's zone list.</summary>
         int[] _zoneApplied = Array.Empty<int>();
         int _zoneAppliedCount;
@@ -161,7 +155,6 @@ namespace Odyssey.Presentation.World
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
             _zoned = new bool[count];
-            _zoneGroundModule = library.Resolve(ModuleIds.ZoneDirtRows, ModuleShape.Pillow);
 
             // The plant table is content, not world state, and content is written once: the ids
             // come from the Defs the simulation itself loads, so a stage renamed in the XML needs
@@ -352,11 +345,16 @@ namespace Odyssey.Presentation.World
 
 
         /// <summary>
-        /// The tilled-ground module for this cell, or 0 where it is in no zone. Asked by the
-        /// mesher at the ground's own floor, on the same terms as a crop: the rows are drawn, not
-        /// simulated — nothing of them is in a cell, a save or the hash.
+        /// The terrain this cell's ground should draw as: bare earth where it is zoned and grass
+        /// under it — the tile IS the terrain quad, so it is seamless and boolean by construction
+        /// (owner, 2026-09-18: "it has a brown tile or not"). Drawn look only; the grid's own
+        /// terrain is untouched, and an unzoned cell reverts to what it was. Named DrawnTerrain
+        /// because GroundLook is already this namespace's static classifier.
         /// </summary>
-        public int ZoneGroundModule(int index) => _zoned[index] ? _zoneGroundModule : 0;
+        public ushort DrawnTerrain(int index) =>
+            _zoned[index] && _terrain[index] == Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass
+                ? Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth
+                : _terrain[index];
         /// <summary>
         /// Restamp the crop mirror from the published snapshot's crop channel.
         ///

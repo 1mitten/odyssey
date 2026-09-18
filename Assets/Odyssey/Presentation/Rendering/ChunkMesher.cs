@@ -63,7 +63,6 @@ namespace Odyssey.Presentation.Rendering
             {
                 int index = size.Index(x, z, y);
                 EmitTerrain(batch, index, x, z, y);
-                EmitZoneGround(batch, index, x, z, y);
                 EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
@@ -169,10 +168,13 @@ namespace Odyssey.Presentation.Rendering
 
         void EmitTerrain(ChunkBatch batch, int index, int x, int z, int y)
         {
-            ushort terrain = _model.Terrain(index);
+            // The ground a zoned cell draws is dirt: the look swap happens here, on the terrain
+            // quad itself, so a field is seamless and boolean by construction — one quad, one
+            // material, no mesh laid over the ground to sit proud of its tile.
+            ushort terrain = _model.DrawnTerrain(index);
             if (terrain == CoreContent.TerrainAir) return;
 
-            int module = _model.TerrainModule(index);
+            int module = _model.TerrainModuleFor(terrain);
             if (module == 0) return;
 
             int tint = TintCode.Daylit(TintCode.Terrain(terrain), _model.OpenToTheSky(index, y));
@@ -341,37 +343,6 @@ namespace Odyssey.Presentation.Rendering
                 Quaternion.identity, Vector3.one));
         }
 
-        /// <summary>
-        /// The tilled field under everything a zone grows: one dirt tile at the ground's own
-        /// floor, drawn for as long as the cell stays zoned and gone the moment it does not. The
-        /// tile is square and cell-sized, so neighbouring zoned cells butt into one field — the
-        /// owner's "fits seamless into each tile" — and each tile is unrotated and unscaled to
-        /// keep the seams that way.
-        ///
-        /// <para><b>Brown by tint, not by texture</b> (owner: "you'll need to colour it brown"):
-        /// the tile's own material is neutral, and the brown it wears is the bare-earth terrain
-        /// tint — the same colour the ground beneath a real field is, applied by the same table,
-        /// so a field on any board matches the dirt that board already draws.</para>
-        ///
-        /// <para>Drawn, never simulated — a zone is authored state that changes no terrain, so
-        /// the tile rides the zone channel the way a crop rides the plant channel, and a
-        /// pack-less checkout keeps its grass and tint rather than losing the field. It sits at
-        /// the terrain's floor, below the crop that grows out of it, and is daylit on the
-        /// ground's terms: a field under a roof dims with the soil it is.</para>
-        /// </summary>
-        void EmitZoneGround(ChunkBatch batch, int index, int x, int z, int y)
-        {
-            int module = _model.ZoneGroundModule(index);
-            if (module == 0) return;
-
-            bool daylit = _model.OpenToTheSky(index, y);
-            int tint = TintCode.Daylit(
-                TintCode.Terrain(NaturalContent.TerrainBareEarth), daylit);
-
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
-                Quaternion.identity, Vector3.one));
-        }
 
         /// <summary>
         /// Resolve the tuft modules once, and keep only the ones that found real art.

@@ -195,12 +195,16 @@ which is the ground surface. Stockpiles have no overlay either, and both deserve
 crisp-bordered region shader `09-ui-and-input.md` §4.6 already specifies; that is its own unit,
 covering both, and is deliberately not smuggled in here.
 
-**The tilled ground** (2026-09-18, the owner's ask after finding a zone invisible on grass):
-each zoned cell draws the farm pack's own dirt tile — `SM_Env_Dirt_01`, square and cell-sized so
-neighbouring cells butt into one field, tinted brown with the bare-earth terrain colour because
-the tile's own material is neutral — through the same channel-and-mirror path a crop takes. (The
-dirt-**rows** variant was tried first and read as mess, "all over the place" in the owner's
-words; the tile replaced it the same day.) `UpdateZones`
+**The tilled ground** (2026-09-18, the owner's ask after finding a zone invisible on grass) is
+**the terrain quad itself, re-looked**: a zoned cell's ground draws as bare earth — the same
+dirt material and tint the board's own earth wears, `Mat_Dirt_01` — instead of grass, through a
+`GroundLook` swap in `EmitTerrain` fed by the zone mirror. Two mesh variants were tried and
+rejected first, both the owner's calls: the dirt **rows** read as mess ("all over the place"),
+and the dirt **tile** (`SM_Env_Dirt_01`) would not sit clean on the cell — a mesh laid over the
+ground can be proud of its tile however it is placed. The terrain swap is seamless and boolean
+by construction (owner: "it has a brown tile or not"): one quad per cell, nothing over laps,
+nothing stacks, an unzoned cell reverts to the grass it was, and the field costs not one extra
+draw call. The grid's own terrain is untouched — drawn look only, nothing saved or hashed. `UpdateZones`
 merge-walks the zone channel into a `_zoned` mirror, the mesher emits the module for zoned
 cells, and `Designate`/`Cancel` mark the chunk dirty because the ground under the cell is what
 changed. Nothing of it is simulated — no terrain is written, and a pack-less checkout keeps its
