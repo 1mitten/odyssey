@@ -161,9 +161,12 @@ namespace Odyssey.Sim.Pawns
             }
 
             PlantDef plant = zones.Plant(zones.ZonePlantAt(cell));
-            ToilProgress++;
+            // Progress is milliwork and the plant's price is ticks (design 17 §3b's convention):
+            // pay at the pawn's own rate — flat today, since no skill drives the curve yet
+            // (design 22 §5) — and read the price against the standard one.
+            ToilProgress += Pawn.WorkRatePerMille(WorkTypeIndex.Growing);
             Work(ctx);
-            if (ToilProgress < plant.sowWorkTicks) return JobStatus.Ongoing;
+            if (ToilProgress < plant.sowWorkTicks * Rates.Scale) return JobStatus.Ongoing;
 
             ctx.Defer(_ => Sowed(ctx, cell));
 
@@ -242,9 +245,9 @@ namespace Odyssey.Sim.Pawns
             }
 
             PlantDef plant = zones.Plant(zones.CropPlant(cell));
-            ToilProgress++;
+            ToilProgress += Pawn.WorkRatePerMille(WorkTypeIndex.Growing);
             Work(ctx);
-            if (ToilProgress < plant.harvestWorkTicks) return JobStatus.Ongoing;
+            if (ToilProgress < plant.harvestWorkTicks * Rates.Scale) return JobStatus.Ongoing;
 
             ctx.Defer(_ => Harvested(ctx, cell, plant));
 

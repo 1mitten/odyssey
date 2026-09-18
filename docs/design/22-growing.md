@@ -99,11 +99,15 @@ The intents, one per gesture:
 
 ## 5. Work: two jobs, and the loop closes itself
 
-`Work_Growing` (order 4, after Construction), `Skill_Growing`, `Job_Sow` and `Job_Harvest`
+`Work_Growing` (order 1, after Construction and ahead of Cutting — a zone's daylight window is
+the one clock that will not wait), `Skill_Growing`, `Job_Sow` and `Job_Harvest`
 (driver ids 10 and 11). Neither JobDef carries `workTicks`: like mining, the work is priced per
 plant, the driver reading `sowWorkTicks` or `harvestWorkTicks` from the zone's `PlantDef` as it
-swings. Skill and experience ride the def defaults; WS rates are not built, and §3a of
-`17-rates-and-stats.md` is where the plant-work curve lands when they are.
+swings. Skill and experience ride the def defaults. **Growing carries no rate curve** (2026-09-18,
+recorded at the rates merge): every driver now pays work at the pawn's own rate —
+`Pawn.WorkRatePerMille(WorkType)`, banked as milliwork per WS1's one-unit rule — and with no
+`rateSkill` on `Work_Growing` that rate is the flat tuned speed, so a skill still buys nothing at
+the hoe. §3a of `17-rates-and-stats.md` is where the plant-work curve lands.
 
 Both drivers are `FellJobDriver`'s shape with one simplification: **the colonist stands in the
 cell, not beside it.** A crop is ground, not an edifice — it blocks nothing, so the stand-beside

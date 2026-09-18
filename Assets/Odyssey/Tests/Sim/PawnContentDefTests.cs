@@ -108,7 +108,12 @@ namespace Odyssey.Tests.Sim
         // the bar by hand, and TheBarFillsAtTheCadenceItsCommentClaims is the test that now
         // holds the arithmetic and the tick path together. No golden moved, because no golden
         // window lets a need reach zero.
-        const ulong ContentFingerprint = 6487834678130530878UL;
+        //
+        // Moved a ninth time, 2026-09-18, by the merge of the growing and rates branches: both
+        // had moved the fingerprint that day, so neither parent's value described the union.
+        // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
+        // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 13615677002989434155UL;
 
 
         [Test]

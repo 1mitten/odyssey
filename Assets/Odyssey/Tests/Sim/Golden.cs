@@ -149,6 +149,18 @@ namespace Odyssey.Tests.Sim
     /// extra tally slot, seen from the pawn side this time. Both numbers move in every case,
     /// including the barren meadow, and nothing about generation or simulation moved.</para>
     ///
+    /// <para><b>Moved a ninth time, 2026-09-18, when the growing branch met the rates branch at
+    /// the merge, and the shape is the predicted one.</b> Two branches had each re-baked
+    /// <see cref="Case.Simulated"/> for their own reason — pace rolls on one, growing state and
+    /// pawn arrays on the other — so neither side's numbers could survive the union and the
+    /// merged values were measured, not composed. The signature was checked before it was
+    /// trusted: <b>all three <see cref="Case.Simulated"/> moved and no <see cref="Case.Generated"/>
+    /// one did</b> — generation is byte-identical to both parents, and only the simulation's
+    /// reach into it moved. Along the way the merge caught growing's two work toils still
+    /// banking plain ticks in <c>ToilProgress</c>, the mixed-unit fault WS1's review had already
+    /// fixed everywhere else; they now pay at the pawn's rate like every driver, which is why
+    /// no Simulated number here is either parent's.</para>
+    ///
     public static class Golden
     {
         /// <summary>One world, pinned: how to build it, how long to run it, and what it came to.</summary>
@@ -204,7 +216,7 @@ namespace Odyssey.Tests.Sim
             Wooded = false,
 
             Generated = 17287400559466587244UL,
-            Simulated = 10597903896334463547UL,
+            Simulated = 15649756692576152247UL,
         };
 
         /// <summary>
@@ -222,7 +234,7 @@ namespace Odyssey.Tests.Sim
             Wooded = true,
 
             Generated = 2087747500389239450UL,
-            Simulated = 13795493344017300943UL,
+            Simulated = 9003281370732817788UL,
         };
 
         /// <summary>
@@ -260,7 +272,7 @@ namespace Odyssey.Tests.Sim
             Wooded = false,
 
             Generated = 13906133993818225881UL,
-            Simulated = 7981093609369776339UL,
+            Simulated = 2284462309605410277UL,
         };
     }
 }
