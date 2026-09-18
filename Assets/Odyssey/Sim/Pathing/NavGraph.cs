@@ -1251,9 +1251,16 @@ namespace Odyssey.Sim.Pathing
             {
                 int dx = Math.Abs(a.X - b.X);
                 int dz = Math.Abs(a.Z - b.Z);
-                if (dx + dz != 1) return false;
+                if (dx > 1 || dz > 1) return false;
 
-                return Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode);
+                if (!Grid.CanEnter(from, mode) || !Grid.CanWalkInto(to, mode)) return false;
+
+                // A diagonal must also clear both flanking cells. The rule is NavGrid's and is
+                // asked for here rather than restated, because this method is what the mover
+                // re-validates every step against: if it were laxer than the search, a path would
+                // be planned that the mover then refused, and if it were stricter the mover would
+                // drop a perfectly good path and re-plan for ever.
+                return dx + dz != 2 || Grid.DiagonalAllowedBetween(from, to, mode);
             }
 
             if (IsHop(a, b))

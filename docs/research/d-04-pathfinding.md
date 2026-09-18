@@ -155,7 +155,7 @@ The abstract heuristic is **knowingly inadmissible by a bounded amount** — pat
 | Move | Geometry | Cost (default, Def-tunable) |
 |---|---|---|
 | Orthogonal step | 2.5 m | 100 |
-| Diagonal step | 3.54 m | 141 (forbidden when both flanking cells block) |
+| Diagonal step | 3.54 m | 141 (~~forbidden when both flanking cells block~~ — **overruled 2026-09-18: forbidden when *either* flanking cell blocks**, see `docs/design/21-diagonal-movement.md` §3) |
 | Terrain modifiers | — | additive: rubble +30, mud +60, damaged floor +15 |
 | Terrain modifiers, **as built** (2026-09-16) | — | marsh +40, shallow water +200; deep water is impassable, not priced |
 | Stair, up | 2 cells + 3.0 m rise | ~290 |

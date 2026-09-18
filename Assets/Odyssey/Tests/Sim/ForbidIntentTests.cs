@@ -46,31 +46,44 @@ namespace Odyssey.Tests.Sim
         {
             ColonyWorld colony = ColonyWorld.Build(Size, seed: 2u, Colony(3));
             var items = colony.Pawns.Items.Items;
-            // The scenario scatters salvage over the start spots, some of which are stockpile
-            // cells, so the baseline is whatever already lies in the zone before anyone moves.
-            int before = Stocked(colony);
 
-            // Forbid every loose thing, then wait: no salvage may move into the stockpile. Salvage
-            // is the measure because the scenario starts it loose, whereas rations start stocked.
+            // **The measure is how much is still lying loose, not how much salvage reached the
+            // zone.** It counted stocked salvage until 2026-09-18, and that made it a race for
+            // scarce shelf space rather than a test of forbidding: measured on this very fixture,
+            // the stockpile has nine cells of which **three** are free, and only **two** loose
+            // salvage exist — so the assertion turned on whether salvage or rations happened to
+            // win those three slots. Eight-connected movement changed `PawnContext.Distance`,
+            // rations became the nearer haul, they took all three cells, and the test failed with
+            // the colony hauling perfectly well and rather more of it. Hauling was traced to be
+            // sure before this was touched: jobs given, items carried for 719 ticks, the driver
+            // reaching its last toil, and not one path dropped.
+            int before = Loose(colony);
+            Assume.That(before, Is.GreaterThan(0), "something has to be lying about for this to mean anything");
+
+            // Forbid every loose thing, then wait: nothing may be picked up at all.
             for (int i = 0; i < items.Count; i++)
                 colony.World.Intents.Submit(new Intent(IntentKind.SetForbidden, a: items[i].Id.Value, b: 1));
             colony.World.Tick(3_000);
-            Assert.That(Stocked(colony), Is.EqualTo(before), "a forbidden thing stays where it lies");
+            Assert.That(Loose(colony), Is.EqualTo(before), "a forbidden thing stays where it lies");
 
             for (int i = 0; i < items.Count; i++)
                 colony.World.Intents.Submit(new Intent(IntentKind.SetForbidden, a: items[i].Id.Value, b: 0));
             colony.World.Tick(6_000);
-            Assert.That(Stocked(colony), Is.GreaterThan(before), "allowed again, it is hauled");
+            Assert.That(Loose(colony), Is.LessThan(before), "allowed again, it is hauled");
         }
 
-        static int Stocked(ColonyWorld colony)
+        /// <summary>
+        /// Things lying outside a stockpile. Falls when anything is hauled, whatever its kind and
+        /// whichever shelf it lands on, which is the property this file is about.
+        /// </summary>
+        static int Loose(ColonyWorld colony)
         {
-            int stocked = 0;
+            int loose = 0;
             var items = colony.Pawns.Items.Items;
             for (int i = 0; i < items.Count; i++)
-                if (!items[i].Despawned && items[i].DefIndex == ItemIndex.Salvage && items[i].Cell >= 0 &&
-                    colony.Pawns.Items.IsStockpileCell(items[i].Cell)) stocked++;
-            return stocked;
+                if (!items[i].Despawned && items[i].Cell >= 0 &&
+                    !colony.Pawns.Items.IsStockpileCell(items[i].Cell)) loose++;
+            return loose;
         }
     }
 }

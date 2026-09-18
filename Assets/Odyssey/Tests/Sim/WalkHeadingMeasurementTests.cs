@@ -48,8 +48,9 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// How many times a path changes orthogonal direction, and over how many steps.
         ///
-        /// <para>Direction is the step itself rather than an angle, because on a 4-connected grid
-        /// those are the same thing and a comparison of integers cannot drift.</para>
+        /// <para>Direction is the step itself rather than an angle: a step is one of eight fixed
+        /// index deltas since the search went 8-connected (2026-09-18), so a comparison of
+        /// integers still cannot drift.</para>
         /// </summary>
         static (int turns, int steps) Turns(int[] path, GridSize size)
         {
@@ -115,7 +116,15 @@ namespace Odyssey.Tests.Sim
             TestContext.WriteLine(report);
             Report(report);
 
-            Assert.That(steps, Is.EqualTo(60), "a 4-connected walk of 30 by 30 is 60 steps");
+            // **This number is the whole point of the instrument.** It was 60 steps and 5 turns
+            // when the search was 4-connected — the measurement that falsified the staircase
+            // theory and showed the squareness was long axis-aligned legs, not a zigzag. An
+            // 8-connected search walks the same journey as 30 diagonal steps in a dead straight
+            // line, and if this ever reads 53 again the abstract heuristic has stopped being
+            // capped by the octile bound (see PathFinder.CellHeuristic) and every colonist is
+            // quietly taking a worse route than the one before diagonals landed.
+            Assert.That(steps, Is.EqualTo(30), "an 8-connected walk of 30 by 30 is 30 diagonal steps");
+            Assert.That(turns, Is.EqualTo(0), "and it is straight, so it never turns");
         }
 
         /// <summary>

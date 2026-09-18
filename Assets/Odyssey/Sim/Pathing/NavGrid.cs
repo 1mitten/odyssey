@@ -115,9 +115,22 @@ namespace Odyssey.Sim.Pathing
         public const int Orthogonal = 100;
 
         /// <summary>
-        /// Reserved. The MVP search is 4-connected — see the note on <see cref="PathFinder"/>.
+        /// A diagonal step: 3.54 m against the orthogonal 2.5 m, so 141 against 100.
+        ///
+        /// <para>Declared and unused from the day the cost table was written until 2026-09-18,
+        /// because the search was four-connected and the comment here said so. It is live now.
+        /// <b>Do not price a diagonal by naming this constant</b> — ask
+        /// <see cref="NavGrid.EnterCost(int,TraverseMode,bool)"/>, which is the one owner, for the
+        /// reason the hop has one: the planner and the mover both price the same step, and a
+        /// price they disagree about fails silently.</para>
         /// </summary>
         public const int Diagonal = 141;
+
+        /// <summary>
+        /// What a diagonal costs over and above an orthogonal step, which is the form the
+        /// heuristic wants. Derived rather than written down twice.
+        /// </summary>
+        public const int DiagonalExtra = Diagonal - Orthogonal;
 
         public const int StairUp = 290;
         public const int StairDown = 230;
@@ -363,6 +376,64 @@ namespace Odyssey.Sim.Pathing
         /// call sites that mean "walking" should go on saying so.</para>
         /// </summary>
         public bool CanWalkInto(int index, TraverseMode mode) => CanEnter(index, mode);
+
+        /// <summary>
+        /// May a pawn cut this corner?
+        ///
+        /// <para><b>A diagonal is refused unless *both* flanking cells are enterable.</b> This is
+        /// stricter than <c>d-04-pathfinding.md</c>, which wrote "forbidden when both flanking
+        /// cells block" and so would have let a colonist slip past a single wall corner. Overruled
+        /// by the owner on 2026-09-18: a walled room has to stay sealed, because rooms,
+        /// temperature and doors all come to rest on that property later, and a colonist visibly
+        /// squeezing through masonry is the picture nobody wants.</para>
+        ///
+        /// <para><b>This is the only place the rule is stated.</b> The cell search, the region
+        /// flood, the boundary links and <see cref="NavGraph.IsLegalStep"/> all call it. If any
+        /// one of them decided for itself, the districts and the paths would disagree about what
+        /// is connected — which is the single failure the region graph exists to prevent, and the
+        /// reason <see cref="PathFinder"/> stayed four-connected for as long as it did.</para>
+        ///
+        /// <para>The flanks are passed in rather than derived, because every caller already knows
+        /// its own x and z and deriving them here would put two divisions in the hot loop. The
+        /// <see cref="DiagonalAllowedBetween"/> below does the decomposition for callers that are
+        /// not in a hurry, and a test pins the two together.
+        /// </para>
+        /// </summary>
+        public bool DiagonalAllowed(int flankX, int flankZ, TraverseMode mode) =>
+            CanWalkInto(flankX, mode) && CanWalkInto(flankZ, mode);
+
+        /// <summary>
+        /// The same rule, for a caller that has two cell indices and not the flanks.
+        ///
+        /// Returns false for anything that is not a single diagonal step on one layer, so it can
+        /// be asked about any pair without the caller testing the shape first.
+        /// </summary>
+        public bool DiagonalAllowedBetween(int from, int to, TraverseMode mode)
+        {
+            int layer = Size.LayerStride;
+            if (from / layer != to / layer) return false;
+
+            int fz = (from % layer) / Size.SizeX, fx = (from % layer) - fz * Size.SizeX;
+            int tz = (to % layer) / Size.SizeX, tx = (to % layer) - tz * Size.SizeX;
+            if (Math.Abs(tx - fx) != 1 || Math.Abs(tz - fz) != 1) return false;
+
+            return DiagonalAllowed(from + (tx - fx), from + (tz - fz) * Size.SizeX, mode);
+        }
+
+        /// <summary>
+        /// The cost of stepping into this cell, diagonally or not, for this mode.
+        ///
+        /// <para><b>This is the only place a step's price is decided</b>, and it takes the shape
+        /// it does so that a diagonal still pays the destination's own terrain, door and hazard
+        /// addends: a diagonal through a marsh is a diagonal and a marsh. Both the planner
+        /// (<c>PathFinder.RelaxDiagonal</c>) and the mover (<c>MovementSystem.StepCost</c>) come
+        /// here rather than adding the difference for themselves, because the hop cost two rounds
+        /// of debugging by being computed in more than one place — see
+        /// <see cref="MoveCost.JumpUp"/> and the comment in the mover about colonists sticking on
+        /// faces.</para>
+        /// </summary>
+        public int EnterCost(int index, TraverseMode mode, bool diagonal) =>
+            EnterCost(index, mode) + (diagonal ? MoveCost.DiagonalExtra : 0);
 
         /// <summary>The cost of stepping into this cell, orthogonally, for this mode.</summary>
         public int EnterCost(int index, TraverseMode mode)

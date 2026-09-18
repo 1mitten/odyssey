@@ -103,14 +103,23 @@ namespace Odyssey.Sim.Pathing
     /// found on an incrementally maintained graph identical to one found on a graph rebuilt from
     /// a save, which is a property the tests assert directly.</para>
     ///
-    /// <para><b>Four-connected, deliberately.</b> The committed architecture allows eight
-    /// horizontal moves. This implementation moves orthogonally only, because a diagonal step is
-    /// a graph edge like any other and would have to appear identically in three places — the
-    /// region flood, the boundary link generation (including the four-block corners that a
-    /// diagonal crosses) and the cell search — or the districts and the paths would disagree
-    /// about what is connected, which is the one failure the whole unit exists to prevent.
-    /// Adding diagonals is a contained change to those three places, and the benchmark below is
-    /// four-connected on both arms, so nothing in the measurement depends on it.</para>
+    /// <para><b>Eight-connected since 2026-09-18.</b> It was four-connected for as long as it
+    /// was because a diagonal step is a graph edge like any other and has to appear identically
+    /// in the region flood, the boundary link generation (including the four-block corners a
+    /// diagonal crosses) and the cell search — or the districts and the paths disagree about what
+    /// is connected, which is the one failure the whole unit exists to prevent. All three call
+    /// <see cref="NavGrid.DiagonalAllowed"/>, which is the only statement of the corner rule, and
+    /// <c>MovementSystem.StepCost</c> builds the same price the same way.</para>
+    ///
+    /// <para><b>What it fixed, and what it did not.</b> The owner reported colonists looking
+    /// "square in movement". The intuitive diagnosis — a 4-connected path is a staircase — was
+    /// measured and <em>falsified</em> before any of this was written: a 30 x 30 diagonal walk
+    /// came out at 60 steps and 5 turns, because on a 4-connected grid every monotone path costs
+    /// the same and the tie-break spends its freedom on long straight runs. So the route was not
+    /// a staircase; it was a few long axis-aligned legs joined by right angles, which is what
+    /// actually read as square, and which no amount of drawn path smoothing would have softened.
+    /// The route itself had to be allowed to go diagonally. See
+    /// <c>docs/design/21-diagonal-movement.md</c>.</para>
     /// </summary>
     public sealed class PathFinder
     {
@@ -333,7 +342,7 @@ namespace Odyssey.Sim.Pathing
             int bz = brem / _sizeX;
             int bx = brem - bz * _sizeX;
 
-            return (Math.Abs(ax - bx) + Math.Abs(az - bz)) * MoveCost.Orthogonal
+            return Octile(Math.Abs(ax - bx), Math.Abs(az - bz))
                    + Math.Abs(ay - by) * LayerChangeHint;
         }
 
@@ -400,6 +409,23 @@ namespace Odyssey.Sim.Pathing
                 if (z > 0) Relax(c, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
                 if (z + 1 < _size.SizeZ) Relax(c, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
 
+                // The four diagonals, after all four orthogonals, in a fixed order. Order is part
+                // of the determinism contract (05-ai-and-jobs.md: "compile-time neighbour order"),
+                // and a diagonal comes last so an 8-connected search that ties with a 4-connected
+                // one still expands the same cell first.
+                //
+                // **The corner rule is NavGrid's and is not restated here.** Both flanking cells
+                // must be enterable, or a colonist cuts through the corner of a wall and a sealed
+                // room stops being sealed for the region flood as well. The flanks are handed in
+                // because x and z are already in hand; deriving them would cost two divisions a
+                // neighbour in the hot loop.
+                bool xLo = x > 0, xHi = x + 1 < _sizeX;
+                bool zLo = z > 0, zHi = z + 1 < _size.SizeZ;
+                if (xLo && zLo) RelaxDiagonal(c, c - 1 - _sizeX, c - 1, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
+                if (xHi && zLo) RelaxDiagonal(c, c + 1 - _sizeX, c + 1, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
+                if (xLo && zHi) RelaxDiagonal(c, c - 1 + _sizeX, c - 1, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
+                if (xHi && zHi) RelaxDiagonal(c, c + 1 + _sizeX, c + 1, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
+
                 // A hop: one block up or one block down, into the column next door. Unaided
                 // vertical movement is exactly this and nothing else (owner, 2026-09-16) — the
                 // cell entered has a floor, so no route can end in mid-air the way a climb could.
@@ -446,6 +472,25 @@ namespace Odyssey.Sim.Pathing
             }
 
             return PathStatus.Unreachable;
+        }
+
+        /// <summary>
+        /// A diagonal step: <see cref="MoveCost.Diagonal"/> in place of the orthogonal base, with
+        /// the destination's own terrain, door and hazard addends still charged.
+        ///
+        /// <para>The price comes from <see cref="NavGrid.EnterCost(int,TraverseMode,bool)"/> and
+        /// is not built here, because <c>MovementSystem.StepCost</c> prices the same step and a
+        /// price the planner and the mover disagree about fails silently — the standing warning
+        /// that already applies to the hop and now applies to this.</para>
+        /// </summary>
+        void RelaxDiagonal(int from, int n, int flankX, int flankZ, int g, int goal,
+            TraverseMode mode, int stamp, int rstamp, bool constrained)
+        {
+            if (!_grid.CanWalkInto(n, mode)) return;
+            if (!_grid.DiagonalAllowed(flankX, flankZ, mode)) return;
+
+            RelaxExplicit(from, n, g + _grid.EnterCost(n, mode, diagonal: true),
+                goal, mode, stamp, rstamp, constrained);
         }
 
         void Relax(int from, int n, int g, int goal, TraverseMode mode, int stamp, int rstamp,
@@ -519,11 +564,59 @@ namespace Odyssey.Sim.Pathing
                 if (r >= 0 && (_regionStamp[r] == rstamp || _regionStamp[r] == -rstamp))
                 {
                     int d = _regionG[r];
-                    return d == 0 ? Manhattan(cell, goal) : d;
+                    if (d == 0) return Manhattan(cell, goal);
+
+                    // **Capped by the straight-line bound, and that cap is what made diagonals
+                    // worth having.** The abstract distance is a sum of region link costs, and
+                    // every one of those is priced orthogonally — so on an open board it answered
+                    // 6,600 for a journey a diagonal walk does for 4,230. A 56% over-estimate
+                    // costs A* its admissibility, and the search spent it going nearly straight:
+                    // the first 8-connected build walked a 30 x 30 diagonal in **53 steps with 12
+                    // turns**, which is worse than the 60 steps and 5 turns it replaced and was
+                    // the whole feature failing quietly. Before diagonals the same estimate was
+                    // only 10% over (6,600 against 6,000), which is why nothing ever showed.
+                    //
+                    // Octile is a true lower bound on an 8-connected grid, so the smaller of the
+                    // two is admissible where the abstract figure alone is not. With it the same
+                    // walk is **30 steps and 0 turns**.
+                    //
+                    // **It also made the search cheaper, which is the opposite of what was
+                    // predicted**, so it was measured rather than argued: over 400 journeys on a
+                    // 120 x 120 x 6 world of rooms and doorways, paths came out 3.5% cheaper for
+                    // **19% fewer node expansions** (3,140 to 2,535 a path against a 6,000
+                    // budget), and on 35% noise 3.1% cheaper for 11% fewer. An over-estimating
+                    // heuristic does not merely pick worse routes, it orders the open list badly
+                    // and re-expands. The fear was that capping it would throw away the abstract
+                    // stage's whole benefit — the case where the goal is one layer down and the
+                    // stair is sixty cells away, where a straight-line guess is useless. It does
+                    // not, because Manhattan carries LayerChangeHint for exactly that case, and
+                    // both benchmark worlds are six layers deep.
+                    return Math.Min(d, Manhattan(cell, goal));
                 }
             }
 
             return Manhattan(cell, goal);
+        }
+
+        /// <summary>
+        /// The horizontal part of the heuristic, octile since the search went 8-connected.
+        ///
+        /// <para><b>Manhattan is not merely loose here, it is wrong.</b> Two cells one step apart
+        /// on the diagonal are <see cref="MoveCost.Diagonal"/> (141) apart, and Manhattan calls
+        /// them 200 — so it <em>over</em>-estimates, which costs A* its admissibility and with it
+        /// any claim that the path returned is the cheapest one. The symptom would not be a crash
+        /// or an unreachable goal; it would be colonists quietly taking slightly silly routes,
+        /// which is the hardest class of fault to notice and the easiest to blame on something
+        /// else.</para>
+        ///
+        /// <para>Exact on open ground: take the diagonal for the shorter axis and walk the
+        /// remainder straight. Integer throughout, like every other cost in this namespace.</para>
+        /// </summary>
+        static int Octile(int dx, int dz)
+        {
+            int lo = dx < dz ? dx : dz;
+            int hi = dx < dz ? dz : dx;
+            return hi * MoveCost.Orthogonal + lo * MoveCost.DiagonalExtra;
         }
 
         int Manhattan(int a, int b)
@@ -538,7 +631,7 @@ namespace Odyssey.Sim.Pathing
             int bz = brem / _sizeX;
             int bx = brem - bz * _sizeX;
 
-            return (Math.Abs(ax - bx) + Math.Abs(az - bz)) * MoveCost.Orthogonal
+            return Octile(Math.Abs(ax - bx), Math.Abs(az - bz))
                    + Math.Abs(ay - by) * LayerChangeHint;
         }
 

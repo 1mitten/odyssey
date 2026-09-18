@@ -195,7 +195,13 @@ namespace Odyssey.Sim.Pawns
                 return MoveCost.Fall;
             }
 
-            return _ctx.Nav.Grid.EnterCost(to, mode);
+            // Same layer. A diagonal is priced by NavGrid and not here, because this is the
+            // other half of the seam the comment above is about: the hop taught that lesson at
+            // 100,000 a step, and a diagonal charged at 100 instead of 141 would be far quieter
+            // and no less wrong.
+            int dx = (to % stride) % _ctx.Size.SizeX - (from % stride) % _ctx.Size.SizeX;
+            int dz = (to % stride) / _ctx.Size.SizeX - (from % stride) / _ctx.Size.SizeX;
+            return _ctx.Nav.Grid.EnterCost(to, mode, diagonal: dx != 0 && dz != 0);
         }
     }
 }

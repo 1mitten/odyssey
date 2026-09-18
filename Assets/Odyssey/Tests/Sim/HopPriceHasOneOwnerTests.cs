@@ -154,6 +154,49 @@ namespace Odyssey.Tests.Sim
         // ---------------------------------------------------------------- helpers
 
         /// <summary>
+        /// The same rule for the diagonal, added when the search went 8-connected (2026-09-18).
+        ///
+        /// <para>Only <c>NavGrid.cs</c> may name <see cref="MoveCost.Diagonal"/>: it declares the
+        /// constant and <c>NavGrid.EnterCost(int, TraverseMode, bool)</c> is the one place a step's
+        /// price is decided. The planner and the mover both price the same diagonal, exactly as
+        /// they both price the same hop, and the hop is the worked example of what happens when
+        /// two places do that arithmetic separately.</para>
+        ///
+        /// <para><c>MoveCost.DiagonalExtra</c> is deliberately <b>not</b> guarded. It is the
+        /// heuristic's form of the number, it decides no step's price, and <c>PathFinder.Octile</c>
+        /// has to be able to say it.</para>
+        /// </summary>
+        [Test]
+        public void OnlyOneFileDecidesWhatADiagonalCosts()
+        {
+            string simRoot = SimSourceRoot();
+            var offenders = new List<string>();
+
+            foreach (string file in Directory.EnumerateFiles(simRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                string name = Path.GetFileName(file);
+                if (name == "NavGrid.cs") continue;
+
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string code = StripComment(lines[i]);
+
+                    // DiagonalExtra is allowed, so the boundary has to reject it explicitly:
+                    // A word boundary alone would otherwise match the "Diagonal" inside "DiagonalExtra".
+                    if (Regex.IsMatch(code, @"\bMoveCost\s*\.\s*Diagonal(?!Extra)\b"))
+                        offenders.Add($"{name}:{i + 1}: {lines[i].Trim()}");
+                }
+            }
+
+            Assert.That(offenders, Is.Empty,
+                "MoveCost.Diagonal names the price of a diagonal step, which " +
+                "NavGrid.EnterCost(index, mode, diagonal) owns. Call it instead, or use " +
+                "MoveCost.DiagonalExtra if what you want is the heuristic's delta. Offenders:\n  " +
+                string.Join("\n  ", offenders));
+        }
+
+        /// <summary>
         /// Everything in the line after a `//`, removed — but not a `//` inside a string, which is
         /// rare here and would only ever cause a false pass, never a false failure.
         /// </summary>
