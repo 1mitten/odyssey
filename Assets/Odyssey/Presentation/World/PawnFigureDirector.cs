@@ -846,7 +846,24 @@ namespace Odyssey.Presentation.World
         public void Evaluate(float deltaTime)
         {
             for (int i = 0; i < _figures.Count; i++)
-                if (_figures[i].Pawn >= 0) _figures[i].Graph.Evaluate(deltaTime);
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+
+                // **A sleeper's clip is held on one frame** (owner, 2026-09-18: "when they are
+                // sleeping - they should be static and not animated. Still in that position").
+                // The lying pose is laid over whatever the graph produced, so without this a
+                // sleeping colonist kept the standing idle's breathing and weight-shift underneath
+                // it and swayed on the mattress.
+                //
+                // **Evaluated with a zero delta, not skipped.** The additive pose is applied with
+                // Pitch, which multiplies onto the bone's current rotation — that is safe only
+                // because the clip rewrites the base pose every frame first. Skip the evaluate and
+                // the same pitches compound on themselves each frame, and the figure winds itself
+                // into a spiral. Evaluate(0) samples the clip at the time it is already at, which
+                // gives the identical base every frame and costs the same as any other sample.
+                figure.Graph.Evaluate(figure.SleepWeight >= 1f ? 0f : deltaTime);
+            }
             ApplyFooting();
             ApplyWorkPose();
             // The chips as well: under the player loop Unity steps them, and in an editor tool
@@ -1148,7 +1165,6 @@ namespace Odyssey.Presentation.World
             figure.SleepWeight = ForceSleep.HasValue
                 ? ForceSleep.Value
                 : SleepPose.Settle(figure.SleepWeight, pawn.Asleep ? 1f : 0f, deltaTime);
-            if (running && figure.SleepWeight > 0.001f) figure.SleepClock += deltaTime;
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what

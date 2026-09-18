@@ -382,6 +382,26 @@ decision 4 states as unchanged, so it has been left alone and pinned by a test t
 figures out loud. If a night in a bed should feel more decisive than a quarter again, that one
 integer in `Colonist.xml` is the lever.
 
+### A sleeper is a position, not a motion (owner, 2026-09-18)
+
+*"When they are sleeping — they should be static and not animated. Still in that position."*
+Three things, and only the first was the one asked for.
+
+1. **The breath is gone.** `SleepPose` now has no clock and no phase at all, which is the
+   structural half of the claim: a pose with nothing to drive it cannot drift however long it is
+   held. It is the only pose in that folder that is a position rather than a cycle.
+2. **The idle clip underneath is held on one frame.** This is the half that actually mattered — a
+   sleeping colonist was still playing the standing idle beneath the lying pose and swaying on the
+   mattress. `Graph.Evaluate(0f)` rather than skipping the evaluate: the pose is applied with
+   `Pitch`, which multiplies onto the bone's current rotation and is safe *only* because the clip
+   rewrites the base pose first. Skip the evaluate and the same pitches compound every frame and
+   the figure winds itself into a spiral.
+3. **A sleeper is no longer "planted".** Found while doing the other two, not reported: the
+   footing IK solves each boot against the ground *below the figure*, and a sleeper's feet are on
+   a mattress two thirds of a metre above it. Left in, it would haul both boots down to the boards
+   and drop the hips after them — a colonist folded through its own bed. Faded rather than
+   switched, exactly as the swimmer already was, so getting up hands the footing back continuously.
+
 ### The build overlay is the thing and nothing else (owner, 2026-09-18)
 
 *"When we place walls, floors, furniture to build — lets not print the cursor, just the

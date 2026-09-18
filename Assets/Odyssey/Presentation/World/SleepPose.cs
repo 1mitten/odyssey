@@ -32,6 +32,14 @@ namespace Odyssey.Presentation.World
     /// <para><b>Everything is an angle or a fraction of the figure's own build</b>, never a number
     /// of metres, so it is right on all sixty-one characters without being authored sixty-one
     /// times — the packs differ in proportion and the director scales them besides.</para>
+    ///
+    /// <para><b>A sleeper does not move at all</b> (owner, 2026-09-18: "when they are sleeping -
+    /// they should be static and not animated. Still in that position"). There is no breath and no
+    /// cycle here, and the idle clip underneath is held on one frame — see
+    /// <c>PawnFigureDirector.Evaluate</c>, which is what actually stops it. This class is
+    /// therefore the only pose in the folder that is a <i>position</i> rather than a motion: it has
+    /// no clock and no phase, which is why it is also the only one with nothing to hold a
+    /// harness to.</para>
     /// </summary>
     public static class SleepPose
     {
@@ -59,12 +67,6 @@ namespace Odyssey.Presentation.World
         /// sinking through it or hovering over it.
         /// </summary>
         public static float ThicknessPerHip { get; set; } = 0.16f;
-
-        /// <summary>Breaths a second at rest. Slow: a sleeping adult, not a winded one.</summary>
-        public static float BreathsPerSecond { get; set; } = 0.22f;
-
-        /// <summary>How far the chest rises and falls, in degrees of spine pitch.</summary>
-        public static float BreathDegrees { get; set; } = 1.6f;
 
         /// <summary>How long the figure takes to lie down or get up, in seconds.</summary>
         public static float SettleSeconds { get; set; } = 0.45f;
@@ -168,12 +170,6 @@ namespace Odyssey.Presentation.World
             float step = SettleSeconds > 1e-3f ? deltaTime / SettleSeconds : 1f;
             return Mathf.MoveTowards(current, target, step);
         }
-
-        /// <summary>The breathing phase, 0 to 1, from a clock in seconds.</summary>
-        public static float Phase(float clock) => Mathf.Repeat(clock * BreathsPerSecond, 1f);
-
-        /// <summary>How far through the breath the chest is, -1 to 1.</summary>
-        public static float Breath(float phase) => Mathf.Sin(phase * 2f * Mathf.PI);
 
         /// <summary>The length of body to lay down, given the rig's standing hip height.</summary>
         public static float BodyLength(float standingHipHeight) =>

@@ -167,7 +167,14 @@ namespace Odyssey.Presentation.World
                 // by how much of a walker the figure is makes the hand-over continuous, and at full
                 // swim weight it multiplies to nothing and the early return below skips the solve
                 // just as the old branch did.
-                float planted = 1f - Mathf.Clamp01(figure.SwimWeight);
+                //
+                // **A sleeper is not planted either**, and for a plainer reason than a swimmer: its
+                // feet are on a mattress two thirds of a metre above the floor, and the ground this
+                // pass solves against is the floor. Left in, the correction hauls both boots down
+                // to the boards and drops the hips to follow — a colonist folded through its own
+                // bed. Faded rather than switched, exactly as the swim is, so getting up hands the
+                // footing back continuously instead of planting both feet on one frame.
+                float planted = 1f - Mathf.Clamp01(Mathf.Max(figure.SwimWeight, figure.SleepWeight));
 
                 // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
                 // every bone and simply goes on walking, which is what it does for the arms too.
@@ -481,14 +488,6 @@ namespace Odyssey.Presentation.World
                 Pitch(figure.LeftUpperLeg, axis, posture.Hip * weight);
                 Pitch(figure.RightLowerLeg, axis, posture.Knee * weight);
                 Pitch(figure.LeftLowerLeg, axis, posture.Knee * weight);
-            }
-
-            // Breathing, which is the one thing that keeps a sleeper from reading as a corpse.
-            // Small on purpose: at this camera height anything larger is a figure heaving.
-            if (figure.Spine != null)
-            {
-                float breath = SleepPose.Breath(SleepPose.Phase(figure.SleepClock));
-                Pitch(figure.Spine, axis, breath * SleepPose.BreathDegrees * weight);
             }
 
             SleepingFigures++;

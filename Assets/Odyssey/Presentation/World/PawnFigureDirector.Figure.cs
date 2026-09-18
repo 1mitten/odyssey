@@ -270,9 +270,6 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public float SleepWeight;
 
-            /// <summary>The breathing clock, in seconds. Runs only while asleep.</summary>
-            public float SleepClock;
-
             /// <summary>
             /// Which way the body lies, head to foot. The bed's own facing where there is a bed,
             /// and whatever the colonist was facing when it dropped where there is not.

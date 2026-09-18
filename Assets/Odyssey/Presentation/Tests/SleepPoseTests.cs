@@ -129,16 +129,30 @@ namespace Odyssey.Tests.Presentation
             Assert.That(Quaternion.Angle(rotation, upright), Is.LessThan(0.01f));
         }
 
-        /// <summary>Breathing is a cycle, small, and centred on nothing.</summary>
+        /// <summary>
+        /// <b>A sleeper is a position, not a motion</b> (owner, 2026-09-18: "when they are sleeping
+        /// - they should be static and not animated. Still in that position").
+        ///
+        /// <para>Asked of the arithmetic rather than of a picture: the placement is a pure function
+        /// of the posture, the bed and the weight, so the same figure asked twice gets the identical
+        /// answer and there is nothing in here for a clock to drive. The other half of the claim —
+        /// that the idle clip underneath is held on one frame — lives in
+        /// <c>PawnFigureDirector.Evaluate</c> and needs a running rig to see.</para>
+        /// </summary>
         [Test]
-        public void BreathingRisesAndFallsAboutTheRestingPose()
+        public void ASleeperIsAPositionAndNotAMotion()
         {
-            float up = SleepPose.Breath(0.25f);
-            float down = SleepPose.Breath(0.75f);
+            Place(1, Vector3.forward, 0.7f, out Vector3 first, out Quaternion firstTurn);
+            Place(1, Vector3.forward, 0.7f, out Vector3 again, out Quaternion againTurn);
 
-            Assert.That(up, Is.EqualTo(1f).Within(0.01f));
-            Assert.That(down, Is.EqualTo(-1f).Within(0.01f));
-            Assert.That(SleepPose.BreathDegrees, Is.LessThan(4f), "a sleeper breathes, it does not heave");
+            Assert.That(again, Is.EqualTo(first), "the same sleeper twice is in the same place");
+            Assert.That(Quaternion.Angle(againTurn, firstTurn), Is.EqualTo(0f).Within(0.0001f));
+
+            // Nothing in the type takes a time, which is the structural half of "not animated":
+            // a pose with no clock cannot drift however long it is held.
+            foreach (var member in typeof(SleepPose).GetMembers())
+                Assert.That(member.Name, Does.Not.Contain("Breath"),
+                    "breathing was removed; a sleeper does not move at all");
         }
     }
 }
