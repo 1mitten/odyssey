@@ -196,8 +196,11 @@ crisp-bordered region shader `09-ui-and-input.md` §4.6 already specifies; that 
 covering both, and is deliberately not smuggled in here.
 
 **The tilled ground** (2026-09-18, the owner's ask after finding a zone invisible on grass):
-each zoned cell draws the farm pack's own dirt rows — `SM_Env_Dirt_Rows_01`, one patch per cell
-at the terrain's floor — through the same channel-and-mirror path a crop takes: `UpdateZones`
+each zoned cell draws the farm pack's own dirt tile — `SM_Env_Dirt_01`, square and cell-sized so
+neighbouring cells butt into one field, tinted brown with the bare-earth terrain colour because
+the tile's own material is neutral — through the same channel-and-mirror path a crop takes. (The
+dirt-**rows** variant was tried first and read as mess, "all over the place" in the owner's
+words; the tile replaced it the same day.) `UpdateZones`
 merge-walks the zone channel into a `_zoned` mirror, the mesher emits the module for zoned
 cells, and `Designate`/`Cancel` mark the chunk dirty because the ground under the cell is what
 changed. Nothing of it is simulated — no terrain is written, and a pack-less checkout keeps its

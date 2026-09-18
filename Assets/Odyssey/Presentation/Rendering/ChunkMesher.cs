@@ -342,14 +342,22 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// The tilled field under everything a zone grows: one dirt-rows patch at the ground's
-        /// own floor, drawn for as long as the cell stays zoned and gone the moment it does not.
+        /// The tilled field under everything a zone grows: one dirt tile at the ground's own
+        /// floor, drawn for as long as the cell stays zoned and gone the moment it does not. The
+        /// tile is square and cell-sized, so neighbouring zoned cells butt into one field — the
+        /// owner's "fits seamless into each tile" — and each tile is unrotated and unscaled to
+        /// keep the seams that way.
+        ///
+        /// <para><b>Brown by tint, not by texture</b> (owner: "you'll need to colour it brown"):
+        /// the tile's own material is neutral, and the brown it wears is the bare-earth terrain
+        /// tint — the same colour the ground beneath a real field is, applied by the same table,
+        /// so a field on any board matches the dirt that board already draws.</para>
         ///
         /// <para>Drawn, never simulated — a zone is authored state that changes no terrain, so
-        /// the patch rides the zone channel the way a crop rides the plant channel, and a
+        /// the tile rides the zone channel the way a crop rides the plant channel, and a
         /// pack-less checkout keeps its grass and tint rather than losing the field. It sits at
         /// the terrain's floor, below the crop that grows out of it, and is daylit on the
-        /// ground's terms: rows under a roof dim with the soil they are.</para>
+        /// ground's terms: a field under a roof dims with the soil it is.</para>
         /// </summary>
         void EmitZoneGround(ChunkBatch batch, int index, int x, int z, int y)
         {
@@ -357,7 +365,8 @@ namespace Odyssey.Presentation.Rendering
             if (module == 0) return;
 
             bool daylit = _model.OpenToTheSky(index, y);
-            int tint = TintCode.Daylit(TintCode.Foliage(1), daylit);
+            int tint = TintCode.Daylit(
+                TintCode.Terrain(NaturalContent.TerrainBareEarth), daylit);
 
             AddBody(batch, module, tint, Matrix4x4.TRS(
                 GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),

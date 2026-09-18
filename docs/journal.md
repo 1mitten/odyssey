@@ -5883,3 +5883,13 @@ scales the real art too (`SafeScale` dresses both paths). One scale throughout n
 checkout loses the fallback's size ladder, the cheaper half of the trade. The catalogue rebuild
 bound all of it — 126 of 143 rows with art, the carrot trio and the dirt rows among them — and
 the worktree's Synty junction is what let it run without touching the licensed files.
+
+### The rows were wrong; the tile is right (2026-09-18)
+
+First look at the tilled ground: the dirt rows read as mess, "all over the place" — each cell's
+patch of sculpted rows fighting its neighbours. The owner named the replacement before naming
+the fault: `SM_Env_Dirt_01`, the square tile that "fits seamless into each tile", and it wants
+colouring brown. The brown comes from the tint table rather than a texture: the tile is drawn
+with the bare-earth terrain tint, the same brown the board's own dirt wears, so a field matches
+the ground it sits on whichever board that is. Unrotated, unscaled, at the floor centre, one per
+cell — the seams between cells are the field.
