@@ -243,10 +243,10 @@ namespace Odyssey.Tests.Hud
             (".strip", "top", () => HudLayout.StripTop, "the strip docked to the top"),
             (".card", "width", () => HudLayout.CardWidth, "card width"),
             (".card", "height", () => HudLayout.CardHeight, "card height"),
+            (".card__avatar-box", "width", () => HudLayout.CardAvatar, "card avatar box width"),
             (".card__avatar", "width", () => HudLayout.CardAvatar, "card avatar"),
-            (".card__jobrow", "height", () => HudLayout.CardJobRow, "card activity line"),
-            (".card__job", "margin-left", () => HudLayout.CardIconGap, "card icon to word"),
-            (".card__names", "margin-left", () => HudLayout.CardAvatarGap, "card avatar to name"),
+            (".card__badge", "width", () => HudLayout.CardJobRow, "card badge width"),
+            (".card__badge", "height", () => HudLayout.CardJobRow, "card badge height"),
             (".card", "padding", () => HudLayout.CardPad, "card padding"),
 
             (".bar-row", "bottom", () => HudLayout.BarBottom, "the command bar docked to the bottom"),
