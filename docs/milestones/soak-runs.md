@@ -98,3 +98,32 @@ five colonists now eat 1.8 meals a day each, the vanilla figure, where before th
 Nothing sat at zero on any need on any seed, and no job failed.
 
 Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-18 — WS2, work speed follows the skill curve (9ae7682)
+
+Commit `9ae7682` (`claude/rates-and-stats`, WS2 of design 17). Same scenario and machine as the
+OQ-21 entry above — `Scenario_Bare`, 120 × 120 × 16, five colonists, no standing orders — run
+once, each seed freshly built and ticked 600,000 times.
+
+| Seed | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | wait | failed | Meals left | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 600,000 | passed | 1.9 s | 0.003 | 0.004 | 14 | 92 | 55 | 2,664 | 0 | 0 | 52 of 144 | `362b4c847c79cebb` |
+| 2 | 600,000 | passed | 2.0 s | 0.003 | 0.005 | 15 | 94 | 55 | 2,613 | 0 | 0 | 50 of 144 | `0e3ff437f26f5f8d` |
+| 3 | 600,000 | passed | 1.9 s | 0.003 | 0.004 | 13 | 93 | 55 | 2,590 | 0 | 0 | 51 of 144 | `ad58de4ae2cee30a` |
+
+**The economy is byte-for-byte the WS1 baseline's, and that is the measured result, not a stale
+run.** The comparison this entry exists for: every count and every hash equals the run captured
+at `f6beb56` before the curve landed. The reason is the same one the goldens gave — the slice
+runs no job whose pace a curve moves. Its tallies are haul, eat, sleep and wander; eating,
+sleeping and idling are needs-driven and rate-free, and hauling is the one work type with no
+rate skill, flat at 1,000 by the design's own rule that a skill drives either rate or quality.
+Mining, cutting and construction — the three the curve slows to 0.55–0.70× for a novice — are
+not designated in this scenario at all. The curve's effect on work speed is therefore proved by
+the exactness tests (`WorkRateTests`: the level-20 face in the curve's ratio of ticks, two
+miners of different skill emptying one cell together, the felling grant count walked along the
+rising curve) and will first show in soak when a slice carries standing orders. Wall time
+doubled against OQ-21 (1.0 → 1.9 s) with the same counts and the same work in them, and the
+per-tick mean reads 0.002 → 0.003 — both are machine noise at a cost this small, not the curve,
+which this run never asks anyone to swing a pickaxe fast or slow against.
+
+Nothing failed, so no row was added to the overnight queue by this run.
