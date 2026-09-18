@@ -4,6 +4,7 @@ using Odyssey.Presentation.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
+using Odyssey.Hud;
 
 namespace Odyssey.Presentation.Rendering
 {

@@ -1,4 +1,5 @@
 #nullable enable
+using Odyssey.Hud;
 
 namespace Odyssey.Presentation.Rendering
 {
