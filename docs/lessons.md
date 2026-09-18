@@ -307,6 +307,15 @@ Two lessons.
 
 **Removing a worktree that holds a junction to `Assets/Synty` deletes the licensed art itself.** A worktree needs the packs to resolve art, and a directory junction (`mklink /J`) is the cheap way to give it them. But `git worktree remove`, like any recursive delete on Windows that does not know it is looking at a reparse point, follows the junction into the target: on 2026-09-16 removing a finished worktree emptied `D:\code\odyssey\Assets\Synty` in the main checkout — 7,222 licensed assets gone, every worktree's junction pointing at an empty folder, and the next scene build reporting 0 of 109 rows with art. Recovery was a headless re-import of the six `.unitypackage` files from the owner's Downloads through `SyntyImport.ImportAll`, then the catalogue and scene rebuilt. **Before removing a worktree, delete its junction with `rmdir Assets\Synty`, which removes the link and never the target, and only then remove the worktree.** A symlink (`mklink /D`) is no safer here; the same rule applies.
 
+**Rebuilding the module catalogue takes two commands, and the second one is not optional.** `PlayScene.RebuildCatalogue` regenerates the 138 rows from code and **drops the `appearance` block** — the 311 atlas swatch rectangles that clothe the 61 colonists, which are classified by a different tool entirely. `CharacterSwatches.Classify` has to run straight after it to put them back:
+
+```
+scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify
+```
+
+**A rebuild alone looks like it worked**, which is the whole danger: it exits zero, keeps all 138 rows, keeps every prefab reference, and nothing warns. On 2026-09-18 the loss showed up only as a 2,160-line deletion in `git diff --stat` on a change that should have added one line per row — so **read the stat after regenerating a generated asset**, and if it is not the shape you expected, find out why before committing. `CharacterSwatches`'s header already says it writes only appearance and deliberately does not rebuild; nobody had written down the inverse.
+
 **A lock guard that is too broad fails in the dangerous direction.** `check_project_lock` counted every `Unity.exe` on the machine, so an editor open on an *unrelated* project made every batch command here refuse to run, while the lock it was complaining about was in fact stale. The failure looks exactly like a real conflict, so the obvious next move is to kill an editor belonging to somebody else's work. It now matches the running process against this project's own path.
 
 ## Characters

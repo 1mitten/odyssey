@@ -139,6 +139,60 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// <b>Every floor slab puts its walking surface on the cell's floor plane.</b>
+        ///
+        /// <para>A slab is drawn at the cell's lower boundary (<c>ChunkMesher.EmitFloor</c> →
+        /// <c>CellMetrics.FloorCentre</c>), so in module-local terms the plane a colonist stands on
+        /// is y = 0 and every slab's <em>top</em> face belongs there. Its thickness hangs below,
+        /// where nobody walks.</para>
+        ///
+        /// <para><b>This is the sibling of the test above and was written the same way — from a
+        /// screenshot.</b> That one pinned that two materials are two meshes; this one pins that
+        /// the two meshes land at one height. Taking the first without the second is exactly what
+        /// happened: the slab rows asked for neither <c>baseAtY</c> nor <c>topAtY</c>, so each
+        /// prefab landed on whatever pivot convention its artist used, and the street tile's top
+        /// came out 25 mm above the plank deck's. The owner reported a grey tile sitting at the
+        /// wrong height in an otherwise wooden deck (2026-09-18, `docs/design/15-building.md`).</para>
+        ///
+        /// <para>Asked of the resolved module rather than of the row, because the row says
+        /// <c>topAtY</c> and the question is whether that produced a level floor —
+        /// <c>ResolvedModule.Bounds</c> is measured after placement, so this walks the real
+        /// arithmetic. It also covers the street surfaces, which are walked on for the same reason
+        /// and were 33 mm out for the same one.</para>
+        /// </summary>
+        [Test]
+        public void EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor()
+        {
+            var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            Assert.That(catalogue, Is.Not.Null, "the module catalogue is committed and should load");
+
+            var library = new ModuleLibrary(catalogue!);
+            int checked_ = 0;
+
+            foreach (ModuleEntry row in catalogue!.Entries)
+            {
+                if (row.shape != ModuleShape.FloorSlab) continue;
+
+                ResolvedModule resolved = library[library.Resolve(row.moduleId, ModuleShape.FloorSlab)];
+
+                // A clone without the licensed packs draws a primitive, whose height is the
+                // fallback's business and not this rule's.
+                if (!resolved.UsesArt || resolved.IsEmpty) continue;
+
+                Assert.That(resolved.Bounds.max.y, Is.EqualTo(0f).Within(0.001f),
+                    $"{row.moduleId} ({row.prefabName}) draws its top face {resolved.Bounds.max.y:F3} m " +
+                    "off the cell floor, so it will not sit level with the slab in the next cell");
+                checked_++;
+            }
+
+            // Or the loop above passes by never running, which is how a rule quietly stops being
+            // one: five buildable slabs and five street surfaces are in the committed catalogue.
+            Assert.That(checked_, Is.GreaterThanOrEqualTo(10),
+                "the catalogue should hold at least the five slab ids and the five street tiles");
+        }
+
+        /// <summary>
         /// A clone without the licensed packs draws exactly what it drew before.
         ///
         /// <para>An unknown module id does not resolve to nothing — it resolves to a built-in

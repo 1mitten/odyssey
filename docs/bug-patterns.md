@@ -146,11 +146,21 @@ contrapositive was the whole answer and was sitting in the same paragraph.
   materials and nothing on either tile says which.
 - `InspectModel.DescribeCellAt` titles a floor by `FloorStuff` alone, so paving and a structural
   floor are the same sentence and the word *paving* is never printed.
-- Both slab catalogue rows carry `baseAtY: 0`, so neither art is normalised to the cell's floor
-  plane. A thin street tile and a thick deck draw at different heights in level cells — **the whole
-  of "one height below"**, a fraction of a cell rather than a layer.
+- Both slab catalogue rows carried `baseAtY: 0`, which is *no* placement rule rather than the one
+  its own comment described, so each art landed on its artist's pivot. Measured: the street tile's
+  top 25 mm **proud** of the plank deck's — the opposite of what the screenshots looked like.
+
+**Fixed:** `ModuleEntry.topAtY` places a walked-on piece by its highest point, so every slab's top
+face is the cell's floor plane (0 ± 1 mm), pinned by
+`EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor`. The other two are reported and not fixed: both
+are design calls. 25 mm will not on its own make a street tile read as decking.
 
 **Caught next time by:** `Odyssey.SaveProbe`. Load the file before arguing about the picture.
+
+**And a trap found on the way out:** `PlayScene.RebuildCatalogue` silently drops the `appearance`
+block — 311 atlas swatch rectangles clothing the 61 colonists — so `CharacterSwatches.Classify` must
+run after it. The rebuild exits zero and keeps all 138 rows and every prefab reference, so the loss
+shows up in nothing but a line count.
 
 ### 2026-09-18 — A dragged floor built a ring and left a hole (P1, P4)
 

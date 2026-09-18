@@ -389,7 +389,10 @@ namespace Odyssey.Presentation.Rendering
             // once per instance: the same trick the look-check scene plays, moved off the hot path.
             var normalise = Vector3.zero;
             if (entry.centreXZ) { normalise.x = bounds.center.x; normalise.z = bounds.center.z; }
+            // baseAtY first: the two ask opposite questions, and every piece already using the
+            // older one is placed correctly, so a row that somehow sets both keeps what it had.
             if (entry.baseAtY) normalise.y = bounds.min.y;
+            else if (entry.topAtY) normalise.y = bounds.max.y;
 
             Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry))
                               * Matrix4x4.Translate(-normalise);
