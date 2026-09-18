@@ -505,6 +505,74 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// No name in the pool is wider than a roster card leaves room for, and the failure names
+        /// <b>every</b> offender rather than the widest.
+        ///
+        /// <para><b>The card's width is a constraint on content since 2026-09-18</b> (owner:
+        /// *"remove any longer names for now"*). Sizing the card to the widest of 244
+        /// owner-supplied names would have cost the coverage ceiling a fourth raise, so the pool
+        /// is what gives instead — which makes this the gate that decides whether a name may be in
+        /// the CSV at all.</para>
+        ///
+        /// <para><b>Why it lists all of them.</b> The obvious version asserts the maximum, and the
+        /// maximum is one name: fix it and the next run names the next one. That happened twice on
+        /// the day this was written — <i>Christopher</i> at 60 px, then <i>Alexander</i> at 52 —
+        /// and each round costs a CI run, because there is no way to measure a face in the fast
+        /// tier. Collecting every name over budget turns an unbounded sequence of guesses into one
+        /// list, which is the whole reason this test is separate from the width test below rather
+        /// than a second assertion inside it.</para>
+        ///
+        /// <para><b>And it is measured, not counted.</b> Character count does not predict width in
+        /// a narrow face: eleven characters draw 60 px and nine draw 52. A fast-tier proxy that
+        /// counted characters passed both.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator NoNameInThePoolIsWiderThanTheCardBudgetsFor()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? card = doc.rootVisualElement.Q(className: "card");
+                Assert.That(card, Is.Not.Null, "the shell built no roster card");
+                var nameLabel = card!.Q<Label>(className: "card__name");
+                Assert.That(nameLabel, Is.Not.Null);
+
+                var over = new List<string>();
+                float widest = 0f;
+                string widestName = string.Empty;
+
+                foreach (string name in ColonistNamePool.Names)
+                {
+                    float w = Draws(nameLabel!, name);
+                    if (w > widest)
+                    {
+                        widest = w;
+                        widestName = name;
+                    }
+                    if (w > HudLayout.CardNameBudget)
+                        over.Add($"{name} {w:0.#}px");
+                }
+
+                Debug.Log($"[Names] {ColonistNamePool.Names.Length} names, widest " +
+                          $"'{widestName}' {widest:0.#}px against a {HudLayout.CardNameBudget}px budget, " +
+                          $"{over.Count} over");
+
+                Assert.That(over, Is.Empty,
+                    $"these names are wider than the {HudLayout.CardNameBudget}px a card leaves, so " +
+                    "each would be cut short on the roster. Remove them from " +
+                    "docs/design/colonist-names.csv and rerun the generator, or widen CardWidth and " +
+                    "take the coverage ceiling with it:" + System.Environment.NewLine +
+                    string.Join(System.Environment.NewLine, over));
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// A card is as wide as its two rows need and no wider (owner, 2026-09-17: the need bars
         /// came off so the strip could carry many more colonists).
         ///
@@ -536,17 +604,22 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(nameLabel, Is.Not.Null);
                 Assert.That(jobLabel, Is.Not.Null);
 
-                // Twelve cycles of the eight-name pool, which is a colony of ninety-six. The
-                // interesting names are not the pool's own — they are the ones carrying the
-                // cycle number the model appends once the pool is exhausted, and a two-digit
-                // suffix is wider than a one-digit one. Stopping at the pool, or at one cycle,
+                // Every name in the pool, plus a cycle past the end of it.
+                //
+                // **It used to be ids 1 to 96**, which was twelve cycles of an eight-name pool and
+                // therefore both the whole pool and the widest cycle suffix. The pool is 244 now,
+                // so 96 would have measured the first 96 names and called it the widest — an
+                // arbitrary sample that happens to be whatever the CSV lists first. The bound is
+                // the pool's own length, and one cycle past it keeps the suffixed names in: a
+                // two-digit suffix draws wider than a one-digit one, and stopping at the pool
                 // would size the card for a colony that never grows.
+                int pool = ColonistNamePool.Names.Length;
                 float widestName = 0f;
                 string longestName = string.Empty;
-                for (int id = 1; id <= 96; id++)
+                for (int id = 1; id <= pool + 12; id++)
                 {
-                    // Seed zero reads the pool from the top, so this still walks every name the
-                    // pool holds — which is what the widest-name measurement is after (U40).
+                    // Seed zero reads the pool from the top, so this walks every name the pool
+                    // holds — which is what the widest-name measurement is after (U40).
                     string name = ColonistNames.Of(0u, new PawnId(id));
                     float w = Draws(nameLabel!, name);
                     if (w <= widestName) continue;
@@ -1719,16 +1792,26 @@ namespace Odyssey.Tests.PlayMode
         /// Every window carries an X, which is the owner's rule stated as a test rather than as a
         /// convention each call site has to remember.
         ///
-        /// <para><b>One window is exempt, and the exemption is named here rather than allowed
-        /// silently (U38).</b> The start screen's root has nothing behind it to close <i>to</i>:
-        /// it exists precisely when no session is built, so an X on it could only either do
-        /// nothing or quit the game while wearing the glyph that means "dismiss this". A control
-        /// that does nothing is worse than no control, and one that quits under a dismiss glyph is
-        /// worse still — so it has none, and the way out is the Quit row that says so in words and
-        /// asks twice.</para>
+        /// <para><b>Two windows are exempt, for two different reasons, and both reasons are
+        /// asserted rather than allowed silently.</b></para>
         ///
-        /// <para>Every <i>other</i> window still has to carry one, which is what the named
-        /// exception buys over loosening the rule: a second window without an X fails here.</para>
+        /// <para><c>start</c> (U38) has nothing behind it to close <i>to</i>: it exists precisely
+        /// when no session is built, so an X on it could only either do nothing or quit the game
+        /// while wearing the glyph that means "dismiss this". A control that does nothing is worse
+        /// than no control, and one that quits under a dismiss glyph is worse still — so it has
+        /// none, and the way out is the Quit row that says so in words and asks twice. The
+        /// assertion is that it really has no X, so the exemption cannot quietly cover one.</para>
+        ///
+        /// <para><c>setup</c> (2026-09-18) became a window when the page took the in-game menus'
+        /// own fill rather than inventing a colour, and it does have somewhere to go: the Back row
+        /// in its footer. That is a <i>better</i> way out than an X for this screen — it says in
+        /// words where it goes — and an X beside it would be two controls for one action. The
+        /// assertion here is on the alternative: the exemption holds only while a
+        /// <c>setup__back</c> row is actually on the page, so deleting Back fails this test rather
+        /// than leaving a window nobody can leave.</para>
+        ///
+        /// <para>Every <i>other</i> window still has to carry one, which is what naming the two
+        /// buys over loosening the rule: a third window without an X fails here.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator EveryWindowHasAWayOutThatIsNotTheKeyboard()
@@ -1742,7 +1825,13 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(windows.Count, Is.GreaterThanOrEqualTo(3),
                     "the Build palette, the Menu popover and the settings panel are all windows");
 
-                var exempt = new[] { "start" };
+                // The window, and what it has instead of an X — null where there is nothing behind
+                // it to go back to at all.
+                var exempt = new (string Window, string? Instead)[]
+                {
+                    ("start", null),
+                    ("setup", "setup__back"),
+                };
                 int exemptSeen = 0;
 
                 foreach (VisualElement window in windows)
@@ -1750,12 +1839,25 @@ namespace Odyssey.Tests.PlayMode
                     Assert.That(window.ClassListContains("panel"), Is.True,
                         $"the '{window.name}' window is not a panel, so it does not carry the fill");
 
-                    if (System.Array.IndexOf(exempt, window.name) >= 0)
+                    int listed = -1;
+                    for (int i = 0; i < exempt.Length; i++)
+                        if (exempt[i].Window == window.name) listed = i;
+
+                    if (listed >= 0)
                     {
                         exemptSeen++;
                         Assert.That(window.Q(className: "panel__close"), Is.Null,
-                            $"the '{window.name}' window is listed as having nothing to close to, " +
-                            "yet it has an X — one of the two is wrong");
+                            $"the '{window.name}' window is listed as carrying no X, yet it has " +
+                            "one — one of the two is wrong");
+
+                        // An exemption is only honest while the thing it was granted for is there.
+                        string? instead = exempt[listed].Instead;
+                        if (instead != null)
+                            Assert.That(window.Q(className: instead), Is.Not.Null,
+                                $"the '{window.name}' window is exempt from the X because it has a " +
+                                $"'{instead}' row instead, and that row is not on the page — so it " +
+                                "is a window with no way out at all");
+
                         continue;
                     }
 
@@ -1763,7 +1865,7 @@ namespace Odyssey.Tests.PlayMode
                         $"the '{window.name}' window has no close button");
                 }
 
-                // The exemption has to still apply to something, or it is a hole left open for a
+                // Each exemption has to still apply to something, or it is a hole left open for a
                 // window that quietly stopped being built.
                 Assert.That(exemptSeen, Is.EqualTo(exempt.Length),
                     "a window named as exempt from the close-button rule was not on screen at all");

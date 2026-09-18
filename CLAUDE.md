@@ -97,6 +97,7 @@ overwritten. Edit the source, then rebuild:
 | `docs/design/icon-keys.csv` | the name, namespace, milestone and description of every named thing |
 | `docs/design/icon-map.csv` | whether the owner's pixel-art sheets can draw it |
 | `docs/design/proper-nouns.csv` | people, places, factions, creatures, the calendar |
+| `docs/design/colonist-names.csv` | the 244 colonist given names, with register and gender |
 
 ```
 python3 tools/wiki/build_wiki.py            # rebuild docs/wiki
@@ -104,6 +105,10 @@ python3 tools/wiki/build_wiki.py --check    # exit 1 if stale; run before commit
 python3 tools/wiki/emit_labels.py           # rebuild Assets/Odyssey/Hud/Registry.g.cs
 python3 tools/wiki/emit_labels.py --check   # exit 1 if stale; run before committing
 ```
+
+`emit_labels.py` generates **two** files from two CSVs — `Registry.g.cs` from the icon keys and
+`ColonistNames.g.cs` from the name pool — so one script and one `--check` cover both. Adding a
+third generated file goes in there rather than in a script of its own.
 
 The HUD reads its labels from the same file: `emit_labels.py` generates `Registry.g.cs`
 (`Registry.Label(key)`), `JobLabels` and `LedgerModel` name nothing themselves, and
@@ -148,7 +153,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **M0** foundations | **Closed.** CI runs two tiers per push and PR: a *fast tier* on GitHub-hosted Linux (Sim, Hud, Long, both content checks) and a *Unity tier* on the owner's Windows machine as a self-hosted runner, switched on by the repository variable `UNITY_RUNNER=1`. |
 | **M1** world, **M2** pawns | **Done and reported** — `docs/milestones/M1-report.md`, `M2-report.md`. Both went further than the plan asked. |
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
-| **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. |
+| **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. 300 × 65, three lines, and **a card is now asserted to be at least as tall as the face it carries**. |
 | **WS** rates | **Designed and planned; nothing is built.** `WS1`–`WS4` (renumbered from `U42`–`U45`, which were taken). A skill level currently buys nothing a player can feel. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
@@ -256,7 +261,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **694 Sim + 406 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **694 Sim + 409 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the

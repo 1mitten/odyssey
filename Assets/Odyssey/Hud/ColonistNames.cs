@@ -6,8 +6,8 @@ namespace Odyssey.Hud
     /// <summary>
     /// Colonist given names, keyed by <see cref="PawnId"/>.
     ///
-    /// The pool is the starter name pool proposed in <c>docs/design/proper-nouns.csv</c> and
-    /// awaiting the owner's veto: given names only, no surnames, because a holding is small
+    /// The pool is <c>docs/design/colonist-names.csv</c>, generated into
+    /// <see cref="ColonistNamePool"/>: given names only, no surnames, because a holding is small
     /// enough to be on first-name terms and a single short name fits the roster bar, the densest
     /// region in the interface. The simulation has no names and no opinion about names; this is
     /// an interface-side identity, stable for a pawn's whole life because <see cref="PawnId"/>
@@ -53,14 +53,24 @@ namespace Odyssey.Hud
                 : 0u;
 
         /// <summary>
-        /// The eight promoted from the mockups. Extends to about forty at M2, when pawn
-        /// generation needs a pool that does not repeat in a colony of fifty — until then the
-        /// eighth name is never reached, and this comment is the promise.
+        /// The pool, generated from <c>docs/design/colonist-names.csv</c> — the one place a
+        /// colonist's name is decided, which is also what the wiki lists so the owner can correct
+        /// any of them (owner, 2026-09-18: *"we need a big pool of random names"*, and *"make it
+        /// performant then and centralise it if need be"*).
+        ///
+        /// <para><b>The promise this keeps.</b> This was eight names lifted from the mockups, with
+        /// a comment saying it "extends to about forty at M2, when pawn generation needs a pool
+        /// that does not repeat in a colony of fifty". It is 244, which is six times what that
+        /// promise asked for and enough that the <see cref="Of"/> cycle suffix below — the
+        /// "Wrenn 2" that a ninth colonist used to get — is unreachable by any colony this game
+        /// will build.</para>
+        ///
+        /// <para><b>Nothing is parsed at run time.</b> The generator writes the array as literals,
+        /// so the strings live in the assembly's constant pool and naming a colonist is an index
+        /// and a modulo. That matters because the roster strip and the inspect header ask per
+        /// figure per frame.</para>
         /// </summary>
-        static readonly string[] Pool =
-        {
-            "Wrenn", "Odile", "Kester", "Sable", "Fen", "Ilma", "Torv", "Nyx",
-        };
+        static readonly string[] Pool = ColonistNamePool.Names;
 
         /// <summary>
         /// The name the colonist rolled from this seed goes by (U40).
@@ -89,16 +99,23 @@ namespace Odyssey.Hud
             // simply a hash of the pair.
             //
             // **Every colonist a world places itself shares that world's seed**, so they share an
-            // offset, and their ids then walk them to eight different names — the guarantee the
-            // old id-only scheme gave for free and the one a plain hash would have thrown away.
-            // Five colonists out of a pool of eight collide better than half the time under a
-            // hash; two people in a colony of five called Wrenn is not a naming scheme.
+            // offset, and their ids then walk them to as many different names as there are
+            // colonists — the guarantee the old id-only scheme gave for free and the one a plain
+            // hash would have thrown away. Out of a pool of eight, five colonists collided better
+            // than half the time under a hash; two people in a colony of five called Wrenn is not
+            // a naming scheme. The pool is 244 now and the walk still cannot repeat, which is a
+            // stronger claim than "unlikely" and costs the same arithmetic.
             //
             // On the select screen the three candidates carry three different seeds and so three
             // different offsets, which can collide — `ColonistSelect` is what promises they do
             // not, because distinctness there is a fact about a screen of three rather than about
             // a name.
             int index = (id.Value - 1 + (int)(Offset(rollSeed) % (uint)Pool.Length)) % Pool.Length;
+
+            // The cycle suffix is for a colony bigger than the pool, which at 244 names is not a
+            // colony this game builds. Kept rather than deleted because it is the one branch that
+            // makes the method total, and it is the only line here that allocates — so on every
+            // path anybody actually walks, naming a colonist allocates nothing at all.
             int cycle = (id.Value - 1) / Pool.Length;
             return cycle == 0 ? Pool[index] : Pool[index] + " " + (cycle + 1);
         }
