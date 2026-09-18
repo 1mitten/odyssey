@@ -2,7 +2,7 @@
 
 The pool every colonist's given name is drawn from. A name is chosen by arithmetic on a colonist's saved seed and their slot, so the **order of this list is load-bearing**: reordering it renames every colonist in every existing save. Add to the end; never sort.
 
-244 names — settled 100, frontier 106, yard 38.
+240 names — settled 97, frontier 106, yard 37.
 
 ## Settled
 
@@ -14,27 +14,27 @@ Ordinary given names, the register most of a colony is drawn in.
 | **Noah** | m | **Sophia** | f | **Oliver** | m | **Ava** | f |
 | **Elijah** | m | **Isabella** | f | **William** | m | **Mia** | f |
 | **Lucas** | m | **Charlotte** | f | **Benjamin** | m | **Amelia** | f |
-| **Henry** | m | **Harper** | f | **Alexander** | m | **Evelyn** | f |
-| **Mason** | m | **Abigail** | f | **Michael** | m | **Emily** | f |
-| **Ethan** | m | **Ella** | f | **Daniel** | m | **Elizabeth** | f |
-| **Jacob** | m | **Camila** | f | **Logan** | m | **Luna** | f |
-| **Jackson** | m | **Sofia** | f | **Levi** | m | **Avery** | any |
-| **Sebastian** | m | **Scarlett** | f | **Jack** | m | **Eleanor** | f |
-| **Owen** | m | **Madison** | f | **Theodore** | m | **Layla** | f |
-| **Samuel** | m | **Penelope** | f | **Joseph** | m | **Chloe** | f |
-| **John** | m | **Grace** | f | **David** | m | **Nora** | f |
-| **Luke** | m | **Hazel** | f | **Julian** | m | **Zoey** | f |
-| **Dylan** | m | **Riley** | any | **Matthew** | m | **Victoria** | f |
-| **Leo** | m | **Lily** | f | **Isaac** | m | **Aurora** | f |
-| **Gabriel** | m | **Violet** | f | **Anthony** | m | **Nova** | f |
-| **Jaxon** | m | **Hannah** | f | **Carter** | m | **Emilia** | f |
-| **Thomas** | m | **Stella** | f | **Charles** | m | **Maya** | f |
-| **Christopher** | m | **Willow** | f | **Caleb** | m | **Addison** | any |
-| **Andrew** | m | **Lucy** | f | **Joshua** | m | **Paisley** | f |
-| **Nathan** | m | **Natalie** | f | **Ryan** | m | **Elena** | f |
-| **Adrian** | m | **Naomi** | f | **Christian** | m | **Alice** | f |
-| **Aaron** | m | **Sadie** | f | **Eli** | m | **Ruby** | f |
-| **Nolan** | m | **Eva** | f | **Hunter** | m | **Ivy** | f |
+| **Henry** | m | **Harper** | f | **Evelyn** | f | **Mason** | m |
+| **Abigail** | f | **Michael** | m | **Emily** | f | **Ethan** | m |
+| **Ella** | f | **Daniel** | m | **Elizabeth** | f | **Jacob** | m |
+| **Camila** | f | **Logan** | m | **Luna** | f | **Jackson** | m |
+| **Sofia** | f | **Levi** | m | **Avery** | any | **Scarlett** | f |
+| **Jack** | m | **Eleanor** | f | **Owen** | m | **Madison** | f |
+| **Theodore** | m | **Layla** | f | **Samuel** | m | **Penelope** | f |
+| **Joseph** | m | **Chloe** | f | **John** | m | **Grace** | f |
+| **David** | m | **Nora** | f | **Luke** | m | **Hazel** | f |
+| **Julian** | m | **Zoey** | f | **Dylan** | m | **Riley** | any |
+| **Matthew** | m | **Victoria** | f | **Leo** | m | **Lily** | f |
+| **Isaac** | m | **Aurora** | f | **Gabriel** | m | **Violet** | f |
+| **Anthony** | m | **Nova** | f | **Jaxon** | m | **Hannah** | f |
+| **Carter** | m | **Emilia** | f | **Thomas** | m | **Stella** | f |
+| **Charles** | m | **Maya** | f | **Willow** | f | **Caleb** | m |
+| **Addison** | any | **Andrew** | m | **Lucy** | f | **Joshua** | m |
+| **Paisley** | f | **Nathan** | m | **Natalie** | f | **Ryan** | m |
+| **Elena** | f | **Adrian** | m | **Naomi** | f | **Christian** | m |
+| **Alice** | f | **Aaron** | m | **Sadie** | f | **Eli** | m |
+| **Ruby** | f | **Nolan** | m | **Eva** | f | **Hunter** | m |
+| **Ivy** | f |  |  |  |  |  |  |
 
 ## Frontier
 
@@ -82,10 +82,10 @@ Nicknames and what people actually get called. Informal, and the register that m
 | **Dave** | m | **Bingo** | any | **Lucky G** | any | **Pleb** | any |
 | **Jonny** | m | **Johnny** | m | **Bishop** | m | **Pete** | m |
 | **Dwayne** | m | **Mungo** | m | **Treacle** | any | **Sausage** | any |
-| **The Dude** | any | **Gardino** | any | **Gary** | m | **Gazza** | m |
-| **Smithy** | any | **Johno** | m | **Spudgun** | any | **Spud** | any |
-| **Tommy** | m | **Preston** | m | **Flower** | any | **Holiday** | any |
-| **Bert** | m | **Trent** | m |  |  |  |  |
+| **Gardino** | any | **Gary** | m | **Gazza** | m | **Smithy** | any |
+| **Johno** | m | **Spudgun** | any | **Spud** | any | **Tommy** | m |
+| **Preston** | m | **Flower** | any | **Holiday** | any | **Bert** | m |
+| **Trent** | m |  |  |  |  |  |  |
 
 ---
 

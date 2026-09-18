@@ -236,7 +236,7 @@
    finding somebody and saying what they are at, and the strip is the densest region on the
    screen, so every pixel it does not spend buys another colonist on the bar. */
 .card {
-    width: 136px;
+    width: 126px;
     height: 89px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which

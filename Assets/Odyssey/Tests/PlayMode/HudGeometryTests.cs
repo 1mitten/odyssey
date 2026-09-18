@@ -505,6 +505,74 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// No name in the pool is wider than a roster card leaves room for, and the failure names
+        /// <b>every</b> offender rather than the widest.
+        ///
+        /// <para><b>The card's width is a constraint on content since 2026-09-18</b> (owner:
+        /// *"remove any longer names for now"*). Sizing the card to the widest of 244
+        /// owner-supplied names would have cost the coverage ceiling a fourth raise, so the pool
+        /// is what gives instead — which makes this the gate that decides whether a name may be in
+        /// the CSV at all.</para>
+        ///
+        /// <para><b>Why it lists all of them.</b> The obvious version asserts the maximum, and the
+        /// maximum is one name: fix it and the next run names the next one. That happened twice on
+        /// the day this was written — <i>Christopher</i> at 60 px, then <i>Alexander</i> at 52 —
+        /// and each round costs a CI run, because there is no way to measure a face in the fast
+        /// tier. Collecting every name over budget turns an unbounded sequence of guesses into one
+        /// list, which is the whole reason this test is separate from the width test below rather
+        /// than a second assertion inside it.</para>
+        ///
+        /// <para><b>And it is measured, not counted.</b> Character count does not predict width in
+        /// a narrow face: eleven characters draw 60 px and nine draw 52. A fast-tier proxy that
+        /// counted characters passed both.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator NoNameInThePoolIsWiderThanTheCardBudgetsFor()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? card = doc.rootVisualElement.Q(className: "card");
+                Assert.That(card, Is.Not.Null, "the shell built no roster card");
+                var nameLabel = card!.Q<Label>(className: "card__name");
+                Assert.That(nameLabel, Is.Not.Null);
+
+                var over = new List<string>();
+                float widest = 0f;
+                string widestName = string.Empty;
+
+                foreach (string name in ColonistNamePool.Names)
+                {
+                    float w = Draws(nameLabel!, name);
+                    if (w > widest)
+                    {
+                        widest = w;
+                        widestName = name;
+                    }
+                    if (w > HudLayout.CardNameBudget)
+                        over.Add($"{name} {w:0.#}px");
+                }
+
+                Debug.Log($"[Names] {ColonistNamePool.Names.Length} names, widest " +
+                          $"'{widestName}' {widest:0.#}px against a {HudLayout.CardNameBudget}px budget, " +
+                          $"{over.Count} over");
+
+                Assert.That(over, Is.Empty,
+                    $"these names are wider than the {HudLayout.CardNameBudget}px a card leaves, so " +
+                    "each would be cut short on the roster. Remove them from " +
+                    "docs/design/colonist-names.csv and rerun the generator, or widen CardWidth and " +
+                    "take the coverage ceiling with it:" + System.Environment.NewLine +
+                    string.Join(System.Environment.NewLine, over));
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// A card is as wide as its two rows need and no wider (owner, 2026-09-17: the need bars
         /// came off so the strip could carry many more colonists).
         ///
