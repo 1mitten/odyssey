@@ -565,9 +565,16 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly ushort CropGrowth;
 
+        /// <summary>
+        /// How many plants a sown cell of this zone's crop stands — the yield the plot will give
+        /// (owner, 2026-09-18: the pane should say how many carrots are growing in the plot, so
+        /// tile and pane cannot disagree about it). 0 where there is no zone.
+        /// </summary>
+        public readonly byte ZoneYield;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
-            byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue)
+            byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0)
         {
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -580,6 +587,7 @@ namespace Odyssey.Sim.Contracts
             EdificeOwner = edificeOwner;
             ZonePlant = zonePlant;
             CropGrowth = cropGrowth;
+            ZoneYield = zoneYield;
         }
     }
 

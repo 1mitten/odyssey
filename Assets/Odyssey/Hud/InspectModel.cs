@@ -504,6 +504,7 @@ namespace Odyssey.Hud
         int _cellRowsQuality;
         int _cellRowsOwner;
         int _cellRowsZonePlant;
+        int _cellRowsZoneYield;
         int _cellRowsCropGrowth;
 
         /// <summary>
@@ -564,7 +565,8 @@ namespace Odyssey.Hud
                 && _cellRowsQuality == detail.EdificeQuality
                 && _cellRowsOwner == detail.EdificeOwner
                 && _cellRowsZonePlant == detail.ZonePlant
-                && _cellRowsCropGrowth == detail.CropGrowth) return;
+                && _cellRowsCropGrowth == detail.CropGrowth
+                && _cellRowsZoneYield == detail.ZoneYield) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -578,6 +580,7 @@ namespace Odyssey.Hud
             _cellRowsOwner = detail.EdificeOwner;
             _cellRowsZonePlant = detail.ZonePlant;
             _cellRowsCropGrowth = detail.CropGrowth;
+            _cellRowsZoneYield = detail.ZoneYield;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -616,9 +619,10 @@ namespace Odyssey.Hud
             if (detail.ZonePlant != byte.MaxValue)
             {
                 string plant = Registry.Label(BuildLabels.PlantKey(detail.ZonePlant));
+                string howMany = detail.ZoneYield > 1 ? plant + " × " + detail.ZoneYield : plant;
                 Row(n++, "growing", detail.CropGrowth == ushort.MaxValue
-                    ? plant + " — awaiting its seed"
-                    : plant + " — " + detail.CropGrowth / 10 + "% grown");
+                    ? howMany + " — awaiting its seed"
+                    : howMany + " — " + detail.CropGrowth / 10 + "% grown");
             }
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0

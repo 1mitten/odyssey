@@ -85,6 +85,7 @@ namespace Odyssey.Sim.World
             // stays silent for them exactly as it does for a wall's quality.
             byte zonePlant = byte.MaxValue;
             ushort cropGrowth = ushort.MaxValue;
+            byte zoneYield = 0;
             if (_zones != null)
             {
                 // A click on a field lands on the ground it is drawn on - the SOLID cell - while
@@ -102,6 +103,7 @@ namespace Odyssey.Sim.World
                 if (plant >= 0)
                 {
                     zonePlant = (byte)plant;
+                    zoneYield = (byte)_zones.Plant(plant).yieldCount;
                     if (_zones.IsPlanted(zoneCell))
                         cropGrowth = (ushort)_zones.Plant(plant).Milligrowth(_zones.GrowthTicks(zoneCell));
                 }
@@ -109,7 +111,7 @@ namespace Odyssey.Sim.World
 
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner, zonePlant, cropGrowth));
+                quality, owner, zonePlant, cropGrowth, zoneYield));
         }
     }
 }
