@@ -519,6 +519,14 @@ namespace Odyssey.Presentation.Ui
                 }
                 _inspectBody.Add(strip);
 
+                // Both tabs' grids stand in one box of a fixed height, so changing tab changes
+                // which rows are drawn and nothing else. The pane grows upward from a docked
+                // bottom edge, so without this its header and tab strip moved under the pointer
+                // every time (owner, 2026-09-18). The height is HudLayout.InspectTabBody, which
+                // the stylesheet also carries and HudStyleSheetTests holds to it.
+                var tabBody = new VisualElement();
+                tabBody.AddToClassList("inspect__tabbody");
+
                 var grid = new VisualElement();
                 grid.AddToClassList("needs");
                 _needs.Add(Need(grid, "Food", "ui.need.food"));
@@ -526,13 +534,15 @@ namespace Odyssey.Presentation.Ui
                 _needs.Add(Need(grid, "Mood", "ui.need.mood"));
                 _needRows = (_needs.Count + 1) / 2;
                 _needsGrid = grid;
-                _inspectBody.Add(grid);
+                tabBody.Add(grid);
 
                 _skillsGrid = new VisualElement();
                 _skillsGrid.AddToClassList("skills");
                 for (int i = 0; i < _inspect.Skills.Count; i++)
                     _skills.Add(SkillLine(_skillsGrid));
-                _inspectBody.Add(_skillsGrid);
+                tabBody.Add(_skillsGrid);
+
+                _inspectBody.Add(tabBody);
 
                 ShowActiveTab();
             }

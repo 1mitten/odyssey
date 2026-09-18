@@ -883,6 +883,16 @@ namespace Odyssey.Presentation.Ui
             if (world == null || _directors == null) return;
 
             SelectionDirector selection = _directors.Selection;
+
+            // The pane and the palette dock into the same bottom-left corner, so the corner holds
+            // one of them. Opening the palette has cleared the selection since 2026-09-17; this is
+            // the other direction, which was never wired — the pane opened underneath the palette
+            // (owner, 2026-09-18). Closed before the pane is refreshed, so there is no frame in
+            // which both are up. BuildPaletteModel.ClosedBy holds the rule, because which reasons
+            // close it is a decision worth testing without a Unity run.
+            if (BuildPaletteOpen && BuildPaletteModel.ClosedBy(reason, selection.IsEmpty))
+                SetBuildPalette(false);
+
             if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
             else if (selection.HasThing) _inspect.SetItem(selection.Thing);
             else if (selection.Cell is { } cell) _inspect.SetCell(cell);

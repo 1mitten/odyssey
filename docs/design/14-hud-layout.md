@@ -487,6 +487,42 @@ that a popover is anchored to its button rather than centred on the screen.
 **And the palette opens on its first category**, rather than on an empty second group that only
 fills once the player has guessed the chips above are clickable.
 
+### 7b.3 The inspect pane is one size on every tab (owner, 2026-09-18)
+
+> *"When I click on tabs like skills/needs — it resizes every time — it needs to be at least a
+> fixed size (IE the size of the skills tab) — so that it doesn't resize to the content of needs."*
+
+**The pane is docked to its bottom edge and grows upward, so a body sized to its own tab moves the
+header.** `.inspect` sits at `bottom: 64px` (`HudLayout.InspectBottom`, derived from the command
+bar), and `InspectHeight` added up the active tab's rows. Needs is three needs in two columns — two
+rows of 25 with one 9 px gap, **59 px**. Skills is thirteen skills in two columns — seven rows of 19
+with six 4 px gaps, **157 px**. So every change of tab moved the pane's top edge, its portrait, its
+name, its tab strip and its first row **ninety-eight pixels**, which is the one part of the pane the
+player has their pointer on at the moment they click.
+
+**The tallest live tab now sets the body, and a shorter one sits at the top of it.** Three choices
+were offered and the owner took the plainest of each: the height is the tallest tab that *exists*,
+the short tab's rows keep the position they have today with the slack below them, and the tile
+readout is left alone.
+
+- **`HudLayout.InspectTabBody`** is the number, `max(needs body, skills body)`, **derived** from
+  `SkillCatalogue.Rows` and `HudLayout.InspectNeeds` rather than typed. A fourteenth skill or a
+  fourth need moves it; a hand-set 160 would have clipped the day a skill was added.
+- **It is deliberately not a maximum over the seven disabled tabs.** Gear, Thoughts, Social, Health
+  and Log have no content to measure, and reserving room for them is empty space bought today
+  against a design nobody has written. They will move this number when they arrive, once, and that
+  is the honest time to pay for it.
+- **`InspectHeight`'s row counts now say only *whether* there is a body**, not how tall it is. They
+  still size a tile's readout, which has no tab strip and therefore cannot resize under the hand.
+- **`.inspect__tabbody`** carries the same height in the stylesheet and both grids stand inside it.
+  `HudStyleSheetTests` holds the two numbers together, the way it already does for the pane's width,
+  its bottom and its header.
+- **The tile readout stays content-sized.** Its height changes only when the player selects a
+  different thing, which is expected; fixing it too would stand a two-fact tile in a 157 px box.
+
+`TheColonistPaneIsTheSameHeightOnEveryTab` asserts the solved box's **top edge**, not just its
+height, because the top edge is what the complaint is about.
+
 ---
 
 ## 7a. The camera keys that changed with this pass

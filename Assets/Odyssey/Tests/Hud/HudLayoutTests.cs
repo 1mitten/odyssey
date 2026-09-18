@@ -490,6 +490,59 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// The colonist pane is one size whatever tab is showing (owner, 2026-09-18: "it resizes
+        /// every time … it needs to be at least a fixed size").
+        ///
+        /// <para>The pane is docked to its bottom edge and grows upward, so a body sized to its
+        /// own tab moved the header, the tab strip and every row under the pointer on each change
+        /// of tab — Needs' two rows of 25 against Skills' seven of 19, ninety-eight pixels apart.
+        /// Both the height and the box the solver hands out are asserted, because the fix is only
+        /// worth anything if the pane's <i>top</i> edge is what stays put.</para>
+        /// </summary>
+        [Test]
+        public void TheColonistPaneIsTheSameHeightOnEveryTab()
+        {
+            float needs = HudLayout.InspectHeight(HudLayout.InspectNeedRows, 0);
+            float skills = HudLayout.InspectHeight(0, SkillCatalogue.Rows);
+
+            Assert.That(needs, Is.EqualTo(skills),
+                "switching tab must not resize the pane");
+
+            HudRect onNeeds = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers,
+                               needRows: HudLayout.InspectNeedRows))[HudRegion.Inspect];
+            HudRect onSkills = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers, needRows: 0,
+                               skillRows: SkillCatalogue.Rows))[HudRegion.Inspect];
+
+            Assert.That(onSkills.Y, Is.EqualTo(onNeeds.Y).Within(0.01f),
+                "the top edge is what the player watches jump");
+            Assert.That(onSkills.Height, Is.EqualTo(onNeeds.Height).Within(0.01f));
+            Assert.That(onSkills.Width, Is.EqualTo(onNeeds.Width));
+        }
+
+        /// <summary>
+        /// The fixed body is tall enough for every tab that has content, and is the taller of the
+        /// two rather than a number somebody typed. A fourteenth skill or a fourth need moves it;
+        /// clipping is what the acceptance criteria forbid.
+        /// </summary>
+        [Test]
+        public void TheFixedBodyIsTheTallestLiveTab()
+        {
+            int needs = HudLayout.InspectNeedRows * HudLayout.NeedRow +
+                        (HudLayout.InspectNeedRows - 1) * HudLayout.NeedRowGap;
+            int skills = SkillCatalogue.Rows * HudLayout.SkillRow +
+                         (SkillCatalogue.Rows - 1) * HudLayout.SkillRowGap;
+
+            Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(needs),
+                "the needs grid would clip");
+            Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(skills),
+                "the skills grid would clip");
+            Assert.That(HudLayout.InspectTabBody, Is.EqualTo(System.Math.Max(needs, skills)),
+                "no more slack than the tallest tab needs");
+        }
+
+        /// <summary>
         /// The shape the owner asked for on 2026-09-17: the tile readout stands in half the
         /// colonist pane's width, and its rows stand the pane up around three times the height
         /// of the header alone — a column of facts, not a band with a sentence in it.

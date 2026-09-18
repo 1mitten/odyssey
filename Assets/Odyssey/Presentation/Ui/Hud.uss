@@ -706,10 +706,23 @@
 
 /* Two columns, 9 px between rows and 18 px between columns. The old pane stacked them, which is
    why it was 690 px wide and 302 tall for three numbers. */
+/* The colonist body's tab area: one height, whatever tab is showing.
+
+   The pane is docked to its bottom edge and grows upward, so a body that sized itself to its own
+   tab moved the header, the tab strip and every row under the pointer each time the player
+   changed tab — Needs is two rows of 25 against Skills' seven of 19, ninety-eight pixels apart
+   (owner, 2026-09-18: "it resizes every time … it needs to be at least a fixed size"). The
+   tallest live tab sets the height here; a shorter one sits at the top of it with the slack
+   below, so between tabs only the rows change. HudLayout.InspectTabBody is the same number and
+   HudStyleSheetTests holds the two together. */
+.inspect__tabbody {
+    height: 157px;
+    margin-top: 9px;
+}
+
 .needs {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: 9px;
 
     /* Eighteen pixels of room borrowed back, so that two 256 px columns and the gap between them
        fit the pane's 534 px of content with the second column's own trailing margin hanging over
@@ -734,7 +747,6 @@
 .skills {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: 9px;
     margin-right: -18px;
     margin-bottom: -4px;
 }

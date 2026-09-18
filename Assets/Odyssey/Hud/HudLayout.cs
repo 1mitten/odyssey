@@ -778,6 +778,41 @@ namespace Odyssey.Hud
 
         public const int SkillRowGap = 4;
 
+        /// <summary>
+        /// How many needs the colonist body draws: Food, Rest and Mood, the three the model
+        /// carries and the three <c>HudShell.SetNeed</c> fills by index.
+        /// </summary>
+        public const int InspectNeeds = 3;
+
+        /// <summary>The needs grid's rows, two to a row like the skills.</summary>
+        public static int InspectNeedRows => (InspectNeeds + 1) / 2;
+
+        /// <summary>
+        /// The colonist pane's body: <b>one height, whatever tab is showing</b> (owner,
+        /// 2026-09-18 — "it resizes every time … it needs to be at least a fixed size").
+        ///
+        /// <para>The pane is docked to its bottom edge and grows upward, so a body sized to its
+        /// own tab moved the header, the tab strip and every row under the pointer each time the
+        /// player changed tab: Needs is two rows of 25 and Skills is seven of 19, ninety-eight
+        /// pixels apart. The tallest live tab wins and the shorter ones sit at the top of it with
+        /// the slack below (owner's choice of the three offered), so the only thing that changes
+        /// between tabs is which rows are drawn.</para>
+        ///
+        /// <para>Derived rather than written down, so that a fourteenth skill or a fourth need
+        /// moves it. It is deliberately <i>not</i> a maximum over the seven disabled tabs — Gear,
+        /// Thoughts, Social, Health and Log have no content to measure, and a guess at them would
+        /// be empty space today bought against a design nobody has written.</para>
+        /// </summary>
+        public static int InspectTabBody
+        {
+            get
+            {
+                int needs = InspectNeedRows * NeedRow + (InspectNeedRows - 1) * NeedRowGap;
+                int skills = SkillCatalogue.Rows * SkillRow + (SkillCatalogue.Rows - 1) * SkillRowGap;
+                return Math.Max(needs, skills);
+            }
+        }
+
         // ------------------------------------------------------------------ the start screen
 
         /// <summary>
@@ -1182,24 +1217,26 @@ namespace Odyssey.Hud
         /// The pane's height with a given tab showing. Exactly one of the three counts is
         /// non-zero when something is selected: a colonist shows one tab's body at a time, and a
         /// tile shows the readout rows instead — no tab strip, so its chrome is the header alone.
+        ///
+        /// <para><b>The row counts no longer set a colonist pane's height</b> (2026-09-18). They
+        /// say <i>whether</i> there is a body, and the body is <see cref="InspectTabBody"/>
+        /// whichever tab is showing; see that member for why. They still size a tile's readout,
+        /// which has no tab strip and so cannot resize under the player's hand.</para>
         /// </summary>
         public static float InspectHeight(int needRows, int skillRows, int cellRows = 0)
         {
-            float body;
             if (cellRows > 0)
-                body = cellRows * CellRow + (cellRows - 1) * CellRowGap;
-            else if (skillRows > 0)
-                body = skillRows * SkillRow + (skillRows - 1) * SkillRowGap;
-            else if (needRows > 0)
-                body = needRows * NeedRow + (needRows - 1) * NeedRowGap;
-            else
-                return 0f;
+            {
+                float rows = cellRows * CellRow + (cellRows - 1) * CellRowGap;
 
-            // A tile keeps the shorter header: its slot holds an icon, not a portrait.
-            return cellRows > 0
-                ? Frame + Pad + InspectHeaderNarrow + InspectHeaderGap + body + Pad
-                : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
-                  body + Pad;
+                // A tile keeps the shorter header: its slot holds an icon, not a portrait.
+                return Frame + Pad + InspectHeaderNarrow + InspectHeaderGap + rows + Pad;
+            }
+
+            if (skillRows <= 0 && needRows <= 0) return 0f;
+
+            return Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
+                   InspectTabBody + Pad;
         }
 
         // ---------------------------------------------------------------- fitting
