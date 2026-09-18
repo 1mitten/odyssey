@@ -98,3 +98,35 @@ five colonists now eat 1.8 meals a day each, the vanilla figure, where before th
 Nothing sat at zero on any need on any seed, and no job failed.
 
 Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-18 — the growing-zone runs (U50)
+
+Branch `claude/growing-zones` at `888ee8a` (the field soak is `0144969`, the Dissolve fix `5713ad9`).
+Same machine as the entries above — Windows dev machine, Ryzen 7 9800X3D, CoreCLR (dotnet SDK
+8.0.425, net8.0). Four runs: the three standard ten-day `Scenario_Bare` seeds, then the new
+`TenDaysOnAField`, which is the same scenario with an eight-by-eight carrot field painted beside
+the start before tick one. The report line gained sow/harvest counters and the carrots-on-the-map
+figure, so the table grows those columns.
+
+| Run | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | sow | harvest | Meals left | Carrots on map | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Bare, seed 1 | 600,000 | passed | 1.9 s | 0.003 | 0.005 | 14 | 92 | 55 | 2,664 | 0 | 0 | 52 of 144 | 0 | `dc6eb87e01951758` |
+| Bare, seed 2 | 600,000 | passed | 1.9 s | 0.003 | 0.004 | 15 | 94 | 55 | 2,613 | 0 | 0 | 50 of 144 | 0 | `53df1cb625080300` |
+| Bare, seed 3 | 600,000 | passed | 1.9 s | 0.003 | 0.004 | 13 | 93 | 55 | 2,590 | 0 | 0 | 51 of 144 | 0 | `e610511ad034200f` |
+| Field, seed 1 | 600,000 | passed | 3.9 s | 0.006 | 0.008 | 14 | 171 | 55 | 2,396 | 192 | 128 | 80 of 144 | 533 | `35befeeaf03415ea` |
+
+- **Every hash differs from the 2026-09-16 rows, as expected** — beds, the build botch and their
+  content landed between the commits, and a hash is only ever comparable within one commit. The
+  three bare hashes were printed identically by the tree *before* the `Dissolve` fix, which is the
+  locality check: the fix changes zone folding only, and nothing in a zone-free run touches it.
+- **The field fed the colony, and the loop closed.** 192 sowings and 128 harvests in ten days;
+  533 carrots on the map and 64 of 64 zone cells still planted, so every harvested cell re-entered
+  the sowing queue — the continuous loop costs no code beyond the harvest itself. The colonists ate
+  171 meals' worth where the bare run eats 92: crops carried roughly a third of the diet, and 80
+  meals were left where the bare run ends on 52. OQ-39's pantry has its first producer.
+- **Cost is still far under budget.** 0.006 ms a tick mean against the bare run's 0.003 with 64
+  planted cells live; the growth pass is O(planted) every 250 ticks and it does not show. The
+  render-side cost of a field is a different number and a different test — see
+  `docs/design/22-growing.md` §6 for the two-thousand-cell frame figure and its caveats.
+
+Nothing failed, so no row was added to the overnight queue by this run.

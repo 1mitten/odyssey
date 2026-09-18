@@ -179,6 +179,19 @@ which is the ground surface. Stockpiles have no overlay either, and both deserve
 crisp-bordered region shader `09-ui-and-input.md` §4.6 already specifies; that is its own unit,
 covering both, and is deliberately not smuggled in here.
 
+The **frame figure** (PlayMode `FrameTimeTests`, the real player loop, 640 × 480 on the RTX
+5070 Ti): a field of **2,041 zone cells carrying 537 crops renders in 2.92 ms mean, 4.72 ms
+worst**, against 1.48 ms for the bare meadow — inside the 5 ms budget with room, but with two
+honest caveats attached. First, the measured field is **young**: five colonists cannot out-walk
+the sowing queue across a board-wide band in ten days, so 537 of 2,041 cells carried a crop and
+none had ripened when the frames were taken — the crop meshes and the tint are what was measured,
+and a fully ripe field is the same three meshes at a later bucket, not a fourth thing. Second,
+**crops cost about one draw call each** in the current renderer: the field sits at 2,630 draw
+calls against the meadow's 1,540, and that per-crop cost, not the growth pass (O(planted) every
+250 ticks, unmeasurable at 0.006 ms a tick in the soak), is the scaling thing to watch when the
+first real farm goes in. Both caveats are recorded rather than papered over; the soak-run ledger
+(`docs/milestones/soak-runs.md`, 2026-09-18) holds the sim-side numbers.
+
 ## 7. UI
 
 The build palette gains its **Zones** category (the key `ui.arch.category.zones` and the tool
@@ -237,3 +250,7 @@ planting.
   exactly the judgement the crisp-border unit is waiting to inherit.
 - **~7 tiles per colonist is arithmetic, not play.** The reference ships 10+ as a rule of thumb;
   ours is fatter, and nobody has felt whether fat is right.
+- **The frame figure belongs to a young field.** §6's 2.92 ms was measured with 537 crops standing
+  and none ripe; whether a fully sown, fully ripe two-thousand-cell field holds the budget has not
+  been watched, and the ~one-draw-call-per-crop line in §6 is the reason to watch it before the
+  first farm the owner actually builds.

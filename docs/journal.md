@@ -4920,3 +4920,39 @@ interesting one was not a conflict in the text sense at all.
 - **And it was made to fail before it was believed.** Forced to certain *success*, the assertion
   "a bed that botched every roll was raised anyway" fires. A test that has not been seen to fail is
   not evidence, and a test that can silently skip has already proved it can lie.
+
+### The dissolve that only a field could find (2026-09-18)
+
+The U50 gate asked for a two-thousand-cell field in the frame test, and painting one is what found
+the bug. `SeedField` walks the meadow's open ground because a fixed block came up 860 of 2,025 —
+water and trees refuse what stands on them — and a zone painted across water **fragments**: the
+gate breaks the stroke into several zone records around each refusal. Sixty-four PlayMode tests
+then failed alphabetically after `FrameTimeTests` in 3.6 seconds, which read as a rendering
+cascade and was nothing of the kind.
+
+Two faults, one behind the other. `Dissolve` used `List.RemoveAt` — a **shift** — while its own
+comment described a **swap**: it re-pointed only the zone that fell into the vacated slot, so with
+four or more zones, folding a middle one left every later zone wearing a stale `Id` with its cells
+pointing at slots nothing held. The fast tier had never dissolved a zone that was not near the end,
+because its fixtures fold two fields at most — the regression test needs four zones to catch it,
+and four separated fields only happen when a board refuses the ground between them. Behind that,
+the throw aborted `IntentBus.Drain` before `_pending.Clear()`, so the same poisoned intent
+re-threw every tick — and the PlayMode bootstrap survives between tests, so one poisoned session
+failed everything that ran after it. The cascade was one bug wearing sixty-four faces.
+
+Two methods earned their keep. Instrumentation before theory: a `Console.WriteLine` in
+`IntentBus.Submit` and `GrowingZones.Designate` separated "the field paint corrupts state" from
+"the corruption fires later", in one run. And the locality proof: after the swap fix, the three
+bare ten-day hashes printed **identically** to the pre-fix tree — the fix changes zone folding
+and nothing else, and the ledger entry records that check beside the hashes so the next reader
+does not have to trust it.
+
+The gate's other half answered its question cleanly. `TenDaysOnAField` is the first run where
+nothing in the slice makes food and something grows: 192 sowings, 128 harvests, 533 carrots, and
+80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
+all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
+render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written
+down rather than smoothed over (a young field, and about one draw call per crop) — §6 and §9 of
+`22-growing.md`. The off-by-one the first field soak hit — designating through the intent bus
+spends a tick draining it — is the same lesson the start-flow unit paid for the other way round:
+a seeded world's clock starts where the seeding left it, not at zero.
