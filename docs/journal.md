@@ -5004,3 +5004,48 @@ solves both tabs and compares `Y` first.
 Nobody has pressed Play on it. The open question a picture cannot answer is whether ninety-eight
 pixels of empty pane under three need bars reads as stable or as broken — and if it reads as broken,
 the answer is more needs, not a shorter box.
+
+### Four of the seven build categories held nothing, and looked no different (2026-09-18)
+
+The owner: *"On the build menu could to disable when top groups that have nothing to build — just
+gray them out for now … gray anything that cannot be built for the time being — so we understand
+what we can build."*
+
+**Half the ask was already done, and finding that out first changed what got built.** "Gray anything
+that cannot be built" is the sub-type tier's behaviour since it existed: a tool with nothing behind
+its key is drawn `bp__tile--off`, dim, unclickable, with a tooltip saying "not built yet; the tool
+arrives with its content". What had never been done was the tier *above* it. Production, Power,
+Security and Recreation hold nothing at all — 0 of 4, 0 of 4, 0 of 3, 0 of 3 — and were painted in
+full category hue beside Structure's 4 of 7. So the answer was one tier, not two, and the existing
+disabled vocabulary was already there to reuse rather than invent.
+
+**The hue goes entirely rather than fading.** Fading was the obvious move and is the worse one: a
+faded hue on a 20 px glyph reads as a rendering fault rather than a state, and it would have given
+the panel a second way of saying what `SubTypeDisabledInk` already says one tier down. The category
+tier is the one place in this HUD allowed a hue per row (design 17 §3) and this is a deliberate
+exception to that rule — the hue is what makes a category identifiable, and a category holding
+nothing is not one the player needs to identify yet.
+
+**It still opens, and the test is on the second half of that claim.** Three treatments were offered;
+the owner took "grey but still openable". Dimming is the information, and blocking the click would
+only hide the plan — the reason to draw seven categories while four are empty is that a player can
+look inside Power and see what is coming. That is only safe because opening an empty category cannot
+arm anything: `SelectCategory` finds no live tool, and `ApplySubType` returns at its `TryGet`. So
+`AnEmptyCategoryOpensAndArmsNothing` asserts the cursor is still empty afterwards, not merely that
+the category opened. It also fails loudly if there is no empty category left to check, which is the
+day to delete the dimming.
+
+**The count is written as an invariant, not as seven numbers.** `ACategorysLiveCountIsWhatItsToolsSay`
+compares `LiveToolsIn` against a walk of the same table rather than against "4, 0, 1, 0, 0, 1, 0".
+`U44` puts a stair into Structure and the first workbench lights Production, and a test that has to
+be edited on each of those is a test that gets edited without being read.
+
+**The repaint loop was the trap.** Categories paint inline from code — `Hud.uss` says so at the
+neutral tier — and `PaintBuild` rewrites their fill, border and ink every repaint. A class on the
+tile alone would have looked right in the editor and been painted back over on the first refresh,
+which is the same silent class of fault as a chip that arms a tool and never lights.
+
+**What was deliberately not done: a tool you cannot afford.** A wall stays lit with no wood and no
+stone. A blueprint can be placed and hauled to later, which is the genre's norm and the reason
+`ReadStockFrom`'s null means "in stock"; the material tier already drops its tint to say what is
+short. "Cannot build right now" is a second state and wants a second treatment.

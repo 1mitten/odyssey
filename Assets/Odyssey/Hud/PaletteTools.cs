@@ -260,6 +260,32 @@ namespace Odyssey.Hud
 
         static Func<DesignateDirector, bool> Holding(DesignateTool tool) => d => d.Tool == tool;
 
+        /// <summary>
+        /// How many of a category's tools do something yet.
+        ///
+        /// <para><b>Counted rather than listed</b> (owner, 2026-09-18: <i>"disable the top groups
+        /// that have nothing to build … so we understand what we can build"</i>). The tool tier has
+        /// drawn its dead entries disabled since it existed, but the category above it did not, so
+        /// four of the seven — Production, Power, Security, Recreation — held nothing at all and
+        /// were painted in full category colour beside Structure's four live tools. A category is
+        /// dim when this is zero, and the count is what its tooltip says.</para>
+        ///
+        /// <para>A count and not a flag, because the tooltip wants "4 of 7 built" and a flag would
+        /// have been a second walk of the same table to get it.</para>
+        /// </summary>
+        public static int LiveToolsIn(int index)
+        {
+            if (index < 0 || index >= Categories.Length) return 0;
+
+            int live = 0;
+            foreach (string tool in Categories[index].tools)
+                if (TryGet(tool, out _)) live++;
+            return live;
+        }
+
+        /// <summary>Whether a category holds anything the player can actually put down.</summary>
+        public static bool HasLiveTool(int index) => LiveToolsIn(index) > 0;
+
         /// <summary>The live tool for a key, or false when the chip is one of the drawn-disabled ones.</summary>
         public static bool TryGet(string key, out PaletteTool tool)
         {

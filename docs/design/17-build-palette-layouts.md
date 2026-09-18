@@ -93,6 +93,59 @@ art (§5).
 than dimming it, which is what lets the stock state be read without putting a number on the button
 — and **no stock counts render on the buttons**, by instruction.
 
+### 3a. An empty category is dim (owner, 2026-09-18)
+
+> *"On the build menu could to disable when top groups that have nothing to build — just gray them
+> out for now … gray anything that cannot be built for the time being — so we understand what we
+> can build."*
+
+**The tool tier had done this since it existed; the category tier had never done it at all.** A
+sub-type with nothing behind the key is drawn `bp__tile--off` — dim ink, faint fill, no click, and a
+tooltip saying why. The category above it was painted in full hue whatever it held, so four of the
+seven were as loud as Structure while holding nothing a player could place:
+
+| Category | Live | Category | Live |
+|---|---|---|---|
+| Structure | 4 of 7 | Power | **0 of 4** |
+| Furniture | 1 of 5 | Security | **0 of 3** |
+| Floors | 1 of 3 | Recreation | **0 of 3** |
+| Production | **0 of 4** | | |
+
+**An empty category loses its hue entirely rather than fading it.** A faded hue at a 20 px glyph
+reads as a rendering fault rather than as a state, and it would give the palette a second way of
+saying what `SubTypeDisabledInk` already says one tier down. The empty tile takes the sub-type
+tier's own disabled triple — `SubTypeDisabledFill`, `SubTypeDisabledBorder`, `SubTypeDisabledInk` —
+so "not yet" looks the same wherever it appears in this panel. This is a **deliberate exception to
+§3's hue-per-row rule**: the rule is what makes a category identifiable, and a category with nothing
+in it is not one the player needs to identify yet.
+
+**It still opens, and that is the decision rather than an oversight.** Three treatments were offered
+and the owner took this one. Dimming is the information; blocking the click would only hide the
+plan, and the reason to draw seven categories while four are empty is precisely that a player can
+look inside Power and see what is coming. It is safe because opening an empty category **cannot arm
+anything**: `SelectCategory` finds no live tool, falls back to the first entry, and `ApplySubType`
+returns at its `TryGet` — which `AnEmptyCategoryOpensAndArmsNothing` asserts on both halves, since
+"still openable" is only defensible while the second half holds.
+
+**An open empty category keeps a visibly open state**, dim but brighter-bordered, because a player
+who clicked into Power still has to be able to see which tile they opened.
+
+**The count is the tooltip and nothing else.** *"Structure — 4 of 7 built"*, *"Power — nothing here
+is built yet"*. A count drawn on the tile was offered and refused: it is development bookkeeping on
+a player-facing panel, and it would want removing later. `PaletteTools.LiveToolsIn` is where it is
+counted — a count rather than a flag, because the tooltip needs the number and a flag would have
+meant walking the same table twice.
+
+**The categories paint from code, not from the sheet** (`Hud.uss` says so at the neutral tier), so
+the dim state lives in `PaintBuild`'s category loop as well as in `CategoryTile`. The loop writes
+inline colours on every repaint and would otherwise paint the hue straight back over a class.
+
+**What this does not cover: a tool you cannot currently afford.** A wall stays lit with no wood and
+no stone in the colony. That is deliberate — a blueprint can be placed and hauled to later, which is
+the genre's norm and the reason `ReadStockFrom`'s null means "in stock" — and the material tier
+already drops its tint to say what is short. If the owner wants "cannot build *right now*" as well
+as "not built *yet*", that is a second state and it needs a second treatment, not this one.
+
 ## 4. Where the panel sits — the one place the specification was overruled
 
 The mockups drew all three floating at a 28 px margin, the panel's corner in the screen's corner.
