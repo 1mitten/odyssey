@@ -380,19 +380,15 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
 
-            // **A slab may not cap a ladder, and a ladder may not be built under a slab.** One rule
-            // stated from both sides, because a rule that can be walked around in two moves is not
-            // a rule: refusing the ladder alone would leave a player free to build the ladder first
-            // and pour the floor over it afterwards, arriving at the very arrangement the refusal
-            // exists to prevent (owner, 2026-09-18: *"a ladder shouldn't be able to be built if
-            // there is a slab directly above because colonists go through the floor"*).
-            if ((def.slab || def.covering) && IsLadder(BelowOf(index))) return false;
+            // The shaft rule, stated once, for both sides of it and for both orders it can be given
+            // in. See ShaftRulePermits.
+            if (!ShaftRulePermits(index, def, building)) return false;
 
             return def.covering ? AllowsCovering(index)
                 : def.slab
                 ? AllowsSlab(index)
                 : building == BuildingHandle.Ladder
-                ? SomethingUnderfoot(index) && AllowsLadder(index)
+                ? StandsOnSomething(index) && AllowsLadder(index)
                 // Something underfoot. A wall hanging in the air is the fault the whole support
                 // model exists to prevent, and refusing it at the order is far better than
                 // collapsing it afterwards: the player never gave an order that could not be
@@ -422,12 +418,31 @@ namespace Odyssey.Sim.Construction
         /// wanted too: capping a ladder with a wall is not a thing to permit by accident.</para>
         /// </summary>
         /// <summary>
-        /// Whether a ladder may go up from this cell: the shaft it would climb into has to be open.
+        /// <b>A ladder climbs an open shaft, and this is the whole rule that keeps it open</b> —
+        /// stated once, for both sides of it, for both orders it can be given in, and asked again
+        /// at the moment the thing is actually built.
         ///
-        /// <para><b>The whole of the owner's report, as a refusal.</b> A ladder under a slab is a
-        /// ladder a colonist climbs <i>through the floor</i>, and it was not merely possible, it was
-        /// the only shape that worked — see <see cref="LadderArrivesAt"/>. The player is told now,
-        /// at the order, rather than finding out by watching somebody walk through a deck.</para>
+        /// <para>A ladder under a slab is a ladder a colonist climbs <i>through the floor</i>
+        /// (owner, 2026-09-18). So a ladder is refused under a floor, and a floor is refused over a
+        /// ladder — two sides of one rule, because a rule that can be walked around in two moves is
+        /// not a rule: refusing the ladder alone would leave a player free to build the ladder
+        /// first and pour the floor over it afterwards.</para>
+        ///
+        /// <para><b>And a blueprint counts, which is what the first cut got wrong.</b> The rule
+        /// asked <c>_grid.Edifice</c> and <c>_grid.Floor</c> — the <i>built</i> world — so an order
+        /// that was still a site was invisible to it. Two individually legal orders therefore
+        /// combined into the arrangement the rule exists to forbid: order the ladder, order the
+        /// floor above it, and both are permitted because neither exists yet. The owner reported it
+        /// as *"sometimes the colonists climb up the ladder where there is wall or slab directly
+        /// above"*, and "sometimes" is what a race between two blueprints sounds like — it depended
+        /// on which job a colonist happened to pick up. Reproduced by probe, 2026-09-18, on the
+        /// played meadow, in both orders.</para>
+        ///
+        /// <para><b>The top of the shaft is protected too.</b> A floor laid over the open cell a
+        /// ladder arrives in is not capping the ladder, but it caps the shaft — and it used to be
+        /// permitted, silently closing a working way up with nothing said (owner's answer: refuse
+        /// it, like the slab rule). That is the <c>BelowOf(BelowOf(...))</c> reach: a slab is
+        /// refused with a ladder one cell under it or two.</para>
         ///
         /// <para><b>A landing is deliberately not asked for here</b>, although it is what makes the
         /// ladder <i>work</i>. The top of a chain of ladders is the only one that needs one, and a
@@ -436,12 +451,50 @@ namespace Odyssey.Sim.Construction
         /// asked at the connector instead, where it can be answered again each time either end
         /// changes — which <see cref="RefreshLadder"/> already does in both directions.</para>
         /// </summary>
+        bool ShaftRulePermits(int index, BuildingDef def, int building)
+        {
+            if (def.slab || def.covering)
+                return !LadderHereOrOrdered(BelowOf(index))
+                    && !LadderHereOrOrdered(BelowOf(BelowOf(index)));
+
+            return building != BuildingHandle.Ladder || AllowsLadder(index);
+        }
+
+        /// <summary>Whether a ladder may go up from this cell: the cell above has to be open.</summary>
         bool AllowsLadder(int index)
         {
             int above = index + _grid.Size.LayerStride;
             if (above >= _grid.Size.CellCount) return false;
 
-            return !_grid.IsSolidTerrain(above) && _grid.Floor[above] == CoreContent.SlabNone;
+            return !FloorHereOrOrdered(above);
+        }
+
+        /// <summary>
+        /// A ladder standing in this cell, <b>or ordered into it</b>. The built half is
+        /// <see cref="IsLadder"/>; the ordered half is why the shaft rule survives a player who
+        /// gives two orders before either is carried out.
+        /// </summary>
+        bool LadderHereOrOrdered(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            return IsLadder(cell) || _building[cell] == BuildingHandle.Ladder;
+        }
+
+        /// <summary>
+        /// Something a colonist would walk out on to at this cell's lower boundary — solid ground,
+        /// a laid slab, or a slab somebody has ordered there and not yet built.
+        /// </summary>
+        bool FloorHereOrOrdered(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            if (_grid.IsSolidTerrain(cell)) return true;
+            if (_grid.Floor[cell] != CoreContent.SlabNone) return true;
+
+            int ordered = _building[cell];
+            if (ordered == BuildingHandle.None) return false;
+
+            BuildingDef def = ConstructionContent.BuildingAt(ordered);
+            return def.slab || def.covering;
         }
 
         /// <summary>The cell one layer down, or -1 at the bottom of the world.</summary>
@@ -457,6 +510,44 @@ namespace Odyssey.Sim.Construction
             int below = index - _grid.Size.LayerStride;
             return below >= 0 && (_grid.Flags[below] & CellFlags.BlockingEdifice) != 0;
         }
+
+        /// <summary>
+        /// What a <b>ladder</b> may stand on: anything an edifice may stand on, and also the top of
+        /// another ladder.
+        ///
+        /// <para><b>Without the second half a shaft can only ever be one storey.</b> A ladder is
+        /// <c>blocking false</c> on purpose — a ladder you cannot stand in is a decoration — and
+        /// <see cref="SomethingUnderfoot"/> wants a floor or a <i>blocking</i> edifice, so the
+        /// second ladder of a chain was refused and <see cref="LadderArrivesAt"/>'s "another ladder
+        /// in it" clause was unreachable for anything a player built. Measured by probe, not read.
+        /// </para>
+        ///
+        /// <para>It is deliberately not folded into <see cref="SomethingUnderfoot"/>, which every
+        /// other edifice asks: standing a <i>wall</i> on a ladder would cap the shaft with something
+        /// the rule above cannot see, and a bed on a ladder is not a thing to permit by accident.
+        /// </para>
+        /// </summary>
+        bool StandsOnSomething(int index) =>
+            SomethingUnderfoot(index) || LadderHereOrOrdered(BelowOf(index));
+
+        /// <summary>
+        /// Whether a ladder standing here has anything to start from — the <b>connector's</b> half
+        /// of <see cref="StandsOnSomething"/>, and deliberately a different question.
+        ///
+        /// <para>Two differences, both deliberate. It asks <c>CellGrid.IsWalkable</c> rather than
+        /// <c>SomethingUnderfoot</c>, because a connector wants a cell a colonist can actually stand
+        /// in and not merely a surface an edifice could rest on. And it counts only a <b>built</b>
+        /// ladder below, never an ordered one: a blueprint may let you place the next ladder of a
+        /// chain, but it must never open a way up that nobody has built yet.</para>
+        ///
+        /// <para>The <c>IsWalkable</c> half alone is what kept a chain from ever working even after
+        /// the placement rule allowed one: the foot of an upper ladder is the open shaft cell below
+        /// it, which is standable only through that lower ladder's own connector — and
+        /// <c>CellGrid</c> cannot see connectors, that being <c>NavGrid.RefreshFrom</c>'s rule that
+        /// a connector is its own floor. Measured, not read: the chain built, and the upper ladder
+        /// silently had no connector.</para>
+        /// </summary>
+        bool StandsOnAFooting(int cell) => _grid.IsWalkable(cell) || IsLadder(BelowOf(cell));
 
         /// <summary>
         /// Whether a slab may be built at this cell's lower boundary.
@@ -764,6 +855,24 @@ namespace Odyssey.Sim.Construction
                 return;
             }
 
+            // **The shaft rule, asked again at the moment of truth**, and it is the only rule that
+            // is. Everything else <see cref="Place"/> checks is checked once because a site holds
+            // its own cell against anything else being ordered there — but the shaft rule spans two
+            // cells that are ordered separately, so the *other* order can arrive after this one and
+            // be perfectly legal when it does. Asking once left a ladder and the floor above it both
+            // permitted, both built, and a colonist climbing through the deck: the owner's third
+            // report, reproduced by probe in both orders.
+            //
+            // Deliberately this rule alone rather than the whole of `Allows`: a site with material
+            // hauled to it fails `needsClearCell`, so re-asking everything would refuse every bed
+            // whose own wood had been delivered.
+            if (!ShaftRulePermits(cell, def, building))
+            {
+                Refund(cell);
+                Clear(cell);
+                return;
+            }
+
             Clear(cell);
 
             // 1. The thing itself — a slab at the cell's lower boundary, or an edifice standing in
@@ -838,6 +947,12 @@ namespace Odyssey.Sim.Construction
             RefreshLadder(ctx, cell);
             RefreshLadder(ctx, cell - size.LayerStride);
 
+            // And the ladder *above* this cell, since a chain was allowed (2026-09-18): a ladder
+            // stands on the one below it, so pulling this one out has to take the connector of the
+            // one above with it. Without this line the upper half of a shaft outlives its own
+            // footing — a colonist climbing a ladder that starts in mid-air.
+            RefreshLadder(ctx, cell + size.LayerStride);
+
             CellRef at = size.FromIndex(cell);
             for (int dir = 0; dir < 4; dir++)
             {
@@ -856,7 +971,7 @@ namespace Odyssey.Sim.Construction
             int above = cell + _grid.Size.LayerStride;
             if (wanted)
                 wanted = above < _grid.Size.CellCount
-                    && _grid.IsWalkable(cell) && LadderArrivesAt(above);
+                    && StandsOnAFooting(cell) && LadderArrivesAt(above);
 
             int existing = ctx.Nav.OneCellConnectorAt(cell);
             if (wanted == (existing >= 0)) return;
@@ -906,10 +1021,14 @@ namespace Odyssey.Sim.Construction
         /// build one in.</item>
         /// </list>
         ///
-        /// <para><b>A real floor still counts</b>, and that is not an oversight: it keeps every
-        /// ladder the ruined city ever stamped, and every ladder in a save written before this
-        /// rule, working exactly as it did. The new placement rule stops any more being made; this
-        /// one does not strand a colonist on the storey above an old one.</para>
+        /// <para><b>A real floor used to count too, and no longer does</b> (2026-09-18, owner:
+        /// *"accept the save break"*). That clause was kept so the rule would be a strict superset
+        /// of the old one — every ladder the ruined city stamped and every ladder in an older save
+        /// went on working — and its price was exactly the thing the placement rule forbids: a
+        /// ladder under a floor that still registers its connector, so a colonist still climbs
+        /// through the deck. A ladder under a floor now opens nothing, which is the second line of
+        /// defence behind <see cref="ShaftRulePermits"/> rather than the fix itself: the fix is that
+        /// the arrangement can no longer be built.</para>
         ///
         /// <para>Standing in the shaft cell is granted by <c>NavGrid.RefreshFrom</c> — <i>"a
         /// connector is its own floor"</i> — so the cell becomes walkable the moment the connector
@@ -922,7 +1041,6 @@ namespace Odyssey.Sim.Construction
             if (_grid.IsBlockedByEdifice(top)) return false;
             if (NaturalContent.IsWater(_grid.Terrain[top])) return false;
 
-            if (_grid.HasFloor(top)) return true;
             if (IsLadder(top)) return true;
 
             return HasLandingBeside(top);

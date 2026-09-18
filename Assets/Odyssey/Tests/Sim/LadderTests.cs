@@ -217,6 +217,148 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// <b>The refusal must see a blueprint, or two legal orders make an illegal building.</b>
+        ///
+        /// <para>This is the owner's third report of 2026-09-18 — *"sometimes the colonists climb up
+        /// the ladder where there is wall or slab directly above"* — and "sometimes" was the tell:
+        /// it depended on which job a colonist happened to pick up. The shaft rule asked the
+        /// <i>built</i> world, so a ladder that was still a site was invisible to the floor's
+        /// refusal and a floor that was still a site was invisible to the ladder's. Order both
+        /// before either is carried out and each is permitted on its own.</para>
+        ///
+        /// <para>Both orders, because the fault was symmetrical and a test that only gives them one
+        /// way round proves half of it.</para>
+        /// </summary>
+        [Test]
+        public void TwoOrdersCannotCombineIntoALadderUnderAFloor([Values(true, false)] bool ladderFirst)
+        {
+            ColonyWorld colony = Board();
+
+            int ground = GroundNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+            int shaft = ground + Size.LayerStride;
+
+            RaiseNow(colony, ground + 1, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            CellRef ladderAt = Size.FromIndex(ground);
+            CellRef floorAt = Size.FromIndex(shaft);
+
+            IntentRejection first = ladderFirst
+                ? colony.Construction.Place(ladderAt, BuildingHandle.Ladder, StuffHandle.Wood)
+                : colony.Construction.Place(floorAt, BuildingHandle.Floor, StuffHandle.Wood);
+            Assume.That(first, Is.EqualTo(IntentRejection.None),
+                "the control: the first order is legal on its own, which is why this hid");
+
+            IntentRejection second = ladderFirst
+                ? colony.Construction.Place(floorAt, BuildingHandle.Floor, StuffHandle.Wood)
+                : colony.Construction.Place(ladderAt, BuildingHandle.Ladder, StuffHandle.Wood);
+
+            Assert.That(second, Is.EqualTo(IntentRejection.NotPermitted),
+                "a waiting order is as much a ladder, or as much a floor, as a built one");
+        }
+
+        /// <summary>
+        /// <b>A shaft may rise more than one storey.</b> A ladder is <c>blocking false</c> so that a
+        /// colonist can stand in it, and <c>SomethingUnderfoot</c> wants a floor or a
+        /// <i>blocking</i> edifice — so until 2026-09-18 the second ladder of a chain was refused,
+        /// every shaft was exactly one storey, and <see cref="LadderTests"/> never noticed because
+        /// every test here builds one ladder. Found by probe while hunting the report above.
+        /// </summary>
+        [Test]
+        public void ALadderMayStandOnALadderSoAShaftCanRiseMoreThanOneStorey()
+        {
+            ColonyWorld colony = Board();
+            Pawn pawn = TheColonist(colony);
+
+            int ground = GroundNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            // Two storeys of wall beside the shaft, and the landing on top of them.
+            int beside = ground + 1;
+            RaiseNow(colony, beside, BuildingHandle.Wall);
+            colony.World.Tick();
+            RaiseNow(colony, beside + Size.LayerStride, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            RaiseNow(colony, ground, BuildingHandle.Ladder);
+            colony.World.Tick();
+            RaiseNow(colony, ground + Size.LayerStride, BuildingHandle.Ladder);
+            colony.World.Tick();
+
+            int landing = beside + 2 * Size.LayerStride;
+            RaiseNow(colony, landing, BuildingHandle.Floor);
+            colony.World.Tick();
+
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Colonist), Is.True,
+                "two ladders are a two-storey shaft, and the landing is at the top of it");
+        }
+
+        /// <summary>
+        /// <b>Pull the bottom ladder out of a chain and the whole shaft closes</b>, not just its
+        /// lower half. A ladder stands on the one below it now, so the fan-out has to reach
+        /// <i>upwards</i> as well — and it did not, because until chains existed nothing above a
+        /// cell could depend on it. Without that line the upper ladder keeps a connector whose foot
+        /// is mid-air.
+        /// </summary>
+        [Test]
+        public void PullingTheBottomOutOfAChainClosesTheWholeShaft()
+        {
+            ColonyWorld colony = Board();
+            Pawn pawn = TheColonist(colony);
+
+            int ground = GroundNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            int beside = ground + 1;
+            RaiseNow(colony, beside, BuildingHandle.Wall);
+            colony.World.Tick();
+            RaiseNow(colony, beside + Size.LayerStride, BuildingHandle.Wall);
+            colony.World.Tick();
+            RaiseNow(colony, ground, BuildingHandle.Ladder);
+            colony.World.Tick();
+            RaiseNow(colony, ground + Size.LayerStride, BuildingHandle.Ladder);
+            colony.World.Tick();
+
+            int landing = beside + 2 * Size.LayerStride;
+            RaiseNow(colony, landing, BuildingHandle.Floor);
+            colony.World.Tick();
+            Assume.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Colonist), Is.True);
+
+            Assert.That(colony.Construction.Demolish(colony.Pawns, ground, out _), Is.True);
+            colony.World.Tick();
+
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Colonist), Is.False,
+                "the upper ladder's connector must not outlive the footing it stands on");
+        }
+
+        /// <summary>
+        /// <b>Roofing over the top of a working shaft is refused</b>, and it used not to be: the
+        /// slab went down, the ladder's top stopped being somewhere to arrive, and a way up closed
+        /// with nothing said to the player at all. The owner's answer was to refuse it, for the
+        /// reason the slab-over-a-ladder rule is refused — silently breaking what somebody built is
+        /// worse than telling them no.
+        /// </summary>
+        [Test]
+        public void TheTopOfAWorkingShaftMayNotBeRoofedOver()
+        {
+            ColonyWorld colony = Board();
+
+            AShaftWithALandingBesideIt(colony, out int ground, out int shaft, out _);
+            int cap = shaft + Size.LayerStride;
+            RaiseNow(colony, ground + 1 + Size.LayerStride, BuildingHandle.Wall);
+            colony.World.Tick();
+            Assume.That(colony.Construction.Allows(cap, BuildingHandle.Floor), Is.True,
+                "the control: that slab is supported and legal while no ladder is under the shaft");
+
+            RaiseNow(colony, ground, BuildingHandle.Ladder);
+            colony.World.Tick();
+
+            Assert.That(colony.Construction.Allows(cap, BuildingHandle.Floor), Is.False,
+                "a roof over the open top of a shaft closes the way up, so it is refused");
+        }
+
+        /// <summary>
         /// Take the ladder away and the way up goes with it. Without this the portal outlives the
         /// thing, which is a colonist walking up a ladder that is not there.
         /// </summary>
