@@ -500,6 +500,7 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemStone = Prefix + "item.stone";
         public const string ItemIronOre = Prefix + "item.ironore";
         public const string ItemCoal = Prefix + "item.coal";
+        public const string ItemCarrots = Prefix + "item.carrots";
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -512,7 +513,7 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         static readonly string[] ItemModules =
         {
-            ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal,
+            ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

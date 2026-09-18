@@ -1541,6 +1541,18 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(0.5f, 0.5f, 0.5f),
             });
+            // A harvest dropped on the field. The heap pass scatters one lump per few carrots in
+            // the stack, so the row is one carrot you could carry, not a pile: the mature crop's
+            // own art at 0.6 is about 0.38 m across, in the band the ore lumps sit in. Pillow for
+            // the reason the crop stages give — a mound is the honest fallback for a vegetable,
+            // where the pillar's stake is the shape of a signpost.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCarrots, shape = ModuleShape.Pillow,
+                prefabName = "SM_Prop_Carrot_01_L",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.6f, 0.6f, 0.6f),
+            });
 
             return rows;
         }
