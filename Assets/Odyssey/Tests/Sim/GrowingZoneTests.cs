@@ -171,6 +171,35 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void CancellingFromAFoldedFieldFindsItsOwnCell()
+        {
+            var (_, zones) = Meadow();
+
+            // Two one-cell fields with a gap, then the stroke that folds them. The fold's
+            // survivor is the eastern zone — the neighbour scan meets it first — so the
+            // absorbed western cell, the smaller index, lands after it in the record unless
+            // the merge restores the order itself.
+            zones.Designate(new CellRef(3, 2, Layer), PlantHandle.Carrot);
+            zones.Designate(new CellRef(5, 2, Layer), PlantHandle.Carrot);
+            zones.Designate(new CellRef(4, 2, Layer), PlantHandle.Carrot);
+            Assert.That(zones.ZoneCount, Is.EqualTo(1));
+            Assert.That(zones.Cells.Count, Is.EqualTo(3));
+
+            // The cancel a fold leaves behind must find its own entry. A record whose cells
+            // are not ascending makes the binary search in Cancel answer negatively, and
+            // RemoveAt(negative) throws inside the intent drain — the same poisoned queue
+            // the Dissolve fix paid for, reached from the merge one layer above it. The
+            // absorbed cell is the one that proves it: the fold leaves the record as
+            // [bridge, eastern, western], and the western cell's search probes two larger
+            // values before giving up.
+            Assert.That(zones.Cancel(new CellRef(3, 2, Layer)), Is.EqualTo(IntentRejection.None));
+            Assert.That(zones.Cancel(new CellRef(5, 2, Layer)), Is.EqualTo(IntentRejection.None));
+            Assert.That(zones.Cancel(new CellRef(4, 2, Layer)), Is.EqualTo(IntentRejection.None));
+            Assert.That(zones.ZoneCount, Is.EqualTo(0), "every cell of the folded field left it");
+            Assert.That(zones.Cells, Is.Empty);
+        }
+
+        [Test]
         public void CancellingTheLastCellDissolvesTheZone()
         {
             var (_, zones) = Meadow();

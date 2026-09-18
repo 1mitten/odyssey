@@ -235,6 +235,14 @@ namespace Odyssey.Sim.Growing
         void MergeInto(Zone home, Zone other)
         {
             home.Cells.AddRange(other.Cells);
+            // Two sorted runs appended are not one sorted list, and everything that reads a
+            // zone's cells — the binary searches in Cancel and in the next Paint's insert —
+            // assumes ascending. Which zone survives the fold depends on which neighbour the
+            // scan meets first, so the absorbed cells can be the smaller indices; unsorted,
+            // a later cancel's search answers negatively and RemoveAt throws inside the
+            // intent drain. Found by re-review the day the branch opened its PR, the same
+            // week Dissolve's shift-remove was: the fold is where both invariants broke.
+            home.Cells.Sort();
             Dissolve(other);
             // The absorbed cells point at the slot their old zone died in, and the stroke that
             // caused the merge is still reading neighbours — one of them could sit in an

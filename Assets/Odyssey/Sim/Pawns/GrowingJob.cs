@@ -260,6 +260,10 @@ namespace Odyssey.Sim.Pawns
         {
             var zones = ctx.Growing;
             if (zones == null) return;
+            // The same re-ask Sowed makes after its own defer: the world moved between the
+            // swing that earned this edit and the tick boundary that lands it, and a crop
+            // that is no longer standing — cancelled out of its zone — yields nothing.
+            if (!zones.IsPlanted(cell)) return;
             // Uproot tells the renderer itself — the same mark a zone cancel rides.
             zones.Uproot(cell);
 

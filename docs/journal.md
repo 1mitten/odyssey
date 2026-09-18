@@ -5805,3 +5805,24 @@ down rather than smoothed over (a young field, and about one draw call per crop)
 `22-growing.md`. The off-by-one the first field soak hit — designating through the intent bus
 spends a tick draining it — is the same lesson the start-flow unit paid for the other way round:
 a seeded world's clock starts where the seeding left it, not at zero.
+
+### The merge broke the fold's other invariant (2026-09-18, re-review)
+
+The PR's own re-review found the third bug in `GrowingZones`' fold, and the second one the
+fast tier could not see. `MergeInto` appended the absorbed zone's sorted cells onto the
+survivor's sorted cells, and two sorted runs appended are not a sorted list. Which zone
+survives a fold depends on which neighbour the scan meets first — east is first in the array —
+so the absorbed cells can be the *smaller* indices, and everything that reads a zone's record
+assumes ascending: `Cancel`'s `RemoveAt(BinarySearch(index))` answers negatively on the
+unsorted record and throws inside the intent drain, the poisoned-queue cascade again.
+
+The derivation earned its test the honest way round this time: the first reproduction passed,
+because the closed-interval binary probe happened to land on the target for the cancel order
+written. Cancelling the *absorbed* cell first — the search probes two larger values, gives up
+negative — throws. The fix is one `Sort()` after the `AddRange`, with the regression test
+pinning the geometry that reaches it. The hash never noticed any of this: it walks the global
+sorted cell list, not zone records, which is exactly why only a cancel after a fold could.
+
+And `Harvested` now re-asks after its defer, as `Sowed` always had: a crop cancelled between
+the swing that earned the edit and the boundary that lands it yields nothing rather than
+carrots for a field the player erased.
