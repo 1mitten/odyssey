@@ -150,8 +150,34 @@ namespace Odyssey.Sim.Pathing
         /// rather than climb. That is the right answer anyway (hopping a one-block ledge really is
         /// quicker than a ladder) and they almost never compete: a ladder spans a shaft nothing
         /// can hop out of, and a hop needs a block top beside it that a shaft does not have.</para>
+        ///
+        /// <para><b>135 was too fast, seen in play on 2026-09-18</b> (owner: <i>"the colonists
+        /// looked too fast going up definitely — I saw that … should be much slower"</i>), and this
+        /// time the number is derived rather than halved. A hop is <b>drawn</b> along the slope
+        /// from one cell centre to the next: 2.5 m across and 3.0 m up is a path
+        /// <b>3.91 m</b> long. Cost is duration, so at 135 — 2.25 s — the figure was drawn covering
+        /// it at <b>1.74 m/s against the 1.50 m/s of walking on the flat</b>. Climbing a terrace
+        /// was literally quicker than strolling beside it, which is exactly what the eye picked
+        /// up.</para>
+        ///
+        /// <para><b>The two bounds are what make 240 a choice rather than a guess.</b>
+        /// <i>Floor:</i> 3.91 m at walking pace is 2.60 s, or <b>156</b> — below that a climb is
+        /// drawn faster than a walk and no motion work can hide it. <i>Ceiling:</i>
+        /// <see cref="StairUp"/> at <b>290</b> — past that a colonist walks to a stair rather than
+        /// hopping a single block, and a hop must stay the cheapest way up one block or the
+        /// terraces stop being crossable ground. 240 is 4.0 s, <b>0.98 m/s along the slope</b>,
+        /// about two thirds of a walking pace: a visible labour, and still 11% quicker than the 270
+        /// that once read as being stuck.</para>
+        ///
+        /// <para><b>And this time the motion carries it.</b> 270 read as stuck because the figure
+        /// slid up the bank at a dawdle with a walk cycle under it. A hop is now drawn as a hop —
+        /// <c>HopArc</c> gathers, heaves the figure over the lip and settles it — and the gait is
+        /// held through the step rather than solved from the speed, because a hop is not ground
+        /// locomotion. If 240 still reads as stuck, that is the pose to look at before this number.
+        /// To retune: change this one constant, then re-bake the goldens
+        /// (<c>ODYSSEY_REGOLDEN=1 scripts/test-fast.sh --filter TestCategory=Long</c>).</para>
         /// </summary>
-        public const int JumpUp = 135;
+        public const int JumpUp = 240;
 
         /// <summary>
         /// Dropping down onto the block below: half of a flat cell, because you mostly let go.

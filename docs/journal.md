@@ -6048,3 +6048,59 @@ because they get clipped by this façaded terrain."* The design is
   bank is drawn there to make that hop legible.
 - **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1756 total, 1742 passed,
   0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### A colonist climbed a terrace faster than one walking beside it (2026-09-18, branch `claude/terrace-foot-guard`)
+
+Owner, after the first look in play: *"Would it be possible to make the terrace step, if going down
+the terrace step, you go a bit faster and if you going up, you go a bit slower … ensure the
+animation/motion adjusts accordingly."* Then, having watched one: *"The colonists looked too fast
+going up definitely … should be much slower."* The design is `docs/design/22-terrace-steps.md` §4b.
+
+- **The asymmetry already existed, and was not the point.** Up was 135, down 50, flat 100 — down
+  already 2.7 times quicker than up. The first answer to the question was therefore "it already does
+  this", with the numbers. What the question found was a different fault underneath it.
+- **The fault was in metres per second, not in the ratio.** A hop is *drawn* along the slope between
+  two cell centres: 2.5 m across and 3.0 m up is **3.91 m**. At 135 — 2.25 s — that is **1.74 m/s**,
+  against **1.50 m/s** for walking a flat cell. Climbing a terrace was literally quicker than
+  strolling beside it. Nobody had measured the drawn path; the cost had only ever been compared with
+  the cost of a flat cell, where 135 against 100 looks like effort.
+- **So the new price is derived, and it is bounded on both sides.** Floor **156**, where a climb
+  stops being drawn faster than a walk; ceiling **290**, `StairUp`, past which a colonist walks to a
+  stair rather than hopping one block and a terraced board stops being crossable. **240** — 4.0 s,
+  0.98 m/s along the slope — sits between them, and is still 11% quicker than the 270 that read as
+  *stuck* the last time this constant was retuned. Both bounds are now assertions, so the fault
+  cannot come back as a tuning.
+- **The motion had to land with the price, or 240 would have been 270 again.** 270 failed because a
+  slow slide up a bank is a colonist stuck on a hill. A hop is now drawn as a hop: `HopArc` gathers
+  for 0.48 s, leaves the ground on a **solved parabola** that passes exactly 0.35 m over the lip and
+  comes down onto it as the step ends.
+- **The arc takes the real rise, and the first cut did not.** A colonist standing in the cell at the
+  foot of a terrace is already half way up the bank, so the climb is about 1.5 m and not the 3.0 m
+  of a layer. The first version added a fixed arch to a fixed climb and cleared the lip by **15 cm
+  while claiming 35** — the two curves were fighting each other. Caught by the test that asserts the
+  clearance on the board rather than on the curve, which is why that test was written that way.
+- **A drop is a square, and the number fell out of what was already written down.** `MoveCost.Drop`
+  is 0.83 s; a 3.0 m free fall takes 0.78 s; the difference is the step off the edge. The implied
+  acceleration is 9.78 m/s², and the test pins it to gravity — so retuning the drop fails a test
+  instead of quietly making colonists fall at the wrong speed.
+- **One clamp replaced a hand-faded lift.** The descent used to fade its bank rise out over the step
+  because taking the ground's maximum would hold the figure to the edge and drop it 1.5 m in a
+  frame. With a ballistic curve the maximum is right for both halves: the body stays on the slope
+  until the slope falls away faster than it does. Fewer rules, and the one that is left is physical.
+- **The gait is held through a hop, because it is solved from horizontal speed and a hop is not
+  ground locomotion.** Measured: a drop crosses a cell at 3.0 m/s, past the fastest gait this cast
+  owns (2.60 m/s), so stepping off a terrace pinned the run cycle and rate-stretched it for eight
+  tenths of a second. A climb at 240 is the opposite — 0.63 m/s across the cell, a third of the idle
+  blended in, a dawdle. Holding the stride covers both; the price is a few frames of sliding during
+  the gather, which is why the gather is short.
+- **A stair would have been drawn vaulting up its own stairwell.** `NavGraph.IsHop` is pure geometry
+  — one layer, one cell across — which is exactly the shape of a stair step. The simulation
+  separates them with `UpperEndIsABlockTop`: you hop onto ground and take a stair to a storey. That
+  second clause is in `PawnPose.IsDrawnAsAHop` with a test, written now, before `U44` lands, because
+  nothing would have failed when it did.
+- **The re-bake has the sharpest control this table has had.** Both boards with steps on them moved
+  their `Simulated` value and nothing else moved at all — no `Generated` value, because a price is
+  not content and nothing is placed differently, and **not one number on the barren meadow**, which
+  is a flat table with no step to hop.
+- **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1771 total, 1757 passed,
+  0 failed**.

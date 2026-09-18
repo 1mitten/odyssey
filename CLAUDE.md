@@ -211,7 +211,11 @@ but it is not what the scene loads.
 **Movement is walk, stair, ladder and a one-block hop.** Climbing was removed as a mechanic (owner,
 2026-09-16). Every cell a pawn can be in has something under it. **A hop's price has one owner** —
 `NavGraph.HopCost`, enforced by `HopPriceHasOneOwnerTests`, because the cell search, the region
-graph and the mover must agree and a disagreement fails silently.
+graph and the mover must agree and a disagreement fails silently. **A hop is priced against the path
+it is drawn along, not against a flat cell** (2026-09-18): 2.5 m across and 3.0 m up is 3.91 m, so
+up at 240 is 0.98 m/s and down at 50 is a fall at gravity, and `MoveCost.JumpUp` is bounded below by
+"never drawn faster than a walk" and above by `StairUp`. The motion is `HopArc` —
+`docs/design/22-terrace-steps.md` §4b.
 
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
@@ -347,6 +351,13 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **The coloured wood has had two playtests; the rounds since have not been played** — the cherry
   and flame canopies read as scarlet at the play camera and are the first to veto, and the measured
   tenth-of-a-stop the new shader costs was deliberately not papered over with a gain.
+- **The new hop wants the same look the old one just failed.** `MoveCost.JumpUp` went 135 → 240 and
+  the motion became an arc (`docs/design/22-terrace-steps.md` §4b) because a colonist climbed a
+  terrace at 1.74 m/s against a walk's 1.50. The open questions a still cannot answer: whether 4.0 s
+  to get up one block now reads as effort or as **stuck** — the exact failure of the 270 this
+  replaces — whether 0.35 m over the lip is a hop or a hurdle, and whether holding the gait through
+  the step shows as the feet sliding during the half-second gather. If it reads as stuck, the pose
+  is the thing to look at before the price.
 - **Nobody has seen a colonist climb a ladder since the pose was written for one.** Four angles
   branch on a ladder against a rock face and all four are invited tuning
   (`docs/design/21-ladders-and-climbing.md` §3): whether they read as a ladder rather than a shrug,

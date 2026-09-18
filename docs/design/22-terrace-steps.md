@@ -100,6 +100,78 @@ spans the cell the ramp rises across. Two candidate fixes, neither taken here:
 Both change the state hash, so both want re-baked goldens and a decision rather than a guess. The
 predicate is in place for whichever is chosen.
 
+## 4b. Crossing a step: the price and the motion
+
+*Owner, 2026-09-18, after the first look in play:* "Would it be possible to make the terrace step, if
+going down the terrace step, you go a bit faster and if you going up, you go a bit slower … ensure
+the animation/motion adjusts accordingly." Then, having watched one: *"The colonists looked too fast
+going up definitely — I saw that … should be much slower."*
+
+The asymmetry already existed. What did not exist was any reason to believe it, and the climb was
+wrong in the other direction from the one the code claimed.
+
+### The measurement that decided it
+
+A hop is **drawn** along the slope from one cell centre to the next. A cell is 2.5 m across and a
+layer is 3.0 m (ADR 0002), so that path is **3.91 m**. Cost is duration — a pawn retires one unit a
+tick at 60 ticks a second — so:
+
+| | Cost | Duration | Drawn along the slope |
+|---|---|---|---|
+| Walking a flat cell | 100 | 1.67 s | 1.50 m/s |
+| Up a step, **before** | 135 | 2.25 s | **1.74 m/s** |
+| Up a step, **now** | **240** | **4.00 s** | **0.98 m/s** |
+| Down a step | 50 | 0.83 s | 4.71 m/s |
+
+A colonist climbing a terrace was drawn moving **16% faster than one strolling beside it**. That is
+what the owner saw, and no amount of pose work hides it.
+
+### Why 240, and not a number somebody liked
+
+Two bounds, and the choice sits between them:
+
+- **Floor, 156.** Below that the climb is drawn faster than a walk. `HopArcTests.AClimbIsNeverDrawnFasterThanAWalk`
+  is that bound, stated as an assertion so the fault cannot come back.
+- **Ceiling, 290** — `MoveCost.StairUp`. Past it a colonist walks to a stair rather than hopping one
+  block, and a hop has to stay the cheapest way up one block or a terraced board stops being
+  crossable ground.
+
+240 is 0.98 m/s along the slope, about two thirds of a walking pace: a visible labour, and still 11%
+quicker than the 270 that read as **stuck** when this constant was last retuned (2026-09-16). The
+difference this time is that the motion carries the duration.
+
+### The motion
+
+`HopArc` owns the shape; `PawnPose` places it; nothing is simulated.
+
+- **Up** is a solved parabola, not an ease. It gathers for the first 12% of the step (0.48 s — a
+  jump starts from a crouch), leaves the lower ground, passes exactly **0.35 m above the lip** at
+  the top of its flight, and comes down onto the upper ground precisely as the step ends. It takes
+  the **real rise** as a parameter, which at a terrace is about 1.5 m and not a layer, because a
+  colonist standing in the cell at the foot of a step is already half way up the bank.
+- **Down** is a square, because that is what falling is. `MoveCost.Drop` is 0.83 s and a 3.0 m free
+  fall takes 0.78 s; the 0.05 s difference is the step off the edge. The implied acceleration is
+  **9.78 m/s²**, and `HopArcTests.AFallIsAtTheSpeedOfGravity` pins it — retune the drop and that
+  test fails rather than colonists quietly falling at the wrong speed.
+- **The clamp does the rest, in one rule for both halves.** The arc is allowed to pass below the
+  bank; the drawn ground pushes it back up. So a body running off a slope stays on the slope until
+  the slope falls away faster than it does, and is airborne after that. The hand-faded lift the
+  descent used to need is gone.
+- **The gait is held through a hop.** It is solved from horizontal speed, and a hop is not ground
+  locomotion: measured at the old price, a drop crossed a cell at 3.0 m/s, past the fastest gait
+  this cast owns (2.60 m/s), so stepping off a terrace pinned the run cycle and rate-stretched it
+  for eight tenths of a second. A climb at 240 is the opposite fault — 0.63 m/s across the cell,
+  which blends a third of the idle in and reads as a dawdle, which is exactly the "stuck" look.
+  Holding the stride the figure arrived with covers both. The cost is a few frames of the gait
+  sliding during the gather, which is why the gather is short.
+
+### What this is not
+
+Not a slope model. There is no cost for walking *along* a terrace edge, no encumbrance term, and no
+urgency — WS4 is still held. If a hauler should one day pay more to climb with 150 stone on her
+back, that belongs on the pawn's **rate** and not on `HopCost`: design 17 §4g, cost prices the cell
+and rate scales the pawn, and the two must never swap jobs.
+
 ## 5. Recorded hooks
 
 Things deliberately left for later, so the next session does not re-derive them:
@@ -125,3 +197,7 @@ Things deliberately left for later, so the next session does not re-derive them:
 | That the two agree | `Assets/Odyssey/Presentation/Tests/TerraceFootTests.cs` |
 | The tree guard and its count | `TreePass`, `NaturalGenReport.TreesRefusedOnTerraceSteps` |
 | No tree at a foot on a generated board | `WoodedMapTests.NoTreeStandsAtTheFootOfATerraceStep` |
+| What crossing a step costs | `MoveCost.JumpUp`, `MoveCost.Drop`, priced once by `NavGraph.HopCost` |
+| The shape of the climb and the fall | `Assets/Odyssey/Presentation/Rendering/HopArc.cs` |
+| Which steps are drawn as hops | `PawnPose.IsDrawnAsAHop` — geometry *and* a block top, so a stair is not one |
+| That the price and the drawn speed agree | `HopArcTests.AClimbIsNeverDrawnFasterThanAWalk` |

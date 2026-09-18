@@ -1,6 +1,7 @@
 #nullable enable
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Rendering
@@ -105,35 +106,28 @@ namespace Odyssey.Presentation.Rendering
         /// neighbouring pieces match along the edge they share — are the same tests that make this
         /// continuous for a walker.</para>
         ///
-        /// <para><b>Going up, take the higher of the two; going down, ease the lift out.</b> The
-        /// asymmetry is not tidiness, it is two different faults. Climbing, the chord runs *below*
-        /// the ground for the second half of the step — a hop's straight line from one cell centre
-        /// to the next passes a metre and a half inside the block being climbed — so the figure
-        /// has to be pushed up onto the surface, and the surface is continuous, so the maximum is
-        /// too. Descending, the ground is a step function: taking the maximum would hold the
-        /// figure flat to the edge and then drop it 1.5 m in one frame. Fading the lift out over
-        /// the step is smooth at both ends, and a drop is short (<c>MoveCost.Drop</c> is 50, about
-        /// four fifths of a second) so there is no time to read it as floating.</para>
+        /// <para><b>A step that changes layer is a hop, and a hop has a shape</b> —
+        /// <see cref="HopArc"/>. Both directions were drawn as a straight line raised onto the
+        /// ground until 2026-09-18, which made a climb a slide up the bank and a drop a slide back
+        /// down it. Now the height comes from the arc and the ground only ever pushes it *up*:
+        /// going up, the arc leaves the gather, clears the lip and settles on the upper surface;
+        /// going down, the fall is allowed to pass below the bank and the clamp keeps the figure on
+        /// the slope until the slope drops away faster than it does. One rule, both halves, and the
+        /// hand-faded lift the descent used to need is gone.</para>
+        ///
+        /// <para><b>The clamp is why it cannot show a figure inside the hillside.</b> Climbing, the
+        /// chord runs below the ground for the second half of the step — a hop's straight line from
+        /// one cell centre to the next passes a metre and a half inside the block being climbed —
+        /// and the surface is continuous, so the maximum of the two is too.</para>
         /// </summary>
         static Vector3 OnTheDrawnGround(Vector3 along, in PawnView pawn, float t, WorldRenderModel? world)
         {
             if (world == null) return along;
 
-            if (pawn.NextCell.Y < pawn.Cell.Y)
-            {
-                // **Both ends, not just the one being left.** The first version faded out the rise
-                // of the cell the figure was leaving and forgot the one it was arriving in, which
-                // is fine dropping off a bank onto flat ground and a metre and a half of teleport
-                // dropping off a step *into* one — and a terrace has banks at the bottom of it by
-                // definition, so that was the common case rather than the exotic one.
-                Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
-                Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
-                float leaving = BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
-                float arriving = BankLayout.RiseAt(world, pawn.NextCell, to.x, to.z);
-                return along + Vector3.up * (leaving * (1f - t) + arriving * t);
-            }
-
             CellRef over = t < 0.5f ? pawn.Cell : pawn.NextCell;
+
+            if (IsDrawnAsAHop(world, pawn))
+                along = new Vector3(along.x, HopHeight(along, pawn, t, world), along.z);
 
             // **The relief is sampled where the walker is, not at the cell's centre**, and that
             // distinction is the whole of a fault the owner reported as colonists jolting about
@@ -165,6 +159,67 @@ namespace Odyssey.Presentation.Rendering
                            BankLayout.RiseAt(world, over, along.x, along.z);
 
             return along.y >= ground ? along : new Vector3(along.x, ground, along.z);
+        }
+
+        /// <summary>
+        /// Is this step the thing <see cref="HopArc"/> draws — a jump onto the block next door, or
+        /// a drop off it?
+        ///
+        /// <para><b>Both halves of the simulation's own rule, asked of the mirror.</b>
+        /// <see cref="NavGraph.IsHop"/> is pure geometry — one layer, one cell across — and geometry
+        /// alone is not enough, because a <b>stair</b> step has exactly that shape. The simulation
+        /// separates the two with <see cref="NavGraph.UpperEndIsABlockTop"/>: you hop onto ground,
+        /// and you take a stair to a storey, so the cell under the upper end has to be solid
+        /// terrain rather than a built floor. That is the test repeated here.</para>
+        ///
+        /// <para><b>Written before it was needed, on purpose.</b> Stairs are not in the game yet
+        /// (<c>U44</c>), so today every step of this shape really is a hop and the second clause
+        /// changes nothing. The day stairs land, a colonist on one would have been drawn vaulting
+        /// up the stairwell, and nothing would have failed — the class of silent fault
+        /// <c>docs/bug-patterns.md</c> calls a rule with two owners. <c>HopArcTests</c> covers it
+        /// with a floored upper cell.</para>
+        /// </summary>
+        public static bool IsDrawnAsAHop(WorldRenderModel? world, in PawnView pawn)
+        {
+            if (world == null) return false;
+            if (!NavGraph.IsHop(pawn.Cell, pawn.NextCell)) return false;
+
+            CellRef upper = pawn.NextCell.Y > pawn.Cell.Y ? pawn.NextCell : pawn.Cell;
+            if (upper.Y == 0) return false;
+
+            GridSize size = world.Size;
+            if (!size.Contains(upper.X, upper.Z, upper.Y)) return false;
+
+            return world.IsSolid(size.Index(upper.X, upper.Z, upper.Y - 1));
+        }
+
+        /// <summary>
+        /// The height of the arc across a hop, before the ground clamp.
+        ///
+        /// <para><b>Between the two drawn surfaces, not the two cell floors.</b> The ends are the
+        /// heights the figure is drawn at while <i>standing</i> in each cell — floor, plus the bank
+        /// beneath it — which is exactly what <see cref="Of"/> returns for a pawn that is not
+        /// moving. Taking the floors instead would leave the arc a metre and a half short at a
+        /// terrace, because a colonist standing in the cell at the foot of one stands half way up
+        /// the ramp, and every hop would start and end with a jolt.</para>
+        ///
+        /// <para>The relief field is added at the walker's own position rather than at either end,
+        /// for the reason recorded in <see cref="OnTheDrawnGround"/>: sampling it anywhere else
+        /// puts a vertical snap at the midpoint of the step.</para>
+        /// </summary>
+        static float HopHeight(Vector3 along, in PawnView pawn, float t, WorldRenderModel world)
+        {
+            Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
+            Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
+
+            float leaving = from.y + BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
+            float arriving = to.y + BankLayout.RiseAt(world, pawn.NextCell, to.x, to.z);
+
+            float height = pawn.NextCell.Y > pawn.Cell.Y
+                ? leaving + HopArc.Climb(t, arriving - leaving)
+                : Mathf.Lerp(leaving, arriving, HopArc.Fall(t));
+
+            return height + GroundRelief.HeightAt(along.x, along.z);
         }
 
         /// <summary>The yaw a heading implies, in degrees. Zero-length headings give zero.</summary>
