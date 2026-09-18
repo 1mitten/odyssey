@@ -594,11 +594,23 @@ fault itself so the fix can never be mistaken for a no-op.
 
 ### What this does not explain
 
-**The material.** The four tiles in the screenshot look grey-plated rather than wooden, and the owner
-read them as stone or steel. Nothing found here changes a run's material: `Director.Stuff` is read
-once per `Submit` and every cell of the run carries it. Art is chosen by stuff alone
-(`WorldRenderModel.SlabModuleFor`), so a differently-drawn tile means a differently-*stuffed* tile —
-and the colony's ledger in that same screenshot holds Wood and Scrap and no steel or stone at all,
-which is not a material a colonist could have hauled and built with. **Unresolved, and deliberately
-not guessed at**; what settles it is clicking one of those tiles and reading its material and layer
-off the inspect pane.
+**The material.** The four tiles look grey-plated rather than wooden. The owner clicked one: **the
+inspect pane calls it a wood floor.** Three things were then ruled out, and together they say a
+wood-floored cell cannot draw the stone module:
+
+- **The ids match.** `StuffHandle.Wood` is 4 and so is `NaturalContent.StuffWood`; Stone is 5 on
+  both sides. `_slabByStuff` is keyed by the same number `RaiseSlab` writes.
+- **Both slab arts resolve.** The committed catalogue has real prefabs for `odyssey.module.slab.wood`
+  (`SM_Bld_Base_Floor_Combined_01`) and `.stone` (`SM_Env_Ground_Tile_Half_01`), so
+  `SlabModuleFor`'s per-cell group fallback — the one thing that *could* draw one material two ways,
+  since `_slot` varies cell by cell — never fires for a wood floor.
+- **The pane and the mesher read one field.** `CellDetailContributor` reads `_grid.FloorStuff[cell]`
+  and `WorldRenderModel.CopyCell` mirrors `_floor` and `_floorStuff` on adjacent lines. They cannot
+  disagree about a cell's material.
+
+**So the leading explanation is that there is no second bug**: the grey is the ground showing through
+the hole — `SM_Env_Ground_Tile_Half_01` is an environment ground tile, which is exactly what a grey
+cross-hatched plate would be — and the pane named a neighbouring deck cell rather than the gap.
+**Not confirmed.** The discriminator is free and is already on this branch: drag a floor over a room
+again. If the hole is gone and the grey with it, the run rule was the whole of it. If a grey tile
+survives on an unbroken deck, there is a second fault and that is the shape to report.
