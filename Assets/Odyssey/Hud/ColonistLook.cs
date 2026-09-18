@@ -1,6 +1,6 @@
 #nullable enable
 
-namespace Odyssey.Presentation.Rendering
+namespace Odyssey.Hud
 {
     /// <summary>
     /// Which of the catalogue's colonist faces a given pawn wears.

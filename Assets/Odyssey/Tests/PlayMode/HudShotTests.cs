@@ -4,6 +4,7 @@ using System.IO;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.Ui;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -35,6 +36,7 @@ namespace Odyssey.Tests.PlayMode
     {
         const string PanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
         const string StylesPath = "Assets/Odyssey/Presentation/Ui/Hud.uss";
+        const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
 
         /// <summary>The size the picture is taken at, which decides how big the type is.</summary>
         const int Width = 1920;
@@ -229,6 +231,17 @@ namespace Odyssey.Tests.PlayMode
             boot.barrenMap = false;
             boot.grassScatter = 60;
             boot.cameraRig = rig;
+
+            // The committed catalogue, so the roster cards and the inspect header are photographed
+            // with the portraits the player actually sees rather than with the no-packs fallback
+            // (docs/design/20-avatars.md §10). The scene assigns this; a rig built by hand did not,
+            // which is why the HUD photograph went on showing drawn avatars after the portraits
+            // landed. Null on a runner without the licensed packs, and the fallback is correct
+            // there — this picture is only ever taken on a machine that has them.
+#if UNITY_EDITOR
+            boot.moduleCatalogue =
+                UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
+#endif
             bootObject.AddComponent<SelectionPresenter>();
 
             var doc = bootObject.AddComponent<UIDocument>();

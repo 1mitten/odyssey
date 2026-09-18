@@ -59,6 +59,8 @@ namespace Odyssey.Presentation.Ui
         VisualElement _colonistReroll = null!;
         VisualElement _colonistKeep = null!;
         VisualElement _colonistDetail = null!;
+        readonly List<AvatarGlyph> _colonistFaces = new List<AvatarGlyph>();
+        AvatarGlyph _detailFace = null!;
         Label _detailName = null!;
         Label _detailTrade = null!;
         Label _detailTraits = null!;
@@ -368,12 +370,25 @@ namespace Odyssey.Presentation.Ui
             {
                 int index = slot;
 
+                // The face, then the two lines about the person whose face it is. A row wrapping a
+                // column, which is the shape a roster card already is — the candidate row was a
+                // plain column until avatars landed (docs/design/20-avatars.md §3).
                 var card = new VisualElement();
                 card.AddToClassList("colonist");
-                card.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__name"));
-                card.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__trade"));
+
+                var face = new AvatarGlyph(HudLayout.Avatar);
+                face.AddToClassList("colonist__face");
+
+                var lines = new VisualElement();
+                lines.AddToClassList("colonist__lines");
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__name"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__trade"));
+
+                card.Add(face);
+                card.Add(lines);
                 card.RegisterCallback<ClickEvent>(_ => _menu.Colonists!.Select(index));
                 _colonistCards.Add(card);
+                _colonistFaces.Add(face);
             }
 
             var rows = new VisualElement();
@@ -397,9 +412,24 @@ namespace Odyssey.Presentation.Ui
             _detailName = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "detail__name");
             _detailTrade = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "detail__trade");
             _detailTraits = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "detail__traits");
-            _colonistDetail.Add(_detailName);
-            _colonistDetail.Add(_detailTrade);
-            _colonistDetail.Add(_detailTraits);
+
+            // The portrait and the record it belongs to, side by side. 64 px against 26 + 18 + 4 +
+            // 18 of text, so the two end within two pixels of each other — HudLayout.DetailAvatar
+            // says so where the number lives.
+            _detailFace = new AvatarGlyph(HudLayout.DetailAvatar);
+            _detailFace.AddToClassList("detail__face");
+
+            var record = new VisualElement();
+            record.AddToClassList("detail__lines");
+            record.Add(_detailName);
+            record.Add(_detailTrade);
+            record.Add(_detailTraits);
+
+            var portrait = new VisualElement();
+            portrait.AddToClassList("detail__record");
+            portrait.Add(_detailFace);
+            portrait.Add(record);
+            _colonistDetail.Add(portrait);
 
             _detailSkills = new VisualElement();
             _detailSkills.AddToClassList("skills");
@@ -428,9 +458,18 @@ namespace Odyssey.Presentation.Ui
             {
                 VisualElement card = _colonistCards[slot];
                 Candidate who = select.Cards[slot];
+                VisualElement lines = card[1];
 
-                HudText.Set((Label)card[0], who.NameAndAge, HudTextRole.Row);
-                HudText.Set((Label)card[1], who.Occupation, HudTextRole.Meta);
+                HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Row);
+                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Meta);
+
+                // The seed is the candidate's own and the id is the one this slot will occupy, so
+                // this is the face the colony goes on to give them — ColonistDraw.IdForSlot is
+                // called rather than slot + 1 written out, which is the rule that file exists to
+                // state once.
+                PawnId willBe = ColonistDraw.IdForSlot(slot);
+                _colonistFaces[slot].SetFace(ColonistFace.Of(who.Seed, willBe));
+                _colonistFaces[slot].SetPortrait(_boot!.Portraits.For(who.Seed, willBe));
                 card.EnableInClassList("row--armed", select.IsLocked(slot));
                 card.EnableInClassList("colonist--on", select.Selected == slot);
                 card.tooltip = select.IsLocked(slot)
@@ -441,6 +480,9 @@ namespace Odyssey.Presentation.Ui
             Candidate current = select.Current;
             HudText.Set(_detailName, current.NameAndAge, HudTextRole.Name);
             HudText.Set(_detailTrade, current.Occupation, HudTextRole.Meta);
+            PawnId shown = ColonistDraw.IdForSlot(select.Selected);
+            _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
+            _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
             // Drawn now and empty until M7, by the owner's decision. It says "—" rather than
             // nothing, because a row that is absent and a row that is empty look identical and

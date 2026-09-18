@@ -77,7 +77,6 @@ namespace Odyssey.Tests.Hud
             (".cmd__label--primary", "color", () => HudTheme.Accent, "accent"),
             (".cmd--primary.cmd--on .cmd__label--primary", "color", () => HudTheme.OnAccent, "on-accent ink"),
             (".rail__number", "color", () => HudTheme.OnAccent, "on-accent ink"),
-            (".card__initial", "color", () => HudTheme.OnAccent, "on-accent ink"),
 
             (".bar__fill", "background-color", () => HudTheme.Good, "good"),
             (".skill__pip", "background-color", () => HudTheme.Warn, "warn"),
@@ -259,6 +258,8 @@ namespace Odyssey.Tests.Hud
             (".startscreen__seedrows", "margin-top", () => HudLayout.Gap, "the box to the rows under it"),
             (".colonist", "height", () => HudLayout.ColonistCard, "a candidate's card"),
             (".colonist", "margin-bottom", () => HudLayout.ColonistCardGap, "card gap"),
+            (".colonist__lines", "margin-left", () => HudLayout.ColonistAvatarGap, "face to name"),
+            (".detail__lines", "margin-left", () => HudLayout.DetailAvatarGap, "portrait to record"),
 
             (".prompt", "width", () => HudLayout.PromptWidth, "naming prompt width"),
             (".field", "height", () => HudLayout.FieldHeight, "a text field"),

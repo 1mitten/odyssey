@@ -102,10 +102,10 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
         public bool skirtHillTrees = true;
 
-        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. Off deals from the world seed instead, so a given world is the same people on every load. Either way colonistLookSeed overrides it.")]
-        public bool randomCastEachSession = true;
+        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. This overrules each colonist's own roll seed, so the people you picked on the setup screen will NOT be the people you get — it is for judging the palette, not for playing. Off, every colonist looks the way their roll says, and a given world is the same people on every load. colonistLookSeed overrides it.")]
+        public bool randomCastEachSession;
 
-        [Tooltip("Pin one cast. 0 follows the switch above; any other value deals that cast every time, and the log prints the value used so a cast you liked can be kept.")]
+        [Tooltip("Pin one cast. 0 follows the switch above; any other value deals the whole colony that cast every time, overruling each colonist's own roll seed, and the log prints the value used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
         /// <summary>
@@ -186,6 +186,32 @@ namespace Odyssey.Presentation.Bootstrap
         DaylightDirector? _daylight;
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
+
+        PortraitStudio? _portraits;
+
+        /// <summary>
+        /// The colonist photographer (<c>docs/design/20-avatars.md</c> §10).
+        ///
+        /// <para><b>It outlives a colony on purpose.</b> A portrait is a fact about an appearance
+        /// rather than about a world, and the screen that needs it most — the setup page — runs
+        /// when no colony exists at all. That works because <c>moduleCatalogue</c> is a serialized
+        /// field rather than something world build produces. Its pictures are released with the
+        /// component, not with the session.</para>
+        /// </summary>
+        public PortraitStudio Portraits
+        {
+            get
+            {
+                if (_portraits == null)
+                {
+                    ColonistMaterials.AdoptInkFrom();
+                    _portraits = new PortraitStudio(moduleCatalogue,
+                        _colonistMaterials ??= new ColonistMaterials());
+                }
+
+                return _portraits;
+            }
+        }
         ColonyWorld? _colony;
         double _accumulator;
         float _tickAlpha;
@@ -479,9 +505,18 @@ namespace Odyssey.Presentation.Bootstrap
             // **And the world seed is pinned in the scene**, which is the part that matters here:
             // with `seed` fixed at 1, "the same world deals the same people" means the same twelve
             // people every single time you press Play. That is right for a saved colony and wrong
-            // for looking at what the palette does, which is what the owner is doing now — so the
-            // roll is back, behind a switch, defaulting on while the look is being judged. Turning
-            // it off restores the stable cast exactly, and it is what a real saved game will want.
+            // for looking at what the palette does, which is what the owner was doing then — so the
+            // roll came back behind a switch, defaulting on while the look was being judged.
+            //
+            // **That default is off since 2026-09-18**, and the portraits are what closed it. A
+            // colonist is dealt from their own roll seed now, and the setup page photographs the
+            // three candidates *before* a colony exists — so a session-wide roll, which is applied
+            // as a pin when the world is built, would deal three different people the moment you
+            // pressed Start. That is the owner's original complaint ("the colonists look nothing
+            // like their profile picture") reappearing in a new form, and by construction rather
+            // than by accident. The switch is still here and still does what it says; judging the
+            // palette is now `Logs/portraits.png`, which shows more of the cast at once than
+            // pressing Play repeatedly ever did.
             //
             // None of it enters the simulation and none of it is saved: nothing is stored, because
             // the same inputs are re-derived. See ColonistAppearance.
@@ -494,16 +529,36 @@ namespace Odyssey.Presentation.Bootstrap
                 colonistLookSeed != 0 ? (uint)colonistLookSeed :
                 randomCastEachSession ? (uint)UnityEngine.Random.Range(1, int.MaxValue) :
                 sessionSeed;
-            var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
+            ColonistAppearanceBook appearances = AppearanceBooks.For(castSeed, moduleCatalogue);
+
+            // Since 2026-09-18 a colonist is dealt from *their own* roll seed, not the world's
+            // (docs/design/20-avatars.md §5) — which is what lets a face on the setup screen be
+            // the face the colony gives them. The cast seed above is then only the fallback, for a
+            // save written before pawns carried one.
+            //
+            // So the two switches have to say so out loud or they would be inspector fields that
+            // silently do nothing: either of them on means "overrule the pawns and deal the whole
+            // colony from this number", which is exactly what both were for.
+            appearances.Pinned =
+                colonistLookSeed != 0 || randomCastEachSession ? castSeed : 0u;
             // One ink line in the game, not two. Characters draw their own hull because they are
             // absent from the depth texture the world's outline pass reads, so the colour and
             // width have to be copied across from the feature that inks everything else.
             ColonistMaterials.AdoptInkFrom();
-            _colonistMaterials = new ColonistMaterials();
+            _colonistMaterials ??= new ColonistMaterials();
+
+            // The photographer takes this colony's book and its materials, so a portrait, the
+            // figure walking around and the baked instanced form are three drawings of one answer
+            // — including the pinned cast above, which would otherwise show on the board and not
+            // on the card.
+            Portraits.Appearances = appearances;
+            Portraits.Materials = _colonistMaterials;
+            Portraits.Clear();
+
             Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces, " +
-                      (colonistLookSeed != 0 ? "pinned by colonistLookSeed" :
-                       randomCastEachSession ? "rolled for this session — copy it into colonistLookSeed to keep this cast" :
-                       "dealt from the world seed"));
+                      (colonistLookSeed != 0 ? "pinned by colonistLookSeed, overruling every pawn's own seed" :
+                       randomCastEachSession ? "rolled for this session, overruling every pawn's own seed — copy it into colonistLookSeed to keep this cast" :
+                       "the fallback only; every colonist is dealt from their own roll seed"));
 
             _renderer = new ChunkRenderer(_model)
             {
@@ -1691,7 +1746,15 @@ namespace Odyssey.Presentation.Bootstrap
             return _developerOverlayStyle;
         }
 
-        void OnDestroy() => TeardownSession();
+        void OnDestroy()
+        {
+            TeardownSession();
+
+            // And the studio itself, which teardown deliberately leaves standing: it is not part
+            // of a session, so this is the only place its rig and its one render texture go.
+            _portraits?.Dispose();
+            _portraits = null;
+        }
 
         /// <summary>
         /// Put the world down: dispose everything that owns a GPU or engine resource, drop every
@@ -1954,6 +2017,12 @@ namespace Odyssey.Presentation.Bootstrap
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();
+
+            // The pictures go with the materials that painted them — a portrait outlives a colony
+            // but not the materials it was rendered through, and a cached texture whose shader is
+            // gone is worse than one render.
+            _portraits?.Clear();
+            if (_portraits != null) _portraits.Materials = null;
             _colonistMaterials?.Dispose();
             _renderer?.Dispose();
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU

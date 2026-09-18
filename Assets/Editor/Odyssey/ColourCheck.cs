@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -114,7 +115,7 @@ namespace Odyssey.EditorTools
                 lightingRoot = new GameObject("ColourRoot");
                 PlayScene.BuildSheetLighting(lightingRoot.transform);
 
-                var appearances = new ColonistAppearanceBook(20260916u, catalogue);
+                ColonistAppearanceBook appearances = AppearanceBooks.For(20260916u, catalogue);
                 materials = new ColonistMaterials();
                 figures = new PawnFigureDirector(catalogue, lightingRoot.transform, 0)
                 {
@@ -337,7 +338,7 @@ namespace Odyssey.EditorTools
                 int id = pawn.Id.Value;
                 if (sheet == Sheet.Art || sheet == Sheet.Palette) { book.ClearOverride(id); continue; }
 
-                ColonistAppearance real = book.For(id);
+                ColonistAppearance real = book.For(frame, pawn.Id);
                 Rgb24 skin = sheet == Sheet.Skin ? Signal : Muted;
                 Rgb24 hair = sheet == Sheet.Hair ? Signal : Muted;
                 Rgb24 cloth = sheet == Sheet.Cloth ? Signal : Muted;
@@ -367,7 +368,7 @@ namespace Odyssey.EditorTools
             foreach (PawnView pawn in frame.Pawns)
             {
                 if (!figures.Drawn.Contains(pawn.Id.Value)) continue;
-                ColonistAppearance look = book.For(pawn.Id.Value);
+                ColonistAppearance look = book.For(frame, pawn.Id);
                 string body = "?", quality = "?", shares = string.Empty;
                 if ((uint)look.Look < (uint)rows.Count)
                 {

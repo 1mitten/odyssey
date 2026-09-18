@@ -406,7 +406,12 @@ namespace Odyssey.Presentation.Ui
                 {
                     view.LastId = model.Id;
                     HudText.Set(view.Name, model.Name, HudTextRole.Row);
-                    HudText.Set(view.Initial, Initial(model.Name), HudTextRole.Row);
+
+                    // Keyed on the id like the name beside it, and for the same reason: a card is
+                    // a slot rather than a person, so what changes here is which colonist this
+                    // slot is showing. SetFace is a second guard on top of that one.
+                    view.Avatar.SetFace(ColonistFace.Of(world.Views.Current, model.Id));
+                    view.Avatar.SetPortrait(_boot!.Portraits.For(world.Views.Current, model.Id));
                 }
                 if (view.LastJob != model.JobDef)
                 {
@@ -449,11 +454,12 @@ namespace Odyssey.Presentation.Ui
             var top = new VisualElement();
             top.AddToClassList("card__top");
 
-            var avatar = new VisualElement();
+            // The colonist's own face (docs/design/20-avatars.md). It replaced a People-coloured
+            // tile with the first letter of the name on it — which was honest while nothing could
+            // draw a person, and stopped being so the day something could. The letter said less
+            // than the name beside it already did.
+            var avatar = new AvatarGlyph(HudLayout.CardAvatar);
             avatar.AddToClassList("card__avatar");
-            avatar.style.backgroundColor = HudTokens.Category(HudCategory.People);
-            Label initial = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__initial");
-            avatar.Add(initial);
 
             var names = new VisualElement();
             names.AddToClassList("card__names");
@@ -508,13 +514,10 @@ namespace Odyssey.Presentation.Ui
             _strip.Add(card);
             return new CardView
             {
-                Root = card, Ring = ring, Initial = initial, Name = name,
+                Root = card, Ring = ring, Avatar = avatar, Name = name,
                 JobIcon = jobIcon, Job = job,
             };
         }
-
-        static string Initial(string name) =>
-            string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1).ToUpperInvariant();
 
         // ============================================================ A3/A4 clock and speed, A5 alerts
 

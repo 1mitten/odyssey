@@ -236,8 +236,8 @@
    finding somebody and saying what they are at, and the strip is the densest region on the
    screen, so every pixel it does not spend buys another colonist on the bar. */
 .card {
-    width: 106px;
-    height: 63px;
+    width: 126px;
+    height: 89px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which
        is what lets the layout model state the strip's height as rows and gaps and be right. */
@@ -269,18 +269,12 @@
 }
 
 .card__avatar {
-    width: 26px;
-    height: 26px;
+    width: 52px;
+    height: 52px;
     border-radius: 4px;
     flex-shrink: 0;
     justify-content: center;
     align-items: center;
-}
-
-.card__initial {
-    color: #0b1116;
-    height: 26px;
-    -unity-text-align: middle-center;
 }
 
 .card__names {
@@ -605,6 +599,12 @@
 .inspect__hdr {
     flex-direction: row;
     align-items: flex-start;
+    height: 60px;
+}
+
+/* A tile or a pile keeps the shorter header: its slot holds an icon at one of the interface's
+   three sizes, not a 60 px photograph of a person. */
+.inspect--narrow .inspect__hdr {
     height: 38px;
 }
 
@@ -1830,6 +1830,17 @@
     margin-left: 32px;
 }
 
+/* The portrait and the record it belongs to, side by side (docs/design/20-avatars.md §3). */
+.detail__record {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.detail__lines {
+    flex-grow: 1;
+    margin-left: 18px;
+}
+
 .detail__name { color: #eef3f6; height: 26px; }
 .detail__trade { color: rgba(255, 255, 255, 0.66); height: 18px; }
 .detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; margin-top: 4px; }
@@ -1852,9 +1863,11 @@
     width: 260px;
 }
 
+/* A row wrapping a column since avatars landed (docs/design/20-avatars.md §3): the face, then the
+   two lines about the person whose face it is. The same shape a roster card's identity row is. */
 .colonist {
-    flex-direction: column;
-    justify-content: center;
+    flex-direction: row;
+    align-items: center;
     height: 47px;
     margin-bottom: 6px;
     padding: 0 8px;
@@ -1868,6 +1881,14 @@
 /* The one whose record is showing on the right. A different question from "kept", which wears
    .row--armed, so it needs a different mark: an outline rather than a fill. */
 .colonist--on { border-color: #6fd3e3; }
+
+/* The two lines beside the face. Overflow hidden so that the name, which is the one text in this
+   interface allowed to be cut short, is cut by the column rather than by the screen. */
+.colonist__lines {
+    flex-grow: 1;
+    margin-left: 8px;
+    overflow: hidden;
+}
 
 .colonist__trade {
     color: rgba(255, 255, 255, 0.66);
