@@ -102,12 +102,18 @@ namespace Odyssey.Presentation.World
             // The bones the swing pitches, resolved once when the figure is built. Null on
             // anything that is not a Humanoid rig, which simply never gets a work pose.
             public Transform? Spine;
+            public Transform? Chest;
+            public Transform? Neck;
+            public Transform? Head;
             public Transform? RightUpperArm;
             public Transform? RightLowerArm;
             public Transform? LeftUpperArm;
             public Transform? LeftLowerArm;
             public Transform? LeftHand;
             public Transform? RightHand;
+
+            /// <summary>Runtime procedural gaze and head-look state for this figure.</summary>
+            public LookGazeState Gaze;
 
             // The legs. Bound for the crouch; see BindWorkBones.
             public Transform? Hips;

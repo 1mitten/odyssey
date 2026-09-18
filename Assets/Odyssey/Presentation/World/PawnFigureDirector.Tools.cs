@@ -259,6 +259,9 @@ namespace Odyssey.Presentation.World
             if (!animator.isHuman) return;
 
             figure.Spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            figure.Chest = animator.GetBoneTransform(HumanBodyBones.Chest) ?? figure.Spine;
+            figure.Neck = animator.GetBoneTransform(HumanBodyBones.Neck);
+            figure.Head = animator.GetBoneTransform(HumanBodyBones.Head);
             figure.RightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
             figure.RightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             figure.LeftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
