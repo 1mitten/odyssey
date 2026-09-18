@@ -75,8 +75,9 @@ Underneath it, the drawn ladder and the climber disagreed by construction:
 | `TryWallBeside` | first solid neighbour, different order | **nothing** |
 
 **`WorldRenderModel.LadderFacing` is now the one owner**, and both call it. Where nothing occludes it
-answers north — what the mesher has always drawn — so a free-standing ladder has a face to hug
-instead of no wall to find. `TryLadderBeside` asks it before the solid scan: a ladder is what you
+answered north — what the mesher has always drawn — so a free-standing ladder has a face to hug
+instead of no wall to find. (**That fallback was replaced the same day**: north is arbitrary and the
+owner saw it. A ladder rotates now and the fallback is the player's own answer — §7.) `TryLadderBeside` asks it before the solid scan: a ladder is what you
 climb, and the solid scan stays underneath as the rule for a shaft cut out of rock. Pinned by
 `LadderFaceTests`, which measures the yaw out of the mesher's own instance matrices rather than
 reading the source. It is the `HopPriceHasOneOwnerTests` lesson in another place.
@@ -177,3 +178,64 @@ The climb pose and the flushness are photographs' business and nothing here has 
 Open questions a test cannot answer: whether the two arm angles read as a ladder rather than a
 shrug, whether 0.46 of a leg is too big a step at the play camera, and whether a colonist arriving in
 an open shaft cell and stepping sideways looks like arriving or like hovering.
+
+---
+
+## 7. The playtest, 2026-09-18 (second round)
+
+Four reports. Three are answered below; the bed's is in `docs/design/20-beds.md` territory and is
+recorded here only because it arrived with the others.
+
+### The roster bar's pictures vanished on start and on load
+
+**And the colonist card kept them, which is what named the fault.** A roster card is a *slot*: it
+re-reads itself when the colonist in it changes, so it asks for a portrait once, keyed on the pawn
+id. Building or loading a colony calls `PortraitStudio.Clear`, which **destroys** every texture —
+and a new colony's pawn ids start at the same small numbers, so no slot's id had changed, nothing
+re-read, and every card was left pointing at a texture that no longer existed. The inspect pane asks
+afresh each time it is opened, which is exactly why it kept working.
+
+An id cannot answer *does this picture still exist*. `PortraitStudio.Generation` can, it costs one
+integer, and the card now refreshes when **either** the colonist or the generation changes.
+
+### A built ladder on the wrong side of its cell
+
+`LadderFacing` fell back to north wherever nothing occluded — an arbitrary answer the player could
+neither predict nor change, and the owner's own example was a ladder "standing in mid-air". So
+**`Building_Ladder` rotates now** (`rotates` in the def; `BuildingFingerprint` moved with it), R
+turns the ghost, and the stored facing is what a free-standing ladder uses.
+
+**The wall still wins wherever there is one**, and that is the rule rather than an exception to it:
+which side of a wall a ladder is bolted to is physics, not preference. One function still owns the
+whole answer, and it now has three readers — the mesher, the figure director, and the build cursor,
+which asks the `chosen` overload so the ghost stands where the built ladder will.
+
+Two things had to follow. `RaiseEdifice` kept a facing **only for two-cell things** — reasonable
+while a bed was the only thing that rotated, and it would have thrown the player's rotation away
+silently between the order and the built ladder; it reads the def's `rotates` now. And a one-cell
+ghost was drawn without a facing at all, so R would have turned nothing the player could see.
+
+### The climb jolted, stalled, and kept its arms up at the top
+
+One fault with three symptoms. The climb weight's target was a flat yes-or-no on whether a face had
+been found, so it held at 1 for the whole step and began easing out on the frame the step **ended** —
+by which time the colonist was standing on the ledge. What followed was 0.15 s of a figure on solid
+floor with its arms overhead while most of a metre of lean unwound underneath it: the raised arms,
+the jolt and the apparent stall, in that order, all after the climbing was over.
+
+`ToppingOut` makes letting go part of the climb: over the last quarter of the rise the weight runs
+down to nought, which brings the arms down, unwinds the lean and puts the figure in the middle of its
+cell exactly as it arrives. It reads the step's **direction**, because going down the top of the
+ladder is the *start* of the step — a phase-only rule would have a colonist let go at the bottom of
+every descent, which is the one place it needs to hold on.
+
+### The bed built through a wall — not reproduced
+
+`BedTests.ABedIsRefusedWhenItsFarCellIsAWall` was written to reproduce it and **passes**: the far
+cell is derived from the facing and validated at the order, for all four facings, and the check runs
+before the head cell's own. The guard the owner asked for is already there and already general —
+`Place` applies it to any `footprint > 1` def, not to the bed specifically.
+
+So either the fault is in what is *drawn* rather than what is built, or it needs a sequence nobody
+has written down yet. The test is kept regardless: a guard nothing tests is a guard that gets tidied
+away. **Waiting on a screenshot and the order of actions.**

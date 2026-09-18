@@ -969,13 +969,21 @@ namespace Odyssey.Sim.Construction
         /// <para><c>second</c> is the far cell of a two-cell thing, or -1. Both cells point at the
         /// <b>one</b> record — the invariant the whole bed design stands on
         /// (docs/design/20-beds.md §4) — and the facing it was placed at is what derives that cell
-        /// again later, so it is stored only for things that have one.</para>
+        /// again later.</para>
+        ///
+        /// <para><b>The facing is kept for anything that rotates, not only for what is two cells
+        /// wide</b> (2026-09-18). It used to be stored only when there was a far cell to derive,
+        /// on the reasoning that a one-cell thing has nothing to point at — which stopped being
+        /// true the moment a ladder became rotatable, and would have thrown the player's rotation
+        /// away silently between the order and the built thing. <c>Place</c> already zeroes the
+        /// facing of anything that does not rotate, so this is the same rule read off the def
+        /// rather than off the footprint.</para>
         void RaiseEdifice(int cell, BuildingDef def, ushort stuff, int second, byte facing, byte quality)
         {
             _edifices.Add(new PlacedEdifice
             {
                 CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
-                Facing = second >= 0 ? facing : (byte)0, Quality = quality,
+                Facing = def.rotates ? facing : (byte)0, Quality = quality,
             });
             _grid.Edifice[cell] = _edifices.Count - 1;
             if (second >= 0) _grid.Edifice[second] = _edifices.Count - 1;

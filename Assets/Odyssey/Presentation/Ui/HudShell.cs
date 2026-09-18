@@ -279,6 +279,21 @@ namespace Odyssey.Presentation.Ui
             public PawnId LastId;
             public int LastJob = int.MinValue;
             public int LastLayer = int.MinValue;
+
+            /// <summary>
+            /// Which generation of pictures this card's portrait came from.
+            ///
+            /// <para><b>Because the id alone was not enough, and the owner saw it</b> (2026-09-18:
+            /// the roster bar's pictures gone on start and on load, while the colonist card still
+            /// had them). A card is a slot and re-reads itself only when the colonist in it
+            /// changes, so it asks for a portrait once. Building or loading a colony calls
+            /// <c>PortraitStudio.Clear</c>, which <em>destroys</em> every texture — and a new
+            /// colony's pawn ids start at the same small numbers, so the slot's id had not changed,
+            /// nothing re-read, and the card was left pointing at a texture that no longer exists.
+            /// The inspect pane asks afresh every time it is opened, which is exactly why it kept
+            /// working and made the fault look like a roster problem.</para>
+            /// </summary>
+            public int LastPortraits = int.MinValue;
         }
 
         class AlertRowView

@@ -1097,8 +1097,17 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            _renderer.DrawGhost(module, tint,
-                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
+            // A ladder's ghost stands on the face the built one will stand on: the wall it would be
+            // fixed to if there is one, and the rotation the player has turned it to if there is
+            // not. Asked of the model rather than worked out here, because that rule has one owner
+            // and two systems have already disagreed about it once.
+            Matrix4x4 placed =
+                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y));
+            if (what.edifice == CoreContent.EdificeLadder && _model != null && _grid != null)
+                placed *= Matrix4x4.Rotate(Quaternion.Euler(
+                    0f, Directions.Yaw[_model.LadderFacing(_grid.Index(cell), facing)], 0f));
+
+            _renderer.DrawGhost(module, tint, placed);
         }
 
         /// <summary>
@@ -1132,11 +1141,14 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The facing goes to a one-cell thing too, since 2026-09-18: a ladder rotates now, and
+            // a ghost that would not turn is a player pressing R and seeing nothing happen — the
+            // exact complaint the rotation was added to answer.
             for (int z = box.Min.Z; z <= box.Max.Z; z++)
             for (int x = box.Min.X; x <= box.Max.X; x++)
             {
                 var at = new CellRef(x, z, box.Min.Y);
-                DrawSiteGhost(at, building, stuff, refused: Refused(at, building));
+                DrawSiteGhost(at, building, stuff, facing, Refused(at, building));
             }
         }
 

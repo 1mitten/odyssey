@@ -88,10 +88,14 @@ namespace Odyssey.Tests.Presentation
         /// only option. A test that asks how the stuff tint is chosen needs to say — a tree and a
         /// wall are both placed with wood, and telling them apart is the whole point.</para>
         /// </summary>
-        public RenderTestWorld Edifice(int x, int z, int y, ushort def, ushort stuff, bool blocking = true)
+        public RenderTestWorld Edifice(int x, int z, int y, ushort def, ushort stuff, bool blocking = true,
+            int facing = 0)
         {
             int index = Index(x, z, y);
-            _edifices.Add(new PlacedEdifice { CellIndex = index, Def = def, Stuff = stuff });
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = index, Def = def, Stuff = stuff, Facing = (byte)facing,
+            });
             Grid.Edifice[index] = _edifices.Count - 1;
             if (blocking) Grid.Flags[index] |= CellFlags.BlockingEdifice;
             return this;

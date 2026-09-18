@@ -38,10 +38,11 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>A ladder standing at (4, 4, 1) with the floor under it, and nothing else.</summary>
-        static RenderTestWorld Shaft() =>
+        static RenderTestWorld Shaft(int facing = 0) =>
             new RenderTestWorld(8, 8, 4)
                 .Solid(4, 4, 0, NaturalContent.TerrainSubsoil)
-                .Edifice(4, 4, 1, CoreContent.EdificeLadder, blocking: false);
+                .Edifice(4, 4, 1, CoreContent.EdificeLadder, CoreContent.StuffConcrete,
+                    blocking: false, facing: facing);
 
         [Test]
         public void ALadderLooksAwayFromWhateverItIsFixedTo()
@@ -62,13 +63,32 @@ namespace Odyssey.Tests.Presentation
         /// and it must be the one the mesher has always drawn.
         /// </summary>
         [Test]
-        public void AFreeStandingLadderStillHasAFace()
+        public void AFreeStandingLadderFacesTheWayItWasTurned()
         {
-            var world = Shaft().Publish();
+            // The owner's second report on the same ladder (2026-09-18): right cell, wrong side,
+            // "standing in mid-air". With nothing to be fixed to there was nowhere to take an
+            // answer from and it fell back to north, which the player could neither predict nor
+            // change. A ladder rotates now, and this is where the rotation is read.
+            foreach (int facing in new[] { Directions.North, Directions.East, Directions.South, Directions.West })
+            {
+                RenderTestWorld world = Shaft(facing).Publish();
+                Assert.That(world.Model.LadderFacing(world.Index(4, 4, 1)), Is.EqualTo(facing),
+                    $"a free-standing ladder turned to {facing} should face {facing}");
+            }
+        }
 
-            Assert.That(world.Model.LadderFacing(world.Index(4, 4, 1)), Is.EqualTo(Directions.North),
-                "a ladder with nothing beside it must still face somewhere, and north is what the " +
-                "mesher has always drawn");
+        /// <summary>
+        /// And the wall still wins, because which side of a wall a ladder is bolted to is physics
+        /// rather than preference. A player who turns a ladder into the stone it is fixed to gets
+        /// the ladder they can actually climb.
+        /// </summary>
+        [Test]
+        public void AWallBeatsTheRotation()
+        {
+            var world = Shaft(Directions.North).Solid(5, 4, 1).Publish();
+
+            Assert.That(world.Model.LadderFacing(world.Index(4, 4, 1)), Is.EqualTo(Directions.West),
+                "fixed to the wall on its east side, whatever it was turned to");
         }
 
         [Test]

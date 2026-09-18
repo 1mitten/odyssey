@@ -1189,9 +1189,29 @@ namespace Odyssey.Presentation.World
             //    read as several metres a second and throw the figure into a sprint;
             //  * snapped on, a colonist would jump to the wall the instant its step began, which
             //    is exactly the class of jolt this whole round is about.
+            // **And let go of the wall before arriving, not after** (owner, 2026-09-18: the climb
+            // "jolts" at the top, the arms are "still way up when they should come down level with
+            // the ledge", and it "seems to stall for a moment").
+            //
+            // All three were one fault. The weight's target was a flat yes-or-no on whether a face
+            // was found, so it stayed at 1 for the whole step and only began easing out on the
+            // frame the step ENDED — by which time the colonist was standing on the ledge. What
+            // followed was 0.15 s of a figure on solid floor with its arms overhead, sliding the
+            // lean's most-of-a-metre back to the middle of its cell: the raised arms, the jolt, and
+            // the apparent stall, in that order, all after the climbing was over.
+            //
+            // So the taper is part of the climb. Over the last quarter of the step the weight runs
+            // down to nought, which brings the arms down, unwinds the lean, and puts the figure in
+            // the middle of its cell exactly as it arrives — which is what topping out is. The ease
+            // below still governs, so nothing snaps; this only moves the target.
+            float holdingOn =
+                figure.ClimbFace == Vector3.zero ? 0f
+                // A forced climb is a photograph of the pose and has no step to be near the end
+                // of; tapering it would photograph a figure letting go.
+                : ForceClimbFace.HasValue ? 1f
+                : ToppingOut(figure.ClimbPhase, up: pawn.NextCell.Y > pawn.Cell.Y);
             float leanStep = deltaTime / ClimbEaseSeconds;
-            figure.ClimbWeight = Mathf.MoveTowards(
-                figure.ClimbWeight, figure.ClimbFace != Vector3.zero ? 1f : 0f, leanStep);
+            figure.ClimbWeight = Mathf.MoveTowards(figure.ClimbWeight, holdingOn, leanStep);
 
             // Swimming: is this colonist in water, and how far into looking like it.
             //

@@ -195,12 +195,12 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **683 Sim + 406 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **684 Sim + 406 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the ladder
-  and site-picking work: EditMode **1656 total, 1643 passed, 0 failed**. The remainder are
-  `[Explicit]` or ignored.
+  and site-picking work and the playtest fixes after it: EditMode **1659 total, 1646 passed, 0
+  failed**. The remainder are `[Explicit]` or ignored.
 - **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
   `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
   frame time is measured — never an editor `camera.Render()` loop.

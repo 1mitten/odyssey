@@ -451,7 +451,8 @@ namespace Odyssey.Presentation.Ui
                 RosterCard model = _roster.Cards[i];
                 CardView view = _cards[i];
 
-                if (view.LastId != model.Id)
+                bool somebodyElse = view.LastId != model.Id;
+                if (somebodyElse)
                 {
                     view.LastId = model.Id;
                     HudText.Set(view.Name, model.Name, HudTextRole.Row);
@@ -460,7 +461,19 @@ namespace Odyssey.Presentation.Ui
                     // a slot rather than a person, so what changes here is which colonist this
                     // slot is showing. SetFace is a second guard on top of that one.
                     view.Avatar.SetFace(ColonistFace.Of(world.Views.Current, model.Id));
-                    view.Avatar.SetPortrait(_boot!.Portraits.For(world.Views.Current, model.Id));
+                }
+
+                // **And again whenever the pictures themselves have been thrown away**, which the
+                // id cannot tell us: a new colony reuses the same small pawn ids, so starting or
+                // loading a game left every slot holding a texture that Clear had destroyed and
+                // the bar went blank (owner, 2026-09-18). Asked here rather than inside the id
+                // branch because the two questions are different — *who is in this slot* and
+                // *does their picture still exist* — and only one of them changes on a load.
+                int generation = _boot!.Portraits.Generation;
+                if (somebodyElse || view.LastPortraits != generation)
+                {
+                    view.LastPortraits = generation;
+                    view.Avatar.SetPortrait(_boot.Portraits.For(world.Views.Current, model.Id));
                 }
                 if (view.LastJob != model.JobDef)
                 {

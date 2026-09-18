@@ -5199,3 +5199,53 @@ about a body's depth from the rungs — it had simply never been applied to a la
 was zero. Fixing the face fixed the lean with it.
 
 Nobody has pressed Play on any of it.
+
+### The second playtest: a blank roster, a ladder facing nowhere, and letting go after you have arrived (2026-09-18)
+
+Four reports. `docs/design/21-ladders-and-climbing.md` §7 holds the rules; this is the reasoning.
+
+**The first thing to establish was which build had been played.** The owner's checkout was on
+`claude/rates-and-stats`, eight commits behind `origin/main`, with the ladder work still an open pull
+request — so none of the morning's fixes were in what they were looking at. That is the
+confirm-delivery lesson paying for itself: two of the four reports are about code they had not run,
+and diagnosing them as regressions would have been a wasted afternoon.
+
+**The roster's blank avatars were diagnosed by what still worked.** The pictures were gone from the
+bar and present on the colonist card, and that asymmetry is the whole answer: a card is a slot that
+re-reads itself only when the colonist in it changes, whereas the inspect pane asks afresh every time
+it is opened. `PortraitStudio.Clear` destroys every texture when a colony is built or loaded, and a
+new colony's pawn ids start at the same small numbers — so nothing about any slot had changed while
+everything under it had been destroyed. An id cannot answer "does this picture still exist". A
+generation counter can, and it costs one integer.
+
+**The ladder's wrong side was an arbitrary answer the player could see was arbitrary.** `LadderFacing`
+fell back to north wherever nothing occluded, which is fine as a tie-break nobody can observe and not
+fine at all when the ladder is standing in the open. The owner picked exactly that case out of the
+options offered. So the ladder rotates now — and the wall still wins wherever there is one, which is
+not an exception but the rule: which side of a wall a ladder is bolted to is physics, not preference.
+
+Two things had to follow it, and both would have failed silently. `RaiseEdifice` kept a facing only
+for two-cell things, which was a perfectly good rule while a bed was the only rotatable thing and
+would have dropped the player's rotation between the order and the built ladder. And a one-cell ghost
+was drawn with no facing at all, so R would have turned nothing the player could see — the rotation
+would have "worked" and looked broken.
+
+**The jolt, the stall and the raised arms at the top were one fault.** The climb weight's target was a
+flat yes-or-no on whether a face had been found, so it held at 1 for the whole step and only began
+easing out on the frame the step *ended* — at which point the colonist was standing on the ledge.
+Everything the owner described happened after the climbing was over: 0.15 s of a figure on solid floor
+with its arms overhead, sliding most of a metre of lean back to the middle of its cell. Making letting
+go part of the climb — the last quarter of the rise — fixes all three at once, because all three were
+the same unwinding happening in the wrong place.
+
+The direction matters and is the one thing a phase-only rule gets wrong: going down, the top of the
+ladder is the *start* of the step, so reading the phase alone would have a colonist let go at the
+bottom of every descent.
+
+**The bed did not reproduce, and the test that failed to reproduce it is kept.** The far cell of a
+two-cell thing is derived from the facing and validated at the order, for all four facings, before
+the head cell's own check — and `BedTests.ABedIsRefusedWhenItsFarCellIsAWall` passes. The guard the
+owner asked to be general already is: `Place` applies it to any `footprint > 1` def rather than to the
+bed. So either what they saw is drawn rather than built, or it needs a sequence nobody has written
+down. Keeping the test regardless: a guard nothing tests is a guard that gets tidied away, and this
+one runs before a check that looks arbitrary until you need it.

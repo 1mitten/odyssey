@@ -847,5 +847,41 @@ namespace Odyssey.Tests.Sim
             Assert.That(restored.Construction.BedQualityAt(head), Is.EqualTo(QualityHandle.Normal),
                 "and so does the tier the finisher rolled");
         }
+
+        /// <summary>
+        /// **A two-cell thing may not be ordered into anything standing in its far cell**, for
+        /// every facing, and this is the test that says so out loud.
+        ///
+        /// <para>Written to answer an owner report of a bed built through a wall (2026-09-18). The
+        /// rule was already there and already worked — the far cell is derived from the facing and
+        /// validated at the order, and all four facings refuse — so this pins it rather than fixing
+        /// it. Worth keeping for that reason: a guard nothing tests is a guard that can be tidied
+        /// away, and the check happens before the head cell's own, which is an order that looks
+        /// arbitrary until you need it.</para>
+        /// </summary>
+        [Test]
+        public void ABedIsRefusedWhenItsFarCellIsAWall()
+        {
+            for (int facing = 0; facing < 4; facing++)
+            {
+                ColonyWorld colony = Fresh();
+                int head = OpenFootprint(colony, out _);
+                Assume.That(head, Is.GreaterThanOrEqualTo(0));
+
+                int second = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, facing, Size);
+                if (second < 0 || !colony.Construction.Allows(second, BuildingHandle.Wall)) continue;
+
+                Assume.That(colony.Construction.Place(
+                    Size.FromIndex(second), BuildingHandle.Wall, StuffHandle.Wood),
+                    Is.EqualTo(IntentRejection.None));
+                colony.Construction.Raise(colony.Pawns, second);
+
+                IntentRejection got = colony.Construction.Place(
+                    Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing);
+                
+                Assert.That(got, Is.EqualTo(IntentRejection.NotPermitted),
+                    $"facing {facing}: a bed whose far cell is a wall must be refused");
+            }
+        }
     }
 }

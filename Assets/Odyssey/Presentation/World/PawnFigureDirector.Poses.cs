@@ -808,6 +808,37 @@ namespace Odyssey.Presentation.World
         public const float ClimbEaseSeconds = 0.15f;
 
         /// <summary>
+        /// How much of a climbing step is spent letting go at the top, as a fraction.
+        ///
+        /// <para>A quarter of a layer, which at the ladder's cost is about a fifth of a second —
+        /// long enough to read as reaching the ledge and short enough that most of the step is
+        /// still a climb. See <see cref="ToppingOut"/>.</para>
+        /// </summary>
+        public const float TopTaper = 0.25f;
+
+        /// <summary>
+        /// How much climb is left in a step, 1 in the middle of it and 0 at the top end.
+        ///
+        /// <para><b>The top end, not the finish.</b> Going up that is the end of the step; going
+        /// down it is the start, because a colonist stepping off a ledge on to a ladder is at the
+        /// top of it on its first frame. Reading the phase without the direction would have the
+        /// figure let go of the wall at the bottom of every descent, which is where it needs to
+        /// hold on most.</para>
+        ///
+        /// <para>This is what stops the arms being overhead on the ledge: it runs the whole climb
+        /// pose out — arms, legs and the lean together — over the last quarter of the rise, so the
+        /// figure arrives standing rather than arriving and then unwinding (owner, 2026-09-18).</para>
+        /// </summary>
+        public static float ToppingOut(float phase, bool up)
+        {
+            if (phase < 0f) return 0f;
+
+            float topness = up ? Mathf.Clamp01(phase) : 1f - Mathf.Clamp01(phase);
+            if (topness <= 1f - TopTaper) return 1f;
+            return Mathf.Clamp01((1f - topness) / TopTaper);
+        }
+
+        /// <summary>
         /// The direction of the ladder standing in this cell, or false when none does.
         ///
         /// <para><b>Asked before the wall, because a ladder is the thing you climb.</b> Where both

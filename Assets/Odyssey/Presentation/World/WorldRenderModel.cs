@@ -46,12 +46,16 @@ namespace Odyssey.Presentation.World
         readonly ushort[] _slot;
 
         /// <summary>
-        /// The bed's drawing state, mirrored per cell from the one record both cells point at:
-        /// the facing (on both halves) and which half is the head (on the head alone), so the
-        /// mesher can draw the whole bed once from the head without asking the world a question
-        /// on every cell.
+        /// How a built thing was turned, mirrored per cell from its record, and — for a bed — which
+        /// of its two cells is the head, so the mesher can draw the whole bed once from the head
+        /// without asking the world a question on every cell. A bed carries the facing on both
+        /// halves and the flag on one.
+        ///
+        /// <para>The facing is kept for <b>any</b> record rather than for beds alone: a ladder
+        /// rotates too since 2026-09-18, and anything that does not rotate stores nought anyway.
+        /// A second array for the second rotatable thing would have been two copies of one fact.</para>
         /// </summary>
-        readonly byte[] _bedFacing;
+        readonly byte[] _edificeFacing;
         readonly bool[] _bedHead;
 
         /// <summary>
@@ -110,7 +114,7 @@ namespace Odyssey.Presentation.World
             _edificeStuff = new ushort[count];
             _flags = new byte[count];
             _slot = new ushort[count];
-            _bedFacing = new byte[count];
+            _edificeFacing = new byte[count];
             _bedHead = new bool[count];
 
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
@@ -339,7 +343,18 @@ namespace Odyssey.Presentation.World
         /// hug the face that is really there rather than finding no wall and standing up straight
         /// in mid-air.</para>
         /// </summary>
-        public int LadderFacing(int index)
+        public int LadderFacing(int index) => LadderFacing(index, _edificeFacing[index] & 3);
+
+        /// <summary>
+        /// The same rule for a ladder that is not there yet: the wall still wins, and
+        /// <paramref name="chosen"/> stands in for the rotation a placed one would carry.
+        ///
+        /// <para>Here so the build cursor and the built ladder cannot disagree about which face it
+        /// ends up on — the ghost has no record to read a facing off, and working the rule out a
+        /// second time in the cursor is exactly how the mesher and the figure director came to
+        /// disagree in the first place.</para>
+        /// </summary>
+        public int LadderFacing(int index, int chosen)
         {
             CellRef cell = Size.FromIndex(index);
             for (int dir = 0; dir < Directions.Count; dir++)
@@ -349,14 +364,20 @@ namespace Odyssey.Presentation.World
                     return Directions.Opposite(dir);
             }
 
-            return Directions.North;
+            // **Nothing to be fixed to, so the player's own answer** (owner, 2026-09-18: a built
+            // ladder in the right cell and on the wrong side, standing in mid-air). This used to be
+            // a flat north, which is an arbitrary way for a free-standing ladder to face and the
+            // only case where the player could see it was arbitrary. A ladder rotates now, and the
+            // rotation is read here rather than everywhere, so the wall still wins wherever there
+            // is one: which side of a wall a ladder is bolted to is physics, not preference.
+            return chosen & 3;
         }
 
         /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
         public int BedPillowModule => _bedPillowModule;
 
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
-        public byte BedFacing(int index) => _bedFacing[index];
+        public byte BedFacing(int index) => _edificeFacing[index];
 
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
@@ -833,15 +854,19 @@ namespace Odyssey.Presentation.World
                 // head, turned the way it was placed. Both halves carry the facing so the drawing
                 // half never has to ask the world which end is which, and only the head carries
                 // the flag — the far cell draws nothing of the bed at all.
+                // The facing is mirrored for **any** record, not only a bed's: a ladder rotates now
+                // too, and the one that does not rotate stores nought anyway (ConstructionGrid's
+                // RaiseEdifice reads it off the def). A second array for the second rotatable thing
+                // would have been two copies of one fact.
                 bool bed = placed.Def == CoreContent.EdificeBed && !placed.Removed;
-                _bedFacing[index] = bed ? placed.Facing : (byte)0;
+                _edificeFacing[index] = placed.Removed ? (byte)0 : placed.Facing;
                 _bedHead[index] = bed && placed.CellIndex == index;
             }
             else
             {
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
-                _bedFacing[index] = 0;
+                _edificeFacing[index] = 0;
                 _bedHead[index] = false;
             }
 

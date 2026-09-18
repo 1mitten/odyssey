@@ -129,6 +129,43 @@ namespace Odyssey.Tests.Presentation
                 "the pushing leg is at full stretch on rock and on rungs alike");
         }
 
+        /// <summary>
+        /// **Letting go happens during the climb, not after it** (owner, 2026-09-18: the top of a
+        /// ladder "jolts", the arms are "still way up when they should come down level with the
+        /// ledge", and it "seems to stall for a moment").
+        ///
+        /// <para>All three were the weight holding at 1 for the whole step and only starting to
+        /// ease out on the frame the step ended — 0.15 s of a figure standing on the ledge with its
+        /// arms overhead while most of a metre of lean unwound underneath it.</para>
+        /// </summary>
+        [Test]
+        public void TheClimbLetsGoBeforeItArrives()
+        {
+            Assert.That(PawnFigureDirector.ToppingOut(0.5f, up: true), Is.EqualTo(1f),
+                "the middle of a climb is all climb");
+            Assert.That(PawnFigureDirector.ToppingOut(1f, up: true), Is.EqualTo(0f),
+                "and none of it is left on arrival");
+            Assert.That(PawnFigureDirector.ToppingOut(0.9f, up: true), Is.InRange(0f, 1f).And.LessThan(1f),
+                "the last quarter is the letting go");
+
+            // Going down, the top of the ladder is the START of the step — a colonist stepping off
+            // a ledge is at the top on its first frame. Reading the phase without the direction
+            // would have it let go at the bottom of every descent, which is the one place it needs
+            // to be holding on.
+            Assert.That(PawnFigureDirector.ToppingOut(0f, up: false), Is.EqualTo(0f));
+            Assert.That(PawnFigureDirector.ToppingOut(1f, up: false), Is.EqualTo(1f));
+
+            // Monotonic in both directions: a weight that went up and down inside one step is a
+            // stutter, which is the class of fault this whole change is about.
+            float previous = -1f;
+            for (int i = 0; i <= 20; i++)
+            {
+                float now = PawnFigureDirector.ToppingOut(i / 20f, up: false);
+                Assert.That(now, Is.GreaterThanOrEqualTo(previous));
+                previous = now;
+            }
+        }
+
         [Test]
         public void EveryFootholdIsBelowTheHip()
         {
