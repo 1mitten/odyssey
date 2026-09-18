@@ -87,12 +87,23 @@ namespace Odyssey.Sim.World
             ushort cropGrowth = ushort.MaxValue;
             if (_zones != null)
             {
-                int plant = _zones.ZonePlantAt(cell);
+                // A click on a field lands on the ground it is drawn on - the SOLID cell - while
+                // the zone lives in the air cell a colonist stands in, exactly as a tree does.
+                // So the ground answers for the zone above it, the same one-step-up lift the
+                // picker's "block below" rule plays from the other side; asking only the clicked
+                // cell made the pane silent over every field.
+                int zoneCell = cell;
+                if (_zones.ZonePlantAt(zoneCell) < 0
+                    && _grid.IsSolidTerrain(cell)
+                    && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
+                    zoneCell += _grid.Size.LayerStride;
+
+                int plant = _zones.ZonePlantAt(zoneCell);
                 if (plant >= 0)
                 {
                     zonePlant = (byte)plant;
-                    if (_zones.IsPlanted(cell))
-                        cropGrowth = (ushort)_zones.Plant(plant).Milligrowth(_zones.GrowthTicks(cell));
+                    if (_zones.IsPlanted(zoneCell))
+                        cropGrowth = (ushort)_zones.Plant(plant).Milligrowth(_zones.GrowthTicks(zoneCell));
                 }
             }
 

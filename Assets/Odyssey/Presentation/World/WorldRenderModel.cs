@@ -655,12 +655,12 @@ namespace Odyssey.Presentation.World
         /// that gets the test wrong draws a cube rather than nothing at all — the same courtesy
         /// <see cref="StoneModule"/> extends.</para>
         /// </summary>
-        public int EarthModule(int index, int variant, bool showsAFace)
+        public int EarthModule(ushort terrain, int variant, bool showsAFace)
         {
-            if (showsAFace) return EarthFaceModule(index, variant, 0b1111);
+            if (showsAFace) return EarthFaceModule(terrain, variant, 0b1111);
 
-            int[] variants = _turfModule[_terrain[index]];
-            return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+            int[] variants = _turfModule[terrain];
+            return variants.Length == 0 ? _terrainModule[terrain] : variants[variant % variants.Length];
         }
 
         /// <summary>
@@ -672,10 +672,10 @@ namespace Odyssey.Presentation.World
         /// the same courtesy <see cref="StoneModule"/> extends: a caller that gets the test wrong
         /// draws a cube rather than nothing at all.</para>
         /// </summary>
-        public int EarthFaceModule(int index, int variant, int canonicalExposure)
+        public int EarthFaceModule(ushort terrain, int variant, int canonicalExposure)
         {
-            int[] family = _earthFaceModule[_terrain[index]];
-            if (family.Length == 0) return _terrainModule[_terrain[index]];
+            int[] family = _earthFaceModule[terrain];
+            if (family.Length == 0) return _terrainModule[terrain];
 
             int pattern = GroundMesh.PatternIndex(canonicalExposure);
             if (pattern < 0) pattern = GroundMesh.ExposurePatterns.Length - 1;

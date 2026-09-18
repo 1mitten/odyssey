@@ -58,6 +58,34 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ClickingTheGroundUnderAFieldAnswersForTheZoneAboveIt()
+        {
+            ColonyWorld colony = Field(colonists: 1);
+            Sow(colony, colony.Start);
+
+            // A click lands on the solid ground the field is drawn on; the zone is the air cell
+            // above. The pane must answer for that zone or it stays silent over every field.
+            var ground = new CellRef(colony.Start.X, colony.Start.Z, colony.Start.Y - 1);
+            colony.World.Intents.Submit(new Intent(IntentKind.QueryCell, ground));
+            colony.World.Tick();
+
+            Assert.That(colony.World.Views.Current.TryGetCellDetail(
+                Size.Index(ground.X, ground.Z, ground.Y), out CellDetail detail), Is.True);
+            Assert.That(detail.ZonePlant, Is.EqualTo((byte)PlantHandle.Carrot),
+                "the ground under a field names the crop growing above it");
+            Assert.That(detail.CropGrowth, Is.EqualTo(ushort.MaxValue),
+                "nothing is planted yet, so the pane says awaiting its seed");
+
+            var elsewhere = new CellRef(ground.X + 5, ground.Z + 5, ground.Y);
+            colony.World.Intents.Submit(new Intent(IntentKind.QueryCell, elsewhere));
+            colony.World.Tick();
+            Assert.That(colony.World.Views.Current.TryGetCellDetail(
+                Size.Index(elsewhere.X, elsewhere.Z, elsewhere.Y), out CellDetail bare), Is.True);
+            Assert.That(bare.ZonePlant, Is.EqualTo(byte.MaxValue),
+                "a cell with no zone above it says nothing about growing");
+        }
+
+        [Test]
         public void ASowerKneelsRatherThanChops()
         {
             ColonyWorld colony = Field(colonists: 1);

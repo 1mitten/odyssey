@@ -236,7 +236,8 @@ namespace Odyssey.Presentation.Rendering
         {
             if (ScatterDensity <= 0) return;
 
-            ushort terrain = _model.Terrain(index);
+            // The drawn terrain, so a zoned cell - drawn as dirt - grows no tuft through it.
+            ushort terrain = _model.DrawnTerrain(index);
             if (terrain != NaturalContent.TerrainGrass) return;
             if (!_model.IsSolid(index)) return;
 

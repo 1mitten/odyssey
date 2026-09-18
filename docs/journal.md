@@ -5905,3 +5905,22 @@ Seamless by construction — one quad per cell, the cell IS the tile — and boo
 construction: there is nothing to stack, and an unzoned cell reverts to grass. The mesh route's
 remains are gone whole: emitter, module id, catalogue row (the last is unreachable dead data in
 the committed asset until the next rebuild rewrites it out).
+
+### The brown that did not show, and the pane that did not answer (2026-09-18)
+
+Both of the owner's plays found real faults. The brown did not show because the meadow's ground
+is not drawn by the path the swap sat in: grass is EARTH, and the earth contributor resolves its
+mesh from the grid's own terrain — the swap changed the tint input and the tint table barely
+distinguishes grass from bare earth, so a dirt-tinted grass block read as grass. The earth path
+now resolves by the terrain the cell carries — the drawn terrain — and the tuft scatter gates on
+it too, so a zoned cell draws earth and grows no grass through it.
+
+And the pane was silent over every field for the reason the fixture always knew: a click lands
+on the SOLID ground the field is drawn on, while the zone lives in the air cell above, exactly
+as a tree does. The contributor now asks one cell up when the clicked cell is solid ground —
+the picker's own "block below" rule played from the other side — with a test pinning the ground
+cell's answer and a far cell's silence.
+
+Both were invisible to the fast tier, again: one lived in the terrain contributor chain, the
+other in a query path no fast test drove. The Unity tier caught the rename's leftover within a
+minute of being allowed to run.
