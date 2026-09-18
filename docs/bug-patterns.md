@@ -32,6 +32,7 @@ Every occurrence so far:
 | Which cells does a bed claim? | the simulation's guard, and the ghost | ghost drew legal, click did nothing |
 | What layer does a run land on? | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | a deck with a hole in it |
 | **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
+| Is this cell the foot of a terrace step? | `BankLayout` (render mirror), `TerraceFoot` (cell grid) | allowed on purpose: different data, pinned cell-by-cell by `TerraceFootTests` |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -180,6 +181,118 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-19 — Every dear step began with the figure standing still (P5)
+
+Found by a smoothness test, never reported, and in the game since any step cost more than 100.
+
+`MovePercent` is a whole percent of the step. A 240-tick hop therefore spends its **first 2.4 ticks
+at nought percent**, and every reader gated on `MovePercent > 0` — the pose, the climb phase, the
+gait hold — treated the pawn as standing still through them, then caught it up in one frame: **30 mm
+against the 10 mm a frame that climb moves**. On a flat cell, which costs exactly 100, it cannot
+happen at all, which is why five sessions of watching colonists walk never showed it.
+
+**A new shape worth naming: a threshold that is exact for the common case and wrong for every other
+one.** `MovePercent > 0` is not a test for "moving", it is a test for "moving *and* the step is cheap
+enough that a percent has ticked over". Ask of any threshold on a published number: *what does the
+number do on the case this was not written for?*
+
+**Stopped by** `PawnView.Moving`, which asks the per-mille progress, and by
+`HopArcTests.AClimbIsSmoothFrameToFrameAllTheWayUp` — which measures the **variation** between
+frames rather than a maximum, because a hitch and a rhythm both pass a maximum comfortably.
+
+### 2026-09-19 — One ramp, two steps, two different prices (P1)
+
+*"The slowness needs to start happening much earlier when entering the beginning of the tile … you
+slow down and then you seem to still go slow on the flat so it's out of sync."*
+
+**A seam, not a curve.** The bank spans one cell; a step spans two half-cells. So the drawn ramp was
+split down the middle of the foot cell between two steps priced for different things — the walk in at
+flat-grass price (drawn at 1.9 m/s, faster than walking) and the hop out at 240 (0.62 m/s, and it
+kept charging that across the flat top). Both halves of the report are that one seam, seen from
+either side.
+
+**It is P1 wearing geometry.** One rule — what a slope costs — with two owners, and here the two
+owners are two *steps* rather than two files. The question to ask of any cost: **does the thing it
+prices line up with the thing that is drawn?** A step is charged between cell centres; art is drawn
+between cell edges; those are half a cell apart, and anything whose appearance spans a cell will be
+charged by two steps that know nothing of each other.
+
+**Stopped by** giving the cell its own cost (`NaturalContent.CostClassSlope`, worth
+`MoveCost.SlopeExtra` = `JumpUp − Orthogonal`, stated as a subtraction so the pair cannot drift) and
+by `PawnPose.StepPace`, which spends each step's time where its climbing is. `TerraceSlopeCostTests`
+asserts the two prices are equal; `HopArcTests.TheFlatsAreWalkedAndTheRampIsClimbed` asserts the ramp
+is one speed from bottom to top with a walk either side.
+
+**And a caution about goldens.** None of the three moved, which was luck rather than inertness: the
+golden windows are a flat meadow, a start clearing chosen for being flat, and a city of pavement.
+A cost change that moves no hash wants a direct test, not a shrug.
+
+### 2026-09-18 — Every fixture had a bank in it, so nobody saw the 1.5 m teleport
+
+Found while measuring a new climb, not reported by anybody.
+
+**A hop up a step with no bank — against rock, inside a working, under a roof — snapped the figure
+1.51 m in a single frame**, and had done since hops were first drawn. The cause is the ground clamp:
+the cell a walker is *over* switches at the midpoint of a step, so with no ramp the ground under it
+is flat for the first half and a whole layer higher for the second. Any height curve timed across
+the whole step reached half its height and was then clamped the rest of the way at once. The mirror
+of it, on a sheer drop, was 657 mm.
+
+**A new shape worth naming: the fixture chose the case.** `BankFootingTests` measures exactly this,
+five ways across a terrace, four hundred samples a step — and every one of its worlds is a *terrace*,
+which by construction has a bank in it. The bank's ramp made the ground continuous and the fault
+invisible. It is the same shape as `GroundRelief.Reset()` hiding the relief snap two days earlier:
+a thorough test suite whose fixtures all share one convenient property.
+
+**Ask of any fixture: what does it always have that the game does not?**
+
+**Stopped by** `HopArcTests.ASheerFaceIsClimbedSmoothlyRatherThanInStrides` and
+`ADropDownASheerFaceIsAsFastAsTheGeometryAllows`, which build a step of bare rock and assert the
+fixture has no bank before measuring anything. The climb now completes by the midpoint and the fall
+starts there.
+
+### 2026-09-18 — A stride could not be drawn because progress was published as a whole percent (P5)
+
+A climb drawn in strides stuttered: 134 mm in one frame where 50 is the budget.
+
+**The cause was a layer away from the motion.** `PawnView.MovePercent` is a whole percent, and the
+sub-tick term cannot smooth it — at 60 frames and 60 ticks a second there is about one frame to a
+tick. A flat cell costs 100, so a percent a tick is exact and the quantisation has never been
+visible; a 240-tick hop advances a whole point every 2.4 ticks, so the figure stands still for two
+frames and then jumps a hundredth of the step. On the flat that jump is 25 mm. Concentrated into a
+stride it was 134.
+
+**Two wrong probes before the right one**, both worth remembering. The first sampled only at
+`tickAlpha = 0`, so the two arms of the comparison were identical and the sub-tick term looked
+innocent. The second sampled per percent — the very granularity under suspicion — so it reported the
+quantisation as the motion.
+
+**Stopped by** `PawnView.MovePerMille`, ten times the resolution, published beside the percent rather
+than instead of it, and by `BankFootingTests.WorstJump` sampling per mille: an instrument coarser
+than what it measures reports quantisation as a teleport.
+
+### 2026-09-18 — Trees grew inside the hillside at the top of every terrace step
+
+*"The flat side of the terrain where the height changes … things generate in those tiles … Trees
+shouldn't be generated in those spots because they get clipped by this façaded terrain."*
+
+**A new shape, and the one to watch for next: a façade with nothing behind it, in a cell the
+simulation is free to fill.** A bank — the ramp drawn up a terrace step — fills the empty cell at
+the foot of the step from floor to rim, and `Odyssey.Sim` does not know it exists, by design. Every
+other façade in this project is drawn *on* ground that stays empty (relief, tufts, chips, banks of
+the surrounding land); this one occupies a cell that worldgen scatters into and colonists walk
+through. Ask of any new façade: **can the simulation put something where this is drawn?**
+
+**It read as an art fault because the commonest case is handled.** `PawnPose` lifts a walking figure
+onto the bank's surface, so colonists look right; only things that are never lifted — a generated
+tree, a body lying down — are swallowed.
+
+**Stopped by** `TerraceFoot.IsFoot`, the simulation's copy of the rule, which `TreePass` asks before
+placing a tree. Two owners (P1) and allowed, because worldgen has no render mirror to ask — so
+`TerraceFootTests` requires the two to agree in every cell of seven boards, four of which are cases
+where the right answer is *no bank*. `docs/design/22-terrace-steps.md` §4 records what is still
+unguarded: a colonist lying down in one, and an item dropped in one.
 
 ### 2026-09-18 — Typing a save name drove the game behind the dialog
 

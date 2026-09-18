@@ -150,8 +150,34 @@ namespace Odyssey.Sim.Pathing
         /// rather than climb. That is the right answer anyway (hopping a one-block ledge really is
         /// quicker than a ladder) and they almost never compete: a ladder spans a shaft nothing
         /// can hop out of, and a hop needs a block top beside it that a shaft does not have.</para>
+        ///
+        /// <para><b>135 was too fast, seen in play on 2026-09-18</b> (owner: <i>"the colonists
+        /// looked too fast going up definitely — I saw that … should be much slower"</i>), and this
+        /// time the number is derived rather than halved. A hop is <b>drawn</b> along the slope
+        /// from one cell centre to the next: 2.5 m across and 3.0 m up is a path
+        /// <b>3.91 m</b> long. Cost is duration, so at 135 — 2.25 s — the figure was drawn covering
+        /// it at <b>1.74 m/s against the 1.50 m/s of walking on the flat</b>. Climbing a terrace
+        /// was literally quicker than strolling beside it, which is exactly what the eye picked
+        /// up.</para>
+        ///
+        /// <para><b>The two bounds are what make 240 a choice rather than a guess.</b>
+        /// <i>Floor:</i> 3.91 m at walking pace is 2.60 s, or <b>156</b> — below that a climb is
+        /// drawn faster than a walk and no motion work can hide it. <i>Ceiling:</i>
+        /// <see cref="StairUp"/> at <b>290</b> — past that a colonist walks to a stair rather than
+        /// hopping a single block, and a hop must stay the cheapest way up one block or the
+        /// terraces stop being crossable ground. 240 is 4.0 s, <b>0.98 m/s along the slope</b>,
+        /// about two thirds of a walking pace: a visible labour, and still 11% quicker than the 270
+        /// that once read as being stuck.</para>
+        ///
+        /// <para><b>And this time the motion carries it.</b> 270 read as stuck because the figure
+        /// slid up the bank at a dawdle with a walk cycle under it. A hop is now drawn as a hop —
+        /// <c>HopArc</c> gathers, heaves the figure over the lip and settles it — and the gait is
+        /// held through the step rather than solved from the speed, because a hop is not ground
+        /// locomotion. If 240 still reads as stuck, that is the pose to look at before this number.
+        /// To retune: change this one constant, then re-bake the goldens
+        /// (<c>ODYSSEY_REGOLDEN=1 scripts/test-fast.sh --filter TestCategory=Long</c>).</para>
         /// </summary>
-        public const int JumpUp = 135;
+        public const int JumpUp = 240;
 
         /// <summary>
         /// Dropping down onto the block below: half of a flat cell, because you mostly let go.
@@ -169,6 +195,24 @@ namespace Odyssey.Sim.Pathing
         /// of wrong from the one being fixed. Say the word and it goes to 25.</para>
         /// </summary>
         public const int Drop = 50;
+        /// <summary>
+        /// What a cell of slope adds to walking into it — the addend behind
+        /// <c>NaturalContent.CostClassSlope</c>, so that entering the foot of a terrace costs
+        /// exactly <see cref="JumpUp"/>.
+        ///
+        /// <para><b>It is here, beside the hop, because the two must not drift apart.</b> A terrace
+        /// climb is drawn as one ramp and charged as two steps — the walk on to the foot cell and
+        /// the hop out of it — with the ramp split down the middle between them. If the two prices
+        /// differ, the figure changes speed half way up a slope that does not change, which is what
+        /// the owner reported on 2026-09-18 when the first half was priced as flat ground. Stating
+        /// it as a subtraction rather than as 140 is what keeps them equal when either moves.</para>
+        ///
+        /// <para>This file and <c>NavGraph.cs</c> are the two <c>HopPriceHasOneOwnerTests</c> allows
+        /// to name a hop's price, and that guard is why the arithmetic is here rather than next to
+        /// the cost table it feeds.</para>
+        /// </summary>
+        public const int SlopeExtra = JumpUp - Orthogonal;
+
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
@@ -317,7 +361,23 @@ namespace Odyssey.Sim.Pathing
             int below = index - Size.LayerStride;
             if (below < 0) return 0;
             ushort under = grid.Terrain[below];
-            return under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
+            byte beneath = under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
+            if (beneath != 0) return beneath;
+
+            // **A slope, which no terrain says and the shape of the ground does.**
+            //
+            // The cell at the foot of a terrace step is drawn as a ramp from the lower floor to
+            // the rim above (`TerraceFoot`, `BankLayout`), so crossing it is climbing, and it was
+            // being priced as the flat grass beneath it. See NaturalContent.CostClassSlope.
+            //
+            // Asked last, so that a wet or boggy cell keeps the class its terrain gives it: a bank
+            // may shelve into a stream, and water is the stronger claim about what it costs to
+            // cross. Asked at all only when both terrain tests came back clear, which is most of
+            // the board, so the cost of asking is the cheap half of TerraceFoot — see the note on
+            // the neighbour scan there.
+            return Worldgen.TerraceFoot.IsFoot(grid, index)
+                ? Worldgen.Natural.NaturalContent.CostClassSlope
+                : (byte)0;
         }
 
         public RegionKind KindOf(int index)

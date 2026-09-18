@@ -45,7 +45,18 @@ namespace Odyssey.Tests.Presentation
         static PawnView Standing(CellRef cell) => Walking(cell, cell, 0);
 
         static PawnView Walking(CellRef from, CellRef to, int percent) =>
-            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, percent);
+            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, percent,
+                movePerMille: percent * 10);
+
+        /// <summary>
+        /// The same at the resolution the figure is actually drawn at: per mille of the step, which
+        /// is what the snapshot publishes and what one tick of a dear step advances. Sampling by
+        /// whole percent measures a quantisation the game no longer has — see
+        /// <see cref="PawnView.MovePerMille"/>.
+        /// </summary>
+        static PawnView WalkingPerMille(CellRef from, CellRef to, int perMille) =>
+            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, perMille / 10,
+                movePerMille: perMille);
 
         // ------------------------------------------------------------------ the surface
 
@@ -160,16 +171,33 @@ namespace Odyssey.Tests.Presentation
             // The fault this half of the change is for. A hop's chord runs from one cell centre to
             // the next, which for a step up passes a metre and a half *inside* the block being
             // climbed — so the figure waded up through the ground for the second half of every hop,
-            // bank or no bank. Measured at the midpoint, where the chord is worst.
+            // bank or no bank.
+            //
+            // **Stated over the boundary rather than over the clock**, since 2026-09-19. It used to
+            // sample at half the step's *time* and require the figure to be on top by then, which
+            // was the same thing while half the time was half the path. `PawnPose.StepPace` spends
+            // the time where the climbing is, so at half the clock the figure is two thirds of the
+            // way up the ramp and still has a moment to go — and that is the change working, not a
+            // regression. What must still hold, and is what this ever meant, is that the figure is
+            // on top of the step from the moment it is over the upper cell.
             RenderTestWorld world = Terrace();
             CellRef from = Bank();
             var to = new CellRef(2, from.Z, 3);      // on top of the riser
 
             float stepTop = CellMetrics.FloorCentre(to).y;
-            Vector3 middle = PawnPose.Of(Walking(from, to, 50), 0f, 0, out _, world.Model);
+            float boundary = (CellMetrics.FloorCentre(from).x + CellMetrics.FloorCentre(to).x) * 0.5f;
 
-            Assert.That(middle.y, Is.GreaterThanOrEqualTo(stepTop - 1e-3f),
-                "half way through a hop the figure is inside the block it is climbing");
+            for (int perMille = 0; perMille <= 1000; perMille++)
+            {
+                Vector3 at = PawnPose.Of(WalkingPerMille(from, to, perMille), 0f, 0, out _, world.Model);
+
+                // Over the upper cell: the riser runs along x, and `to` is the lower x of the two.
+                if (at.x > boundary) continue;
+
+                Assert.That(at.y, Is.GreaterThanOrEqualTo(stepTop - 1e-3f),
+                    $"at {perMille} per mille the figure is over the upper cell at {at.y}, inside " +
+                    $"the block it is climbing, whose top is {stepTop}");
+            }
         }
 
         // ------------------------------------------------------------------ continuity
@@ -183,14 +211,19 @@ namespace Odyssey.Tests.Presentation
         /// </summary>
         static float WorstJump(RenderTestWorld world, CellRef from, CellRef to)
         {
-            const int samples = 400;
+            // **Per mille, not per percent**, since 2026-09-18. The figure is drawn from
+            // PawnView.MovePerMille and one tick of the dearest step there is advances a few of
+            // them, so a thousandth is the finest step the drawn position ever takes. Sampling by
+            // whole percent measured a quantisation the game had and has not any more, and it read
+            // a deliberate stride up a bank — 13 mm a frame — as a 134 mm teleport.
+            const int samples = 1000;
             float worst = 0f;
             float previous = PawnPose.Of(Standing(from), 0f, 0, out _, world.Model).y;
 
             for (int i = 0; i <= samples; i++)
             {
-                int percent = Mathf.RoundToInt(i * 100f / samples);
-                float y = PawnPose.Of(Walking(from, to, percent), 0f, 0, out _, world.Model).y;
+                int perMille = Mathf.RoundToInt(i * 1000f / samples);
+                float y = PawnPose.Of(WalkingPerMille(from, to, perMille), 0f, 0, out _, world.Model).y;
                 worst = Mathf.Max(worst, Mathf.Abs(y - previous));
                 previous = y;
             }

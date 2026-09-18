@@ -136,6 +136,30 @@ namespace Odyssey.Tests.Sim
     /// boards at 850 to 1,150 a tick instead of in step. WS2's rate work moved none of these by
     /// the same reasoning recorded two entries down, and this entry is the re-bake the unit's row
     /// promised would be deliberate.</para>
+    ///
+    /// <para><b>Moved a ninth time, 2026-09-18, by the terrace guard, and <i>only the wooded
+    /// board</i>.</b> <c>TreePass</c> refuses a tree in a cell at the foot of a terrace step,
+    /// because presentation fills that cell with a bank and the tree is sheared off by it — see
+    /// <c>TerraceFoot</c>. So the played board grows a few dozen fewer trees, and both its numbers
+    /// moved: <c>Generated</c> because a tree is an edifice in the grid and the grid is hashed
+    /// before the first tick, and <c>Simulated</c> because it inherits that board.</para>
+    ///
+    /// <para><b>Moved a tenth time the same day, by the hop's price, and this time the two boards
+    /// with steps in them moved and the flat one did not.</b> <c>MoveCost.JumpUp</c> went from 135
+    /// to 240 because the owner saw a colonist climb a terrace faster than one walked beside it —
+    /// the arithmetic is in the constant's own comment. A price is not content and nothing is
+    /// placed differently, so <b>no <see cref="Case.Generated"/> value moved</b>; the wooded board
+    /// and the ruined city both have one-block steps on them, so their colonists reach a different
+    /// state over 10,000 ticks and both <c>Simulated</c> values did. <b>The barren meadow did not
+    /// move at all</b> — <c>MakeBarren</c> is one flat table, there is no step on it to hop, and a
+    /// colonist who never hops cannot notice what hopping costs. That is the control, and it is a
+    /// sharper one than usual: it separates "the price changed" from "everything moved".</para>
+    ///
+    /// <para><b>The other two cases did not move at all, and that is the control.</b> The barren
+    /// meadow grows no trees and the ruined city's generator has no <c>TreePass</c> in it, so a
+    /// guard on tree placement can reach neither — measured by running the whole table and reading
+    /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
+    /// else moving would have meant something had come along uninvited.</para>
     /// </summary>
     public static class Golden
     {
@@ -207,8 +231,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 15662665231234558495UL,
-            Simulated = 8598539094455010883UL,
+            Generated = 4458515928023308940UL,
+            Simulated = 1174039887129915637UL,
         };
 
         /// <summary>
@@ -245,7 +269,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 8696720977944009509UL,
+            Simulated = 15543912199131212387UL,
         };
     }
 }

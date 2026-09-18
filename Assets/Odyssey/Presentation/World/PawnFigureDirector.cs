@@ -1019,12 +1019,31 @@ namespace Odyssey.Presentation.World
         /// weight to 99% idle in ten frames, 0.167 s: a figure that visibly snapped to a standing
         /// pose the instant the player pressed space. Held instead, it keeps the stride it was
         /// drawn in and picks the walk straight back up when the world moves again.</para>
+        ///
+        /// <para><b>And held through a hop, for the same reason in a different disguise</b>
+        /// (2026-09-18). A hop is not ground locomotion: after the gather the figure is in the air,
+        /// and the horizontal speed it happens to be carrying there is an artefact of what the step
+        /// costs. Measured both ways at the old price: a drop crossed a cell at <b>3.0 m/s</b>,
+        /// past the fastest gait this cast owns (2.60 m/s), so a colonist stepping off a terrace
+        /// pinned to the run cycle, played it rate-stretched for eight tenths of a second and
+        /// snapped back to a walk. A climb at the new price is the opposite fault — 0.63 m/s across
+        /// the cell, which blends a third of the idle in and reads as a dawdle up the hillside,
+        /// which is precisely what the last retune of <c>MoveCost.JumpUp</c> produced and was
+        /// rejected for. Holding the stride the figure arrived with covers both: the legs keep the
+        /// cadence they had, and the <see cref="HopArc"/> does the talking.</para>
+        ///
+        /// <para>The cost of holding is that the cadence does not answer to the strides the climb
+        /// is drawn in: the body pushes up on to each tread and the legs keep the rhythm they
+        /// arrived with. If the feet ever read as sliding up the bank, this is the line to look at
+        /// — and the honest answer then is a climb pose, which no pack we own contains, rather than
+        /// solving the gait from a speed that swings between a push and a plant.</para>
         /// </summary>
         public static float ObserveSpeed(float previous, Vector3 simPosition, Vector3 position,
-            float deltaTime, bool settled)
+            float deltaTime, bool settled, bool hopping = false)
         {
             if (!settled) return 0f;
             if (deltaTime <= 1e-5f) return previous;
+            if (hopping) return previous;
 
             Vector3 moved = position - simPosition;
             moved.y = 0f;
@@ -1174,7 +1193,7 @@ namespace Odyssey.Presentation.World
             // If lifts ever land this has to become a question about the connector's KIND rather
             // than its geometry, because a lift is vertical and you stand in it.
             bool straightUp = pawn.NextCell.X == pawn.Cell.X && pawn.NextCell.Z == pawn.Cell.Z;
-            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y && straightUp
+            figure.ClimbPhase = pawn.Moving && pawn.NextCell.Y != pawn.Cell.Y && straightUp
                 ? HeldClimbPhase ?? Mathf.Clamp01(pawn.MovePercent * 0.01f)
                 : -1f;
 
@@ -1313,7 +1332,8 @@ namespace Odyssey.Presentation.World
             // nothing about ticks. A figure that has just been leased has no previous position
             // worth differencing, hence Settled.
             bool settled = figure.Settled;
-            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled);
+            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled,
+                hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
             figure.Settled = true;
             figure.SimPosition = position;
 
