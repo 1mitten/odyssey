@@ -775,6 +775,75 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Giving an order shuts whatever menu was up over the board, and gives the order.
+        ///
+        /// <para>Owner, 2026-09-18: <i>"if I'm in the build menu (or any other menu) and I click on
+        /// an order — I expect that menu to be closed down and the … order would happen"</i>. The
+        /// orders strip is the one control that is on screen whether or not anything else is, which
+        /// is why it was taken out of the palette's header in the first place — so it is precisely
+        /// the control a player reaches for from inside something else.</para>
+        ///
+        /// <para><b>Both halves are asserted, and the second is the one worth having.</b> A close
+        /// that also swallowed the order would look right in a screenshot and be a worse bug than
+        /// the overlap it replaced: the menu goes, and nothing the player asked for happens. So the
+        /// tool is checked in the director afterwards, not just the panel's display.</para>
+        ///
+        /// <para>Driven with a real <c>ClickEvent</c> on the real button, the way
+        /// <c>BedOwnerPickerTests</c> is — this cannot be a fast-tier test, because what is being
+        /// proved is that a shell built by the composition root wires the two together.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AnOrderClosesWhateverMenuWasOpenAndStillHappens()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                // "the build menu (or any other menu)" — both bar popovers, one after the other.
+                foreach (string menu in new[] { "build", "menu" })
+                {
+                    VisualElement? opener = ButtonFor(doc, menu);
+                    Assert.That(opener, Is.Not.Null, $"the command bar has no {menu} button");
+                    using (var open = ClickEvent.GetPooled())
+                    {
+                        open.target = opener;
+                        opener!.SendEvent(open);
+                    }
+                    yield return Settle(doc);
+
+                    VisualElement? panel = doc.rootVisualElement.Q(name: menu);
+                    Assert.That(panel, Is.Not.Null, $"the shell built no {menu} popover");
+                    Assert.That(panel!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        $"the {menu} popover did not open, so this proves nothing");
+
+                    // Put the order down first if a previous pass left it held: the strip toggles,
+                    // and a test that armed nothing would pass its "menu closed" half regardless.
+                    boot.Directors!.Designate.Tool = DesignateTool.None;
+
+                    VisualElement? order =
+                        doc.rootVisualElement.Q(name: "action-" + PaletteTools.Fell);
+                    Assert.That(order, Is.Not.Null, "the orders strip has no Chop button");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = order;
+                        order!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(panel.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        $"giving an order left the {menu} popover standing over the board");
+                    Assert.That(boot.Directors!.Designate.Tool, Is.EqualTo(DesignateTool.Fell),
+                        $"the {menu} popover closed but the order never happened");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Open the Build palette and hand back the panel.
         /// </summary>
         static IEnumerator OpenPalette(UIDocument doc)

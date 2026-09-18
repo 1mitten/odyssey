@@ -93,6 +93,59 @@ art (§5).
 than dimming it, which is what lets the stock state be read without putting a number on the button
 — and **no stock counts render on the buttons**, by instruction.
 
+### 3a. An empty category is dim (owner, 2026-09-18)
+
+> *"On the build menu could to disable when top groups that have nothing to build — just gray them
+> out for now … gray anything that cannot be built for the time being — so we understand what we
+> can build."*
+
+**The tool tier had done this since it existed; the category tier had never done it at all.** A
+sub-type with nothing behind the key is drawn `bp__tile--off` — dim ink, faint fill, no click, and a
+tooltip saying why. The category above it was painted in full hue whatever it held, so four of the
+seven were as loud as Structure while holding nothing a player could place:
+
+| Category | Live | Category | Live |
+|---|---|---|---|
+| Structure | 4 of 7 | Power | **0 of 4** |
+| Furniture | 1 of 5 | Security | **0 of 3** |
+| Floors | 1 of 3 | Recreation | **0 of 3** |
+| Production | **0 of 4** | | |
+
+**An empty category loses its hue entirely rather than fading it.** A faded hue at a 20 px glyph
+reads as a rendering fault rather than as a state, and it would give the palette a second way of
+saying what `SubTypeDisabledInk` already says one tier down. The empty tile takes the sub-type
+tier's own disabled triple — `SubTypeDisabledFill`, `SubTypeDisabledBorder`, `SubTypeDisabledInk` —
+so "not yet" looks the same wherever it appears in this panel. This is a **deliberate exception to
+§3's hue-per-row rule**: the rule is what makes a category identifiable, and a category with nothing
+in it is not one the player needs to identify yet.
+
+**It still opens, and that is the decision rather than an oversight.** Three treatments were offered
+and the owner took this one. Dimming is the information; blocking the click would only hide the
+plan, and the reason to draw seven categories while four are empty is precisely that a player can
+look inside Power and see what is coming. It is safe because opening an empty category **cannot arm
+anything**: `SelectCategory` finds no live tool, falls back to the first entry, and `ApplySubType`
+returns at its `TryGet` — which `AnEmptyCategoryOpensAndArmsNothing` asserts on both halves, since
+"still openable" is only defensible while the second half holds.
+
+**An open empty category keeps a visibly open state**, dim but brighter-bordered, because a player
+who clicked into Power still has to be able to see which tile they opened.
+
+**The count is the tooltip and nothing else.** *"Structure — 4 of 7 built"*, *"Power — nothing here
+is built yet"*. A count drawn on the tile was offered and refused: it is development bookkeeping on
+a player-facing panel, and it would want removing later. `PaletteTools.LiveToolsIn` is where it is
+counted — a count rather than a flag, because the tooltip needs the number and a flag would have
+meant walking the same table twice.
+
+**The categories paint from code, not from the sheet** (`Hud.uss` says so at the neutral tier), so
+the dim state lives in `PaintBuild`'s category loop as well as in `CategoryTile`. The loop writes
+inline colours on every repaint and would otherwise paint the hue straight back over a class.
+
+**What this does not cover: a tool you cannot currently afford.** A wall stays lit with no wood and
+no stone in the colony. That is deliberate — a blueprint can be placed and hauled to later, which is
+the genre's norm and the reason `ReadStockFrom`'s null means "in stock" — and the material tier
+already drops its tint to say what is short. If the owner wants "cannot build *right now*" as well
+as "not built *yet*", that is a second state and it needs a second treatment, not this one.
+
 ## 4. Where the panel sits — the one place the specification was overruled
 
 The mockups drew all three floating at a 28 px margin, the panel's corner in the screen's corner.
@@ -121,6 +174,79 @@ space"* (2026-09-17). So:
 This is the rule the bar and the popovers already follow, and the same words the owner used about
 the popovers a day earlier: *"directly above the build button … no spacing and padding to ensure
 tight space"*.
+
+#### The other direction, which was missing for a day (owner, 2026-09-18)
+
+> *"If I have the build menu open and I haven't selected anything to build — I go to click on any
+> tile for info — that panel appears but underneath the build menu. What should happen is the build
+> menu closes and then the tile info can be seen — otherwise windows overlap."*
+
+**Only half of "one panel in the corner" had been written.** Opening the palette cleared the
+selection; selecting something *while* the palette was up did nothing to the palette, so the pane
+opened into the corner the palette was already sitting in and lost. The palette's own placement
+comment had been asserting the invariant this broke — *"the pane is closed when the palette opens
+now, so there is nothing to lift over"* — which was true of one direction and quietly assumed of
+both.
+
+**A selection now closes the palette**, which is the exact inverse of the 2026-09-17 rule rather
+than a new idea. The alternatives are worse: drawing the pane *over* the palette leaves two panels
+stacked in one corner with the palette hidden anyway, and moving either one elsewhere unpicks the
+docking the owner asked for.
+
+**It is asked of the reason, not of the input device.** What collides is the inspect pane, so
+whatever raises the pane closes the palette — a world click, a roster card, an alert jump, a drag
+box, a shift-click that adds somebody. `BuildPaletteModel.ClosedBy` holds the rule, in the
+Unity-free assembly, because which reasons close it is a decision worth testing in seconds.
+
+**`Cleared` must not be one of them, and that is load-bearing rather than tidy.** Opening the
+palette calls `Selection.Clear()`, so a close rule that fired on a cleared selection would shut the
+palette on the frame it opened and the symptom would be a Build button that does nothing.
+`OpeningThePaletteCannotCloseIt` is that trap, written down. `Died` and `LayerChanged` are out for
+the same reason in gentler form: they take a selection away, and nothing new is drawn in the corner.
+An empty selection never closes it either, which covers a shift-click that removes the last
+colonist.
+
+**A tool in hand stays in hand.** This closes a panel; it does not put the player's tool down.
+A *world* selection cannot happen while a tool is armed at all — `SliceCameraRig.WorldToolArmed`
+routes that click to the designate path — so the only way to reach the rule holding something is a
+roster click, and disarming there would silently undo a choice nobody revoked. It also means this
+change cannot interfere with building, which is what makes it safe to apply to every selection
+reason at once.
+
+**The close happens before the pane refreshes**, so there is no frame in which both are up.
+
+#### And giving an order closes any menu (owner, same day)
+
+> *"If I'm in the build menu (or any other menu) and I click on an order — I expect that menu to be
+> closed down and the dialog appear/order would happen."*
+
+**The parenthesis is the requirement.** A rule written about the Build palette alone would have been
+right about the panel that happened to be open when the owner noticed it, and wrong about Menu and
+the bed picker the same afternoon. `CloseMenusOverTheBoard` is one method, called from the order
+button, and it shuts all three.
+
+**The modals are excluded by construction, not by omission.** Settings, the debug windows and
+everything else built through `HudModal` put a pickable scrim over the whole screen, so nothing
+behind one can be clicked at all — the orders strip included. There is no case to handle, and it is
+written down here because the list otherwise looks short.
+
+**Why the strip in particular.** It was taken out of the palette's header on 2026-09-17 precisely so
+that giving an order would not cost opening a panel first (§2). That makes it the one control a
+player reaches for *from inside something else* — and leaving that something else standing is what
+made the click feel as though it had not landed.
+
+**This does not retire the palette's mode colour (§7); it hands the job to the banner.** The panel
+wears the held order's hue while it is open, and the floating armed banner is suppressed for exactly
+as long as that is true. Close the palette on the order click and the banner appears instead — 3 px
+of the same hue against the panel's 2 px hairline, which is the louder of the two and the one the
+owner asked to be *"much thicker"*. The palette's own mode colour still has its cases: an order
+armed by hotkey with the palette open, or armed first and the palette opened after.
+
+**The test asserts that the order still happens**, not only that the menu closed. A close that
+swallowed the order would photograph correctly and be a worse fault than the overlap it replaced —
+the menu goes and nothing the player asked for does. `AnOrderClosesWhateverMenuWasOpenAndStillHappens`
+checks the director afterwards. It is a PlayMode test because what is being proved is that a shell
+built by the composition root wires the two together; there is no fast-tier version of that.
 
 ### 4a. Rows is a column, not a band (owner, second pass)
 

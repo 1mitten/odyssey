@@ -4962,3 +4962,169 @@ being followed everywhere except in the file that states them.
   which of the two senses was cheaper to move — 12 journal references against a contained set of
   three planning documents — which is also what proved the built sense had to be the one that
   stayed.
+
+### The inspect pane resized under the pointer (2026-09-18)
+
+The owner, on the colonist card: *"When I click on tabs like skills/needs — it resizes every time —
+it needs to be at least a fixed size (IE the size of the skills tab) — so that it doesn't resize to
+the content of needs."*
+
+**The pane grows upward from a docked bottom edge, which is what turned a height into a jump.**
+`.inspect` sits at `bottom: 64px`, derived from the command bar, and `HudLayout.InspectHeight` added
+up the *active* tab's rows: Needs is 59 px (two rows of 25, one 9 px gap), Skills is 157 (seven rows
+of 19, six 4 px gaps). Because the bottom is pinned, all 98 px of the difference came off the top —
+the portrait, the name, the tab strip and the first row all moved, and the tab strip is precisely
+where the pointer is at the moment of the click. A pane docked to its *top* would have had the same
+arithmetic and not been worth a complaint.
+
+**Three questions were asked before any code was written, and the owner took the plainest option of
+each**: the height is the tallest tab that exists today rather than a guess at the seven disabled
+ones; a short tab's rows keep the position they already have, with the slack below them rather than
+spread through them; and the tile readout is left content-sized, because with no tab strip it cannot
+resize under the hand.
+
+**The number is derived, not typed.** `HudLayout.InspectTabBody` is `max` of the needs body and the
+skills body, computed from `SkillCatalogue.Rows` and a new `InspectNeeds`. A hand-set 160 would have
+read the same today and clipped the day a fourteenth skill was added — and the skills grid is
+already a computed seven rows precisely because it is the kind of list that grows.
+
+**`InspectHeight`'s row arguments now say only whether there is a body.** They still size a tile's
+readout. That is a deliberate asymmetry rather than an oversight, and the doc comment says so, since
+the next tidy-up would otherwise "unify" the three branches straight back into the bug.
+
+**The stylesheet is the second copy and it is held, not trusted.** `.inspect__tabbody` carries the
+same 157, and the row added to `HudStyleSheetTests`'s table pairs it with `HudLayout.InspectTabBody`
+— the same mechanism that already holds the pane's width, its bottom and its header. The fast tier
+parses the USS, so the two cannot drift without a red test in twenty seconds.
+
+**The test asserts the top edge, not the height.** Equal heights was the obvious assertion and it is
+the weaker one: the complaint is about a thing moving, so `TheColonistPaneIsTheSameHeightOnEveryTab`
+solves both tabs and compares `Y` first.
+
+Nobody has pressed Play on it. The open question a picture cannot answer is whether ninety-eight
+pixels of empty pane under three need bars reads as stable or as broken — and if it reads as broken,
+the answer is more needs, not a shorter box.
+
+### Four of the seven build categories held nothing, and looked no different (2026-09-18)
+
+The owner: *"On the build menu could to disable when top groups that have nothing to build — just
+gray them out for now … gray anything that cannot be built for the time being — so we understand
+what we can build."*
+
+**Half the ask was already done, and finding that out first changed what got built.** "Gray anything
+that cannot be built" is the sub-type tier's behaviour since it existed: a tool with nothing behind
+its key is drawn `bp__tile--off`, dim, unclickable, with a tooltip saying "not built yet; the tool
+arrives with its content". What had never been done was the tier *above* it. Production, Power,
+Security and Recreation hold nothing at all — 0 of 4, 0 of 4, 0 of 3, 0 of 3 — and were painted in
+full category hue beside Structure's 4 of 7. So the answer was one tier, not two, and the existing
+disabled vocabulary was already there to reuse rather than invent.
+
+**The hue goes entirely rather than fading.** Fading was the obvious move and is the worse one: a
+faded hue on a 20 px glyph reads as a rendering fault rather than a state, and it would have given
+the panel a second way of saying what `SubTypeDisabledInk` already says one tier down. The category
+tier is the one place in this HUD allowed a hue per row (design 17 §3) and this is a deliberate
+exception to that rule — the hue is what makes a category identifiable, and a category holding
+nothing is not one the player needs to identify yet.
+
+**It still opens, and the test is on the second half of that claim.** Three treatments were offered;
+the owner took "grey but still openable". Dimming is the information, and blocking the click would
+only hide the plan — the reason to draw seven categories while four are empty is that a player can
+look inside Power and see what is coming. That is only safe because opening an empty category cannot
+arm anything: `SelectCategory` finds no live tool, and `ApplySubType` returns at its `TryGet`. So
+`AnEmptyCategoryOpensAndArmsNothing` asserts the cursor is still empty afterwards, not merely that
+the category opened. It also fails loudly if there is no empty category left to check, which is the
+day to delete the dimming.
+
+**The count is written as an invariant, not as seven numbers.** `ACategorysLiveCountIsWhatItsToolsSay`
+compares `LiveToolsIn` against a walk of the same table rather than against "4, 0, 1, 0, 0, 1, 0".
+`U44` puts a stair into Structure and the first workbench lights Production, and a test that has to
+be edited on each of those is a test that gets edited without being read.
+
+**The repaint loop was the trap.** Categories paint inline from code — `Hud.uss` says so at the
+neutral tier — and `PaintBuild` rewrites their fill, border and ink every repaint. A class on the
+tile alone would have looked right in the editor and been painted back over on the first refresh,
+which is the same silent class of fault as a chip that arms a tool and never lights.
+
+**What was deliberately not done: a tool you cannot afford.** A wall stays lit with no wood and no
+stone. A blueprint can be placed and hauled to later, which is the genre's norm and the reason
+`ReadStockFrom`'s null means "in stock"; the material tier already drops its tint to say what is
+short. "Cannot build right now" is a second state and wants a second treatment.
+
+### One panel in the corner, written in only one direction (2026-09-18)
+
+The owner: *"If I have the build menu open and I haven't selected anything to build — I go to click
+on any tile for info — that panel appears but underneath the build menu. What should happen is the
+build menu closes and then the tile info can be seen — otherwise windows overlap."*
+
+**This was not a new rule; it was the missing half of one the owner gave the day before.** On
+2026-09-17: *"if the tile info dialog is showing, that is closed down and the build mode is open"*,
+and both panels were docked into the same bottom-left corner on the same day. So `SetBuildPalette`
+clears the selection as it opens. Selecting something *while* the palette was up was never wired,
+and the pane opened underneath it.
+
+**The palette's own comment had been asserting the invariant that was broken.** `PlaceBuildPalette`
+says the bottom *"used to lift over the inspect pane when something was selected; the pane is closed
+when the palette opens now, so there is nothing to lift over and the panel sits on the bar in every
+case"*. Every word of that is true of one direction and was quietly assumed of both — the panel
+stopped lifting, and the case where the pane arrives second stopped being handled at the same
+moment. A comment that states an invariant is worth more when it names which direction it was
+proved in.
+
+**Asked of the reason, not of the input device.** What collides is the pane, so whatever raises the
+pane closes the palette. That covers the roster card and the alert jump, which are the same overlap
+reached another way and would have been left broken by a rule written about world clicks.
+
+**`Cleared` had to be excluded, and the exclusion is the interesting part.** Opening the palette
+clears the selection, so a close rule that fired on a cleared selection would have shut the palette
+on the frame it opened — a Build button that does nothing, and a self-inflicted one. The test is
+named for the trap rather than for the behaviour. `Died` and `LayerChanged` are out for the milder
+version of the same reason: they take a selection away and draw nothing new.
+
+**Nothing here can interfere with building, and that was checked rather than assumed.**
+`SliceCameraRig.WorldToolArmed` routes a click to the designate path whenever a tool is held, so a
+world click can only *select* when the player's hands are empty — which is exactly the case the
+owner described. The only way to reach the new rule holding a tool is a roster click, and the owner
+chose to keep the tool in hand there: closing a panel is not the same as putting a tool down.
+
+Nobody has pressed Play on it.
+
+### The order you gave from inside a menu left the menu standing (2026-09-18)
+
+The owner, an hour after the pane-under-the-palette one: *"if I'm in the build menu (or any other
+menu) and I click on an order — I expect that menu to be closed down and the dialog appear/order
+would happen"*.
+
+**The parenthesis was the whole requirement, and it is the reason this is one method rather than one
+line.** The obvious fix — close the Build palette in the order button's handler — would have been
+right about the panel that happened to be open when the owner noticed, and wrong about the Menu
+popover and the bed picker on the same afternoon. `CloseMenusOverTheBoard` shuts all three, and the
+next non-modal popover joins it in one place rather than in every call site that has learned to
+close things.
+
+**The modals turned out to need nothing, and that was worth checking rather than assuming.**
+Settings and the debug windows are built through `HudModal`, which puts a pickable scrim over the
+whole screen — so the orders strip cannot be clicked while one is up at all. Excluded by
+construction. Written into the method's own comment, because a list of three in a HUD with eight
+panels looks like an oversight until somebody says why it is not.
+
+**Why the orders strip is the control this happens to.** It was taken out of the palette's header on
+2026-09-17 exactly so that giving an order would not cost opening a panel first — *"this enables us
+to quickly give orders without having to click the build button"*. That makes it the one control a
+player reaches for from inside something else, which is precisely the case where leaving that
+something else standing reads as the click not having landed. The same fix, one screw further on.
+
+**It hands a job over rather than retiring one.** §7's mode colour — the palette wearing the held
+order's hue — exists for "order held while the palette is open", and the floating armed banner is
+suppressed for as long as that holds. Closing the palette on the click means the banner appears
+instead, 3 px of the same hue against the panel's 2 px hairline, which is the louder of the two and
+the one the owner asked to be *"much thicker"*. The palette's hairline keeps the cases it was really
+for: an order armed by hotkey, or armed before the palette was opened.
+
+**The test asserts the order still happens.** That is the half worth having. A close that also
+swallowed the order would photograph perfectly and be a worse fault than the overlap it replaced —
+the menu goes and nothing the player asked for does — so the tool is read back out of the director,
+not just the panel's display. It has to be a PlayMode test: what is being proved is that a shell
+built by the composition root wires the two together, and the fast tier compiles no shell. That is
+the known gap in `CLAUDE.md` about clicks, met where it can be met.
+
+Nobody has pressed Play on it.
