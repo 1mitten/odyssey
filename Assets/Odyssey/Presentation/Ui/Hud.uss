@@ -392,39 +392,69 @@
    rows * height + (rows - 1) * gap tall — which is what HudLayout models and what the PlayMode
    gate compares the realised box against. The same trick is used by the needs grid and the
    depth rail below. */
-.alerts__rows { margin-top: 9px; margin-bottom: -7px; }
+.alerts__rows { margin-top: 9px; margin-bottom: -4px; }
 
-/* Two lines of 13 px type at the renderer's own line height, which is nearer 26 px a line than
-   the 17 the point size suggests. A minimum rather than a fixed height: a one-line alert still
-   occupies the modelled row so the panel's height is predictable, and a longer one grows rather
-   than being clipped. The authored leads and details are all one or two lines in a 242 px
-   column. */
+/* One line of 13 px type at the renderer's own line height (26 px). Vertically middle-aligned
+   icon, highlighted clickable subject, and aligned dismiss button on the right. */
 .alert {
     flex-direction: row;
-    align-items: flex-start;
-    margin-bottom: 7px;
-    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-right: 2px;
 }
 
-.alert__icon { margin-top: 1px; }
+.alert__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
 
 .alert__text {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     flex-grow: 1;
-    margin-left: 9px;
+    align-items: center;
+    overflow: hidden;
 }
 
-/* Lead first in full ink, detail trailing dim. A player who reads only the leads should know
-   what to do; the detail is there for the one they stop on. */
+.alert__target {
+    cursor: link;
+}
+
+.alert__target:hover {
+    text-decoration: underline;
+}
+
+.alert__prefix,
+.alert__message,
 .alert__lead {
     color: #eef3f6;
-    white-space: normal;
+    white-space: nowrap;
 }
 
 .alert__detail {
     color: rgba(255, 255, 255, 0.60);
-    white-space: normal;
+    white-space: nowrap;
+}
+
+.alert__dismiss {
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: link;
+    border-radius: 2px;
+}
+
+.alert__dismiss:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.alert__dismiss:hover > .hud-glyph {
+    --glyph-color: #e64a38;
 }
 
 /* ---------------------------------------------------------------- the right-hand gutter

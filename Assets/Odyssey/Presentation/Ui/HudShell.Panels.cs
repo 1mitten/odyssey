@@ -637,14 +637,19 @@ namespace Odyssey.Presentation.Ui
 
             // ---- alerts, under it in the same column
             _alertsPanel = Panel("alerts", "alerts");
-            Header(_alertsPanel, "Alerts", out _);
+            VisualElement header = Header(_alertsPanel, "Alerts", out _);
+            VisualElement clearAll = CloseButton(header, "alerts", () =>
+            {
+                _alerts.DismissAll();
+                RefreshAlerts();
+            });
+            clearAll.tooltip = "Clear all alerts";
+
             _alertRows = new VisualElement();
             _alertRows.AddToClassList("alerts__rows");
             _alertsPanel.Add(_alertRows);
 
-            // Hidden outright when there is nothing to say. The panel it replaces printed "No
-            // active alerts." above a sentence explaining that conditions arrive with M2, which is
-            // a development note sitting in a player-facing region.
+            // Hidden outright when there is nothing to say.
             _alertsPanel.style.display = DisplayStyle.None;
             column.Add(_alertsPanel);
         }
@@ -691,30 +696,32 @@ namespace Odyssey.Presentation.Ui
             {
                 AlertRow model = _alerts.Rows[i];
                 AlertRowView view = _alertViews[i];
+                view.DismissKey = model.DismissKey;
+                view.TargetPawn = model.Pawn;
+                view.TargetCell = model.Cell;
 
                 Color ink = model.Severity switch
                 {
                     AlertSeverity.Danger => HudTokens.Bad,
                     AlertSeverity.Warning => HudTokens.Warn,
-                    _ => HudTokens.Info,
+                    _ => HudTokens.Accent,
                 };
                 view.Icon.Kind = model.Severity == AlertSeverity.Notice
                     ? HudGlyphKind.Info
                     : HudGlyphKind.AlertTriangle;
                 view.Icon.Tint = ink;
 
-                // The actionable clause in full ink, the detail trailing in meta. A player who
-                // reads only the leads should know what to do.
-                //
-                // The model hands back the same string instance while the alert stands, so the
-                // reference comparison is exact and the two strings below are built once per
-                // change of state rather than four times a second.
                 if (!ReferenceEquals(view.LastLead, model.Lead))
                 {
                     view.LastLead = model.Lead;
-                    HudText.Set(view.Lead, model.Lead, HudTextRole.Body);
-                    HudText.Set(view.Detail, " — " + model.Detail, HudTextRole.Body);
-                    view.Root.tooltip = $"{model.Lead} — {model.Detail} ({model.Count})";
+                    HudText.Set(view.Prefix, model.TargetPrefix, HudTextRole.Body);
+                    view.Prefix.style.display = string.IsNullOrEmpty(model.TargetPrefix) ? DisplayStyle.None : DisplayStyle.Flex;
+
+                    HudText.Set(view.Target, model.TargetName, HudTextRole.Body);
+                    view.Target.style.color = ink;
+
+                    HudText.Set(view.Message, model.TargetSuffix, HudTextRole.Body);
+                    view.Root.tooltip = model.Lead;
                 }
             }
 
@@ -732,16 +739,66 @@ namespace Odyssey.Presentation.Ui
 
             var text = new VisualElement();
             text.AddToClassList("alert__text");
+
+            Label prefix = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__prefix");
+            Label target = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__target");
+            target.style.unityFontStyleAndWeight = FontStyle.Bold;
+            Label message = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__message");
             Label lead = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__lead");
             Label detail = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__detail");
-            text.Add(lead);
-            text.Add(detail);
+
+            text.Add(prefix);
+            text.Add(target);
+            text.Add(message);
+
+            var dismiss = new VisualElement();
+            dismiss.AddToClassList("alert__dismiss");
+            var dismissGlyph = new HudGlyph(HudGlyphKind.Close, 11f, HudTokens.TextDim);
+            dismiss.Add(dismissGlyph);
+            dismiss.tooltip = "Dismiss alert";
 
             row.Add(icon);
             row.Add(text);
+            row.Add(dismiss);
             _alertRows.Add(row);
 
-            return new AlertRowView { Root = row, Icon = icon, Lead = lead, Detail = detail };
+            var view = new AlertRowView
+            {
+                Root = row,
+                Icon = icon,
+                Text = text,
+                Prefix = prefix,
+                Target = target,
+                Message = message,
+                Lead = lead,
+                Detail = detail,
+                Dismiss = dismiss,
+            };
+
+            text.RegisterCallback<PointerDownEvent>(_ =>
+            {
+                var world = _boot?.World;
+                if (world == null) return;
+                if (view.TargetPawn.IsValid)
+                {
+                    _directors?.ChooseColonist(view.TargetPawn, world.Views.Current);
+                }
+                else if (view.TargetCell.HasValue)
+                {
+                    _directors?.Slice.SetLayer(view.TargetCell.Value.Y);
+                    _directors?.Selection.Pick(view.TargetCell.Value, PawnId.None, world.Views.Current);
+                    _directors?.Camera.JumpTo(view.TargetCell.Value);
+                }
+            });
+
+            dismiss.RegisterCallback<ClickEvent>(evt =>
+            {
+                evt.StopPropagation();
+                _alerts.Dismiss(view.DismissKey);
+                RefreshAlerts();
+            });
+
+            return view;
         }
     }
 }

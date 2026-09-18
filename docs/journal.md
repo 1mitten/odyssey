@@ -5368,3 +5368,16 @@ as ever: one named owner for each half, `StandsOnSomething` for placement and `S
 the connector, with the difference between them written down.
 
 Both fixes were the owner's call, asked mid-unit rather than assumed, and both were told to go in.
+
+### Interactive Alerts: subject selection, dismissals, and vertical alignment (2026-09-18)
+
+Settled through Ground → Interview → Plan → Execute on branch `claude/interactive-alerts`.
+
+- **Alerts were verbose sentences with trailing details.** "A colonist is close to breaking — mood has fallen into the strained band" was passive and took two lines in a 242 px column, pushing the depth rail and panel stack down. It now takes the direct form "Wrenn is close to breaking" or "Wrenn is starving", with the subject highlighted in bold severity ink (Red for Danger, Amber/Yellow for Warning, Accent Gold for Notice).
+- **Clicking the highlighted subject or alert text selects and jumps.** It calls `HudDirectors.ChooseColonist(pawnId, snapshot)`, which sets the slice layer, selects the colonist in `SelectionDirector`, and focuses the camera directly on them — identical to clicking their card in the top roster bar.
+- **Alert rows carry aligned dismiss 'X' buttons in a column.** Each row has an 18×18 px dismiss element with `HudGlyphKind.Close` aligned to the right edge. Dismissing suppresses the alert until the underlying need condition clears and later re-occurs (e.g. food climbing back above `StarveClearAt` removes the dismissed latch).
+- **A panel-level Clear All button sits in the header.** An 'X' in the top right-hand corner of the Alerts panel header (using the standard `CloseButton` styling opposite the "Alerts" label) clears all currently visible alerts at once.
+- **Symbol vertical alignment and compact single-line height.** The alert symbol is vertically centered with the text (`align-items: center`). Single-line alert row height is updated to 26 px (`HudLayout.AlertHeight = 26`), matching UI Toolkit's 13 px text box, reducing HUD screen coverage and avoiding unnecessary multi-line row clamping.
+- **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
+- **Gates verified:** Fast tier 694 Sim + 408 Hud passed; EditMode 1672 total, 1659 passed, 0 failed; PlayMode 78 total, 73 passed, 0 failed; both wiki checks clean.
+
