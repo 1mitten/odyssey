@@ -82,11 +82,39 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public int LiveRenderTextures => _target != null ? 1 : 0;
 
-        /// <summary>Whether a portrait can be taken at all: no packs, no photographs.</summary>
-        public bool Available => Rows.Count > 0;
+        /// <summary>
+        /// Whether a portrait can be taken at all.
+        ///
+        /// <para><b>It asks whether any row resolved to a prefab, not whether there are rows</b>,
+        /// and the difference is the whole of it. The catalogue is a committed asset whose prefab
+        /// references point into the gitignored <c>Assets/Synty</c>: on a checkout without the
+        /// packs it loads perfectly and every single reference is null. Counting rows therefore
+        /// answers "yes" on exactly the machine that cannot take a photograph — which is what the
+        /// self-hosted runner found, by running the portrait tests instead of ignoring them and
+        /// then discovering there was nobody to photograph.</para>
+        /// </summary>
+        public bool Available
+        {
+            get
+            {
+                List<ModuleEntry> rows = Rows;
+                for (int i = 0; i < rows.Count; i++)
+                    if (rows[i].prefab != null) return true;
 
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// The colonist family, found once. <see cref="ModuleCatalogue.FindFamily"/> walks the
+        /// whole catalogue and builds a list, and this is asked on every portrait.
+        /// </summary>
         List<ModuleEntry> Rows =>
-            _catalogue == null ? EmptyRows : _catalogue.FindFamily(ModuleIds.ColonistBase);
+            _rows ??= _catalogue == null
+                ? EmptyRows
+                : _catalogue.FindFamily(ModuleIds.ColonistBase);
+
+        List<ModuleEntry>? _rows;
 
         static readonly List<ModuleEntry> EmptyRows = new List<ModuleEntry>();
 

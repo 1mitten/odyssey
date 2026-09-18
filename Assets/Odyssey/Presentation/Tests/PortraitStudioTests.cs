@@ -1,8 +1,10 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
+using UnityEngine;
 
 namespace Odyssey.Presentation.Tests
 {
@@ -22,9 +24,36 @@ namespace Odyssey.Presentation.Tests
             using var studio = new PortraitStudio(catalogue: null, materials: null);
 
             Assert.That(studio.Available, Is.False);
+            Assert.That(studio.Portraits, Is.Zero);
             Assert.That(studio.For(4242u, new PawnId(1)), Is.Null);
             Assert.That(studio.LiveRenderTextures, Is.Zero,
                 "a studio that cannot photograph anybody must not have built a rig");
+        }
+
+        [Test]
+        public void ACatalogueWhoseArtIsAbsentIsNotAStudio()
+        {
+            // **The case the self-hosted runner found and this machine could not.** The catalogue
+            // is a committed asset; the prefabs it points at live in gitignored Assets/Synty. So a
+            // checkout without the packs loads a catalogue full of rows and empty of art, and the
+            // first version of `Available` counted the rows — answering "yes, photographs are
+            // possible" on exactly the machine where they are not, which made two tests run and
+            // fail instead of ignoring themselves.
+            var catalogue = ScriptableObject.CreateInstance<ModuleCatalogue>();
+            try
+            {
+                var rows = new List<ModuleEntry>();
+                for (int i = 0; i < 12; i++)
+                    rows.Add(new ModuleEntry { moduleId = ModuleIds.Colonist(i) });
+                catalogue.SetEntries(rows);
+
+                using var studio = new PortraitStudio(catalogue, materials: null);
+
+                Assert.That(studio.Available, Is.False,
+                    "twelve rows with no prefab between them is not a studio");
+                Assert.That(studio.For(4242u, new PawnId(1)), Is.Null);
+            }
+            finally { Object.DestroyImmediate(catalogue); }
         }
 
         [Test]
