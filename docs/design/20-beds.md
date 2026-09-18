@@ -422,6 +422,32 @@ strews with wood. A wall fills its cell and a slab is laid at the boundary under
 shows what is lying there; a bed is broad, low and open, and does. Extending it to walls is one
 line and is the owner's call.
 
+### The second round of screenshots (owner, 2026-09-18)
+
+**A log went through a finished bed, and the first item fix had a hole in the middle of it.**
+Refusing the *order* on an occupied cell guards the start, and holding the cells once the bed
+*stands* guards the end — and the whole of the build in between was unguarded. Order a bed on
+clear ground, a colonist takes a while to raise it, a hauler puts a log down where it is going,
+and the bed is built straight over it. **A site holds its cells from the moment it is ordered
+now**, through the one place a site is written (`ConstructionGrid.Set`), and gives them back when
+it is cancelled or replaced. The release runs first and reads the site as it is, because the
+facing that says which second cell to give back is about to be overwritten.
+
+**A colonist asleep beside its bed: not reproduced, and recorded as such.** Three colonists with
+three beds all sleep in beds (`EveryColonistWithABedToThemselvesSleepsInOne`), and the head lands
+inside the pillow's own box for all four facings with the feet still on the mattress
+(`TheHeadRestLandsOnThePillowForEveryFacing`, `TheWholeSleeperFitsOnTheMattress`) — the
+facing-dependent sign error the photograph suggested is not there, and the bed in question simply
+faces the other way from its neighbours.
+
+The likeliest remaining explanation is the simulation being right about a situation that looks
+wrong: **`TrySleep` decides once.** A colonist who finds no free bed — the third still being
+built, or all of them momentarily reserved by colonists walking to them — lies down where it
+stands, and having fallen asleep it stays there all night even after a bed frees up. Whether that
+should change is the owner's, and it is a real question rather than a bug: waking a colonist to
+shuffle beds would read as twitchy, while a colonist ignoring its *own* empty bed all night would
+not.
+
 ### Why Assign did nothing, three times (2026-09-18)
 
 The owner reported being unable to give a bed to a colonist on 2026-09-17, again after the row was

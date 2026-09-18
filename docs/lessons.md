@@ -1966,3 +1966,15 @@ on load, like support and ladder connectors, so it costs no save format and no h
 It also fixed a failure that looked unrelated: bed cells had been haul destinations, so haulers
 reserved them, and `TrySleep` checks the reservation before it checks whose bed it is — which
 locked a colonist out of their own bed and sent them to sleep on the floor.
+
+## Guard the start and the end of a thing's life and you have missed the middle
+
+A bed must not contain a log. The first fix refused the **order** on a cell holding items; the
+second held the cells once the bed **stood**. Both were right and together they still let the
+reported picture through, because a building has a third state: ordered, not yet raised, and taking
+a colonist a while to get to. A hauler put a log down in exactly that window.
+
+Where a thing has a life cycle, the invariant belongs at the **transition every state passes
+through** — here `ConstructionGrid.Set`, which is the one place a site is written, so ordering,
+replacing, cancelling and raising all run through it. Two guards at the ends read as thorough and
+are not.

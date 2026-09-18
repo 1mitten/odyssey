@@ -1,6 +1,7 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
 
@@ -141,6 +142,80 @@ namespace Odyssey.Tests.Presentation
             Assert.That(northward.z, Is.GreaterThan(northward.x), "a north-facing bed is long in Z");
             Assert.That(eastward.x, Is.GreaterThan(eastward.z), "an east-facing bed is long in X");
             Assert.That(eastward.x, Is.EqualTo(northward.z).Within(0.001f), "and the same bed either way");
+        }
+
+        /// <summary>
+        /// <b>A sleeper's head lands on the pillow, whichever way the bed faces.</b>
+        ///
+        /// <para>The two halves of this are computed in different files — the pillow by
+        /// <see cref="BedShape.Part"/> for the mesher, the head by <c>PawnFigureDirector.AimSleep</c>
+        /// from <see cref="BedShape.HeadRestAlong"/> — so nothing but a test holds them together.
+        /// The owner photographed a colonist asleep beside its bed rather than on it
+        /// (2026-09-18), and a facing-dependent sign error is exactly what that looks like, so it
+        /// is checked for all four rather than for the one a fixture happens to pick.</para>
+        /// </summary>
+        [Test]
+        public void TheHeadRestLandsOnThePillowForEveryFacing()
+        {
+            for (int facing = 0; facing < Directions.Count; facing++)
+            {
+                Vector3 origin = BedShape.Origin(4, 4, 1, facing);
+                var along = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
+                Vector3 head = origin + along * BedShape.HeadRestAlong;
+
+                // The pillow's own box, from the matrix the mesher will draw it with.
+                ModuleLibrary.GetFallbackBox(ModuleShape.Pillow, out Vector3 size, out Vector3 centre);
+                Matrix4x4 at = BedShape.Part(Matrix4x4.Translate(origin), facing, BedShape.PillowPart)
+                    * Matrix4x4.TRS(centre, Quaternion.identity, size);
+
+                var box = new Bounds(at.MultiplyPoint3x4(new Vector3(-0.5f, -0.5f, -0.5f)), Vector3.zero);
+                for (int i = 1; i < 8; i++)
+                    box.Encapsulate(at.MultiplyPoint3x4(new Vector3(
+                        (i & 1) == 0 ? -0.5f : 0.5f,
+                        (i & 2) == 0 ? -0.5f : 0.5f,
+                        (i & 4) == 0 ? -0.5f : 0.5f)));
+
+                Assert.That(head.x, Is.InRange(box.min.x, box.max.x),
+                    $"facing {facing}: the head is not over the pillow in X");
+                Assert.That(head.z, Is.InRange(box.min.z, box.max.z),
+                    $"facing {facing}: the head is not over the pillow in Z");
+            }
+        }
+
+        /// <summary>
+        /// And the body it drags behind it stays on the mattress: a head on the pillow with the
+        /// feet hanging off the far end would be the same fault one body-length along.
+        /// </summary>
+        [Test]
+        public void TheWholeSleeperFitsOnTheMattress()
+        {
+            const float hip = 0.95f;
+
+            for (int facing = 0; facing < Directions.Count; facing++)
+            {
+                Vector3 origin = BedShape.Origin(4, 4, 1, facing);
+                var along = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
+
+                Vector3 head = origin + along * BedShape.HeadRestAlong;
+                Vector3 feet = head + along * SleepPose.BodyLength(hip);
+
+                // The mattress, in world terms, from the same source the mesher draws it from.
+                ModuleLibrary.GetFallbackBox(ModuleShape.SolidBlock, out Vector3 size, out Vector3 centre);
+                Matrix4x4 at = BedShape.Part(Matrix4x4.Translate(origin), facing, 1)
+                    * Matrix4x4.TRS(centre, Quaternion.identity, size);
+
+                var box = new Bounds(at.MultiplyPoint3x4(new Vector3(-0.5f, -0.5f, -0.5f)), Vector3.zero);
+                for (int i = 1; i < 8; i++)
+                    box.Encapsulate(at.MultiplyPoint3x4(new Vector3(
+                        (i & 1) == 0 ? -0.5f : 0.5f,
+                        (i & 2) == 0 ? -0.5f : 0.5f,
+                        (i & 4) == 0 ? -0.5f : 0.5f)));
+
+                Assert.That(feet.x, Is.InRange(box.min.x - 0.01f, box.max.x + 0.01f),
+                    $"facing {facing}: the feet hang off the mattress in X");
+                Assert.That(feet.z, Is.InRange(box.min.z - 0.01f, box.max.z + 0.01f),
+                    $"facing {facing}: the feet hang off the mattress in Z");
+            }
         }
 
         /// <summary>

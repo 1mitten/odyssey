@@ -589,6 +589,19 @@ namespace Odyssey.Sim.Construction
 
         void Set(int index, int building, int stuff, int facing = 0)
         {
+            // **A site holds its cells against items from the moment it is ordered**, not from the
+            // moment it stands. Ordering already refuses a cell that holds something (Allows), but
+            // a bed takes a colonist a while to build, and in between a hauler was free to put a
+            // log down on the cell and the bed was raised straight over it — which is exactly what
+            // the owner photographed after the first fix (2026-09-18: "the bed was built and there
+            // was a log going through it"). Refusing the order and blocking the built thing left
+            // the whole of the build in between.
+            //
+            // Released first, from what is there now, because a cancelled or replaced site has to
+            // give its cells back — and the facing that says which second cell to give back is
+            // about to be overwritten.
+            ReleaseItemHold(index);
+
             bool was = _building[index] != 0;
             _building[index] = (byte)building;
             _stuff[index] = (byte)stuff;
@@ -599,12 +612,41 @@ namespace Odyssey.Sim.Construction
             // A new site, a cancelled one and a finished one all start the next from nothing.
             _delivered[index] = 0;
             _work[index] = 0;
+            if (building != BuildingHandle.None)
+            {
+                BuildingDef def = ConstructionContent.BuildingAt(building);
+                if (def.needsClearCell)
+                {
+                    _items.BlockItemsAt(index);
+                    int second = EdificeFootprint.SecondCell(
+                        index, def.edifice, _facing[index], _grid.Size);
+                    if (second >= 0) _items.BlockItemsAt(second);
+                }
+            }
+
             bool now = building != BuildingHandle.None;
             if (was == now) return;
 
             int at = _sites.BinarySearch(index);
             if (now) _sites.Insert(~at, index);
             else _sites.RemoveAt(at);
+        }
+
+        /// <summary>
+        /// Give back the cells a site standing here was holding against items, if it was holding
+        /// any. Read from the site as it is now, so it must run before the site is overwritten.
+        /// </summary>
+        void ReleaseItemHold(int index)
+        {
+            int standing = _building[index];
+            if (standing == BuildingHandle.None) return;
+
+            BuildingDef def = ConstructionContent.BuildingAt(standing);
+            if (!def.needsClearCell) return;
+
+            _items.AllowItemsAt(index);
+            int second = EdificeFootprint.SecondCell(index, def.edifice, _facing[index], _grid.Size);
+            if (second >= 0) _items.AllowItemsAt(second);
         }
 
         // ---- the world edit ------------------------------------------------------------------

@@ -383,6 +383,112 @@ namespace Odyssey.Tests.Sim
             return rejected.Count == 0 ? IntentRejection.None : rejected[0].Reason;
         }
 
+        /// <summary>
+        /// <b>Three colonists and three beds: everybody gets one.</b>
+        ///
+        /// <para>The owner's photograph after the first round of fixes: two colonists lying
+        /// properly on their pillows and a third asleep on the grass beside an empty bed
+        /// (2026-09-18). Nothing in the fixtures asked the obvious question — that a colony with a
+        /// bed each puts everybody in one — because every ownership test used two.</para>
+        /// </summary>
+        [Test]
+        public void EveryColonistWithABedToThemselvesSleepsInOne()
+        {
+            ColonyWorld colony = Fresh();
+
+            var heads = new System.Collections.Generic.List<int>();
+            int excludeHead = -1, excludeFoot = -1;
+            for (int i = 0; i < 3; i++)
+            {
+                int head = heads.Count == 0
+                    ? OpenFootprint(colony, out int foot)
+                    : AnotherOpenFootprint(colony, excludeHead, excludeFoot, out foot);
+                Assume.That(head, Is.GreaterThanOrEqualTo(0), $"no room for bed {i + 1}");
+
+                RaiseABed(colony, head);
+                heads.Add(head);
+                excludeHead = head;
+                excludeFoot = foot;
+            }
+
+            foreach (var pawn in colony.Pawns.Pawns.All) pawn.Needs[NeedIndex.Rest] = 40;
+
+            for (int i = 0; i < 20_000; i++)
+            {
+                colony.World.Tick();
+                bool all = true;
+                foreach (var p in colony.Pawns.Pawns.All) if (!p.Asleep) all = false;
+                if (all) break;
+            }
+
+            foreach (var pawn in colony.Pawns.Pawns.All)
+            {
+                Assert.That(pawn.Asleep, Is.True, "a colonist never got to sleep at all");
+                Assert.That(heads, Does.Contain(pawn.Cell),
+                    "a colonist slept somewhere that is not one of the three beds");
+            }
+
+            var used = new System.Collections.Generic.HashSet<int>();
+            foreach (var pawn in colony.Pawns.Pawns.All) used.Add(pawn.Cell);
+            Assert.That(used.Count, Is.EqualTo(3), "two colonists ended up in the same bed");
+        }
+
+        /// <summary>
+        /// <b>Nothing can be put down on a bed, or on a bed that is still being built.</b>
+        ///
+        /// <para>Refusing the <i>order</i> on a cell that holds something was only the first half,
+        /// and the owner's second photograph is the second half: a bed built with a log through it
+        /// (2026-09-18). The order was placed on a clear cell, a colonist took a while to build it,
+        /// and in between a hauler put a log down where the bed was going. So a site holds its
+        /// cells from the moment it is ordered, not from the moment it stands.</para>
+        /// </summary>
+        [Test]
+        public void ABedHoldsItsCellsAgainstItemsFromTheOrderNotFromTheRaise()
+        {
+            ColonyWorld colony = Fresh();
+            int head = OpenFootprint(colony, out int foot);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+
+            var items = colony.Pawns.Items;
+            Assume.That(items.CellHasSpace(head), Is.True, "the cell starts empty");
+            Assume.That(items.CellHasSpace(foot), Is.True);
+
+            // Ordered, and not yet built.
+            Assume.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
+                Is.EqualTo(IntentRejection.None));
+
+            Assert.That(items.CellHasSpace(head), Is.False,
+                "a waiting bed site must not be a place a hauler can put a log down");
+            Assert.That(items.CellHasSpace(foot), Is.False, "and neither must its far cell");
+
+            // Built: still held.
+            colony.Construction.Raise(colony.Pawns, head, (byte)QualityHandle.Normal);
+            Assert.That(items.CellHasSpace(head), Is.False, "a standing bed holds its cells too");
+            Assert.That(items.CellHasSpace(foot), Is.False);
+
+            // And a nearby cell is unaffected, so this is a hold and not a blanket ban.
+            int elsewhere = AnotherOpenFootprint(colony, head, foot, out _);
+            Assume.That(elsewhere, Is.GreaterThanOrEqualTo(0));
+            Assert.That(items.CellHasSpace(elsewhere), Is.True, "only the bed's own cells are held");
+        }
+
+        /// <summary>A cancelled order gives its cells back; the ground is ordinary again.</summary>
+        [Test]
+        public void ACancelledBedGivesItsCellsBack()
+        {
+            ColonyWorld colony = Fresh();
+            int head = OpenFootprint(colony, out int foot);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+
+            Assume.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
+                Is.EqualTo(IntentRejection.None));
+            Assume.That(colony.Pawns.Items.CellHasSpace(head), Is.False);
+
+            Assert.That(colony.Construction.Cancel(Size.FromIndex(head)), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Pawns.Items.CellHasSpace(head), Is.True, "the head cell is ground again");
+            Assert.That(colony.Pawns.Items.CellHasSpace(foot), Is.True, "and so is the far one");
+        }
+
         [Test]
         public void ABedCanBeGivenToOneColonistAndTakenBack()
         {
