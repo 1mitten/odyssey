@@ -117,5 +117,18 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static readonly Gesture Stow = new Gesture(
             seconds: 0.85f, depth: 0.33f, downEnds: 0.5f, holdEnds: 0.62f);
+
+        /// <summary>
+        /// Working seed into a plot. The pickup re-timed (owner, 2026-09-18: *"the animation for
+        /// sowing seeds should not be chopping axe - reuse the pickup animation where the
+        /// colonist goes to knees and holds for a while, then comes to feet"*): the same depth and
+        /// the same curve, with the hold stretched over most of the motion because the hold
+        /// <i>is</i> the work. Timed against the carrot's <c>sowWorkTicks</c> at the tuned rate —
+        /// about 2.8 s — so the rise lands as the settle toil begins; the clock is the gesture's
+        /// own and not the toil's, which is the one approximation in the reuse and the reason
+        /// this page says "for now" with the owner's own words.
+        /// </summary>
+        public static readonly Gesture Sow = new Gesture(
+            seconds: 2.6f, depth: 0.33f, downEnds: 0.16f, holdEnds: 0.84f);
     }
 }

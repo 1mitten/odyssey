@@ -111,14 +111,13 @@ namespace Odyssey.Sim.Pawns
     public class SowJobDriver : JobDriver
     {
         /// <summary>
-        /// The plot, once the walk is over and the swings have started. The target and the
-        /// destination are the same cell here — the one the colonist stands in — so either name
-        /// answers; the figure has to face the ground it is breaking.
+        /// Never a work focus: sowing is a kneel, not a stance (owner, 2026-09-18 — the sow must
+        /// not chop). A work focus would summon the computed swing and its tool, and a sower
+        /// carries neither; the pose is the <see cref="PawnGesture.Sow"/> the toil begins below,
+        /// the pickup's kneel re-timed so the hold is the work. The figure still knows where the
+        /// plot is from the job's own target, and the settle toil needs nothing here.
         /// </summary>
-        /// <para>Nothing during the settle toil: the seed is already in and the figure should
-        /// be easing out of its stance, not still bending.</para>
-        public override int WorkFocus =>
-            ToilIndex != 1 ? -1 : Job.TargetCell >= 0 ? Job.TargetCell : Job.DestCell;
+        public override int WorkFocus => -1;
 
         public override bool TryMakeReservations(PawnContext ctx)
         {
@@ -159,6 +158,12 @@ namespace Odyssey.Sim.Pawns
                 WalkBack();
                 return JobStatus.Ongoing;
             }
+
+            // The kneel begins with the work and holds while it runs — the gesture idiom the
+            // lift toil established: begun once at the toil's start, ended by its own clock, so
+            // the rise lands as the settle begins. WalkBack zeroes the progress, so a sower
+            // displaced mid-hold kneels again on return rather than finishing a kneel it left.
+            if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Sow);
 
             PlantDef plant = zones.Plant(zones.ZonePlantAt(cell));
             // Progress is milliwork and the plant's price is ticks (design 17 §3b's convention):

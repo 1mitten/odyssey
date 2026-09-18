@@ -636,7 +636,9 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Which curve a gesture follows. See <see cref="Gesture"/>.</summary>
         static Gesture GestureOf(PawnGesture kind) =>
-            kind == PawnGesture.Stow ? Gesture.Stow : Gesture.Lift;
+            kind == PawnGesture.Stow ? Gesture.Stow
+            : kind == PawnGesture.Sow ? Gesture.Sow
+            : Gesture.Lift;
 
         /// <summary>
         /// How far down a crouch may take the hips before the legs are asked for more than they

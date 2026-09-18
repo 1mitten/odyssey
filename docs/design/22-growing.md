@@ -111,12 +111,22 @@ the hoe. §3a of `17-rates-and-stats.md` is where the plant-work curve lands.
 
 Both drivers are `FellJobDriver`'s shape with one simplification: **the colonist stands in the
 cell, not beside it.** A crop is ground, not an edifice — it blocks nothing, so the stand-beside
-stance and its reach check have nothing to guard. Walk to the cell, swing for the def's work,
-and on the last swing defer the structural write (§ of the standing rules: anything structural
+stance and its reach check have nothing to guard. Walk to the cell, work for the def's price,
+and on the last tick defer the structural write (§ of the standing rules: anything structural
 goes through the deferred phase): sowing marks the cell planted at growth 0 and marks the chunk;
 harvesting spawns the yield at the cell — `NearestCellWithSpace` within three cells, the felling
 precedent, so a full cell passes its carrots to a neighbour instead of losing them — and clears
 the planting.
+
+**The sow kneels rather than chops** (owner, 2026-09-18: *"the animation for sowing seeds should
+not be chopping axe — reuse the pickup animation where the colonist goes to knees and holds for a
+while, then comes to feet"*). `SowJobDriver` reports no work focus, so the computed tool swing —
+which `IndexForJob` defaults every unknown job to, the axe — never plays and no tool appears in
+the hands; instead the toil begins `PawnGesture.Sow`, the pickup's own solved kneel re-timed
+(`Gesture.Sow`: down quickly, a hold stretched over most of the motion, up slowly) so the hold
+*is* the work. The gesture runs on its own clock timed against the carrot's `sowWorkTicks` at the
+tuned rate — the one approximation in the reuse, accepted "for now" with the owner's own words.
+Harvest keeps its swing: cutting a ripe crop is a cut, and nothing was asked of it.
 
 The continuous loop needs no code beyond that: a harvested cell is an unplanted cell in a zone,
 which is exactly what `SowWorkGiver` scans for, so it re-enters the queue the same tick. Resow
@@ -172,10 +182,12 @@ made `ItemIndex.Count` seven while presentation's item-module table stayed six, 
 now has its own module row (the mature crop's art at carry size), and the episode is the second
 on this branch where green fast-tier seconds said nothing about a join only Unity compiles.
 
-The **zone overlay, this unit, is a per-cell green tint** through the standing-orders span path,
-fed from the sparse snapshot channel, added to the colour-guard test (`ZoneTintColour`,
-`(0.24, 0.62, 0.28, 0.32)` — darker and cooler than the felling mark's pale green, no order
-shares it). One deviation from the plan's wording: it draws a **cell mark, not a cell shade**.
+The **zone overlay, this unit, is a per-cell tint** through the standing-orders span path,
+fed from the sparse snapshot channel, added to the colour-guard test (`ZoneTintColour`
+`(0.45, 0.32, 0.17, 0.34)`). It was a field green `(0.24, 0.62, 0.28, 0.32)` until the owner
+found it hard to see on the surface (2026-09-18) and asked for **earthy brown — worked soil**,
+which no order shares and which reads on grass where the green vanished. Both hues are recorded
+because the brown is the owner's call on a colour nobody had played. One deviation from the plan's wording: it draws a **cell mark, not a cell shade**.
 `DrawCellShade` fills the cell's whole volume, which is right for a deconstruct order standing
 in the wall it is taking apart; a zone cell is open air above the soil, so a shade would draw a
 three-metre glass box over every row. `DrawCellMark`'s plate sits at the floor of that air cell,
@@ -218,10 +230,11 @@ code cannot show on its own:
   `Director.Plant + 1`, and `GrowingZones.HandleDesignate` is the only place that subtracts.
 - **One rubber kills everything.** Cancel submits a third intent per cell, `CancelZone`, so
   the zone dies the way an order and a building die, and the ground under it is untouched.
-- **The zone mode wears olive, not green.** `HudTheme.ZonesHue` colours both the Zones
-  category tier and the pinned strip action, because a pinned action's hue has one owner
-  each: `Good` already belongs to fell. The mode colour matching the category tile is the
-  same value in both places, not a coincidence to keep in step.
+- **The zone mode wears earthy brown** (olive, then brown the same day: the owner found green
+  hard to see on the surface). `HudTheme.ZonesHue` colours both the Zones category tier and the
+  pinned strip action, because a pinned action's hue has one owner each: `Good` already belongs
+  to fell. The mode colour matching the category tile is the same value in both places, not a
+  coincidence to keep in step.
 - **The crop chip is drawn art, lit as a sub-type.** No pixel art exists for a crop and a
   placeholder square is forbidden in the palette, so the carrot is a vector glyph. The
   chosen crop wears the sub-type tier's own lit class — it is the zone tool's payload, not
@@ -250,8 +263,10 @@ planting.
   the banner. Contact sheets and tests are all it will have until the owner opens it.
 - **Four calendar days to a harvest is a pacing guess.** Visible on day one, food on day five:
   if that reads as slow in play, `growTicks` is one number in one XML file.
-- **The green tint is interim.** Whether it reads as "growing here" or as a texture fault is
-  exactly the judgement the crisp-border unit is waiting to inherit.
+- **The tint is interim** — green, then earthy brown at the owner's ask before anybody had
+  played either. Whether brown reads as "growing here" or as a dirt patch is exactly the
+  judgement the crisp-border unit is waiting to inherit, and the first playtest may send it back
+  the other way.
 - **~7 tiles per colonist is arithmetic, not play.** The reference ships 10+ as a rule of thumb;
   ours is fatter, and nobody has felt whether fat is right.
 - **The frame figure belongs to a young field.** §6's 2.92 ms was measured with 537 crops standing

@@ -979,11 +979,13 @@ namespace Odyssey.Presentation.Bootstrap
             }
         }
 
-        /// <summary>The colour a growing zone is tinted in — a field green, darker and cooler
-        /// than the felling mark's pale yellow-green, so a planted area and an order never ask to
-        /// be told apart by reading a tooltip. Alpha in the same translucent band as the orders:
-        /// the soil has to show through, and a tint nobody can see is worse than none.</summary>
-        public static readonly Color ZoneTintColour = new Color(0.24f, 0.62f, 0.28f, 0.32f);
+        /// <summary>The colour a growing zone is tinted in — an earthy brown, the worked-soil
+        /// colour a field actually is (owner, 2026-09-18: the green was hard to see on the
+        /// surface). Brown is also a hue no order wears, so a planted area and an order never ask
+        /// to be told apart by reading a tooltip, and it reads on grass where the green vanished.
+        /// Alpha in the same translucent band as the orders: the soil has to show through, and a
+        /// tint nobody can see is worse than none.</summary>
+        public static readonly Color ZoneTintColour = new Color(0.45f, 0.32f, 0.17f, 0.34f);
 
         /// <summary>
         /// Every growing-zone cell on a drawn layer, tinted.

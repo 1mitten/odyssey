@@ -5837,3 +5837,22 @@ hashed or silently unhashed state, either wrong), a fourth speed tier (breaks th
 for a tester's problem), and ripen alone (never shows the stages moving). The warp is a method
 on the root rather than an intent for the reason the re-entrancy note records: the bus drains
 inside a tick, so a skip through it would ask the world to re-enter its own tick.
+
+### The sower kneels, and the field turns to soil (2026-09-18, owner's first two looks)
+
+Two owner calls on work nobody had played. **The sow must not chop** — the swing every unknown
+job inherits is the axe's, so a sower was felling the ground; and **the green was hard to see on
+the surface**, so the zone and its toolbar colour want earthy brown.
+
+The kneel reuses the pickup rather than inventing a pose: `PawnGesture.Sow` is the lift's own
+solved curve re-timed (`Gesture.Sow`, down quickly, the hold stretched over most of the motion,
+up slowly — the hold *is* the work), and `SowJobDriver` stops reporting a work focus, which is
+the thing that summoned the swing and the tool in the first place. One approximation, accepted
+with the owner's "for now": the gesture runs on its own clock timed against the carrot's price
+at the tuned rate, so a rate change would re-time the kneel by hand. Harvest keeps its swing —
+a cut is a cut, and nothing was asked of it.
+
+The brown is `(0.45, 0.32, 0.17, 0.34)` on the board and `0xc3985c` in the panel, worked soil on
+both surfaces, and the colour-guard test now asserts soil rather than green — both hues recorded
+in 22-growing.md §6, because the brown is a judgement on a colour nobody has played and the
+first playtest may send it back.

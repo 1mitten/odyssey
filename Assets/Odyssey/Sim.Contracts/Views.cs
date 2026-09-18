@@ -29,6 +29,15 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Setting something down.</summary>
         Stow = 2,
+
+        /// <summary>
+        /// Kneeling at a plot to work seed into it (owner, 2026-09-18: the sow must not chop).
+        /// The pickup's own pose and curve, re-timed: down quickly, a long hold at the soil —
+        /// the hold is the work — and up slowly. Reused rather than new because a sower kneels
+        /// exactly where a lifter stooops, against ground the relief has tilted, and the solved
+        /// pose is already correct on all sixty-one rigs.
+        /// </summary>
+        Sow = 3,
     }
 
     /// <summary>

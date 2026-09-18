@@ -58,6 +58,32 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ASowerKneelsRatherThanChops()
+        {
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            Sow(colony, colony.Start);
+
+            // The kneel is the work: while the seed is going in, the sower is down at the soil
+            // and no work focus is reported — a focus would summon the computed tool swing, and
+            // the sow must not chop (owner, 2026-09-18).
+            bool knelt = false, working = false, planted = false;
+            for (int tick = 0; tick < 5_000 && !planted; tick++)
+            {
+                colony.World.Tick();
+                planted = zones.IsPlanted(Size.Index(colony.Start));
+                foreach (var pawn in colony.Pawns.Pawns.All)
+                {
+                    if (pawn.Gesture == PawnGesture.Sow) knelt = true;
+                    if (pawn.Driver != null && pawn.Driver.WorkFocus >= 0) working = true;
+                }
+            }
+            Assert.That(planted, Is.True, "the field was never sown");
+            Assert.That(knelt, Is.True, "the sower never knelt at the plot");
+            Assert.That(working, Is.False, "sowing reported a work focus and would have drawn a tool swing");
+        }
+
+        [Test]
         public void AFieldIsSownRipensYieldsAndSowsAgain()
         {
             ColonyWorld colony = Field();
