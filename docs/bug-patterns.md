@@ -181,6 +181,29 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-18 — Typing a save name drove the game behind the dialog
+
+*"When you type in during a save game the in game controls still work and can cause confusion."*
+Typing `sss` panned the camera three cells south; a digit changed the game speed; a `c` armed the
+Cancel tool behind the modal.
+
+**A new shape, and worth naming: a gate in one input system cannot govern another that never sees
+the event.** Every in-game key is *polled* out of `Keyboard.current` in six components' `Update`;
+the text field is a UI Toolkit control that only ever sees what the panel routes to it. Focus is
+real and does its job — it just has no bearing on a poll. Two systems, one keyboard, neither aware
+of the other.
+
+**It survived because it was half-fixed already.** The modal's scrim takes the *pointer*, so the
+dialog behaved like a modal in the one dimension anybody checks, and the keyboard half looked like
+it must be handled too.
+
+**Stopped by** `HotkeyDirector.GameKeysLive`, which every poller now asks instead of keeping its own
+copy of the guard (P: one rule with six owners — the second reason to sit a frame out would have had
+to be written six times). The holder is a **token, not a flag**: focus moves as a blur and a focus,
+in no promised order, so a bool is cleared by the field being *left* after the field being *entered*
+set it. `HotkeyDirectorTests` holds both that and the mirror failure — a gate stuck *shut* is a game
+that has silently stopped answering its keys.
+
 ### 2026-09-18 — Selecting a colonist repainted the whole wood (P9, P5)
 
 *"A bug with the trees occurs when See through to selection/occlusion is set on. When I select a

@@ -5940,3 +5940,63 @@ The owner: *"- The button that is the default button in the depth control should
   - `HudLayoutTests.TheOrdersStripStandsInTheGutterUnderTheRail` validates depth rail gutter clearance across all resolutions.
   - `HudLayoutTests.TheInspectPaneNeverReachesTheCommandBar` validates inspect pane bottom clearance.
   - Fast tier: 723 Sim + 418 Hud passed; both content checks current.
+
+### Typing took the keyboard off the game, names became the player's, and the starting kit stopped being a pantry (2026-09-18, branch `claude/start-inventory-and-naming`)
+
+Three owner asks in one branch, and the first turned out to be the biggest.
+
+- **The save dialog never had the keyboard, and nothing noticed because the scrim looked modal.**
+  Owner: *"when you type in during a save game the in game controls still work and can cause
+  confusion."* Every in-game key is **polled** from `Keyboard.current` in six components; a UI
+  Toolkit field only ever sees events the panel routes to it. Two systems, one keyboard, neither
+  aware of the other — so typing `sss` panned the camera, a `1` changed the game speed and a `c`
+  armed the Cancel tool behind the modal. The pointer *was* handled, by the scrim, which is exactly
+  why this survived: the modal behaved like a modal in the one dimension anybody looked at.
+- **Six copies of one guard was the real defect.** Each poller opened with its own
+  `if (hotkeys.Listening != null) return;`, and the day a *second* reason to sit a frame out arrived,
+  five of them would have kept going. So the rule moved into `HotkeyDirector.GameKeysLive` and the
+  pollers ask that. One rule, one owner — the pattern `docs/bug-patterns.md` keeps catching.
+- **A token, not a flag, and the reason is orderings nobody controls.** Focus moves as a blur and a
+  focus and nothing promises which arrives first; a bool would be cleared by the field being *left*
+  after the field being *entered* had set it, leaving the gate open with a cursor on screen.
+  `AFieldThatHasAlreadyLostTheKeyboardCannotGiveItBack` is that case written down. `StopTyping`
+  covers the mirror failure — a gate stuck *shut* is a game that has quietly stopped answering its
+  keys, and that is the worse half.
+- **Escape had to go with the keyboard, and Escape-after-blur reverted nothing.** The first cut
+  invoked the field's escape handler *after* `Blur()`, so the blur ended the edit and the handler
+  was then handed a field nobody was editing. Caught by writing the revert before the test, not
+  after. It now runs before the blur, and the comment says why.
+- **Renaming a colonist is the first piece of identity that cannot be derived.** Name, face, age and
+  trade all fall out of a roll seed the simulation already saves, which is how the game carries
+  sixty-one people in four bytes a head. A typed name falls out of nothing, so it needed a book, a
+  save section and an argument for why presentation state is in a save file at all — and that
+  argument already existed, written out in full on `ViewStateSection` for the camera. `ISaveable`,
+  pointedly not `IStateHashable`: two colonies that tick identically must compare equal whether or
+  not somebody typed a name over one.
+- **The trap the select screen walks straight into.** Slot 0's `PawnId` is the same `1` the *last*
+  colony's first colonist had, so dealing candidates through `ColonistNames.Of` would hand a fresh
+  stranger a name typed in a game that is already over. Hence `Rolled` beside `Of` —
+  and it is the third time this project has met "a new colony's pawn ids start at the same small
+  numbers", after the roster bar's portraits and the roster bar's names.
+- **A rename belongs to the person, not the slot** (owner's call). Reroll forgets the name of
+  whoever it rerolled; a locked card keeps both. That is `18-colonist-select.md` §2 decision 2
+  applied to the typed name for the reason it was applied to the dealt one.
+- **Sixteen characters, chosen for the roster strip rather than for names.** The densest region in
+  the interface is where a name that elides costs the most, and telling colonists apart at a glance
+  is the whole point of naming one.
+- **The starting kit: 144 meals and eight scrap was the soak's pantry, not a game's opening.** The
+  meal count was sized so the ten-day headless gate measures the simulation rather than a famine,
+  and it then followed the player into a game it was never sized for; the scrap predates there being
+  any other hauling work on the board; and a player wanting a wall had to fell a tree first. Now 36
+  meals, no scrap, 150 each of stone and wood — `docs/design/22-starting-kit.md`.
+- **No golden moved, by construction.** The new fields default to zero and only `Playtest()`
+  overrides them, because `Bare()` is what the golden table and the soak build on. The test that
+  said the two scenarios *"differ only in their orders"* is gone: its real job was stopping Bare
+  drifting, and that is now done by pinning Bare's own numbers rather than by tying it to a preset
+  that is meant to be tuned.
+- **`ColonyItems.Spawn` does not clamp an empty cell to the stack limit** — it checks the limit only
+  when the cell already holds something. Found while writing the kit, and clamped in the placement,
+  because a single stack of 200 stone is one no hauler could carry and no stockpile could take
+  apart.
+- **Verified:** fast tier **724 Sim + 432 Hud**; EditMode **1740 total, 1726 passed, 0 failed**;
+  PlayMode **81 total, 76 passed, 0 failed**; both content checks current.

@@ -523,6 +523,47 @@ invariant still holds and the clash test still passes.
 **Contexts** change what a key means: world, tool active, panel focused, text entry, modal.
 Conflicts are detected at load and reported, not silently resolved.
 
+### 6a. Text entry takes the keyboard (2026-09-18)
+
+**The first of those contexts to actually exist**, and it arrived as a bug report rather than as a
+feature. Owner, 2026-09-18: *"when you type in during a save game the in game controls still work
+and can cause confusion — they should be disabled during this dialog and enabled afterwards."*
+
+**Why focus could not do it by itself.** Every key in the running game is *polled* out of
+`Keyboard.current` — the camera rig, the designate presenter and the command bar each read it in
+their own `Update` — while the text field is a UI Toolkit control that sees only the events the
+panel routes to it. Those are two systems reading one keyboard, and neither knows the other exists.
+So typing a save called `sss` panned the camera south three times; a name with a `1` in it changed
+the game speed; `c` armed the Cancel tool behind the modal. The scrim over the world already
+stopped the *pointer* reaching the board, which is exactly why this was easy to miss — the modal
+looked modal.
+
+**One gate, asked in one question.** `HotkeyDirector` gains `Typist` — the field holding the
+keyboard — and every poller asks `GameKeysLive` instead of its own copy of `Listening != null`.
+That folds the rebind rule and the typing rule into one sentence, which matters because there were
+six copies of the first one and the second would have had to be written six times beside it. The
+rule is in the fast tier, where `HotkeyDirectorTests` holds it without an engine.
+
+**A token, not a flag.** Focus moves as a blur and a focus and nothing promises which arrives
+first. A bool would be cleared by the field being *left* after the field being *entered* had set it,
+and the gate would stand open with a cursor blinking on screen. Only the field that took the
+keyboard can give it back — and `StopTyping` exists for the screen that closes without its field
+ever being blurred, because a gate stuck shut is a game that has quietly stopped answering its keys,
+which is the worse half of the same bug.
+
+**Escape goes with the keyboard.** It is read directly rather than through a binding, so it is not
+covered by `GameKeysLive`; instead `SettingsPresenter` stands down entirely while a field has the
+keyboard and the field handles the key itself. Over the save prompt Escape closes the prompt; over a
+colonist's name it puts back the name that was there before the edit. Without this, the one key a
+player reaches for to abandon a half-typed name would have disarmed their build tool instead.
+
+**And Return confirms**, in the save prompt, by pressing the Confirm row rather than by deciding
+anything: `SavePrompt.Confirm` still owns the whole rule, including the two presses an overwrite
+asks for.
+
+**Not covered, deliberately:** the mouse. The scrim already takes the pointer for a modal, and the
+setup page is a full-viewport page with nothing behind it.
+
 `InputRouter` resolves one raw event to exactly one consumer via an explicit capture stack.
 The eight cases it must get right, each with a test:
 

@@ -2094,6 +2094,21 @@
     overflow: hidden;
 }
 
+/* The box a colonist is renamed in, which stands exactly where the name it replaces stood
+   (owner, 2026-09-18: "rename your colonist on creation by clicking on the name").
+
+   The .field default is 30px tall with 9px of air above it — right under a caption on the setup
+   board, wrong inside a card, where it would push the card past the height its own avatar and
+   padding fix. So both are overridden to the name line's own 26, and the card does not move when
+   the box appears. The padding comes in because the card is 76px wide and eight pixels of it on
+   each side is a third of a name. */
+.colonist__namebox {
+    height: 26px;
+    margin-top: 0;
+}
+
+.colonist__namebox .unity-base-text-field__input { padding: 0 4px; }
+
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */
 .startscreen__back {

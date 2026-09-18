@@ -250,5 +250,98 @@ namespace Odyssey.Tests.Hud
             Assert.That(AspectKey.Of(ColonistNames.RollSeedAspect),
                 Is.EqualTo(AspectKey.Of("odyssey.pawn.rollseed")));
         }
+
+        // ------------------------------------------------------------------ naming one yourself
+
+        [Test]
+        public void ANamedCandidateIsCalledWhatThePlayerCalledThem()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+
+            Assert.That(select.Rename(1, "Ada"), Is.True);
+            Assert.That(select.DisplayName(1), Is.EqualTo("Ada"));
+            Assert.That(select.DisplayNameAndAge(1), Is.EqualTo("Ada, 31"));
+            Assert.That(select.GivenName(1), Is.EqualTo("Ada"));
+
+            Assert.That(select.Cards[1].Name, Is.EqualTo("person-2"),
+                "the dealt name is what the roll produced and a rename does not rewrite it");
+            Assert.That(select.DisplayName(0), Is.EqualTo("person-1"), "the others are untouched");
+        }
+
+        [Test]
+        public void ClearingTheBoxPutsTheDealtNameBack()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+            select.Rename(1, "Ada");
+
+            Assert.That(select.Rename(1, "  "), Is.True);
+            Assert.That(select.GivenName(1), Is.Null);
+            Assert.That(select.DisplayName(1), Is.EqualTo("person-2"));
+        }
+
+        /// <summary>
+        /// A typed name goes with the person it was given to (owner, 2026-09-18). A reroll deals a
+        /// different face, different skills and a different name into the slot, so a name left
+        /// standing over it would be the player's word attached to somebody they have never seen.
+        /// </summary>
+        [Test]
+        public void ARerollForgetsTheNameOfWhoeverItRerolled()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+            select.Rename(0, "Ada");
+            select.Rename(1, "Bel");
+            select.ToggleLock(1);
+
+            select.Reroll(Deals(7u, 8u, 9u));
+
+            Assert.That(select.GivenName(0), Is.Null, "a rerolled slot kept the name of the last person in it");
+            Assert.That(select.GivenName(1), Is.EqualTo("Bel"), "a locked slot keeps its person and their name");
+        }
+
+        [Test]
+        public void DealingAFreshSetForgetsEveryName()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+            select.Rename(0, "Ada");
+
+            select.Deal(Deals(4u, 5u, 6u));
+
+            Assert.That(select.GivenName(0), Is.Null);
+            Assert.That(select.ChosenNames(), Is.All.Null);
+        }
+
+        [Test]
+        public void TheNamesGoWithTheSeedsInSlotOrder()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+            select.Rename(2, "  Ada   Vance ");
+
+            Assert.That(select.ChosenSeeds(), Is.EqualTo(new[] { 1u, 2u, 3u }));
+            Assert.That(select.ChosenNames(), Is.EqualTo(new string?[] { null, null, "Ada Vance" }),
+                "a name is cleaned on the way in, by the same rule the book will hold it under");
+        }
+
+        [Test]
+        public void RenamingASlotThatIsNotOnScreenDoesNothing()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+
+            Assert.That(select.Rename(-1, "Ada"), Is.False);
+            Assert.That(select.Rename(ColonistSelect.Slots, "Ada"), Is.False);
+            Assert.That(select.DisplayName(ColonistSelect.Slots), Is.Empty);
+        }
+
+        [Test]
+        public void ARenameRaisesChangedOnlyWhenSomethingChanged()
+        {
+            ColonistSelect select = Dealt(1u, 2u, 3u);
+            int changes = 0;
+            select.Changed += () => changes++;
+
+            select.Rename(0, "Ada");
+            select.Rename(0, " Ada ");
+
+            Assert.That(changes, Is.EqualTo(1), "an echoed keystroke redrew three cards");
+        }
     }
 }
