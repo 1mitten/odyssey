@@ -823,6 +823,13 @@ namespace Odyssey.Presentation.Bootstrap
             _frameTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
+
+            // Before anything reads the mirror, because the picker reads it and a waiting order is
+            // one of the things a click can land on (WorldRenderModel.SetSites). Until this line
+            // existed a site was drawn and not clickable: over open air the ray found nothing in
+            // the column and the layer was dead to every tool, which is what the cancel tool could
+            // not cancel on 2026-09-18.
+            _model.SetSites(_world.Views.Current.Sites);
             int movePerTick = MovePerTick;
 
             // Before the world is submitted, because it decides how part of the world is drawn.

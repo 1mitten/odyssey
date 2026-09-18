@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -18,6 +19,7 @@ namespace Odyssey.Tests.Presentation
     sealed class RenderTestWorld
     {
         readonly List<PlacedEdifice> _edifices = new List<PlacedEdifice>();
+        readonly List<SiteView> _sites = new List<SiteView>();
 
         public RenderTestWorld(int sizeX, int sizeZ, int layers)
         {
@@ -140,6 +142,22 @@ namespace Odyssey.Tests.Presentation
             }
 
             return world.Publish();
+        }
+
+        /// <summary>
+        /// An order waiting to be built here, as the frame would carry it.
+        ///
+        /// <para>Not part of the chunk mirror and deliberately not published by
+        /// <see cref="Publish"/>: a site is not geometry, it arrives once a frame from the
+        /// snapshot, and the composition root hands it over separately. A test that wants one says
+        /// so, in the order it happens in the game — the world, then the frame.</para>
+        /// </summary>
+        public RenderTestWorld Site(int x, int z, int y, byte building = BuildingHandle.Wall)
+        {
+            _sites.Add(new SiteView(Index(x, z, y), building, (byte)CoreContent.StuffConcrete,
+                delivered: 0, cost: 5, workDone: 0, workTotal: 100));
+            Model.SetSites(new ReadOnlySpan<SiteView>(_sites.ToArray()));
+            return this;
         }
 
         /// <summary>Publish everything into the mirror, as the snapshot contributor would.</summary>
