@@ -823,6 +823,13 @@ namespace Odyssey.Presentation.Bootstrap
             _frameTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
+
+            // Before anything reads the mirror, because the picker reads it and a waiting order is
+            // one of the things a click can land on (WorldRenderModel.SetSites). Until this line
+            // existed a site was drawn and not clickable: over open air the ray found nothing in
+            // the column and the layer was dead to every tool, which is what the cancel tool could
+            // not cancel on 2026-09-18.
+            _model.SetSites(_world.Views.Current.Sites);
             int movePerTick = MovePerTick;
 
             // Before the world is submitted, because it decides how part of the world is drawn.
@@ -1027,11 +1034,38 @@ namespace Odyssey.Presentation.Bootstrap
         /// a whole run painted red because one end of it is rock says less than the cells
         /// themselves do.</para>
         /// </summary>
-        bool Refused(CellRef cell, int building)
+        bool Refused(CellRef cell, int building) => Refused(cell, building, facing: 0);
+
+        /// <summary>
+        /// The same question for a thing that is more than one cell: <b>every</b> cell it would
+        /// occupy has to take it, not just the one under the pointer.
+        ///
+        /// <para><b>The guard was in the simulation and not on the screen</b>, which is the half
+        /// the player meets. <c>ConstructionGrid.Place</c> derives the far cell from the facing and
+        /// refuses the order when anything is standing in it — correct, tested, and completely
+        /// invisible: the ghost asked only about the head cell, so a bed whose far half was in a
+        /// wall drew in its own material like any legal order, and clicking it did nothing at all.
+        /// A click that silently does nothing is indistinguishable from a click that missed, which
+        /// is how "it doesn't respect where I placed it" gets reported (owner, 2026-09-18).</para>
+        ///
+        /// <para>The footprint is derived by <c>EdificeFootprint</c> — the simulation's own rule,
+        /// asked rather than restated, so the ghost cannot come to disagree with the order about
+        /// which cells a thing claims. That disagreement is the fault this line of work has hit
+        /// three times (`19-build-cursor.md` §6).</para>
+        /// </summary>
+        bool Refused(CellRef cell, int building, int facing)
         {
             ConstructionGrid? sites = _colony?.Construction;
             if (sites == null || _grid == null) return false;
-            return !sites.Allows(_grid.Index(cell), building);
+
+            int index = _grid.Index(cell);
+            if (!sites.Allows(index, building)) return true;
+
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (def.footprint <= 1) return false;
+
+            int second = EdificeFootprint.SecondCell(index, def.edifice, facing, _grid.Size);
+            return second < 0 || !sites.Allows(second);
         }
 
         void DrawSiteGhost(CellRef cell, int building, int stuff, int facing = 0, bool refused = false)
@@ -1090,8 +1124,17 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            _renderer.DrawGhost(module, tint,
-                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
+            // A ladder's ghost stands on the face the built one will stand on: the wall it would be
+            // fixed to if there is one, and the rotation the player has turned it to if there is
+            // not. Asked of the model rather than worked out here, because that rule has one owner
+            // and two systems have already disagreed about it once.
+            Matrix4x4 placed =
+                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y));
+            if (what.edifice == CoreContent.EdificeLadder && _model != null && _grid != null)
+                placed *= Matrix4x4.Rotate(Quaternion.Euler(
+                    0f, Directions.Yaw[_model.LadderFacing(_grid.Index(cell), facing)], 0f));
+
+            _renderer.DrawGhost(module, tint, placed);
         }
 
         /// <summary>
@@ -1121,15 +1164,18 @@ namespace Odyssey.Presentation.Bootstrap
                     facing == 3 ? box.Max.X : box.Min.X,
                     facing == 2 ? box.Max.Z : box.Min.Z,
                     box.Min.Y);
-                DrawSiteGhost(head, building, stuff, facing, Refused(head, building));
+                DrawSiteGhost(head, building, stuff, facing, Refused(head, building, facing));
                 return;
             }
 
+            // The facing goes to a one-cell thing too, since 2026-09-18: a ladder rotates now, and
+            // a ghost that would not turn is a player pressing R and seeing nothing happen — the
+            // exact complaint the rotation was added to answer.
             for (int z = box.Min.Z; z <= box.Max.Z; z++)
             for (int x = box.Min.X; x <= box.Max.X; x++)
             {
                 var at = new CellRef(x, z, box.Min.Y);
-                DrawSiteGhost(at, building, stuff, refused: Refused(at, building));
+                DrawSiteGhost(at, building, stuff, facing, Refused(at, building));
             }
         }
 
@@ -1357,7 +1403,10 @@ namespace Odyssey.Presentation.Bootstrap
             int cell = sites.WhereItWouldLand(_grid.Index(hover), director.Building);
             CellRef at = _grid.Size.FromIndex(cell);
 
-            bool allowed = sites.Allows(cell, director.Building);
+            // The whole footprint, not the cell under the pointer: a bed whose far half is in a
+            // wall is a refused order and has to look like one before it is given, or the click
+            // does nothing and the player is left to guess why. See the Refused overload.
+            bool allowed = !Refused(at, director.Building, director.Facing);
             BuildingDef what = ConstructionContent.BuildingAt(director.Building);
 
             // **Inside something is still an answer, and now it is the thing itself in red**

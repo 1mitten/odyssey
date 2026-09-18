@@ -847,5 +847,91 @@ namespace Odyssey.Tests.Sim
             Assert.That(restored.Construction.BedQualityAt(head), Is.EqualTo(QualityHandle.Normal),
                 "and so does the tier the finisher rolled");
         }
+
+        /// <summary>
+        /// **A two-cell thing may not be ordered into anything standing in its far cell**, for
+        /// every facing, and this is the test that says so out loud.
+        ///
+        /// <para>Written to answer an owner report of a bed built through a wall (2026-09-18). The
+        /// rule was already there and already worked — the far cell is derived from the facing and
+        /// validated at the order, and all four facings refuse — so this pins it rather than fixing
+        /// it. Worth keeping for that reason: a guard nothing tests is a guard that can be tidied
+        /// away, and the check happens before the head cell's own, which is an order that looks
+        /// arbitrary until you need it.</para>
+        /// </summary>
+        [Test]
+        public void ABedIsRefusedWhenItsFarCellIsAWall()
+        {
+            for (int facing = 0; facing < 4; facing++)
+            {
+                ColonyWorld colony = Fresh();
+                int head = OpenFootprint(colony, out _);
+                Assume.That(head, Is.GreaterThanOrEqualTo(0));
+
+                int second = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, facing, Size);
+                if (second < 0 || !colony.Construction.Allows(second, BuildingHandle.Wall)) continue;
+
+                Assume.That(colony.Construction.Place(
+                    Size.FromIndex(second), BuildingHandle.Wall, StuffHandle.Wood),
+                    Is.EqualTo(IntentRejection.None));
+                colony.Construction.Raise(colony.Pawns, second);
+
+                IntentRejection got = colony.Construction.Place(
+                    Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing);
+                
+                Assert.That(got, Is.EqualTo(IntentRejection.NotPermitted),
+                    $"facing {facing}: a bed whose far cell is a wall must be refused");
+            }
+        }
+
+        /// <summary>
+        /// **The facing the player chose has to reach the record**, and for a long time it did not.
+        ///
+        /// <para><c>Raise</c> derived the far cell from <c>_facing[cell]</c>, then called
+        /// <c>Clear(cell)</c> — which zeroes the site, facing included — and then read the facing
+        /// <i>again</i> for the record, out of the slot it had just wiped. Every rotatable thing was
+        /// built facing north whatever was ordered.</para>
+        ///
+        /// <para><b>It hid because only the drawing was wrong.</b> The cells were derived before the
+        /// clear and were always right, so the footprint guard still worked, nothing was ever built
+        /// somewhere illegal, and no simulation test could see it. Even
+        /// <see cref="ABedsFacingIsInTheStateHash"/> passed — on the difference between the two
+        /// beds' <em>cells</em> rather than on the facings it was written to pin. What the owner
+        /// saw was a bed ghost turned one way and a built bed at a quarter turn to it, lying
+        /// through a wall it did not occupy (2026-09-18).</para>
+        ///
+        /// <para>Every facing, and that matters: north is 0 and a lost facing is also 0, so a test
+        /// that only tried north would have passed throughout.</para>
+        /// </summary>
+        [Test]
+        public void TheFacingItWasPlacedAtReachesTheRecord()
+        {
+            int tried = 0;
+            for (int facing = 0; facing < 4; facing++)
+            {
+                ColonyWorld colony = Fresh();
+                int head = OpenFootprint(colony, out _);
+                Assume.That(head, Is.GreaterThanOrEqualTo(0));
+
+                int second = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, facing, Size);
+                if (second < 0 || !colony.Construction.Allows(second, BuildingHandle.Bed)) continue;
+
+                Assume.That(colony.Construction.Place(
+                    Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing),
+                    Is.EqualTo(IntentRejection.None), $"the order for facing {facing} was refused");
+
+                colony.Construction.Raise(colony.Pawns, head);
+                PlacedEdifice placed = colony.Outcome.Edifices[colony.Grid.Edifice[head]];
+
+                Assert.That((int)placed.Facing, Is.EqualTo(facing),
+                    $"a bed ordered facing {facing} was built facing {placed.Facing}");
+                Assert.That(colony.Grid.Edifice[second], Is.EqualTo(colony.Grid.Edifice[head]),
+                    "and the far cell it claimed must be the one that facing derives");
+                tried++;
+            }
+
+            Assert.That(tried, Is.GreaterThan(1),
+                "the board gave only one usable facing, so this proved nothing");
+        }
     }
 }

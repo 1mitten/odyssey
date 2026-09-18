@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -520,21 +521,39 @@ namespace Odyssey.Presentation.World
             const float Pulling = -35f;
             const float ElbowBend = -30f;
 
+            // **A ladder is not a rock face, and the owner's reference photographs are the
+            // evidence** (2026-09-18, five climbers from behind and one from the side). On stone a
+            // climber takes whatever holds there are and the lower hand ends near its own hip; on a
+            // ladder BOTH hands are on rungs above the head — the trailing one at about chin height
+            // and the leading one at nearly full stretch — because the rungs are where they are and
+            // there is nowhere else to put a hand. Reaching goes a little higher for the same
+            // reason: a rung is gripped over the top, not pressed against.
+            //
+            // Two numbers, and they are the owner's to tune once they have watched a colonist go
+            // up one. Nothing else in the pose depends on them.
+            const float LadderReaching = -162f;
+            const float LadderPulling = -104f;
+            const float LadderElbowBend = -46f;
+
+            float reaching = figure.OnLadder ? LadderReaching : Reaching;
+            float pulling = figure.OnLadder ? LadderPulling : Pulling;
+            float elbow = figure.OnLadder ? LadderElbowBend : ElbowBend;
+
             float swing = Mathf.Sin(figure.ClimbPhase * ReachesPerCell * 2f * Mathf.PI);
 
             if (figure.RightUpperArm != null && figure.LeftUpperArm != null)
             {
-                float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f) * figure.ClimbWeight;
-                float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f) * figure.ClimbWeight;
+                float right = Mathf.Lerp(pulling, reaching, (swing + 1f) * 0.5f) * figure.ClimbWeight;
+                float left = Mathf.Lerp(reaching, pulling, (swing + 1f) * 0.5f) * figure.ClimbWeight;
 
                 // No tilt: a climb is straight up the sagittal plane, where a swing is across the
                 // body.
                 Vector3 axis = SwingAxis(figure.Transform, 0f);
 
                 Pitch(figure.RightUpperArm, axis, right);
-                Pitch(figure.RightLowerArm, axis, ElbowBend * figure.ClimbWeight);
+                Pitch(figure.RightLowerArm, axis, elbow * figure.ClimbWeight);
                 Pitch(figure.LeftUpperArm, axis, left);
-                Pitch(figure.LeftLowerArm, axis, ElbowBend * figure.ClimbWeight);
+                Pitch(figure.LeftLowerArm, axis, elbow * figure.ClimbWeight);
             }
 
             ApplyClimbLegs(figure, swing);
@@ -581,18 +600,23 @@ namespace Odyssey.Presentation.World
             // arithmetic rather than a second constant that would drift out of step with it.
             toRock = toRock.normalized * Mathf.Max(0.05f, CellMetrics.HalfXZ - ClimbLean);
 
-            PlantFoot(figure, figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, toRock, left);
-            PlantFoot(figure, figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, toRock, right);
+            float steppedDrop = figure.OnLadder
+                ? ClimbPose.LadderSteppedDrop : ClimbPose.SteppedDrop;
+
+            PlantFoot(figure, figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot,
+                toRock, left, steppedDrop);
+            PlantFoot(figure, figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot,
+                toRock, right, steppedDrop);
         }
 
         /// <summary>One boot on to its hold, eased out of wherever the gait had it.</summary>
         void PlantFoot(Figure figure, Transform? upper, Transform? lower, Transform? foot,
-            Vector3 toRock, float step)
+            Vector3 toRock, float step, float steppedDrop)
         {
             if (upper == null || lower == null || foot == null) return;
 
             Vector3 hold = ClimbPose.Foothold(upper.position, toRock, figure.Transform.up,
-                figure.LegLength, step);
+                figure.LegLength, step, steppedDrop);
             Vector3 target = Vector3.Lerp(foot.position, hold, Mathf.Clamp01(figure.ClimbWeight));
 
             Quaternion sole = foot.rotation;
@@ -782,6 +806,65 @@ namespace Odyssey.Presentation.World
         /// grab, not a settling-in.</para>
         /// </summary>
         public const float ClimbEaseSeconds = 0.15f;
+
+        /// <summary>
+        /// How much of a climbing step is spent letting go at the top, as a fraction.
+        ///
+        /// <para>A quarter of a layer, which at the ladder's cost is about a fifth of a second —
+        /// long enough to read as reaching the ledge and short enough that most of the step is
+        /// still a climb. See <see cref="ToppingOut"/>.</para>
+        /// </summary>
+        public const float TopTaper = 0.25f;
+
+        /// <summary>
+        /// How much climb is left in a step, 1 in the middle of it and 0 at the top end.
+        ///
+        /// <para><b>The top end, not the finish.</b> Going up that is the end of the step; going
+        /// down it is the start, because a colonist stepping off a ledge on to a ladder is at the
+        /// top of it on its first frame. Reading the phase without the direction would have the
+        /// figure let go of the wall at the bottom of every descent, which is where it needs to
+        /// hold on most.</para>
+        ///
+        /// <para>This is what stops the arms being overhead on the ledge: it runs the whole climb
+        /// pose out — arms, legs and the lean together — over the last quarter of the rise, so the
+        /// figure arrives standing rather than arriving and then unwinding (owner, 2026-09-18).</para>
+        /// </summary>
+        public static float ToppingOut(float phase, bool up)
+        {
+            if (phase < 0f) return 0f;
+
+            float topness = up ? Mathf.Clamp01(phase) : 1f - Mathf.Clamp01(phase);
+            if (topness <= 1f - TopTaper) return 1f;
+            return Mathf.Clamp01((1f - topness) / TopTaper);
+        }
+
+        /// <summary>
+        /// The direction of the ladder standing in this cell, or false when none does.
+        ///
+        /// <para><b>Asked before the wall, because a ladder is the thing you climb.</b> Where both
+        /// exist they agree by construction — <see cref="WorldRenderModel.LadderFacing"/> fixes the
+        /// ladder to the first occluding neighbour, which is the wall the old scan would have found
+        /// anyway — and where only the ladder exists this is the difference between a colonist on
+        /// a ladder and a colonist levitating beside one.</para>
+        ///
+        /// <para>The direction is the ladder's <em>back</em>: the mesher rotates the module so its
+        /// front looks out along <c>LadderFacing</c>, so the climber faces the opposite way, into
+        /// the rungs. One owner for that face and two readers of it, which is the whole point of
+        /// asking the model rather than the neighbourhood.</para>
+        /// </summary>
+        bool TryLadderBeside(CellRef at, out Vector3 toLadder)
+        {
+            toLadder = Vector3.zero;
+            WorldRenderModel? world = World;
+            if (world == null) return false;
+
+            int index = world.Size.Index(at.X, at.Z, at.Y);
+            if (world.EdificeDef(index) != CoreContent.EdificeLadder) return false;
+
+            int back = Directions.Opposite(world.LadderFacing(index));
+            toLadder = new Vector3(Directions.DeltaX[back], 0f, Directions.DeltaZ[back]);
+            return true;
+        }
 
         /// <summary>
         /// The direction of the nearest solid face beside a cell, or false when there is none.

@@ -102,6 +102,70 @@ namespace Odyssey.Tests.Presentation
             Assert.That(offset.y, Is.LessThan(0f), "and it should still be below the hip");
         }
 
+        /// <summary>
+        /// A rung is not a hold. The owner's side-on reference (2026-09-18) shows a ladder climber
+        /// with the pushing leg nearly straight and the other knee drawn right up in front of the
+        /// chest, because the rungs are a fixed distance apart and that distance is most of a shin.
+        /// Posed at the rock's step the same figure shuffles up in half-steps.
+        ///
+        /// <para>Both ends of the cycle are checked, because the pushing end must <em>not</em> have
+        /// moved: a climber at full stretch is at full stretch on either surface, and a ladder pose
+        /// that lifted both feet would read as somebody hanging rather than climbing.</para>
+        /// </summary>
+        [Test]
+        public void TheLadderStepComesUpHigherThanTheRockStep()
+        {
+            Vector3 hip = Vector3.up * 2f;
+
+            float rock = ClimbPose.Foothold(hip, ToRock, Vector3.up, 0.9f, 1f).y;
+            float rung = ClimbPose.Foothold(
+                hip, ToRock, Vector3.up, 0.9f, 1f, ClimbPose.LadderSteppedDrop).y;
+
+            Assert.That(rung, Is.GreaterThan(rock), "the stepped boot should be higher on a ladder");
+            Assert.That(rung, Is.LessThan(hip.y), "and still below the hip");
+
+            Assert.That(ClimbPose.Foothold(hip, ToRock, Vector3.up, 0.9f, 0f, ClimbPose.LadderSteppedDrop).y,
+                Is.EqualTo(ClimbPose.Foothold(hip, ToRock, Vector3.up, 0.9f, 0f).y).Within(1e-4f),
+                "the pushing leg is at full stretch on rock and on rungs alike");
+        }
+
+        /// <summary>
+        /// **Letting go happens during the climb, not after it** (owner, 2026-09-18: the top of a
+        /// ladder "jolts", the arms are "still way up when they should come down level with the
+        /// ledge", and it "seems to stall for a moment").
+        ///
+        /// <para>All three were the weight holding at 1 for the whole step and only starting to
+        /// ease out on the frame the step ended — 0.15 s of a figure standing on the ledge with its
+        /// arms overhead while most of a metre of lean unwound underneath it.</para>
+        /// </summary>
+        [Test]
+        public void TheClimbLetsGoBeforeItArrives()
+        {
+            Assert.That(PawnFigureDirector.ToppingOut(0.5f, up: true), Is.EqualTo(1f),
+                "the middle of a climb is all climb");
+            Assert.That(PawnFigureDirector.ToppingOut(1f, up: true), Is.EqualTo(0f),
+                "and none of it is left on arrival");
+            Assert.That(PawnFigureDirector.ToppingOut(0.9f, up: true), Is.InRange(0f, 1f).And.LessThan(1f),
+                "the last quarter is the letting go");
+
+            // Going down, the top of the ladder is the START of the step — a colonist stepping off
+            // a ledge is at the top on its first frame. Reading the phase without the direction
+            // would have it let go at the bottom of every descent, which is the one place it needs
+            // to be holding on.
+            Assert.That(PawnFigureDirector.ToppingOut(0f, up: false), Is.EqualTo(0f));
+            Assert.That(PawnFigureDirector.ToppingOut(1f, up: false), Is.EqualTo(1f));
+
+            // Monotonic in both directions: a weight that went up and down inside one step is a
+            // stutter, which is the class of fault this whole change is about.
+            float previous = -1f;
+            for (int i = 0; i <= 20; i++)
+            {
+                float now = PawnFigureDirector.ToppingOut(i / 20f, up: false);
+                Assert.That(now, Is.GreaterThanOrEqualTo(previous));
+                previous = now;
+            }
+        }
+
         [Test]
         public void EveryFootholdIsBelowTheHip()
         {

@@ -381,9 +381,20 @@ namespace Odyssey.Sim.Construction
             if (!NaturalContent.TerrainAt(_grid.Terrain[index]).buildable) return false;
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
+
+            // **A slab may not cap a ladder, and a ladder may not be built under a slab.** One rule
+            // stated from both sides, because a rule that can be walked around in two moves is not
+            // a rule: refusing the ladder alone would leave a player free to build the ladder first
+            // and pour the floor over it afterwards, arriving at the very arrangement the refusal
+            // exists to prevent (owner, 2026-09-18: *"a ladder shouldn't be able to be built if
+            // there is a slab directly above because colonists go through the floor"*).
+            if ((def.slab || def.covering) && IsLadder(BelowOf(index))) return false;
+
             return def.covering ? AllowsCovering(index)
                 : def.slab
                 ? AllowsSlab(index)
+                : building == BuildingHandle.Ladder
+                ? SomethingUnderfoot(index) && AllowsLadder(index)
                 // Something underfoot. A wall hanging in the air is the fault the whole support
                 // model exists to prevent, and refusing it at the order is far better than
                 // collapsing it afterwards: the player never gave an order that could not be
@@ -412,6 +423,36 @@ namespace Odyssey.Sim.Construction
         /// says about building through a wood. A ladder is excluded by the same word and that is
         /// wanted too: capping a ladder with a wall is not a thing to permit by accident.</para>
         /// </summary>
+        /// <summary>
+        /// Whether a ladder may go up from this cell: the shaft it would climb into has to be open.
+        ///
+        /// <para><b>The whole of the owner's report, as a refusal.</b> A ladder under a slab is a
+        /// ladder a colonist climbs <i>through the floor</i>, and it was not merely possible, it was
+        /// the only shape that worked — see <see cref="LadderArrivesAt"/>. The player is told now,
+        /// at the order, rather than finding out by watching somebody walk through a deck.</para>
+        ///
+        /// <para><b>A landing is deliberately not asked for here</b>, although it is what makes the
+        /// ladder <i>work</i>. The top of a chain of ladders is the only one that needs one, and a
+        /// player builds a chain from the bottom: demanding a landing at the order would refuse
+        /// every ladder in a shaft except the last, in the only order they can be built in. It is
+        /// asked at the connector instead, where it can be answered again each time either end
+        /// changes — which <see cref="RefreshLadder"/> already does in both directions.</para>
+        /// </summary>
+        bool AllowsLadder(int index)
+        {
+            int above = index + _grid.Size.LayerStride;
+            if (above >= _grid.Size.CellCount) return false;
+
+            return !_grid.IsSolidTerrain(above) && _grid.Floor[above] == CoreContent.SlabNone;
+        }
+
+        /// <summary>The cell one layer down, or -1 at the bottom of the world.</summary>
+        int BelowOf(int index)
+        {
+            int below = index - _grid.Size.LayerStride;
+            return below < 0 ? -1 : below;
+        }
+
         bool SomethingUnderfoot(int index)
         {
             if (_grid.HasFloor(index)) return true;
@@ -695,7 +736,24 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
             ushort stuff = ConstructionContent.StuffAt(_stuff[cell]).stuff;
-            int second = EdificeFootprint.SecondCell(cell, def.edifice, _facing[cell], _grid.Size);
+
+            // **Read before the site is cleared, because clearing it takes the facing with it.**
+            //
+            // This line used to be two: the far cell was derived here and the facing was read again
+            // *after* `Clear(cell)` on its way to the record — out of a slot that had just been
+            // zeroed. So every rotatable thing was built facing north whatever the player chose,
+            // and the fault hid perfectly. The cells were right, because they were derived up here
+            // from the real facing; only the drawn thing was wrong, so no simulation test could see
+            // it, the footprint guard still refused a bed whose far half was in a wall, and
+            // `ABedsFacingIsInTheStateHash` passed on the difference between the two beds' *cells*
+            // rather than on the facings it was written to pin.
+            //
+            // What the owner saw: a bed ghost turned the way they wanted, and a built bed at a
+            // quarter turn to it, sometimes lying through a wall it was never allowed to occupy
+            // (2026-09-18, with a screenshot of each). And with it the sleeper, who is laid out
+            // from the bed's facing and was lying across a bed that had been placed along.
+            byte facing = _facing[cell];
+            int second = EdificeFootprint.SecondCell(cell, def.edifice, facing, _grid.Size);
 
             // A two-cell thing's cells were both validated at the order; the world can still have
             // moved under the far one while the wood was being fetched — the ground below it can
@@ -713,7 +771,7 @@ namespace Odyssey.Sim.Construction
             // 1. The thing itself — a slab at the cell's lower boundary, or an edifice standing in
             //    the cell. One `if`, because everything else about the two is identical.
             if (def.slab) RaiseSlab(cell, stuff, def.covering);
-            else RaiseEdifice(cell, def, stuff, second, _facing[cell], quality);
+            else RaiseEdifice(cell, def, stuff, second, facing, quality);
 
             // A finished bed's head cell joins the list the sleep chooser already scans — the
             // scenario's own start-of-world cells are already in it, and the chooser does not
@@ -744,8 +802,7 @@ namespace Odyssey.Sim.Construction
 
             // 5. A ladder joins two layers, and a slab is what gives a ladder somewhere to arrive.
             //    Both are refreshed here because either can be the one that completes the pair.
-            RefreshLadder(ctx, cell);
-            RefreshLadder(ctx, cell - _grid.Size.LayerStride);
+            RefreshLaddersAround(ctx, cell);
         }
 
         /// <summary>
@@ -766,6 +823,33 @@ namespace Odyssey.Sim.Construction
         /// ladder with nothing above it registers nothing and is simply a thing on a wall until a
         /// floor arrives over it.</para>
         /// </summary>
+        /// <summary>
+        /// Every ladder whose connector this cell could have changed.
+        ///
+        /// <para>Three families, and the third is new with the landing rule. A ladder <b>in</b> this
+        /// cell, and one <b>under</b> it, are the two ends of the pair the cell is part of. But a
+        /// shaft arrives in an <i>open</i> cell now and steps sideways on to the floor beside it, so
+        /// a slab laid here is also the landing for a ladder standing under each of this cell's four
+        /// neighbours — and taking it away again strands that ladder. Missing those is the class of
+        /// fault that leaves a colony with a ladder it can climb and a ladder it cannot, identical
+        /// on the board and differing only in the order the two things were built.</para>
+        /// </summary>
+        void RefreshLaddersAround(PawnContext ctx, int cell)
+        {
+            GridSize size = _grid.Size;
+            RefreshLadder(ctx, cell);
+            RefreshLadder(ctx, cell - size.LayerStride);
+
+            CellRef at = size.FromIndex(cell);
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int nx = at.X + (dir == 1 ? 1 : dir == 3 ? -1 : 0);
+                int nz = at.Z + (dir == 0 ? 1 : dir == 2 ? -1 : 0);
+                if (!size.Contains(nx, nz, at.Y)) continue;
+                RefreshLadder(ctx, size.Index(nx, nz, at.Y) - size.LayerStride);
+            }
+        }
+
         void RefreshLadder(PawnContext ctx, int cell)
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return;
@@ -774,7 +858,7 @@ namespace Odyssey.Sim.Construction
             int above = cell + _grid.Size.LayerStride;
             if (wanted)
                 wanted = above < _grid.Size.CellCount
-                    && _grid.IsWalkable(cell) && _grid.IsWalkable(above);
+                    && _grid.IsWalkable(cell) && LadderArrivesAt(above);
 
             int existing = ctx.Nav.OneCellConnectorAt(cell);
             if (wanted == (existing >= 0)) return;
@@ -802,9 +886,77 @@ namespace Odyssey.Sim.Construction
             }
         }
 
+        /// <summary>
+        /// Is the top of a ladder somewhere a colonist can arrive?
+        ///
+        /// <para><b>The old test was <c>IsWalkable</c>, and it demanded the one arrangement the
+        /// owner reported as a bug.</b> <c>CellGrid.IsWalkable</c> needs <c>HasFloor</c> — a slab in
+        /// the cell, or solid ground under it — so the only ladder that ever registered a connector
+        /// was a ladder with a slab <i>directly above it</i>, and a colonist climbing it went
+        /// straight through the floor (owner, 2026-09-18). The configuration the report calls wrong
+        /// and the configuration the rule demanded were the same one.</para>
+        ///
+        /// <para>So the shaft cell is <b>open</b> — that is what a ladder goes up — and what makes
+        /// it somewhere to arrive is one of two things:</para>
+        /// <list type="bullet">
+        /// <item><b>a landing beside it:</b> an orthogonal neighbour with a real floor, which is the
+        /// slab you step off on to. The owner's own answer to what a legal ladder needs at the
+        /// top.</item>
+        /// <item><b>another ladder in it:</b> the shaft continues, and it is the topmost ladder of
+        /// the chain that has to find a landing. Without this clause a run of ladders up through a
+        /// mined shaft could never be built from the bottom, which is the only order a player can
+        /// build one in.</item>
+        /// </list>
+        ///
+        /// <para><b>A real floor still counts</b>, and that is not an oversight: it keeps every
+        /// ladder the ruined city ever stamped, and every ladder in a save written before this
+        /// rule, working exactly as it did. The new placement rule stops any more being made; this
+        /// one does not strand a colonist on the storey above an old one.</para>
+        ///
+        /// <para>Standing in the shaft cell is granted by <c>NavGrid.RefreshFrom</c> — <i>"a
+        /// connector is its own floor"</i> — so the cell becomes walkable the moment the connector
+        /// registers, and the step sideways on to the landing is an ordinary walk.</para>
+        /// </summary>
+        bool LadderArrivesAt(int top)
+        {
+            if ((uint)top >= (uint)_grid.Size.CellCount) return false;
+            if (_grid.IsSolidTerrain(top)) return false;
+            if (_grid.IsBlockedByEdifice(top)) return false;
+            if (NaturalContent.IsWater(_grid.Terrain[top])) return false;
+
+            if (_grid.HasFloor(top)) return true;
+            if (IsLadder(top)) return true;
+
+            return HasLandingBeside(top);
+        }
+
+        /// <summary>
+        /// Is there a floor to step off on to, orthogonally beside this cell?
+        ///
+        /// <para>Orthogonal and on the same layer: a landing is the slab next to the top of the
+        /// shaft, not one a layer away and not a diagonal, because a diagonal is not a step the
+        /// mover makes (the search is 4-connected — see <c>PathFinder</c>).</para>
+        /// </summary>
+        bool HasLandingBeside(int cell)
+        {
+            GridSize size = _grid.Size;
+            CellRef at = size.FromIndex(cell);
+
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int nx = at.X + (dir == 1 ? 1 : dir == 3 ? -1 : 0);
+                int nz = at.Z + (dir == 0 ? 1 : dir == 2 ? -1 : 0);
+                if (!size.Contains(nx, nz, at.Y)) continue;
+                if (_grid.IsWalkable(size.Index(nx, nz, at.Y))) return true;
+            }
+
+            return false;
+        }
+
         /// <summary>Is a ladder standing in this cell, whoever put it there?</summary>
         bool IsLadder(int cell)
         {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
             int handle = _grid.Edifice[cell];
             if (handle < 0 || handle >= _edifices.Count) return false;
             PlacedEdifice placed = _edifices[handle];
@@ -836,13 +988,21 @@ namespace Odyssey.Sim.Construction
         /// <para><c>second</c> is the far cell of a two-cell thing, or -1. Both cells point at the
         /// <b>one</b> record — the invariant the whole bed design stands on
         /// (docs/design/20-beds.md §4) — and the facing it was placed at is what derives that cell
-        /// again later, so it is stored only for things that have one.</para>
+        /// again later.</para>
+        ///
+        /// <para><b>The facing is kept for anything that rotates, not only for what is two cells
+        /// wide</b> (2026-09-18). It used to be stored only when there was a far cell to derive,
+        /// on the reasoning that a one-cell thing has nothing to point at — which stopped being
+        /// true the moment a ladder became rotatable, and would have thrown the player's rotation
+        /// away silently between the order and the built thing. <c>Place</c> already zeroes the
+        /// facing of anything that does not rotate, so this is the same rule read off the def
+        /// rather than off the footprint.</para>
         void RaiseEdifice(int cell, BuildingDef def, ushort stuff, int second, byte facing, byte quality)
         {
             _edifices.Add(new PlacedEdifice
             {
                 CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
-                Facing = second >= 0 ? facing : (byte)0, Quality = quality,
+                Facing = def.rotates ? facing : (byte)0, Quality = quality,
             });
             _grid.Edifice[cell] = _edifices.Count - 1;
             if (second >= 0) _grid.Edifice[second] = _edifices.Count - 1;
@@ -915,7 +1075,7 @@ namespace Odyssey.Sim.Construction
             ctx.MarkStructureChanged(cell);
 
             // And a ladder below has just lost the landing it arrived at (U43).
-            RefreshLadder(ctx, cell - _grid.Size.LayerStride);
+            RefreshLaddersAround(ctx, cell);
             return true;
         }
 

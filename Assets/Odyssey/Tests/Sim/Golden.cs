@@ -199,6 +199,13 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// The ruined city, which is still generated and still tested even though the scene does
         /// not load it. Its passes are the ones nothing else exercises.
+        ///
+        /// <para><b>Simulated re-baked 2026-09-18</b> for the ladder shaft rule, and the failure
+        /// named its own cause: the board generated identically and only the run diverged. A ladder
+        /// used to need a slab <i>directly above</i> it to register a connector at all, so every
+        /// ladder the city stamps under an open cell was dead; now a landing beside the top counts
+        /// too, and the colony reaches places it could not. Generated is untouched, which is the
+        /// evidence that no generator pass changed.</para>
         /// </summary>
         public static readonly Case City = new Case
         {
@@ -209,7 +216,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 9209903446312531288UL,
+            Simulated = 6021360912580352346UL,
         };
     }
 }

@@ -5188,3 +5188,191 @@ built by the composition root wires the two together, and the fast tier compiles
 the known gap in `CLAUDE.md` about clicks, met where it can be met.
 
 Nobody has pressed Play on it.
+
+### Three reports, one play session: the dead layer, the levitating climber, and the ladder that had to go through the floor (2026-09-18)
+
+`docs/design/21-ladders-and-climbing.md` holds the rules. This is why they are those rules.
+
+**The cancel bug was not in the cancel tool, and the clarifying question is what found it.** The
+report was that a slab being built could not be cancelled. The follow-up — *did anything else on
+that layer respond?* — came back "only blueprints were dead", and the slab was over open air. That
+turns a tool bug into a picking bug in one sentence: the cancel path submits two intents per cell and
+had never been reached, because `SliceCameraRig` raises no event at all when the pick misses.
+`SlicePicker.Owner` knew an edifice, a floor, water and the block below; a site was none of them, and
+sites are drawn straight into the renderer outside the mirror the picker walks. Over open air that is
+fatal — nothing in the column — and over ground it merely answers with the cell one layer *down*,
+which is why cancelling from the layer below sometimes worked and made the whole thing look
+intermittent.
+
+**The levitation was one missing case in a comment that had aged badly.** The climb pose was already
+reached by a ladder step; every joint it moves is multiplied by `ClimbWeight`, which only rises while
+a face is found, and the face came from a scan for a *solid* neighbour. The comment beside it said
+the simulation refuses to lay a connector where there is no block, so a wall would always be found.
+True of a mined shaft. Never true of a built ladder — `RefreshLadder` asks for no wall at all. A
+ladder against slabs found nothing solid, the weight decayed to nought, and the figure rode the idle
+up through the air.
+
+**Two systems owned one plane, which is the fault this project has now had twice.** The mesher picked
+the ladder's face from the first occluding neighbour and fell back to north; the director scanned for
+solid in a different order and fell back to nothing. Where nothing occluded they disagreed
+completely: a ladder drawn on the north face and a colonist standing up straight beside it. It is
+`HopPriceHasOneOwnerTests` again, in presentation, and the answer is the same shape — one function on
+the mirror both read, and a test that measures the drawn yaw rather than reading the source.
+
+**The third report and the existing rule were the same arrangement seen from opposite sides.** A
+ladder registered a connector only when both ends were walkable, and walkable needs a floor — so the
+only ladder that had ever worked was one with a slab directly above it, which is precisely the
+"colonists go through the floor" the owner was reporting. Refusing the placement on its own would not
+have tightened ladders, it would have deleted them. So the shaft cell is open now, the ladder makes
+its own top standable, and you step off sideways on to the slab beside it. `NavGrid.RefreshFrom`
+already had the clause that makes it work — *a connector is its own floor* — written for shafts and
+waiting.
+
+**One deviation from the owner's answer, and it is not a softening.** They asked for no landing
+anywhere to be refused at placement. Only the topmost ladder of a chain needs a landing and a player
+builds a chain bottom-up, so demanding it at the order would refuse every ladder in a shaft except
+the last, in the only order they can be built. It is asked at the connector instead, where
+`RefreshLadder` already answers it again each time either end changes. The ladder is buildable and
+opens nothing until the landing arrives.
+
+**And the migration the plan worried about turned out not to exist.** The plan proposed stamping
+holes in worldgen and accepting a save break, and flagged it as the one irreversible decision. It was
+not needed: keeping "a real floor still counts" as one of the three ways a ladder may arrive makes
+the new rule a superset of the old one, so every stamped city ladder and every ladder in an old save
+keeps working. What the placement rule stops is any more being made. The cheapest fix and the
+conservative one turned out to be the same fix.
+
+**The golden master moved and named its own cause.** `Golden.City.Simulated` re-baked; `Generated`
+untouched, which is the evidence that no generator pass changed. City ladders standing under an open
+cell used to register nothing and now work, so the colony reaches places it could not. The meadow and
+the played board did not move, because neither has a ladder on it.
+
+**The photographs were the specification for the pose.** Five climbers from behind and one from the
+side: both hands on rungs *above the head*, the trailing one at chin height, the stepped knee drawn
+right up while the pushing leg stays nearly straight. The rock numbers say the lower hand hangs near
+the hip and the step is modest, which is right for stone and reads as a shrug on a ladder. Four
+numbers now branch on `Figure.OnLadder`; the pushing end of the cycle deliberately does not, because
+full stretch is full stretch either way and lifting both feet reads as hanging.
+
+Flushness needed no new number at all. `ClimbLean` already puts the body 0.30 m off the cell face,
+about a body's depth from the rungs — it had simply never been applied to a ladder, because the face
+was zero. Fixing the face fixed the lean with it.
+
+Nobody has pressed Play on any of it.
+
+### The second playtest: a blank roster, a ladder facing nowhere, and letting go after you have arrived (2026-09-18)
+
+Four reports. `docs/design/21-ladders-and-climbing.md` §7 holds the rules; this is the reasoning.
+
+**The first thing to establish was which build had been played.** The owner's checkout was on
+`claude/rates-and-stats`, eight commits behind `origin/main`, with the ladder work still an open pull
+request — so none of the morning's fixes were in what they were looking at. That is the
+confirm-delivery lesson paying for itself: two of the four reports are about code they had not run,
+and diagnosing them as regressions would have been a wasted afternoon.
+
+**The roster's blank avatars were diagnosed by what still worked.** The pictures were gone from the
+bar and present on the colonist card, and that asymmetry is the whole answer: a card is a slot that
+re-reads itself only when the colonist in it changes, whereas the inspect pane asks afresh every time
+it is opened. `PortraitStudio.Clear` destroys every texture when a colony is built or loaded, and a
+new colony's pawn ids start at the same small numbers — so nothing about any slot had changed while
+everything under it had been destroyed. An id cannot answer "does this picture still exist". A
+generation counter can, and it costs one integer.
+
+**The ladder's wrong side was an arbitrary answer the player could see was arbitrary.** `LadderFacing`
+fell back to north wherever nothing occluded, which is fine as a tie-break nobody can observe and not
+fine at all when the ladder is standing in the open. The owner picked exactly that case out of the
+options offered. So the ladder rotates now — and the wall still wins wherever there is one, which is
+not an exception but the rule: which side of a wall a ladder is bolted to is physics, not preference.
+
+Two things had to follow it, and both would have failed silently. `RaiseEdifice` kept a facing only
+for two-cell things, which was a perfectly good rule while a bed was the only rotatable thing and
+would have dropped the player's rotation between the order and the built ladder. And a one-cell ghost
+was drawn with no facing at all, so R would have turned nothing the player could see — the rotation
+would have "worked" and looked broken.
+
+**The jolt, the stall and the raised arms at the top were one fault.** The climb weight's target was a
+flat yes-or-no on whether a face had been found, so it held at 1 for the whole step and only began
+easing out on the frame the step *ended* — at which point the colonist was standing on the ledge.
+Everything the owner described happened after the climbing was over: 0.15 s of a figure on solid floor
+with its arms overhead, sliding most of a metre of lean back to the middle of its cell. Making letting
+go part of the climb — the last quarter of the rise — fixes all three at once, because all three were
+the same unwinding happening in the wrong place.
+
+The direction matters and is the one thing a phase-only rule gets wrong: going down, the top of the
+ladder is the *start* of the step, so reading the phase alone would have a colonist let go at the
+bottom of every descent.
+
+**The bed did not reproduce, and the test that failed to reproduce it is kept.** The far cell of a
+two-cell thing is derived from the facing and validated at the order, for all four facings, before
+the head cell's own check — and `BedTests.ABedIsRefusedWhenItsFarCellIsAWall` passes. The guard the
+owner asked to be general already is: `Place` applies it to any `footprint > 1` def rather than to the
+bed. So either what they saw is drawn rather than built, or it needs a sequence nobody has written
+down. Keeping the test regardless: a guard nothing tests is a guard that gets tidied away, and this
+one runs before a check that looks arbitrary until you need it.
+
+### The bed still has not been reproduced, and the hunt for it found two other things (2026-09-18)
+
+The owner reported the bed unchanged, which it would be — nothing had been changed about it. So the
+placement path was walked end to end rather than reasoned about a third time: the intent seam
+(`A`/`B`/`C` and `HandlePlace` passing them in that order), the gesture (`Commit` returns the anchor
+for a single placement and `TryPreview` builds that same cell's footprint, so ghost and order agree
+for every facing), the rotate key's shared binding (the rig skips slice-up exactly when
+`RotatableArmed`, so R cannot quietly raise the slice under a bed), the mesher's yaw, and the drawn
+bed's own extent — 4.6 m inside a 5 m footprint with 0.2 m clear at each end. Every one of them is
+right. **It is still not reproduced**, and saying so is better than shipping a change that treats a
+symptom nobody has pinned.
+
+**One of the two things the hunt did find was an hour old and mine.** `Building_Ladder` gained
+`rotates` in the Defs, and the HUD keeps a *parallel* table of footprints and rotatability because it
+cannot see `Odyssey.Sim.Construction` (ADR 0003). `DesignateDirector.RotatableArmed` reads that
+table — so the def alone would have left R raising the slice instead of turning the ghost, and the
+player's rotation discarded, with every simulation test green, because the consequence is not in the
+simulation at all. The fixture that was supposed to hold the two tables together checked their
+*lengths* and spot-checked the wall and the bed: exactly the shape of test that passes while the row
+that matters is wrong. It walks every handle against the Defs now.
+
+That is the second time in two days that a rule with two owners has failed silently, after the
+ladder's face. The pattern is worth naming: a parallel table is allowed here — ADR 0003 makes it
+necessary — but a parallel table that nothing *compares* is a bug with a delay on it.
+
+**The other was the guard the owner asked to be general, which already was, on the side they could
+not see.** `Place` derives a two-cell thing's far cell from the facing and refuses the order when
+anything stands in it. Correct, tested, and invisible: the ghost asked only about the cell under the
+pointer, so a bed with its far half in a wall drew in its own material like any legal order and then
+the click did nothing. A click that silently does nothing is indistinguishable from a click that
+missed — which is one way "it doesn't respect where I placed it" gets reported, and it is worth
+fixing whether or not it is the fault being chased. The ghost derives the footprint with
+`EdificeFootprint` rather than restating it, because a cursor that disagrees with the order about
+which cells a thing claims is the fault this line of work has already hit three times.
+
+### The bed, found: two correct lines with a Clear between them (2026-09-18)
+
+`Raise` derived the bed's far cell from `_facing[cell]`, called `Clear(cell)` — which zeroes the
+site, facing included — and then read the facing **again**, out of the slot it had just wiped, on its
+way to the record. Every rotatable thing was built facing north whatever the player chose.
+
+**It hid because only the drawing was wrong.** The cells were derived before the clear and were
+always right, so the footprint guard still refused a bed whose far half was in a wall, nothing was
+ever built anywhere illegal, and the simulation was consistent with itself throughout. The record
+said north, so the mesher drew the bed extending north from its head cell — into whatever was north,
+walls included — while the cells it occupied were the ones the player asked for. A bed lying through
+a wall it does not occupy. And `AimSleep` lays a sleeper out along the bed's facing, so the same
+line put colonists across their beds: the "half way up the bed … hanging off" from the same report.
+
+**Three tests had a clear shot and all three missed.** `ABedsFacingIsInTheStateHash` passes on the
+difference between the two beds' *cells* rather than their facings — written to pin the facing,
+pinning something that happened to move with it. `ABedIsRefusedWhenItsFarCellIsAWall`, written the
+previous day expressly to reproduce this report, passes because the guard it tests was never the
+broken part. And every other bed test places facing 0, which is also what a lost facing looks like.
+The new test walks every facing the board allows and refuses to pass on fewer than two.
+
+**The method is the lesson, not the line.** Three sessions of reading the placement path end to end
+— the intent seam, the gesture, the shared rotate key, the mesher's yaw, the bed's drawn extent —
+each concluded correctly that the part in front of it was right, and every one of those conclusions
+was true. The fault was in the gap between two of them. Ten lines of throwaway test printing
+*asked → got* found it on the first run. Reading tells you whether a line is correct; it does not
+tell you what the value actually is at the moment it is used.
+
+The screenshots were what made the probe possible. "It doesn't respect the rotation" is ambiguous
+between the cell, the facing and the drawing; two pictures of the same three beds before and after
+building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.
