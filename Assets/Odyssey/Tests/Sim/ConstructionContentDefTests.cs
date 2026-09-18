@@ -52,7 +52,7 @@ namespace Odyssey.Tests.Sim
         // U45 appended Building_Bed at handle 5 — two cells, rotatable, quality-bearing, 5 stuff
         // and 180 ticks. It was written at handle 2 and moved here on the merge: the three above
         // reached main first and a handle position is a save contract.
-        const ulong BuildingFingerprint = 1601939814383435364UL;
+        const ulong BuildingFingerprint = 14011408076065575136UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

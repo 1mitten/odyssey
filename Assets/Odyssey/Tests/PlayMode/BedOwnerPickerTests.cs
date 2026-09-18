@@ -71,10 +71,10 @@ namespace Odyssey.Tests.PlayMode
                 if (!size.Contains(x, z, start.Y)) continue;
 
                 int head = size.Index(x, z, start.Y);
-                if (!colony.Construction.Allows(head)) continue;
+                if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
 
                 int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, size);
-                if (foot < 0 || !colony.Construction.Allows(foot)) continue;
+                if (foot < 0 || !colony.Construction.Allows(foot, BuildingHandle.Bed)) continue;
 
                 if (colony.Construction.Place(size.FromIndex(head), BuildingHandle.Bed,
                         StuffHandle.Wood, facing: 0) != IntentRejection.None) continue;

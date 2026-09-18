@@ -192,6 +192,10 @@ namespace Odyssey.Sim.Pawns
             // its seed before a save is read over it.
             Construction.RebuildLadderConnectors(Pawns);
 
+            // And which cells hold furniture nothing may be put down in — derived from the same
+            // edifice list, for the same reason.
+            Construction.RebuildItemBlocks();
+
             _nav.Rebuild();
         }
 

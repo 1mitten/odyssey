@@ -359,6 +359,20 @@ namespace Odyssey.Sim.Construction
             if (NaturalContent.IsWater(_grid.Terrain[index])) return false;
             if (_grid.Edifice[index] >= 0) return false;
 
+            // **Furniture needs a clear cell** (owner, 2026-09-18: "you shouldn't be able to put a
+            // bed where there is an object/item structure in the way … you can see some meals
+            // poking through the bed, this is invalid").
+            //
+            // A property of the thing, not a rule about building, because the two really do
+            // differ. A bed is broad and low and open, so a stack of meals stands up through the
+            // mattress and is plainly wrong. A wall fills its cell and a slab is laid at the
+            // boundary underneath it; neither shows what is in the cell, and refusing those would
+            // stop a colonist walling a corner because somebody dropped a log there — which was
+            // measured, not supposed: the blanket rule failed twelve tests that build perfectly
+            // ordinary walls near a start the scenario strews with wood.
+            if (ConstructionContent.BuildingAt(building).needsClearCell && _items.ItemAt(index) != null)
+                return false;
+
             // Rubble, and nothing else today. The flag has existed on TerrainDef since the tables
             // were written and had no reader until a collapse started leaving a mess (U29): a heap
             // of debris is cleared before anything is built on it.
@@ -774,6 +788,39 @@ namespace Odyssey.Sim.Construction
                 _grid.Flags[cell] |= CellFlags.BlockingEdifice;
                 if (second >= 0) _grid.Flags[second] |= CellFlags.BlockingEdifice;
             }
+
+            // Furniture takes its cells out of circulation for items, both of them: a bed must not
+            // be walled off from the order and then have a pile carried on to it afterwards.
+            if (def.needsClearCell)
+            {
+                _items.BlockItemsAt(cell);
+                if (second >= 0) _items.BlockItemsAt(second);
+            }
+        }
+
+        /// <summary>
+        /// Work out again which cells hold furniture nothing may be put down in, for a colony that
+        /// has just been loaded.
+        ///
+        /// <para>Derived rather than saved, the same argument <see cref="RebuildLadderConnectors"/>
+        /// makes one line along: the edifice is in the save and what it implies about the cells
+        /// around it is worked out from that, so this costs no save format and no hash bit.</para>
+        /// </summary>
+        public void RebuildItemBlocks()
+        {
+            _items.ClearItemBlocks();
+
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice placed = _edifices[i];
+                if (placed.Removed) continue;
+                if (!ConstructionContent.NeedsClearCell(placed.Def)) continue;
+
+                _items.BlockItemsAt(placed.CellIndex);
+                int second = EdificeFootprint.SecondCell(
+                    placed.CellIndex, placed.Def, placed.Facing, _grid.Size);
+                if (second >= 0) _items.BlockItemsAt(second);
+            }
         }
 
         /// <summary>
@@ -862,6 +909,10 @@ namespace Odyssey.Sim.Construction
             if (second >= 0) MarkChunksAround(ctx, second);
 
             // 3. What is walkable changed here, and in the cell above through the floor rule.
+            // The cells are ordinary ground again, so things may be put down in them.
+            _items.AllowItemsAt(was.CellIndex);
+            if (second >= 0) _items.AllowItemsAt(second);
+
             // 4 and 5 — what was holding the boundary above it up, and a ladder's connector at
             // either end — ride along inside MarkNavAround, which is why a two-cell thing gets it
             // for both of its cells rather than only for the one that was clicked.

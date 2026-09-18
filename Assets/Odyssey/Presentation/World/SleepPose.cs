@@ -62,11 +62,37 @@ namespace Odyssey.Presentation.World
         public static float HeightPerHip { get; set; } = 1.9f;
 
         /// <summary>
-        /// How far the body's middle floats above whatever it lies on, as a fraction of the hip
-        /// height — half a torso's thickness, so the sleeper rests on the surface rather than
-        /// sinking through it or hovering over it.
+        /// Half a torso's thickness, front to back, as a fraction of the hip height. What a
+        /// sleeper on its back floats above the surface.
         /// </summary>
         public static float ThicknessPerHip { get; set; } = 0.16f;
+
+        /// <summary>
+        /// Half a torso's width, shoulder to shoulder, as a fraction of the hip height.
+        ///
+        /// <para><b>This is what stops a side sleeper sinking.</b> Rolled on to its side a body
+        /// presents its width to the mattress rather than its thickness, and the width is half as
+        /// much again — so a lift computed from thickness alone buried the shoulder and the hip in
+        /// the bed (owner, 2026-09-18: "sunk"). <see cref="Lift"/> takes whichever the roll
+        /// actually presents.</para>
+        /// </summary>
+        public static float ShoulderPerHip { get; set; } = 0.24f;
+
+        /// <summary>
+        /// How far the body's middle floats above what it lies on, for a posture at a given roll.
+        ///
+        /// <para>The half-height of a box of the body's thickness and width, turned through the
+        /// roll: flat on the back it is the thickness, full on the side it is the width, and
+        /// between the two it is what the rotation gives. There is no fudge in it, which is why it
+        /// is right for a posture nobody has drawn yet.</para>
+        /// </summary>
+        public static float Lift(in Posture posture, float standingHipHeight)
+        {
+            float hip = standingHipHeight > 0.01f ? standingHipHeight : 0.95f;
+            float roll = posture.Roll * Mathf.Deg2Rad;
+            return hip * (ThicknessPerHip * Mathf.Abs(Mathf.Cos(roll))
+                          + ShoulderPerHip * Mathf.Abs(Mathf.Sin(roll)));
+        }
 
         /// <summary>How long the figure takes to lie down or get up, in seconds.</summary>
         public static float SettleSeconds { get; set; } = 0.45f;
@@ -177,19 +203,24 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// Where the figure's root goes and which way it points, to lie along
-        /// <paramref name="along"/> with its head at the far end.
+        /// <paramref name="along"/> with its head at <paramref name="headAt"/>.
+        ///
+        /// <para><b>The head is given and the feet are worked out</b>, not the other way round and
+        /// not from the middle. The head is the end that has to land somewhere exact — on the
+        /// pillow — and the feet may fall wherever a body of that length puts them, because this
+        /// bed is two and a half times a colonist's length and nothing is watching its foot end.
+        /// Centring the body on the bed instead is what left the head adrift in the middle of the
+        /// mattress (owner, 2026-09-18).</para>
         ///
         /// <para><b>The root is the feet</b>, which is what makes this a placement rather than a
-        /// rotation about the middle. Laid back through a right angle the body extends
-        /// <i>behind</i> the root, so the root belongs at the foot end and the head arrives one
-        /// body-length back along the bed — on the pillow, which is the one part of this a player
-        /// will actually check.</para>
+        /// rotation about the middle: laid back through a right angle the body extends
+        /// <i>behind</i> the root, so the root goes one body-length along the bed from the head.</para>
         ///
         /// <para><paramref name="weight"/> blends the whole thing against the standing pose, so a
         /// colonist lies down and gets up rather than snapping flat.</para>
         /// </summary>
         public static void Place(
-            in Posture posture, Vector3 centre, Vector3 along, float surfaceY,
+            in Posture posture, Vector3 headAt, Vector3 along, float surfaceY,
             float standingHipHeight, float weight,
             Vector3 standingPosition, Quaternion standingRotation,
             out Vector3 position, out Quaternion rotation)
@@ -202,12 +233,12 @@ namespace Odyssey.Presentation.World
             flat.Normalize();
 
             float length = BodyLength(standingHipHeight);
-            float lift = standingHipHeight > 0.01f ? standingHipHeight * ThicknessPerHip : 0.15f;
+            float lift = Lift(posture, standingHipHeight);
 
             var feet = new Vector3(
-                centre.x + flat.x * (length * 0.5f),
+                headAt.x + flat.x * length,
                 surfaceY + lift,
-                centre.z + flat.z * (length * 0.5f));
+                headAt.z + flat.z * length);
 
             Quaternion facing = Quaternion.LookRotation(flat, Vector3.up);
 

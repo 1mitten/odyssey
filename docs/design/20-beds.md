@@ -382,6 +382,46 @@ decision 4 states as unchanged, so it has been left alone and pinned by a test t
 figures out loud. If a night in a bed should feel more decisive than a quarter again, that one
 integer in `Colonist.xml` is the lever.
 
+### What the screenshots showed (owner, 2026-09-18)
+
+Three photographs of a colonist asleep, and three faults — one of which turned out to be the
+smaller half of itself.
+
+**The head was adrift in the middle of the mattress.** The body was centred on the bed, and
+**this bed is 4.6 m long against a colonist's 1.8 m** — two cells of a 2.5 m grid — so centring
+left the head two thirds of a metre short of the pillow. `SleepPose.Place` takes the *head* point
+now and works the feet out from it, and the point is `BedShape.HeadRestAlong`, derived from the
+pillow's own centre so the two cannot drift apart. The head is the end that has to be exact; the
+feet may fall where a body of that length puts them, because nothing is watching the foot end of a
+bed this size.
+
+**Side sleepers sank.** Rolled onto its side a body presents its **width** to the mattress rather
+than its thickness, and width is half as much again — so a lift computed from thickness alone
+buried the shoulder and the hip. `SleepPose.Lift` is the half-height of the body box turned
+through the roll: the thickness flat on the back, the width full on the side, and what the
+rotation gives in between. No fudge, so it is right for a posture nobody has drawn yet.
+
+**Items stood up through the bed, and refusing the order was only half of it.** `needsClearCell`
+on `BuildingDef` stops a bed being *ordered* onto a pile. It does nothing about a hauler carrying
+a pile *onto* a bed afterwards, which is the same picture arriving the other way round — and that
+is the likelier route, since a bed cell was empty and walkable and therefore a perfectly good
+destination. A bed's cells are out of circulation for items entirely now
+(`ColonyItems.BlockItemsAt`), **derived from the edifice list on load** exactly as support, the
+region graph and a ladder's connector are, so it costs no save format and no hash bit.
+
+**A rule found on the way, worth knowing.** `TrySleep` checks a bed's *reservation* before it
+checks whose bed it is — so a hauler that had claimed a bed cell as a drop target locked the owner
+out of their own bed and sent them to sleep on the ground. Measured, not supposed:
+`AnOwnerSleepsInTheirOwnBedAndNobodyElseDoes` began failing for exactly that reason, and the
+fixture's own `Unclaimed` helper records it. Beds cannot be claimed that way any more, but a bed
+reserved by some other means still would be.
+
+**`needsClearCell` is furniture's and not every building's**, and that was measured too: the
+blanket rule failed twelve tests that build perfectly ordinary walls near a start the scenario
+strews with wood. A wall fills its cell and a slab is laid at the boundary under it, so neither
+shows what is lying there; a bed is broad, low and open, and does. Extending it to walls is one
+line and is the owner's call.
+
 ### Why Assign did nothing, three times (2026-09-18)
 
 The owner reported being unable to give a bed to a colonist on 2026-09-17, again after the row was

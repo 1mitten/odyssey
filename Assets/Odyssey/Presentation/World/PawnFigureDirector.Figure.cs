@@ -276,8 +276,12 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public Vector3 SleepAlong = Vector3.forward;
 
-            /// <summary>The middle of the body in plan: the bed's own centre, or the cell's.</summary>
-            public Vector3 SleepCentre;
+            /// <summary>
+            /// Where the head goes in plan: the middle of the pillow, or the cell's own centre
+            /// stepped back half a body where there is no bed. The head rather than the middle,
+            /// because the head is the end that has to land somewhere exact.
+            /// </summary>
+            public Vector3 SleepHeadAt;
 
             /// <summary>World height of the surface being lain on — a mattress top, or the ground.</summary>
             public float SleepSurfaceY;

@@ -79,6 +79,20 @@ namespace Odyssey.Sim.Construction
         public bool takesQuality;
 
         /// <summary>
+        /// Whether the cell must be empty of <b>items</b> before this can be ordered there.
+        ///
+        /// <para>Furniture, and nothing else so far. A bed is broad, low and open, so a stack of
+        /// meals left on the ground stands straight up through the mattress (owner, 2026-09-18,
+        /// with a screenshot of exactly that). A wall fills its cell and a slab is laid at the
+        /// boundary under it, so neither shows what is lying there — and refusing those too would
+        /// stop a colonist walling a corner because somebody dropped a log in it.</para>
+        ///
+        /// <para>A field rather than a rule in <c>Allows</c> because that is the difference: it is
+        /// a fact about the shape of the thing, and the table is where facts about things live.</para>
+        /// </summary>
+        public bool needsClearCell;
+
+        /// <summary>
         /// Units of stuff a site swallows before any work can start.
         ///
         /// <para>Five for a wall, which is the reference's number for a wall of any material
@@ -302,6 +316,18 @@ namespace Odyssey.Sim.Construction
         /// <see cref="BuildingHandle"/> value, written into the published frame and into every
         /// save, so this list — never the table's own sorted order — is what resolves a name.
         /// </summary>
+        /// <summary>
+        /// Does the thing standing as this edifice keep items out of its cells? Asked of an
+        /// edifice id rather than a building handle, because a standing thing is a
+        /// <c>PlacedEdifice</c> and the handle it was ordered from is not kept.
+        /// </summary>
+        public static bool NeedsClearCell(ushort edifice)
+        {
+            for (int i = 0; i < Buildings.Count; i++)
+                if (Buildings[i].edifice == edifice && Buildings[i].needsClearCell) return true;
+            return false;
+        }
+
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
@@ -398,7 +424,7 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
-                    costCount = 5, workToBuild = 180, minSkill = 0,
+                    needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.bed",
                 },
             };

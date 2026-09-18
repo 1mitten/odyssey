@@ -1950,3 +1950,19 @@ as a picker at the top-left of the screen against the row at y = 1095 that raise
 **`GeometryChangedEvent` is the event that fires when the size exists**, so placement belongs
 there, and the placement call should decline to write a position it cannot compute rather than
 writing a NaN.
+
+## Half a rule about state is a rule that does not hold
+
+The owner reported meals standing up through a bed. The first fix refused to **place** a bed on a
+cell holding items, which is the direction the report described and is half of the rule: nothing
+stopped a hauler carrying a pile **onto** the bed afterwards, and that is the likelier route,
+because an empty walkable cell is a perfectly good haul destination whatever is standing in it.
+
+Where a report is about a state that must never exist, fix **every way in**, not the one the
+report happened to come through. The second half here was `ColonyItems.CellHasSpace`, the single
+gate every spawn, drop and haul destination already passes through — derived from the edifice list
+on load, like support and ladder connectors, so it costs no save format and no hash bit.
+
+It also fixed a failure that looked unrelated: bed cells had been haul destinations, so haulers
+reserved them, and `TrySleep` checks the reservation before it checks whose bed it is — which
+locked a colonist out of their own bed and sent them to sleep on the floor.

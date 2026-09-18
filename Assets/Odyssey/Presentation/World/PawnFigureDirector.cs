@@ -903,20 +903,28 @@ namespace Odyssey.Presentation.World
                 // The bed's own origin and its own facing, from the same place the bed itself is
                 // drawn from — so a sleeper cannot lie across a bed that has been turned.
                 Vector3 origin = GroundRelief.Lift(BedShape.Origin(at.X, at.Z, at.Y, facing));
-                figure.SleepCentre = origin;
+                var along = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
+
+                // The head goes on the pillow, which is a point the bed itself decides — so moving
+                // the pillow moves the sleeper and the two cannot drift apart.
+                figure.SleepHeadAt = origin + along * BedShape.HeadRestAlong;
                 figure.SleepSurfaceY = origin.y + BedShape.MattressTop;
-                figure.SleepAlong = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
+                figure.SleepAlong = along;
                 return;
             }
 
             Vector3 floor = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
-            figure.SleepCentre = floor;
             figure.SleepSurfaceY = floor.y;
 
             // Whatever it was facing when it lay down. Held rather than recomputed, so a colonist
             // asleep on the ground does not swing round as the yaw eases.
-            Vector3 along = Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward;
-            if (along.sqrMagnitude > 1e-6f) figure.SleepAlong = along;
+            Vector3 heading = Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward;
+            if (heading.sqrMagnitude > 1e-6f) figure.SleepAlong = heading;
+
+            // No pillow to aim at, so the body is centred on the cell it dropped in: the head goes
+            // half a body-length back along the way it is lying.
+            figure.SleepHeadAt =
+                floor - figure.SleepAlong * (SleepPose.BodyLength(figure.StandingHipHeight) * 0.5f);
         }
 
         /// <summary>
@@ -1301,7 +1309,7 @@ namespace Odyssey.Presentation.World
             if (figure.SleepWeight > 0.001f)
             {
                 SleepPose.Place(
-                    SleepPose.PostureFor(figure.Pawn), figure.SleepCentre, figure.SleepAlong,
+                    SleepPose.PostureFor(figure.Pawn), figure.SleepHeadAt, figure.SleepAlong,
                     figure.SleepSurfaceY, figure.StandingHipHeight, figure.SleepWeight,
                     figure.Transform.position, figure.Transform.rotation,
                     out Vector3 lain, out Quaternion laid);

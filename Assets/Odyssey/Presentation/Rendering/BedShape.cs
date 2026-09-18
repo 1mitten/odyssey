@@ -71,6 +71,19 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float MattressTop => Centres[1].y + Sizes[1].y * 0.5f;
 
+        /// <summary>
+        /// Where along the bed a sleeper's head goes, in metres from the origin: the middle of the
+        /// pillow, and negative because the head end is local −Z.
+        ///
+        /// <para><b>Taken from the pillow rather than from the bed.</b> A colonist is about 1.8 m
+        /// and this bed is 4.6 m — two cells of a 2.5 m grid — so a body centred on the bed leaves
+        /// its head two thirds of a metre short of the pillow, adrift in the middle of the
+        /// mattress. That is what the owner photographed (2026-09-18: "the head should be above the
+        /// pillow and the rest of the body below"). Derived from the pillow's own centre, so moving
+        /// the pillow moves the sleeper with it.</para>
+        /// </summary>
+        public static float HeadRestAlong => Centres[PillowPart].z;
+
         /// <summary>The overall box a bed occupies, for a selection bracket to be drawn round.</summary>
         public static Vector3 Size => new Vector3(Sizes[0].x, Centres[2].y + Sizes[2].y * 0.5f, Sizes[0].z);
 

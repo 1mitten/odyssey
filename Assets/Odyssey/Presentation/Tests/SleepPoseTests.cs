@@ -20,9 +20,10 @@ namespace Odyssey.Tests.Presentation
     {
         const float Hip = 0.95f;
 
+        /// <summary>Laid with its head at the origin, so every assertion reads against a known point.</summary>
         static void Place(int pawnId, Vector3 along, float surfaceY, out Vector3 position, out Quaternion rotation) =>
             SleepPose.Place(
-                SleepPose.PostureFor(pawnId), Vector3.zero, along, surfaceY, Hip, weight: 1f,
+                SleepPose.PostureFor(pawnId), headAt: Vector3.zero, along, surfaceY, Hip, weight: 1f,
                 standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
                 out position, out rotation);
 
@@ -30,18 +31,52 @@ namespace Odyssey.Tests.Presentation
         /// The head ends up at the far end of the bed from the root — on the pillow, which is the
         /// one part of this a player will actually check.
         /// </summary>
+        /// <summary>
+        /// <b>The head lands where it was asked to, and the feet follow.</b>
+        ///
+        /// <para>The point of the whole placement: the head is the end that has to be exact,
+        /// because it goes on the pillow. Centring the body on the bed instead left the head two
+        /// thirds of a metre short of it, adrift in the middle of the mattress — which is what the
+        /// owner photographed.</para>
+        /// </summary>
         [Test]
-        public void TheHeadLiesAtTheFarEndFromTheFeet()
+        public void TheHeadLandsWhereItIsAskedForAndTheFeetFollow()
         {
             Place(1, Vector3.forward, 0.7f, out Vector3 position, out Quaternion rotation);
 
             // The root is the feet, and the body extends behind it once laid back.
             Vector3 head = position + rotation * Vector3.up * SleepPose.BodyLength(Hip);
 
-            Assert.That(position.z, Is.GreaterThan(0f), "the feet are at the foot end");
-            Assert.That(head.z, Is.LessThan(0f), "and the head at the other one");
+            Assert.That(head.x, Is.EqualTo(0f).Within(0.01f), "the head is where it was placed");
+            Assert.That(head.z, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(position.z, Is.EqualTo(SleepPose.BodyLength(Hip)).Within(0.01f),
+                "and the feet are one body-length along from it");
             Assert.That(head.y, Is.EqualTo(position.y).Within(0.05f),
                 "a sleeper is level: the head is not propped up or buried");
+        }
+
+        /// <summary>
+        /// A side sleeper floats on its <b>width</b>, not its thickness, so it does not sink into
+        /// the mattress it is lying on (owner, 2026-09-18: "sunk").
+        /// </summary>
+        [Test]
+        public void ASideSleeperIsLiftedByItsWidthRatherThanItsThickness()
+        {
+            SleepPose.Posture back = SleepPose.Postures[0];
+            SleepPose.Posture side = SleepPose.Postures[2];
+
+            Assume.That(back.Roll, Is.EqualTo(0f), "the first posture is the flat one");
+            Assume.That(Mathf.Abs(side.Roll), Is.GreaterThan(45f), "the third is on its side");
+
+            Assert.That(SleepPose.Lift(side, Hip), Is.GreaterThan(SleepPose.Lift(back, Hip)),
+                "a body on its side needs more clearance than one on its back");
+            Assert.That(SleepPose.Lift(back, Hip),
+                Is.EqualTo(Hip * SleepPose.ThicknessPerHip).Within(0.001f),
+                "and one on its back needs exactly half its thickness");
+
+            foreach (SleepPose.Posture posture in SleepPose.Postures)
+                Assert.That(SleepPose.Lift(posture, Hip), Is.GreaterThan(0f),
+                    $"{posture.Name} would lie inside whatever it is on");
         }
 
         /// <summary>The body lies along the bed, not across it — so a turned bed turns its sleeper.</summary>
@@ -122,7 +157,8 @@ namespace Odyssey.Tests.Presentation
             Quaternion upright = Quaternion.Euler(0f, 37f, 0f);
 
             SleepPose.Place(
-                SleepPose.PostureFor(1), Vector3.zero, Vector3.forward, 0f, Hip, weight: 0f,
+                SleepPose.PostureFor(1), headAt: Vector3.zero, along: Vector3.forward, surfaceY: 0f,
+                standingHipHeight: Hip, weight: 0f,
                 standing, upright, out Vector3 position, out Quaternion rotation);
 
             Assert.That(position, Is.EqualTo(standing));

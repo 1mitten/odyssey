@@ -32,6 +32,20 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// Is this cell free of anybody's claim on it?
+        ///
+        /// <para><b>Asked because a bed on a reserved cell is a bed nobody can sleep in</b> —
+        /// including its owner. <c>TrySleep</c> checks the reservation before it checks whose bed
+        /// it is, so a hauler that has claimed the cell as a destination locks the owner out of
+        /// their own bed and they lie down on the ground instead. Measured, not supposed: on the
+        /// bare board all three colonists start out hauling, and the first pair of free footprints
+        /// near the start are cells two of them have already claimed.</para>
+        /// </summary>
+        static bool Unclaimed(ColonyWorld colony, int cell) =>
+            colony.Pawns.Reservations.CanReserve(
+                colony.Pawns.Pawns.All[0].Id, ReservationManager.Key(ReservationTargetKind.Cell, cell));
+
+        /// <summary>
         /// A cell beside the start whose whole north-facing footprint can take a bed: the head and
         /// the cell it would claim both open. Returns the head, with the second cell in
         /// <paramref name="second"/>.
@@ -48,10 +62,12 @@ namespace Odyssey.Tests.Sim
                 if (!Size.Contains(x, z, start.Y)) continue;
 
                 int head = Size.Index(x, z, start.Y);
-                if (!colony.Construction.Allows(head)) continue;
+                if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
+                if (!Unclaimed(colony, head)) continue;
 
                 int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
-                if (foot >= 0 && colony.Construction.Allows(foot))
+                if (foot >= 0 && Unclaimed(colony, foot)
+                    && colony.Construction.Allows(foot, BuildingHandle.Bed))
                 {
                     second = foot;
                     return head;
@@ -161,7 +177,13 @@ namespace Odyssey.Tests.Sim
                 int index = Size.Index(x, z, start.Y - 1);
                 if (!colony.Grid.IsSolidTerrain(index)) continue;
                 int above = index + Size.LayerStride;
-                if (above >= Size.CellCount || !colony.Construction.Allows(above)) continue;
+                if (above >= Size.CellCount) continue;
+                if (!colony.Construction.Allows(above, BuildingHandle.Bed)) continue;
+
+                // And the far cell, because a bed needs both and this test is about the lift
+                // rather than about finding the one cell in the meadow that is short of room.
+                int far = EdificeFootprint.SecondCell(above, CoreContent.EdificeBed, 0, Size);
+                if (far < 0 || !colony.Construction.Allows(far, BuildingHandle.Bed)) continue;
 
                 Assert.That(
                     colony.Construction.Place(Size.FromIndex(index), BuildingHandle.Bed, StuffHandle.Wood, 0),
@@ -271,7 +293,7 @@ namespace Odyssey.Tests.Sim
         // ---- ownership (design 20 section 7) --------------------------------------------------
 
         /// <summary>A second open footprint, distinct from the first, for the two-bed tests.</summary>
-        static int AnotherOpenFootprint(ColonyWorld colony, int notHead, out int second)
+        static int AnotherOpenFootprint(ColonyWorld colony, int notHead, int notFoot, out int second)
         {
             CellRef start = colony.Start;
             for (int radius = 1; radius < 12; radius++)
@@ -283,10 +305,19 @@ namespace Odyssey.Tests.Sim
                 if (!Size.Contains(x, z, start.Y)) continue;
 
                 int head = Size.Index(x, z, start.Y);
-                if (head == notHead || !colony.Construction.Allows(head)) continue;
+                if (head == notHead || head == notFoot) continue;
+                if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
+                if (!Unclaimed(colony, head)) continue;
 
                 int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
-                if (foot >= 0 && colony.Construction.Allows(foot))
+                if (foot == notHead || foot == notFoot) continue;
+                if (foot >= 0 && !Unclaimed(colony, foot)) continue;
+
+                // Both cells of the first bed are excluded, not just its head. They are searched
+                // before either is raised, so an overlap is not refused by the grid — the second
+                // bed would simply be built in the first one's foot cell and the two tests about
+                // whose bed is whose would be about one bed.
+                if (foot >= 0 && colony.Construction.Allows(foot, BuildingHandle.Bed))
                 {
                     second = foot;
                     return head;
@@ -411,8 +442,8 @@ namespace Odyssey.Tests.Sim
         {
             ColonyWorld colony = Fresh();
             var pawn = colony.Pawns.Pawns.All[0];
-            int first = OpenFootprint(colony, out _);
-            int secondBed = AnotherOpenFootprint(colony, first, out _);
+            int first = OpenFootprint(colony, out int firstFoot);
+            int secondBed = AnotherOpenFootprint(colony, first, firstFoot, out _);
             Assume.That(first, Is.GreaterThanOrEqualTo(0));
             Assume.That(secondBed, Is.GreaterThanOrEqualTo(0));
             RaiseABed(colony, first);
@@ -456,12 +487,13 @@ namespace Odyssey.Tests.Sim
             // Two beds. The owner's is the one further from where either of them stands: own-bed
             // preference is only observable if distance argues the other way.
             int near = OpenFootprint(colony, out int nearFoot);
-            int far = AnotherOpenFootprint(colony, near, out int farFoot);
+            int far = AnotherOpenFootprint(colony, near, nearFoot, out int farFoot);
             Assume.That(near, Is.GreaterThanOrEqualTo(0));
             Assume.That(far, Is.GreaterThanOrEqualTo(0));
             RaiseABed(colony, near);
             RaiseABed(colony, far);
             Assert.That(Assign(colony, far, owner.Id.Value), Is.EqualTo(IntentRejection.None));
+
 
             owner.Needs[NeedIndex.Rest] = 40;
             for (int i = 0; i < 6_000 && !owner.Asleep; i++) colony.World.Tick();
@@ -597,9 +629,9 @@ namespace Odyssey.Tests.Sim
                 for (int y = colony.Start.Y + 1; y < Size.SizeY - 1 && high < 0; y++)
                 {
                     int head = Size.Index(x, z, y);
-                    if (!colony.Construction.Allows(head)) continue;
+                    if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
                     int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
-                    if (foot < 0 || !colony.Construction.Allows(foot)) continue;
+                    if (foot < 0 || !colony.Construction.Allows(foot, BuildingHandle.Bed)) continue;
 
                     // Higher than the start, and the walk to it exists: the chooser's own
                     // reachability is the oracle, asked once here rather than assumed.
@@ -649,9 +681,9 @@ namespace Odyssey.Tests.Sim
                 for (int y = colony.Start.Y + 1; y < Size.SizeY - 1 && high < 0; y++)
                 {
                     int head = Size.Index(x, z, y);
-                    if (!colony.Construction.Allows(head)) continue;
+                    if (!colony.Construction.Allows(head, BuildingHandle.Bed)) continue;
                     int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
-                    if (foot < 0 || !colony.Construction.Allows(foot)) continue;
+                    if (foot < 0 || !colony.Construction.Allows(foot, BuildingHandle.Bed)) continue;
                     if (!colony.Pawns.Reachable(colony.Pawns.Pawns.All[0], head)) continue;
 
                     // Somewhere to stand and build it from, or nobody ever will - and a place
