@@ -62,6 +62,75 @@ namespace Odyssey.Tests.PlayMode
         static float SlackFor(Rect canvas, Vector2Int resolution) =>
             Mathf.Max(1.5f, 2f * canvas.width / resolution.x);
 
+        /// <summary>
+        /// <b>Load another colony and the roster bar must show that colony's people.</b>
+        ///
+        /// <para>The owner, 2026-09-18: <i>"the colonist info card and the roster top bar names
+        /// don't match up ... maybe to do with loading and saving another game"</i>. A roster card
+        /// is a slot that re-reads itself only when the colonist in it changes, and it asked the
+        /// pawn id alone. Every colony numbers its pawns from one, so after a load the slot's id had
+        /// not moved, the name and face were never rewritten, and the bar went on showing the
+        /// colony the player had left. The inspect pane reads afresh every frame, so it was right
+        /// and the two disagreed on screen.</para>
+        ///
+        /// <para>Driven through the real shell, because the fault was entirely in the view: the
+        /// model had the right names all along and every unit test of it passed. The session is
+        /// rebuilt under a second seed, which is what loading another save does to this bar.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRosterBarFollowsTheColonyIntoANewSession()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                List<string> first = StripNames(doc);
+                Assert.That(first, Is.Not.Empty, "the bar is showing somebody to begin with");
+                Assert.That(first, Is.EqualTo(RosterNames(boot)),
+                    "and it agrees with the frame before anything is loaded");
+
+                // What loading another save does to this bar: teardown and rebuild, which is
+                // LoadSession's own first two lines. The same small pawn ids come back rolled from
+                // a different seed, so every name and face behind them changes and nothing else does.
+                boot.TeardownSession();
+                boot.BuildSession(seedOverride: 20260918u, from: null);
+                yield return Settle(doc);
+
+                List<string> second = StripNames(doc);
+                Assert.That(second, Is.EqualTo(RosterNames(boot)),
+                    "after a load the roster bar must name the colony it is now looking at. Showing " +
+                    "the previous one's names is what the owner saw as the bar and the colonist " +
+                    "card disagreeing");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The names the roster bar is actually drawing, left to right.</summary>
+        static List<string> StripNames(UIDocument doc)
+        {
+            var names = new List<string>();
+            doc.rootVisualElement.Query<Label>(className: "card__name").ForEach(
+                label => names.Add(label.text));
+            return names;
+        }
+
+        /// <summary>The names the published frame says those cards should be showing.</summary>
+        static List<string> RosterNames(OdysseyBootstrap boot)
+        {
+            var names = new List<string>();
+            WorldSnapshot? frame = boot.World?.Views.Current;
+            if (frame == null) return names;
+
+            var roster = new RosterModel();
+            roster.Refresh(frame, PawnId.None);
+            for (int i = 0; i < roster.Cards.Count; i++) names.Add(roster.Cards[i].Name);
+            return names;
+        }
+
         [UnityTest]
         public IEnumerator NoTwoPanelsOverlapAtAnyOfTheThreeResolutions()
         {

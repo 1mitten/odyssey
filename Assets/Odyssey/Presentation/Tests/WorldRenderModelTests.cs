@@ -139,6 +139,94 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// <b>Every floor slab puts its walking surface on the cell's floor plane.</b>
+        ///
+        /// <para>A slab is drawn at the cell's lower boundary (<c>ChunkMesher.EmitFloor</c> →
+        /// <c>CellMetrics.FloorCentre</c>), so in module-local terms the plane a colonist stands on
+        /// is y = 0 and every slab's <em>top</em> face belongs there. Its thickness hangs below,
+        /// where nobody walks.</para>
+        ///
+        /// <para><b>This is the sibling of the test above and was written the same way — from a
+        /// screenshot.</b> That one pinned that two materials are two meshes; this one pins that
+        /// the two meshes land at one height. Taking the first without the second is exactly what
+        /// happened: the slab rows asked for neither <c>baseAtY</c> nor <c>topAtY</c>, so each
+        /// prefab landed on whatever pivot convention its artist used, and the street tile's top
+        /// came out 25 mm above the plank deck's. The owner reported a grey tile sitting at the
+        /// wrong height in an otherwise wooden deck (2026-09-18, `docs/design/15-building.md`).</para>
+        ///
+        /// <para>Asked of the resolved module rather than of the row, because the row says
+        /// <c>topAtY</c> and the question is whether that produced a level floor —
+        /// <c>ResolvedModule.Bounds</c> is measured after placement, so this walks the real
+        /// arithmetic. It also covers the street surfaces, which are walked on for the same reason
+        /// and were 33 mm out for the same one.</para>
+        ///
+        /// <para><b>Two assertions and not one, because the first fix broke the second.</b>
+        /// Levelling the slabs on to the plane <em>exactly</em> made them coplanar with the terrain
+        /// block below — <c>FloorCentre</c> for cell y is that block's top face — and the owner's
+        /// board z-fought within the hour. "All the slabs agree" is necessary and is not enough:
+        /// they must agree at a height that clears the ground. A version of this test that checked
+        /// only the first would have passed the flicker through.</para>
+        /// </summary>
+        [Test]
+        public void EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor()
+        {
+            var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            Assert.That(catalogue, Is.Not.Null, "the module catalogue is committed and should load");
+
+            var library = new ModuleLibrary(catalogue!);
+            int checked_ = 0;
+
+            foreach (ModuleEntry row in catalogue!.Entries)
+            {
+                if (row.shape != ModuleShape.FloorSlab) continue;
+
+                ResolvedModule resolved = library[library.Resolve(row.moduleId, ModuleShape.FloorSlab)];
+
+                // A clone without the licensed packs draws a primitive, whose height is the
+                // fallback's business and not this rule's.
+                if (!resolved.UsesArt || resolved.IsEmpty) continue;
+
+                Assert.That(resolved.Bounds.max.y, Is.EqualTo(CellMetrics.SlabLift).Within(0.001f),
+                    $"{row.moduleId} ({row.prefabName}) draws its top face {resolved.Bounds.max.y:F3} m " +
+                    "above the cell floor, so it will not sit level with the slab in the next cell");
+                checked_++;
+            }
+
+            // And the clearance is not zero. CellMetrics.SlabLift carries the argument; this is
+            // here so that "level" can never again be achieved by levelling everything on to the
+            // one plane the ground below already occupies.
+            Assert.That(CellMetrics.SlabLift, Is.GreaterThan(0f),
+                "a slab flush with the cell floor plane is coplanar with the terrain block beneath " +
+                "it, and paving is laid on ground by definition");
+
+            // Or the loop above passes by never running, which is how a rule quietly stops being
+            // one: five buildable slabs and five street surfaces are in the committed catalogue.
+            // **Only where there is art to check.** The guard above is right that a loop which
+            // never runs is a rule that has quietly stopped being one — but asking for ten checked
+            // rows unconditionally asks for the licensed packs, and the project's standing rule is
+            // that a clone without them still builds and runs headless. It does not: this test was
+            // the one red on the self-hosted runner from the moment it was written, because the
+            // runner's checkout has no `Assets/Synty` and so every row is a primitive.
+            //
+            // The two cases are told apart by the library rather than by the environment: with no
+            // packs, *nothing* in the catalogue has art, so there is nothing here to be wrong. With
+            // packs, ten rows must be checkable, and fewer means the rule has lost its reach.
+            bool anyArtAtAll = false;
+            foreach (ModuleEntry row in catalogue.Entries)
+            {
+                if (library[library.Resolve(row.moduleId, row.shape)].UsesArt) { anyArtAtAll = true; break; }
+            }
+
+            if (anyArtAtAll)
+                Assert.That(checked_, Is.GreaterThanOrEqualTo(10),
+                    "the catalogue should hold at least the five slab ids and the five street tiles");
+            else
+                Assert.Pass("no licensed pack is present, so every module is a primitive and this " +
+                            "rule has nothing to measure. The clearance assertion above still ran.");
+        }
+
+        /// <summary>
         /// A clone without the licensed packs draws exactly what it drew before.
         ///
         /// <para>An unknown module id does not resolve to nothing — it resolves to a built-in

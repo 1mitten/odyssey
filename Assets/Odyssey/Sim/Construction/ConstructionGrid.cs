@@ -614,6 +614,46 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
+        /// <b>Would the slab ordered here stand up if it were finished now?</b> Asked of the
+        /// <em>built</em> world only — no plans, no blueprints.
+        ///
+        /// <para><see cref="AllowsSlab"/>'s deliberate other half. That one accepts a cell held up
+        /// by slabs merely <em>ordered</em> around it, which is the whole of why a roof can be
+        /// dragged in one gesture. It makes a promise about the finished roof and says nothing
+        /// about the order the cells go up in — and nothing used to enforce that order, so a
+        /// colonist taking the nearest site could raise the far end of a bridge while the cells
+        /// meant to hold it up were still blueprints. It stood on nothing and fell on the tick it
+        /// was finished.</para>
+        ///
+        /// <para><b>The owner reported precisely this first</b> (2026-09-18): <i>"the colonists
+        /// tried to build the most outer slabs first which then landed a stone/steel looking tile 1
+        /// height below instead of where it was"</i>. The tile below was the rubble the collapse
+        /// left, and three sessions went on the rubble's drawing before the collapse was measured.
+        /// The owner's rule: <b>a slab that cannot stand is not built yet, and it never leaves
+        /// rubble.</b> Rubble is for construction that was destroyed, not for construction that
+        /// never happened.</para>
+        ///
+        /// <para>True for anything that is not a slab, so a caller can ask it of any site without
+        /// first working out what kind it is. <see cref="BuildWorkGiver.CanBuild"/> asks it before
+        /// offering a job, which defers the cell rather than refusing it; <see cref="Raise"/> asks
+        /// it again at the moment of truth, for the same reason the shaft rule is asked twice.</para>
+        /// </summary>
+        public bool SlabWouldStand(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+
+            int building = _building[cell];
+            if (building == BuildingHandle.None) return true;
+            if (!ConstructionContent.BuildingAt(building).slab) return true;
+
+            // A covering is laid on ground that is already there and is held up by whatever holds
+            // that ground up, so it can never be the unsupported case (18-paving.md).
+            if (ConstructionContent.BuildingAt(building).covering) return true;
+
+            return _support == null || _support.SupportIfSlabAt(cell) > 0;
+        }
+
+        /// <summary>
         /// Would this slab stand once the slabs already <b>ordered</b> around it are built?
         ///
         /// <para><b>Without this you cannot roof a room in one gesture, and that is what the owner
@@ -914,6 +954,25 @@ namespace Odyssey.Sim.Construction
                 Clear(cell);
                 return;
             }
+
+            // **And the support rule, for the same reason and with the opposite answer.**
+            //
+            // A slab accepted on the strength of its planned neighbours must not go up before they
+            // do. `BuildWorkGiver.CanBuild` already declines to offer such a site, so reaching here
+            // means support was lost between the job starting and the last blow landing — a
+            // neighbour cancelled, or mined out from under it.
+            //
+            // **The site is kept, not cancelled**, which is the one place this differs from the
+            // shaft rule above. A shaft violation is permanent: the floor above it exists and the
+            // ladder can never be legal there. This is a race, and the cell is very likely to
+            // become legal again the moment somebody builds the neighbour that was always planned.
+            // Cancelling would take the far half of a dragged roof away from the player, which is
+            // exactly what `SupportedByWhatIsPlanned` exists to prevent.
+            //
+            // The work already done stays done, so the retry costs nothing, and nothing falls —
+            // which is the owner's rule (2026-09-18): a slab that cannot stand is simply not built
+            // yet, and it never leaves rubble.
+            if (!SlabWouldStand(cell)) return;
 
             Clear(cell);
 

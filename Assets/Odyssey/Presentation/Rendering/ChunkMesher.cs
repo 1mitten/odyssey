@@ -472,8 +472,15 @@ namespace Odyssey.Presentation.Rendering
             if (module == 0) return;
             // Draped, like every other thing that fills a cell - see EmitFacePanels for why a
             // lift cannot close a seam, and WaterContributor for the same argument made about tiles.
+            //
+            // And drawn as a sheet rather than as a plate. Draping closes the seam in *metres* and
+            // still leaves it open by a pixel: a plate's rim ends exactly in the plane of its
+            // neighbour's top face, ties with it on depth, and wins often enough to draw a dotted
+            // line of dark wood along every seam in the colony. CellMetrics.FloorTile is the one
+            // owner of both halves of the answer, and CellMetrics.FloorSheet carries the argument,
+            // the measurements and the owner's two screenshots of it.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
-                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) * CellMetrics.FloorTile);
         }
 
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)
