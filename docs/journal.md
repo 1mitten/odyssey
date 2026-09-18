@@ -5737,3 +5737,22 @@ by one naming the live set outright — `ui.skill.mining` and `ui.skill.cutting`
 name — because asserting a borrow that no longer exists would pin the very thing this removed. The
 grid is unmoved at seven rows: `(13+1)/2` and `(14+1)/2` are both 7, so nothing in the pane or the
 setup page had to be re-derived.
+
+**And the art gate caught the missing icon within one CI round.** Adding Chopping without a picture
+failed `TheSkillsTabSwitchesAndDrawsTheOwnersArt`, which asserts `drawn == All.Length - 1` — *every
+skill but social is cut from the owner's sheet*. Expected 13, drew 12. That is a self-maintaining
+rule rather than a count somebody has to remember to bump: **add a skill and you have added an
+obligation to draw it**, and the alternative was an outlined placeholder square sitting in the
+Skills tab indefinitely with nothing to report it.
+
+The owner supplied the tile the same afternoon, a 32 px framed action tile in sheet 06's own format.
+**It went in as a sheet of its own rather than into sheet 06**, and the reason is worth keeping: the
+icon map records which cells are *used by keys*, not which cells hold art, so an unmapped cell of
+somebody's sheet is not a free cell — pasting into one risks painting over art nobody has mapped
+yet. `09-supplied-tiles.png` is one cell wide and says in `sheets.csv` that it grows a column at a
+time, so the next one-off has somewhere to go that costs nothing to find.
+
+The pipeline then did the rest on its own terms: `detect` agreed with the registry, `export` wrote
+64 x 64 RGBA8 at nearest-neighbour scale 2, and **no other icon changed by a byte** — which is the
+check worth making after any export, because the tool rewrites all of them and a silently re-encoded
+sheet would be invisible in a diff of thirteen files.

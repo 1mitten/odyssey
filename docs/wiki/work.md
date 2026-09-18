@@ -2,7 +2,7 @@
 
 The work types a colonist can be assigned, in priority order of urgency, and the skills that govern how well they do them. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging.
 
-36 entries, 2 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+36 entries, 1 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Work types
 
@@ -40,7 +40,7 @@ The work types a colonist can be assigned, in priority order of urgency, and the
 | **Salvage** | `ui.skill.salvage` | Stripping a shell without wrecking what is in it | sheet 06 (action tiles), high | M2 |
 | **Cooking** | `ui.skill.cooking` | Meal quality, and food poisoning avoided | sheet 06 (action tiles), high | M2 |
 | **Growing** | `ui.skill.growing` | Yield and harvest speed | sheet 06 (action tiles), high | M2 |
-| **Chopping** | `ui.skill.cutting` | Felling trees. How fast the axe comes down, and how fast the trunk goes over <br>**Needs:** an axe head, edge-on | no art | M2 |
+| **Chopping** | `ui.skill.cutting` | Felling trees. How fast the axe comes down, and how fast the trunk goes over | sheet 09 (?), high | M2 |
 | **Animals** | `ui.skill.animals` | Taming, training and husbandry | sheet 06 (action tiles), high | M2 |
 | **Crafting** | `ui.skill.crafting` | Bench work and item quality | sheet 06 (action tiles), high | M2 |
 | **Fabrication** | `ui.skill.fabrication` | Advanced production. Gates the best gear | sheet 06 (action tiles), high | M2 |
