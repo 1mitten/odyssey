@@ -16,7 +16,17 @@ namespace Odyssey.Sim
     /// <para><b>The scale is internal.</b> Everything that crosses the sim→UI contract, and
     /// everything a human reads, stays in ticks at the standard rate: <c>CellDetail.WorkToClear</c>,
     /// <c>SiteView.WorkDone/WorkTotal</c> and <c>WorkFor()</c> are all published in ticks, and the
-    /// accumulators are divided back where they reach the interface or the state hash.</para>
+    /// accumulators are divided back where they reach the interface.</para>
+    ///
+    /// <para><b>The state hash is not one of those places.</b> It reads every accumulator whole,
+    /// at the resolution the accumulator is kept at. The division was there briefly so WS1 could
+    /// land without a golden moving, and once WS3 re-baked them it was only a blind spot a
+    /// thousand milliwork wide.</para>
+    ///
+    /// <para><b>One unit, everywhere, including the toils that have no rate.</b> A toil that
+    /// nothing can speed up — eating, sleeping, standing down — pays at exactly
+    /// <see cref="Scale"/> a tick rather than counting plain ticks. A single field carrying two
+    /// units is what <see cref="FromSave"/> cannot read, and what makes half a hash blind.</para>
     /// </summary>
     public static class Rates
     {

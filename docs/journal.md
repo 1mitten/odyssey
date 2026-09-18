@@ -5390,3 +5390,64 @@ tell you what the value actually is at the moment it is used.
 The screenshots were what made the probe possible. "It doesn't respect the rotation" is ambiguous
 between the cell, the facing and the drawing; two pictures of the same three beds before and after
 building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.
+
+### The rates line, reviewed: one field carrying two units (2026-09-18)
+
+Five fixes off a fresh-eyes review of `WS1`–`WS3`, on a worktree built from the pull request head.
+Four of the five are one fault wearing different clothes, and the fifth is a comment that had been
+doing arithmetic on the wrong cadence.
+
+**`ToilProgress` was counting ticks in three drivers and thousandths in four.** `WS1` scaled the
+work toils so a rate could change how fast a colonist pays without changing what anything costs,
+and left the three toils no rate can speed up — eating, sleeping, standing down — on a bare `++`.
+Internally each was consistent, which is why nothing failed. Across the field they were not, and
+the field is saved and hashed. Two things followed. `Rates.FromSave` is told a format version and
+nothing else, so on a pre-format-5 file it multiplied *every* value by a thousand: right for a
+half-mined rock, wrong for a half-eaten meal, which then finished on the next tick. And
+`Pawn.ContributeTo` divided the field back, so eat, sleep and wait read zero for the whole of their
+length and reached the hash not at all. A toil with no rate now pays at exactly `Rates.Scale` a
+tick — the standard rate, said in the unit everybody else is speaking — and
+`ToilProgressHasOneUnitTests` fails the fast tier on any `ToilProgress++` left in the simulation.
+
+**The same division was costing the hash three decimal places everywhere else.** All four
+accumulators were hashed divided back to whole ticks. That was WS1's price for landing with no
+golden moving, and it was the right trade for one commit; WS3 then re-baked every `Simulated` value
+anyway and the division outlived its reason, leaving a blind spot a thousand milliwork wide — two
+runs could differ on a cell and agree until the difference happened to cross a tick boundary. A
+hash that is late to notice a divergence is the thing this hash exists not to be. Hashed whole now.
+
+**All three goldens moved, and that the run did not change was measured rather than argued.** With
+the other three fixes in place and only these two lines reverted, the table comes back to the
+values the branch committed, to the digit. So the colonists walked the same walks and swung the
+same swings; what moved is what the hash can notice about them. No `Generated` value moved, as none
+could — nothing here runs before the first tick.
+
+**`starvationPerInterval` was four times faster than every sentence describing it.** The comment
+read the needs cadence as 200 intervals a day. It is 400 — a 60,000-tick day over the 150-tick
+cadence — so at 2 per interval the bar filled in a day and a quarter where the Def, the field and
+the design all promised two and a half, and severe malnutrition arrived in the fourth day of not
+eating rather than the fifth. **Nothing had ever measured it:** every band test set
+`StarvationSeverity` by hand, so the only new Def integer with no test was the one that decides how
+long starvation takes to bite. It is 1 now, the arithmetic is written out beside it rather than
+summarised, and `TheBarFillsAtTheCadenceItsCommentClaims` holds the sum and the tick path together.
+No golden moved — no golden window lets a need reach zero — which is also why the WS3 soak's
+condition comparison was honestly vacuous.
+
+**A pace cached off a seed that arrives later.** `InnatePacePerMille` caches on first read, which is
+right; the seed it reads is restored by `PawnSeedSection`, which runs *after* the pawn section that
+made the pawn, and is rewritten again whenever a candidate is rerolled on the select screen.
+Nothing reads a pace that early today, so nothing was wrong — but this project has already rolled
+an entire colony from seed zero by exactly that route, when `PawnContext.Seed` was unset until the
+first tick. `RollSeed` is a property now and its setter drops the cache, which turns a live trap
+into a closed one for the cost of four lines.
+
+**And a colonist could collapse onto her own bed.** `SleepJobDriver` tested zero rest before it
+tested arrival, so a colonist whose rest ran out on the tick she stepped onto her bed took the
+collapse branch — and rest effectiveness is read off the cell while the thought was not, so she got
+the bed's rate and the mud's memory. Arrival wins: there is no walk left to cut short.
+
+**What the five have in common is that none of them could fail a test that existed.** Three were
+invisible because the thing they corrupted was only ever read back by the same code that wrote it;
+one was a comment; one needs a window a few ticks wide. The tests added here are the cheap general
+forms — a source scan for the unit, one arithmetic assertion beside one tick-driven one for the
+cadence, and a control apiece for the cache and the bed.

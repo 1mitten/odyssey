@@ -91,7 +91,16 @@ namespace Odyssey.Tests.Sim
         // pace bounds — 850 to 1,150, capped by the walk cycle's 2 m/s — and PawnKindDef gained
         // starvationPerInterval, the speed of the bar that starving fills and eating drains
         // (design 17 §4b, §4c). Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 7457751015177459969UL;
+        //
+        // Moved an eighth time, 2026-09-18, in review: starvationPerInterval went 2 to 1. The
+        // comment beside it read the needs cadence as 200 intervals a day when it is 400 — a
+        // 60,000-tick day over the 150-tick cadence — so the bar filled four times faster than
+        // every sentence describing it said, and severe malnutrition arrived on the fourth day
+        // rather than the fifth. Nothing had ever measured it: the bands were pinned by setting
+        // the bar by hand, and TheBarFillsAtTheCadenceItsCommentClaims is the test that now
+        // holds the arithmetic and the tick path together. No golden moved, because no golden
+        // window lets a need reach zero.
+        const ulong ContentFingerprint = 17402318122187830516UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

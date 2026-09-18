@@ -89,7 +89,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **M1** world, **M2** pawns | **Done and reported** — `docs/milestones/M1-report.md`, `M2-report.md`. Both went further than the plan asked. |
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. |
-| **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. |
+| **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -195,7 +195,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **684 Sim + 406 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **712 Sim + 406 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the ladder

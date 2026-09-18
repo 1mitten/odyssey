@@ -453,9 +453,11 @@ namespace Odyssey.Sim.Designations
             {
                 hash.Add(_cells[i]);
                 hash.Add(_kinds[_cells[i]]);
-                // Divided back to ticks: at the standard rate every ledger value is an exact
-                // multiple of the scale, so the hash reads what it always read.
-                hash.Add(_work[_cells[i]] / Rates.Scale);
+                // Milliwork, whole: the ledger is hashed at the resolution it is kept at. It was
+                // divided back to ticks while WS1 needed the goldens to hold still, and that
+                // cost the hash three decimal places it had no reason to give up once WS3 had
+                // re-baked them anyway.
+                hash.Add(_work[_cells[i]]);
             }
         }
 

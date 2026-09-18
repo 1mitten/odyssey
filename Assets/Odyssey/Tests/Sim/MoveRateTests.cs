@@ -137,6 +137,38 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ThePaceIsRedrawnWhenTheSeedItCameFromChanges()
+        {
+            // The pace is cached on first read, because the band needs no arithmetic twice — so
+            // the cache has to be thrown away when the seed under it moves. It moves twice in the
+            // real game: PawnSeedSection restores it on load, *after* the pawn section built the
+            // pawn, and the select screen rewrites it when a candidate is rerolled. Nothing reads
+            // a pace that early today; this is what keeps the day something does from being a
+            // silent one, and the project has already rolled a whole colony from seed zero once
+            // by exactly this route.
+            ColonyWorld colony = Board();
+            var pawn = Adopt(colony);
+
+            int first = pawn.InnatePacePerMille();
+            Assert.That(first, Is.Not.Zero, "the pace never rolled");
+
+            // Walk seeds until one rolls differently, so the assertion is about the cache and not
+            // about two seeds happening to agree inside a 301-wide band.
+            int changed = first;
+            for (uint seed = 1u; seed <= 64u && changed == first; seed++)
+            {
+                pawn.RollSeed = seed;
+                changed = pawn.InnatePacePerMille();
+            }
+
+            Assert.That(changed, Is.Not.EqualTo(first),
+                "sixty-four seeds and the pace never moved — the cache is holding the first roll");
+
+            // And it is a cache, not a re-roll per call: asked twice on one seed it answers once.
+            Assert.That(pawn.InnatePacePerMille(), Is.EqualTo(changed));
+        }
+
+        [Test]
         public void ThePaceStaysInsideTheBandAndUnderTheJogThreshold()
         {
             // The band is not free taste: movePerTick 1 is 1.5 m/s and the drawn walk cycle
@@ -186,6 +218,56 @@ namespace Odyssey.Tests.Sim
             pawn.StarvationSeverity = 1_000;
             Assert.That(pawn.ConditionPerMille(), Is.EqualTo(700),
                 "the floor, not below — we have no downed state to fall through yet");
+        }
+
+        [Test]
+        public void TheBarFillsAtTheCadenceItsCommentClaims()
+        {
+            // The bands were pinned by setting the bar by hand, so nothing held the one number
+            // that decides how long starvation takes to bite — and the comment beside it was
+            // wrong by four times. The needs cadence is 150 ticks against a 60,000-tick day, so
+            // 400 intervals a day, and starvationPerInterval is per *interval*. Both halves are
+            // asserted: the arithmetic, and that the tick path really does it.
+            ColonyWorld colony = Board();
+            var pawn = colony.Pawns.Pawns.Spawn(Size.Index(colony.Start));
+            PawnContent content = colony.Pawns.Content;
+
+            int intervalsPerDay = content.DayTicks / content.NeedsIntervalTicks;
+            Assert.That(intervalsPerDay, Is.EqualTo(400), "the cadence this number is read against");
+
+            int perDay = intervalsPerDay * content.Kind.starvationPerInterval;
+            Assert.That(perDay, Is.EqualTo(400),
+                "the bar fills in two and a half days of an empty pantry, which is what the Def " +
+                "comment promises — change both or neither");
+
+            // An empty pantry, held empty: she may reach a meal, and the bar is about the food
+            // need being at zero rather than about whether anything is left to eat.
+            pawn.StarvationSeverity = 0;
+            for (int tick = 0; tick < content.DayTicks; tick++)
+            {
+                pawn.Needs[NeedIndex.Food] = 0;
+                colony.World.Tick();
+            }
+
+            // One update may fall either side of the window's edges, so a day is worth perDay
+            // give or take one interval's worth.
+            Assert.That(pawn.StarvationSeverity, Is.EqualTo(perDay).Within(
+                    content.Kind.starvationPerInterval),
+                "a day of an empty pantry did not move the bar by a day's worth");
+
+            // And recovery is symmetric by the same number — the brake that makes the spiral
+            // recoverable, and the reason one meal arrests the bar rather than merely stopping it.
+            int starved = pawn.StarvationSeverity;
+            var food = content.Needs[NeedIndex.Food];
+            for (int tick = 0; tick < content.DayTicks; tick++)
+            {
+                pawn.Needs[NeedIndex.Food] = food.max;
+                colony.World.Tick();
+            }
+
+            Assert.That(pawn.StarvationSeverity, Is.LessThanOrEqualTo(
+                    System.Math.Max(0, starved - perDay + content.Kind.starvationPerInterval)),
+                "a fed day drained the bar more slowly than a starved day filled it");
         }
 
         [Test]
@@ -356,6 +438,43 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.Cell, Is.Not.EqualTo(bed), "she made it to the bed after all");
             Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.SleptOnGround),
                 Is.True, "she went down in the open and remembers nothing of it");
+        }
+
+        [Test]
+        public void ACollapseOnTheBedItselfIsNotACollapse()
+        {
+            // The control on the guard above, and the bug it was written for: the zero-rest test
+            // used to run before the arrival test, so a colonist whose rest reached zero on the
+            // tick she stepped onto her own bed took the collapse branch. Rest effectiveness is
+            // read off the cell and the thought was not, so she got the bed's rate and the mud's
+            // memory. Arrival wins — there is no walk left to cut short.
+            ColonyWorld colony = Board();
+            var pawn = Adopt(colony);
+            var beds = colony.Pawns.Items.Beds;
+            Assume.That(beds.Count, Is.GreaterThan(0), "the scenario placed no bed");
+            int bed = -1;
+            foreach (int cell in beds)
+            {
+                bed = cell;
+                break;
+            }
+
+            pawn.Cell = bed;
+            pawn.Needs[NeedIndex.Rest] = 0;
+
+            var driver = new SleepJobDriver();
+            var job = new Job();
+            job.Reset(JobIndex.Sleep);
+            job.TargetCell = bed;
+            driver.Begin(pawn, job);
+
+            Assert.That(driver.Tick(colony.Pawns), Is.EqualTo(JobStatus.Ongoing));
+            Assert.That(driver.ToilIndex, Is.EqualTo(1), "she never lay down");
+            Assert.That(driver.Tick(colony.Pawns), Is.EqualTo(JobStatus.Ongoing));
+            Assert.That(pawn.Asleep, Is.True);
+            Assert.That(pawn.Cell, Is.EqualTo(bed), "she left the bed she was standing on");
+            Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.SleptOnGround),
+                Is.False, "she slept in her own bed and remembers the ground");
         }
 
         // ---- the seam costs nothing -------------------------------------------------------------

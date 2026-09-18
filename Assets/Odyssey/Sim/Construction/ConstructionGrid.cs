@@ -1264,9 +1264,9 @@ namespace Odyssey.Sim.Construction
                 hash.Add(_stuff[index]);
                 hash.Add(_facing[index]);
                 hash.Add(_delivered[index]);
-                // Divided back to ticks: at the standard rate every ledger value is an exact
-                // multiple of the scale, so the hash reads what it always read.
-                hash.Add(_work[index] / Rates.Scale);
+                // Milliwork, whole, for the reason DesignationGrid's own ledger states: the hash
+                // is kept at the resolution the ledger is.
+                hash.Add(_work[index]);
             }
         }
 

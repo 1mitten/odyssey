@@ -50,8 +50,29 @@ namespace Odyssey.Sim.Pawns
         /// <para>Saved in a section of its own and in the state hash — see
         /// <c>docs/design/18-colonist-select.md</c> §3, which also says why it is not in the pawn
         /// record.</para>
+        ///
+        /// <para><b>A property rather than a field, and the setter is the point.</b> Anything
+        /// derived from this seed and cached must be thrown away when it changes, and the one
+        /// such thing is <see cref="InnatePacePerMille"/>. The seed arrives late twice over — a
+        /// load restores it in <c>PawnSeedSection</c>, which runs <i>after</i> the pawn section
+        /// that made the pawn, and a select screen rewrites it on a candidate — so a pace cached
+        /// before either would have been drawn from seed zero and kept for the colonist's life.
+        /// Nothing reads it that early today; this is what stops the day something does from
+        /// being a silent one. The project has had that exact bug once already, when
+        /// <c>PawnContext.Seed</c> was unset until the first tick and rolled every colony in the
+        /// game from zero.</para>
         /// </summary>
-        public uint RollSeed;
+        public uint RollSeed
+        {
+            get => _rollSeed;
+            set
+            {
+                _rollSeed = value;
+                _innatePacePerMille = 0;
+            }
+        }
+
+        uint _rollSeed;
 
         public Pawn(PawnId id, int cell, PawnContent content)
         {
@@ -641,13 +662,14 @@ namespace Odyssey.Sim.Pawns
 
             // Destination and move progress are simulation state; the path itself is not, and
             // hashing it would make a save/load resume look like a divergence for no reason.
-            // Both accumulators count thousandths (Rates) and the hash reads them divided back
-            // to whole units: exact while a rate stands at the tuning speed, quantised under
-            // the per-pawn ones, and the toils that count plain ticks — eat, sleep, wait —
-            // read near zero for most of their length, reaching the hash through what their
-            // endings change instead.
+            // Both accumulators count thousandths (Rates) and the hash reads them whole. They
+            // were briefly divided back, so that WS1 could land with no golden moving; WS3 then
+            // re-baked every Simulated hash anyway and the division outlived its reason, leaving
+            // a thousandfold blind spot — two runs could differ by up to 999 milliwork on a cell
+            // or a step and agree, until the difference happened to cross a tick boundary. A
+            // hash that is late to notice a divergence is the thing this hash exists not to be.
             hash.Add(Destination);
-            hash.Add(MoveProgress / Rates.Scale);
+            hash.Add(MoveProgress);
 
             hash.Add(HeldReservations.Count);
             for (int i = 0; i < HeldReservations.Count; i++) hash.Add(HeldReservations[i]);
@@ -661,7 +683,7 @@ namespace Odyssey.Sim.Pawns
             CurrentJob.ContributeTo(ref hash);
             hash.Add(JobStartTick);
             hash.Add(Driver != null ? Driver.ToilIndex : -1);
-            hash.Add(Driver != null ? Driver.ToilProgress / Rates.Scale : -1);
+            hash.Add(Driver != null ? Driver.ToilProgress : -1);
         }
     }
 }

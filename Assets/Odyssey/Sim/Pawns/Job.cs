@@ -89,8 +89,16 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Which toil is running. Saved.</summary>
         public int ToilIndex { get; internal set; }
 
-        /// <summary>Milliwork accumulated inside the current toil (thousandths of a tick).
-        /// Saved; see <see cref="Rates"/>.</summary>
+        /// <summary>
+        /// Milliwork accumulated inside the current toil (thousandths of a tick). Saved and
+        /// hashed; see <see cref="Rates"/>.
+        ///
+        /// <para><b>Milliwork in every driver without exception.</b> A toil with no rate to
+        /// speed it up still advances by <see cref="Rates.Scale"/> a tick rather than by one:
+        /// the field is saved and hashed, so a driver counting plain ticks into it puts two
+        /// units in one number, which <see cref="Rates.FromSave"/> then cannot read and the
+        /// hash cannot see.</para>
+        /// </summary>
         public int ToilProgress { get; internal set; }
 
         /// <summary>

@@ -75,11 +75,15 @@
       Starvation severity per needs interval (WS3, design 17 §4c): gained while the food need is
       at zero, lost at the same rate while it is not, so one meal arrests the bar rather than
       merely stopping it. INVENTED: the design pins the three offsets, the floor and the demand
-      that recovery be symmetric, and nothing about the bar's speed. Two of a thousand is a fifth
-      of the bar a day — with the runway at about seventy-two hours, the first band arrives
-      somewhere past hour eighty and the worst on the fifth day of not eating.
+      that recovery be symmetric, and nothing about the bar's speed.
+
+      The cadence is 400 intervals a day — a 60,000-tick day over needsIntervalTicks 150 — so one
+      of a thousand fills the bar in two and a half days of an empty pantry. With the runway at
+      about seventy-two hours, the first band arrives around hour eighty-seven and the worst in
+      the fifth day of not eating. It was 2 against a comment that had read the cadence as 200 a
+      day and so promised a bar four times slower than the one it got.
     -->
-    <starvationPerInterval>2</starvationPerInterval>
+    <starvationPerInterval>1</starvationPerInterval>
     <!--
       Odds, per cent, that a freshly spawned colonist has a minor or a major passion for any one
       skill; the rest are none. ASSUMED: nothing in docs/research has measured how the reference

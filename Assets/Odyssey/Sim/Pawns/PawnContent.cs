@@ -494,13 +494,22 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Starvation severity gained per needs interval while the food need is at zero, and
         /// lost per interval while it is not (WS3, design 17 §4c). INVENTED: the design pins the
-        /// three offsets and the floor and nothing about the bar's speed. Two of a thousand
-        /// gives a fifth of the bar per in-game day — food gone at hour seventy-two, the first
-        /// effect somewhere past hour eighty, severe on the fifth day of not eating — which is
-        /// the gentle slope the design argues for: recovery is symmetric by the same number, so
-        /// one meal arrests the bar rather than merely stopping it.
+        /// three offsets and the floor and nothing about the bar's speed.
+        ///
+        /// <para><b>The cadence is what sets this number, and it is 400 intervals a day</b> —
+        /// 60,000 tick day over the 150-tick needs cadence. One per interval is 400 per mille a
+        /// day, so a bar that fills in two and a half days of an empty pantry: the food need
+        /// reaches zero at hour 72, the first band about fifteen hours later, and the worst band
+        /// in the fifth day of not eating. That is the gentle, recoverable slope the design
+        /// argues for, and recovery is symmetric by the same number, so one meal arrests the bar
+        /// rather than merely stopping it.</para>
+        ///
+        /// <para>It was 2, on a comment that read the cadence as 200 intervals a day and so
+        /// described a bar filling four times slower than it did. The arithmetic is written out
+        /// above rather than summarised, because it is the sentence that was wrong, and
+        /// <c>TheBarFillsAtTheCadenceItsCommentClaims</c> is the test that now holds it.</para>
         /// </summary>
-        public int starvationPerInterval = 2;
+        public int starvationPerInterval = 1;
 
         /// <summary>
         /// Odds, per cent, that a freshly spawned colonist of this kind has a minor or a major
