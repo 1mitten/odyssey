@@ -522,7 +522,36 @@ namespace Odyssey.Presentation.Rendering
         {
             scratch.Clear();
             for (int i = 0; i < count; i++) scratch.Add(source[from + i]);
-            props.SetVectorArray(id, scratch);
+            WritePadded(props, id, scratch);
+        }
+
+        /// <summary>
+        /// Write one property's per-instance colours into a <em>shared</em> block, padded to the
+        /// draw-call ceiling so that the array is the same length every time.
+        ///
+        /// <para><b>A property block fixes an array's length the first time it is set and caps every
+        /// later set to it</b> — "Property (_LeafDeepColour) exceeds previous array size (31 vs 25).
+        /// Cap to previous size." A block used once, at one size, never meets this; a block reused
+        /// across buckets of different sizes meets it on the second bucket, and from then on every
+        /// bucket larger than the first one drawn reads colours that were never written for it. That
+        /// is the whole of the bug the sight fade showed: with see-through off nothing partitions and
+        /// every tree draws from its own bucket's block, so the wood is right; with it on the solid
+        /// halves all share this block, the first one seen locks the length, and the wood repaints
+        /// itself as the selection moves and the locked length stops fitting.</para>
+        ///
+        /// <para>Padding is the fix rather than a fresh block per size because it is the fix already
+        /// in use: <c>TreeMaterials.UniformProps</c> fills to the same ceiling for the same family of
+        /// reason, that a block's array is indexed from zero by every draw call. The padding is never
+        /// read — a draw of <c>n</c> instances indexes the first <c>n</c> entries — so what it holds
+        /// does not matter, only that the length never changes. It costs the shared blocks a fixed
+        /// upload; the per-bucket blocks of <see cref="PropsOf"/> are deliberately left unpadded,
+        /// since each is written once at its own size and every tree on the board pays for those.</para>
+        /// </summary>
+        public static void WritePadded(MaterialPropertyBlock props, int id,
+            System.Collections.Generic.List<Vector4> values)
+        {
+            while (values.Count < MaxInstancesPerCall) values.Add(default);
+            props.SetVectorArray(id, values);
         }
 
         static readonly int BarkDeepId = Shader.PropertyToID("_BarkDeepColour");
@@ -555,15 +584,16 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>
         /// The same for the solid half of a partitioned bucket, which changes every frame the
-        /// camera or the selection moves and so is rebuilt into one reused block.
+        /// camera or the selection moves and so is rebuilt into one reused block. Reused, so
+        /// <see cref="WritePadded"/> rather than a bare set — that is where the reuse bites.
         /// </summary>
         MaterialPropertyBlock SolidProps()
         {
             _solidProps ??= new MaterialPropertyBlock();
-            _solidProps.SetVectorArray(BarkDeepId, _solidBarkDeep);
-            _solidProps.SetVectorArray(BarkWarmId, _solidBarkWarm);
-            _solidProps.SetVectorArray(LeafDeepId, _solidLeafDeep);
-            _solidProps.SetVectorArray(LeafFreshId, _solidLeafFresh);
+            WritePadded(_solidProps, BarkDeepId, _solidBarkDeep);
+            WritePadded(_solidProps, BarkWarmId, _solidBarkWarm);
+            WritePadded(_solidProps, LeafDeepId, _solidLeafDeep);
+            WritePadded(_solidProps, LeafFreshId, _solidLeafFresh);
             return _solidProps;
         }
 

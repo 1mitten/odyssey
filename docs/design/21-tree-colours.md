@@ -264,6 +264,21 @@ colours are per batch — but a batch can be long, so its block is filled to the
 with identical entries. Any slice of any length then reads the same colour, which makes the offset
 question moot instead of merely unlikely.
 
+**And the third question, which was a live bug until 2026-09-18: a block is reused, and an array's
+length is fixed by the first thing written into it.** `MaterialPropertyBlock.SetVectorArray` latches
+the length on the first set and caps every later set to it, warning and carrying on. That is
+harmless for a bucket's own block, written once at its own size, and it was not harmless for the one
+block the *solid half of a sight-partitioned bucket* shares with every other bucket on the board: the
+first partitioned bucket of a session set the length, and any larger bucket afterwards drew its
+surplus trees in colours it had never been given. Selecting a colonist turns see-through on, so the
+symptom was a wood that repainted itself when somebody was selected and went back when they were not
+— reported, reasonably, as a bug in the trees, and nothing to do with them.
+
+Every write to a *shared* block goes through `ChunkRenderer.WritePadded` now, which pads to the same
+draw-call ceiling the surround already uses, so the length never moves. The per-bucket blocks of
+`PropsOf` are deliberately left unpadded: they are not shared, and every tree on the board would pay
+the wider upload every frame. `TreeColourBlockTests` pins it at the sizes the field warning carried.
+
 **A vector array is not a colour property, so the colour space is now ours to get right.**
 `Material.SetColor` converts a `Color` property into the active colour space; `SetVectorArray` hands
 its contents over untouched. `ChunkMesher.Colour` does the conversion that used to happen for free,
