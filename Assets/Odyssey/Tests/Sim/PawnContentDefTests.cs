@@ -81,7 +81,10 @@ namespace Odyssey.Tests.Sim
         // taken from a freshly loaded pack after the write-through in ConstructionTests' first
         // version had been found and removed: a fingerprint of a polluted database is the wrong
         // number to pin, and it is not the number a clean load produces.
-        const ulong ContentFingerprint = 11486946601781265446UL;
+        // Moved a sixth time, 2026-09-18, by the growing zones: Item_Carrots joins the item
+        // table (nutrition 180, stackLimit 40) as the yield of Plant_Carrot. One new commodity
+        // at the end of the handle order, nothing existing moved.
+        const ulong ContentFingerprint = 9025186057861755672UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

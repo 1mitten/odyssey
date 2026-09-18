@@ -381,6 +381,7 @@ namespace Odyssey.Sim.Pawns
         public const int Stone = ItemHandle.Stone;
         public const int IronOre = ItemHandle.IronOre;
         public const int Coal = ItemHandle.Coal;
+        public const int Carrots = ItemHandle.Carrots;
         public const int Count = ItemHandle.Count;
     }
 
@@ -655,7 +656,11 @@ namespace Odyssey.Sim.Pawns
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction");
             content.Items = ByName<ItemDef>(defs,
-                "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal");
+                "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
+                // Appended, never inserted: an item handle is stored in every stack, every haul
+                // job and every stockpile's allow list, so its number is a save contract
+                // (docs/design/22-growing.md §2).
+                "Item_Carrots");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
