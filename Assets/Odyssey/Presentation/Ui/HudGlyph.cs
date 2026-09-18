@@ -44,6 +44,7 @@ namespace Odyssey.Presentation.Ui
         CategoryPower,
         CategorySecurity,
         CategoryFloors,
+        CategoryZones,
         CategoryRecreation,
 
         ToolWall,
@@ -78,6 +79,8 @@ namespace Odyssey.Presentation.Ui
         ToolMine,
         ToolDeconstruct,
         ToolCancel,
+        ToolGrowZone,
+        PlantCarrot,
 
         LayoutRows,
         LayoutRail,

@@ -234,6 +234,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolMine)) Arm(DesignateTool.Mine);
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolFell)) Arm(DesignateTool.Fell);
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolCancel)) Arm(DesignateTool.Cancel);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolGrowZone)) Arm(DesignateTool.GrowZone);
 
             // The rotate key is the slice-up key, claimed by the tool while a rotatable thing is
             // armed (owner's answer, design 20 §5): R turns the bed's ghost, PageUp is always
@@ -296,16 +297,20 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (cells.Count == 0) return;
 
-            // Cancel is two intents, because there are two kinds of order and the player is holding
-            // one rubber. A cell cannot carry both a designation and a building site, so exactly
-            // one of the pair does anything and the other is refused with AlreadyInThatState —
-            // which is the cheapest possible way to make one tool mean "whatever is here, stop".
+            // Cancel is three intents, because there are three kinds of order and the player is
+            // holding one rubber. A cell cannot carry a designation, a building site and a zone
+            // membership all at once, so at most one of the three does anything and the others
+            // are refused with AlreadyInThatState — which is the cheapest possible way to make
+            // one tool mean "whatever is here, stop". The zone intent is the newest of the three
+            // (U46); before it existed a cancel drag over a field would have left the field
+            // standing while the player believed they had cleared it.
             if (tool == DesignateTool.Cancel)
             {
                 for (int i = 0; i < cells.Count; i++)
                 {
                     world.Intents.Submit(new Intent(IntentKind.CancelDesignation, cells[i]));
                     world.Intents.Submit(new Intent(IntentKind.CancelBuilding, cells[i]));
+                    world.Intents.Submit(new Intent(IntentKind.CancelZone, cells[i]));
                 }
 
                 return;
@@ -317,6 +322,16 @@ namespace Odyssey.Presentation.Bootstrap
                     world.Intents.Submit(new Intent(
                         IntentKind.PlaceBuilding, cells[i], Director.Building, Director.Stuff,
                         Director.Facing));
+                return;
+            }
+
+            // The zone order's A is one-based (0 stays "unset"), so the chosen crop rides as
+            // PlantHandle + 1 — the same convention the simulation's own handler states.
+            if (tool == DesignateTool.GrowZone)
+            {
+                int plant = Director.Plant + 1;
+                for (int i = 0; i < cells.Count; i++)
+                    world.Intents.Submit(new Intent(IntentKind.DesignateZone, cells[i], plant));
                 return;
             }
 

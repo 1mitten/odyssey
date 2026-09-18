@@ -8,8 +8,8 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// The Build palette's line art: seven categories, twenty-six placeable things, four actions
-    /// and three layout switches.
+    /// The Build palette's line art: eight categories, twenty-seven placeable things, five
+    /// actions, one crop and three layout switches.
     ///
     /// <para><b>Why these are drawn and not imported.</b> The palette specification is explicit —
     /// every button is "1.8px-stroke line art on a 24px grid, single colour inheriting the label
@@ -88,6 +88,15 @@ namespace Odyssey.Presentation.Ui
                     Rect(painter, p(4, 4), p(20, 20));
                     Polyline(painter, true, p(12, 4), p(12, 20));
                     Polyline(painter, true, p(4, 12), p(20, 12));
+                    return;
+
+                // Four corner brackets: a marquee, which is what painting a zone is — drag a
+                // rectangle of board and everything inside it becomes one thing.
+                case HudGlyphKind.CategoryZones:
+                    Polyline(painter, true, p(4, 8), p(4, 4), p(8, 4));
+                    Polyline(painter, true, p(16, 4), p(20, 4), p(20, 8));
+                    Polyline(painter, true, p(20, 16), p(20, 20), p(16, 20));
+                    Polyline(painter, true, p(8, 20), p(4, 20), p(4, 16));
                     return;
 
                 // An arch on two posts.
@@ -353,6 +362,28 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(6, 18), p(18, 6));
                     return;
 
+                // Grow: a seedling over the soil line it is planted in. The marquee above says
+                // "a zone"; the sprout says what the zone is for.
+                case HudGlyphKind.ToolGrowZone:
+                    Polyline(painter, true, p(5, 19), p(19, 19));
+                    Polyline(painter, true, p(12, 19), p(12, 7));
+                    Polyline(painter, true, p(12, 12), p(7.5f, 8));
+                    Polyline(painter, true, p(12, 12), p(16.5f, 8));
+                    return;
+
+                // A carrot: a tapered root with its top left on. The plant tier's chip shows the
+                // crop itself, the same way the material tier shows the stuff — and it is drawn
+                // rather than an IconBadge for the reason the rest of this panel is: no sheet in
+                // the ADR 0007 pipeline covers it, and the panel forbids the placeholder square.
+                case HudGlyphKind.PlantCarrot:
+                    Polyline(painter, true, p(12, 7), p(12, 4));
+                    Polyline(painter, true, p(12, 5.5f), p(8.5f, 3));
+                    Polyline(painter, true, p(12, 5.5f), p(15.5f, 3));
+                    Polyline(painter, false, p(9, 7), p(12, 21), p(15, 7));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    return;
+
                 // ------------------------------------------------------ the layout switcher
 
                 // Rows: three full-width bands.
@@ -409,6 +440,7 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.category.power", HudGlyphKind.CategoryPower },
             { "ui.arch.category.security", HudGlyphKind.CategorySecurity },
             { "ui.arch.category.floors", HudGlyphKind.CategoryFloors },
+            { "ui.arch.category.zones", HudGlyphKind.CategoryZones },
             { "ui.arch.category.recreation", HudGlyphKind.CategoryRecreation },
 
             { "ui.arch.tool.wall", HudGlyphKind.ToolWall },
@@ -454,6 +486,8 @@ namespace Odyssey.Presentation.Ui
             { PaletteTools.Mine, HudGlyphKind.ToolMine },
             { PaletteTools.Deconstruct, HudGlyphKind.ToolDeconstruct },
             { PaletteTools.Cancel, HudGlyphKind.ToolCancel },
+            { PaletteTools.GrowZone, HudGlyphKind.ToolGrowZone },
+            { "ui.terrain.carrot", HudGlyphKind.PlantCarrot },
         };
 
         /// <summary>The shape for a key, or <see cref="HudGlyphKind.Placeholder"/> where none is

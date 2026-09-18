@@ -1342,12 +1342,16 @@ namespace Odyssey.Presentation.Bootstrap
             // Deconstruct is named rather than left to fall through. It fell through to the cancel
             // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
             // while the player was demolishing, and tuning the cancel colour would have silently
-            // re-tinted it.
+            // re-tinted it. The zone is named for the opposite reason: the preview is painted in
+            // the very tint the committed zone wears (ZoneTintColour), so what the player sees
+            // while dragging is the field they are about to have, not a promise in a different
+            // colour.
             Color tint = director.Tool switch
             {
                 DesignateTool.Mine => MineOrderColour,
                 DesignateTool.Fell => FellOrderColour,
                 DesignateTool.Deconstruct => DeconstructOrderColour,
+                DesignateTool.GrowZone => ZoneTintColour,
                 _ => PreviewCancelColour,
             };
 

@@ -61,6 +61,11 @@ namespace Odyssey.Presentation.Ui
         readonly List<(int stuff, VisualElement tile)> _buildMaterialTiles =
             new List<(int, VisualElement)>();
 
+        /// <summary>The plant tier's tiles, by the crop each stands for. Only the growing zone
+        /// opens the tier, but the tiles exist in every layout, built once with it.</summary>
+        readonly List<(int plant, VisualElement tile)> _buildPlantTiles =
+            new List<(int, VisualElement)>();
+
         readonly List<(int index, VisualElement tile)> _buildCategoryTiles =
             new List<(int, VisualElement)>();
 
@@ -250,6 +255,7 @@ namespace Odyssey.Presentation.Ui
             HotkeyAction? action = key == PaletteTools.Mine ? HotkeyAction.ToolMine
                 : key == PaletteTools.Fell ? HotkeyAction.ToolFell
                 : key == PaletteTools.Cancel ? HotkeyAction.ToolCancel
+                : key == PaletteTools.GrowZone ? HotkeyAction.ToolGrowZone
                 : (HotkeyAction?)null;
             if (action == null) return string.Empty;
 
@@ -293,6 +299,7 @@ namespace Odyssey.Presentation.Ui
             _buildTiles.Clear();
             _buildCategoryTiles.Clear();
             _buildMaterialTiles.Clear();
+            _buildPlantTiles.Clear();
 
             _buildPanel.EnableInClassList("bp--rows", _palette.Layout == BuildPaletteLayout.Rows);
             _buildPanel.EnableInClassList("bp--rail", _palette.Layout == BuildPaletteLayout.Rail);
@@ -325,6 +332,26 @@ namespace Odyssey.Presentation.Ui
             var subs = Band("bp__subs");
             foreach (string key in _palette!.SubTypes) subs.Add(SubTypeTile(key, "bp__sub"));
             _buildBody.Add(subs);
+
+            _buildBody.Add(Divider());
+
+            // The plant band, on the same footing as the material one below: always present,
+            // dimmed to a heading when nothing armed wants it, because the alternative — the
+            // band appearing and vanishing with the tool — is the panel-height jump every other
+            // reserved band in this file exists to prevent. One crop today; the band is one
+            // button wide and cheap to keep.
+            var plants = new VisualElement();
+            plants.AddToClassList("bp__band");
+            plants.AddToClassList("bp__mats");
+            Label plantWord = HudText.Make("PLANT", HudTextRole.PanelLabel, ussClass: "bp__mats-label");
+            plantWord.AddToClassList("bp__plants-label");
+            plants.Add(plantWord);
+
+            var plantRow = new VisualElement();
+            plantRow.AddToClassList("bp__mats-row");
+            foreach (int plant in PaletteTools.Plants) plantRow.Add(PlantTile(plant, "bp__mat"));
+            plants.Add(plantRow);
+            _buildBody.Add(plants);
 
             _buildBody.Add(Divider());
 
@@ -390,6 +417,17 @@ namespace Odyssey.Presentation.Ui
             foreach (int stuff in PaletteTools.Materials) mats.Add(MaterialTile(stuff, "bp__mat-tile"));
             pane.Add(mats);
 
+            // The plant tier, under the materials and before the spacer: same band, same rule —
+            // Rail's pane is a fixed height, so the tier is always laid out and only ever shown
+            // or hidden, never built.
+            pane.Add(Divider());
+            pane.Add(HudText.Make("PLANT", HudTextRole.PanelLabel, ussClass: "bp__pane-label"));
+
+            var plantGrid = new VisualElement();
+            plantGrid.AddToClassList("bp__mat-grid");
+            foreach (int plant in PaletteTools.Plants) plantGrid.Add(PlantTile(plant, "bp__mat-tile"));
+            pane.Add(plantGrid);
+
             var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
             spacer.style.flexGrow = 1;
             pane.Add(spacer);
@@ -435,6 +473,14 @@ namespace Odyssey.Presentation.Ui
             subs.AddToClassList("bp__bar-subs");
             foreach (string key in _palette!.SubTypes) subs.Add(SubTypeTile(key, "bp__bar-sub"));
             content.Add(subs);
+
+            // The plant group, between the sub-types and the materials, because it belongs to the
+            // sub-type tier — it is the zone tool's payload — and only rides in the material
+            // band's shape because that is the chip the dense row has room for.
+            var plants = new VisualElement();
+            plants.AddToClassList("bp__bar-mats");
+            foreach (int plant in PaletteTools.Plants) plants.Add(PlantTile(plant, "bp__mat"));
+            content.Add(plants);
 
             var mats = new VisualElement();
             mats.AddToClassList("bp__bar-mats");
@@ -568,6 +614,42 @@ namespace Odyssey.Presentation.Ui
             tile.RegisterCallback<ClickEvent>(_ => _palette?.SelectMaterial(stuff));
 
             _buildMaterialTiles.Add((stuff, tile));
+            return tile;
+        }
+
+        /// <summary>
+        /// One crop, on the material band's chip, lit as a sub-type.
+        ///
+        /// <para><b>Why drawn art and not an <see cref="IconBadge"/>.</b> The badge wants pixel
+        /// art under its key and the icon library has none for a crop, so a badge here would
+        /// draw the outlined square — which <c>HudGeometryTests</c> forbids anywhere in the
+        /// palette. The glyph is the same vector stroke the categories and sub-types wear, and
+        /// pixel art for the carrot arrives with the icon sheet that draws it.</para>
+        ///
+        /// <para><b>Why the lit state is the sub-type's.</b> A crop is not a material — it is
+        /// the growing zone tool's payload, chosen the way a wall's sub-type is — so it wears
+        /// <c>bp__tile--on</c> and its label turns with <c>bp__tile--on .bp__tile-label</c>,
+        /// both already in the sheet. No inline painting, no second lit style, nothing for a
+        /// second tier to drift away from.</para>
+        /// </summary>
+        VisualElement PlantTile(int plant, string shape)
+        {
+            string key = BuildLabels.PlantKey(plant);
+
+            var tile = new VisualElement { name = "plant-" + plant };
+            tile.AddToClassList("bp__tile");
+            tile.AddToClassList(shape);
+
+            bool large = shape == "bp__mat-tile";
+            tile.Add(new HudGlyph(PaletteGlyphs.For(key), large ? 22f : 17f,
+                HudTokens.Convert(HudTheme.SubTypeInk)));
+            tile.Add(HudText.Make(Registry.Label(key),
+                large ? HudTextRole.Name : HudTextRole.Row, ussClass: "bp__tile-label"));
+
+            tile.tooltip = Registry.Label(key) + " — the crop the zone sows";
+            tile.RegisterCallback<ClickEvent>(_ => _palette?.SelectPlant(plant));
+
+            _buildPlantTiles.Add((plant, tile));
             return tile;
         }
 
@@ -721,6 +803,23 @@ namespace Odyssey.Presentation.Ui
             // over an empty space is the honest price of a control that does not move.
             foreach (Label label in _buildPanel.Query<Label>(className: "bp__mats-label").ToList())
                 label.style.opacity = wanted ? 1f : 0.35f;
+
+            // --- plants
+            //
+            // The same bargain as the material band: always built with the layout, shown or
+            // hidden here, the heading dimmed rather than removed so the panel never changes
+            // height when a tool takes an interest. Rail's headings keep their full ink, exactly
+            // as its MATERIAL heading does — the dim query below only finds the Rows copy,
+            // because Rail's pane sections its headings as furniture rather than flags.
+            bool plantWanted = _palette.WantsPlant;
+            foreach (var (plant, tile) in _buildPlantTiles)
+            {
+                tile.style.display = plantWanted ? DisplayStyle.Flex : DisplayStyle.None;
+                tile.EnableInClassList("bp__tile--on", plantWanted && plant == _palette.Plant);
+            }
+
+            foreach (Label label in _buildPanel.Query<Label>(className: "bp__plants-label").ToList())
+                label.style.opacity = plantWanted ? 1f : 0.35f;
 
             // --- the cost, once
             //
