@@ -70,14 +70,18 @@ namespace Odyssey.Sim.Growing
         }
 
         /// <summary>
-        /// The drawn stage for this many accumulated ticks: 1 below a third grown, 2 below two
-        /// thirds, 3 from there. Stages are what re-meshes, and there are three of them in a
-        /// crop's lifetime — <see cref="PlantGrowthSystem"/> marks a chunk dirty on nothing else.
+        /// The drawn stage for this many accumulated ticks: 1 below 45 per cent grown, 2 below
+        /// 85, 3 from there. The third band was a third wide, and for more than a day of it the
+        /// field stood full of full-size carrots that were correctly not ripe - which read, in
+        /// play, as sowers planting beside a harvest nobody was taking (owner, 2026-09-18). The
+        /// big art now arrives close enough to ripeness that what looks pickable nearly is.
+        /// Stages are what re-meshes, and there are three of them in a crop's lifetime —
+        /// <see cref="PlantGrowthSystem"/> marks a chunk dirty on nothing else.
         /// </summary>
         public int StageOfTicks(int ticks)
         {
             int milli = Milligrowth(ticks);
-            return milli < 333 ? 1 : milli < 667 ? 2 : 3;
+            return milli < 450 ? 1 : milli < 850 ? 2 : 3;
         }
     }
 }

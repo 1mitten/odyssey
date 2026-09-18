@@ -94,12 +94,15 @@ namespace Odyssey.Tests.Sim
         {
             PlantDef carrot = ContentPack.Plants()[0];
 
-            // The stage thresholds are where the re-meshes live: one just below a third, one
-            // just past it — the exact pair of cadence values either side of the boundary.
-            Assert.That(carrot.StageOfTicks(43_250), Is.EqualTo(1));
-            Assert.That(carrot.StageOfTicks(43_500), Is.EqualTo(2));
-            Assert.That(carrot.StageOfTicks(86_500), Is.EqualTo(2));
-            Assert.That(carrot.StageOfTicks(86_750), Is.EqualTo(3));
+            // The stage thresholds are where the re-meshes live: one just below 45 per cent,
+            // one just past it — the exact pair of cadence values either side of the boundary.
+            // The bands were thirds until play showed the third stage arriving a third short of
+            // ripe: full-size carrots standing correctly unharvestable for over a day read as a
+            // harvest nobody was taking (owner, 2026-09-18), so the big art now arrives at 85.
+            Assert.That(carrot.StageOfTicks(58_250), Is.EqualTo(1));
+            Assert.That(carrot.StageOfTicks(58_500), Is.EqualTo(2));
+            Assert.That(carrot.StageOfTicks(110_250), Is.EqualTo(2));
+            Assert.That(carrot.StageOfTicks(110_500), Is.EqualTo(3));
             Assert.That(carrot.StageOfTicks(carrot.growTicks), Is.EqualTo(3));
         }
 
@@ -120,11 +123,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(chunks.IsDirty(chunk), Is.False,
                 "sprout to slightly taller sprout re-meshes nothing: a field at noon draws as the meadow beside it");
 
-            // Run the crop to just past the first third. 43,500 accumulated ticks is 174 runs:
-            // 130 through the first day's window and 44 more when day one opens at 75,000 —
-            // the last of them on tick 85,750, which this run executes exactly.
-            colony.World.Tick(70_501);
-            Assert.That(zones.GrowthTicks(index), Is.EqualTo(43_500));
+            // Run the crop to just past the first boundary — 45 per cent of 130,000 is 58,500,
+            // a whole number of 250-tick runs, so the loop lands on it exactly without deriving
+            // the window cadence by hand: it crosses the boundary on the run that reaches it.
+            while (zones.GrowthTicks(index) < 58_500) colony.World.Tick(250);
+            Assert.That(zones.GrowthTicks(index), Is.EqualTo(58_500));
             Assert.That(chunks.IsDirty(chunk), Is.True,
                 "the stage bucket changed, and a bucket change is the only thing that re-meshes");
         }

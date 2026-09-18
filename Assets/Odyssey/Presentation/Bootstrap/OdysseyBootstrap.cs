@@ -1055,20 +1055,27 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             // And while the seed is still going in (owner, 2026-09-18: "seeds should appear
-            // during when the colonist is on the ground for a little time, not after"): a sower
-            // kneeling at a plot is the seed's first appearance, drawn from the pawn registry
-            // the way the rest of the figure's state is. Only pawns working a SOW job in a
-            // drawn band, and the cell must be zoned so a forced sow gone wrong draws nothing.
+            // during when the colonist is on the ground for a little time, not after"). Gated on
+            // the KNEEL and not the job: a sower walks to her plot inside the same job, and the
+            // first version drew specks under her feet on every zoned tile she crossed - the
+            // owner watched seeds appear on a tile she merely walked over. The kneel plays only
+            // in the work toil, and a cell that already stands a plant draws its own specks (or
+            // its plants) and none of these.
             System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 if (pawns[i].JobDef != JobIndex.Sow) continue;
+                if (pawns[i].Gesture != PawnGesture.Sow) continue;
                 CellRef at = pawns[i].Cell;
                 if (at.Y < lowest || at.Y > highest) continue;
-                bool zoned = false;
+                int atIndex = size.Index(at.X, at.Z, at.Y);
+                bool taken = false;
                 for (int z = 0; z < zones.Length; z++)
-                    if (zones[z].CellIndex == size.Index(at.X, at.Z, at.Y)) { zoned = true; break; }
-                if (!zoned) continue;
+                    if (zones[z].CellIndex == atIndex) { taken = true; break; }
+                if (!taken) continue;
+                for (int p = 0; p < planted.Length; p++)
+                    if (planted[p].CellIndex == atIndex) { taken = false; break; }
+                if (!taken) continue;
                 _renderer.DrawSeedSpecks(at, SeedSpeckColour);
             }
         }

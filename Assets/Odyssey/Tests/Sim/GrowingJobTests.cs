@@ -58,6 +58,36 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ARipeCropIsTakenBeforeANewSeedGoesIn()
+        {
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            var size = Size;
+
+            // One cell ripe, one fallow, both zoned: the grower must take the harvest first -
+            // the owner watched sowers planting beside a standing crop (2026-09-18). The
+            // pipeline's own sort promises it (harvest precedes sow at equal priority); this is
+            // the promise held where a playtest can meet it.
+            CellRef ripe = colony.Start;
+            CellRef fallow = new CellRef(colony.Start.X + 1, colony.Start.Z, colony.Start.Y);
+            Sow(colony, ripe);
+            Sow(colony, fallow);
+            zones.Sow(size.Index(ripe.X, ripe.Z, ripe.Y));
+            zones.Advance(size.Index(ripe.X, ripe.Z, ripe.Y), 1_000_000);
+
+            bool harvestedFirst = false, sownFirst = false;
+            for (int tick = 0; tick < 10_000 && !harvestedFirst && !sownFirst; tick++)
+            {
+                colony.World.Tick();
+                if (!zones.IsPlanted(size.Index(ripe.X, ripe.Z, ripe.Y))) harvestedFirst = true;
+                if (zones.IsPlanted(size.Index(fallow.X, fallow.Z, fallow.Y))) sownFirst = true;
+            }
+            Assert.That(harvestedFirst, Is.True, "the ripe crop was never taken at all");
+            Assert.That(sownFirst, Is.False,
+                "the fallow cell was sown while a ripe crop stood unharvested");
+        }
+
+        [Test]
         public void ClickingTheGroundUnderAFieldAnswersForTheZoneAboveIt()
         {
             ColonyWorld colony = Field(colonists: 1);

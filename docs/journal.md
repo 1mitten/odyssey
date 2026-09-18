@@ -5963,3 +5963,22 @@ down: a pawn working a Sow job in a zone draws its handful from the pawn registr
 appears under the kneel and not after the stand-up. And the brown went near-black, 0.06 at 0.78 -
 two darkenings in one day, the second asked in the words "much much deeper" and answered at the
 top of the alpha band the colour guard allows.
+
+### Three playtest faults: phantom seeds, the unripe harvest, the stale catalogue (2026-09-18)
+
+Seeds appearing under a walking colonist: the "sowing in progress" specks were gated on the JOB,
+and a sower walks to her plot inside the same job - so every zoned tile she crossed grew a
+handful. The gate is the KNEEL now (the gesture plays only in the work toil), and a cell that
+already stands a plant is excluded, so the seed appears under the kneel and nowhere else.
+
+"Sowing when the harvest has not happened": the pipeline was already right - harvest precedes sow
+at equal priority, by the registry's name sort - and a new test proves it where a playtest can
+meet it: a ripe crop and a fallow cell both waiting, one grower, the ripe one goes first. What the
+owner saw was the third stage's width: the big art arrived at two thirds grown and ripeness is
+one hundred, so for over a day the field stood full of full-size carrots correctly waiting while
+the sowers planted on. The stage bands moved to 45/85, so the big carrot now arrives close enough
+to ripe that what looks pickable nearly is.
+
+And "absolutely no change in the carrots": the catalogue was right on disk and stale in the
+owner's session - her editor held the project while the rebuild was blocked, so she played the
+previous asset. A fresh open has the bigger, sunk, five-to-a-plot carrots.

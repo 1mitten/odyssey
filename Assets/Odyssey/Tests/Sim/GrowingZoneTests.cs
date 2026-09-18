@@ -321,7 +321,7 @@ namespace Odyssey.Tests.Sim
             zones.Designate(new CellRef(2, 2, Layer), PlantHandle.Carrot);
             zones.Designate(new CellRef(3, 2, Layer), PlantHandle.Carrot);
             zones.Sow(Size.Index(3, 2, Layer));
-            zones.Advance(Size.Index(3, 2, Layer), 90_000); // past two thirds: a mature row
+            zones.Advance(Size.Index(3, 2, Layer), 120_000); // past 85 per cent: a mature row
 
             var world = new SimWorldBuilder()
                 .WithSize(Size)
@@ -335,7 +335,7 @@ namespace Odyssey.Tests.Sim
 
             PlantView crop = view.Plants[0];
             Assert.That(crop.CellIndex, Is.EqualTo(Size.Index(3, 2, Layer)));
-            Assert.That(crop.Stage, Is.EqualTo(3), "two thirds grown draws as the mature stage");
+            Assert.That(crop.Stage, Is.EqualTo(3), "past the 85 per cent band, grown draws as the mature stage");
             Assert.That(crop.Growth, Is.GreaterThan(0), "and the quantised bar has moved off zero");
         }
     }
