@@ -486,7 +486,7 @@ namespace Odyssey.Presentation.Ui
             ghostAvatarBox.Add(_ghostAvatar);
             _dragGhost.Add(ghostAvatarBox);
 
-            _ghostName = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
+            _ghostName = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card-drag-ghost__name");
             _ghostName.pickingMode = PickingMode.Ignore;
             _dragGhost.Add(_ghostName);
 

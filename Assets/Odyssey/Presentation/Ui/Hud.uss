@@ -334,6 +334,17 @@
     opacity: 0.85;
 }
 
+.card-drag-ghost__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    height: 19px;
+    width: 100%;
+    margin-top: 2px;
+    -unity-text-align: middle-center;
+}
+
 /* Roster pagination toolbar docked alongside the cards */
 .roster-pager {
     flex-direction: row;
