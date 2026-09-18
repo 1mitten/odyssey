@@ -25,8 +25,16 @@ namespace Odyssey.Hud
         /// <summary>
         /// Whether the ghost may be turned with the rotate key before placing. Parallel to
         /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed.
+        ///
+        /// <para><b>The ladder joined the list on 2026-09-18 and this row is why the change was not
+        /// finished when the def said it was.</b> A def gaining <c>rotates</c> does nothing on its
+        /// own: this table decides whether the rotate key belongs to the tool, so a ladder marked
+        /// rotatable in the Defs and not here would have had R raise the slice instead of turning
+        /// the ghost — the key doing the wrong one of its two jobs, silently, with every simulation
+        /// test still green. <c>BuildShapesAgreeWithTheDefs</c> now walks both tables rather than
+        /// spot-checking two rows, which is what would have caught it.</para>
         /// </summary>
-        public static readonly bool[] Rotates = { false, false, false, false, false, true };
+        public static readonly bool[] Rotates = { false, false, false, false, true, true };
 
         public static int CellsOf(int building) =>
             (uint)building < (uint)Cells.Length ? Cells[building] : 1;

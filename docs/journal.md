@@ -5249,3 +5249,38 @@ owner asked to be general already is: `Place` applies it to any `footprint > 1` 
 bed. So either what they saw is drawn rather than built, or it needs a sequence nobody has written
 down. Keeping the test regardless: a guard nothing tests is a guard that gets tidied away, and this
 one runs before a check that looks arbitrary until you need it.
+
+### The bed still has not been reproduced, and the hunt for it found two other things (2026-09-18)
+
+The owner reported the bed unchanged, which it would be — nothing had been changed about it. So the
+placement path was walked end to end rather than reasoned about a third time: the intent seam
+(`A`/`B`/`C` and `HandlePlace` passing them in that order), the gesture (`Commit` returns the anchor
+for a single placement and `TryPreview` builds that same cell's footprint, so ghost and order agree
+for every facing), the rotate key's shared binding (the rig skips slice-up exactly when
+`RotatableArmed`, so R cannot quietly raise the slice under a bed), the mesher's yaw, and the drawn
+bed's own extent — 4.6 m inside a 5 m footprint with 0.2 m clear at each end. Every one of them is
+right. **It is still not reproduced**, and saying so is better than shipping a change that treats a
+symptom nobody has pinned.
+
+**One of the two things the hunt did find was an hour old and mine.** `Building_Ladder` gained
+`rotates` in the Defs, and the HUD keeps a *parallel* table of footprints and rotatability because it
+cannot see `Odyssey.Sim.Construction` (ADR 0003). `DesignateDirector.RotatableArmed` reads that
+table — so the def alone would have left R raising the slice instead of turning the ghost, and the
+player's rotation discarded, with every simulation test green, because the consequence is not in the
+simulation at all. The fixture that was supposed to hold the two tables together checked their
+*lengths* and spot-checked the wall and the bed: exactly the shape of test that passes while the row
+that matters is wrong. It walks every handle against the Defs now.
+
+That is the second time in two days that a rule with two owners has failed silently, after the
+ladder's face. The pattern is worth naming: a parallel table is allowed here — ADR 0003 makes it
+necessary — but a parallel table that nothing *compares* is a bug with a delay on it.
+
+**The other was the guard the owner asked to be general, which already was, on the side they could
+not see.** `Place` derives a two-cell thing's far cell from the facing and refuses the order when
+anything stands in it. Correct, tested, and invisible: the ghost asked only about the cell under the
+pointer, so a bed with its far half in a wall drew in its own material like any legal order and then
+the click did nothing. A click that silently does nothing is indistinguishable from a click that
+missed — which is one way "it doesn't respect where I placed it" gets reported, and it is worth
+fixing whether or not it is the fault being chased. The ghost derives the footprint with
+`EdificeFootprint` rather than restating it, because a cursor that disagrees with the order about
+which cells a thing claims is the fault this line of work has already hit three times.

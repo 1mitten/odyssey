@@ -1034,11 +1034,38 @@ namespace Odyssey.Presentation.Bootstrap
         /// a whole run painted red because one end of it is rock says less than the cells
         /// themselves do.</para>
         /// </summary>
-        bool Refused(CellRef cell, int building)
+        bool Refused(CellRef cell, int building) => Refused(cell, building, facing: 0);
+
+        /// <summary>
+        /// The same question for a thing that is more than one cell: <b>every</b> cell it would
+        /// occupy has to take it, not just the one under the pointer.
+        ///
+        /// <para><b>The guard was in the simulation and not on the screen</b>, which is the half
+        /// the player meets. <c>ConstructionGrid.Place</c> derives the far cell from the facing and
+        /// refuses the order when anything is standing in it — correct, tested, and completely
+        /// invisible: the ghost asked only about the head cell, so a bed whose far half was in a
+        /// wall drew in its own material like any legal order, and clicking it did nothing at all.
+        /// A click that silently does nothing is indistinguishable from a click that missed, which
+        /// is how "it doesn't respect where I placed it" gets reported (owner, 2026-09-18).</para>
+        ///
+        /// <para>The footprint is derived by <c>EdificeFootprint</c> — the simulation's own rule,
+        /// asked rather than restated, so the ghost cannot come to disagree with the order about
+        /// which cells a thing claims. That disagreement is the fault this line of work has hit
+        /// three times (`19-build-cursor.md` §6).</para>
+        /// </summary>
+        bool Refused(CellRef cell, int building, int facing)
         {
             ConstructionGrid? sites = _colony?.Construction;
             if (sites == null || _grid == null) return false;
-            return !sites.Allows(_grid.Index(cell), building);
+
+            int index = _grid.Index(cell);
+            if (!sites.Allows(index, building)) return true;
+
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (def.footprint <= 1) return false;
+
+            int second = EdificeFootprint.SecondCell(index, def.edifice, facing, _grid.Size);
+            return second < 0 || !sites.Allows(second);
         }
 
         void DrawSiteGhost(CellRef cell, int building, int stuff, int facing = 0, bool refused = false)
@@ -1137,7 +1164,7 @@ namespace Odyssey.Presentation.Bootstrap
                     facing == 3 ? box.Max.X : box.Min.X,
                     facing == 2 ? box.Max.Z : box.Min.Z,
                     box.Min.Y);
-                DrawSiteGhost(head, building, stuff, facing, Refused(head, building));
+                DrawSiteGhost(head, building, stuff, facing, Refused(head, building, facing));
                 return;
             }
 
@@ -1376,7 +1403,10 @@ namespace Odyssey.Presentation.Bootstrap
             int cell = sites.WhereItWouldLand(_grid.Index(hover), director.Building);
             CellRef at = _grid.Size.FromIndex(cell);
 
-            bool allowed = sites.Allows(cell, director.Building);
+            // The whole footprint, not the cell under the pointer: a bed whose far half is in a
+            // wall is a refused order and has to look like one before it is given, or the click
+            // does nothing and the player is left to guess why. See the Refused overload.
+            bool allowed = !Refused(at, director.Building, director.Facing);
             BuildingDef what = ConstructionContent.BuildingAt(director.Building);
 
             // **Inside something is still an answer, and now it is the thing itself in red**

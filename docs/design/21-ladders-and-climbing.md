@@ -239,3 +239,29 @@ before the head cell's own. The guard the owner asked for is already there and a
 So either the fault is in what is *drawn* rather than what is built, or it needs a sequence nobody
 has written down yet. The test is kept regardless: a guard nothing tests is a guard that gets tidied
 away. **Waiting on a screenshot and the order of actions.**
+
+### What the second hunt did find
+
+The owner reported it unchanged, so the placement path was walked end to end: the intent seam
+(`A`=building, `B`=stuff, `C`=facing, and `HandlePlace` passes them in that order), the gesture
+(`Commit` returns the anchor for a single placement, and `TryPreview` builds that same cell's
+footprint, so the ghost and the order agree for every facing), the rotate key's shared binding (the
+rig skips slice-up exactly when `RotatableArmed`), the mesher's yaw, and the drawn bed's own extent
+— 4.6 m inside a 5 m footprint, 0.2 m clear at each end. All correct. **The bed still has not been
+reproduced.**
+
+Two real defects fell out of the hunt anyway, and one of them was an hour old:
+
+- **`BuildShapes` had not been told the ladder rotates.** The HUD keeps a parallel table of
+  footprints and rotatability because it cannot see `Odyssey.Sim.Construction` (ADR 0003), and
+  `DesignateDirector.RotatableArmed` reads *that* table to decide whether R turns the ghost or
+  raises the slice. The def alone would have left R doing the other job and the rotation silently
+  discarded, with every simulation test green — the consequence is not in the simulation.
+  `BuildShapesAgreementTests` now walks every handle against the Defs; the fixture that existed
+  checked the two arrays' lengths and spot-checked the wall and the bed.
+- **The footprint guard was in the simulation and not on the screen.** `Place` refuses a bed whose
+  far cell is occupied — correct, tested, invisible. The ghost asked only about the cell under the
+  pointer, so the order drew in its own material like any legal one and the click then did nothing
+  at all. A click that silently does nothing is indistinguishable from a click that missed, which is
+  one way "it doesn't respect where I placed it" gets reported. The ghost now asks about every cell
+  the thing would claim, deriving them with `EdificeFootprint` rather than restating the rule.
