@@ -5993,3 +5993,12 @@ how many a plot grows. The catalogue taught its lesson twice - a rebuild wipes t
 classifier's work unless the classifier runs behind it - and the fast tier's blind spot (it
 compiles neither Presentation nor Editor) cost the owner two Safe Mode dialogs before the batch
 compile became the gate it should always have been.
+
+### The stuck batch, the racing runner (2026-09-18, late)
+
+The evening's last two runs collided: a self-hosted CI EditMode and a cancelled local attempt
+both wanted the project, and the CI one died in bee_backend's "more than one copy" - then stayed
+alive as a shell of itself holding the lock, the exact shape lessons.md's first lesson names. The
+stuck process was cleared (a batch shell with no results and no editor behind it), the tiers re-ran
+clean, and the runner will pick up the pushes when it next polls. The lesson's cost this time was
+half an hour of "close the editor" aimed at nobody.
