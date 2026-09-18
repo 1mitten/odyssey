@@ -589,11 +589,20 @@
    the one thing a depth readout has to say at a glance. */
 .rail__cell--above { background-color: rgba(255, 255, 255, 0.07); }
 
+.rail__cell--surface {
+    height: 32px;
+    background-color: rgba(127, 201, 140, 0.25);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(127, 201, 140, 0.65);
+}
+
+.rail__cell--surface:hover {
+    background-color: rgba(127, 201, 140, 0.40);
+}
+
 .rail__cell--active {
     background-color: #6fd3e3;
 }
-
-.rail__cell--surface { border-bottom-width: 1px; border-bottom-color: rgba(255, 255, 255, 0.35); }
 
 .rail__number {
     color: #0b1116;
@@ -656,14 +665,15 @@
 
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
-/* Docked to the left edge with the stores panel above it. Its bottom is not on a screen edge —
-   it clears the command bar — so only the two left corners are squared. */
+/* Docked to the left edge with the stores panel above it. Its bottom sits flush against the command
+   bar, so both bottom corners and the top-left corner are squared. */
 .inspect {
     left: 0;
-    bottom: 64px;
+    bottom: 50px;
     width: 560px;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 /* The tile readout and a selected pile stand in a column, not a band: half the width, with the

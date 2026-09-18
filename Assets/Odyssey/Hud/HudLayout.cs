@@ -436,6 +436,7 @@ namespace Odyssey.Hud
         public const int RailWidth = 44;
         public const int RailCellWidth = 26;
         public const int RailCellHeight = 16;
+        public const int RailSurfaceCellHeight = 32;
         public const int RailCellGap = 6;
 
         /// <summary>The "R / F" hint under the rail.</summary>
@@ -737,8 +738,8 @@ namespace Odyssey.Hud
         /// </summary>
         public const int CellRowName = 92;
 
-        /// <summary>The pane's clearance over the command bar, which cannot grow taller than one row.</summary>
-        public const int InspectToBar = 14;
+        /// <summary>The pane's clearance over the command bar: flush (0 px), maximising visible board space above.</summary>
+        public const int InspectToBar = 0;
 
         /// <summary>
         /// The pane's bottom edge, measured from the bottom of the screen.
@@ -1347,10 +1348,12 @@ namespace Odyssey.Hud
             // And since 2026-09-17 the orders strip stands between the two, in the same gutter,
             // so the rail gives that room up as well. The rail is the region that gives, here as
             // everywhere: the strip is four fixed buttons and cannot be squeezed into fewer.
+            // With the surface cell twice as tall (2x cell height), an N-layer board occupies
+            // (N + 1) units of cell height, so room is apportioned over (layers + 1).
             float room = viewportHeight - Edge - RailChrome - RailCellGap
                          - (BarBottom + HudCommands.BarHeight + Frame + Gap)
                          - OrdersBlock;
-            return Math.Max(MinRailPitch, Math.Min(ideal, room / layers));
+            return Math.Max(MinRailPitch, Math.Min(ideal, room / (layers + 1)));
         }
 
         /// <summary>The gap between two cells at a given pitch, kept in the proportion the
@@ -1364,7 +1367,7 @@ namespace Odyssey.Hud
         public static float RailHeight(float viewportHeight, int layers)
         {
             float pitch = RailPitch(viewportHeight, layers);
-            return RailChrome + layers * pitch + RailGap(pitch);
+            return RailChrome + (layers + 1) * pitch;
         }
 
         /// <summary>
