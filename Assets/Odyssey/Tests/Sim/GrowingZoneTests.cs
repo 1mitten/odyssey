@@ -171,6 +171,27 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ZoningAndUnzoningMarkTheChunkTheGroundChangedIn()
+        {
+            // The field's tilled ground is drawn from the zone channel, so the chunk must be
+            // told to redraw exactly when a cell joins or leaves a zone - the same mark a crop's
+            // appearance makes, or the rows would arrive a refresh late.
+            var grid = Meadow().grid;
+            var chunks = new Odyssey.Sim.World.ChunkGrid(Size);
+            var zones = new GrowingZones(grid, ContentPack.Plants(), chunks);
+            CellRef at = new CellRef(2, 2, Layer);
+
+            Assert.That(zones.Designate(at, PlantHandle.Carrot), Is.EqualTo(IntentRejection.None));
+            Assert.That(chunks.IsDirty(chunks.ChunkIndexOfCell(at)),
+                "painting a field marks its chunk for the tilled ground");
+
+            chunks.ClearDirty(chunks.ChunkIndexOfCell(at));
+            Assert.That(zones.Cancel(at), Is.EqualTo(IntentRejection.None));
+            Assert.That(chunks.IsDirty(chunks.ChunkIndexOfCell(at)),
+                "taking a cell out of its field marks it again, for the grass coming back");
+        }
+
+        [Test]
         public void CancellingFromAFoldedFieldFindsItsOwnCell()
         {
             var (_, zones) = Meadow();

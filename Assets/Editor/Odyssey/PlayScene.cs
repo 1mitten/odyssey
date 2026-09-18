@@ -1334,6 +1334,16 @@ namespace Odyssey.EditorTools
             Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 0.75f);
             Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.0f);
 
+            // The field under the crop: the farm pack's dirt rows, one patch per zoned cell,
+            // drawn from the zone channel rather than written into any terrain (owner,
+            // 2026-09-18 - the ground under a zone should look worked). Pillow like a crop, so a
+            // pack-less checkout draws a low dirt mound rather than nothing.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ZoneDirtRows, shape = ModuleShape.Pillow,
+                prefabName = "SM_Env_Dirt_Rows_01", centreXZ = true, baseAtY = true,
+            });
+
             // Trees are the pieces that actually make this look like a place. Measured widths
             // decide the casting: the pines are 1.78–2.12 m and sit inside a 2.5 m cell, while the
             // broadleaf trees run 2.74–4.32 m. Tree_03 at 2.74 m is the closest fit, and a little

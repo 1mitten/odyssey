@@ -550,8 +550,24 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int EdificeOwner;
 
+        /// <summary>
+        /// What this cell's growing zone grows, as a <c>PlantHandle</c>, or 255 where the cell is
+        /// in no zone. Sparse like the bed's fields: most cells answer nothing, and the pane says
+        /// nothing for them.
+        /// </summary>
+        public readonly byte ZonePlant;
+
+        /// <summary>
+        /// How far the crop standing here has grown, in thousandths of ripeness — or
+        /// <c>ushort.MaxValue</c> where the zone's cell is still waiting for its seed. Read as
+        /// "43% grown" beside the plant's name; the changing number is why the pane is worth
+        /// holding open over a field.
+        /// </summary>
+        public readonly ushort CropGrowth;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
-            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0)
+            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
+            byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue)
         {
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -562,6 +578,8 @@ namespace Odyssey.Sim.Contracts
             WorkToClear = workToClear;
             EdificeQuality = edificeQuality;
             EdificeOwner = edificeOwner;
+            ZonePlant = zonePlant;
+            CropGrowth = cropGrowth;
         }
     }
 

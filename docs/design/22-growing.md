@@ -33,7 +33,7 @@ other content table.
 | `Plant_Carrot` | | why that number |
 |---|---|---|
 | `growTicks` | **130,000** growing-window ticks | Four calendar days at full daylight (§3). Rice-class is 3 listed days ≈ 5.5 real; the carrot sits just above it so the first harvest lands after the starting pantry has proved itself, and a quarter of the bar fills on day one so progress is *visible* |
-| `sowWorkTicks` | **170** | The rice-class sow figure. Includes clearing the cell's grass: sow work is one number, terrain unchanged (a dirt-row ground pass is presentation, §6) |
+| `sowWorkTicks` | **170** | The rice-class sow figure. Includes clearing the cell's grass: sow work is one number, terrain unchanged (the tilled rows are drawn, never simulated — §6) |
 | `harvestWorkTicks` | **200** | The rice-class harvest figure |
 | `yield` | **5** carrots | One sowing = 900 need units = exactly one meal-equivalent (§5) |
 | `minFertility` | **70** | Admits Grass (100) and BareEarth (85); refuses Gravel (55), Marsh (40), Rubble (20), Sand (8), water and rock (0). The plan sketch said 50; **70 is the decision**, because at 50 the gravel under the terrace risers becomes plantable and carrots in gravel read as a bug. The rice precedent (70%) is the same number for the same reason |
@@ -195,6 +195,16 @@ which is the ground surface. Stockpiles have no overlay either, and both deserve
 crisp-bordered region shader `09-ui-and-input.md` §4.6 already specifies; that is its own unit,
 covering both, and is deliberately not smuggled in here.
 
+**The tilled ground** (2026-09-18, the owner's ask after finding a zone invisible on grass):
+each zoned cell draws the farm pack's own dirt rows — `SM_Env_Dirt_Rows_01`, one patch per cell
+at the terrain's floor — through the same channel-and-mirror path a crop takes: `UpdateZones`
+merge-walks the zone channel into a `_zoned` mirror, the mesher emits the module for zoned
+cells, and `Designate`/`Cancel` mark the chunk dirty because the ground under the cell is what
+changed. Nothing of it is simulated — no terrain is written, and a pack-less checkout keeps its
+grass and tint rather than losing the field (the Pillow fallback there is a low dirt mound,
+pending a look). The crisp-bordered region shader unit (§6, below) still owns the final look;
+the rows are the interim ground made real.
+
 The **frame figure** (PlayMode `FrameTimeTests`, the real player loop, 640 × 480 on the RTX
 5070 Ti): a field of **2,041 zone cells carrying 537 crops renders in 2.92 ms mean, 4.72 ms
 worst**, against 1.48 ms for the bare meadow — inside the 5 ms budget with room, but with two
@@ -252,9 +262,10 @@ a computed value** — the big one, which turns the roof refusal into a computat
 daylight window a sky reading, and is the gate for indoor and underground growing; fertility as
 a growth multiplier (GRF(F) — the gate exists, the multiplier is one multiply in
 `PlantGrowthSystem` when it lands); the 65% early harvest and partial yields; plant lifespan and
-death of age; blight, fire and grazing; the zone inspect pane (species chooser, allow-sow /
-allow-cut toggles, rename) — the palette chooser covers a one-crop world, and the pane arrives
-when a second crop makes it earn its place; cut-only auto-harvest zones and wild plants; tree
+death of age; blight, fire and grazing; the zone inspect pane's **species chooser** — the pane
+itself arrived 2026-09-18 (a click on a zoned cell now says what grows there and how far along
+it is, via `CellDetail`'s zone fields), but changing the crop from it waits for a second crop to
+choose between, and allow-sow / allow-cut toggles and rename with it; cut-only auto-harvest zones and wild plants; tree
 planting.
 
 ## 9. What nobody has judged

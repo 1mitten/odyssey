@@ -103,12 +103,31 @@ namespace Odyssey.Tests.Hud
             return model;
         }
 
+        [Test]
+        public void AZonedCellSaysWhatGrowsThereAndHowFarAlongItIs()
+        {
+            // The owner's ask (2026-09-18): clicking a growing zone should say what is growing
+            // in it. The row names the crop and its ripeness; a painted-but-unseeded cell says
+            // it is waiting rather than reading as 0% of nothing.
+            InspectModel model = Looking(FrameWith(Detail(zonePlant: 0, cropGrowth: 430)));
+            Assert.That(Rows(model), Does.Contain("growing=" + Registry.Label(BuildLabels.PlantKey(0)) + " — 43% grown"),
+                "a crop under way names itself and its ripeness");
+
+            model = Looking(FrameWith(Detail(zonePlant: 0, cropGrowth: ushort.MaxValue)));
+            Assert.That(Rows(model), Does.Contain("awaiting its seed"),
+                "a fallow zone cell says it is waiting, not that nothing grows here");
+
+            model = Looking(FrameWith(Detail()));
+            Assert.That(Rows(model), Does.Not.Contain("growing="),
+                "a cell in no zone says nothing about growing");
+        }
+
         static CellDetail Detail(byte terrain = TerrainHandle.Grass, byte edifice = EdificeHandle.None,
             byte floorStuff = StuffHandle.None, byte support = 0,
             ushort moveCost = 1000, ushort workToClear = 0,
-            byte quality = 0, int owner = 0) =>
+            byte quality = 0, int owner = 0, byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue) =>
             new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear,
-                quality, owner);
+                quality, owner, zonePlant, cropGrowth);
 
         /// <summary>The rows as one readable line, in order: "walk speed=33%" and friends.</summary>
         static string Rows(InspectModel model)

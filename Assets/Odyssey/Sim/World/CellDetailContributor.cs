@@ -27,12 +27,15 @@ namespace Odyssey.Sim.World
     {
         readonly CellGrid _grid;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
+        readonly Growing.GrowingZones? _zones;
         readonly int[] _costByClass = new int[256];
 
-        public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
+        public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
+            Growing.GrowingZones? zones = null)
         {
             _grid = grid;
             _edifices = edifices;
+            _zones = zones;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -76,9 +79,26 @@ namespace Odyssey.Sim.World
 
             ushort workToClear = (ushort)WorldContent.Table[terrain].workToClear;
 
+            // The field's own two answers, beside the ground's: what the zone here grows and how
+            // far the standing crop has come (owner, 2026-09-18 — clicking a zone should say what
+            // is growing in it). 255 and MaxValue are the pane's "nothing to say", and the pane
+            // stays silent for them exactly as it does for a wall's quality.
+            byte zonePlant = byte.MaxValue;
+            ushort cropGrowth = ushort.MaxValue;
+            if (_zones != null)
+            {
+                int plant = _zones.ZonePlantAt(cell);
+                if (plant >= 0)
+                {
+                    zonePlant = (byte)plant;
+                    if (_zones.IsPlanted(cell))
+                        cropGrowth = (ushort)_zones.Plant(plant).Milligrowth(_zones.GrowthTicks(cell));
+                }
+            }
+
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner));
+                quality, owner, zonePlant, cropGrowth));
         }
     }
 }

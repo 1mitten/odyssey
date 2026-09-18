@@ -181,6 +181,9 @@ namespace Odyssey.Sim.Growing
             if (!SiteAllows(index, _plants[plant])) return IntentRejection.NotPermitted;
 
             Paint(index, (byte)plant);
+            // The ground under the cell changes with its zone - tilled rows arrive - so this is
+            // a remesh, the same mark a crop's appearance makes.
+            _chunks?.MarkDirty(_grid.Size.FromIndex(index));
             return IntentRejection.None;
         }
 
@@ -199,6 +202,7 @@ namespace Odyssey.Sim.Growing
             _zoneAt[index] = -1;
             if (_cropAt[index] != 0) Uproot(index);
             if (zone.Cells.Count == 0) Dissolve(zone);
+            _chunks?.MarkDirty(_grid.Size.FromIndex(index));
             return IntentRejection.None;
         }
 

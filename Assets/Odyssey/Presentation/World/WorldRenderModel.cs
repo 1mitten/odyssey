@@ -78,6 +78,25 @@ namespace Odyssey.Presentation.World
         int _cropAppliedCount;
         int[] _cropScratch = Array.Empty<int>();
 
+        /// <summary>
+        /// Whether each cell is in a growing zone — the tilled ground rides this, exactly as a
+        /// crop rides the plant channel. Fed from the published snapshot; a zone is authored
+        /// state that changes no terrain, so the mirror is the only place the field's ground
+        /// exists.
+        /// </summary>
+        readonly bool[] _zoned;
+
+        /// <summary>
+        /// The dirt-rows module, resolved once at construction. Zero until the catalogue row
+        /// ships, in which case the field keeps its grass and its tint and nothing else changes.
+        /// </summary>
+        readonly int _zoneGroundModule;
+
+        /// <summary>The zoned cells <see cref="UpdateZones"/> last stamped, ascending — the merge twin of the next snapshot's zone list.</summary>
+        int[] _zoneApplied = Array.Empty<int>();
+        int _zoneAppliedCount;
+        int[] _zoneScratch = Array.Empty<int>();
+
 
 
         /// <summary>
@@ -141,6 +160,8 @@ namespace Odyssey.Presentation.World
             _bedHead = new bool[count];
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
+            _zoned = new bool[count];
+            _zoneGroundModule = library.Resolve(ModuleIds.ZoneDirtRows, ModuleShape.Pillow);
 
             // The plant table is content, not world state, and content is written once: the ids
             // come from the Defs the simulation itself loads, so a stage renamed in the XML needs
@@ -323,6 +344,13 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public int CropModule(int index)
         {
+
+        /// <summary>
+        /// The tilled-ground module for this cell, or 0 where it is in no zone. Asked by the
+        /// mesher at the ground's own floor, on the same terms as a crop: the rows are drawn, not
+        /// simulated — nothing of them is in a cell, a save or the hash.
+        /// </summary>
+        public int ZoneGroundModule(int index) => _zoned[index] ? _zoneGroundModule : 0;
             byte plant = _cropPlant[index];
             if (plant == 0) return 0;
             int slot = (plant - 1) * 3 + _cropStage[index] - 1;
@@ -374,6 +402,40 @@ namespace Odyssey.Presentation.World
 
             (_cropApplied, _cropScratch) = (_cropScratch, _cropApplied);
             _cropAppliedCount = plants.Length;
+        }
+
+        /// <summary>
+        /// Take this frame's zone cells, as <see cref="UpdateCrops"/> takes its plants: a merge
+        /// walk over two ascending lists, so a 2,000-cell field costs O(zoned) a frame. No dirty
+        /// marks are raised here — the simulation marks the chunk when a cell is zoned or
+        /// unzoned, which is exactly when the ground under it changes.
+        /// </summary>
+        public void UpdateZones(ReadOnlySpan<ZoneView> zones)
+        {
+            if (_zoneScratch.Length < zones.Length) _zoneScratch = new int[zones.Length];
+
+            int old = 0, now = 0;
+            while (old < _zoneAppliedCount || now < zones.Length)
+            {
+                int priorCell = old < _zoneAppliedCount ? _zoneApplied[old] : int.MaxValue;
+                int freshCell = now < zones.Length ? zones[now].CellIndex : int.MaxValue;
+
+                if (priorCell < freshCell)
+                {
+                    _zoned[priorCell] = false;
+                    old++;
+                }
+                else
+                {
+                    if (priorCell == freshCell) old++;
+                    _zoned[zones[now].CellIndex] = true;
+                    _zoneScratch[now] = zones[now].CellIndex;
+                    now++;
+                }
+            }
+
+            (_zoneApplied, _zoneScratch) = (_zoneScratch, _zoneApplied);
+            _zoneAppliedCount = zones.Length;
         }
 
         /// <summary>

@@ -63,6 +63,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 int index = size.Index(x, z, y);
                 EmitTerrain(batch, index, x, z, y);
+                EmitZoneGround(batch, index, x, z, y);
                 EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
@@ -334,6 +335,29 @@ namespace Odyssey.Presentation.Rendering
 
             bool daylit = _model.OpenToTheSky(index, y);
             int tint = TintCode.Daylit(TintCode.Foliage(0), daylit);
+
+            AddBody(batch, module, tint, Matrix4x4.TRS(
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
+                Quaternion.identity, Vector3.one));
+        }
+
+        /// <summary>
+        /// The tilled field under everything a zone grows: one dirt-rows patch at the ground's
+        /// own floor, drawn for as long as the cell stays zoned and gone the moment it does not.
+        ///
+        /// <para>Drawn, never simulated — a zone is authored state that changes no terrain, so
+        /// the patch rides the zone channel the way a crop rides the plant channel, and a
+        /// pack-less checkout keeps its grass and tint rather than losing the field. It sits at
+        /// the terrain's floor, below the crop that grows out of it, and is daylit on the
+        /// ground's terms: rows under a roof dim with the soil they are.</para>
+        /// </summary>
+        void EmitZoneGround(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            int module = _model.ZoneGroundModule(index);
+            if (module == 0) return;
+
+            bool daylit = _model.OpenToTheSky(index, y);
+            int tint = TintCode.Daylit(TintCode.Foliage(1), daylit);
 
             AddBody(batch, module, tint, Matrix4x4.TRS(
                 GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),

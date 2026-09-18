@@ -866,6 +866,16 @@ namespace Odyssey.Presentation.Bootstrap
             // field would redraw one stage behind what the orders and the figures show.
             _model.UpdateCrops(_world.Views.Current.Plants);
 
+            // The zone mirror for the same reason: the field's tilled ground must be in place
+            // before the dirty chunk a designation marked is rebuilt, or a painted field would
+            // show its rows one refresh behind its tint.
+            _model.UpdateZones(_world.Views.Current.Zones);
+
+            // The zone mirror for the same reason: the field's tilled ground must be in place
+            // before the dirty chunk a designation marked is rebuilt, or a painted field would
+            // show its rows one refresh behind its tint.
+            _model.UpdateZones(_world.Views.Current.Zones);
+
             _renderer.Render(activeLayer, slice);
 
             // Figures first, because what they take is what the instanced pass must leave alone.

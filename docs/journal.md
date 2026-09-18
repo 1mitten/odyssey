@@ -5856,3 +5856,20 @@ The brown is `(0.45, 0.32, 0.17, 0.34)` on the board and `0xc3985c` in the panel
 both surfaces, and the colour-guard test now asserts soil rather than green — both hues recorded
 in 22-growing.md §6, because the brown is a judgement on a colour nobody has played and the
 first playtest may send it back.
+
+### The field gets its ground, and a click gets its answer (2026-09-18)
+
+Two more owner looks at the zone. "No graphical change to the ground" was true and was the
+design's own deferral — the dirt-row pass was a recorded hook — and the farm pack was pointed at
+as the answer. The tilled ground is `SM_Env_Dirt_Rows_01`, one patch per zoned cell, drawn
+through the crop path rather than a terrain write: a `_zoned` mirror merge-walked from the zone
+channel, the mesher emitting the module at the terrain's floor, and `Designate`/`Cancel` marking
+the chunk because the ground under the cell is what changed. Nothing simulated, nothing saved,
+nothing hashed; pack-less keeps grass and tint. The committed catalogue gains its row at the
+next rebuild — until then `Resolve` answers zero and the field keeps its grass, so the change
+cannot half-appear.
+
+And the click: `CellDetail` carries `ZonePlant` and `CropGrowth` now, the contributor answers
+for zones beside beds, and the pane's row reads "growing — carrot, 43% grown" or "awaiting its
+seed". Changing the crop from the pane is recorded as the species-chooser hook it always was:
+one crop exists, and a chooser with one choice is a label wearing a button.
