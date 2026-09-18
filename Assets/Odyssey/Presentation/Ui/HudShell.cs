@@ -836,12 +836,14 @@ namespace Odyssey.Presentation.Ui
 
             foreach (RailCellView view in _rail)
             {
-                view.Root.style.height = cell;
+                bool isSurface = view.Layer == _surfaceLayer;
+                float cellHeight = isSurface ? 2f * cell : cell;
+                view.Root.style.height = cellHeight;
                 view.Root.style.marginBottom = gap;
 
                 // A squeezed cell has no room for its own number. The rail still says which layer
                 // is live by which cell is lit, which is the part that has to survive.
-                view.Number.style.display = cell >= HudLayout.RailCellHeight - 2f
+                view.Number.style.display = cellHeight >= HudLayout.RailCellHeight - 2f
                     ? DisplayStyle.Flex
                     : DisplayStyle.None;
             }
