@@ -71,16 +71,28 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly uint[]? Colonists;
 
+        /// <summary>
+        /// What the player called each chosen colonist, in the same order as
+        /// <see cref="Colonists"/> — null where they kept the name they were dealt, and null
+        /// altogether when no colonist select was in the flow.
+        ///
+        /// <para>Beside the seeds rather than derived from them, because a typed name is the one
+        /// thing on that screen a seed cannot produce.</para>
+        /// </summary>
+        public readonly string?[]? Names;
+
         /// <summary>What the player called the colony, or empty to take the request's default.</summary>
         public readonly string Name;
 
         /// <summary>Which board size, as an index into <see cref="MapSizes.All"/>.</summary>
         public readonly int Size;
 
-        public NewGameChoice(uint seed, uint[]? colonists, string? name, int size)
+        public NewGameChoice(uint seed, uint[]? colonists, string? name, int size,
+            string?[]? names = null)
         {
             Seed = seed;
             Colonists = colonists;
+            Names = names;
             Name = name ?? string.Empty;
             Size = size;
         }
@@ -488,7 +500,8 @@ namespace Odyssey.Hud
             if (!Seed.Usable) return false;
 
             StartRequested?.Invoke(
-                new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size));
+                new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size,
+                    Colonists?.ChosenNames()));
             return true;
         }
 

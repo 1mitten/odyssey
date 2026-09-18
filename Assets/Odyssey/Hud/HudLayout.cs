@@ -280,6 +280,21 @@ namespace Odyssey.Hud
         public const int CardGap = 7;
 
         /// <summary>
+        /// Width of the compact pagination control docked on the right side of the roster bar
+        /// (<c>[ &lt; ] 1 / 3 [ &gt; ]</c>).
+        /// </summary>
+        public const int PagerWidth = 72;
+        public const int PagerGap = 4;
+        public const int PagerBtnWidth = 18;
+        public const int PagerHeight = 24;
+
+        /// <summary>
+        /// Maximum number of colonist cards shown across the one row of the strip before pagination engages
+        /// (owner, 2026-09-18: "Should be one row with 6 on an more (no 2 rows or anthing - always one)").
+        /// </summary>
+        public const int StripCardsCap = 6;
+
+        /// <summary>
         /// How far the colonist strip sits from the top of the screen, and the command bar from
         /// the bottom: **nothing at all** (owner, 2026-09-17, "directly at the bottom of the
         /// screen, no spacing, padding, to maximise viewing space — dock it to the bottom and
@@ -288,8 +303,7 @@ namespace Odyssey.Hud
         /// <para>Both are deliberately <see cref="Edge"/> no longer. The stores panel, the clock
         /// and the depth rail keep their margin, because they are panels that sit *in* the view;
         /// these two are bars that bound it, and a bar with a strip of world under it reads as
-        /// floating rather than as the edge of the screen. Docking also buys back the one thing
-        /// the strip is short of, which is room to grow a second row into.</para>
+        /// floating rather than as the edge of the screen.</para>
         /// </summary>
         public const int StripTop = 0;
 
@@ -299,13 +313,10 @@ namespace Odyssey.Hud
         /// <summary>
         /// How many rows of cards the strip may run to.
         ///
-        /// <para>Two, not unbounded: the strip is the one region with no ceiling of its own — a
-        /// colony of fifty would paper the screen — and the clamp is what keeps "no two regions
-        /// overlap" and the coverage ceiling true by construction rather than true for the colony
-        /// sizes somebody happened to test. A colony past what two rows hold shows the ones that
-        /// fit, exactly as it did at one row.</para>
+        /// <para>Always exactly one row (owner, 2026-09-18: "Should be one row with 6 on an more
+        /// (no 2 rows or anthing - always one)"). Capacity beyond 6 cards is handled by pagination.</para>
         /// </summary>
-        public const int StripRows = 2;
+        public const int StripRows = 1;
 
         /// <summary>
         /// The most of the viewport's height the colonist strip may stand in.
@@ -425,6 +436,7 @@ namespace Odyssey.Hud
         public const int RailWidth = 44;
         public const int RailCellWidth = 26;
         public const int RailCellHeight = 16;
+        public const int RailSurfaceCellHeight = 32;
         public const int RailCellGap = 6;
 
         /// <summary>The "R / F" hint under the rail.</summary>
@@ -726,8 +738,8 @@ namespace Odyssey.Hud
         /// </summary>
         public const int CellRowName = 92;
 
-        /// <summary>The pane's clearance over the command bar, which cannot grow taller than one row.</summary>
-        public const int InspectToBar = 14;
+        /// <summary>The pane's clearance over the command bar: flush (0 px), maximising visible board space above.</summary>
+        public const int InspectToBar = 0;
 
         /// <summary>
         /// The pane's bottom edge, measured from the bottom of the screen.
@@ -1242,13 +1254,12 @@ namespace Odyssey.Hud
             if (cards <= 0) boxes[HudRegion.ColonistStrip] = default;
             else
             {
-                // A second row is as wide as a full one, so the box is sized by the widest row
-                // rather than by the count: six cards over two rows still occupies the span of
-                // whatever the first row holds.
                 int perRow = Math.Max(1, CardsPerRow(width));
-                int widest = Math.Min(cards, perRow);
+                bool hasPager = content.Colonists > perRow * StripRowsAllowed(height);
+                int widest = hasPager ? perRow : Math.Min(cards, perRow);
                 int rows = StripRowsUsed(width, height, cards);
-                float stripWidth = widest * CardWidth + (widest - 1) * CardGap;
+                float cardsWidth = widest * CardWidth + (widest - 1) * CardGap;
+                float stripWidth = cardsWidth + (hasPager ? PagerGap + PagerWidth : 0);
                 boxes[HudRegion.ColonistStrip] = new HudRect(
                     (width - stripWidth) * 0.5f, StripTop, stripWidth, StripHeight(rows));
             }
@@ -1337,10 +1348,12 @@ namespace Odyssey.Hud
             // And since 2026-09-17 the orders strip stands between the two, in the same gutter,
             // so the rail gives that room up as well. The rail is the region that gives, here as
             // everywhere: the strip is four fixed buttons and cannot be squeezed into fewer.
+            // With the surface cell twice as tall (2x cell height), an N-layer board occupies
+            // (N + 1) units of cell height, so room is apportioned over (layers + 1).
             float room = viewportHeight - Edge - RailChrome - RailCellGap
                          - (BarBottom + HudCommands.BarHeight + Frame + Gap)
                          - OrdersBlock;
-            return Math.Max(MinRailPitch, Math.Min(ideal, room / layers));
+            return Math.Max(MinRailPitch, Math.Min(ideal, room / (layers + 1)));
         }
 
         /// <summary>The gap between two cells at a given pitch, kept in the proportion the
@@ -1354,7 +1367,7 @@ namespace Odyssey.Hud
         public static float RailHeight(float viewportHeight, int layers)
         {
             float pitch = RailPitch(viewportHeight, layers);
-            return RailChrome + layers * pitch + RailGap(pitch);
+            return RailChrome + (layers + 1) * pitch;
         }
 
         /// <summary>
@@ -1448,27 +1461,29 @@ namespace Odyssey.Hud
         public static int CardsPerRow(float width)
         {
             float room = StripRoom(width);
-            return Math.Max(0, (int)Math.Floor((room + CardGap) / (CardWidth + CardGap)));
+            int fit = Math.Max(0, (int)Math.Floor((room - PagerWidth - PagerGap + CardGap) / (CardWidth + CardGap)));
+            return Math.Min(StripCardsCap, fit);
+        }
+
+        /// <summary>How many pages a given colony size requires at this resolution.</summary>
+        public static int PageCount(float width, float height, int colonists)
+        {
+            int capacity = VisibleCards(width, height, int.MaxValue / 2);
+            return capacity <= 0 || colonists <= 0 ? 1 : Math.Max(1, (colonists + capacity - 1) / capacity);
         }
 
         /// <summary>
-        /// How many rows this screen is tall enough to spend on the strip, 1 to
-        /// <see cref="StripRows"/>. Never zero: a screen too short for one row of cards would
-        /// have no roster at all, which is worse than being over budget.
+        /// How many rows this screen is tall enough to spend on the strip.
+        /// Always 1 row (owner, 2026-09-18: "Should be one row with 6 on an more (no 2 rows or anthing - always one)").
         /// </summary>
-        public static int StripRowsAllowed(float height)
-        {
-            float budget = height * StripHeightShare;
-            int rows = (int)Math.Floor((budget + CardGap) / (CardHeight + CardGap));
-            return Math.Max(1, Math.Min(StripRows, rows));
-        }
+        public static int StripRowsAllowed(float height) => 1;
 
-        /// <summary>How many rows that many cards actually occupy, 0 to what the screen allows.</summary>
+        /// <summary>How many rows that many cards actually occupy, 0 to 1.</summary>
         public static int StripRowsUsed(float width, float height, int cards)
         {
             int perRow = CardsPerRow(width);
             if (cards <= 0 || perRow <= 0) return 0;
-            return Math.Min(StripRowsAllowed(height), (cards + perRow - 1) / perRow);
+            return 1;
         }
 
         /// <summary>How tall the strip stands at a given number of rows.</summary>

@@ -20,6 +20,8 @@ namespace Odyssey.Presentation.Ui
 
         ChevronDown,
         ChevronUp,
+        ChevronLeft,
+        ChevronRight,
         Close,
         Menu,
 
@@ -241,6 +243,14 @@ namespace Odyssey.Presentation.Ui
 
                 case HudGlyphKind.ChevronUp:
                     Polyline(painter, true, P(6, 15), P(12, 9), P(18, 15));
+                    return;
+
+                case HudGlyphKind.ChevronLeft:
+                    Polyline(painter, true, P(15, 6), P(9, 12), P(15, 18));
+                    return;
+
+                case HudGlyphKind.ChevronRight:
+                    Polyline(painter, true, P(9, 6), P(15, 12), P(9, 18));
                     return;
 
                 case HudGlyphKind.Close:

@@ -217,8 +217,10 @@ namespace Odyssey.Presentation.Bootstrap
 
             // While the settings panel is waiting for a key, every press belongs to the
             // rebind: arming a tool with the very key being offered to the slot would be two
-            // things on one key, which is the fault this assembly's clash test exists for.
-            if (hotkeys.Listening != null) return;
+            // things on one key, which is the fault this assembly's clash test exists for. The
+            // same holds while a text field has the keyboard — the C of a colony's name is not
+            // the Cancel tool — and the director answers both in one question.
+            if (!hotkeys.GameKeysLive) return;
 
             // Mine, cut, cancel. Pressing the armed tool's own key again disarms it, so a
             // player who picked one up can always put it down the way they picked it up. The

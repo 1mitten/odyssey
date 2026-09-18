@@ -198,9 +198,9 @@ anchored to a screen edge or centred; nothing is placed at a computed offset.
 | **Colonist strip** | centred, `top 20` | 106 × 63 cards (132 × 86 until 2026-09-17), 7 px apart; clamped to what fits between the two corners |
 | **Clock + speed** | `right 76, top 20, w 266` | one panel — the merge *is* the fix for A3/A4 overlapping |
 | **Alerts** | under the clock in the same column, 9 px gap | hidden outright when empty |
-| **Depth rail** | `right 20, top 20, w 44` | one 26 × 16 cell a layer; shrinks rather than overflowing |
+| **Depth rail** | `right 20, top 20, w 44` | one 26 × 16 cell a layer, surface cell 2× height (32 px) with subtle earth-green tint; shrinks rather than overflowing |
 | **Orders strip** | under the rail in the same gutter, 9 px gap, `w 44` | one 34 px button an order; four today (§5.4) |
-| **Inspect** | `left 20, bottom 84, w 560` | 43 px tall with nothing selected, 164 with a colonist |
+| **Inspect** | `left 0, bottom 50, w 560` | flush on command bar (0 px gap); 43 px tall with nothing selected, 164 with a colonist |
 | **Command bar** | centred, `bottom 20` | 38 px items, one row, overflow into Menu |
 
 **The right-hand column is a column, and that is a scar.** The clock and the alerts were two
@@ -410,6 +410,19 @@ was neither disabled nor labelled.
     over §4's 18% ceiling. The clamp is the part that matters: the strip is the only region with no
     ceiling of its own, so unbounded rows would make every other guarantee here true only for the
     colony sizes somebody happened to try.
+  - **Amended 2026-09-18 (owner): the inspect pane sits flush against the bottom command bar.**
+    `InspectToBar` drops from 14 px to 0 px, moving `InspectBottom` from 64 px to 50 px
+    (`BarBottom + HudCommands.BarHeight + Frame = 50`). Shifting the card down eliminates the
+    awkward negative gap between the inspect pane and the docked command bar, freeing 14 px of
+    unobstructed board sightlines above the pane. Both bottom corners are squared
+    (`border-bottom-right-radius: 0;`), matching the docked popover treatment where panels meet
+    the command bar edge.
+  - **Amended the same day (owner): the surface layer button on the depth rail is twice as tall
+    and earth-tinted.** The button representing the default starting view (ground/surface layer)
+    stands at 32 px (`RailSurfaceCellHeight = 32`, twice the 16 px of standard cells), and wears
+    a subtle earth-green tint (`rgba(127, 201, 140, 0.25)`, derived from `HudTheme.Good`) when
+    inactive. `HudLayout.RailPitch` apportions room over `layers + 1` units so the squeezed rail
+    never encroaches into the orders strip below it.
 
 ---
 

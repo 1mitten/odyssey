@@ -316,10 +316,11 @@ namespace Odyssey.Presentation.CameraRig
             // Actions, not keys: which key each action is on is the player's to change in the
             // settings panel, and this is the only thing the rebind needs to hold true — the
             // same line reads W and whatever W was changed to. While a slot in that panel is
-            // waiting for a key, every press belongs to the rebind, so the pollers sit the
-            // frame out rather than arming a tool with the key the player is offering it.
+            // waiting for a key — or while a text field has the keyboard — every press belongs
+            // elsewhere, so the pollers sit the frame out rather than panning the camera with the
+            // save name somebody is typing. Both reasons are one question the director answers.
             HotkeyDirector hotkeys = _directors.Hotkeys;
-            if (hotkeys.Listening != null) return;
+            if (!hotkeys.GameKeysLive) return;
 
             var move = Vector2.zero;
             if (keys.IsPressed(hotkeys, HotkeyAction.CameraForward)) move.y += 1f;

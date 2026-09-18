@@ -178,6 +178,7 @@ namespace Odyssey.Presentation.Rendering
             if (module == 0) return;
 
             int tint = TintCode.Daylit(TintCode.Terrain(terrain), _model.OpenToTheSky(index, y));
+            if (DrawnWhole(terrain)) tint = TintCode.Whole(tint);
 
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
             // cell is tilted onto the tangent plane of the relief field so its top face follows
@@ -197,6 +198,24 @@ namespace Odyssey.Presentation.Rendering
                 if (_terrain[i].Emit(cell, sink))
                     return;
         }
+
+        /// <summary>
+        /// Which terrains are part of the waterside rather than things standing in front of it, and
+        /// so are drawn whole however squarely they stand in a sight line (<c>TintCode.WholeBase</c>).
+        ///
+        /// <para>Marsh, and marsh only. Water already has its own marker and banks get theirs where
+        /// they are emitted; a bog is the odd one out because it is an ordinary solid ground cell —
+        /// it is in <c>NaturalContent.IsGround</c>, a colonist walks over it — and so it was fading
+        /// like any other ground, opening a hole in the shore right beside water that stayed whole
+        /// because water is exempt. Owner, 2026-09-18: "sometimes it hides marsh as well — omit
+        /// this."</para>
+        ///
+        /// <para>Asked of the terrain index here rather than through a <c>NaturalContent</c>
+        /// predicate because it is a <em>drawing</em> decision and not a content one: nothing in the
+        /// simulation is different about a bog for this reason, and a name in the content tables
+        /// would invite one to be.</para>
+        /// </summary>
+        static bool DrawnWhole(ushort terrain) => terrain == NaturalContent.TerrainMarsh;
 
         internal int ExposedSidesOf(int x, int z, int y) => ExposedSides(x, z, y);
 
@@ -460,7 +479,8 @@ namespace Odyssey.Presentation.Rendering
 
             // Draped, so a bank lies along the same rolling field the ground either side of it
             // does. Always daylit: BankLayout required the cell to be open to the sky.
-            AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(bank.Terrain), open: true),
+            AddBody(batch, module,
+                TintCode.Daylit(TintCode.Whole(TintCode.Terrain(bank.Terrain)), open: true),
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)));
         }
@@ -522,8 +542,15 @@ namespace Odyssey.Presentation.Rendering
             if (module == 0) return;
             // Draped, like every other thing that fills a cell - see EmitFacePanels for why a
             // lift cannot close a seam, and WaterContributor for the same argument made about tiles.
+            //
+            // And drawn as a sheet rather than as a plate. Draping closes the seam in *metres* and
+            // still leaves it open by a pixel: a plate's rim ends exactly in the plane of its
+            // neighbour's top face, ties with it on depth, and wins often enough to draw a dotted
+            // line of dark wood along every seam in the colony. CellMetrics.FloorTile is the one
+            // owner of both halves of the answer, and CellMetrics.FloorSheet carries the argument,
+            // the measurements and the owner's two screenshots of it.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
-                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) * CellMetrics.FloorTile);
         }
 
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)

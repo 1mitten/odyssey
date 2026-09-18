@@ -60,6 +60,7 @@ namespace Odyssey.Presentation.Ui
         const float SlowBucketSeconds = 1f;         // clock, rail
 
         readonly RosterModel _roster = new RosterModel();
+        public RosterModel Roster => _roster;
         readonly InspectModel _inspect = new InspectModel();
         readonly LayerRulerModel _ruler = new LayerRulerModel();
         readonly LedgerModel _ledger = new LedgerModel();
@@ -118,9 +119,28 @@ namespace Odyssey.Presentation.Ui
 
         // ---- colonist strip (A2)
         VisualElement _strip = null!;
+        VisualElement _cardsHost = null!;
         readonly List<CardView> _cards = new List<CardView>();
         int _stripCapacity = int.MaxValue;
         bool _sweepingRoster;
+        VisualElement? _rosterPager;
+        VisualElement? _prevPageBtn;
+        VisualElement? _nextPageBtn;
+        Label? _pageLabel;
+        PawnId _lastSelectedPawn = PawnId.None;
+        int _lastRosterPage = -1;
+        int _lastRosterPageCount = -1;
+
+        bool _isRightDragging;
+        bool _pendingRightDrag;
+        Vector2 _rightDragStartPos;
+        PawnId _draggedPawnId;
+        int _draggedSlot;
+        VisualElement? _dragGhost;
+        AvatarGlyph? _ghostAvatar;
+        Label? _ghostName;
+        CardView? _dragTargetView;
+        float _edgeHoverTimer;
 
         // ---- clock and speed (A3/A4)
         Label _clockTime = null!;
@@ -237,6 +257,18 @@ namespace Odyssey.Presentation.Ui
         /// the colony's directors, and for harness scenes that build no world.</summary>
         HotkeyDirector? _hotkeysFallback;
 
+        /// <summary>
+        /// The binding map, the colony's once there is one.
+        ///
+        /// <para>An accessor rather than the expression written wherever it is wanted: the shell
+        /// reads it to draw a keycap, to poll the palette key and — since the text fields take the
+        /// keyboard — to shut the game's keys off while somebody types. Three copies of a
+        /// null-coalesce that has to pick the *same* director every time is how a gate comes to be
+        /// set on one object and read on another.</para>
+        /// </summary>
+        internal HotkeyDirector Hotkeys() =>
+            _directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
+
         /// <summary>Our own copy of the panel settings, so that changing the interface scale does
         /// not write to the committed asset. See <see cref="ApplyUiScale"/>.</summary>
         PanelSettings? _panelCopy;
@@ -276,6 +308,25 @@ namespace Odyssey.Presentation.Ui
             public IconBadge JobIcon = null!;
 
             public PawnId LastId;
+            /// <summary>
+            /// The seed the colonist in this slot was rolled from, beside their id.
+            ///
+            /// <para><b>Because the id alone does not say who somebody is, and the owner saw this
+            /// one too</b> (2026-09-18: *"the colonist info card and the roster top bar names don't
+            /// match up ... maybe to do with loading and saving another game"*). Every colony
+            /// numbers its pawns from one, so loading a different game leaves this slot holding the
+            /// same id it had — and the name and face, which are read once per colonist and come
+            /// from the seed, were never rewritten. The bar went on showing the previous colony's
+            /// people while the inspect pane, which reads afresh, showed the present one's.</para>
+            ///
+            /// <para>Exactly the fault <see cref="LastPortraits"/> was added for a few hours
+            /// earlier, and the reason both exist rather than one is worth keeping: that fix asked
+            /// *do the pictures still exist*, which is a question about the studio, and this one
+            /// asks *is this the same person*, which is a question about the colonist. Answering
+            /// the second properly would have covered the first, and did not, because only the
+            /// portrait was looked at.</para>
+            /// </summary>
+            public uint LastSeed;
             public int LastJob = int.MinValue;
             public int LastLayer = int.MinValue;
 
@@ -702,6 +753,11 @@ namespace Odyssey.Presentation.Ui
             // it ends — a card's own PointerUp never arrives if the release landed off the strip.
             if (_sweepingRoster && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
                 _sweepingRoster = false;
+
+            if (_isRightDragging && UnityEngine.InputSystem.Mouse.current?.rightButton.isPressed != true)
+            {
+                EndDragDrop();
+            }
         }
 
         void RefreshAll()
@@ -735,6 +791,18 @@ namespace Odyssey.Presentation.Ui
             {
                 _strip.style.left = inset;
                 _strip.style.right = inset;
+            }
+
+            int perRow = HudLayout.CardsPerRow(width);
+            if (_cardsHost != null)
+            {
+                _cardsHost.style.maxWidth = perRow * (HudLayout.CardWidth + HudLayout.CardGap);
+                if (_roster != null && _roster.PageCount > 1)
+                {
+                    _cardsHost.style.width = perRow * (HudLayout.CardWidth + HudLayout.CardGap);
+                    _cardsHost.style.flexShrink = 0f;
+                    _cardsHost.style.justifyContent = Justify.FlexStart;
+                }
             }
 
             float height = _hud.resolvedStyle.height;
@@ -780,12 +848,14 @@ namespace Odyssey.Presentation.Ui
 
             foreach (RailCellView view in _rail)
             {
-                view.Root.style.height = cell;
+                bool isSurface = view.Layer == _surfaceLayer;
+                float cellHeight = isSurface ? 2f * cell : cell;
+                view.Root.style.height = cellHeight;
                 view.Root.style.marginBottom = gap;
 
                 // A squeezed cell has no room for its own number. The rail still says which layer
                 // is live by which cell is lit, which is the part that has to survive.
-                view.Number.style.display = cell >= HudLayout.RailCellHeight - 2f
+                view.Number.style.display = cellHeight >= HudLayout.RailCellHeight - 2f
                     ? DisplayStyle.Flex
                     : DisplayStyle.None;
             }

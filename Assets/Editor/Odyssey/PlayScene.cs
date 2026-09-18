@@ -1103,10 +1103,21 @@ namespace Odyssey.EditorTools
             void Slab(string id, string prefab) => rows.Add(new ModuleEntry
             {
                 moduleId = id, shape = ModuleShape.FloorSlab, prefabName = prefab,
-                // Pivot placement, not bounds placement: the walking surface is the cell floor and
-                // the slab's own thickness hangs below it. Snapping the bounds instead would lift
+                // The walking surface is the cell floor and the slab's own thickness hangs below
+                // it — so it is the slab's TOP that is placed, never its base. baseAtY would lift
                 // every floor in the world by its own thickness.
-                centreXZ = true, baseAtY = false,
+                //
+                // **That intent used to be spelled `baseAtY = false`, which is not the same thing**
+                // and was only ever right by luck: with neither rule on, a piece lands on whatever
+                // pivot convention its own artist used. Measured 2026-09-18 (`SlabHeightProbe`),
+                // the plank deck's top came out at +0.008 m and the street tile's at +0.033 m, so a
+                // stone floor stood 25 mm proud of the wood beside it on the same layer, and the
+                // owner reported a grey tile sitting at the wrong height in their deck. One rule
+                // with one owner now: every slab's top face is the same height.
+                //
+                // The clearance above the plane is topAtY's own, not a number repeated here —
+                // CellMetrics.SlabLift carries it and says why it cannot be zero.
+                centreXZ = true, baseAtY = false, topAtY = true,
             });
 
             void Block(string id) => rows.Add(new ModuleEntry

@@ -271,29 +271,24 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The strip wraps to a second row and stops there (owner, 2026-09-17: dock the bars to
-        /// the screen edges "so many more could fit across 2 rows potentially").
-        ///
-        /// <para>The clamp is the part worth a test. The strip is the one region with no ceiling
-        /// of its own, so a colony of forty over an unbounded number of rows would paper the
-        /// screen and every other guarantee here — no overlap, the coverage ceiling — would be
-        /// true only for the colony sizes somebody happened to try.</para>
+        /// The strip stands at exactly one row (owner, 2026-09-18: "Should be one row with 6 on an more (no 2 rows or anthing - always one)").
         /// </summary>
         [Test]
-        public void TheStripGrowsToASecondRowAndNoFurther()
+        public void TheStripIsAlwaysOneRowAndNoFurther()
         {
             foreach ((int width, int height) in Resolutions)
             {
                 int perRow = HudLayout.CardsPerRow(width);
                 int allowed = HudLayout.StripRowsAllowed(height);
                 Assert.That(perRow, Is.GreaterThan(0), $"no card fits at all at {width}x{height}");
+                Assert.That(allowed, Is.EqualTo(1), "the strip is strictly one row");
 
                 Assert.That(HudLayout.StripRowsUsed(width, height, perRow), Is.EqualTo(1),
-                    "a full first row should not have started a second");
-                Assert.That(HudLayout.StripRowsUsed(width, height, perRow + 1), Is.EqualTo(allowed),
-                    "one card past a full row belongs on a second row wherever there is room for one");
-                Assert.That(HudLayout.StripRowsUsed(width, height, perRow * 5), Is.EqualTo(allowed),
-                    "the strip must stop at its row cap however large the colony is");
+                    "a full first row occupies one row");
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow + 1), Is.EqualTo(1),
+                    "cards past a full row are paginated into the same one row");
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow * 5), Is.EqualTo(1),
+                    "the strip must stop at its 1-row cap however large the colony is");
 
                 Assert.That(HudLayout.VisibleCards(width, height, 500),
                     Is.EqualTo(perRow * allowed),
@@ -313,25 +308,46 @@ namespace Odyssey.Tests.Hud
                 Assert.That(strip.Width, Is.LessThanOrEqualTo(HudLayout.StripRoom(width) + 0.01f),
                     $"the strip is wider than the room it may occupy at {width}x{height}");
                 Assert.That(HudLayout.FirstOverlap(boxes), Is.Null,
-                    $"two rows of cards run into another region at {width}x{height}");
+                    $"strip runs into another region at {width}x{height}");
 
-                // The ceiling is stated against the resting HUD, as the criteria are — but with
-                // the colony that fills both rows rather than the three the other coverage test
-                // uses, because a region that can double in height is exactly the one that could
-                // spend the budget without anybody selecting anything.
+                // The ceiling is stated against the resting HUD, as the criteria are.
                 var resting = HudContent.NothingSelected(colonists: 500, storeRows: 3, layers: Layers);
                 var restingBoxes = HudLayout.Solve(width, height, resting);
                 float coverage = HudLayout.Coverage(restingBoxes, width, height);
-                TestContext.WriteLine($"Full two-row strip at {width}x{height}: {coverage:P2} — " +
+                TestContext.WriteLine($"Full one-row strip at {width}x{height}: {coverage:P2} — " +
                     string.Join(", ", restingBoxes.Select(b => $"{b.Key} {b.Value.Area / (width * height):P2}")));
 
-                // Per region in the message: the total alone cannot say which region spent the
-                // budget, and the region that grew is not always the one that broke it.
                 Assert.That(coverage, Is.LessThanOrEqualTo(HudLayout.CoverageCeiling),
-                    $"a full two-row strip puts the resting HUD over its coverage ceiling at " +
+                    $"a full one-row strip puts the resting HUD over its coverage ceiling at " +
                     $"{width}x{height}: {coverage:P2}. Per region: " +
                     string.Join(", ", restingBoxes.Select(b => $"{b.Key} {b.Value.Area / (width * height):P2}")));
             }
+        }
+
+        [Test]
+        public void CardsPerRowIsCappedAtSixCards()
+        {
+            foreach ((int width, _) in Resolutions)
+            {
+                Assert.That(HudLayout.CardsPerRow(width), Is.LessThanOrEqualTo(HudLayout.StripCardsCap));
+            }
+            Assert.That(HudLayout.CardsPerRow(1920), Is.EqualTo(6));
+            Assert.That(HudLayout.CardsPerRow(2560), Is.EqualTo(6));
+        }
+
+        [Test]
+        public void PaginatedStripKeepsFixedBoundingBoxAcrossDifferentVisibleCardCounts()
+        {
+            // When total colonists exceed 1 row capacity (6), whether the current page shows 6 cards
+            // or 1 card, the solved box keeps the same width and position flush next to the 6th slot.
+            var fullPage = new HudContent(colonists: 10, storeRows: 3, alerts: 0, layers: 16, needRows: 0);
+            var partialPage = new HudContent(colonists: 7, storeRows: 3, alerts: 0, layers: 16, needRows: 0);
+
+            var fullBox = HudLayout.Solve(1920, 1080, fullPage)[HudRegion.ColonistStrip];
+            var partialBox = HudLayout.Solve(1920, 1080, partialPage)[HudRegion.ColonistStrip];
+
+            Assert.That(fullBox.Width, Is.EqualTo(partialBox.Width).Within(0.01f));
+            Assert.That(fullBox.X, Is.EqualTo(partialBox.X).Within(0.01f));
         }
 
         /// <summary>

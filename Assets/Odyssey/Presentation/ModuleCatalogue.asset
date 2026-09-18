@@ -19,6 +19,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -48,6 +49,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -77,6 +79,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -106,6 +109,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Window_Double_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -135,6 +139,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Window_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -164,6 +169,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Window_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -193,6 +199,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Window_Double_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -222,6 +229,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Window_Double_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -251,6 +259,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -280,6 +289,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Door_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -309,6 +319,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Door_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -338,6 +349,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Door_Double_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -367,6 +379,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Wall_Door_Double_Large_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -396,6 +409,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Pillar_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -425,6 +439,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Stairs_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -454,6 +469,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Stairs_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -483,6 +499,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Stairs_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -512,6 +529,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Bld_Ladder_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: -1.15}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -541,6 +559,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Bld_Ladder_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: -1.15}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -570,6 +589,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Floor_Combined_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -599,6 +619,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Floor_Combined_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -628,6 +649,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Floor_Combined_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -657,6 +679,7 @@ MonoBehaviour:
     prefabName: SM_Bld_Base_Floor_Combined_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -686,6 +709,7 @@ MonoBehaviour:
     prefabName: SM_Env_Ground_Tile_Half_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -715,6 +739,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -744,6 +769,7 @@ MonoBehaviour:
     prefabName: SM_Env_Ground_Tile_Half_01
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -773,6 +799,7 @@ MonoBehaviour:
     prefabName: SM_Env_Ground_Tile_Half_02
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -802,6 +829,7 @@ MonoBehaviour:
     prefabName: SM_Env_Ground_Tile_Half_03
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -831,6 +859,7 @@ MonoBehaviour:
     prefabName: SM_Env_Ground_Tile_Half_04
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -860,6 +889,7 @@ MonoBehaviour:
     prefabName: SM_Env_Ground_Tile_Half_05
     centreXZ: 1
     baseAtY: 0
+    topAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -889,6 +919,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -918,6 +949,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -947,6 +979,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -976,6 +1009,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1005,6 +1039,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1034,6 +1069,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1063,6 +1099,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1092,6 +1129,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1121,6 +1159,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1150,6 +1189,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1179,6 +1219,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1208,6 +1249,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1237,6 +1279,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1266,6 +1309,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1295,6 +1339,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1324,6 +1369,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1353,6 +1399,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1382,6 +1429,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1411,6 +1459,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1440,6 +1489,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1469,6 +1519,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1498,6 +1549,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1527,6 +1579,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1556,6 +1609,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1585,6 +1639,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1614,6 +1669,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1643,6 +1699,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1672,6 +1729,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1701,6 +1759,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1730,6 +1789,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1759,6 +1819,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1788,6 +1849,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1817,6 +1879,7 @@ MonoBehaviour:
     prefabName: 
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1846,6 +1909,7 @@ MonoBehaviour:
     prefabName: SM_Env_Grass_Med_Clump_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1875,6 +1939,7 @@ MonoBehaviour:
     prefabName: SM_Env_Grass_Med_Clump_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -1904,6 +1969,7 @@ MonoBehaviour:
     prefabName: SM_Env_Grass_Tall_Clump_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -2020,6 +2086,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Env_Tree_Pine_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -2049,6 +2116,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Env_Tree_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -2078,6 +2146,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Wep_Axe_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -2107,6 +2176,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Wep_Pickaxe_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -2136,6 +2206,7 @@ MonoBehaviour:
     prefabName: SM_Wep_Hammer_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
@@ -2165,6 +2236,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Business_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2231,6 +2303,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Business_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2297,6 +2370,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Jumpsuit_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2363,6 +2437,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Jumpsuit_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2429,6 +2504,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Peasent_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2495,6 +2571,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Peasent_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2561,6 +2638,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Prisoner_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2627,6 +2705,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Prisoner_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2693,6 +2772,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Space_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2759,6 +2839,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2825,6 +2906,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Female_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2891,6 +2973,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Female_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -2957,6 +3040,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Female_04
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3023,6 +3107,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3089,6 +3174,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Male_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3155,6 +3241,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Male_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3221,6 +3308,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Chr_Street_Male_04
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3287,6 +3375,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Alien_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3343,6 +3432,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Alien_Male_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3404,6 +3494,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Android_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3455,6 +3546,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Augmented_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3521,6 +3613,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Cop_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3582,6 +3675,7 @@ MonoBehaviour:
     prefabName: SM_Chr_CyberPunk_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3648,6 +3742,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Cyber_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3719,6 +3814,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Cyber_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3785,6 +3881,7 @@ MonoBehaviour:
     prefabName: SM_Chr_CyborgNinja_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3841,6 +3938,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Garbage_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3907,6 +4005,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Hacker_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -3973,6 +4072,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Junky_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4039,6 +4139,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Junky_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4105,6 +4206,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Medical_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4161,6 +4263,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Monk_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4227,6 +4330,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Muscle_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4293,6 +4397,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Rich_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4359,6 +4464,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Rich_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4425,6 +4531,7 @@ MonoBehaviour:
     prefabName: SM_Chr_FarmBoy_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4496,6 +4603,7 @@ MonoBehaviour:
     prefabName: SM_Chr_FarmGirl_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4567,6 +4675,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Farmer_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4633,6 +4742,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Farmer_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4704,6 +4814,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Farmer_Male_Old_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4775,6 +4886,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Bandit_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4846,6 +4958,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Captain_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4912,6 +5025,7 @@ MonoBehaviour:
     prefabName: SM_Chr_GoldMiner_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -4978,6 +5092,7 @@ MonoBehaviour:
     prefabName: SM_Chr_GoldMiner_Male_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5044,6 +5159,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Hunter_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5115,6 +5231,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Mexican_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5181,6 +5298,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Mexican_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5252,6 +5370,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Mexican_Male_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5323,6 +5442,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmericanChief_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5394,6 +5514,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmericanElder_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5460,6 +5581,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmericanWarrior_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5526,6 +5648,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmericanWarrior_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5592,6 +5715,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmericanWarrior_Male_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5663,6 +5787,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmericanWarrior_Male_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5734,6 +5859,7 @@ MonoBehaviour:
     prefabName: SM_Chr_NativeAmerican_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5800,6 +5926,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Priest_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5871,6 +5998,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Salesman_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -5937,6 +6065,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Soldier_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -6008,6 +6137,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Thug_Male_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -6079,6 +6209,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Thug_Male_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -6150,6 +6281,7 @@ MonoBehaviour:
     prefabName: SM_Chr_Traveller_Female_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
@@ -6221,6 +6353,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Prop_Sack_Stack_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.6, y: 1.6, z: 1.6}
@@ -6250,6 +6383,7 @@ MonoBehaviour:
     prefabName: SM_Prop_Box_Supplies_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.5, y: 1.5, z: 1.5}
@@ -6279,6 +6413,7 @@ MonoBehaviour:
     prefabName: SM_Prop_LogPile_01
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.4, y: 0.4, z: 0.4}
@@ -6308,6 +6443,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Env_Rock_03
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.35, y: 0.35, z: 0.35}
@@ -6337,6 +6473,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Env_Rock_08
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.16, y: 0.16, z: 0.16}
@@ -6366,6 +6503,7 @@ MonoBehaviour:
     prefabName: SM_Gen_Env_Rock_Pebbles_02
     centreXZ: 1
     baseAtY: 1
+    topAtY: 0
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.5, y: 0.5, z: 0.5}

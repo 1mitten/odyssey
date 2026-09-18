@@ -132,6 +132,32 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("Sit the art's lowest point on the placement height. Off for pieces with a skirt.")]
         public bool baseAtY = true;
 
+        /// <summary>
+        /// Sit the art's <b>highest</b> point just above the placement height — by
+        /// <see cref="CellMetrics.SlabLift"/> — which is the rule for anything walked <i>on</i>
+        /// rather than stood <i>in</i>.
+        ///
+        /// <para><b>Just above, never on.</b> The cell's floor plane is also the top face of the
+        /// block filling the cell below, so a surface levelled exactly on to it is coplanar with
+        /// the ground and z-fights. <see cref="CellMetrics.SlabLift"/> holds the clearance and the
+        /// measurement behind it; it lives with this rule so that a future walked-on piece cannot
+        /// forget it.</para>
+        ///
+        /// <para><b>A floor slab is drawn at the cell's lower boundary</b>, which is the plane a
+        /// colonist's feet are on, so the face that matters is the slab's <em>top</em> and not its
+        /// pivot. Without this each slab art landed on whatever convention its own prefab used, and
+        /// two floors on one layer drew at two heights: measured 2026-09-18, the plank deck's top
+        /// at +0.008 m and the street tile's at +0.033 m, so a stone floor stood 25 mm proud of the
+        /// wood beside it (`SlabHeightProbe`). The owner reported that as a stone tile "one height
+        /// below" the deck (`docs/design/15-building.md`).</para>
+        ///
+        /// <para>Mutually exclusive with <see cref="baseAtY"/>, which asks the opposite question.
+        /// <see cref="baseAtY"/> wins if both are set, because it is the older rule and every piece
+        /// already using it is placed correctly.</para>
+        /// </summary>
+        [Tooltip("Sit the art's highest point on the placement height. For floors, which are walked on.")]
+        public bool topAtY;
+
         [Tooltip("Extra local offset in metres, applied after normalisation.")]
         public Vector3 offset = Vector3.zero;
 

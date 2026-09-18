@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Read a saved game and say what is in it, with no Unity.
+
+    Not part of scripts/test-fast.sh, which names its two test projects explicitly. This is a
+    tool you run by hand when a playtest report needs settling against the file rather than
+    against a screenshot; see tools/dotnet/Odyssey.SaveProbe/Program.cs for why it exists.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Odyssey.SaveProbe</AssemblyName>
+    <RootNamespace>Odyssey.SaveProbe</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Odyssey.Sim/Odyssey.Sim.csproj" />
+    <ProjectReference Include="../Odyssey.Sim.Contracts/Odyssey.Sim.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

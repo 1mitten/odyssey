@@ -632,3 +632,193 @@ cannot draw as stone.
 the deck above and still there after the deck above is removed. There is no second bug to fix here.
 What would overturn it is a grey tile on an *unbroken* deck, which the fix above should now make
 impossible; that is the version worth a screenshot, because it rules out everything in this section.
+
+### The screenshot arrived, and the grey is stone paving
+
+**2026-09-18, and the answer was in the owner's save folder the whole time.** The overturning picture
+came back: grey plates in an *unbroken* wood deck, coplanar with it, the whole run of them, with the
+deck continuing past on every side. So the "surface one cell down" reading is dead, and so is the
+hole it was seen through.
+
+**The three checks above are all still true. The conclusion drawn from them was not**, because all
+three answer one question — *can a wood floor draw as stone?* — and none asks the question that
+mattered: **was it ever wood?** "A wood-floored cell cannot draw the stone module" is sound, and its
+contrapositive is the whole answer: a cell drawing the stone module is not wood-floored.
+
+**Measured, by loading the owner's own saves** (`tools/dotnet/Odyssey.SaveProbe`, written for this
+and kept):
+
+```
+timmy-test.odyssey    day 2   Paved/Stone 11   Paved/Wood 20   Built/Wood 31
+                              Paved/Stone at (72,57,L11) touches Paved/Wood
+                              Paved/Stone at (73,57,L11) touches Paved/Wood   … and (74,57), (75,57)
+timmy-buildy-test     day 2   Paved/Stone  4   Paved/Wood  4
+the-lost-buckets-day-3 day 4  Paved/Wood  20   Built/Wood 90     — no stone anywhere
+```
+
+**The grey tiles are stone paving, laid on the same layer as the wood beside them.** Every mixed
+deck in the folder mixes *materials*, never layers, and in every one of them the stone cells are
+`SlabPaved` — the **Paving** tool — and never `SlabBuilt`. A run of four at one z, with wood at the
+next z, is exactly the picture.
+
+> **Wrong, and superseded the same day — see "The grey was never a floor" below.** Stone paving is
+> real and those two saves do hold it, but it is not what the owner photographed. The save from
+> *that* session holds **no stone anywhere on the board**. The grey was rubble *terrain*.
+
+Three things follow, and they are separate faults:
+
+- **Two tools both mean "floor" and they remember different materials.** `PaletteTools` files
+  `Paving` (`ui.arch.tool.deckplate`) under *Structure* **and** *Floors*, beside a second tile called
+  `Slab`, and its own header calls paving "what the player simply calls a floor".
+  `BuildPalette._lastMaterial` is keyed **per sub-type**, so Paving and Slab each keep their own
+  material and one can sit on stone while the other sits on wood, with nothing on either tile saying
+  so. Where nothing is remembered, `ApplySubType` keeps `_designate.Stuff` — the material of the
+  *last tool armed* — so it also carries over from the wall you just built.
+- **The pane titles a floor by its material and never by its kind.** `InspectModel.DescribeCellAt`
+  builds "Stone floor" from `FloorStuff` alone, so paving and a structural floor are the same
+  sentence and the one word that would have ended this — *paving* — is never printed.
+- **The two slab arts did not share a top surface.** Both catalogue rows carried `baseAtY: 0`, so
+  neither was normalised to the cell's floor plane and each sat on whatever pivot convention its own
+  artist used. **Fixed; see below.**
+
+**Unverified, and the cheapest thing to check first.** The owner clicked a grey plate and the pane
+said *Wood floor*, which on this reading means the pick landed on the wood cell *behind* it — the
+expected consequence of drawing a slab below its own cell's floor plane, since the plate's image
+slides down-screen out of the cell the picker marches through. It is stated here as the likely
+reading rather than a measurement. It falls out on its own if the slab arts are levelled, and until
+they are, clicking near the far edge of a grey plate should name the neighbour while clicking near
+the front edge names the plate.
+
+### Every slab's top face is at one height, 8 mm above the cell floor
+
+**Measured first, and the measurement corrected the guess.** From the screenshots the stone plate
+read as *recessed* into the deck. It is the opposite — `SlabHeightProbe`, against the real
+`ModuleLibrary`, with y = 0 the plane a colonist stands on:
+
+```
+                             before                 after
+odyssey.module.slab          top=+0.008  t 0.101    top=+0.008  t 0.101
+odyssey.module.slab.concrete top=+0.008             top=+0.008
+odyssey.module.slab.deck     top=+0.008             top=+0.008
+odyssey.module.slab.wood     top=+0.008             top=+0.008
+odyssey.module.slab.stone    top=+0.033  t 0.033    top=+0.008  t 0.033
+```
+
+**The street tile stood 25 mm *proud* of the plank deck**, not below it, and the sunken look is the
+tile's own art — a raised cross inside a frame — rather than its placement. The deck's own +0.008
+was not an error and is now the height they all share; see the clearance below for why it is not 0.
+
+**The rule now has one owner.** `ModuleEntry.topAtY` places a piece by its **highest** point, which
+is the right question for anything walked *on*; `baseAtY` asks the opposite and keeps precedence, so
+every piece already placed correctly is untouched. `PlayScene.Slab` sets it, which covers the five
+buildable slab ids and the five street surfaces.
+
+#### And the clearance is load-bearing
+
+**Levelling the slabs on to the plane *exactly* made the board flicker** (owner, 2026-09-18, within
+the hour: *"there is all sorts of flickering happening to tiles now — maybe fighting layers?"*).
+They were right about the cause. `CellMetrics.FloorCentre` for cell *y* is at `y * SizeY`, which is
+**the top face of the terrain block filling cell y−1** — so a slab whose top face sits on the plane
+is coplanar with the ground, and paving, whose entire purpose is to be laid on ground that is
+already there, z-fights with it.
+
+The +0.008 the plank deck happened to carry was never slop. It was clearance, and taking it away is
+what the first fix did wrong.
+
+**`CellMetrics.SlabLift` is that clearance, and `topAtY` applies it** — the top face lands `SlabLift`
+*above* the placement height, never on it. It lives in the rule rather than in each row, or the next
+walked-on piece has to remember it. 8 mm because that is the number that had already never
+flickered, and 8 mm against a 3 m layer does not read as a kerb.
+
+**The test now pins both halves**, because the first version would have passed the flicker straight
+through: every slab agrees *and* they agree at a height that clears the ground. "All the slabs are
+level" is necessary and is not sufficient — levelling them all on to the one plane the ground
+already occupies satisfies it perfectly.
+
+**The old spelling was `baseAtY = false`, and it was only ever right by luck.** Its comment already
+said the intent exactly — *"the walking surface is the cell floor and the slab's own thickness hangs
+below it"* — but "not base-at-Y" is not "top-at-Y": it is *no rule at all*, and it lands each piece
+on its artist's pivot. One prefab happened to be near enough and the other was not.
+
+**Pinned by `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor`**, which walks every `FloorSlab` row
+in the committed catalogue and asserts the resolved bounds' top is `CellMetrics.SlabLift` ± 1 mm. It
+asks the *resolved* module, not the row, so it walks the real arithmetic rather than re-reading the
+flag; and it counts what it checked, because a rule whose loop never runs has quietly stopped being
+one.
+
+**Regenerating the catalogue takes two commands, not one.**
+`PlayScene.RebuildCatalogue` rebuilds the rows and **drops the `appearance` block** — the 311 atlas
+swatch rectangles that clothe the 61 colonists — so `CharacterSwatches.Classify` has to run after it
+to put them back. `CharacterSwatches`'s own header says it writes only appearance and deliberately
+does not rebuild; the inverse is just as true and was not written down anywhere. A rebuild alone
+looks like it worked: it exits zero, keeps all 138 rows and every prefab reference.
+
+```
+scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify   # or the colonists go bald
+```
+
+**What this does not fix**, and it is the part worth an eye: 25 mm is 1% of a cell, so levelling the
+two slabs will *not* by itself make a stone floor read as part of a wooden deck. The grey plates are
+`SM_Env_Ground_Tile_Half_01`, a **street** tile, and they read as ground because that is what they
+are. If a built stone floor should look like a floor rather than like pavement, that is an art
+choice and it is the owner's.
+
+**The lesson is the one `docs/lessons.md` already holds and this line of work keeps paying for.**
+Three sessions argued about this tile from stills and from reading, and produced three confident
+wrong answers. The save files were on the same disk throughout. `Odyssey.SaveProbe` exists so that
+the next report starts from the file.
+
+### The grey was never a floor
+
+**2026-09-18, fourth round, and the one that ends it.** The owner could not reproduce any of it in a
+new game and asked the right question: *"could an old game cause problems?"*
+
+`Odyssey.SaveProbe` on the save from the session that was photographed:
+
+```
+the-lost-buckets-day-3.odyssey  day 4
+    Floor=Paved  Stuff=Wood   20
+    Floor=Built  Stuff=Wood   95        <- no stone slab anywhere on the board
+    terrain Rubble  8                   <- eight cells
+```
+
+**Eight rubble cells, and eight grey plates in the screenshot.** `PlayScene` registers
+`Slab(ModuleIds.Terrain("Rubble"), "SM_Env_Ground_Tile_Half_03")`, so rubble *terrain* is drawn with
+a grey street tile — the same family as the stone slab art, which is why three sessions kept
+recognising it as one.
+
+**A surface terrain and a floor slab can share a cell, and a collapse guarantees they will.**
+`SupportSystem.Rubble` writes rubble into `FirstFloorAtOrBelow(cell)` — on purpose, so debris lands
+on something rather than in mid-air, and on purpose not solid so it buries nothing. **The cell it
+chooses therefore has a floor by definition.** `ChunkMesher.EmitFloor` draws the slab and
+`SurfaceContributor` draws the surface tile, both at that cell's floor plane, and neither knows
+about the other.
+
+**This is why the pane and the picture disagreed, and the pane was right all along.**
+`CellDetailContributor` reads `FloorStuff`, the floor really was wood, and "Wood floor" was the
+truth. The grey on top of it was not a floor and has no `FloorStuff` to report. Every explanation
+offered across three sessions was about the floor — a stale mirror, a hole one layer down, stone
+paving — and the answer was a second thing drawn in the same place.
+
+**The fix lifts the rubble on to the floor rather than hiding it.** Hiding was shorter and wrong:
+rubble refuses to be built on until it is cleared (`TerrainDef.buildable`), so a cell that silently
+rejects orders with nothing on screen to explain why is the "command that does nothing and says
+nothing" this build has apologised for three times. It is a heap lying on a deck, so it is drawn as
+one, `CellMetrics.SlabLift` above the slab — the same clearance a slab takes over the ground, taken
+again over the slab.
+
+**Pinned by `RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt`**, which meshes the same cell twice,
+once with a floor under the rubble and once without. An instance matrix carries its prefab's own
+normalisation and the ground relief varies with x and z, so neither the two instances in one cell
+nor a cell against its neighbour isolates the lift; the same cell in two worlds holds both constant.
+
+**What the levelling work above was, in hindsight.** The 25 mm step between the slab arts was real
+and is fixed and tested, and the clearance rule came out of it. But it was never what the owner
+photographed, and levelling the arts on to the plane is what made the board z-fight. **Three wrong
+answers in a row, all reached by reasoning about a screenshot.** The save file answered it in one
+command, and `docs/bug-patterns.md` P6 is about exactly that.
+
+**Rubble is worth a look of its own** (§8): a grey street tile is what "a heap of debris" draws as
+today, and on a wooden deck it reads as somebody's paving rather than as a mess to clear. That is an
+art call and the owner's.

@@ -5796,6 +5796,229 @@ The owner: *"We need to rearrange the roster top bar - the name of the person sh
   - Unity PlayMode: 80 total, 75 passed, 0 failed.
   - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
 
+### The floor's dotted seam was the tile's own rim, and four placement fixes proved it was not placement (2026-09-18, branch `claude/grey-floor-layer`)
+
+The owner, with two screenshots of a wood slab field: *"you can see these slabs leave small
+artifacts/lines or gaps that don't even up … you can notice this when you look at the ground from
+certain angles — you see a slight issue with not being fully flush."*
+
+- **It reproduces headlessly, and that is most of the work.** `SlabFlushProbe` lays a wood floor on
+  the meadow — on the ground, which is what the owner is photographing — and shoots it at the play
+  camera's 48° and at a grazing 25°, with the relief on and off. The artefact is a **dotted dark
+  grid on the cell pitch**, dense at the low pitch and thinner at the play pitch. `SeamProbe`, which
+  already existed for the same report a day earlier, had only ever shot a deck floating in the air,
+  at 30 m, where the thing cannot be seen: its own comment says the mismatch is "about 2 mm, which
+  is under a tenth of a pixel at the camera the owner was using", and that is why a day's work had
+  come back "clean at every range".
+- **Pixels, not pictures.** Counting pixels a good deal darker than all four of their neighbours,
+  inside a box that holds nothing but floor, turned each experiment into one number. Every wrong
+  answer below was killed by that number in one run apiece, and three of them had looked plausible
+  in a screenshot.
+- **Four placement fixes, all measured, all wrong.** *The drape's shear*: the flat board draws the
+  same grid, so no. (The arithmetic is worth keeping: neighbouring tangent planes agree to 1.2 mm at
+  the middle of a shared edge and part by **15 mm at the corners** — the `GroundRelief.Period`
+  comment's 14 mm, not `SeamProbe`'s 2 mm, which was the mid-edge figure and the reason the shear
+  was cleared too early.) *The ground or a wall beneath it*: a deck two layers up in the air draws
+  it too. *Growing each tile so neighbours overlap*: 6 mm changed nothing and **200 mm changed
+  nothing**, which is the measurement that finally pointed at the answer. *Staggering alternate
+  tiles by a millimetre*: no change either, and for a reason worth writing down — a tie exposes the
+  rim by nothing and a stagger exposes it for real, so there is no value of it that helps.
+- **The art was measured too, because "it is the art" was the one hypothesis nobody had tested.**
+  `SlabTopFaceProbe` turns Read/Write on for the one model, measures, and turns it back off. The
+  piece is a plain box: 2.5000 × 2.5000 m, 40 vertices, its top face **flat to the micrometre** and
+  the full width of the piece. So the art is exact and two tiles do meet flush.
+- **Which leaves the rim, and the rim is the answer.** The top edge of a tile's rim *is* the
+  perimeter of its top face, so it ends exactly in the plane of the neighbour's top face. Equal
+  depth is a tie; a tie is decided per pixel; and a vertical face under a 72° sun comes back at four
+  tenths of the brightness of the deck. Sampling the dots confirmed it before any fix was written —
+  rgb(52, 36, 25) against rgb(139, 100, 65) beside it, the same hue at 0.37, which is wood in the
+  dark and not a hole, not the grass and not the sky.
+- **The fix is to stop drawing the rim.** `CellMetrics.FloorTile` squashes a floor plate to a sheet
+  about its own walking surface — a tenth of a millimetre — so the rim is degenerate on screen and
+  generates no fragments to win a tie with, and grows it 3 mm past its cell so two neighbours
+  overlap rather than share an edge. **470 → 16** at 48°, **884 → 35** at 25°, **73 → 3** on the
+  floating deck. Paving goes through the same matrix, because it is the same plate.
+- **The project had already written the argument down and not applied it to floors.**
+  `WorldRenderModel.ResolveTerrain`: *"Water is a surface, not a floor. It asks for a sheet rather
+  than the slab every other non-solid terrain gets, because a slab has sides and an underside that
+  water cannot afford to draw."* Every other non-solid terrain got the slab.
+- **What it costs, said plainly because nobody has pressed Play on it.** A floor over open air loses
+  101 mm of drawn thickness and its lip reads as paper seen edge-on; a floor on the ground had 93 of
+  those millimetres buried anyway. If the lip matters, the answer is a **fascia on the face** — the
+  idiom `ChunkMesher` already uses for walls — and that wants a panel module rather than a constant.
+- **Guards:** `ChunkMesherTests.AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn` asserts flat
+  **and** still a clearance above the cell floor plane, because squashing about zero is just as flat
+  and puts every floor back on the plane it z-fights (P7, written about this very constant a day
+  earlier). `.TwoNeighbouringFloorTilesOverlap` pins the knit. New pattern **P8** in
+  `docs/bug-patterns.md`: when an artefact tracks the cell pitch and survives the board going flat,
+  it is the piece's own edge and no amount of placement will move it.
+- **Verified:** fast tier 723 Sim + 411 Hud; EditMode **1712 total, 1698 passed, 0 failed**;
+  PlayMode **80 total, 75 passed, 0 failed**; both content checks current.
+
+### The roster bar kept the last colony's names, and the guard for it had to be driven through the real shell (2026-09-18)
+
+The owner: *"the colonist info card and the roster top bar names don't match up? there has been a
+mix up?"*, and then the sentence that solved it — *"maybe to do with loading and saving another
+game?"*
+
+- **A pawn id is not a person.** Every colony numbers its pawns from one, so the first roster slot
+  holds `PawnId(1)` in every game there has ever been. A roster card is a slot that re-reads itself
+  only when the colonist in it changes, and it asked `view.LastId != model.Id`. Load another colony
+  and that is false, so the name and the face — both read once, both derived from the roll seed —
+  were never rewritten. The inspect pane reads afresh every frame, so it was right, and the two
+  disagreed on screen.
+- **This is the *third* time the same fault has been fixed, each time for one thing.** A few hours
+  earlier the same slot logic left the bar's portraits blank on start and on load;
+  `CardView.LastPortraits` fixed the picture with a generation counter and its comment spells the
+  cause out in full — *"a new colony's pawn ids start at the same small numbers, so the slot's id
+  had not changed"*. The name and the face were sitting two lines above it and were not looked at.
+  Answering *is this the same person* would have covered *do the pictures still exist*; answering
+  only the second did not.
+- **The fix is one `||` and a published seed.** `RosterCard.Seed` carries the roll seed the name was
+  made from, so the view compares a person rather than a number, and the model reads the seed once
+  and uses it twice instead of the frame being asked the same question in two places.
+- **The guard had to be a PlayMode test, and proving that was the point.** Every unit test of
+  `RosterModel` passed throughout — the model always had the right names. The fault was entirely in
+  the view, so `HudGeometryTests.TheRosterBarFollowsTheColonyIntoANewSession` builds the real shell,
+  reads the labels the bar is actually drawing, tears the session down and builds another (which is
+  `LoadSession`'s own first two lines), and reads them again. **Run against the bug it fails with
+  the owner's report in its message**: the bar saying `Spudgun` where the frame says `Ivy`. A guard
+  that has not been seen to fail is not a guard, and this project has shipped one of those before
+  (P7).
+- **And the Unity tier's only red was not this branch's work at all.**
+  `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor` skips catalogue rows whose art is missing and
+  then asserts ten rows were checked — two reasonable halves that together require `Assets/Synty`,
+  which the self-hosted runner has not got. It had failed every CI run on the branch since it was
+  written and looked like the branch's own doing. It now asks the library whether *anything* has art
+  before demanding the count. `docs/lessons.md` has it, under the rule it broke.
+- **Verified:** fast tier 723 Sim + 412 Hud; EditMode **1713 total, 1699 passed, 0 failed**;
+  PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
+
+### Roster top bar pagination and slot reordering (2026-09-18)
+
+The owner: *"when many colonists are generated - the roster top bar stops generating profile cards - I suggest a small toolbar control that sits alongside the right hand side of the roster bar which is effectively pages of colonists to display - so you switch between the pages of colonists to the maximum or maybe suggest a better way to handle many colonists - also take into account when you say click on an alert to go to a person, the profile switches to that page. Also if you could make it so if you right click and hold on a roster profile card you can drag and drop them between slots and it will swap them"*.
+
+- **Overflow pagination**: When the colony size exceeds the capacity of the roster bar (computed via `CardsPerRow(width) * StripRowsAllowed(height)`), the roster now pages across colonists rather than truncating them or overflowing into adjacent regions.
+- **The pager toolbar**: Docked cleanly alongside the right-hand edge of the card matrix. Features `< [page] / [total] >` controls with `ChevronLeft` and `ChevronRight` vector glyphs drawn via `Painter2D` in `HudGlyph`. It hides automatically (`display: none`) when all colonists fit on a single page. Mouse wheel over the strip cycles through pages.
+- **Steady-state zero GC**: Following ADR 0003, page labels cache last-seen page indices and rebuild their string text only on page transitions.
+- **Selection synchronization**: Selecting a colonist in the 3D world, clicking an alert, or navigating to a colonist flips the roster bar to the page containing that colonist's profile card, without resetting manual page navigation during steady state.
+- **Direct slot swapping on right-click drag-and-drop**: Holding right-click and dragging a card shows a semi-transparent drag ghost following the cursor, highlights target cards with `.card--drag-target`, and directly swaps positions (A ↔ B) upon release. Edge hover paging allows dragging across page boundaries.
+- **Persistence across save/load**: Custom colonist order and the active roster page persist in `ViewStateSection` (version 2) under the `"view"` save key, isolated from simulation hash determinism.
+- **Guards**:
+  - `HudModelTests.RosterPaginationClampsAndSlicesCorrectly` asserts pagination mathematics.
+  - `HudModelTests.RosterEnsurePageForSwitchesActivePage` asserts selection synchronization.
+  - `HudModelTests.RosterSwapDirectlySwapsColonistPositions` asserts direct slot swapping.
+  - `ViewStateTests.TheRosterOrderAndPageSurviveAStreamAndRestore` asserts save/load round-trip in PlayMode.
+- **Verified**: fast tier 723 Sim + 416 Hud; EditMode **1717 total, 1703 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### Roster single row, 6-card capacity, and fixed-position docked pager (2026-09-18)
+
+The owner: *"Should be one row with 6 on an more (no 2 rows or anthing - always one). The pagination control needs to stay in the exact same place but it moves around according to how many colonists on that page, also move this control flush next to the last possible 6th slot with little spacing and make sure it stays in fixed position"*.
+
+- **Single row strictly enforced**: `HudLayout.StripRows = 1`, `StripRowsAllowed(height) => 1`, and `StripRowsUsed(...) => 1`. The roster bar never wraps to two rows at any resolution.
+- **6-card capacity per page**: `HudLayout.StripCardsCap = 6` clamps `CardsPerRow(width)`. Colonies of 6 or fewer occupy a single row of up to 6 cards; colonies of 7 or more paginate across pages of 6 cards each.
+- **Stationary pagination control**: Previously, `_cardsHost` dynamically sized to the count of cards on the active page, causing the pager to shift horizontally whenever a page had fewer cards than the capacity (e.g. jumping left on a 1- or 2-colonist remainder page). Now, when paginated (`PageCount > 1`), `_cardsHost` locks to the exact width of 6 card slots (`6 * (CardWidth + CardGap) = 618 px`) with `Justify.FlexStart` and `flexShrink = 0`. As a result, the 6 card slots and the pagination toolbar remain in the exact same screen position regardless of how many cards are on that page.
+- **Flush docking with little spacing**: `.roster-pager` margin reduced to 0.5px (combined with card margin-right of 3.5px, providing a clean 4.0px gap flush next to the 6th slot). `HudLayout.PagerGap = 4`.
+- **Verified**: fast tier 723 Sim + 418 Hud; EditMode **1725 total, 1711 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### Depth control default button and flush colonist info card (2026-09-18)
+
+The owner: *"- The button that is the default button in the depth control should be twice as big as the other ones and be tinted to indicate the default view to the player. - The colonist info card needs to be flush against the bottom bar as there is a gap/spacing to allow for maximise space for seeing"*.
+
+- **Depth control default button (2× height & earth tint)**:
+  - The starting/ground layer represents the default slice view. Its button on the depth rail now stands twice as tall at 32 px (`HudLayout.RailSurfaceCellHeight = 32`, 2× the 16 px of standard cells), while maintaining standard 26 px cell width.
+  - Wears a subtle earth-green tint (`rgba(127, 201, 140, 0.25)` derived from `HudTheme.Good`, with a matching `rgba(127, 201, 140, 0.65)` border) when inactive, clearly distinguishing ground level from pale sky and dark subterranean rock. When active, the active cyan (`#6fd3e3`) highlight cleanly takes precedence.
+  - Squeezing geometry in `HudLayout.RailPitch` and `HudLayout.RailHeight` now distributes room across `layers + 1` effective cell units, ensuring that on short viewports or deep boards the taller surface button never encroaches on the orders strip or command bar.
+  - `HudShell.FitRail()` scales the surface view cell to `2f * cell` and preserves label visibility.
+- **Colonist info card & info panels flush against bottom bar**:
+  - `HudLayout.InspectToBar` dropped from 14 px to 0 px, moving `InspectBottom` from 64 px to 50 px (`BarBottom + HudCommands.BarHeight + Frame = 50`).
+  - Shifting the inspect pane down eliminates the floating 14 px gap above the docked command bar, recovering 14 px of visible game world above the card.
+  - In `Hud.uss`, `.inspect` updated to `bottom: 50px;` and both bottom corners squared off (`border-bottom-right-radius: 0;`), creating a seamless docked transition against the command bar edge that matches popover styling.
+  - Applies to both wide colonist inspection (560 px) and narrow tile/pile readout (280 px).
+- **Guards & Verification**:
+  - `HudStyleSheetTests` asserts `.rail__cell--surface` height equals `HudLayout.RailSurfaceCellHeight` (32 px) and `.inspect` bottom equals `HudLayout.InspectBottom` (50 px).
+  - `HudLayoutTests.TheOrdersStripStandsInTheGutterUnderTheRail` validates depth rail gutter clearance across all resolutions.
+  - `HudLayoutTests.TheInspectPaneNeverReachesTheCommandBar` validates inspect pane bottom clearance.
+  - Fast tier: 723 Sim + 418 Hud passed; both content checks current.
+
+### Typing took the keyboard off the game, names became the player's, and the starting kit stopped being a pantry (2026-09-18, branch `claude/start-inventory-and-naming`)
+
+Three owner asks in one branch, and the first turned out to be the biggest.
+
+- **The save dialog never had the keyboard, and nothing noticed because the scrim looked modal.**
+  Owner: *"when you type in during a save game the in game controls still work and can cause
+  confusion."* Every in-game key is **polled** from `Keyboard.current` in six components; a UI
+  Toolkit field only ever sees events the panel routes to it. Two systems, one keyboard, neither
+  aware of the other — so typing `sss` panned the camera, a `1` changed the game speed and a `c`
+  armed the Cancel tool behind the modal. The pointer *was* handled, by the scrim, which is exactly
+  why this survived: the modal behaved like a modal in the one dimension anybody looked at.
+- **Six copies of one guard was the real defect.** Each poller opened with its own
+  `if (hotkeys.Listening != null) return;`, and the day a *second* reason to sit a frame out arrived,
+  five of them would have kept going. So the rule moved into `HotkeyDirector.GameKeysLive` and the
+  pollers ask that. One rule, one owner — the pattern `docs/bug-patterns.md` keeps catching.
+- **A token, not a flag, and the reason is orderings nobody controls.** Focus moves as a blur and a
+  focus and nothing promises which arrives first; a bool would be cleared by the field being *left*
+  after the field being *entered* had set it, leaving the gate open with a cursor on screen.
+  `AFieldThatHasAlreadyLostTheKeyboardCannotGiveItBack` is that case written down. `StopTyping`
+  covers the mirror failure — a gate stuck *shut* is a game that has quietly stopped answering its
+  keys, and that is the worse half.
+- **Escape had to go with the keyboard, and Escape-after-blur reverted nothing.** The first cut
+  invoked the field's escape handler *after* `Blur()`, so the blur ended the edit and the handler
+  was then handed a field nobody was editing. Caught by writing the revert before the test, not
+  after. It now runs before the blur, and the comment says why.
+- **Renaming a colonist is the first piece of identity that cannot be derived.** Name, face, age and
+  trade all fall out of a roll seed the simulation already saves, which is how the game carries
+  sixty-one people in four bytes a head. A typed name falls out of nothing, so it needed a book, a
+  save section and an argument for why presentation state is in a save file at all — and that
+  argument already existed, written out in full on `ViewStateSection` for the camera. `ISaveable`,
+  pointedly not `IStateHashable`: two colonies that tick identically must compare equal whether or
+  not somebody typed a name over one.
+- **The trap the select screen walks straight into.** Slot 0's `PawnId` is the same `1` the *last*
+  colony's first colonist had, so dealing candidates through `ColonistNames.Of` would hand a fresh
+  stranger a name typed in a game that is already over. Hence `Rolled` beside `Of` —
+  and it is the third time this project has met "a new colony's pawn ids start at the same small
+  numbers", after the roster bar's portraits and the roster bar's names.
+- **A rename belongs to the person, not the slot** (owner's call). Reroll forgets the name of
+  whoever it rerolled; a locked card keeps both. That is `18-colonist-select.md` §2 decision 2
+  applied to the typed name for the reason it was applied to the dealt one.
+- **Sixteen characters, chosen for the roster strip rather than for names.** The densest region in
+  the interface is where a name that elides costs the most, and telling colonists apart at a glance
+  is the whole point of naming one.
+- **The starting kit: 144 meals and eight scrap was the soak's pantry, not a game's opening.** The
+  meal count was sized so the ten-day headless gate measures the simulation rather than a famine,
+  and it then followed the player into a game it was never sized for; the scrap predates there being
+  any other hauling work on the board; and a player wanting a wall had to fell a tree first. Now 36
+  meals, no scrap, 150 each of stone and wood — `docs/design/22-starting-kit.md`.
+- **No golden moved, by construction.** The new fields default to zero and only `Playtest()`
+  overrides them, because `Bare()` is what the golden table and the soak build on. The test that
+  said the two scenarios *"differ only in their orders"* is gone: its real job was stopping Bare
+  drifting, and that is now done by pinning Bare's own numbers rather than by tying it to a preset
+  that is meant to be tuned.
+- **`ColonyItems.Spawn` does not clamp an empty cell to the stack limit** — it checks the limit only
+  when the cell already holds something. Found while writing the kit, and clamped in the placement,
+  because a single stack of 200 stone is one no hauler could carry and no stockpile could take
+  apart.
+- **Verified:** fast tier **724 Sim + 432 Hud**; EditMode **1740 total, 1726 passed, 0 failed**;
+  PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
+- **The white selection cursor sitting flush on terrain, floors, water, and banks (2026-09-18).**
+  The white cursor bracket used to select cells and inspect info in the world previously failed to sit flush on sloped terrain:
+  part of the bracket stubs sank into the ground (obscured from view) while the opposite edges hovered high in the air.
+  - **Root causes in `ChunkRenderer.DrawFloorBracket`:**
+    1. Stubs were placed with `Quaternion.identity` (pure horizontal orientation) and only 5 mm initial clearance (`0.04m - 0.035m`), while ground mesh and floor slabs are rendered as sheared tangent planes via `GroundRelief.Drape(centre)`. On meadow slopes (~8°), an unrotated horizontal stub sinks up to ~7 cm into the rising ground.
+    2. Stubs sampled `GroundRelief.Lift` independently at each of the four cell corners. Because the ground relief is curved (sinusoids), four corner elevations disagree with the planar sheared mesh of the cell.
+    3. `DrawFloorBracket` ignored water surface elevation (`WaterLine.SurfaceAbove`) and bank ramps (`BankLayout.At`), drawing the bracket at the submerged cell floor or buried inside bank ramps.
+  - **The geometric solution (`docs/design/23-flush-selection-cursor.md`):**
+    - The eight stubs of a floor bracket (two per corner) are defined in cell-local coordinates and transformed by the surface's placement matrix:
+      `placement = GroundRelief.Drape(surfaceCentre)`.
+    - Because the stubs share the exact shear transformation `(m10 = slopeX, m12 = slopeZ)` as the terrain mesh, every point on the bottom face of every stub maintains an exact, uniform clearance of `FloorBracketBias = 0.008f` (8 mm) above the draped ground plane, completely eliminating ground clipping and z-fighting on any slope.
+    - Surface elevation resolution:
+      1. Water cells: `placement = GroundRelief.Drape(CellMetrics.FloorCentre(cell) + Vector3.up * WaterLine.SurfaceAbove(_model, cell))` rests the cursor directly on the water surface.
+      2. Straight bank risers: `BankLayout.StraightBankShear()` shears the bracket stubs by `SizeY / SizeXZ = 1.2` along local Z, so stubs along Z tilt with the 1.2 ramp slope from lower terrace to upper terrace while X stubs remain horizontal across the ramp.
+      3. Corner bank risers: 4-corner rise values calculated from `BankMesh.HeightAt` lift corner stubs to conform to the inner/outer bank facets.
+      4. Solid blocks / edifices: `DrawCellHighlight` updated from `Lift` to `Drape`, ensuring upright cell selection boxes remain plumb and full height on slopes.
+  - **Asserted rather than looked at:** Added `Assets/Odyssey/Presentation/Tests/SelectionCursorTests.cs` verifying the 8-stub topology, exact 8 mm clearance on flat ground and ~8° slopes, straight bank shear slopes, corner rises, and water placement elevation.
+  - **Verified:** fast tier **724 Sim + 438 Hud**; EditMode **1752 total, 1738 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
 80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
 all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
 render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written

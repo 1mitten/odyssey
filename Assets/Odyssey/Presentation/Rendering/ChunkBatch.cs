@@ -110,6 +110,29 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int LinenBase = 8192;
 
+        /// <summary>
+        /// Bit 14 marks a code as a surface that is drawn <b>whole</b>: the sight fade never splits
+        /// it, however squarely it stands in the beam.
+        ///
+        /// <para>It names a rule rather than a thing, because two different things want it and a
+        /// third will. A <b>bank</b> is the stepped earth ramp drawn against a one-layer terrace
+        /// step, which no cell in the simulation contains at all. <b>Marsh</b> is the wet fringe of
+        /// a pond, which is an ordinary solid cell but reads as part of the water beside it. In both
+        /// cases a half-ghosted surface is not a view through anything — it is a hole in the
+        /// landscape, in a place that has no hole in it, and next to water that stays whole because
+        /// water is exempt too. <c>ChunkRenderer.NeverFades</c> is where the rule is spent.</para>
+        ///
+        /// <para>This bit says nothing about colour — <see cref="ChunkRenderer.ResolveColour"/>
+        /// never reads it, and a bank and a marsh are both still terrain, still tinted as terrain.
+        /// It is here so the <em>drawing</em> can tell one from the ground beside it.</para>
+        ///
+        /// <para>It costs no extra bucket worth counting. A bank is its own module and so was
+        /// already its own bucket; marsh is its own terrain index and so already had its own tint.
+        /// That is exactly why the marker can be free here and could not be on, say, a tree's
+        /// colour.</para>
+        /// </summary>
+        public const int WholeBase = 16384;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>
@@ -136,11 +159,19 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Water is terrain as well, so it keeps the terrain bit and its palette entry.</summary>
         public static int Water(int terrain) => WaterBase + TerrainBase + terrain;
 
+        /// <summary>
+        /// The same code, marked as a surface to draw whole. Adds nothing to how it is coloured.
+        /// </summary>
+        public static int Whole(int code) => code | WholeBase;
+
         public static bool IsTerrain(int code) => (code & TerrainBase) != 0;
 
         public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
 
         public static bool IsWater(int code) => (code & WaterBase) != 0;
+
+        /// <summary>Is this bucket a surface the sight fade must leave in one piece?</summary>
+        public static bool IsWhole(int code) => (code & WholeBase) != 0;
 
         /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
         public static bool IsTree(int code) => (code & TreeBase) != 0;

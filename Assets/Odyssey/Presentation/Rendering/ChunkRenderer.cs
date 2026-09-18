@@ -359,15 +359,12 @@ namespace Odyssey.Presentation.Rendering
                     shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 };
 
-                // Grass is never in the way, and it is nearly every instance on the board. Leaving
-                // foliage out of the partition is what keeps the cost of this feature confined to
-                // the things that can actually hide a person.
                 // The per-instance colours of a tree, which is what lets every colour in a chunk
                 // share one draw. Built once per meshing rather than once a frame, and only when
                 // the material that reads them is the one actually drawing.
                 bool coloured = painted != null && bucket.IsColoured;
 
-                int faded = sight && !foliage ? Partition(bucket) : 0;
+                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
                 if (faded == 0)
                 {
                     if (coloured)
@@ -406,6 +403,35 @@ namespace Odyssey.Presentation.Rendering
                 InstancesFaded += faded;
             }
         }
+
+        /// <summary>
+        /// What the sight fade never touches, however squarely it stands in the beam.
+        ///
+        /// <para>The fade exists to stop something <em>hiding a person</em>, and three kinds of
+        /// thing on the board cannot do that however much of the screen they cover.</para>
+        ///
+        /// <para><b>Foliage</b>, because grass is ankle-high and is also nearly every instance on
+        /// the board — leaving it out is what keeps the cost of the feature confined to the things
+        /// that can actually hide somebody.</para>
+        ///
+        /// <para><b>Water, banks and marsh</b> (owner, 2026-09-18, in two reports), because all
+        /// three are <em>surfaces</em> rather than objects, and half a surface is not a view through
+        /// it — it is a hole. A pond is drawn as a body of faces, so fading the instances the beam
+        /// crosses opens a window into the bed of the stream and leaves a ragged edge where the beam
+        /// stops; a bank is a sheet leaning on a terrace step that no cell in the simulation even
+        /// contains, so fading it cuts a gap in a hillside that has no gap in it; and marsh is the
+        /// wet fringe of the same pond, so fading it punched a hole in the shore right beside water
+        /// that stayed whole. None of them ever stands between the camera and a colonist the way a
+        /// wall or an outcrop does: a colonist in the water or the bog is standing <em>in</em> it,
+        /// and one at the top of a step is above the bank, not behind it. The ground either side of
+        /// them still fades, which is what the feature is for.</para>
+        ///
+        /// <para>Water keeps its own marker because it already had one; the bank and the bog share
+        /// <c>TintCode.WholeBase</c>, which is named for this rule rather than for either of them,
+        /// so the next surface that wants it needs nothing here.</para>
+        /// </summary>
+        public static bool NeverFades(int tint) =>
+            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint);
 
         /// <summary>
         /// Split one bucket's instances into the ones standing in a line of sight and the rest,
@@ -522,7 +548,36 @@ namespace Odyssey.Presentation.Rendering
         {
             scratch.Clear();
             for (int i = 0; i < count; i++) scratch.Add(source[from + i]);
-            props.SetVectorArray(id, scratch);
+            WritePadded(props, id, scratch);
+        }
+
+        /// <summary>
+        /// Write one property's per-instance colours into a <em>shared</em> block, padded to the
+        /// draw-call ceiling so that the array is the same length every time.
+        ///
+        /// <para><b>A property block fixes an array's length the first time it is set and caps every
+        /// later set to it</b> — "Property (_LeafDeepColour) exceeds previous array size (31 vs 25).
+        /// Cap to previous size." A block used once, at one size, never meets this; a block reused
+        /// across buckets of different sizes meets it on the second bucket, and from then on every
+        /// bucket larger than the first one drawn reads colours that were never written for it. That
+        /// is the whole of the bug the sight fade showed: with see-through off nothing partitions and
+        /// every tree draws from its own bucket's block, so the wood is right; with it on the solid
+        /// halves all share this block, the first one seen locks the length, and the wood repaints
+        /// itself as the selection moves and the locked length stops fitting.</para>
+        ///
+        /// <para>Padding is the fix rather than a fresh block per size because it is the fix already
+        /// in use: <c>TreeMaterials.UniformProps</c> fills to the same ceiling for the same family of
+        /// reason, that a block's array is indexed from zero by every draw call. The padding is never
+        /// read — a draw of <c>n</c> instances indexes the first <c>n</c> entries — so what it holds
+        /// does not matter, only that the length never changes. It costs the shared blocks a fixed
+        /// upload; the per-bucket blocks of <see cref="PropsOf"/> are deliberately left unpadded,
+        /// since each is written once at its own size and every tree on the board pays for those.</para>
+        /// </summary>
+        public static void WritePadded(MaterialPropertyBlock props, int id,
+            System.Collections.Generic.List<Vector4> values)
+        {
+            while (values.Count < MaxInstancesPerCall) values.Add(default);
+            props.SetVectorArray(id, values);
         }
 
         static readonly int BarkDeepId = Shader.PropertyToID("_BarkDeepColour");
@@ -555,15 +610,16 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>
         /// The same for the solid half of a partitioned bucket, which changes every frame the
-        /// camera or the selection moves and so is rebuilt into one reused block.
+        /// camera or the selection moves and so is rebuilt into one reused block. Reused, so
+        /// <see cref="WritePadded"/> rather than a bare set — that is where the reuse bites.
         /// </summary>
         MaterialPropertyBlock SolidProps()
         {
             _solidProps ??= new MaterialPropertyBlock();
-            _solidProps.SetVectorArray(BarkDeepId, _solidBarkDeep);
-            _solidProps.SetVectorArray(BarkWarmId, _solidBarkWarm);
-            _solidProps.SetVectorArray(LeafDeepId, _solidLeafDeep);
-            _solidProps.SetVectorArray(LeafFreshId, _solidLeafFresh);
+            WritePadded(_solidProps, BarkDeepId, _solidBarkDeep);
+            WritePadded(_solidProps, BarkWarmId, _solidBarkWarm);
+            WritePadded(_solidProps, LeafDeepId, _solidLeafDeep);
+            WritePadded(_solidProps, LeafFreshId, _solidLeafFresh);
             return _solidProps;
         }
 
@@ -1035,15 +1091,63 @@ namespace Odyssey.Presentation.Rendering
         readonly Matrix4x4[] _floorMatrices = new Matrix4x4[8];
 
         /// <summary>
+        /// Bias above the floor surface in metres, so the bracket does not z-fight with the ground mesh.
+        /// </summary>
+        public const float FloorBracketBias = 0.008f;
+
+        /// <summary>
+        /// The eight bars of a floor bracket in the placement's own space: two along the horizontal
+        /// axes at each of the four corners of a cell.
+        ///
+        /// <para>Separated from the draw so the geometry can be asserted rather than looked at.</para>
+        /// </summary>
+        public static int FloorBracketEdges(Matrix4x4 place, Matrix4x4[] into, float[]? cornerRises = null)
+        {
+            float half = CellMetrics.HalfXZ;
+            float length = Mathf.Max(CellMetrics.SizeXZ * BracketStub, BracketThickness);
+            int n = 0;
+
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float sx = (corner & 1) == 0 ? -1f : 1f;
+                float sz = (corner & 2) == 0 ? -1f : 1f;
+                float rise = cornerRises != null && corner < cornerRises.Length ? cornerRises[corner] : 0f;
+                float y = BracketThickness * 0.5f + FloorBracketBias + rise;
+
+                // Along X: extends inward from sx * half towards 0
+                var offsetX = new Vector3(
+                    sx * (half - length * 0.5f),
+                    y,
+                    sz * (half - BracketThickness * 0.5f));
+                var scaleX = new Vector3(length, BracketThickness, BracketThickness);
+                into[n++] = place * ScaledAt(offsetX, scaleX);
+
+                // Along Z: extends inward from sz * half towards 0
+                var offsetZ = new Vector3(
+                    sx * (half - BracketThickness * 0.5f),
+                    y,
+                    sz * (half - length * 0.5f));
+                var scaleZ = new Vector3(BracketThickness, BracketThickness, length);
+                into[n++] = place * ScaledAt(offsetZ, scaleZ);
+            }
+
+            return n;
+        }
+
+        /// <summary>
         /// The cursor for a cell with nothing in it: four corners on the floor, two stubs each.
         ///
-        /// Selecting empty ground has to show *something*, because a click with no visible
-        /// answer reads as a click that was ignored — but a three-metre cube over bare grass says
-        /// there is a thing there when there is not. A flat ring says "this square", which is all
-        /// that is true, and it is the natural shape for the build and dig designations that will
-        /// land on empty ground later.
+        /// <para>Draped rather than lifted, so the ring lies along the same tangent plane the ground
+        /// or floor slab does and the stubs stay flush above the surface without cutting into it on
+        /// a slope.</para>
         /// </summary>
-        public void DrawFloorBracket(CellRef cell, Color colour)
+        public void DrawFloorBracket(CellRef cell, Color colour) =>
+            DrawFloorBracket(GroundRelief.Drape(CellMetrics.FloorCentre(cell)), colour);
+
+        /// <summary>
+        /// The cursor placed at an explicit surface transform, for water and banks.
+        /// </summary>
+        public void DrawFloorBracket(Matrix4x4 placement, Color colour, float[]? cornerRises = null)
         {
             Material material = BracketMaterial(colour);
             var rp = new RenderParams(material)
@@ -1053,29 +1157,7 @@ namespace Odyssey.Presentation.Rendering
                 receiveShadows = false,
             };
 
-            // A few centimetres up, or the ring z-fights with the ground it is drawn on.
-            Vector3 centre = CellMetrics.FloorCentre(cell) + Vector3.up * 0.04f;
-            float half = CellMetrics.SizeXZ * 0.5f;
-            float length = Mathf.Max(CellMetrics.SizeXZ * BracketStub, BracketThickness);
-            int n = 0;
-
-            for (int corner = 0; corner < 4; corner++)
-            {
-                float sx = (corner & 1) == 0 ? -1f : 1f;
-                float sz = (corner & 2) == 0 ? -1f : 1f;
-                // Each corner at its own height: the cell under the cursor is tilted, so a ring
-                // drawn at one height would sink into the ground on one side and hover on the
-                // other - which is exactly the tell that the cursor and the ground disagree.
-                var at = GroundRelief.Lift(
-                    new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half));
-
-                _floorMatrices[n++] = Matrix4x4.TRS(
-                    at - new Vector3(sx * length * 0.5f, 0f, 0f), Quaternion.identity,
-                    new Vector3(length, BracketThickness, BracketThickness));
-                _floorMatrices[n++] = Matrix4x4.TRS(
-                    at - new Vector3(0f, 0f, sz * length * 0.5f), Quaternion.identity,
-                    new Vector3(BracketThickness, BracketThickness, length));
-            }
+            int n = FloorBracketEdges(placement, _floorMatrices, cornerRises);
 
             if (SubmitToGpu)
                 Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _floorMatrices, n);
@@ -1086,7 +1168,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The bracket cursor around one whole cell.</summary>
         public void DrawCellHighlight(CellRef cell, Color colour) =>
             DrawSelectionBracket(
-                GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
+                GroundRelief.Drape(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
                 new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ),
                 colour);
 
@@ -1599,7 +1681,10 @@ namespace Odyssey.Presentation.Rendering
                 GroundRelief.Drape(centre) * Matrix4x4.Scale(size));
         }
 
-        public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
+        public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour) =>
+            DrawSelectionBracket(Matrix4x4.Translate(centre), size, colour);
+
+        public void DrawSelectionBracket(Matrix4x4 place, Vector3 size, Color colour)
         {
             // Translucent, and emissive so it does not go dim with the light: a cursor has to be
             // findable at a glance without becoming the brightest thing on the board. The alpha
@@ -1625,9 +1710,9 @@ namespace Odyssey.Presentation.Rendering
                     (corner & 4) == 0 ? -1f : 1f);
 
                 var at = new Vector3(
-                    centre.x + sign.x * half.x,
-                    centre.y + sign.y * half.y,
-                    centre.z + sign.z * half.z);
+                    sign.x * half.x,
+                    sign.y * half.y,
+                    sign.z * half.z);
 
                 for (int axis = 0; axis < 3; axis++)
                 {
@@ -1643,7 +1728,7 @@ namespace Odyssey.Presentation.Rendering
                     Vector3 position = at;
                     position[axis] -= sign[axis] * length * 0.5f;
 
-                    _bracketMatrices[n++] = Matrix4x4.TRS(position, Quaternion.identity, scale);
+                    _bracketMatrices[n++] = place * ScaledAt(position, scale);
                 }
             }
 

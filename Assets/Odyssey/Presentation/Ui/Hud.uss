@@ -226,7 +226,13 @@
     left: 0; right: 0;
     top: 0;
     flex-direction: row;
-    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.strip__cards {
+    flex-direction: row;
+    flex-wrap: nowrap;
     justify-content: center;
     align-content: flex-start;
 }
@@ -303,6 +309,78 @@
     width: 100%;
     margin-top: 2px;
     -unity-text-align: middle-center;
+}
+
+/* Drag and drop slot swapping feedback */
+.card--dragging {
+    opacity: 0.35;
+}
+
+.card--drag-target {
+    border-color: #6fd3e3;
+    scale: 1.04;
+}
+
+.card-drag-ghost {
+    position: absolute;
+    width: 96px;
+    height: 89px;
+    padding: 8px;
+    background-color: rgba(12, 16, 20, 0.94);
+    border-width: 1px;
+    border-color: #6fd3e3;
+    border-radius: 5px;
+    align-items: center;
+    opacity: 0.85;
+}
+
+.card-drag-ghost__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    height: 19px;
+    width: 100%;
+    margin-top: 2px;
+    -unity-text-align: middle-center;
+}
+
+/* Roster pagination toolbar docked alongside the cards */
+.roster-pager {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    margin: 0 0 7px 0.5px;
+    padding: 0 2px;
+    background-color: rgba(12, 16, 20, 0.86);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+}
+
+.roster-pager__btn {
+    width: 18px;
+    height: 20px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 3px;
+    cursor: link;
+}
+
+.roster-pager__btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.roster-pager__btn:active {
+    background-color: rgba(111, 211, 227, 0.20);
+}
+
+.roster-pager__label {
+    min-width: 32px;
+    -unity-text-align: middle-center;
+    color: #a9b7c0;
+    padding: 0 2px;
 }
 
 /* ---------------------------------------------------------------- A3/A4 clock and speed,
@@ -511,11 +589,20 @@
    the one thing a depth readout has to say at a glance. */
 .rail__cell--above { background-color: rgba(255, 255, 255, 0.07); }
 
+.rail__cell--surface {
+    height: 32px;
+    background-color: rgba(127, 201, 140, 0.25);
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(127, 201, 140, 0.65);
+}
+
+.rail__cell--surface:hover {
+    background-color: rgba(127, 201, 140, 0.40);
+}
+
 .rail__cell--active {
     background-color: #6fd3e3;
 }
-
-.rail__cell--surface { border-bottom-width: 1px; border-bottom-color: rgba(255, 255, 255, 0.35); }
 
 .rail__number {
     color: #0b1116;
@@ -578,14 +665,15 @@
 
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
-/* Docked to the left edge with the stores panel above it. Its bottom is not on a screen edge —
-   it clears the command bar — so only the two left corners are squared. */
+/* Docked to the left edge with the stores panel above it. Its bottom sits flush against the command
+   bar, so both bottom corners and the top-left corner are squared. */
 .inspect {
     left: 0;
-    bottom: 64px;
+    bottom: 50px;
     width: 560px;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 /* The tile readout and a selected pile stand in a column, not a band: half the width, with the
@@ -2005,6 +2093,21 @@
     text-overflow: ellipsis;
     overflow: hidden;
 }
+
+/* The box a colonist is renamed in, which stands exactly where the name it replaces stood
+   (owner, 2026-09-18: "rename your colonist on creation by clicking on the name").
+
+   The .field default is 30px tall with 9px of air above it — right under a caption on the setup
+   board, wrong inside a card, where it would push the card past the height its own avatar and
+   padding fix. So both are overridden to the name line's own 26, and the card does not move when
+   the box appears. The padding comes in because the card is 76px wide and eight pixels of it on
+   each side is a third of a name. */
+.colonist__namebox {
+    height: 26px;
+    margin-top: 0;
+}
+
+.colonist__namebox .unity-base-text-field__input { padding: 0 4px; }
 
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */

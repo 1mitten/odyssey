@@ -389,7 +389,14 @@ namespace Odyssey.Presentation.Rendering
             // once per instance: the same trick the look-check scene plays, moved off the hot path.
             var normalise = Vector3.zero;
             if (entry.centreXZ) { normalise.x = bounds.center.x; normalise.z = bounds.center.z; }
+            // baseAtY first: the two ask opposite questions, and every piece already using the
+            // older one is placed correctly, so a row that somehow sets both keeps what it had.
             if (entry.baseAtY) normalise.y = bounds.min.y;
+            // The top face lands CellMetrics.SlabLift *above* the placement height, not on it: the
+            // cell's floor plane is also the top face of the block below, so a surface levelled
+            // exactly on to it z-fights with the ground it is laid on. The clearance belongs to the
+            // rule rather than to each row, or every future walked-on piece has to remember it.
+            else if (entry.topAtY) normalise.y = bounds.max.y - CellMetrics.SlabLift;
 
             Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry))
                               * Matrix4x4.Translate(-normalise);

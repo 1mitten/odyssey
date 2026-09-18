@@ -155,6 +155,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. The card is identity alone — name, age, occupation — at 76 px, which is the face plus its padding on both sides, and **a card is now asserted to clear its own avatar by that padding**; the skills live in the detail pane beside it, two columns and a heading. |
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
+| **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -177,6 +178,9 @@ this file.
 | The debug menu | `docs/design/18-debug-menu.md` |
 | The start screen, saving, loading | `docs/design/17-start-flow.md` |
 | Colonist select | `docs/design/18-colonist-select.md` |
+| Naming a colonist, the setup page | `docs/design/19-world-setup.md` §10 |
+| What a colony starts with | `docs/design/22-starting-kit.md` |
+| Text entry taking the keyboard | `docs/design/09-ui-and-input.md` §6a |
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
@@ -185,6 +189,7 @@ this file.
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
 | The build cursor and its drag gesture | `docs/design/19-build-cursor.md` |
+| The white selection cursor sitting flush | `docs/design/23-flush-selection-cursor.md` |
 | Input cases, modality, live portraits | `docs/design/09-ui-and-input.md` |
 | Panels | `docs/design/10-ui-panel-catalogue.md` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
@@ -261,15 +266,15 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **721 Sim + 409 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **724 Sim + 438 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the
-  blueprint-race shaft rule and the one-layer run rule: EditMode **1670 total, 1657 passed, 0
-  failed**. The remainder are `[Explicit]` or ignored.
-- **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
-  `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
-  frame time is measured — never an editor `camera.Render()` loop.
+  flush selection cursor on terrain, floors, water, and banks: EditMode **1752 total, 1738 passed, 0 failed** (12 added by `SelectionCursorTests`).
+  PlayMode, the same day: **82 total, 77 passed, 0 failed**.
+  `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
+  `TheRosterBarFollowsTheColonyIntoANewSession`.
+  PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
   **Its previously recorded 74 was wrong, not superseded**: nothing under
   `Assets/Odyssey/Tests/PlayMode` had changed since the commit it was recorded against, no PlayMode
   test is parameterised, and this branch added none at the point it was re-measured at 77. Three
@@ -294,6 +299,15 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 
 ### Waiting on the owner
 
+- **Nobody has played the new starting kit** (2026-09-18, `docs/design/22-starting-kit.md`): 36
+  meals, no scrap, 150 each of stone and wood. Five integers in one method with nothing deriving
+  from them, and explicitly invited tuning. The question a test cannot answer is whether three or
+  four days of food reads as tension or as anxiety — and if the colony is starving before anybody
+  has built anything, the answer is more meals rather than faster growing.
+- **Nobody has renamed a colonist at the keyboard** (`19-world-setup.md` §10). Whether clicking the
+  name is a discoverable way to rename somebody without a pencil or a caption, and whether sixteen
+  characters is the right ceiling — it was picked for the roster strip, which is the narrowest place
+  a name is drawn, not for the card where it is typed.
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`.
 - **The avatars and portraits are photographed, not played** — whether a 128 px render reads at
@@ -308,6 +322,13 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   whether a 34 px button is the right size, whether the strip wants to sit lower, whether the
   six-pixel right-click threshold is right, and the **20% coverage ceiling**, which is the owner's
   to reverse.
+- **A floor is drawn as a sheet now, and the lip is the thing to look at.** The dotted line along
+  every floor seam was the tile's rim tying with its neighbour's top face on depth
+  (`docs/bug-patterns.md` P8), and it is gone — measured, 470 → 16 artefact pixels at the play
+  camera. The price is that a floor **over open air** has lost its 101 mm of drawn thickness, so a
+  balcony or a roof lip with no wall under it may read as paper seen edge-on. A floor on the ground
+  had 93 of those millimetres buried and is unchanged. If the lip is wrong, the fix is a fascia on
+  the face rather than a thicker plate.
 - **Nobody has pressed Play on the three HUD fixes of 2026-09-18.** The colonist pane is one height
   on every tab now, so Needs sits in a box sized for Skills with about ninety-eight pixels of slack
   below it — whether that reads as stable or as broken is the question, and if it is broken the
@@ -385,6 +406,14 @@ before debugging a report**, because this project keeps meeting the same four fa
 clothes: one rule with two owners; a rule that asks the built world and misses the order; a
 compatibility clause keeping the bug alive; and a conditional rule applied per cell across a drag.
 **Add a row whenever a bug is fixed.**
+
+**For a report about how something *looks*, start at that file's runbook, "a tile that looks wrong".**
+One grey tile cost four rounds, three of which produced confident wrong answers reasoned from
+screenshots while the save that settled it sat on the same disk. The first move is
+`dotnet run --project tools/dotnet/Odyssey.SaveProbe` — it prints every floor, item and terrain in a
+save with no Unity. **A cell can hold more than one drawable thing**, and the report will name only
+the one the player recognises: that tile was a wood floor *and* rubble terrain, and the pane calling
+it "Wood floor" was telling the truth.
 
 The two that come up daily:
 

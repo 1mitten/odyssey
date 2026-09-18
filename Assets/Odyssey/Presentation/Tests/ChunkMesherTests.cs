@@ -481,6 +481,90 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// A floor tile is drawn as a <b>sheet</b>, and the two halves of that both have to hold.
+        ///
+        /// <para>Closing the seam in metres was not enough: a floor plate's rim ends exactly in the
+        /// plane of its neighbour's top face, ties with it on depth, and wins enough pixels to draw
+        /// a dotted line of dark wood along every seam in the colony — the owner's report of
+        /// 2026-09-18, reproduced and measured by <c>SlabFlushProbe</c>. A rim with no height
+        /// generates no fragments to win with, which is the fix, and
+        /// <see cref="CellMetrics.FloorSheet"/> carries the argument and the numbers.</para>
+        ///
+        /// <para><b>Both halves, because the obvious way to undo this passes half of it.</b>
+        /// Squashing a floor about the wrong plane — zero rather than
+        /// <see cref="CellMetrics.SlabLift"/> — leaves it just as flat and drops every floor in the
+        /// game by eight millimetres, back on to the ground plane it z-fights with. So the height of
+        /// the walked-on surface is asserted as well as the flatness. This is exactly the shape of
+        /// P7 in <c>docs/bug-patterns.md</c>, which was written about this same constant.</para>
+        /// </summary>
+        [Test]
+        public void AFloorTileIsDrawnAsASheetAtTheHeightAColonistWalksOn()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(6, 6, 3);
+            world.Slab(2, 2, 1).Slab(3, 2, 1).Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+            List<DrawnCorner> corners = Corners(batch.Roof);
+            Assert.That(corners, Is.Not.Empty, "there is a floor to check");
+
+            float low = float.MaxValue, high = float.MinValue;
+            for (int i = 0; i < corners.Count; i++)
+            {
+                low = Mathf.Min(low, corners[i].At.y);
+                high = Mathf.Max(high, corners[i].At.y);
+            }
+
+            Assert.That(high - low, Is.LessThan(0.001f),
+                "a floor tile must be drawn as a sheet. A plate's rim ties with its neighbour's " +
+                "top face on depth and draws a dotted line along every seam");
+
+            Assert.That(low, Is.EqualTo(CellMetrics.FloorCentre(2, 2, 1).y + CellMetrics.SlabLift)
+                    .Within(0.001f),
+                "and the sheet must stay where the walking surface was — a clearance above the " +
+                "cell floor plane, which is also the top of the block below. Squashed on to the " +
+                "plane itself it is just as flat and z-fights the ground it is laid on");
+        }
+
+        /// <summary>
+        /// Two neighbouring floor tiles must <b>overlap</b>, not abut. Two sheets that share an
+        /// edge exactly are only watertight if the rasteriser agrees to a bit about where that
+        /// edge is, and it does not — each tile is placed by its own matrix. See
+        /// <see cref="CellMetrics.FloorKnit"/>.
+        /// </summary>
+        [Test]
+        public void TwoNeighbouringFloorTilesOverlap()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(6, 6, 3);
+            world.Slab(2, 2, 1).Slab(3, 2, 1).Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            // Each tile measured against *its own* centre, because a grown tile's corner is on the
+            // far side of the boundary and cannot be told from its neighbour's by position alone.
+            int tiles = 0;
+            foreach (InstanceBucket bucket in batch.Roof)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Matrix4x4 m = bucket.Matrices[i];
+                Vector3 centre = m.GetColumn(3);
+                float reach = 0f;
+                for (int corner = 0; corner < 4; corner++)
+                    reach = Mathf.Max(reach, Mathf.Abs(m.MultiplyPoint3x4(new Vector3(
+                        (corner & 1) == 0 ? -0.5f : 0.5f, 0f,
+                        (corner & 2) == 0 ? -0.5f : 0.5f)).x - centre.x));
+
+                tiles++;
+                Assert.That(reach, Is.GreaterThan(CellMetrics.HalfXZ + CellMetrics.FloorKnit * 0.5f),
+                    "a floor tile must reach past its own cell, so that two neighbours overlap " +
+                    "rather than share an edge no rasteriser can agree about");
+            }
+
+            Assert.That(tiles, Is.EqualTo(2), "both tiles were drawn");
+        }
+
+        /// <summary>
         /// And a floor laid across rolling ground must not step either — the same fault, one
         /// surface down, and the one a player walks over rather than looks at.
         /// </summary>
@@ -562,6 +646,75 @@ namespace Odyssey.Tests.Presentation
 
             Assert.That(Instances(batch.Body), Is.EqualTo(first), "a rebuild must replace, not append");
             Assert.That(batch.Body.Count, Is.EqualTo(buckets), "bucket arrays are reused across rebuilds");
+        }
+
+        /// <summary>
+        /// <b>Rubble on a floor is drawn on top of it, not inside it.</b>
+        ///
+        /// <para>A surface terrain and a floor slab can share a cell, and a collapse guarantees
+        /// they will: <c>SupportSystem.Rubble</c> picks <c>FirstFloorAtOrBelow</c>, so the cell it
+        /// drops debris into <em>has a floor by definition</em>. Both are drawn — the slab by
+        /// <c>EmitFloor</c>, the surface by <c>SurfaceContributor</c> — and before this they were
+        /// drawn at the same height.</para>
+        ///
+        /// <para><b>The owner met it as a grey tile in a wooden deck</b> (2026-09-18) and it cost
+        /// three sessions, because every explanation offered was about the floor: the pane reads
+        /// <c>FloorStuff</c> and honestly said "Wood floor", and the save holds no stone slab
+        /// anywhere on the board. The grey was the rubble terrain drawn over the deck.</para>
+        ///
+        /// <para><b>The same cell in two worlds, rather than two cells in one.</b> An instance's
+        /// matrix carries its prefab's own normalisation, and the ground relief varies with x and
+        /// z, so neither "the two instances in this cell" nor "this cell against its neighbour"
+        /// isolates the lift. Meshing the identical cell with and without a floor under the rubble
+        /// holds both of those constant and leaves exactly the change being tested.</para>
+        /// </summary>
+        [Test]
+        public void RubbleLyingOnAFloorIsDrawnAboveTheSlabAndNotInIt()
+        {
+            ChunkBatch bare = MeshLayer(new RenderTestWorld(6, 6, 3)
+                .Solid(2, 2, 0)
+                .Surface(2, 2, 1, CoreContent.TerrainRubble)
+                .Publish(), 1);
+
+            ChunkBatch floored = MeshLayer(new RenderTestWorld(6, 6, 3)
+                .Solid(2, 2, 0)
+                .Slab(2, 2, 1, NaturalContent.StuffWood)
+                .Surface(2, 2, 1, CoreContent.TerrainRubble)
+                .Publish(), 1);
+
+            List<float> onGround = HeightsIn(bare, 2, 2, 1);
+            List<float> onFloor = HeightsIn(floored, 2, 2, 1);
+
+            Assert.That(onGround.Count, Is.EqualTo(1), "rubble on bare ground is one tile");
+            Assert.That(onFloor.Count, Is.EqualTo(2),
+                "a floored cell holds the slab the player built and the debris lying on it, and " +
+                "both are things to draw");
+
+            float wanted = onGround[0] + CellMetrics.SlabLift;
+            Assert.That(onFloor, Has.Some.EqualTo(wanted).Within(0.001f),
+                $"the rubble should be drawn at {wanted:F3}, one clearance above where it sits on " +
+                "bare ground. Drawn at the same height as the slab it lies on, it z-fights — which " +
+                "is what the owner reported as a grey tile appearing in a wooden deck");
+        }
+
+        /// <summary>The heights of every roof instance standing in one cell.</summary>
+        static List<float> HeightsIn(ChunkBatch batch, int x, int z, int y)
+        {
+            var heights = new List<float>();
+            Vector3 centre = CellMetrics.FloorCentre(x, z, y);
+
+            foreach (InstanceBucket bucket in batch.Roof)
+            {
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    Vector3 at = bucket.Matrices[i].GetColumn(3);
+                    if (Mathf.Abs(at.x - centre.x) > 0.01f) continue;
+                    if (Mathf.Abs(at.z - centre.z) > 0.01f) continue;
+                    heights.Add(at.y);
+                }
+            }
+
+            return heights;
         }
     }
 

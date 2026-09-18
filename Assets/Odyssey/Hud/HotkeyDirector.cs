@@ -221,6 +221,65 @@ namespace Odyssey.Hud
         public (HotkeyAction Action, int Slot)? Listening { get; private set; }
 
         /// <summary>
+        /// The text field that has the keyboard, or null when no field does.
+        ///
+        /// <para><b>A token rather than a flag, and the token is the point.</b> Focus moves from
+        /// one field to another as a blur and a focus, and nothing promises which arrives first —
+        /// so a bool would be cleared by the field being left after the field being entered had
+        /// set it, and the gate would be open with a cursor blinking on screen. The token means
+        /// only the field that took the keyboard can give it back, in either order.</para>
+        /// </summary>
+        public object? Typist { get; private set; }
+
+        /// <summary>Whether a text field has the keyboard.</summary>
+        public bool Typing => Typist != null;
+
+        /// <summary>
+        /// Whether the game's keys are the player's to press right now.
+        ///
+        /// <para><b>Every poller asks this and nothing else.</b> There are six of them — the camera
+        /// rig, the designate presenter, the command bar, and the rest — and each used to ask
+        /// <c>Listening != null</c> in its own words. That was one rule with six copies, and the
+        /// day a second reason to sit a frame out arrived, five of them would have kept typing the
+        /// player's save name into the camera (owner, 2026-09-18: *"when you type in during a save
+        /// game the in game controls still work and can cause confusion"*). Typing "sss" panned the
+        /// camera, armed a tool and changed the game speed, because a UI Toolkit field's focus
+        /// cannot gate a poll of <c>Keyboard.current</c> — the field never sees the key at all.</para>
+        ///
+        /// <para>Escape is deliberately not covered: it is read directly rather than through a
+        /// binding, and while a field has the keyboard it belongs to the field, which is where
+        /// that rule lives.</para>
+        /// </summary>
+        public bool GameKeysLive => Listening == null && Typist == null;
+
+        /// <summary>
+        /// Take the keyboard for a text field. Idempotent, and a second field taking it from the
+        /// first simply takes it — the last field to be focused is the one that has it.
+        /// </summary>
+        public void BeginTyping(object field)
+        {
+            if (field == null) throw new ArgumentNullException(nameof(field));
+            Typist = field;
+        }
+
+        /// <summary>
+        /// Give the keyboard back, if this field is the one holding it. A field that has already
+        /// lost it to another says nothing, which is what makes the blur-after-focus ordering
+        /// harmless.
+        /// </summary>
+        public void EndTyping(object field)
+        {
+            if (ReferenceEquals(Typist, field)) Typist = null;
+        }
+
+        /// <summary>
+        /// Give the keyboard back whoever holds it. For the closing of a screen that may have
+        /// taken it without ever being blurred — a hidden element does not always raise a focus
+        /// event, and a gate left shut is a game that has stopped answering its keys.
+        /// </summary>
+        public void StopTyping() => Typist = null;
+
+        /// <summary>
         /// What came of the last <see cref="Capture"/>, for the panel that has to say why a
         /// key did not take. Set before <see cref="ListenChanged"/> is raised, so a handler
         /// reads it in the same breath.
