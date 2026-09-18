@@ -6236,5 +6236,6 @@ design is `docs/design/22-terrace-steps.md` §4c.
   — caught by a test that has been measuring that crossing since long before any of this. The other
   three were tests sampling the ground at the clock's position rather than the figure's, which are
   the same thing only while time is distance. They are not any more, and that is the change working.
-- **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1780 total, 1766 passed,
-  0 failed**.
+- **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1781 total, 1767 passed,
+  0 failed**; PlayMode **82 total, 75 passed, 0 failed** (the scratch worktree has no Synty
+  junction, so the two portrait tests skip there — see the previous entry).
