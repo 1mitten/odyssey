@@ -313,10 +313,20 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (tool == DesignateTool.Build)
             {
+                // **One run, one layer.** The lift is per cell and conditional, so a box dragged
+                // over a walled room used to resolve to two layers at once — the ring lifting on to
+                // the storey above because it sits over walls, the middle staying put over open air
+                // and being refused — and the player got a deck with a hole in it and no warning
+                // that anything had happened on two floors. ConstructionGrid.RunLayerFor owns that
+                // answer; the ghosts ask it too, so the preview and the order cannot disagree.
+                ConstructionGrid? sites = _bootstrap?.Colony?.Construction;
+                int y = sites?.RunLayerFor(cells, Director.Building) ?? cells[0].Y;
+
                 for (int i = 0; i < cells.Count; i++)
                     world.Intents.Submit(new Intent(
-                        IntentKind.PlaceBuilding, cells[i], Director.Building, Director.Stuff,
-                        Director.Facing));
+                        IntentKind.PlaceBuilding,
+                        new CellRef(cells[i].X, cells[i].Z, y),
+                        Director.Building, Director.Stuff, Director.Facing));
                 return;
             }
 

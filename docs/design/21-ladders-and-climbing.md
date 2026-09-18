@@ -136,6 +136,11 @@ The system now:
    four, and taking it away strands them. Missing that is the class of fault that leaves two
    identical-looking ladders behaving differently depending on the order they were built in.
 
+> **§4 was rewritten on 2026-09-18 by the playtest below — read §8 before trusting the two
+> "decisions worth knowing about" that follow.** A blueprint was invisible to both halves of the
+> rule, so two legal orders still produced a ladder under a floor; and "nothing migrates" was
+> reversed on the owner's instruction.
+
 ### Two decisions worth knowing about
 
 **A landing is not required at the order.** The owner's answer was "no landing anywhere = refuse",
@@ -292,3 +297,106 @@ Two real defects fell out of the hunt anyway, and one of them was an hour old:
   at all. A click that silently does nothing is indistinguishable from a click that missed, which is
   one way "it doesn't respect where I placed it" gets reported. The ghost now asks about every cell
   the thing would claim, deriving them with `EdificeFootprint` rather than restating the rule.
+
+---
+
+## 8. The playtest, 2026-09-18 (third round)
+
+Three reports, all about ladders. Beds were confirmed fixed in the same session. **One of the three
+needed no code at all, one had a cause nobody had guessed, and the fix for it uncovered two further
+defects that nothing had ever exercised.**
+
+### "Is it possible to use R to rotate a ladder … or display red outline?" — already done
+
+Rotation, the turning ghost and the red refusal all landed in the merge the owner was playing.
+`Building_Ladder` carries `rotates`, `BuildShapes.Rotates` agrees (and `BuildShapesAgreementTests`
+walks both), and `OdysseyBootstrap.Refused` paints the ghost `PreviewRefusedColour` by asking
+`ConstructionGrid.Allows` — the same rule the click will apply, so the colour cannot come to
+disagree with the outcome. Nothing was built for this report. It is recorded because "verify before
+building" is what saved the work.
+
+### "I can't place the ladder underneath a slab and it has to be against the wall" — one cause, not two
+
+The first half is the rule the owner asked for the day before, and it stands: **refuse, and the red
+ghost is enough of a reason** (owner's answer, asked directly). The alternatives — auto-queueing a
+deconstruct of the slab above, or allowing an inert ladder — were both put and both declined.
+
+**The second half was the same rule wearing a disguise.** Nothing in the code has ever asked for a
+neighbouring wall. Inside a roofed room *every* cell is under a slab, so the only cells that accept
+a ladder are the ones past the slab's edge — which are the ones beside the wall. The owner confirmed
+it: *"it wouldn't snap or even place itself on tiles with slabs above"*. No second defect.
+
+### "Sometimes the colonists climb up the ladder where there is wall or slab directly above"
+
+**The prime suspect was wrong, and a probe said so in one run.** The standing theory was §4's
+compatibility clause — `LadderArrivesAt` returning true on a real floor, kept so old and generated
+ladders would go on working. It cannot be the cause on the board the owner played: **the wooded
+meadow generates no ladders and no connectors at all**, measured on three seeds, so every ladder
+there is one the player built, and a player could no longer build one under a floor.
+
+The real cause, reproduced on the meadow in both orders:
+
+> **The shaft rule asked the built world, and a blueprint is not built.** `IsLadder` reads
+> `_grid.Edifice` and the floor test read `_grid.Floor`, so an order still waiting to be carried out
+> was invisible to both halves of the rule. Order the ladder, order the floor above it: each is
+> legal *on its own*, because neither exists yet. Both then get built.
+
+That is the whole of "**sometimes**" — it depended on which job a colonist happened to pick up.
+
+**The fix is that the rule now sees sites, and is asked twice.** `ShaftRulePermits` is the one owner
+of the whole question, for both sides and both orders; `LadderHereOrOrdered` and `FloorHereOrOrdered`
+are the built-or-ordered tests it asks. And `Raise` asks it **again at the moment of truth**, which
+is the shape the two-cell guard beside it already had: everything else `Place` checks is checked once
+because a site holds its own cell, but the shaft rule spans two cells that are ordered separately, so
+the other order can legitimately arrive later. Re-asking *only this rule* rather than the whole of
+`Allows` is deliberate — a site with its material hauled to it fails `needsClearCell`, so re-asking
+everything would refuse every bed whose own wood had been delivered.
+
+**And the compatibility clause went anyway**, on the owner's instruction (*"accept the save break"*),
+as the second line of defence rather than the fix: a ladder that somehow ends up under a floor now
+opens nothing. What that cost, measured rather than assumed: **nothing on any generated board.** All
+three golden masters are byte-identical, city included — because worldgen's ladders reach the nav as
+`StampedConnector`s (`SurfacePasses.RecordConnectors`) and never consult `LadderArrivesAt` at all.
+The city has 20-odd ladder connectors a seed, 13 to 18 of them with a floored top, and dropping the
+clause moved none of them. The planned worldgen hole-stamping and city re-bake were therefore never
+needed, and the owner's *"forget the city, it is redundant"* closed the question for good. **The save
+break is still real** for an actual saved colony holding a ladder under a floor; nothing in the test
+suite covers that, because nothing can build one to save.
+
+### Two defects the hunt found, neither of them reported
+
+**A shaft could only ever be one storey.** A ladder is `blocking false` so a colonist can stand in
+it, and `SomethingUnderfoot` wants a floor or a *blocking* edifice — so the second ladder of a chain
+was refused, and `LadderArrivesAt`'s "another ladder in it" clause, written for exactly this case,
+was unreachable for anything a player built. Every test in `LadderTests` builds one ladder, so
+nothing had ever asked. Fixed on the owner's instruction (*"fix it here"*): `StandsOnSomething` lets
+a ladder stand on a ladder, and **only a ladder** — folding it into `SomethingUnderfoot` would let a
+*wall* stand on a ladder and cap the shaft with something the rule above cannot see.
+
+That fix did not work on its own, and the reason is worth keeping. `RefreshLadder` gated the
+connector on `CellGrid.IsWalkable` at the ladder's foot, which needs a real floor — but the foot of
+an upper ladder is the open shaft cell, standable only through the lower ladder's *own connector*,
+and `CellGrid` cannot see connectors (`NavGrid.RefreshFrom`'s rule that a connector is its own
+floor). The chain built and the upper ladder silently had none. `StandsOnAFooting` is the connector's
+own version of the question, and it counts only a **built** ladder below: a blueprint may let you
+place the next ladder of a chain, but it must never open a way up nobody has built. The fan-out then
+had to reach **upwards** too — `RefreshLaddersAround` refreshes the cell above now — or pulling the
+bottom ladder out leaves the upper one with a connector whose foot is mid-air.
+
+**Roofing over a working shaft closed it silently.** A slab over the open cell a ladder arrives in is
+not capping the ladder, so nothing refused it; the ladder simply stopped having anywhere to arrive
+and the way up vanished with nothing said. Refused now, by the owner's answer, for the same reason
+the slab-over-a-ladder rule exists — that is the `BelowOf(BelowOf(...))` reach in `ShaftRulePermits`:
+a slab is refused with a ladder one cell under it or two.
+
+### What is still not covered
+
+`Raise`'s re-check **cannot be reached from `Place` any more**, which is the point of it but leaves
+it untested by construction: with sites visible on both sides there is no legal pair of orders that
+combines into an illegal building. It earns its place because `_sites` are saved — a save written
+before this rule can carry exactly that pair — and because it is the guard for anything that edits
+the board without going through `Place`. The same is true of the dropped compatibility clause: with
+the placement rule closed, nothing in the game can build a ladder under a floor for it to refuse.
+
+**And nobody has pressed Play on any of it.** The climb pose numbers from §3 are still unjudged in
+motion, which is the one thing worth doing while a ladder is in front of you.
