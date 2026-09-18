@@ -88,7 +88,11 @@ The intents, one per gesture:
   crop exists only inside its zone, so one rubber stroke kills field and fence together. An
   emptied record dissolves.
 - The siting gate at designation: walkable ground terrain, `fertility ≥ minFertility`, no
-  edifice, not water, **not roofed**. The roof refusal is the light hook's v1 shape — until
+  edifice, not water, **not roofed**. The zone cell is the standing cell — the air above the
+  turf, where the pawn and the crop and every tree are — and its own terrain is air, so the
+  fertility question is asked of the solid cell *below*, exactly as the tree roots in ground
+  it does not stand in. (Found by the first test: reading the standing cell refused every
+  field on every board, because air is fertile nowhere.) The roof refusal is the light hook's v1 shape — until
   light is computed, a slab over a field would otherwise ripen carrots on schedule in the dark,
   and that lie is worse than a refused drag. When light lands, the refusal becomes a computation
   and the gate moves to the grower.

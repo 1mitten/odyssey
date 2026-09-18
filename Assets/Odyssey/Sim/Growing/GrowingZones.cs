@@ -105,6 +105,13 @@ namespace Odyssey.Sim.Growing
         /// May this seed go in this cell? The siting gate, asked here and nowhere else so that a
         /// zone that exists is one that made sense when it was painted.
         ///
+        /// <para><b>The zone lives where the pawn stands, and the soil it asks about does
+        /// not.</b> The surface cell of the meadow is the solid grass itself; the cell a
+        /// colonist walks and sows in is the air cell above it, whose own terrain is air —
+        /// fertility nought for every cell of every field ever. The ground that answers is the
+        /// one below, exactly as the tree above it is an edifice of the air cell and not of the
+        /// soil it roots in.</para>
+        ///
         /// <para>Whether it <em>still</em> makes sense is the job's question, as it is for a
         /// designation: a roof raised over a zone after the fact does not unzone it, and the
         /// sowing work giver asks again before it sends anybody. The roof refusal is the light
@@ -115,14 +122,19 @@ namespace Odyssey.Sim.Growing
         {
             if (!_grid.IsWalkable(index)) return false;
             // Wadeable water is walkable, which is exactly why it is asked apart: a paddy is not
-            // a carrot bed, and IsWalkable alone would paint one onto a stream.
+            // a carrot bed, and IsWalkable alone would paint one onto a stream. Water stands in
+            // its own cell — the one a pawn wades in — so this reads the cell itself, while the
+            // soil reads the cell below.
             if (NaturalContent.IsWater(_grid.Terrain[index])) return false;
             // Nothing grows through a slab, and something standing in the cell keeps it: a tree
             // is felled first, a wall is the player's own doing to undo.
             if (_grid.Floor[index] != 0) return false;
             if (_grid.Edifice[index] >= 0) return false;
             if (_grid.IsRoofed(index)) return false;
-            return NaturalContent.TerrainAt(_grid.Terrain[index]).fertility >= plant.minFertility;
+
+            int ground = index - _grid.Size.LayerStride;
+            if (ground < 0) return false;
+            return NaturalContent.TerrainAt(_grid.Terrain[ground]).fertility >= plant.minFertility;
         }
 
         // ---- painting and cancelling ------------------------------------------------------------
