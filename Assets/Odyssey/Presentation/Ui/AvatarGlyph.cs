@@ -92,6 +92,17 @@ namespace Odyssey.Presentation.Ui
             style.borderBottomLeftRadius = HudTheme.ControlRadius;
             style.borderBottomRightRadius = HudTheme.ControlRadius;
 
+            // A white frame (owner, 2026-09-18). Set here rather than in the stylesheet for the
+            // same reason the radius is: one avatar, one edge, wherever it is drawn.
+            style.borderTopColor = HudTokens.AvatarBorder;
+            style.borderRightColor = HudTokens.AvatarBorder;
+            style.borderBottomColor = HudTokens.AvatarBorder;
+            style.borderLeftColor = HudTokens.AvatarBorder;
+            style.borderTopWidth = HudTokens.AvatarBorderWidth;
+            style.borderRightWidth = HudTokens.AvatarBorderWidth;
+            style.borderBottomWidth = HudTokens.AvatarBorderWidth;
+            style.borderLeftWidth = HudTokens.AvatarBorderWidth;
+
             // The figure runs to the bottom edge of the box, so at the rounded corners it would
             // otherwise paint outside its own tile.
             style.overflow = Overflow.Hidden;

@@ -236,8 +236,8 @@
    finding somebody and saying what they are at, and the strip is the densest region on the
    screen, so every pixel it does not spend buys another colonist on the bar. */
 .card {
-    width: 106px;
-    height: 63px;
+    width: 126px;
+    height: 89px;
     /* Half the gap on each side horizontally, the whole of it below — so the gap between two
        rows is one CardGap and the first row still starts exactly at the strip's top edge, which
        is what lets the layout model state the strip's height as rows and gaps and be right. */
@@ -269,8 +269,8 @@
 }
 
 .card__avatar {
-    width: 26px;
-    height: 26px;
+    width: 52px;
+    height: 52px;
     border-radius: 4px;
     flex-shrink: 0;
     justify-content: center;
@@ -599,6 +599,12 @@
 .inspect__hdr {
     flex-direction: row;
     align-items: flex-start;
+    height: 60px;
+}
+
+/* A tile or a pile keeps the shorter header: its slot holds an icon at one of the interface's
+   three sizes, not a 60 px photograph of a person. */
+.inspect--narrow .inspect__hdr {
     height: 38px;
 }
 

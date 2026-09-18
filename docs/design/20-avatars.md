@@ -365,6 +365,55 @@ It is still available and still does exactly what it says. What it was *for* —
 the palette quickly — is now `Logs/portraits.png`, which shows twenty-four at once and does not
 require pressing Play at all.
 
+### 10.6 Twice the size, and a white frame (owner, 2026-09-18)
+
+*"Can we make the in-game avatar profile twice as big as it's hard to see"*, and *"put a white
+border around the portraits"*. Both done, and the first one cost more than it looks.
+
+| | was | now |
+|---|---|---|
+| Roster card avatar | 26 | **52** |
+| Roster card | 106 × 63 | **126 × 89** |
+| Inspect header avatar | 30 | **60** |
+| Inspect header | 38 | **60** |
+| Strip height share | 0.14 | **0.18** |
+| Top scrim | 170 | **192** |
+| Coverage ceiling | 0.19 | **0.20** |
+
+**The card is re-derived, not stretched.** Its width is still the wider of its two rows, measured
+by the text engine: the name row becomes 16 + 52 + 8 + 50 = 126 and overtakes the activity row's
+106. `TheCardIsWideEnoughForItsRowsAndNoWider` passes with the card at exactly what it needs.
+
+**Three things fell out of it, and each was a test rather than a discovery on screen.**
+
+- **The strip would have quietly halved the roster at 1080p.** Two rows need
+  `2 × (CardHeight + CardGap)`; the old 0.14 budget is 151 px there, which held two 63 px cards and
+  holds one 89 px card. Nothing would have reported that — the back row would simply have stopped
+  being drawn. 0.18 is 194 px, which is two of the new cards, and still deliberately one row at 720.
+- **The top scrim stopped reaching under the strip.** A two-row strip is 185 px against a 170 px
+  gradient, which is a colonist's name standing on bare meadow. 192.
+- **A tile's header must not follow a colonist's.** `InspectHeader` is now the avatar's height,
+  and the tile readout shares that header — but a tile's slot holds an `IconBadge` on a `ui.*` key,
+  and the interface draws icons at 17, 16 and 30 **and no other size**. Following would have minted
+  a fourth icon size and stood a five-fact readout on a header two thirds the height of its body.
+  `InspectHeaderNarrow` stays at 38, and `TheTileReadoutIsHalfAsWideAndRowsMakeItTall` is what
+  insisted.
+
+**The coverage ceiling went 19% → 20%**, and the one per cent is this. A two-row strip at
+1280 × 720 goes 3.81% → **5.07%** and the whole HUD to **19.80%**. Two qualifications worth
+keeping: that is the *forced* worst case and not what the game draws there, since 1280 × 720 is
+allowed one row and the resting measurement never left the old 19%; and the usual lever is gone —
+the previous two occasions clamped the region instead of raising the ceiling, but clamping here
+means showing fewer colonists, and the card is this size precisely because the owner asked for the
+face in it to be legible. **It is the owner's to reverse**, and the cheapest reversal is the avatar,
+since every pixel of it is four pixels of card.
+
+**The frame is 0.88 white at two pixels**, not pure white at one. A photograph has soft edges and a
+hard white rectangle round it reads as a cut-out pasted on the card; one pixel at 52 reads as an
+artefact of the render rather than as a deliberate edge. It is set on `AvatarGlyph` rather than per
+site, so the setup page's portraits carry it too — one avatar, one edge, wherever it is drawn. Say
+so if the start screen should be bare and it is one class.
+
 ### 10.5 What it does not change
 
 The drawn avatar stays, as the fallback with no licensed packs, and `AvatarGlyph` chooses between

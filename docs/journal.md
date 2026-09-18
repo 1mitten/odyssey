@@ -4283,3 +4283,41 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     26 px on a roster card, whether the head-bone framing suits all sixty-one bodies rather than the
     twenty-four on the sheet, and whether one key light flatters the cast or wants a fill.
 
+- **The in-game avatar doubles, and takes four other numbers with it, 2026-09-18**
+  (`docs/design/20-avatars.md` Â§10.6). The owner, having seen the portraits: *"can we make the
+  in-game avatar profile twice as big as it's hard to see"*, then *"put a white border around the
+  portraits"*.
+  - **26 â†’ 52 on a roster card and 30 â†’ 60 in the inspect header**, and the card is re-derived
+    rather than stretched: its width is still the wider of its two rows as the text engine measures
+    them, and the name row's 16 + 52 + 8 + 50 = 126 overtakes the activity row's 106. 126 Ã— 89.
+  - **The strip would have quietly halved the roster at 1080p.** Two rows cost
+    `2 Ã— (CardHeight + CardGap)`, and the old 0.14 height share is 151 px there â€” two 63 px cards,
+    or one 89 px card. Nothing reports that: the back row simply stops being drawn. `StripHeightShare`
+    is 0.18, which is 194 px at 1080 and still deliberately one row at 720.
+  - **The top scrim stopped reaching under the strip** â€” 185 px of two-row cards against a 170 px
+    gradient, which is a colonist's name standing on bare meadow. 192.
+  - **A tile's header must not follow a colonist's.** `InspectHeader` is the avatar's height now,
+    and the tile readout shared that constant â€” but a tile's slot holds an `IconBadge`, and this
+    interface draws icons at 17, 16 and 30 and no other size. Following would have minted a fourth
+    icon size and stood a five-fact readout on a header two thirds the height of its own body.
+    `InspectHeaderNarrow` stays at 38.
+  - **The coverage ceiling went 19% â†’ 20%.** A two-row strip at 1280 Ã— 720 goes 3.81% â†’ 5.07% and
+    the HUD to 19.80%. Two qualifications: that is the forced worst case rather than what the game
+    draws there, since 1280 Ã— 720 is allowed one row and the *resting* measurement never left the
+    old 19%; and the lever used on the previous two occasions is gone â€” both clamped the region
+    instead of raising the ceiling, and clamping here means showing fewer colonists, when the card
+    is this size precisely because the owner asked for the face in it to be legible. Recorded as
+    theirs to reverse, with the cheapest reversal named: every pixel of avatar is four of card.
+  - **Every one of those four was a failing test rather than something seen on screen**, which is
+    the argument for the anchor tests stated better than the tests themselves state it. A change
+    that looked like two constants came back with three consequences and a budget.
+  - **The frame is 0.88 white at two pixels**, not pure white at one: a photograph has soft edges,
+    and a hard white rectangle round it reads as a cut-out pasted on the card, while one pixel at
+    52 reads as an artefact of the render rather than as an edge somebody chose. Set on
+    `AvatarGlyph` rather than per site, so the setup page carries it too.
+  - **Verified:** fast tier 645 Sim and 384 Hud; EditMode **1536 total, 1524 passed, 0 failed**;
+    PlayMode **76 total, 71 passed, 0 failed**. `Logs/hud-shot.png` now photographs the HUD with the
+    catalogue assigned, which it never did before â€” the rig built a bootstrap by hand and never had
+    one, so that picture had gone on showing the drawn fallback after the portraits landed. It was
+    the owner asking whether the roster used the portraits that found it.
+

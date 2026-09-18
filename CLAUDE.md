@@ -594,6 +594,16 @@ a clone without `Assets/Synty` is still correct. The framing anchors on the **he
 the top of the silhouette — anything else cuts a hat-wearer off at the chin, which is what
 `Logs/portraits.png` showed.
 
+**The in-game avatar is twice the size it was, and framed in white** (owner, 2026-09-18) — 26 → 52
+on a roster card, 30 → 60 in the inspect header, with a 2 px `HudTheme.AvatarBorder`. **That is not
+a one-line change and §10.6 of the design is the list**: the card is re-derived to 126 × 89 from its
+own measured rows; `StripHeightShare` went 0.14 → 0.18 because two rows of the taller card do not
+fit 1080p's old budget and **the strip would silently have stopped drawing the second row**; the top
+scrim went 170 → 192 to keep reaching under it; `InspectHeaderNarrow` was split off at 38 so a
+*tile's* readout does not follow a portrait and mint a fourth icon size; and the **coverage ceiling
+went 19% → 20%**, which is the forced two-row worst case at 1280 × 720 (19.80%) rather than the
+resting one, and **is the owner's to reverse**.
+
 **Every colonist has a composed flat avatar, drawn** (`U41`, 2026-09-18) — on the roster card, in
 the inspect header, and on both halves of the world-setup page. `ColonistFace` in `Odyssey.Hud` is
 the recipe (four colours plus one of eight crowns and one of three builds) and `AvatarGlyph` paints

@@ -350,6 +350,10 @@ namespace Odyssey.Presentation.Ui
 
         public static readonly Color AvatarInk = Convert(Odyssey.Hud.HudTheme.AvatarInk);
 
+        public static readonly Color AvatarBorder = Convert(Odyssey.Hud.HudTheme.AvatarBorder);
+
+        public const int AvatarBorderWidth = Odyssey.Hud.HudTheme.AvatarBorderWidth;
+
         public const float AvatarInkWidth = Odyssey.Hud.HudTheme.AvatarInkWidth;
 
         /// <summary>A colonist's own colour, as the appearance derives it.</summary>

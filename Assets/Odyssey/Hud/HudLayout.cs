@@ -256,14 +256,20 @@ namespace Odyssey.Hud
         /// longer than the pool's does not break the card — but it does mean a card whose name is
         /// cut short, which is why the test's lower bound exists rather than only its upper.</para>
         /// </summary>
-        public const int CardWidth = 106;
+        /// <para><b>126 x 89 since 2026-09-18</b>, when the owner asked for the in-game avatar to be
+        /// twice the size because it was hard to see. The avatar went 26 → 52 and the card is
+        /// re-derived from the same two rows rather than stretched: the name row is now
+        /// 16 + 52 + 8 + 50 = 126, which overtakes the activity row's 106 and becomes the width.
+        /// The measured strings are the test's, not an estimate — 'Wrenn 10' draws 50 px and
+        /// 'Deconstructing' 67.</para>
+        public const int CardWidth = 126;
 
         /// <summary>
         /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
         /// avatar row takes the slack, so the gap between the two rows is what is left rather
         /// than a fourth number to keep in step.
         /// </summary>
-        public const int CardHeight = 63;
+        public const int CardHeight = 89;
 
         public const int CardGap = 7;
 
@@ -310,14 +316,32 @@ namespace Odyssey.Hud
         /// 151. A colony past what the strip may hold shows the ones that fit, exactly as it did
         /// when there was only ever one row.</para>
         /// </summary>
-        public const float StripHeightShare = 0.14f;
+        /// <para><b>0.14 until 2026-09-18</b>, when the avatar doubled and took the card from 63 to
+        /// 89. The arithmetic that forced this: two rows need <c>2 x (CardHeight + CardGap)</c>, so
+        /// at 1080 the old budget of 151 px held two 63 px cards and holds only one 89 px card —
+        /// **the strip would have quietly halved the roster at the commonest resolution**, and
+        /// nothing would have said so except a colony whose back row had vanished. 0.18 is
+        /// 194 px at 1080, which is two of the new cards with two to spare, and 130 px at 720,
+        /// which is still deliberately one.</para>
+        public const float StripHeightShare = 0.18f;
 
-        /// <summary>The avatar tile on a card, and the selected-thing avatar in the inspect
-        /// pane's header, which are the same size by specification.</summary>
-        public const int Avatar = 30;
+        /// <summary>
+        /// The avatar tile on a card, and the selected-thing avatar in the inspect pane's header,
+        /// which are the same size by specification.
+        ///
+        /// <para><b>Doubled on 2026-09-18</b>, 30 → 60, at the owner's instruction: *"can we make
+        /// the in-game avatar profile twice as big as it's hard to see"*. It is a face now
+        /// (<c>docs/design/20-avatars.md</c> §10) rather than a coloured tile, and a 128 px render
+        /// shrunk to thirty was giving back almost none of what was rendered.</para>
+        /// </summary>
+        public const int Avatar = 60;
 
-        /// <summary>The avatar tile on a roster card, which is smaller than the inspect one.</summary>
-        public const int CardAvatar = 26;
+        /// <summary>
+        /// The avatar tile on a roster card, which is smaller than the inspect one. Doubled with
+        /// it, 26 → 52; <see cref="CardWidth"/> and <see cref="CardHeight"/> are re-derived rather
+        /// than nudged, and <see cref="StripHeightShare"/> had to move with them.
+        /// </summary>
+        public const int CardAvatar = 52;
 
         /// <summary>Avatar to name on a card's identity row.</summary>
         public const int CardAvatarGap = 8;
@@ -714,9 +738,27 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The pane's header block: the 19 px name on one line and the 12 px job-and-state line
-        /// under it, which together stand taller than the 30 px avatar beside them.
+        /// under it — 38 px of text.
+        ///
+        /// <para><b>The avatar is what sets this now, not the text</b> (2026-09-18). It used to be
+        /// the other way round, the two lines standing taller than the 30 px tile beside them; at
+        /// 60 the portrait is the taller of the two and the header is its height. The text still
+        /// aligns to the top of the block rather than centring on the picture, so the name sits
+        /// where it always has and only the block below it grew.</para>
         /// </summary>
-        public const int InspectHeader = 38;
+        public const int InspectHeader = Avatar;
+
+        /// <summary>
+        /// The same header when the subject is a tile or a pile rather than a colonist.
+        ///
+        /// <para><b>It stayed at 38, and the split is the point.</b> A tile's slot holds an
+        /// <see cref="IconBadge"/> on a <c>ui.*</c> key, and the interface draws icons at 17, 16
+        /// and 30 and no other size (<c>14-hud-layout.md</c> §4). Growing this with the colonist's
+        /// portrait would have made a fourth icon size out of a rule with three, and stood a
+        /// five-fact readout up on a header two thirds the height of its own body. Only a
+        /// photograph of a person earned the extra pixels.</para>
+        /// </summary>
+        public const int InspectHeaderNarrow = 38;
         public const int InspectHeaderGap = 6;
         public const int InspectTabs = 26;
         public const int InspectTabGap = 9;
@@ -1153,8 +1195,9 @@ namespace Odyssey.Hud
             else
                 return 0f;
 
+            // A tile keeps the shorter header: its slot holds an icon, not a portrait.
             return cellRows > 0
-                ? Frame + Pad + InspectHeader + InspectHeaderGap + body + Pad
+                ? Frame + Pad + InspectHeaderNarrow + InspectHeaderGap + body + Pad
                 : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
                   body + Pad;
         }
@@ -1380,7 +1423,23 @@ namespace Odyssey.Hud
         /// orders 0.80%. <b>The bar is the largest single spend</b> and it is a full-width docked
         /// bar by the owner's instruction, where the specification drew a centred pill; that is
         /// where to look first if this ever has to come back down.</para>
+        ///
+        /// <para><b>Twenty per cent since 2026-09-18, and the one per cent is the doubled avatar</b>
+        /// (owner: *"can we make the in-game avatar profile twice as big as it's hard to see"*).
+        /// A roster card went from 106 x 63 to 126 x 89 to hold a 52 px face, which takes a
+        /// <b>two-row</b> strip at 1280 x 720 from 3.81% to <b>5.07%</b> and the whole HUD to
+        /// <b>19.80%</b>. Two things about that number. It is the forced worst case rather than
+        /// what the game draws: at 1280 x 720 the strip is allowed **one** row, and the resting
+        /// measurement there is still under the old 19% — <c>CoverageWithNothingSelected-
+        /// IsUnderTheCeiling</c> never failed through any of this. And the usual lever is not
+        /// available: the previous two occasions clamped the region instead of raising the
+        /// ceiling, but clamping here means showing fewer colonists, and the card is the size it
+        /// is because the owner asked for the face in it to be legible.</para>
+        ///
+        /// <para><b>It is the owner's to reverse</b>, exactly as the orders strip's one per cent
+        /// is. The cheapest reversal is the avatar: every pixel of it is four pixels of card area
+        /// and the card is what the strip is made of.</para>
         /// </summary>
-        public const float CoverageCeiling = 0.19f;
+        public const float CoverageCeiling = 0.20f;
     }
 }
