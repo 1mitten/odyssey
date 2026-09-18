@@ -5950,3 +5950,16 @@ assertion failed. The likely reason a real click shows nothing is that a click l
 colonist picks the colonist (the pick rule an earlier playtest fault fixed), and the sower stands
 exactly where you click right after sowing. The test now pins the row, the crop name and the
 ripeness so the join cannot silently break again.
+
+### The plot grows its yield, in the dark, from the sower's hands (2026-09-18)
+
+Four owner asks, one pass. The carrots are much bigger and sunk a quarter-metre into the soil -
+scale 1.4 with a per-stage sink, so the mature carrot reads as sitting IN the field, to be pulled.
+The plot now draws its actual yield: five plants per sown cell from the first sprout, scattered at
+hashed positions, free by instancing - the render test that pinned "one plant is one instance" now
+pins "one bucket, as many instances as the yield", which is the same argument grown. The seeds
+germinate away - specks draw only on stage-one cells - and they begin while the sower is still
+down: a pawn working a Sow job in a zone draws its handful from the pawn registry, so the seed
+appears under the kneel and not after the stand-up. And the brown went near-black, 0.06 at 0.78 -
+two darkenings in one day, the second asked in the words "much much deeper" and answered at the
+top of the alpha band the colour guard allows.

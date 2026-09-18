@@ -1933,9 +1933,9 @@ MonoBehaviour:
     prefabName: SM_Prop_Carrot_01_S
     centreXZ: 1
     baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
+    offset: {x: 0, y: -0.15, z: 0}
     yaw: 0
-    scale: {x: 1, y: 1, z: 1}
+    scale: {x: 1.4, y: 1.4, z: 1.4}
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1962,9 +1962,9 @@ MonoBehaviour:
     prefabName: SM_Prop_Carrot_01_M
     centreXZ: 1
     baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
+    offset: {x: 0, y: -0.2, z: 0}
     yaw: 0
-    scale: {x: 1, y: 1, z: 1}
+    scale: {x: 1.4, y: 1.4, z: 1.4}
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1991,9 +1991,9 @@ MonoBehaviour:
     prefabName: SM_Prop_Carrot_01_L
     centreXZ: 1
     baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
+    offset: {x: 0, y: -0.25, z: 0}
     yaw: 0
-    scale: {x: 1, y: 1, z: 1}
+    scale: {x: 1.4, y: 1.4, z: 1.4}
     materialOnly: 0
     material: {fileID: 0}
     materialName: 

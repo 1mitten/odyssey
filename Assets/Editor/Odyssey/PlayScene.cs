@@ -1323,11 +1323,12 @@ namespace Odyssey.EditorTools
             // art near its authored size (measured 0.31/0.44/0.63 m across in the inventory) and
             // the fallbacks a visible quarter/half/metre mound, so the stages still read without
             // the packs.
-            void Crop(string id, string prefab, float size) => rows.Add(new ModuleEntry
+            void Crop(string id, string prefab, float size, float sink = 0f) => rows.Add(new ModuleEntry
             {
                 moduleId = id, shape = ModuleShape.Pillow, prefabName = prefab,
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(size, size, size),
+                offset = new Vector3(0f, -sink, 0f),
             });
 
             // Scale one throughout (owner, 2026-09-18: "there is a carrot in multiple grow stages
@@ -1337,9 +1338,13 @@ namespace Odyssey.EditorTools
             // to carry (0.5/0.75/1.0) was authored for the Pillow fallbacks, which it still
             // serves by shape alone - a mound grows only by being drawn at three stages' heights,
             // and losing that on a pack-less checkout is the cheaper half of the trade.
-            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 1.0f);
-            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 1.0f);
-            Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.0f);
+            // Bigger and sunk (owner, 2026-09-18: "the carrots need to be much bigger and inset
+            // into the ground to be pulled out"): scale 1.4 with a quarter-metre of the root
+            // below the soil line, so the mature carrot reads as sitting IN the field rather
+            // than on it. Both apply per plant, so a plot's whole yield sinks alike.
+            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 1.4f, sink: 0.15f);
+            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 1.4f, sink: 0.2f);
+            Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.4f, sink: 0.25f);
 
 
             // Trees are the pieces that actually make this look like a place. Measured widths

@@ -70,6 +70,14 @@ namespace Odyssey.Presentation.World
         /// <summary>One module per plant per drawn stage, resolved once at construction: three stages in a row per plant, the order <see cref="CropModule"/> indexes.</summary>
         readonly int[] _cropModules;
 
+        /// <summary>
+        /// How many plants stand in a sown cell of each crop — the yield the plot will give,
+        /// drawn from the first sprout (owner, 2026-09-18: the number of carrots grown/growing
+        /// is the amount in the plot). Free by instancing: more matrices in the same bucket, not
+        /// more buckets. Clamped, because a content error of a thousand would draw a thousand.
+        /// </summary>
+        readonly int[] _plantCounts;
+
         /// <summary>The plant table, in handle order. Resolved once at construction; injectable for a test.</summary>
         readonly PlantDef[] _plants;
 
@@ -160,6 +168,9 @@ namespace Odyssey.Presentation.World
             // come from the Defs the simulation itself loads, so a stage renamed in the XML needs
             // no edit here. A test may hand its own table in; by default the shipped pack's.
             _plants = plants ?? ContentPack.Plants();
+            _plantCounts = new int[_plants.Length];
+            for (int i = 0; i < _plants.Length; i++)
+                _plantCounts[i] = Math.Clamp(_plants[i].yieldCount, 1, 8);
             _cropModules = new int[_plants.Length * 3];
             for (int i = 0; i < _plants.Length; i++)
             {
@@ -335,6 +346,13 @@ namespace Odyssey.Presentation.World
         /// when the drawn stage actually changes — which is the rule the growth system marks the
         /// chunk by, so a re-mesh never redraws a field that looks the same.</para>
         /// </summary>
+        /// <summary>How many plants a sown cell of this cell's crop draws, or 0 where nothing grows.</summary>
+        public int CropCount(int index)
+        {
+            byte plant = _cropPlant[index];
+            return plant == 0 ? 0 : _plantCounts[plant - 1];
+        }
+
         public int CropModule(int index)
         {
             byte plant = _cropPlant[index];

@@ -336,12 +336,29 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.CropModule(index);
             if (module == 0) return;
 
+            // The plot draws its yield: as many plants as the harvest will give, from the first
+            // sprout to the last pull (owner, 2026-09-18). Free by instancing - more matrices in
+            // the same bucket, not more buckets - and scattered at hashed per-cell-per-plant
+            // positions so a field reads as rows of plants rather than one repeated clump. The
+            // offset/scale the catalogue row carries moves every plant alike, so the sink the
+            // row asks for is honoured per plant and not just per cell.
             bool daylit = _model.OpenToTheSky(index, y);
             int tint = TintCode.Daylit(TintCode.Foliage(0), daylit);
 
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
-                Quaternion.identity, Vector3.one));
+            int count = _model.CropCount(index);
+            Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y));
+            for (int i = 0; i < count; i++)
+            {
+                uint h = (uint)(index * 747_796_405u + i * 289_133_645_3u);
+                h = (h ^ (h >> 13)) * 1_274_126_177u;
+                float ox = ((h & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 1.1f);
+                float oz = (((h >> 16) & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 1.1f);
+                float yaw = (h % 4u) * 90f;
+
+                AddBody(batch, module, tint, Matrix4x4.TRS(
+                    centre + new Vector3(ox, 0f, oz),
+                    Quaternion.Euler(0f, yaw, 0f), Vector3.one));
+            }
         }
 
 

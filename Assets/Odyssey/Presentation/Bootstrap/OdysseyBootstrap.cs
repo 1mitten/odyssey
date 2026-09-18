@@ -998,7 +998,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The colour of a sown cell's seed specks - pale enough to read as seed against the dark soil, and nothing else on the board's floor is white.</summary>
         public static readonly Color SeedSpeckColour = new Color(0.92f, 0.90f, 0.82f, 1f);
 
-        public static readonly Color ZoneTintColour = new Color(0.13f, 0.075f, 0.025f, 0.72f);
+        public static readonly Color ZoneTintColour = new Color(0.06f, 0.032f, 0.012f, 0.78f);
 
         /// <summary>
         /// Every growing-zone cell on a drawn layer, tinted.
@@ -1042,12 +1042,34 @@ namespace Odyssey.Presentation.Bootstrap
             // speckled white tiny dots to indicate it's sown"). A sown cell is a dark tile until
             // the sprout's first stage is big enough to read, so the sowing itself is invisible
             // for the first hours; the specks are the feedback, one handful per planted cell.
+            // First stage only: the specks are the seed, and they germinate away once there is
+            // a plant to see (owner: "seeds should disappear after some growth - and carrot
+            // starts appearing").
             System.ReadOnlySpan<PlantView> planted = snapshot.Plants;
             for (int i = 0; i < planted.Length; i++)
             {
+                if (planted[i].Stage != 1) continue;
                 CellRef cell = size.FromIndex(planted[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
                 _renderer.DrawSeedSpecks(cell, SeedSpeckColour);
+            }
+
+            // And while the seed is still going in (owner, 2026-09-18: "seeds should appear
+            // during when the colonist is on the ground for a little time, not after"): a sower
+            // kneeling at a plot is the seed's first appearance, drawn from the pawn registry
+            // the way the rest of the figure's state is. Only pawns working a SOW job in a
+            // drawn band, and the cell must be zoned so a forced sow gone wrong draws nothing.
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JobDef != JobIndex.Sow) continue;
+                CellRef at = pawns[i].Cell;
+                if (at.Y < lowest || at.Y > highest) continue;
+                bool zoned = false;
+                for (int z = 0; z < zones.Length; z++)
+                    if (zones[z].CellIndex == size.Index(at.X, at.Z, at.Y)) { zoned = true; break; }
+                if (!zoned) continue;
+                _renderer.DrawSeedSpecks(at, SeedSpeckColour);
             }
         }
 

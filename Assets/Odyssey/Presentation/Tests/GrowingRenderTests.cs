@@ -81,7 +81,11 @@ namespace Odyssey.Tests.Presentation
 
             List<InstanceBucket> buckets = BucketsFor(batch, module);
             Assert.That(buckets, Has.Count.EqualTo(1), "one stage of one crop is one bucket");
-            Assert.That(buckets[0].Count, Is.EqualTo(1), "one plant is one instance");
+            // The plot draws its yield (owner, 2026-09-18: the number of carrots growing is the
+            // amount in the plot), so the carrot's five is the instance count - and still ONE
+            // bucket, which is the whole argument that it is free.
+            Assert.That(buckets[0].Count, Is.EqualTo(world.Model.CropCount(cell)),
+                "a plot draws as many plants as its harvest will yield");
 
             Vector3 at = buckets[0].Matrices[0].MultiplyPoint3x4(Vector3.zero);
             Assert.That(at.y, Is.EqualTo(2f * 3f).Within(0.35f),
