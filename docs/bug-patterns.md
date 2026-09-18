@@ -32,6 +32,7 @@ Every occurrence so far:
 | Which cells does a bed claim? | the simulation's guard, and the ghost | ghost drew legal, click did nothing |
 | What layer does a run land on? | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | a deck with a hole in it |
 | **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
+| Is this cell the foot of a terrace step? | `BankLayout` (render mirror), `TerraceFoot` (cell grid) | allowed on purpose: different data, pinned cell-by-cell by `TerraceFootTests` |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -180,6 +181,28 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-18 — Trees grew inside the hillside at the top of every terrace step
+
+*"The flat side of the terrain where the height changes … things generate in those tiles … Trees
+shouldn't be generated in those spots because they get clipped by this façaded terrain."*
+
+**A new shape, and the one to watch for next: a façade with nothing behind it, in a cell the
+simulation is free to fill.** A bank — the ramp drawn up a terrace step — fills the empty cell at
+the foot of the step from floor to rim, and `Odyssey.Sim` does not know it exists, by design. Every
+other façade in this project is drawn *on* ground that stays empty (relief, tufts, chips, banks of
+the surrounding land); this one occupies a cell that worldgen scatters into and colonists walk
+through. Ask of any new façade: **can the simulation put something where this is drawn?**
+
+**It read as an art fault because the commonest case is handled.** `PawnPose` lifts a walking figure
+onto the bank's surface, so colonists look right; only things that are never lifted — a generated
+tree, a body lying down — are swallowed.
+
+**Stopped by** `TerraceFoot.IsFoot`, the simulation's copy of the rule, which `TreePass` asks before
+placing a tree. Two owners (P1) and allowed, because worldgen has no render mirror to ask — so
+`TerraceFootTests` requires the two to agree in every cell of seven boards, four of which are cases
+where the right answer is *no bank*. `docs/design/22-terrace-steps.md` §4 records what is still
+unguarded: a colonist lying down in one, and an item dropped in one.
 
 ### 2026-09-18 — Typing a save name drove the game behind the dialog
 

@@ -92,6 +92,24 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         public const ushort TerrainAir = CoreContent.TerrainAir;
 
+        /// <summary>
+        /// Is this terrain one of the natural soils — ground that slumps, spills and grows things,
+        /// as against stone, water and pavement?
+        ///
+        /// <para>Here rather than in presentation, though drawing was the first thing to ask it:
+        /// <c>GroundLook.IsEarth</c> now calls this, and so does <see cref="TerraceFoot"/>, which
+        /// has to decide whether a terrace step is soil that a bank of earth spills down. Two lists
+        /// of six terrain codes would have been two lists to keep in step, and the second one would
+        /// have been wrong the first time a soil was added.</para>
+        /// </summary>
+        public static bool IsEarth(ushort terrain) =>
+            terrain == TerrainGrass ||
+            terrain == TerrainBareEarth ||
+            terrain == TerrainPackedGravel ||
+            terrain == TerrainSand ||
+            terrain == TerrainSubsoil ||
+            terrain == TerrainMarsh;
+
         // ---- edifices ----------------------------------------------------------------------
         //
         // CoreContent's edifice ids end at EdificeUtilityTap = 9.

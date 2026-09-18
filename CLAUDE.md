@@ -184,6 +184,7 @@ this file.
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
+| Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
@@ -240,6 +241,12 @@ invisible where the game is played.
   are simulated. The one deliberate exception is the saved **view** (camera, slice, selection,
   speed), which is `ISaveable` and pointedly *not* `IStateHashable`: determinism is the hash's
   business and where the camera points cannot affect a tick.
+- **But a façade that fills a cell the simulation can fill is a bug waiting to be reported.** The
+  bank at the foot of a terrace step fills its cell floor to rim, and worldgen grew trees inside it
+  (2026-09-18). Every other façade is drawn on ground that stays empty. Ask it of any new one: *can
+  the simulation put something where this is drawn?* If it can, the rule needs a sim-side copy —
+  `TerraceFoot`, checked cell-by-cell against `BankLayout` — and the guard goes where the thing is
+  placed. `docs/design/22-terrace-steps.md`.
 - **Content is written once.** The XML under `Assets/Odyssey/Defs/Core` is the only copy of the pawn
   tuning and the world tables. Callers go through `ContentPack.Pawns()` and `WorldContent.Table`.
 - **Content values are pinned by fingerprints, and they earn their keep.** Editing rock's
@@ -372,6 +379,11 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **No health model**, so fall damage is designed with a number and nothing to apply it to, a
   colonist rides a collapsing floor down unharmed, and the debug menu has no kill or heal.
 - **No fog of war**, so a sealed cavern is visible if the player scrolls the layer down.
+- **A colonist can still lie down inside a terrace bank.** Trees are guarded out of those cells at
+  generation (`TerraceFoot`, `docs/design/22-terrace-steps.md`), and a walking figure is lifted onto
+  the ramp, but a body lying down is not: sleep on the ground at the foot of a step and the façade
+  hides you. §4 of that document holds the two candidate fixes and why neither was guessed at — both
+  move the state hash. An item dropped in one has the same problem and is unreported.
 - **A skill level buys nothing a player can feel** — experience is complete and no rate reads it.
   That is the whole of WS.
 - **Nothing tests that a click reaches the game.** A PlayMode test cannot press a button (input

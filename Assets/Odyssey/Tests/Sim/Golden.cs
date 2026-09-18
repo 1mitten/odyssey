@@ -136,6 +136,19 @@ namespace Odyssey.Tests.Sim
     /// boards at 850 to 1,150 a tick instead of in step. WS2's rate work moved none of these by
     /// the same reasoning recorded two entries down, and this entry is the re-bake the unit's row
     /// promised would be deliberate.</para>
+    ///
+    /// <para><b>Moved a ninth time, 2026-09-18, by the terrace guard, and <i>only the wooded
+    /// board</i>.</b> <c>TreePass</c> refuses a tree in a cell at the foot of a terrace step,
+    /// because presentation fills that cell with a bank and the tree is sheared off by it — see
+    /// <c>TerraceFoot</c>. So the played board grows a few dozen fewer trees, and both its numbers
+    /// moved: <c>Generated</c> because a tree is an edifice in the grid and the grid is hashed
+    /// before the first tick, and <c>Simulated</c> because it inherits that board.</para>
+    ///
+    /// <para><b>The other two cases did not move at all, and that is the control.</b> The barren
+    /// meadow grows no trees and the ruined city's generator has no <c>TreePass</c> in it, so a
+    /// guard on tree placement can reach neither — measured by running the whole table and reading
+    /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
+    /// else moving would have meant something had come along uninvited.</para>
     /// </summary>
     public static class Golden
     {
@@ -207,8 +220,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 15662665231234558495UL,
-            Simulated = 8598539094455010883UL,
+            Generated = 4458515928023308940UL,
+            Simulated = 2209177290872111506UL,
         };
 
         /// <summary>

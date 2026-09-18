@@ -6000,3 +6000,51 @@ Three owner asks in one branch, and the first turned out to be the biggest.
   apart.
 - **Verified:** fast tier **724 Sim + 432 Hud**; EditMode **1740 total, 1726 passed, 0 failed**;
   PlayMode **81 total, 76 passed, 0 failed**; both content checks current.
+
+### Nothing grows at the foot of a terrace step (2026-09-18, branch `claude/terrace-foot-guard`)
+
+Owner: *"The flat side of the terrain where the height changes, we created a façade of terrain but
+the problem is that things generate in those tiles … Trees shouldn't be generated in those spots
+because they get clipped by this façaded terrain."* The design is
+`docs/design/22-terrace-steps.md`; what is worth keeping is why it could not be one line.
+
+- **The bank is a façade, and that was the point until something stood in one.** A bank fills the
+  empty cell at the foot of a terrace step from the floor to the rim above, and nothing in
+  `Odyssey.Sim` knows it exists — not pathable, not saved, not hashed, like ground relief and grass
+  tufts. That was harmless while the only question was what to draw. It stopped being harmless when
+  the generator put a tree in the cell: the wedge of hillside shears the trunk off. A *walking*
+  colonist is fine, because `PawnPose` lifts a figure onto the bank's surface — which is the reason
+  the fault reads as an art bug rather than as a placement one.
+- **The rule had to be stated twice, so it is checked rather than trusted.** `BankLayout` reads the
+  render mirror; worldgen has a `CellGrid` and no mirror. One function could not serve both, so
+  there is a second owner — `TerraceFoot.IsFoot` — and `TerraceFootTests` walks **every cell** of
+  seven boards requiring the two answers to be identical: a one-layer step, flat ground, a two-layer
+  riser, a rock face, a plateau corner, a notch, a quarry, ground under a roof. Four of those seven
+  are boards where the interesting answer is *no bank*, which is where two copies of a rule usually
+  drift apart.
+- **The diagonal is the clause a hand-written guard would have missed.** A bank stands against an
+  orthogonal step, or — where there is none — against a diagonal one: the outside-corner piece that
+  wraps a convex corner, added when a run of banks was found to have a square bite out of it at
+  every corner. So the guard reads eight neighbours, not four.
+- **"Which terrains are earth" became one list on the way past.** It was `GroundLook.IsEarth`, a
+  drawing judgement, and the step test needs the same judgement — earth spills down a step, stone is
+  sheer. It is now `NaturalContent.IsEarth` with `GroundLook` calling it. A second copy would have
+  been wrong the first time a soil was added and the symptom would have been a tree in a bank.
+- **Measured, not estimated: 122 of some 1,600 would-be trees on the played board**, about one in
+  thirteen, all along terrace edges (seeds 1, 7 and 42 give 122, 118, 122). The density roll is
+  still drawn per column whatever the terrain, so the guard thins the wood along steps without
+  reshuffling it anywhere else.
+- **Three pinned numbers moved and the shape of the move is the evidence.** The wooded golden's two
+  values and the six `dry` hashes in `WaterTests` moved, because a tree is an edifice in the grid.
+  The barren meadow's golden, the ruined city's golden and all six `barren` hashes are
+  byte-for-byte what they were — measured by running the tables before re-baking and reading which
+  assertions failed. A guard on `TreePass` can reach no board that has no `TreePass`, and anything
+  else moving would have meant something had come along uninvited.
+- **What was deliberately not done.** The owner also reported a colonist sleeping in one and
+  disappearing: *"not sure what to do to prevent sleeping in that spot"*. Two candidates are written
+  down in §4 of the design — refuse the lie-down spot, or refuse a bed there — and both change the
+  state hash, so they want a decision rather than a guess. The predicate is in place for whichever
+  is chosen. Walking is untouched on purpose: the cell is the take-off cell for the hop, and the
+  bank is drawn there to make that hop legible.
+- **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1756 total, 1742 passed,
+  0 failed**.

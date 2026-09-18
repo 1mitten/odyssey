@@ -74,6 +74,14 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int Conifers;
         public int Broadleaves;
         public int TreesClearedForStart;
+
+        /// <summary>
+        /// Trees the density roll picked and the terrace guard turned down, because the cell is the
+        /// foot of a step and presentation fills it with a bank. Zero on a flat board; on the
+        /// played meadow it is the size of the thing the guard is doing, which is the number to
+        /// watch if the wood ever looks thinned.
+        /// </summary>
+        public int TreesRefusedOnTerraceSteps;
         public int Outcrops;
         public int OutcropCells;
         public int Caverns;
