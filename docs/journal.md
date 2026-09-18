@@ -6273,4 +6273,5 @@ colonists at certain points and smoother is preferred and predictable."*
   rounding and nothing else — and one 30 mm frame where the ramp's 0.62 m/s meets the flat top's
   1.5 m/s. That junction is the terrain changing and is left alone.
 - **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1777 total, 1763 passed,
-  0 failed**.
+  0 failed**; PlayMode **82 total, 75 passed, 0 failed** (scratch worktree, so the two portrait
+  tests skip for want of the Synty junction).
