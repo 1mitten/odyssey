@@ -760,7 +760,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **649 Sim + 384 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **681 Sim + 399 Hud**; Long tier **20**.
   Unity tier on 2026-09-18, on the build botch merged with beds: EditMode **1638 total, 1625
   passed, 0 failed**. PlayMode was last run the same day on the flat avatars: **74 total, 69
   passed, 0 failed** (in both, the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
