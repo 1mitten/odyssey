@@ -3038,6 +3038,110 @@ work itself.
   so three new tests were green in eleven seconds and red in the gate. `docs/lessons.md` has had
   this written down since the morning of the same day.
 
+
+- **Beds, the first furniture, 2026-09-17** (`docs/design/20-beds.md`, interview in
+  `docs/research/beds-interview.md`). The owner asked for the whole loop in one breath — bed
+  from the Build palette, a rotatable two-tile outline on R, built through the pipeline, a
+  skill-rolled quality of Poor/Normal/Decent/Uber/Epic, a colonist assigned to own it and sleep
+  in it — and the interview settled the four decisions that shaped it: two tiles with computed
+  placeholder art; R rotates only while a rotatable ghost is armed; assignment from the bed's
+  own pane; the tiers scale rest effectiveness now, numbers provisional in XML.
+  - **The ground found more standing than expected.** A "bed" already existed as an invisible
+    scenario cell — the sleep chooser scans a list of them and rest already splits 100 in a
+    bed against 80 on the ground — so the bed upgraded a notion rather than inventing one. The
+    build pipeline turned out to be generic over the thing built, so a bed site flows through
+    delivery and construction untouched. And nothing existed for the rest: no multi-cell
+    edifice, no rotation input, no ownership state, no quality field.
+  - **One record behind two slots, and the second cell is not stored.** Both cells'
+    `Edifice[]` point at the same `PlacedEdifice`, whose facing says where the far cell is —
+    derived by `EdificeFootprint`, never stored, so the record cannot disagree with itself. The
+    first cut stored a `CellIndexB = -1`, and the reason it went is a language fact worth the
+    journal: **Unity compiles C# 9, where struct field initializers do not exist**, while the
+    dotnet mirror compiles `latest` — so `= -1` defaults would have passed every fast-tier run
+    and broken the Unity tier, and cell 0 is a real cell besides. Facing, Quality and Owner are
+    all zero-safe instead: facing 0 is north-and-meaningless, quality 0 is none, and owner 0 is
+    nobody because pawn ids are 1-based.
+  - **The bed's edifice id is 12, not 10, and the trees are why.** `NaturalContent.FirstEdifice`
+    reserved 10 and 11 for conifer and broadleaf; the first cut took 10 anyway and would have
+    drawn every bed as a conifer, named it one in the pane, and — because the render model
+    routes ids ≥ 10 to the natural table — indexed past the natural module array. The contract
+    weld test (`CellDetailTests`) caught it in the fast tier before Unity ever saw it, which is
+    what it is for. The mesher's stuff-tint rule now asks `IsTree(def)` rather than an id
+    range, so a wooden bed keeps its timber tint above the trees' ids.
+  - **Quality closed U26's outstanding success roll** — rolled once, at completion, by the
+    finishing colonist's Construction skill, on a bell whose weight falls off two a step from
+    the tier the skill has earned: a novice never reaches Epic, a master never falls to Poor,
+    and the tests pin exactly those endpoints, never a draw. The tiers are content
+    (Quality.xml, fingerprinted beside the buildings) and the rest numbers — 85/100/112/125/140
+    per cent of a plain bed, the owner's own — replaced the hardcoded 100 the needs system
+    carried. The roll draws from (world seed, cell ^ tick) on a new `BuildQuality` salt: the
+    refund's shape, not the yield's, because a bed rebuilt on the same spot is a new bed and
+    may finish better, where a cell mined twice is not a thing that happens.
+  - **Ownership lives on the bed record and nowhere else** — no pawn-side field, riding the
+    edifice list into the save and the hash instead. `AssignBedOwner` is the handler's to keep
+    honest: one bed per colonist is enforced by releasing the old bed in the same breath, a
+    pawn who does not exist is refused, and either half of a bed names it. The sleep chooser
+    learned the same rule — a bed that is somebody's is theirs and nobody else checks in, and
+    a colonist's own bed wins outright however far away it is, measured by test: the owner
+    walks past a nearer unowned bed, and the second colonist takes the unowned one.
+  - **R is the game's first context rule.** R was already the slice's, and the owner's answer
+    was R anyway — so instead of a second `HotkeyAction` (a clash the binding map refuses by
+    design) the two consumers agree on one predicate, `DesignateDirector.RotatableArmed`,
+    decided in the fast tier: the tool claims the slice-up key's press while a rotatable thing
+    is armed, PageUp is never claimed, and design 09 §6 gained case 9 with its own "no key
+    means two things today" line amended — the day one does has arrived, and this is how it
+    was solved without breaking the one-key-one-action invariant.
+  - **The pane's first interactive fact.** A bed's readout says its tier and its owner, and the
+    owner row opens the colonist popover — built once, filled on open, a pick submitting
+    `AssignBedOwner` exactly as every command is submitted, landing on the next tick or on
+    unpause. The affordance is armed by `InspectModel.BedUnderPane`, cleared every refresh so
+    it cannot outlive the bed.
+  - **The placeholder is three scaled boxes** — frame, mattress, pillow — instances of a plain
+    block module tinted by the bed's stuff, drawn once from the head cell, rotated by the
+    stored facing, centred on the seam of the two cells and draped there: a bed is one thing
+    fixed to the grid across two cells, and the rule the stepped walls settled is that
+    anything fixed to the grid is draped. One catalogue row on `odyssey.module.bed` upgrades
+    every bed the day real two-tile art exists.
+  - **Two gates were built for this line.** A local C# 9 syntax gate — the whole Presentation
+    assembly, Unity-side tests included, compiled against the installed Unity's own DLLs —
+    because the fast tier cannot see Presentation at all and it caught `GroundRelief.Drape`
+    returning a matrix where the first cut read a point. And a version-2 save fixture built by
+    hand, proving the bed's three new record fields read back as zeros from a file the day-old
+    build wrote. Save format is 3 on this branch; whichever of start-flow and beds merges
+    second takes 4.
+  - **Verified:** fast tier 586 Sim + 219 Hud green, one ignored (a board shape the solid-cell
+    search could not find), both content gates green, the C# 9 gate clean. Not run: the Unity
+    tier — it runs on the owner's self-hosted runner against the pull request. **Not measured:
+    nobody has pressed Play.** The bed's placeholder art, the popover's reach and the R claim
+    are all judgements for the keyboard, and design 20 §12 already lists what is open.
+
+- **The bed and the floors, checked against the owner's use case, 2026-09-17.** The owner asked
+  the question the flat-board tests had not: does the bed build on a floor above, and is the
+  colonist assigned to it able to sleep in it — checked for floors above and below. Five tests
+  came out of the asking, and nothing had to change: the seams were already right, they had
+  simply never been asked.
+  - **A slab is a floor, and the bed's footprint accepts both cells on one.** A bed ordered a
+    storey above the ground, on slabs laid over open air, places, raises, publishes its tier and
+    joins the sleep list — with the control proving the pass is the slab and not thin air (air
+    over air is still refused). The slabs are laid straight onto the grid the way the floor half
+    of the building line will lay them when its branch lands; the bed's claim is about what it
+    stands on, not who put it there.
+  - **A floor over a bed changes nothing.** A slab laid over the site between order and raise —
+    the world moving over the order while the wood was out — leaves placement, raising and
+    ownership untouched, because nothing in the bed's rules looks up.
+  - **A storey up, end to end.** On the terraced meadow a bed ordered as a player orders it
+    (an intent) on higher ground than the start is fed its wood up the riser, worked, and
+    finished at a rolled tier by the driver's own completion branch — the one path no earlier
+    bed test had reached, every other test raising beds directly. Its owner then climbs to it
+    and sleeps there at the Epic rate.
+  - **The honest limit, stated in the test's own comment:** a bed on a *built slab* storey can
+    be placed, raised, owned and asked about today, but sleeping in it — and hauling to it —
+    waits on a way up. The built-stair line has not landed; a ladder excludes a laden hauler by
+    its own rule, and nothing else on this branch connects storeys. The terrace test reaches
+    its bed the way the game currently can: a one-block hop. The day stairs land, the same
+    tests will hold one storey higher without a line changing.
+
+
 - **U29 floors and collapse, 2026-09-17.** The unit the project exists to prove, and on inspection
   mostly wiring: the support physics was built in M1 and switched off. `SupportSolver` had computed
   collapses since then, `SupportSystem` had deferred them, and the lambda at the end of it was
@@ -4585,3 +4689,129 @@ reason rather than at it.
   code carried a value at bit 16: fifteen million overflowed into the part field. Nothing was
   observably wrong, because the only modules with a tint that large had exactly one part. **Wrong
   only by luck is not a property to leave in a key**; it has thirty-two bits now.
+- **The beds merge, and reviewing it, 2026-09-17.** `claude/beds` went conflicting against main
+  after U29's floors, U42's paving, U43's ladders and the rates design all landed. Fifteen
+  conflicts; eleven were unions and four were real.
+  - **The bed's handle moved from 2 to 5.** It had been written as the next number after the
+    wall; the floor, the deck plate and the ladder reached main first and took 2, 3 and 4. A
+    handle position is a save contract and positions are append-only, so the later branch is the
+    one that moves — safe here only because no save with a bed in it had ever left the branch.
+    Save format is 4 for the same reason: the start flow took 3.
+  - **The renumbering's one silent casualty is the lesson worth keeping.** `BuildShapes` is a
+    hand-written two-array table in the Hud assembly, parallel to `BuildingHandle`. Main never
+    touched the file, so it was **not a conflict**: three entries merged in silence and the bed
+    quietly became a one-cell thing that could not be turned. Three `DesignateDirector` tests
+    failed and none of them named the cause. The class's own remarks claimed "the two tables are
+    held together the same way the labels are — a test walks both", and no such test existed.
+    The general form: **a parallel table needs a length assertion against the handle set's
+    `Count`, or renumbering breaks it with no conflict to warn anybody.**
+  - **`WhereItWouldLand` is where the bed's "never lifted" rule belongs.** It had been written
+    inline in `Place`; main had since lifted that arithmetic out precisely so the cursor and the
+    order could not disagree. Leaving it behind would have drawn the bed's ghost with the wall's
+    lift — the same class of fault the method was created to close.
+  - **Then the review found three things both tiers were green over.** Four of the six ownership
+    tests were never running: `RaiseABed` called `Raise` without placing a site, `Raise` returns
+    at once when there is none, and each test ended on an `Assume` that an unbuilt bed could be
+    given an owner. **A failed `Assume` is Inconclusive**, which `dotnet test` reports as neither
+    a pass nor a skip — the console says `Passed! Failed: 0, Skipped: 0` and the test is simply
+    absent from the totals. The whole of the ownership feature had been untested since the day it
+    was written. A fifth test ignored itself on every run, searching for solid ground at
+    `start.Y` when the ground is the layer below. The feature was right; the tests were not
+    asking. Nineteen bed tests now, none skipped.
+  - **And the build cursor knew nothing about beds.** Both ghost paths arrived from the
+    build-cursor work after the bed design was written, and both drew one cell-filling module at
+    the head cell. A bed ordered on grass was a block — and **R changed nothing anybody could
+    see, because a cube looks the same all four ways round**, which is the feature the design's
+    §5 exists to prove. `BedShape` owns the three boxes now; the mesher and both ghosts ask it.
+    The seam test that would have caught it is in `FloorToolReachTests`, beside the one written
+    when U29's floor tool turned out to be armable, draggable and inert: **point at bare grass
+    and a bed must be ordered in the air above it.**
+
+- **The bed, after the owner first looked at it, 2026-09-17.** Five reports, four of them about
+  the bed being drawn as *boxes* rather than as a bed, and one about a feature that had been
+  unreachable since it was written.
+  - **`BedShape` is written in metres now**, not in raw scale factors. Two of the three parts are
+    drawn from module boxes of different sizes, so a bare `Scale` meant a different thing for each
+    — which is how six numbers that ought to touch drifted 0.56 m apart without anything failing.
+  - **The pillow floated**, because the mattress reached `z = ±1.02` and the pillow sat at
+    `z = −1.75`, hanging past the end of the bed. The frame and mattress run the bed's whole
+    length now. `BedShapeTests` asserts the *relations* — pillow on mattress, mattress on frame,
+    all of it inside the two cells — rather than the numbers, so the six can be tuned freely and
+    none of them into mid-air.
+  - **A pillow cannot be rounded by a matrix**, so it got a mesh: `PillowMesh`, a superellipsoid
+    spanning the same −0.5..0.5 unit box every stand-in does, and the **only smooth-shaded thing
+    in the renderer** — everything else is hard-normalled because the flat-lit look depends on it,
+    and a pillow is the one thing in the game meant to read as soft. **It was inside-out at the
+    poles**, and the reason is worth keeping: `Mathf.Cos(-π/2)` is `-4.4e-8` in float, not zero,
+    and `SignedPow` carried that sign through — which mirrors the pole ring through the axis and
+    reverses the winding of every triangle touching it. Clamping `cos v` at zero fixes it. Same
+    class as the trap `PrimitiveMeshes` documents: an inside-out mesh is valid geometry, nothing
+    throws, and the counts look healthy.
+  - **White needed a tint that is not a stuff**, because none of the six stuffs is cloth. Bedding
+    got a `TintCode` bit of its own beside foliage and water, so a stone bed has the same linen
+    pillow a wooden one does — and the ghost under the cursor draws it that way too, which is the
+    build cursor's whole bargain.
+  - **Selecting a bed highlighted the whole cell.** A bed is two cells long, knee high, and the
+    one edifice that does not fill the cell it stands in, so a cell highlight was wrong about its
+    size, its facing and both of its ends. It is a bracket round the bed's own box now, measured
+    from the head cell whichever half was clicked.
+  - **A quality tier has a colour, and `HudTheme.Quality` is the only place that decides it.**
+    Normal returns **null** — "no change" read literally, which is not the same as returning the
+    body colour, because a tier named on another surface must keep that surface's colour. The
+    colour rides on the row rather than being chosen by whatever draws it.
+  - **And the owner could not find how to assign a bed at all.** The row had been pickable since
+    it was written and said so with a pointer cursor and a hover brighten — sitting between
+    "quality" and "walk speed", which are facts, and reading "—", which says there is nothing
+    here. **Hover is not an affordance on a row nobody suspects.** It reads "Assign…" now, in a
+    bordered box, with a chevron so the owned case says it is a control too. A fast-tier test had
+    pinned the em dash; it pins the word.
+  - **One of the five test failures was the test's own fault**, and that is the note for next
+    time: `BedShapeTests.LocalBox` applied the part matrix to a unit cube without composing the
+    module's `local`, which is where the geometry actually ends up. Each part then had the
+    module's size divided out and its centre at the origin, and four assertions failed over a bed
+    whose numbers were right. A new test failing is not by itself a fault in the code under test,
+    and "fixing" the bed to satisfy it would have shipped the wrong geometry.
+
+- **The bed's second look, 2026-09-18.** Two reports from the owner, and both turned out to be
+  about *drawing*. One of them was the most instructive mistake this line has produced.
+  - **"I couldn't assign anyone with a bed"**, for the second time. The row had a pointer cursor,
+    a hover brighten, a border and a chevron by then, and was still not found. **Hover is not an
+    affordance**: a player does not hover a row to discover whether it is a control, they scan a
+    panel and see facts. It is a filled accent box with a bed glyph, the word "Assign…" and a
+    chevron now, set in the heavier `Row` type role — weight being `HudType`'s and never the
+    stylesheet's, which `TheSheetSetsNoTypeAtAll` caught the moment the first attempt reached for
+    `-unity-font-style`.
+  - **"Colonists stand outside rather than getting into a spare bed."** They do not, and this was
+    measured before anything was changed: a probe on the owner's exact case — nobody owning
+    anything, one spare bed, one tired colonist — walked the colonist into the bed and slept
+    there. `TrySleep` picks the nearest reachable unowned bed and always had.
+    **Nothing in the whole of presentation knew a pawn could be asleep**, so a colonist in a bed
+    was drawn standing bolt upright in it, all night. The report was exactly right about what was
+    on screen and the cause was one layer over from where it looked; taking it at face value would
+    have meant rewriting a sleep chooser that was correct. **A simulation that works and cannot be
+    seen is a simulation that gets reported broken.**
+  - **`SleepPose` is the fix** — a computed lying pose in the idiom `WorkSwing`, `ClimbPose` and
+    `SwimPose` established, because no pack contains a sleep clip. It lies in a bed and on the
+    floor, the owner's own second ask, because a colonist who cannot reach a bed lies down where it
+    is — `SleptOnGround` made visible. **Four postures** off the owner's reference sheet, chosen
+    from the pawn id so a colonist lies the same way every night and after a load, at no cost in
+    state.
+  - **The posture hash was broken and its own test caught it.** The choice is `% 4`, so only the
+    bottom two bits are ever read — and those are exactly the bits a Knuth multiply-and-shift
+    leaves unmixed. Every colonist came out in one posture, which is the morgue the table exists to
+    avoid. A full avalanche fixes it; the test now asserts all four appear among a dozen
+    *consecutive* ids, because consecutive is what a colony has.
+  - **And measuring the first two found a third fault nobody had asked about: two of the five
+    quality tiers did nothing.** Rest gain is `6 x effectiveness / 100`, giving 4.8, 5.1, 6.0,
+    6.72, 7.5, 8.4 — truncated to 4, 5, 6, **6**, 7, 8. A Decent bed recovered rest at exactly a
+    Normal bed's rate, so the tier a colonist rolled was worth nothing. The fractional part is
+    spent by a Bresenham step over the interval index, which is derived from the tick and the pawn
+    id and therefore stays out of the save and the hash. No golden moved: no colonist gets tired
+    inside those windows.
+  - **What was deliberately left alone.** A plain bed is 1.25x the floor and an Epic one 1.75x,
+    which follows from `groundRestEffectiveness = 80` — a number design 20 §2 records as the
+    owner's. It is pinned by a test that states both figures out loud rather than changed quietly.
+  - Three of the tests written this round failed on their first run and were right to every time,
+    and all three assert a **relation** rather than a value: the pillow rests on the mattress, each
+    tier beats the one below, neighbouring colonists differ. Each fault had left every individual
+    number looking perfectly reasonable.

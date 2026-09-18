@@ -522,15 +522,33 @@ namespace Odyssey.Sim.Pawns
         static bool TrySleep(Pawn pawn, PawnContext ctx, Job job)
         {
             var beds = ctx.Items.Beds;
+            int own = -1;
             int bestBed = -1;
             int bestDistance = int.MaxValue;
+            int me = pawn.Id.Value;
 
             for (int i = 0; i < beds.Count; i++)
             {
                 int cell = beds[i];
+
+                // A bed that is somebody's is theirs and nobody else checks in: no colonist
+                // sleeps in another's bed, which is the whole of what ownership is (design 20
+                // §7). The scenario's own spots answer 0 — nobody's, as they always were.
+                int owner = ctx.Construction != null ? ctx.Construction.BedOwnerAt(cell) : 0;
+                if (owner != 0 && owner != me) continue;
+
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                 if (!ctx.Reachable(pawn, cell)) continue;
+
+                // My own bed wins outright, however far away it is: that is what having one
+                // means. It has to be reachable and free like any other — an own bed on the far
+                // side of a collapse does not keep a colonist awake.
+                if (owner == me)
+                {
+                    own = cell;
+                    break;
+                }
 
                 int distance = ctx.Distance(pawn.Cell, cell);
                 if (distance >= bestDistance) continue;
@@ -542,7 +560,7 @@ namespace Odyssey.Sim.Pawns
 
             // No bed within reach is not a failure: a tired colonist lies down in the rubble and
             // remembers having done so.
-            job.TargetCell = bestBed;
+            job.TargetCell = own >= 0 ? own : bestBed;
             return true;
         }
     }

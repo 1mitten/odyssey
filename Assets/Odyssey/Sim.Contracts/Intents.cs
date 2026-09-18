@@ -16,15 +16,32 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>
         /// Put a building site on a cell: <c>A</c> is a <c>BuildingHandle</c>, <c>B</c> a
-        /// <c>StuffHandle</c>. Its own kind rather than a <c>Designate</c> with a third argument,
-        /// because a designation is a verb applied to whatever is already there and this names a
-        /// thing that is not there yet — it carries what to make and what to make it of, and the
-        /// component that owns it is not the one that owns orders.
+        /// <c>StuffHandle</c>, and <c>C</c> the facing 0–3 for a thing that rotates (0, and
+        /// ignored, for everything else). Its own kind rather than a <c>Designate</c> with a third
+        /// argument, because a designation is a verb applied to whatever is already there and this
+        /// names a thing that is not there yet — it carries what to make and what to make it of,
+        /// and the component that owns it is not the one that owns orders.
         /// </summary>
         PlaceBuilding,
 
         /// <summary>Take a building site off a cell, refunding whatever was delivered to it.</summary>
         CancelBuilding,
+
+        /// <summary>
+        /// Give one built bed to one colonist, or take it back: <see cref="Intent.Cell"/> is any
+        /// cell of the bed and <c>A</c> the <c>PawnId</c>, or -1 to leave the bed unowned.
+        ///
+        /// <para><b>A persistent assignment, not a reservation.</b> Reservations are transient by
+        /// design — all-or-nothing, released on job end — while ownership is state the world
+        /// keeps: the bed sleeps its owner and nobody else until somebody says otherwise. One bed
+        /// per colonist is the handler's rule, not the interface's hope: assigning a colonist who
+        /// already has a bed releases the old one, so a pawn can never hold two and the sleep
+        /// chooser never has to break a tie.</para>
+        ///
+        /// <para>A command, not a question: queued while the clock is paused and applied on
+        /// unpause, exactly as a build order is.</para>
+        /// </summary>
+        AssignBedOwner,
 
         /// <summary>
         /// Put one job on one named colonist, now: <c>A</c> is a <c>JobIndex</c> value and
@@ -105,6 +122,12 @@ namespace Odyssey.Sim.Contracts
             IntentKind.PlaceBuilding => true,
             IntentKind.CancelBuilding => true,
             IntentKind.ForceJob => true,
+            // Assigning a bed's owner is a player's order over a cell and meets the test above
+            // exactly: it writes state the player authored and needs no system to finish it.
+            // It matters more than most, because the pane that offers it is a thing you open
+            // while paused — and a popover you pick a colonist from that leaves the row still
+            // reading "nobody" until you press play is the slab fault told again.
+            IntentKind.AssignBedOwner => true,
             _ => false,
         };
     }
@@ -138,12 +161,20 @@ namespace Odyssey.Sim.Contracts
         public readonly int A;
         public readonly int B;
 
-        public Intent(IntentKind kind, CellRef cell = default, int a = 0, int b = 0)
+        /// <summary>
+        /// The third payload, so far used by one intent: <c>PlaceBuilding</c> carries the facing
+        /// of a rotatable thing here. Zero for every intent that has no third thing to say, which
+        /// is also what "facing 0" means, so an old caller that names none places north.
+        /// </summary>
+        public readonly int C;
+
+        public Intent(IntentKind kind, CellRef cell = default, int a = 0, int b = 0, int c = 0)
         {
             Kind = kind;
             Cell = cell;
             A = a;
             B = b;
+            C = c;
         }
 
         public void ContributeTo(ref StateHash hash)
@@ -152,9 +183,10 @@ namespace Odyssey.Sim.Contracts
             hash.Add(Cell);
             hash.Add(A);
             hash.Add(B);
+            hash.Add(C);
         }
 
-        public override string ToString() => $"{Kind}({Cell}, {A}, {B})";
+        public override string ToString() => $"{Kind}({Cell}, {A}, {B}, {C})";
     }
 
     /// <summary>An intent the simulation refused, and why, so the UI can say so.</summary>

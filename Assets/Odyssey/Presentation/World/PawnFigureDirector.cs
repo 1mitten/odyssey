@@ -865,7 +865,24 @@ namespace Odyssey.Presentation.World
         public void Evaluate(float deltaTime)
         {
             for (int i = 0; i < _figures.Count; i++)
-                if (_figures[i].Pawn >= 0) _figures[i].Graph.Evaluate(deltaTime);
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+
+                // **A sleeper's clip is held on one frame** (owner, 2026-09-18: "when they are
+                // sleeping - they should be static and not animated. Still in that position").
+                // The lying pose is laid over whatever the graph produced, so without this a
+                // sleeping colonist kept the standing idle's breathing and weight-shift underneath
+                // it and swayed on the mattress.
+                //
+                // **Evaluated with a zero delta, not skipped.** The additive pose is applied with
+                // Pitch, which multiplies onto the bone's current rotation — that is safe only
+                // because the clip rewrites the base pose every frame first. Skip the evaluate and
+                // the same pitches compound on themselves each frame, and the figure winds itself
+                // into a spiral. Evaluate(0) samples the clip at the time it is already at, which
+                // gives the identical base every frame and costs the same as any other sample.
+                figure.Graph.Evaluate(figure.SleepWeight >= 1f ? 0f : deltaTime);
+            }
             ApplyFooting();
             ApplyWorkPose();
             // The chips as well: under the player loop Unity steps them, and in an editor tool
@@ -875,6 +892,65 @@ namespace Odyssey.Presentation.World
             Chips?.Evaluate(deltaTime);
         }
 
+
+        /// <summary>
+        /// Work out where a sleeping colonist's body goes: which way it lies, about what point, and
+        /// on what surface.
+        ///
+        /// <para><b>The bed is looked up rather than carried on the view.</b> The pawn is standing
+        /// in the bed's own cell and presentation already knows which way every bed faces and how
+        /// high its mattress is, so a field on <c>PawnView</c> saying so would be a second copy of
+        /// an answer this side already has — and the one that would go stale.</para>
+        ///
+        /// <para><b>No bed is not a failure case.</b> A colonist who could not reach one lies down
+        /// where it is, along whatever it was last facing; that is the <c>SleptOnGround</c> memory
+        /// made visible, and it is the owner's own second ask (2026-09-18: "lies on the bed and also
+        /// lies on the floor").</para>
+        /// </summary>
+        void AimSleep(Figure figure, in PawnView pawn)
+        {
+            int index = World != null && World.Size.Contains(pawn.Cell.X, pawn.Cell.Z, pawn.Cell.Y)
+                ? World.Size.Index(pawn.Cell.X, pawn.Cell.Z, pawn.Cell.Y)
+                : -1;
+
+            int head = index >= 0 && World != null ? World.BedHeadAt(index) : -1;
+            if (head >= 0 && World != null)
+            {
+                CellRef at = World.Size.FromIndex(head);
+                int facing = World.BedFacing(head);
+
+                // The bed's own origin and its own facing, from the same place the bed itself is
+                // drawn from — so a sleeper cannot lie across a bed that has been turned.
+                Vector3 origin = GroundRelief.Lift(BedShape.Origin(at.X, at.Z, at.Y, facing));
+                var along = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
+
+                // The head goes on the pillow, which is a point the bed itself decides — so moving
+                // the pillow moves the sleeper and the two cannot drift apart.
+                figure.SleepHeadAt = origin + along * BedShape.HeadRestAlong;
+                figure.SleepSurfaceY = origin.y + BedShape.MattressTop;
+                figure.SleepAlong = along;
+                return;
+            }
+
+            Vector3 floor = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
+            figure.SleepSurfaceY = floor.y;
+
+            // Whatever it was facing when it lay down. Held rather than recomputed, so a colonist
+            // asleep on the ground does not swing round as the yaw eases.
+            Vector3 heading = Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward;
+            if (heading.sqrMagnitude > 1e-6f) figure.SleepAlong = heading;
+
+            // No pillow to aim at, so the body is centred on the cell it dropped in: the head goes
+            // half a body-length back along the way it is lying.
+            figure.SleepHeadAt =
+                floor - figure.SleepAlong * (SleepPose.BodyLength(figure.StandingHipHeight) * 0.5f);
+        }
+
+        /// <summary>
+        /// Force every figure to a sleep weight, for a harness and a contact sheet. Null is the
+        /// game's own answer, which is what the pawn says.
+        /// </summary>
+        public float? ForceSleep { get; set; }
 
         /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
         static void Pitch(Transform? bone, Vector3 axis, float degrees)
@@ -1110,6 +1186,14 @@ namespace Odyssey.Presentation.World
                 : SwimPose.Settle(figure.SwimWeight, afloat, deltaTime);
             if (running && figure.SwimWeight > 0.001f) figure.SwimClock += deltaTime;
 
+            // Asleep, and where. A bed decides which way the body lies and how high off the floor;
+            // with no bed the colonist lies where it dropped, facing wherever it last faced, which
+            // is the SleptOnGround case and is drawn rather than left standing.
+            figure.SleepWeight = ForceSleep.HasValue
+                ? ForceSleep.Value
+                : SleepPose.Settle(figure.SleepWeight, pawn.Asleep ? 1f : 0f, deltaTime);
+            if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
+
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
@@ -1236,6 +1320,21 @@ namespace Odyssey.Presentation.World
 
             figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
             figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
+
+            // Laid down last, over everything above, because lying is a statement about the whole
+            // figure rather than an adjustment to a standing one: the lean, the heading and the
+            // footing all describe a colonist on its feet and none of them means anything once it
+            // is on its back. Blended by the weight, so the standing pose is what it eases from.
+            if (figure.SleepWeight > 0.001f)
+            {
+                SleepPose.Place(
+                    SleepPose.PostureFor(figure.Pawn), figure.SleepHeadAt, figure.SleepAlong,
+                    figure.SleepSurfaceY, figure.StandingHipHeight, figure.SleepWeight,
+                    figure.Transform.position, figure.Transform.rotation,
+                    out Vector3 lain, out Quaternion laid);
+                figure.Transform.position = lain;
+                figure.Transform.rotation = laid;
+            }
 
             Blend(figure, figure.Speed, running);
         }

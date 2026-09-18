@@ -466,6 +466,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(placed.Def, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(placed.Stuff, Is.EqualTo(NaturalContent.StuffWood), "it remembers what it was made of");
             Assert.That(placed.CellIndex, Is.EqualTo(cell));
+            Assert.That(placed.Quality, Is.EqualTo(0),
+                "walls take no quality for ever — the finisher's roll is furniture's, not structure's");
 
             // Five went into the wall; the other fifteen are still the colony's.
             Assert.That(OnTheGround(colony, ItemIndex.Wood), Is.EqualTo(15));

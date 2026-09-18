@@ -516,7 +516,9 @@ because the game ships panning on WASD *or* arrows and slicing on R/F *or* PgUp/
 another action owns is refused and reported, never silently swapped. It runs **one global
 context**: no key means two things today, and the contexts below — like `InputRouter` — arrive on
 the day one does. Escape and the modifiers are not bindable at all, and the function keys are
-reserved for the command bar's panels.
+reserved for the command bar's panels. **The first second-use of a key arrived on 2026-09-17 and
+is case 9 below** — claimed at the press, not by a second binding, so the map's one-key-one-action
+invariant still holds and the clash test still passes.
 
 **Contexts** change what a key means: world, tool active, panel focused, text entry, modal.
 Conflicts are detected at load and reported, not silently resolved.
@@ -551,6 +553,13 @@ The eight cases it must get right, each with a test:
 7. A tooltip never captures the pointer.
 8. Scroll over a panel scrolls the panel; scroll over the world zooms the camera; scroll with
    the layer modifier changes the slice regardless of what is under the cursor.
+9. **The slice-up key turns an armed rotatable thing** (2026-09-17, the bed, owner's answer in
+   `docs/design/20-beds.md` §2: R rotates the ghost; PageUp is always slice-up; R raises the
+   slice whenever nothing rotatable is armed). The claim is made at the press by the two
+   consumers agreeing on one predicate — `DesignateDirector.RotatableArmed`, decided in the fast
+   tier — not by a second `HotkeyAction`, because a second action on R is a clash the binding map
+   refuses by design and a context rule stated twice is a rule one half of forgets. This is the
+   game's first context rule; when real contexts arrive, it is the first thing they inherit.
 
 Layer navigation needs bindings the reference game has no need for, so they are specified
 fresh in `docs/design/10-ui-panel-catalogue.md` rather than adapted.

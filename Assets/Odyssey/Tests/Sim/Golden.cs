@@ -88,6 +88,25 @@ namespace Odyssey.Tests.Sim
     /// <c>Generated</c> here would have meant something else had come along with it. Checked by
     /// running the table before re-baking and reading which assertion failed: all three failed on
     /// the second, which is the one that fires only after the first has passed.</para>
+    ///
+    /// <para><b>Moved a <b>sixth</b> time, in the same breath, by the beds, and only the two boards with
+    /// something standing.</b> <c>PlacedEdifice</c> gained <c>Facing</c>, <c>Quality</c> and
+    /// <c>Owner</c>, all hashed by <c>EdificeSaveSection</c>, and a construction site gained a
+    /// hashed facing byte. The barren meadow did not move at all — it has an empty edifice list
+    /// and never places a site, so the new fields contribute nothing — which is the control that
+    /// says the generator itself is untouched. The wooded board's trees and the city's walls are
+    /// generator-stamped records, and every one of them now contributes three more zeros to the
+    /// walk; rebaked once on top of U40's numbers, not twice — see the values below.</para>
+    ///
+    /// <para><b>The two landed together and were baked once, and the shape of the re-bake is what
+    /// says it is honest.</b> The pickup duration and the bed's three edifice fields reached this
+    /// file from opposite branches. Read what moved: <b>the barren meadow did not move at all</b>
+    /// — it keeps the number main gave it — because it has an empty edifice list and never places
+    /// a site, so the beds contribute nothing to it. The wooded and city boards' <c>Generated</c>
+    /// values are <b>exactly the beds branch's own</b>, unchanged by the merge, because a duration
+    /// is content and content cannot move a hash taken before the first tick. Only their
+    /// <c>Simulated</c> numbers are new to both branches, which is the one place two changes could
+    /// combine. Any other pattern would have meant something had come along uninvited.</para>
     /// </summary>
     public static class Golden
     {
@@ -159,8 +178,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 8029423938199474119UL,
-            Simulated = 16725035343162846352UL,
+            Generated = 15662665231234558495UL,
+            Simulated = 3319942754904635200UL,
         };
 
         /// <summary>
@@ -175,8 +194,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 2695749815698818099UL,
-            Simulated = 2896902808510897329UL,
+            Generated = 13030130651254543899UL,
+            Simulated = 10435990758459796433UL,
         };
     }
 }

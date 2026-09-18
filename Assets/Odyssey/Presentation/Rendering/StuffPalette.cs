@@ -276,6 +276,13 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The colour a module of this stuff takes, given whether art is underneath it.</summary>
         public static Color For(int stuff, bool overArt) => overArt ? StuffTint(stuff) : StuffSolid(stuff);
 
+        /// <summary>
+        /// Bedding. Not pure white: nothing else in the world is, and a 1.0 surface under the
+        /// golden hour blows out and reads as a light source rather than as cloth. This is a warm
+        /// off-white, the colour of an unbleached sheet.
+        /// </summary>
+        public static readonly Color Linen = new Color(0.93f, 0.92f, 0.88f, 1f);
+
         /// <summary>The terrain def name for a terrain index, for the module id.</summary>
         public static string TerrainName(int terrain) =>
             terrain >= 0 && terrain < NaturalContent.TerrainCount

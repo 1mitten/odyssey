@@ -74,6 +74,16 @@ namespace Odyssey.Hud
     {
         public string Name;
         public string Value;
+
+        /// <summary>
+        /// The colour the value is drawn in, or null to leave the row's own colour alone.
+        ///
+        /// <para>Set only where the value carries a judgement the colour is part of — a quality
+        /// tier — so that <c>HudTheme.Quality</c> is the one place a tier's colour is decided and
+        /// every surface that names one agrees. Null is the ordinary case and means the shell
+        /// touches nothing.</para>
+        /// </summary>
+        public HudColour? Tint;
     }
 
     /// <summary>
@@ -238,6 +248,7 @@ namespace Odyssey.Hud
         {
             Tabs.Clear();
             Commands.Clear();
+            _bedUnderPane = false;
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -490,6 +501,24 @@ namespace Odyssey.Hud
         int _cellRowsWork;
         int _cellRowsOrderKind;
         int _cellRowsOrderPercent;
+        int _cellRowsQuality;
+        int _cellRowsOwner;
+
+        /// <summary>
+        /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
+        /// first interactive fact, and the one thing a tile readout can do rather than only say
+        /// (design 20 §8). Cleared every refresh and set only by <see cref="SetCellRows"/>, so a
+        /// stale true cannot outlive the bed it described.
+        /// </summary>
+        public bool BedUnderPane => _bedUnderPane;
+
+        bool _bedUnderPane;
+
+        /// <summary>
+        /// The cell the pane is describing, for whoever must name it back to the world — the
+        /// owner picker's pick is an intent about this cell.
+        /// </summary>
+        public CellRef Cell => _cell;
 
         /// <summary>
         /// The tile's facts, one row each, in a fixed order so a fact is always in the same
@@ -512,6 +541,16 @@ namespace Odyssey.Hud
             }
             int orderPercent = (progress * 100 + 127) / 255;
 
+            // **Set before the early return, not inside the rebuild.** This is a fact about the
+            // cell the pane is holding, not about whether the rows happened to change — and it was
+            // written as the latter, which armed the affordance for exactly one frame and then
+            // killed it. `Refresh` clears it every time; `SetCellRows` returns here whenever
+            // nothing has moved; so the second refresh after a bed was selected cleared the flag,
+            // took this return, and never set it again. The row went on reading "Assign…" for ever
+            // over a control that was dead, and the owner reported being unable to assign a bed
+            // three times across two sessions before a test could say why (BedOwnerPickerTests).
+            _bedUnderPane = detail.EdificeQuality > 0;
+
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
                 && _cellRowsFloor == detail.FloorStuff
@@ -519,7 +558,9 @@ namespace Odyssey.Hud
                 && _cellRowsSupport == detail.Support
                 && _cellRowsWork == detail.WorkToClear
                 && _cellRowsOrderKind == (ordered ? kind : 0)
-                && _cellRowsOrderPercent == (ordered ? orderPercent : 0)) return;
+                && _cellRowsOrderPercent == (ordered ? orderPercent : 0)
+                && _cellRowsQuality == detail.EdificeQuality
+                && _cellRowsOwner == detail.EdificeOwner) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -529,6 +570,8 @@ namespace Odyssey.Hud
             _cellRowsWork = detail.WorkToClear;
             _cellRowsOrderKind = ordered ? kind : 0;
             _cellRowsOrderPercent = ordered ? orderPercent : 0;
+            _cellRowsQuality = detail.EdificeQuality;
+            _cellRowsOwner = detail.EdificeOwner;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -537,6 +580,26 @@ namespace Odyssey.Hud
                 Row(n++, OrderVerb(kind), orderPercent + "% done");
             else if (detail.WorkToClear > 0)
                 Row(n++, "minable", "about " + Seconds(detail.WorkToClear) + " of work");
+
+            // A bed's own two facts, beside what it is (design 20 §8): how well it was made, and
+            // whose it is. The owner row is the pane's first interactive row — the shell turns a
+            // press on it into the assign popover — so it is said even where nobody owns the bed
+            // yet, because "give this to somebody" is the actionable clause and the actionable
+            // clause leads.
+            if (detail.EdificeQuality > 0)
+            {
+                Row(n++, "quality", QualityLabels.Label(detail.EdificeQuality),
+                    HudTheme.Quality(detail.EdificeQuality));
+
+                // "Assign…" rather than an em dash for a bed nobody owns. The row has been
+                // pickable since it was written and nothing said so: it looked exactly like the
+                // rows above and below it, which are facts, and the owner could not find the
+                // feature at all (2026-09-17: "I couldn't work out how to assign a colonist to a
+                // bed"). A control has to say it is one, and the word is the cheapest way to.
+                Row(n++, "owner", detail.EdificeOwner > 0
+                    ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
+                    : "Assign…");
+            }
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"
@@ -560,12 +623,13 @@ namespace Odyssey.Hud
             while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
         }
 
-        void Row(int index, string name, string value)
+        void Row(int index, string name, string value, HudColour? tint = null)
         {
             while (CellRows.Count <= index) CellRows.Add(new InspectRow());
             InspectRow row = CellRows[index];
             row.Name = name;
             row.Value = value;
+            row.Tint = tint;
             CellRows[index] = row;
         }
 

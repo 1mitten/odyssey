@@ -121,12 +121,37 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly byte GestureSerial;
 
+        /// <summary>
+        /// Whether this pawn is asleep — so that it can be <b>drawn</b> asleep.
+        ///
+        /// <para><b>A field here rather than a <see cref="PawnAspect"/>, and the reason is the one
+        /// the aspect seam itself gives:</b> aspects are selection-scoped, published for the pawn
+        /// the interface asked about and no other, and every colonist on screen has to be drawn
+        /// in the right pose whether anybody has selected them or not. It sits beside
+        /// <see cref="Working"/> because it is the same kind of fact — a pose input, which is
+        /// precisely why that field is on this view too.</para>
+        ///
+        /// <para><b>Written because a sleeping colonist was drawn standing up.</b> Nothing in the
+        /// whole of presentation knew this, so a colonist who had walked to a bed and gone to
+        /// sleep in it stood bolt upright in it all night — and the owner, watching, reported that
+        /// colonists would not use the beds at all and stood outside instead (2026-09-18). They
+        /// were in the beds. The simulation was measured and is correct; there was no way to see
+        /// it.</para>
+        ///
+        /// <para>The direction to lie in is not carried: the pawn is in the bed's own cell and
+        /// presentation already knows which way that bed faces, so a second field would be a
+        /// second copy of an answer.</para>
+        /// </summary>
+        public readonly bool Asleep;
+
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
             bool working = false, CellRef workCell = default,
-            PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0)
+            PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
+            bool asleep = false)
         {
+            Asleep = asleep;
             Gesture = gesture;
             GestureSerial = gestureSerial;
             Id = id;
@@ -364,8 +389,19 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
         public bool IsFrame => Delivered >= Cost;
 
+        /// <summary>
+        /// The rotation the order was placed at, 0–3 — meaningful only while
+        /// <see cref="Footprint"/> is greater than one, and carried so the interface can draw the
+        /// site's marks over every cell the thing will occupy rather than its head alone.
+        /// </summary>
+        public readonly byte Facing;
+
+        /// <summary>Cells the finished thing will occupy: two for the bed's order, one otherwise.</summary>
+        public readonly byte Footprint;
+
         public SiteView(int cellIndex, byte building, byte stuff,
-            ushort delivered, ushort cost, int workDone, int workTotal)
+            ushort delivered, ushort cost, int workDone, int workTotal,
+            byte facing = 0, byte footprint = 1)
         {
             CellIndex = cellIndex;
             Building = building;
@@ -374,6 +410,8 @@ namespace Odyssey.Sim.Contracts
             Cost = cost;
             WorkDone = workDone;
             WorkTotal = workTotal;
+            Facing = facing;
+            Footprint = footprint;
         }
     }
 
@@ -431,8 +469,20 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly ushort WorkToClear;
 
+        /// <summary>
+        /// The tier the bed standing here finished at, 1–5, or 0 where there is no bed — which is
+        /// every wall, for ever. Sparse like the row it rides: most cells answer nothing.
+        /// </summary>
+        public readonly byte EdificeQuality;
+
+        /// <summary>
+        /// The <c>PawnId</c> of the colonist the bed standing here belongs to, or 0 where it is
+        /// nobody's — 0 being a value no pawn has, ids being 1-based.
+        /// </summary>
+        public readonly int EdificeOwner;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
-            ushort moveCostPerMille, ushort workToClear)
+            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0)
         {
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -441,6 +491,8 @@ namespace Odyssey.Sim.Contracts
             Support = support;
             MoveCostPerMille = moveCostPerMille;
             WorkToClear = workToClear;
+            EdificeQuality = edificeQuality;
+            EdificeOwner = edificeOwner;
         }
     }
 

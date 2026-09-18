@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The five tiers a quality-bearing thing can finish at (docs/design/20-beds.md section 6), in
+  handle order: a QualityDef's position is a QualityHandle value written into a finished record,
+  so this order is the contract exactly as BuildingOrder is. Index 0 is "takes no quality",
+  matching the handle's zero default exactly as Building_None does.
+
+  restEffectiveness is a LEVEL in per cent of a plain bed's rest, on the same scale
+  groundRestEffectiveness already uses (80 for the ground) - not a factor in thousandths,
+  because nothing multiplies it and the player reads it. Poor 85, Normal 100, Decent 112,
+  Uber 125, Epic 140: the owner's interview answers, 2026-09-17, provisional by design and
+  tunable here without touching code.
+
+  The roll itself is arithmetic in QualityContent.Roll, not a table here: the weight of a tier
+  falls off by two a step from the tier the finishing skill has earned, so a novice can never
+  reach Epic and a master can never fall to Poor. Those endpoints are what the tests pin.
+-->
+<Defs>
+  <QualityDef>
+    <defName>Quality_None</defName>
+    <label>nothing</label>
+    <restEffectiveness>100</restEffectiveness>
+  </QualityDef>
+  <QualityDef>
+    <defName>Quality_Poor</defName>
+    <label>poor</label>
+    <restEffectiveness>85</restEffectiveness>
+    <iconKey>ui.quality.poor</iconKey>
+  </QualityDef>
+  <QualityDef>
+    <defName>Quality_Normal</defName>
+    <label>normal</label>
+    <restEffectiveness>100</restEffectiveness>
+    <iconKey>ui.quality.normal</iconKey>
+  </QualityDef>
+  <QualityDef>
+    <defName>Quality_Decent</defName>
+    <label>decent</label>
+    <restEffectiveness>112</restEffectiveness>
+    <iconKey>ui.quality.decent</iconKey>
+  </QualityDef>
+  <QualityDef>
+    <defName>Quality_Uber</defName>
+    <label>uber</label>
+    <restEffectiveness>125</restEffectiveness>
+    <iconKey>ui.quality.uber</iconKey>
+  </QualityDef>
+  <QualityDef>
+    <defName>Quality_Epic</defName>
+    <label>epic</label>
+    <restEffectiveness>140</restEffectiveness>
+    <iconKey>ui.quality.epic</iconKey>
+  </QualityDef>
+</Defs>

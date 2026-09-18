@@ -67,7 +67,8 @@ namespace Odyssey.Sim.Pawns
             // Until 2026-09-17 a wall a colonist raised was in neither the save nor the hash;
             // `EdificeSaveSection` carries the measurement that found it.
             var edificeSave = new EdificeSaveSection(edifices);
-            construction = new ConstructionGrid(pawns.Cells, edificeSave, pawns.Items, support.Solver);
+            construction = new ConstructionGrid(
+                pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
             // U29: the seam through which a job that edits the world says the structure changed.

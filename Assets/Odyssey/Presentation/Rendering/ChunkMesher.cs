@@ -501,9 +501,16 @@ namespace Odyssey.Presentation.Rendering
                 return;
             }
 
-            int tint = TintCode.Stuff(def >= NaturalContent.FirstEdifice
-                ? CoreContent.StuffNone
-                : _model.EdificeStuff(index));
+            // And what is left wears what it was built of, with no id-range test in front of it.
+            //
+            // There used to be one — `def >= NaturalContent.FirstEdifice ? StuffNone : …` — which
+            // meant "the natural things have no stuff", and while trees were the only natural
+            // edifices it was true. The bed's id is 12 and FirstEdifice is 10, so that test would
+            // now strip a bed of the wood or stone it was built from and draw every one of them
+            // untinted. Trees having gone out above, the question the test was asking no longer
+            // has anything to ask it about: whatever reaches here has a record, and the record
+            // says what it is made of.
+            int tint = TintCode.Stuff(_model.EdificeStuff(index));
             var shape = _model.Library[module].Shape;
 
             switch (def)
@@ -517,6 +524,9 @@ namespace Odyssey.Presentation.Rendering
                     return;
                 case CoreContent.EdificeLadder:
                     EmitLadder(batch, module, tint, index, x, z, y);
+                    return;
+                case CoreContent.EdificeBed:
+                    EmitBed(batch, module, tint, index, x, z, y);
                     return;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
@@ -648,6 +658,49 @@ namespace Odyssey.Presentation.Rendering
             AddBody(batch, module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f)));
+        }
+
+        /// <summary>
+        /// The bed, drawn once from the head cell as three scaled instances of the plain block
+        /// module: a frame, a mattress, a pillow — the computed-swing idiom, an honest placeholder
+        /// for two-tile art no pack contains (design 20 §9). The far cell points at the same
+        /// record and draws nothing of it.
+        ///
+        /// <para><b>Centred on the seam and draped there</b>, because a bed is one thing fixed to
+        /// the grid across two cells, and the rule the stepped walls settled is that anything
+        /// fixed to the grid is draped. The scale factors are fractions of the block module's own
+        /// cell extents, so the geometry is stated in cells and survives a cell-size change.</para>
+        ///
+        /// <para><b>It may straddle a chunk boundary</b> when its two cells sit across a chunk
+        /// edge: instances are not clipped by their bucket, so it renders correctly from either
+        /// side, and this is written here so nobody "fixes" it later. Both cells' chunks are
+        /// marked dirty by the same edit that raised the bed.</para>
+        ///
+        /// <para>The pillow sits at the head end — local −Z — and the facing's yaw turns local +Z
+        /// outward, so the head of a north-facing bed is the cell the order named, which is the
+        /// cell the sleep chooser sends its owner to.</para>
+        /// </summary>
+        void EmitBed(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
+        {
+            if (!_model.BedHead(index)) return;
+
+            int facing = _model.BedFacing(index);
+
+            // The three parts come from BedShape, which the cursor's ghost asks as well: a bed
+            // drawn one way under the pointer and another way on the board is how the build
+            // cursor's whole bargain comes undone.
+            //
+            // The pillow is its own module and its own tint — a rounded shape rather than a box,
+            // and linen rather than the stuff the frame is made of.
+            Matrix4x4 root = BedShape.Root(x, z, y, facing);
+            for (int part = 0; part < BedShape.PartCount; part++)
+            {
+                bool pillow = BedShape.IsPillow(part);
+                AddBody(batch,
+                    pillow ? _model.BedPillowModule : module,
+                    pillow ? TintCode.Linen() : tint,
+                    BedShape.Part(root, facing, part));
+            }
         }
 
         int FirstOpenDirection(int x, int z, int y)

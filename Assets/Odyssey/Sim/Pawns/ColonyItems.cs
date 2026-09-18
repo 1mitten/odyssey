@@ -165,6 +165,17 @@ namespace Odyssey.Sim.Pawns
             if (at < 0) _beds.Insert(~at, cell);
         }
 
+        /// <summary>
+        /// Take a bed cell out of the list — the other half of <see cref="AddBed"/>, which until a
+        /// bed could be built had no caller: a deconstructed bed must stop being slept in, and the
+        /// scenario's own cells are never removed.
+        /// </summary>
+        public void RemoveBed(int cell)
+        {
+            int at = _beds.BinarySearch(cell);
+            if (at >= 0) _beds.RemoveAt(at);
+        }
+
         public bool IsStockpileCell(int cell) => _stockpileAtCell.ContainsKey(cell);
 
         public Stockpile? StockpileAt(int cell) =>
@@ -248,7 +259,37 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>Is this cell empty? The question a bed, a spawn or a footprint asks.</summary>
-        public bool CellHasSpace(int cell) => !_itemAtCell.ContainsKey(cell);
+        public bool CellHasSpace(int cell) =>
+            !_itemAtCell.ContainsKey(cell) && !_noItems.Contains(cell);
+
+        /// <summary>
+        /// Cells that hold furniture nothing may be put down in — both cells of every bed.
+        ///
+        /// <para><b>Derived, not saved</b>, and rebuilt from the edifice list on load exactly as
+        /// structural support, the region graph and a ladder's connector are
+        /// (<c>ColonyWorld.RebuildDerived</c>). That is what keeps this out of the save format and
+        /// out of the state hash.</para>
+        ///
+        /// <para><b>Why it is here and not only at the build order.</b> Refusing to <i>place</i> a
+        /// bed on a pile is half the rule; the other half is that a hauler must not carry a pile on
+        /// to a bed afterwards, which is the same picture arriving the other way round — the owner
+        /// reported it as meals poking up through a mattress (2026-09-18), and that is exactly what
+        /// <see cref="NearestCellWithSpace"/> would do with an empty, walkable, bed-shaped cell.
+        /// It also stopped a bed cell from being a haul destination at all, which was locking a
+        /// colonist out of their own bed: <c>TrySleep</c> checks the reservation before it checks
+        /// whose bed it is, so a hauler's claim on the cell sent the owner to sleep on the
+        /// ground.</para>
+        /// </summary>
+        readonly HashSet<int> _noItems = new HashSet<int>();
+
+        /// <summary>Nothing may be put down in this cell while the furniture stands there.</summary>
+        public void BlockItemsAt(int cell) => _noItems.Add(cell);
+
+        /// <summary>The other half: the furniture has gone and the cell is ordinary ground again.</summary>
+        public void AllowItemsAt(int cell) => _noItems.Remove(cell);
+
+        /// <summary>Forget every block, before they are worked out again from the edifice list.</summary>
+        public void ClearItemBlocks() => _noItems.Clear();
 
         /// <summary>
         /// Can this cell take <paramref name="count"/> of a def? Empty, or holding the same def
@@ -260,7 +301,8 @@ namespace Odyssey.Sim.Pawns
         /// stack of anything else, is not space.
         /// </summary>
         public bool CellHasSpace(int cell, int defIndex, int count) =>
-            !_itemAtCell.TryGetValue(cell, out int index) || Fits(_items[index], defIndex, count);
+            !_noItems.Contains(cell)
+            && (!_itemAtCell.TryGetValue(cell, out int index) || Fits(_items[index], defIndex, count));
 
         bool Fits(ColonyItem resident, int defIndex, int count) =>
             resident.DefIndex == defIndex && resident.Stack + count <= Content.Items[defIndex].stackLimit;

@@ -44,11 +44,26 @@ namespace Odyssey.Sim.World
             ushort terrain = _grid.Terrain[cell];
 
             byte edifice = 0;
+            byte quality = 0;
+            int owner = 0;
             int handle = _grid.Edifice[cell];
             if (handle >= 0 && handle < _edifices.Count)
             {
                 PlacedEdifice placed = _edifices[handle];
-                if (!placed.Removed) edifice = (byte)placed.Def;
+                if (!placed.Removed)
+                {
+                    edifice = (byte)placed.Def;
+
+                    // A bed's own two answers, published beside what it is: the tier its finisher
+                    // rolled and who it belongs to. Every other edifice carries zeros and the pane
+                    // shows nothing, which is the same silence walls have always had (design 20
+                    // §8).
+                    if (placed.Def == CoreContent.EdificeBed)
+                    {
+                        quality = placed.Quality;
+                        owner = placed.Owner;
+                    }
+                }
             }
 
             byte floorStuff = _grid.Floor[cell] != 0 ? (byte)_grid.FloorStuff[cell] : (byte)0;
@@ -62,7 +77,8 @@ namespace Odyssey.Sim.World
             ushort workToClear = (ushort)WorldContent.Table[terrain].workToClear;
 
             writer.AddCellDetail(new CellDetail(
-                cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear));
+                cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
+                quality, owner));
         }
     }
 }

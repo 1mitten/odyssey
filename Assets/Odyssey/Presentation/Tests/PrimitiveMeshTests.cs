@@ -44,6 +44,68 @@ namespace Odyssey.Tests.Presentation
             }
         }
 
+        /// <summary>
+        /// The pillow faces outwards too, and the same argument applies: a rounded box wound the
+        /// wrong way is valid geometry that draws its own inside and reports healthy counts.
+        ///
+        /// <para>Checked against the outward direction rather than against a stored normal, because
+        /// the pillow's normals are recalculated and smooth — so a normal that agreed with a
+        /// mis-wound triangle would prove nothing. Every vertex of a superellipsoid about the
+        /// origin is itself an outward direction, which is the oracle used here.</para>
+        /// </summary>
+        [Test]
+        public void ThePillowFacesOutwards()
+        {
+            Mesh pillow = PillowMesh.Mesh;
+            Vector3[] vertices = pillow.vertices;
+            int[] triangles = pillow.triangles;
+
+            int checkedFaces = 0;
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                Vector3 a = vertices[triangles[t]];
+                Vector3 b = vertices[triangles[t + 1]];
+                Vector3 c = vertices[triangles[t + 2]];
+
+                Vector3 wound = Vector3.Cross(b - a, c - a);
+                if (wound.sqrMagnitude < 1e-12f) continue; // degenerate sliver at a pole
+
+                Vector3 outward = ((a + b + c) / 3f).normalized;
+                if (outward.sqrMagnitude < 0.5f) continue;
+
+                Assert.That(Vector3.Dot(wound.normalized, outward), Is.GreaterThan(0f),
+                    $"triangle {t / 3} of the pillow is wound inward");
+                checkedFaces++;
+            }
+
+            Assert.That(checkedFaces, Is.GreaterThan(100), "most of the pillow was actually checked");
+        }
+
+        /// <summary>
+        /// The pillow fills the same −0.5..0.5 unit box every other stand-in does, so
+        /// <c>ModuleLibrary</c>'s placement maths means the same thing for it.
+        /// </summary>
+        [Test]
+        public void ThePillowFillsTheUnitBox()
+        {
+            Bounds bounds = PillowMesh.Mesh.bounds;
+
+            Assert.That(bounds.min.x, Is.EqualTo(-0.5f).Within(0.01f));
+            Assert.That(bounds.max.x, Is.EqualTo(0.5f).Within(0.01f));
+            Assert.That(bounds.min.y, Is.EqualTo(-0.5f).Within(0.01f));
+            Assert.That(bounds.max.y, Is.EqualTo(0.5f).Within(0.01f));
+            Assert.That(bounds.min.z, Is.EqualTo(-0.5f).Within(0.01f));
+            Assert.That(bounds.max.z, Is.EqualTo(0.5f).Within(0.01f));
+
+            // Rounded, not a box: a cube of the same extent would have eight corners at the full
+            // diagonal, and this must not. If this ever passes at the cube's distance the
+            // roundness has been turned to zero and the pillow is a block again.
+            float cubeCorner = new Vector3(0.5f, 0.5f, 0.5f).magnitude;
+            float furthest = 0f;
+            foreach (Vector3 v in PillowMesh.Mesh.vertices) furthest = Mathf.Max(furthest, v.magnitude);
+            Assert.That(furthest, Is.LessThan(cubeCorner * 0.95f), "the pillow is not rounded at all");
+        }
+
         [Test]
         public void EveryFaceCarriesAWholeTexture()
         {

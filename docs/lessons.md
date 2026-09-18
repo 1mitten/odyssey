@@ -1816,3 +1816,170 @@ a slot between the two, and at the top edge that slot is a line of sight onto wh
 a hairline of lit ground along the brow of every waterfall. Close it by extending the sheet *into*
 the surface it hangs from, and lengthen it by the same amount or it stops short at the bottom, which
 is the half-right version of the fix.
+
+## A failed `Assume` is invisible, and `dotnet test` still prints "Passed!"
+
+Found 2026-09-17 reviewing the beds merge. Four tests covering the whole of bed ownership were
+not running: a helper raised a bed without first ordering one, so no bed stood, and each test
+ended on `Assume.That(assign(...), Is.EqualTo(IntentRejection.None))`. NUnit reports a failed
+assumption as **Inconclusive**, VSTest records it as `NotExecuted`, and the console summary
+counts it as neither passed nor skipped — the run says `Passed! - Failed: 0, Skipped: 0` and
+the test simply is not in the totals. The tier had been green over an untested feature since the
+day it was written.
+
+Two habits that catch it:
+
+- **Count the tests, not the word "Passed".** A total that does not grow when you add a test is
+  the symptom. `--logger "trx;LogFileName=x.trx"` then grep the TRX for `outcome="NotExecuted"`
+  lists every one with its reason; a run with no filter should show only `Long`/`Benchmark` rows.
+- **`Assume` is for the board, not for the code under test.** "This seed happened to put a
+  buildable cell near the start" is an assumption. "The intent I just submitted was accepted" is
+  an assertion — if it can fail, the test must fail with it.
+
+The same run found `Assert.Ignore` hiding a second one: a test searched for solid ground at
+`start.Y`, which is the layer a colonist *stands in*, found none anywhere and ignored itself on
+every run since it was written. An `Ignore` with a plausible reason reads as an honest skip; check
+that the reason can ever be false.
+
+## A hand-written table parallel to a handle set will not conflict when the handles renumber
+
+Same merge. `BuildingHandle.Bed` moved from 2 to 5 to make room for three buildings that reached
+main first. `BuildShapes` — a two-array table in the Hud assembly, parallel to `BuildingHandle` —
+was not touched by main, so git merged it in silence with three entries, and the bed became a
+one-cell thing that could not be turned. Three `DesignateDirector` tests failed and none of them
+named the cause. The class's own remarks claimed a test held the two tables together; none did.
+
+**Every parallel table needs a length assertion against the handle set's `Count`**, in whichever
+assembly can see both. `RegistryTests` already did it for `BuildLabels`, `JobLabels` and
+`ItemLabels`; `BuildShapes` is now beside them. A handle added past the end of such an array does
+not throw — it reads as the default, which is the silently wrong answer.
+
+## Hover is not an affordance
+
+Two rounds were paid for this on the bed's owner row (2026-09-17, then again 2026-09-18). The row
+submitted an intent and had done since it was written; what it looked like at rest was a pointer
+cursor, then a hover brighten, then a border and a chevron. The owner could not find it either
+time, and said so in the same words both times: *"I couldn't work out how to assign a colonist to
+a bed."*
+
+A player does not hover a row to find out whether it is a control; they scan the panel and see
+facts. **A control has to look like one while the pointer is somewhere else entirely** — a filled
+box, an icon, and weight. The row also has to *name the action*: it read "—" for an unowned bed,
+which says there is nothing here, and a fast-tier test had pinned that em dash in place.
+
+## A simulation that works and cannot be seen is a simulation that is reported broken
+
+Same round, and the more expensive half. The owner reported that colonists would not use spare
+beds and stood outside instead. A probe on exactly that case — nobody owning anything, one spare
+bed, one tired colonist — walked the colonist into the bed and slept there. `TrySleep` was correct
+and always had been.
+
+Nothing in the whole of presentation knew a pawn could be asleep, so a colonist in a bed was drawn
+**standing bolt upright in it**. The bug report was accurate about what was on screen and wrong
+about what it meant, and it would have been perfectly reasonable to go and "fix" the sleep chooser.
+
+**Measure the behaviour before believing a behavioural bug report**, especially about a system with
+no visual state of its own. And when a feature ships whose whole evidence is a pose, a sprite or a
+readout — check that the thing exists, because its absence looks exactly like the feature not
+working.
+
+## Integer division silently collapses a tier table
+
+Found in the same measurement. Rest gain was `base * effectiveness / 100` with a base of 6, so the
+five quality tiers and the ground produced 4.8, 5.1, 6.0, 6.72, 7.5, 8.4 — truncated to 4, 5, 6,
+**6**, 7, 8. A Decent bed was worth exactly a Normal one. Nothing failed; every number was a good
+number.
+
+Where content is a percentage of a small integer, **assert the ladder** — each step strictly better
+than the one below — rather than the values. The fix is to spend the fractional part rather than
+discard it; a Bresenham step over an index the world already stores keeps it out of the save and
+the hash, where a carried remainder field would not.
+
+## A multiply-and-shift hash has no usable low bits, and `% small` reads only those
+
+The sleep posture is chosen with `% 4`, from a hash of the pawn id. The first cut was the ordinary
+Knuth multiply plus one shift — `h = id * 2654435761; h ^= h >> 15` — which is a perfectly good
+hash everywhere except in its bottom bits, and the bottom two bits were the only ones `% 4` ever
+looked at. **Every colonist in the colony came out in the same posture**, which is exactly the
+one-shape outcome the posture table exists to prevent.
+
+Where a hash feeds a small modulus, use a full avalanche (murmur3's `fmix32`: shift-xor, multiply,
+shift-xor, multiply, shift-xor) so the low bits carry the whole input. And test the *distribution
+over consecutive ids*, because consecutive is what a colony actually has — a test over scattered
+ids would have passed.
+
+## A single-assembly compile check cannot see an assembly boundary
+
+With the editor open on a worktree (and so the project locked against a batch run), the Presentation
+assembly can be compile-checked by pointing `dotnet build` at the sources with `LangVersion 9` —
+Unity's own — and referencing Unity's DLLs plus `Library/ScriptAssemblies`. That catches the thing
+the fast tier cannot: a construct that compiles under `latest` and not under 9.
+
+**It does not catch anything about assembly boundaries**, because it compiles every Odyssey source
+into one assembly. It reported clean on a PlayMode test that then failed in Unity twice over: a
+field that is `private` to `HudShell` looked reachable, and a type visible in the merged assembly
+was not visible across the real asmdef reference set. Treat it as a language-version gate, not as a
+substitute for `scripts/unity.sh`.
+
+The other half of the lesson: **a test written for a private field is usually asking the wrong
+question.** The fix was not to widen `HudShell._inspect` but to wait for the *row* to appear in the
+panel — which is what a player actually has, and a stronger assertion than the flag behind it.
+
+## A flag cleared every refresh and set only on the change path lives for one frame
+
+The bed's owner row submitted an intent and never fired, three reports across two sessions. The
+cause was two lines a long way apart in `InspectModel`: `Refresh` cleared `_bedUnderPane` **every
+time**, and it was set inside `SetCellRows` — which returns early whenever nothing about the cell
+has changed. So the flag was true on the refresh that built the rows and false on every refresh
+after it, while the row went on reading "Assign…" over a control the shell had already disarmed.
+
+**A pane refreshes many times a second and a player clicks a good deal later than that**, so the
+only frame the old code got right was the one nobody could click in. Two consequences worth
+carrying:
+
+- **Derive an affordance from the state it describes, not from the work that displayed it.** The
+  flag is a fact about the cell being held; it belongs before the early return, beside the data it
+  is read from.
+- **Test the second refresh.** A test that refreshes once and asserts passes over this bug
+  completely. `ABedStaysAssignableAfterTheRowsHaveSettled` refreshes five times, and the control
+  run — old code restored — fails on exactly that one.
+
+## NaN written to a USS position is not ignored; it moves the element to the corner
+
+Same feature, second fault, found in the same run. A popover shown on the current frame has not
+been laid out, so `resolvedStyle.height` and `worldBound.height` both answer NaN. Feeding that
+through placement arithmetic gives `style.bottom = NaN`, and the element lands at (0, 0) — measured
+as a picker at the top-left of the screen against the row at y = 1095 that raised it.
+
+`schedule.Execute` is not the fix: it can run before layout resolves, which is what it did here.
+**`GeometryChangedEvent` is the event that fires when the size exists**, so placement belongs
+there, and the placement call should decline to write a position it cannot compute rather than
+writing a NaN.
+
+## Half a rule about state is a rule that does not hold
+
+The owner reported meals standing up through a bed. The first fix refused to **place** a bed on a
+cell holding items, which is the direction the report described and is half of the rule: nothing
+stopped a hauler carrying a pile **onto** the bed afterwards, and that is the likelier route,
+because an empty walkable cell is a perfectly good haul destination whatever is standing in it.
+
+Where a report is about a state that must never exist, fix **every way in**, not the one the
+report happened to come through. The second half here was `ColonyItems.CellHasSpace`, the single
+gate every spawn, drop and haul destination already passes through — derived from the edifice list
+on load, like support and ladder connectors, so it costs no save format and no hash bit.
+
+It also fixed a failure that looked unrelated: bed cells had been haul destinations, so haulers
+reserved them, and `TrySleep` checks the reservation before it checks whose bed it is — which
+locked a colonist out of their own bed and sent them to sleep on the floor.
+
+## Guard the start and the end of a thing's life and you have missed the middle
+
+A bed must not contain a log. The first fix refused the **order** on a cell holding items; the
+second held the cells once the bed **stood**. Both were right and together they still let the
+reported picture through, because a building has a third state: ordered, not yet raised, and taking
+a colonist a while to get to. A hauler put a log down in exactly that window.
+
+Where a thing has a life cycle, the invariant belongs at the **transition every state passes
+through** — here `ConstructionGrid.Set`, which is the one place a site is written, so ordering,
+replacing, cancelling and raising all run through it. Two guards at the ends read as thorough and
+are not.

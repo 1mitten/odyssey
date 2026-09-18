@@ -63,9 +63,17 @@ namespace Odyssey.Tests.Presentation
         static ConstructionGrid ConstructionOver(RenderTestWorld world)
         {
             var edifices = new List<PlacedEdifice>();
-            var items = new ColonyItems(ContentPack.Pawns());
+
+            // A real PawnContext rather than a bare ColonyItems: the grid validates a bed's owner
+            // against the pawn list, so it takes the registry, and the registry is only ever made
+            // by a context. Nothing here spawns a pawn — the fixture's questions are about where
+            // an order lands, not who sleeps in it.
+            var nav = new NavGraph(world.Grid);
+            var ctx = new PawnContext(
+                world.Grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns());
             return new ConstructionGrid(
-                world.Grid, new EdificeSaveSection(edifices), items, new SupportSolver(world.Grid));
+                world.Grid, new EdificeSaveSection(edifices), ctx.Items, ctx.Pawns,
+                new SupportSolver(world.Grid));
         }
 
         /// <summary>
@@ -220,6 +228,42 @@ namespace Odyssey.Tests.Presentation
             Assert.That(construction.Place(onTheFloor, BuildingHandle.Wall, StuffHandle.Wood),
                 Is.EqualTo(IntentRejection.None),
                 "and a wall stands on it, which is how the second storey begins");
+        }
+
+        /// <summary>
+        /// <b>Can a player build a bed by pointing at the ground?</b>
+        ///
+        /// <para>The same question this fixture was written to ask about floors, asked of the one
+        /// other thing whose order is not lifted the way a wall's is. A bed is deliberately never
+        /// lifted — <c>ConstructionGrid.WhereItWouldLand</c> returns the clicked cell for anything
+        /// wider than one, because lifting one end of a two-cell thing while the other stays put
+        /// is an order whose shape the player cannot see — and the picker deliberately answers a
+        /// click on bare grass with the ground <i>block</i>. Put together, those two rules decide
+        /// whether the bed is placeable at all, and neither assembly's own tests can see both.</para>
+        ///
+        /// <para>Every cell is the picker's. The test says which layer it expects the site on and
+        /// nothing else, so a disagreement between the two rules fails here rather than in a
+        /// playtest.</para>
+        /// </summary>
+        [Test]
+        public void PointingAtBareGroundOrdersABedInTheAirAboveIt()
+        {
+            RenderTestWorld world = GroundWithAWallAt(4, 4);
+            ConstructionGrid construction = ConstructionOver(world);
+
+            bool hit = SlicePicker.Pick(DownAt(6, 6), world.Model, activeLayer: 1, out CellRef clicked);
+            Assert.That(hit, Is.True, "grass is pickable");
+
+            Assert.That(construction.Place(clicked, BuildingHandle.Bed, StuffHandle.Wood, facing: 0),
+                Is.EqualTo(IntentRejection.None),
+                "a bed ordered on open grass is the commonest order in the game; if this refuses, "
+                + "the tool is armable, draggable and inert");
+
+            int head = world.Index(6, 6, 1);
+            Assert.That(construction.At(head), Is.EqualTo(BuildingHandle.Bed),
+                "the site stands on the grass rather than inside the block");
+            Assert.That(construction.SiteAt(new CellRef(6, 7, 1)), Is.EqualTo(head),
+                "and the far cell of the footprint names the same one order");
         }
     }
 }

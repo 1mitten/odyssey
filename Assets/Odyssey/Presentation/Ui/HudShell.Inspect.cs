@@ -573,8 +573,42 @@ namespace Odyssey.Presentation.Ui
 
                 view.Name = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowname");
                 view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
+                // The value sits in a box with a glyph before it and a chevron after, and the box
+                // is styled as a button on the one row that is pickable. Built for every row and
+                // shown only where it means something, because rows are reused across facts and
+                // the affordance has to travel with the row's current meaning rather than being
+                // built into an element.
+                //
+                // Two rounds of this were too quiet to find (owner, 2026-09-17 and again after):
+                // a pointer cursor, then a hover brighten and a border. A row that is a control
+                // has to look like one with the pointer somewhere else entirely, which means an
+                // icon and weight, not a treatment that only appears once you are already on it.
+                view.PickBox = new VisualElement();
+                view.PickBox.AddToClassList("inspect__rowbox");
+
+                view.Glyph = new HudGlyph(HudGlyphKind.ToolBunk, 13f, HudTokens.Accent);
+                view.Glyph.AddToClassList("inspect__rowglyph");
+                view.Glyph.style.display = DisplayStyle.None;
+
+                view.Chevron = HudText.Make("›", HudTextRole.Meta, ussClass: "inspect__rowchevron");
+                view.Chevron.style.display = DisplayStyle.None;
+
+                view.PickBox.Add(view.Glyph);
+                view.PickBox.Add(view.Value);
+                view.PickBox.Add(view.Chevron);
+
                 view.Root.Add(view.Name);
-                view.Root.Add(view.Value);
+                view.Root.Add(view.PickBox);
+
+                // Registered once for every row and armed per tile by IsPick below: the pane's
+                // rows are reused across facts, so the one row that does something is the one
+                // whose fact it is holding, decided on the model's word rather than the element's.
+                CellRowView captured = view;
+                view.Root.RegisterCallback<ClickEvent>(_ =>
+                {
+                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                });
+
                 _cellRowsGrid.Add(view.Root);
                 _cellRows.Add(view);
             }
@@ -593,12 +627,139 @@ namespace Odyssey.Presentation.Ui
                     view.LastName = row.Name;
                     HudText.Set(view.Name, row.Name, HudTextRole.Meta);
                 }
-                if (view.LastValue != row.Value)
+
+                // The owner row is pickable exactly while the tile says it is a bed's (the model
+                // clears the flag every refresh, so the affordance cannot outlive the bed).
+                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                // The pickable row's value is set in the heavier Row role, which is where weight
+                // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
+                // assign button bolder" is a role here rather than a font-style there.
+                HudTextRole role = pick ? HudTextRole.Row : HudTextRole.Meta;
+                if (view.LastValue != row.Value || view.LastRole != role)
                 {
                     view.LastValue = row.Value;
-                    HudText.Set(view.Value, row.Value, HudTextRole.Meta);
+                    view.LastRole = role;
+                    HudText.Set(view.Value, row.Value, role);
+                    // HudText.Set writes the role's own colour, so a tint that was applied before
+                    // has just been overwritten and has to be laid on again.
+                    view.LastTint = null;
+                }
+
+                // The value's colour, where the fact carries one — a quality tier, and nothing
+                // else so far. Null means the row keeps the colour the stylesheet gives it, which
+                // is what "Normal: no change" asks for, so the style is cleared rather than set to
+                // a colour of our own.
+                if (view.LastTint?.Hex != row.Tint?.Hex)
+                {
+                    view.LastTint = row.Tint;
+                    if (row.Tint is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
+                    else view.Value.style.color = StyleKeyword.Null;
+                }
+
+                if (view.IsPick != pick)
+                {
+                    view.IsPick = pick;
+                    view.Root.EnableInClassList("inspect__row--pick", pick);
+                    view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
                 }
             }
+        }
+
+        // ---- the bed's owner picker: the pane's first interactive fact ------------------------
+
+        VisualElement? _bedPicker;
+        VisualElement? _bedPickerRows;
+
+        /// <summary>The row the picker was raised by, so a re-place after layout knows where to go.</summary>
+        VisualElement? _bedPickerAnchor;
+
+        /// <summary>
+        /// Raise the colonist picker over the owner row, or put it down if it is already up.
+        ///
+        /// <para>Built once, filled on every open: who is alive to be given a bed changes more
+        /// often than the popover is built and less often than it is opened, and a picker that
+        /// listed a dead colonist is the kind of stale a rebuild-on-open cannot be.</para>
+        ///
+        /// <para><b>The pick is an intent, not a write.</b> The pane never mutates the world; it
+        /// names the cell and the colonist and the simulation decides, at a tick boundary, the
+        /// way every command in the game does — so an assignment made while the clock is paused
+        /// lands on unpause, exactly as a build order does.</para>
+        /// </summary>
+        void ToggleBedPicker(VisualElement anchor)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+
+            if (_bedPicker == null)
+            {
+                _bedPicker = Popover("bedowner", "Give this bed to", CloseBedPicker, "bedowner");
+                _bedPickerRows = new VisualElement();
+                _bedPickerRows.AddToClassList("bedowner__rows");
+                _bedPicker.Add(_bedPickerRows);
+                _hud.Add(_bedPicker);
+
+                // Placed again whenever its size changes, which is the only moment its height is
+                // knowable: a popover shown this frame has not been laid out, so the placement
+                // arithmetic has nothing to work with and the first attempt does nothing.
+                _bedPicker.RegisterCallback<GeometryChangedEvent>(_ => PlaceBedPicker());
+            }
+
+            if (_bedPicker.style.display == DisplayStyle.Flex)
+            {
+                CloseBedPicker();
+                return;
+            }
+
+            _bedPickerRows!.Clear();
+            _bedPickerRows.Add(BedPickerRow("No owner", -1));
+            var frame = world.Views.Current;
+            var pawns = frame.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+                _bedPickerRows.Add(BedPickerRow(
+                    ColonistNames.Of(frame, pawns[i].Id), pawns[i].Id.Value));
+
+            _bedPickerAnchor = anchor;
+            _bedPicker.style.display = DisplayStyle.Flex;
+            PlaceBedPicker();
+        }
+
+        /// <summary>
+        /// Put the picker against the row that raised it, as far as the current layout allows.
+        ///
+        /// <para>Called on open and again on every <c>GeometryChangedEvent</c>, because on the
+        /// frame it opens the popover has no height and the placement cannot be computed at all.
+        /// It is safe to call repeatedly: the arithmetic is a pure function of the two rects, so
+        /// once the size settles the answer stops changing and the event stops firing.</para>
+        /// </summary>
+        void PlaceBedPicker()
+        {
+            if (_bedPicker == null || _bedPickerAnchor == null) return;
+            if (_bedPicker.style.display.value != DisplayStyle.Flex) return;
+            PlacePopover(_bedPicker, _bedPickerAnchor, onTheBar: false);
+        }
+
+        void CloseBedPicker()
+        {
+            if (_bedPicker != null) _bedPicker.style.display = DisplayStyle.None;
+        }
+
+        VisualElement BedPickerRow(string label, int pawnId)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("bedowner__row");
+            row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
+
+            CellRef cell = _inspect.Cell;
+            int pick = pawnId;
+            row.tooltip = pick < 0 ? "Leave the bed unowned" : "Give this bed to " + label;
+            row.RegisterCallback<ClickEvent>(_ =>
+            {
+                _boot?.World?.Intents.Submit(new Intent(IntentKind.AssignBedOwner, cell, pick));
+                CloseBedPicker();
+            });
+            return row;
         }
 
         VisualElement ActionButton(InspectCommand command)

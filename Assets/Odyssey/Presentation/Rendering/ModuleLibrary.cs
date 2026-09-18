@@ -604,6 +604,7 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.Bank: mesh = BankMesh.For(meshVariant); break;
                 case ModuleShape.WaterSurface: mesh = WaterMesh.Surface; break;
                 case ModuleShape.WaterFall: mesh = WaterMesh.Fall; break;
+                case ModuleShape.Pillow: mesh = PillowMesh.Mesh; break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }
 
@@ -713,6 +714,13 @@ namespace Odyssey.Presentation.Rendering
                     // reads directly as the drop in metres. Anything else here would make the
                     // caller multiply by a constant it had to go and look up.
                     size = new Vector3(CellMetrics.SizeXZ, 1f, 1f);
+                    centre = Vector3.zero;
+                    return;
+                case ModuleShape.Pillow:
+                    // The unit box, so the caller's scale reads directly as the pillow's size in
+                    // metres divided by a cell. Centred on its own middle rather than standing on
+                    // a floor, because a pillow is placed by where it lies on a mattress.
+                    size = Vector3.one;
                     centre = Vector3.zero;
                     return;
                 case ModuleShape.RockBlock:
