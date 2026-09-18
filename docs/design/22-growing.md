@@ -139,11 +139,45 @@ trees ride, and the reason the Unity tier on a clone is a real test of this unit
 formality. Emission is bucketed per species × stage like the tree buckets; a stage bucket change
 is the only thing that re-meshes (§3).
 
-The **zone overlay, this unit, is a per-cell green tint** through the existing cell-shade span
-path, fed from a sparse snapshot channel — the standing-orders pattern, added to the colour-guard
-test. Stockpiles have no overlay either, and both deserve the crisp-bordered region shader
-`09-ui-and-input.md` §4.6 already specifies; that is its own unit, covering both, and is
-deliberately not smuggled in here.
+**What U48 actually built, and the three decisions in it that the plan did not settle:**
+
+- **The mirror is fed between ticks, not contributed.** The geometry mirror is filled by a
+  snapshot contributor because it reads the cell grid; a crop is not in the grid, and the crop
+  channel already rides the snapshot. `WorldRenderModel.UpdateCrops` restamps the per-cell crop
+  bytes from it once a frame, before the renderer runs and after the tick has published, by a
+  merge walk over the two sorted lists — O(planted), which is what a 2,000-cell field asks of a
+  frame. The mirror raises **no** dirty marks: the simulation knows which stage transitions
+  change what is drawn, and it marks.
+- **The fallback is a pillow mound, sized per stage by one scale.** The plan said "primitive
+  fallback" without a shape; the pillar's fallback box is a 3 m stake and the pillow's unit box
+  reads its scale directly in metres, so one row scale sizes both the art and the primitive:
+  0.5/0.75/1.0 leaves the real carrots near their authored sizes (0.31/0.44/0.63 m across,
+  `synty-inventory.csv`) and leaves a pack-less clone a quarter/half/one-metre mound — the stages
+  still read, and a mound is what a leafy plant actually is.
+- **The remesh mark for sowing and uprooting moved into `GrowingZones`, and the cancel bug went
+  with it.** U47 marked from the job drivers, which covered sowing and harvest but left the
+  cancel path — whose intent handlers take a bare `Intent` and have no context to mark from —
+  silently drawing a crop the simulation had taken out. Who changed the world owns the mark
+  (the U29 settlement), so `Sow` and `Uproot` mark now, the drivers' copies are gone, and cancel
+  is covered by the same line. `CrossingAStageDirties…` clears the fixture's sow mark before it
+  reads, so the growth pass is still the thing under test.
+
+The Unity tier also collected a debt U46 had left where only it could see: the new Carrots item
+made `ItemIndex.Count` seven while presentation's item-module table stayed six, and
+`ModuleIdTests` — written for exactly this drift — failed naming item def 6. The dropped harvest
+now has its own module row (the mature crop's art at carry size), and the episode is the second
+on this branch where green fast-tier seconds said nothing about a join only Unity compiles.
+
+The **zone overlay, this unit, is a per-cell green tint** through the standing-orders span path,
+fed from the sparse snapshot channel, added to the colour-guard test (`ZoneTintColour`,
+`(0.24, 0.62, 0.28, 0.32)` — darker and cooler than the felling mark's pale green, no order
+shares it). One deviation from the plan's wording: it draws a **cell mark, not a cell shade**.
+`DrawCellShade` fills the cell's whole volume, which is right for a deconstruct order standing
+in the wall it is taking apart; a zone cell is open air above the soil, so a shade would draw a
+three-metre glass box over every row. `DrawCellMark`'s plate sits at the floor of that air cell,
+which is the ground surface. Stockpiles have no overlay either, and both deserve the
+crisp-bordered region shader `09-ui-and-input.md` §4.6 already specifies; that is its own unit,
+covering both, and is deliberately not smuggled in here.
 
 ## 7. UI
 
