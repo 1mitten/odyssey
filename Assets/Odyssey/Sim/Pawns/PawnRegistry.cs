@@ -65,8 +65,17 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Debug menu: <c>IntentKind.SpawnPawn</c>. A cell that is not walkable is refused rather
-        /// than spawning a colonist nobody can reach or path out of.
+        /// Debug menu: <c>IntentKind.SpawnPawn</c>. The intent names a <em>column</em>: the
+        /// colonist arrives at the walkable cell nearest the layer asked for, and the command is
+        /// refused only when the whole column has nowhere to stand — never a colonist nobody can
+        /// reach or path out of.
+        ///
+        /// <para><b>The layer is the caller's guess, not its instruction.</b> The debug menu says
+        /// "near the camera", and the camera's own layer over open ground is the air above the
+        /// terrain, so a rule that took the layer literally refused every spawn the menu sent —
+        /// and said <c>OutOfBounds</c> while doing it, for a cell that was plainly in bounds. See
+        /// <see cref="Odyssey.Sim.World.CellGrid.NearestWalkableInColumn"/>, which is the one
+        /// owner of that fall.</para>
         ///
         /// <para>Passions are rolled here off <see cref="Spawn"/>'s own <c>RollSeed</c> (the world's,
         /// since nothing here asks for one of its own — U40), exactly as
@@ -79,8 +88,8 @@ namespace Odyssey.Sim.Pawns
         {
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
-            int index = _ctx.Size.Index(cell);
-            if (!_ctx.Cells.IsWalkable(index)) return IntentRejection.OutOfBounds;
+            int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
+            if (index < 0) return IntentRejection.NotPermitted;
             Pawn pawn = Spawn(index);
             pawn.RollPassions();
             return IntentRejection.None;

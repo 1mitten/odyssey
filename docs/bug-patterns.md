@@ -804,3 +804,35 @@ exist. `OnDestroy` had guarded that exact dereference since it was written.
   line, in every build log, unread.
 - The fix is not a guard but a second waiter — `HookDeveloperOverlay`, which waits on `Directors`
   where `Attach` waits on `Preferences` — because the two genuinely wait on different things.
+
+## The caller's guess taken as the caller's instruction
+
+**2026-09-19, the debug menu's spawn.** Owner: *"Every time I tried to generate more colonists — I
+get this warning message `[Odyssey] the simulation refused 1293 x SpawnPawn: OutOfBounds`."* The
+crowd playtest for pawn avoidance could not be run at all, because no colonist could be added.
+
+Two separate faults wearing one message.
+
+- **The refusal.** `DebugAnchorCell` returned the middle of the map *at the active slice layer*,
+  and `HandleSpawnPawn` took that layer as an instruction. Over open ground the slice layer is the
+  air several storeys above the terrain, so the cell was in bounds, unstandable, and refused —
+  every time, for the life of the feature. A caller that names a *column* and guesses at a layer is
+  the normal case wherever the interface is above the ground looking down; the layer is a guess and
+  the grid has to be the one to settle it. `CellGrid.NearestWalkableInColumn` is now the single
+  owner of that fall, for the spawn; `FirstFloorAtOrBelow`, which already existed, does it for the
+  grant.
+- **The lie in the reason.** In-bounds-but-unstandable answered `OutOfBounds`, which is the one
+  reading of the message that was definitely false and the one the eye goes to. It says
+  `NotPermitted` now. **A rejection reason is a diagnosis; a wrong one sends the next reader to the
+  wrong half of the code.**
+- **The four-figure count.** Nothing in the build had ever called `IntentBus.ClearRejected`, so the
+  list grew for the session and `ReportRejections` re-counted the whole of it every frame. One
+  click reported as 1,293 refusals a few seconds later — and *that* number is what makes a reader
+  hunt for a loop submitting intents, which does not exist. **A diagnostic that is itself wrong
+  costs more than no diagnostic**: the same handler's doc comment records that two playtests were
+  already spent on refusals being invisible, and this is the other edge of the same knife.
+- **The check:** `DebugIntentTests.SpawnPawnAimedAtTheAirFallsToTheGroundInThatColumn`,
+  `GiveResourceAimedAtTheAirLandsOnTheFloorBelow` and
+  `SpawnPawnRefusesAColumnWithNowhereToStandAndSaysSoTruthfully`. The fast tier proves none of the
+  shell half — `HudShell` is Presentation and does not compile there — so the anchor's own three
+  paths remain a by-hand test (`docs/design/18-debug-menu.md`).

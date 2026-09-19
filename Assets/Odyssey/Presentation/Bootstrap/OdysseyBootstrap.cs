@@ -1324,6 +1324,13 @@ namespace Odyssey.Presentation.Bootstrap
                 else _rejectionCounts[key] = 1;
             }
 
+            // Emptied every frame, whether or not this is the frame that logs. Nothing in the
+            // build had ever cleared it, so the list grew for the life of the session and each
+            // frame re-counted the whole of it: one refused spawn was reported as 1,293 of them
+            // a few seconds later, and the number said "a loop is submitting this" when the truth
+            // was one click.
+            _world.Intents.ClearRejected();
+
             if (Time.unscaledTime - _lastRejectionReport < 1f || _rejectionCounts.Count == 0) return;
             _lastRejectionReport = Time.unscaledTime;
 

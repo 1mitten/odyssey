@@ -6617,3 +6617,45 @@ pawns), with anticipatory steering before reaching the obstacle.
     - Unity EditMode: **1,861 total, 1,847 passed, 0 failed** (new tests `DiagonalStep_PastCornerTree_SteersAwayFromObstacleCorner`, `TreeObstacle_OnLowerTerraceLayer_IsDetectedAtColonistLayer`, `PassingEncounter_DistanceThreshold_ScalesSmoothlyWithoutThresholdPop`).
     - Unity PlayMode: **82 total, 77 passed, 0 failed**.
     - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.
+
+## 2026-09-19 — the crowd playtest could not start: the debug spawn had never worked
+
+The avoidance work above needs a crowd, and the owner could not make one: *"Every time I tried to
+generate more colonists — I get this warning message `[Odyssey] the simulation refused 1293 x
+SpawnPawn: OutOfBounds`."*
+
+**The message was wrong in both of its interesting parts**, which is why it read as a mystery.
+
+*`OutOfBounds` was a lie.* `DebugAnchorCell` returned the middle of the map at the **active slice
+layer**, and `HandleSpawnPawn` treated that layer as an instruction. The play camera looks down at
+open ground, so the slice layer is the air several storeys above the terrain: the cell was inside
+the map, had nothing to stand on, and the handler's one rejection for "not walkable" happened to be
+spelled `OutOfBounds`. Every debug spawn since the row was written has been refused; nobody had
+pressed it before (it is on the standing "nobody has pressed Play on the debug menu" list).
+
+*1,293 was a lie.* Nothing in the build had ever called `IntentBus.ClearRejected`, so the list grew
+for the life of the session and `ReportRejections` re-counted the whole of it every frame. A handful
+of clicks became a four-figure count within seconds — and a four-figure count is what makes a reader
+look for a loop submitting intents rather than for one wrong cell.
+
+**The fix keeps the seam.** The tempting repair was a widening walkable search inside `HudShell`,
+and a first pass wrote one: 150 lines of two-pass radial search. It could not compile, and the
+reason it could not compile is the design answer — **presentation has no access to `CellGrid` at
+all**, by the snapshot-read/intent-write rule. The shell cannot know what is standable. So the
+split is: the shell names the **column** the player means (selected colonist, else selected cell,
+else the cell under the camera's focus — not the middle of the map, which is a place nobody is
+looking at and hundreds of metres from the colony), and the simulation settles the layer.
+`CellGrid.NearestWalkableInColumn` is the one owner of that fall for a spawn; `FirstFloorAtOrBelow`,
+which has existed all along for exactly this question, does it for a resource grant, which shares
+the anchor and so shared the fault. A column with genuinely nowhere to stand now answers
+`NotPermitted`.
+
+Recorded in `docs/bug-patterns.md` as *the caller's guess taken as the caller's instruction*, and
+the design doc's claim that the anchor was "always in bounds, so the two action rows never have a
+reason to refuse" is corrected in place — in bounds it was; standable it was not.
+
+- *Verified:*
+  - Fast tier: **749 Sim + 445 Hud = 1,194 passed, 0 failed** (three new `DebugIntentTests`).
+  - Unity EditMode: **1,864 total, 1,850 passed, 0 failed**.
+  - Unity PlayMode: **82 total, 77 passed, 0 failed**.
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.

@@ -368,7 +368,10 @@ namespace Odyssey.Sim.Pawns
             CellRef at = intent.Cell;
             if (!cells.Size.Contains(at.X, at.Z, at.Y)) return IntentRejection.OutOfBounds;
 
-            int origin = cells.Size.Index(at);
+            // The debug menu names a column, not a layer — "near the camera" is the air several
+            // storeys above open ground — so a grant aimed at nothing falls to the first floor
+            // under it, which is where a dropped stack would have ended up anyway.
+            int origin = cells.FirstFloorAtOrBelow(cells.Size.Index(at));
             int cell = NearestCellWithSpace(cells, origin, defIndex, amount, maxRadius: 3);
             if (cell < 0) return IntentRejection.NotPermitted;
 
