@@ -804,3 +804,39 @@ exist. `OnDestroy` had guarded that exact dereference since it was written.
   line, in every build log, unread.
 - The fix is not a guard but a second waiter — `HookDeveloperOverlay`, which waits on `Directors`
   where `Attach` waits on `Preferences` — because the two genuinely wait on different things.
+
+## The content pack does not exist in a player, and the code said so years before it mattered
+
+**2026-09-19, the empty world — the real cause.** After a shader fix that was a genuine but
+*different* fault, the owner reported again: *"No graphics came up in the build… apart from the
+characters."*
+
+`ContentPack.FindRoot` locates the Defs by walking up for a directory holding both `Assets` and
+`ProjectSettings`. A built player has neither, so it throws, world generation never runs, and the
+scene is empty but for the figures the start flow had already made. Its own remarks predicted
+this in full: *"A built player has neither directory and would land in the throw below, which is
+deliberate. Nothing in CI or scripts/ builds a player, so shipping the pack is not solved here
+rather than solved wrongly here."* `UseRoot` exists for exactly this and had never been called.
+
+- **The check:** anything the game reads from a path under `Assets/` at runtime is absent from a
+  player. `ContentPackBuild` stages the pack into `StreamingAssets` for the build and removes it
+  after, so the repository keeps one copy; the composition root calls `UseRoot` outside the
+  editor.
+- **A deliberate limitation outlives the sentence that made it deliberate.** "Nothing builds a
+  player" was true when written and stopped being true the hour a build command was added. When
+  you write *"X is not solved because nobody does Y"*, the note has to be found by whoever first
+  does Y — a grep for `StreamingAssets` found it, but only after two wrong answers.
+
+## A clean log from a program sitting on its main menu proves nothing
+
+**Same day, and it cost two wrong diagnoses.** Twice I ran the player from a terminal, saw a
+clean log, and reported a fix. Both times the player had stopped at the main screen, where
+nothing loads the content pack, nothing generates a world and nothing draws terrain — the entire
+subsystem under suspicion had not run.
+
+- **The check:** before believing a smoke test, confirm the code under suspicion actually
+  executed. The log that mattered says `world 120x120x16 seed 1 generated in 61 ms`; the two that
+  did not say anything of the sort, and their silence read as success.
+- **The fix is to make it reachable**: `-odyssey-newgame` boots a player straight into a colony,
+  so a build can be smoke-tested without a person clicking. A check nobody can run from a
+  terminal is a check that will be skipped.

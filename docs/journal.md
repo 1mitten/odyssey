@@ -6515,3 +6515,36 @@ nothing but characters. In the editor the same commit is perfect.
   game runs, because both compile and run in the editor's domain. `PlayerBuild` now refuses to
   build with a runtime-found shader off the list, so the next one fails loudly instead of
   shipping an empty world.
+
+## 2026-09-19 — Two wrong answers before the empty build gave up its cause
+
+The owner's report after the first player build was "no terrain, no graphics, apart from
+characters". It took three attempts, and the first two are the instructive part.
+
+- **First answer: shader stripping.** Real, measured, and not the cause. Every shader the game
+  finds at runtime was genuinely absent from the player, the log said so, and fixing it was
+  worth doing. But I reported it as *the* fix on the strength of a clean player log — and the
+  player had been sitting on the main screen, where none of the renderer under suspicion runs.
+- **Second answer: the same mistake again.** A cleaner log, still from a menu. I had proved the
+  shaders were missing and never proved that was *why* the world was empty. Those are different
+  claims and I ran them together.
+- **The real cause was written down in the code before the problem existed.**
+  `ContentPack.FindRoot` walks up for a directory holding `Assets` and `ProjectSettings`, and its
+  own remarks say: "A built player has neither directory and would land in the throw below, which
+  is deliberate. Nothing in CI or scripts/ builds a player, so shipping the pack is not solved
+  here rather than solved wrongly here" — and it names the answer, `UseRoot` with
+  `Application.streamingAssetsPath`. `UseRoot` had existed, unused, waiting for the day somebody
+  built a player. That day was four hours earlier.
+- **A deliberate limitation outlives the sentence that justified it.** "Nothing builds a player"
+  was true when written and false the moment `unity.sh build` landed. The note was findable and I
+  did not find it until the third pass, because I was looking at the renderer.
+- **The fix is the one the note specified.** `ContentPackBuild` stages `Assets/Odyssey/Defs` into
+  `StreamingAssets` before a build and removes it after, so the repository keeps exactly one copy
+  of the pawn tuning and the world tables — the standing rule in CLAUDE.md. The composition root
+  calls `UseRoot` outside the editor only, so Def edits still take effect immediately on Play.
+- **And the reason it took three passes is now fixed too.** `-odyssey-newgame` boots a player
+  straight into a colony, so a build can be smoke-tested from a terminal. The log that finally
+  settled it reads `world 120x120x16 seed 1 generated in 61 ms … catalogue 121/138 rows have
+  art`, which is the sentence none of the earlier runs could have produced whatever was wrong.
+- **Verified:** world generates in the player, no exceptions, no missing shaders. Fast tier 736 +
+  445; EditMode **1837 total, 1823 passed, 0 failed**; build 386 MB, 0 errors.
