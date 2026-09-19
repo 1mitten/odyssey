@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
@@ -35,9 +36,17 @@ namespace Odyssey.Presentation.Rendering
         /// <paramref name="world"/> is what lets a pawn stand on a bank rather than in one; see
         /// <see cref="BankLayout"/>. Null is a pawn on flat cells, which is what the arithmetic
         /// tests want and what a caller with no mirror to hand gets.
+        ///
+        /// <paramref name="otherPawns"/> optionally provides nearby pawns to calculate mutual
+        /// right-hand passing lateral offsets.
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
-            out Vector3 heading, WorldRenderModel? world = null)
+            out Vector3 heading, WorldRenderModel? world = null) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, default);
+
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns)
         {
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
             if (!pawn.Moving)
@@ -104,6 +113,80 @@ namespace Odyssey.Presentation.Rendering
             StepPace pace = StepPace.Of(world, pawn, travel);
             float s = wading ? t : pace.At(t);
             Vector3 along = GroundRelief.Lift(from + travel * s);
+
+            // Sub-tile lateral steering: veer around oncoming traffic, stationary pawns, and trees.
+            Vector3 lateralOffset = Vector3.zero;
+            if (heading.sqrMagnitude > 1e-4f)
+            {
+                // 1. Passing traffic / stationary pawns
+                if (otherPawns.Length > 0)
+                {
+                    for (int i = 0; i < otherPawns.Length; i++)
+                    {
+                        ref readonly var other = ref otherPawns[i];
+                        if (other.Id == pawn.Id) continue;
+
+                        if (other.Moving)
+                        {
+                            Vector3 otherHeading = new Vector3(
+                                CellMetrics.FloorCentre(other.NextCell).x - CellMetrics.FloorCentre(other.Cell).x,
+                                0f,
+                                CellMetrics.FloorCentre(other.NextCell).z - CellMetrics.FloorCentre(other.Cell).z);
+
+                            if (otherHeading.sqrMagnitude > 1e-4f)
+                            {
+                                float dot = Vector3.Dot(heading.normalized, otherHeading.normalized);
+                                if (dot < -0.5f)
+                                {
+                                    bool swappingCells = (pawn.Cell == other.NextCell && pawn.NextCell == other.Cell);
+                                    bool sharingNext = (pawn.NextCell == other.NextCell);
+                                    bool sharingCell = (pawn.Cell == other.Cell);
+
+                                    Vector3 nomA = CellMetrics.FloorCentre(pawn.Cell) + travel * s;
+                                    Vector3 otherTravel = CellMetrics.FloorCentre(other.NextCell) - CellMetrics.FloorCentre(other.Cell);
+                                    float otherS = Mathf.Clamp01(other.MovePerMille > 0 ? other.MovePerMille * 0.001f : other.MovePercent * 0.01f);
+                                    Vector3 nomB = CellMetrics.FloorCentre(other.Cell) + otherTravel * otherS;
+                                    float dist = Vector2.Distance(new Vector2(nomA.x, nomA.z), new Vector2(nomB.x, nomB.z));
+
+                                    if (swappingCells || sharingNext || sharingCell || dist < 3.0f)
+                                    {
+                                        Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s);
+                                        if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
+                                            lateralOffset = passDisp;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (other.Cell == pawn.NextCell || other.Cell == pawn.Cell)
+                            {
+                                Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s);
+                                if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
+                                    lateralOffset = passDisp;
+                            }
+                        }
+                    }
+                }
+
+                // 2. In-cell static obstacles (e.g. tree trunks)
+                if (world != null)
+                {
+                    bool currHasObstacle = world.HasObstacle(pawn.Cell);
+                    bool nextHasObstacle = world.HasObstacle(pawn.NextCell);
+                    if (currHasObstacle || nextHasObstacle)
+                    {
+                        Vector3 obstDisp = SteeringCurve.ObstacleDisplacement(heading, s, currHasObstacle, nextHasObstacle);
+                        if (obstDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
+                            lateralOffset = obstDisp;
+                    }
+                }
+            }
+
+            if (lateralOffset.sqrMagnitude > SteeringCurve.HardClampedMax * SteeringCurve.HardClampedMax)
+                lateralOffset = lateralOffset.normalized * SteeringCurve.HardClampedMax;
+
+            along += lateralOffset;
 
             // **A step with water at either end is drawn by its two ends, not by the ground under
             // it.** Ground-following is right wherever there is ground; between a waterline and

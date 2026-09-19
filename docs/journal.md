@@ -6550,3 +6550,40 @@ rather than walking in rigid 4-connected linear straight lines.
   Both wiki and registry content gates clean. Golden master simulated hashes re-baked in
   `Golden.cs` for `Meadow`, `PlayedBoard`, and `City` to reflect colonists travelling diagonally.
 
+## 2026-09-19 — Soft crowd avoidance and sub-tile visual lateral steering
+
+The owner requested that colonists no longer walk straight through one another, item piles, or trees,
+and instead manoeuvre naturally to the side of a tile (or pass on the right when meeting oncoming
+pawns), with anticipatory steering before reaching the obstacle.
+
+- **Two-tier separation (Sim path bias + Presentation lateral steering).** Following the clean room
+  analysis of prior art (RimWorld's `PawnPathCost` and crowd passing), avoidance is split:
+  1. *Simulation (pure C#):* `MoveCost.OccupiedBias = 30` added to local cell expansion in `PathFinder`
+     when a cell is occupied by a standing pawn, encouraging planners to prefer empty adjacent tiles
+     or corridor branches when available without hard-blocking or dirtying the D4 macro-region graph.
+  2. *Presentation (view-side smoothing):* Sub-tile lateral offsets are applied purely in presentation
+     (`PawnPose.Of`), modifying neither the simulation grid, save state, nor state hashes.
+- **Save/load determinism preserved.** Global `PawnContext.Paths.Occupancy` defaults to null to guarantee
+  that paths re-planned across save/reload boundaries cannot drift the tick state hash due to transient
+  crowd layout variations. The occupancy predicate is provided via `PathOptions` and `PathService` for
+  callers requesting live soft avoidance.
+- **Kinematics and $C^1$ bell envelope (`SteeringCurve.cs`).**
+  Lateral displacement follows $B(t) = 16t^2(1-t)^2$ peaking at $1.0$ at midpoint ($t=0.5$), with zero
+  value and zero first derivative at cell boundaries ($t=0, 1$). This guarantees $C^1$ continuity and
+  eliminates velocity/acceleration jerks at cell transitions.
+- **Mutual right-hand passing.** When opposing pawns meet ($\vec{d}_1 \cdot \vec{d}_2 < -0.5$), both
+  veer to their right along the lateral normal $(dz, 0, -dx)$ by up to $0.60\text{ m}$. Together they
+  achieve $1.20\text{ m}$ mutual clearance ($\ge 1.0\text{ m}$ target) while remaining well within the
+  $2.5\text{ m}$ tile half-width ($1.25\text{ m}$), leaving $0.65\text{ m}$ buffer to corridor walls.
+- **Anticipatory obstacle deflection.** For static obstacles like tree trunks (`WorldRenderModel.HasObstacle`),
+  `AnticipatoryLeadIn(t)` begins veering right during the second half of the preceding cell ($t \in [0.5, 1.0]$),
+  smoothing the trajectory before crossing into the obstacle cell where lateral offset is maintained around the trunk.
+- **Ground relief integration.** Lateral steering displacement is added to `along` before `OnTheDrawnGround`,
+  so bank rise and terrain relief are sampled at the exact steered feet position.
+- **Verified:**
+  - Fast tier: **746 Sim + 445 Hud = 1,191 passed, 0 failed** (`AvoidancePathingTests.cs`, `SteeringCurveTests.cs`).
+  - Unity EditMode: **1858 total, 1844 passed, 0 failed** (`ObstacleSteeringTests.cs`, `PawnPassingTests.cs`).
+  - Unity PlayMode: **82 total, 77 passed, 0 failed** (frame times and presentation intact).
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
+

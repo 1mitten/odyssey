@@ -65,6 +65,16 @@ namespace Odyssey.Sim.Pathing
         public int NodeBudgetPerTick { get; set; }
         public int NodeBudgetPerRequest { get; set; }
 
+        /// <summary>
+        /// Optional predicate determining if a cell is occupied by a stationary/working pawn,
+        /// forwarded to the underlying <see cref="PathFinder"/>.
+        /// </summary>
+        public Func<int, bool>? Occupancy
+        {
+            get => _finder.Occupancy;
+            set => _finder.Occupancy = value;
+        }
+
         public int Pending => _queue.Count - _head;
 
         /// <summary>Results served by the last <see cref="Serve"/>, in request order.</summary>

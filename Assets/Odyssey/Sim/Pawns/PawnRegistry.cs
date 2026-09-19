@@ -35,6 +35,20 @@ namespace Odyssey.Sim.Pawns
         public Pawn? Get(PawnId id) => _byId.TryGetValue(id.Value, out int index) ? _pawns[index] : null;
 
         /// <summary>
+        /// True if any pawn is currently stationary in this cell (no active path).
+        /// Used by the pathfinder to apply soft crowd avoidance bias.
+        /// </summary>
+        public bool IsCellOccupiedByStandingPawn(int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                var p = _pawns[i];
+                if (p.Cell == cell && !p.HasPath) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Build a colonist at a cell. This is the whole public API for making a pawn: one call,
         /// no partially-initialised intermediate state, and the driver pool built up front so no
         /// job start ever allocates.

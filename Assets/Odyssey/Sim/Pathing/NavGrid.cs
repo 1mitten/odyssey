@@ -228,6 +228,12 @@ namespace Odyssey.Sim.Pathing
         public const int Fall = 100_000;
 
         /// <summary>
+        /// Added during local A* cell expansion when a candidate cell contains a stationary
+        /// pawn, gently biasing unconstrained pathfinders toward open adjacent corridors or clear paths.
+        /// </summary>
+        public const int OccupiedBias = 30;
+
+        /// <summary>
         /// The floor on what the abstract search charges for crossing a region. The real charge
         /// scales with the region — see <see cref="NavGraph.RegionTransitCost"/>, which explains
         /// why a constant here was measurably wrong.
