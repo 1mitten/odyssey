@@ -196,6 +196,8 @@ this file.
 | The white selection cursor sitting flush | `docs/design/23-flush-selection-cursor.md` |
 | Input cases, modality, live portraits | `docs/design/09-ui-and-input.md` |
 | Panels | `docs/design/10-ui-panel-catalogue.md` |
+| Alert chimes, and what picks one | `docs/design/24-alert-sounds.md` |
+| The audio framework itself | ADR 0010, `docs/reference/audio-sourcing.md` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
 
 ### What runs today
@@ -402,6 +404,15 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   (`docs/design/21-ladders-and-climbing.md` §3): whether they read as a ladder rather than a shrug,
   whether a step of 0.46 of a leg is too big at the play camera, and whether arriving in an open
   shaft cell and stepping sideways looks like arriving or like hovering.
+- **Nobody has heard the alert chimes.** Five of the owner's recordings replaced the synthesised
+  two-note sine on 2026-09-19, loudness-matched to −18 LUFS. Two of them play today: `alert-normal`
+  when an idle-colonists row appears, `alert-negative` when a starving or breaking one does.
+  Questions a measurement cannot answer: whether −18 LUFS is right in a quiet room against the
+  ambience bed and the work sounds, and whether the raid siren at 9.54 s and the joining fanfare at
+  5.77 s are alerts or cutscene stings — the bake deliberately did not shorten them
+  (`docs/design/24-alert-sounds.md` §6). **The chime had effectively never fired before this**: the
+  audio side carried a starvation threshold on a scale a hundred times out, so there is no prior
+  impression to compare against.
 - **Nobody has seen the falls move.** Whether the streaks read as falling water or as a pattern
   sliding down a pane cannot be judged in a still, and stills are all anybody has looked at.
 - **The shallow stream reads pale at the play camera.** Raising the alpha is the obvious fix;

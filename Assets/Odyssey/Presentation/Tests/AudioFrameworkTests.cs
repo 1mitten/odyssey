@@ -9,7 +9,7 @@ namespace Odyssey.Tests.Presentation
 {
     /// <summary>
     /// The pure arithmetic and pure decisions of the audio system: faders, the clock's music
-    /// phases, and the alert watcher's hysteresis.
+    /// phases, and which chime an alert row gets.
     ///
     /// None of these touch an AudioSource; that is the point of splitting them out. A volume
     /// conversion that drifts, a phase boundary off by an hour, or an alert that re-fires every
@@ -126,50 +126,99 @@ namespace Odyssey.Tests.Presentation
         }
     }
 
-    public class AlertWatchTests
+    public class AlertChimeTests
     {
-        static PawnView Fed(int id, int food) =>
-            new(new PawnId(id), new CellRef(1, 1, 0), food, 80, 50);
+        static AlertRow Row(string key, AlertSeverity severity, int pawn = 1) =>
+            new(key, "Wrenn", " is starving", severity, pawn: new PawnId(pawn));
 
         [Test]
-        public void CrossingTheThresholdRaisesOnce()
+        public void SeverityPicksTheChimeAndAnythingUnlistedStillGetsOne()
         {
-            var watch = new AlertWatch();
+            Assert.That(AlertChime.ForSeverity(AlertSeverity.Notice), Is.EqualTo(SoundIds.AlertNormal));
+            Assert.That(AlertChime.ForSeverity(AlertSeverity.Warning), Is.EqualTo(SoundIds.AlertNegative));
+            Assert.That(AlertChime.ForSeverity(AlertSeverity.Danger), Is.EqualTo(SoundIds.AlertNegative));
 
-            Assert.That(watch.Step(new[] { Fed(1, 50) }), Is.EqualTo(AudioAlert.None));
-            Assert.That(watch.Step(new[] { Fed(1, 13) }), Is.EqualTo(AudioAlert.None),
-                "13 is hungry, not starving");
-            Assert.That(watch.Step(new[] { Fed(1, AlertWatch.StarveThreshold) }),
-                Is.EqualTo(AudioAlert.Starving), "the boundary itself is the crossing");
-            Assert.That(watch.Step(new[] { Fed(1, 5) }), Is.EqualTo(AudioAlert.None),
-                "deeper into starvation is not a second alert");
-            Assert.That(watch.Step(new[] { Fed(1, 5) }), Is.EqualTo(AudioAlert.None));
+            // The nineteen ui.alert.* keys nothing raises yet are the point of the default: one
+            // of them arriving must chime without anybody editing AlertChime first.
+            Assert.That(AlertChime.For("ui.alert.somethingnobodyhaswrittenyet", AlertSeverity.Danger),
+                Is.EqualTo(SoundIds.AlertNegative));
         }
 
         [Test]
-        public void TheAlertRearmsOnlyPastTheBand()
+        public void AKeyWithItsOwnSoundBeatsItsSeverity()
         {
-            var watch = new AlertWatch();
-            watch.Step(new[] { Fed(1, 0) });
-
-            // Wobble inside the band: no re-fire, because the chime would flap every frame.
-            watch.Step(new[] { Fed(1, AlertWatch.RearmAbove - 1) });
-            Assert.That(watch.Step(new[] { Fed(1, 0) }), Is.EqualTo(AudioAlert.None),
-                "a need oscillating around the threshold raised once and stays raised");
-
-            // Recover past the band, then cross again: that is a second event and chimes again.
-            watch.Step(new[] { Fed(1, AlertWatch.RearmAbove) });
-            Assert.That(watch.Step(new[] { Fed(1, 0) }), Is.EqualTo(AudioAlert.Starving));
+            Assert.That(AlertChime.For(AlertChime.RaidKey, AlertSeverity.Danger),
+                Is.EqualTo(SoundIds.AlertRaid),
+                "a raid and a starving colonist are both Danger and must not sound alike");
         }
 
         [Test]
-        public void SeveralColonistsCrossingAtOnceChimeOnce()
+        public void TheFirstStepArmsWithoutChiming()
         {
-            var watch = new AlertWatch();
-            AudioAlert fired = watch.Step(new[] { Fed(1, 0), Fed(2, 0), Fed(3, 0) });
+            var watch = new AlertChimeWatch();
 
-            Assert.That(fired, Is.EqualTo(AudioAlert.Starving),
-                "one chime carries 'somebody is starving'; the roster says who");
+            Assert.That(watch.Step(new[] { Row(AlertModel.StarveKey, AlertSeverity.Danger) }),
+                Is.Null, "loading a save with a hungry colonist does not chime at the player");
+            Assert.That(watch.Step(new[] { Row(AlertModel.StarveKey, AlertSeverity.Danger) }),
+                Is.Null, "and a row that was already there stays silent");
+        }
+
+        [Test]
+        public void ARowChimesWhenItAppearsAndNotWhileItStays()
+        {
+            var watch = new AlertChimeWatch();
+            watch.Step(System.Array.Empty<AlertRow>());
+
+            AlertRow starving = Row(AlertModel.StarveKey, AlertSeverity.Danger);
+            Assert.That(watch.Step(new[] { starving }), Is.EqualTo(SoundIds.AlertNegative));
+            Assert.That(watch.Step(new[] { starving }), Is.Null,
+                "still starving is not a second event");
+            Assert.That(watch.Step(new[] { starving }), Is.Null);
+        }
+
+        [Test]
+        public void AClearedRowChimesAgainWhenItReturns()
+        {
+            var watch = new AlertChimeWatch();
+            watch.Step(System.Array.Empty<AlertRow>());
+
+            AlertRow starving = Row(AlertModel.StarveKey, AlertSeverity.Danger);
+            watch.Step(new[] { starving });
+            watch.Step(System.Array.Empty<AlertRow>());
+
+            Assert.That(watch.Step(new[] { starving }), Is.EqualTo(SoundIds.AlertNegative),
+                "the colonist ate and is starving again: that is a new alert");
+        }
+
+        [Test]
+        public void SeveralRowsAppearingTogetherChimeOnceAtTheLoudest()
+        {
+            var watch = new AlertChimeWatch();
+            watch.Step(System.Array.Empty<AlertRow>());
+
+            string? chime = watch.Step(new[]
+            {
+                Row(AlertModel.IdleKey, AlertSeverity.Notice, pawn: 1),
+                Row(AlertModel.StarveKey, AlertSeverity.Danger, pawn: 2),
+                Row(AlertModel.IdleKey, AlertSeverity.Notice, pawn: 3),
+            });
+
+            Assert.That(chime, Is.EqualTo(SoundIds.AlertNegative),
+                "one sound says 'something needs you'; the panel says what");
+        }
+
+        [Test]
+        public void AnExistingRowDoesNotMaskANewOneBesideIt()
+        {
+            var watch = new AlertChimeWatch();
+            watch.Step(System.Array.Empty<AlertRow>());
+
+            AlertRow starving = Row(AlertModel.StarveKey, AlertSeverity.Danger, pawn: 1);
+            watch.Step(new[] { starving });
+
+            AlertRow idle = Row(AlertModel.IdleKey, AlertSeverity.Notice, pawn: 2);
+            Assert.That(watch.Step(new[] { starving, idle }), Is.EqualTo(SoundIds.AlertNormal),
+                "the loudest row present is not the loudest row that is new");
         }
     }
 }

@@ -97,7 +97,7 @@ namespace Odyssey.Tests.Presentation
                 },
                 new AudioCatalogue.SoundDef
                 {
-                    Id = SoundIds.AlertStarving, Clips = new[] { _chime },
+                    Id = SoundIds.AlertNegative, Clips = new[] { _chime },
                     Bus = SoundBus.Alerts, Volume = 0.9f, SpatialBlend = 0f,
                     Priority = 16, Cooldown = 2f,
                 },
@@ -510,10 +510,9 @@ namespace Odyssey.Tests.Presentation
             float before = audio.MusicVolume;
             Assume.That(before, Is.GreaterThan(0.4f));
 
-            // A starving colonist in the published frame: chime + duck, driven end to end.
-            var starving = new PawnView(new PawnId(1), new CellRef(1, 1, 0), food: 0, rest: 50, mood: 20);
-            audio.Sync(0.05f, Frame(DayTick, starving), Vector3.zero, Vector3.zero, 0);
-            audio.Sync(0.5f, Frame(DayTick, starving), Vector3.zero, Vector3.zero, 0);
+            // The chime the HUD raises when an alert row appears — the director's half of it.
+            audio.PlayAlert(SoundIds.AlertNegative);
+            audio.Sync(0.5f, Frame(DayTick), Vector3.zero, Vector3.zero, 0);
 
             Assert.That(audio.OneShotsPlayed, Is.EqualTo(1), "the chime played");
             Assert.That(audio.MusicVolume, Is.LessThan(before * 0.7f),

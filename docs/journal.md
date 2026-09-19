@@ -6684,3 +6684,79 @@ rather than walking in rigid 4-connected linear straight lines.
   Both wiki and registry content gates clean. Golden master simulated hashes re-baked in
   `Golden.cs` for `Meadow`, `PlayedBoard`, and `City` to reflect colonists travelling diagonally.
 
+
+## 2026-09-19 — Five real chimes, and the one they replaced could never have fired
+
+The owner supplied five notification recordings and called the sound already in the game *nasty*.
+It was: `AudioSetup.Alert()` synthesised a 0.6 s two-note sine, 830 Hz stepping down to 622 Hz,
+and the file it wrote sounded exactly like the two lines of trigonometry that made it. Replacing
+it was meant to be an afternoon of ffmpeg and a catalogue row.
+
+**The thing worth writing down is what turned up on the way.** `AlertWatch` — the only path from
+the simulation to a chime — tested the published food need against `StarveThreshold = 12`, under a
+comment reading *"food, in the published 0–100 units"*. Food is published 0–1000. `AlertModel`, the
+red row on screen, uses `StarveAt = 120`. So the chime was set to fire at a hundredth of the food
+the warning exists for, which is to say at a colonist who is already dying, long after the panel
+had given up shouting. Nobody had reported it, because a sound that never plays sounds like a
+sound you have not triggered yet.
+
+Its three unit tests passed. They fed the watcher literal `13`, `5` and `0` — numbers chosen to
+straddle the constant — so they proved the comparison worked and could never have noticed that the
+constant was on a scale that does not exist. **A test that restates the number it is testing tests
+the code around the number.** That is a variant of P1 worth having in the register beside the hop
+price and the ladder face: not two owners disagreeing, but two owners on different *units*.
+
+So the fix is not a corrected constant. `AlertWatch` is gone. `AlertChimeWatch` reads the alerts
+panel's own rows and returns a sound when one appears; `AlertModel` is the single owner of what an
+alert is, of its hysteresis, of its severity and of whether the player dismissed it. The chime is
+raised from `HudShell.RefreshAlerts`, in the same pass that builds the row, because a sound landing
+on a different frame from the line it belongs to reads as two events rather than one. A pleasant
+side-effect: `AudioDirector.Sync` no longer walks the pawn list every frame, so the whole change is
+a small saving on the frame rather than a cost.
+
+**The mapping is severity first, key second**, and that was the deliberate decision rather than the
+obvious one. The obvious shape is a table from alert key to sound, which is correct and which would
+have covered the three alerts that exist. But `icon-keys.csv` declares twenty-two `ui.alert.*` keys
+and nineteen of them are unimplemented; a key-first table means every one of those arrives silent,
+and the person who implements fire or a hull breach has to know that a second file wants editing.
+Severity-first means an unknown key already chimes — correctly, because the panel had to pick a
+severity for it to be drawn at all — and `AlertChime.Overrides` exists only for conditions severity
+undersells. It has one row: `ui.alert.raid`, because a raid and a starving colonist are both
+`Danger` and must obviously not make the same noise. That row is also the seam doing its job in
+advance: the raid siren is imported, mixed and mapped, and the day something raises that key it
+plays with no code change.
+
+**On the files themselves.** The five arrived spanning −14.5 to −24.5 LUFS. Ten decibels is the
+difference between a chime that startles and one that is missed entirely, and no amount of
+catalogue tuning fixes it properly, because `Volume` is where the *mix* lives — how important a
+sound is — and it should not be absorbing how loud somebody's export happened to be. So
+`tools/audio/bake_alerts.sh` matches them: two-pass EBU R128 to −18 LUFS with a −1.5 dBTP ceiling,
+which lands every clip inside two decibels of every other. `alert-normal` stops at −20 because it
+is a peaky bell and the true-peak ceiling binds before the loudness target does; squashing the
+transient to reach −18 would have been changing the sound to satisfy a number, so it keeps its
+crest and gets the two decibels back as catalogue `Volume` 0.95. That is the division of labour the
+catalogue comment already claimed and this is the first case that tested it.
+
+The raid siren also carried half a second of silence before it started — half a second of nothing
+after an alarm has been raised — so the bake trims dead air at −45 dB in and −50 dB out with 6 ms
+guard fades. Raid 10.73 → 9.54 s, joined 6.38 → 5.77 s, normal 1.96 → 1.57 s. **It does not
+compress, EQ or shorten anything musical, and the script says so in its header**, because the
+moment a bake tool starts making taste decisions nobody can tell which sound they are listening to.
+Whether nine and a half seconds is an alert or a cutscene sting is a question for the owner, and it
+is in the design doc as one.
+
+Import class splits on whether the sound is on a critical frame. `normal` and `negative` fire in
+play and are PCM decompressed on load, 168 KB each, no decode at the instant they sound. `happy`,
+`joined` and `raid` are seconds long, rare and not latency-critical, so they ride ADPCM compressed
+in memory: 1.3 MB of alerts in total rather than 2.8. None is forced to mono — Unity's importer
+peak-normalises the downmix when `forceToMono` is set, which would throw away the loudness match
+the bake exists to produce, and that trap is worth remembering the next time somebody tidies a
+stereo clip.
+
+Three of the five are in the library and played by nothing, which is `SoundIds.Campfire`'s bargain
+and the same words are used for it. `happy` needs an `AlertSeverity.Good` that does not exist, and
+a green row in a panel whose job is problems is a design question rather than a plumbing one.
+
+Unity EditMode **1848 total, 1834 passed, 0 failed**. `docs/design/24-alert-sounds.md` holds the
+decisions; ADR 0010's alert clause is amended in place rather than rewritten, because its playback
+half — 2D, own bus, starts the duck — is exactly as decided and only the trigger moved.
