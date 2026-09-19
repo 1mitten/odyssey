@@ -300,6 +300,19 @@ invisible where the game is played.
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
   person — so check `Get-CimInstance Win32_Process -Filter "Name='Unity.exe'"` before concluding a
   batch run failed, and do not kill a process that might be somebody's open editor.
+- **Player build** (`scripts/unity.sh build`, ~15 s, 386 MB into gitignored `Build/`): the only
+  thing that compiles the *player* assembly set and the only thing that can fail on a stripped
+  shader or a path under `Assets/` read at runtime. **Two green tiers say nothing about whether
+  the game runs** — both compile and run in the editor's domain, where every shader and every
+  variant exists always. Smoke-test it with `Build/Win64/Odyssey.exe -odyssey-newgame -logFile <path>`,
+  which boots straight into a colony; a clean log from the main menu proves nothing, and that
+  mistake cost three passes on 2026-09-19. Three separate faults had to be fixed before the first
+  player drew anything: `ShaderInclusion` (runtime-found shaders), `ContentPackBuild` (the Defs,
+  via `StreamingAssets`) and `InstancingKeepAlive` (the `INSTANCING_ON` variant, which
+  always-included does *not* keep). `PlayerBuild` refuses on all three.
+- **Before diagnosing anything build-shaped, `git diff HEAD -- ProjectSettings/ Assets/Settings/`.**
+  An uncommitted flip of URP's `m_StripUnusedVariants` to `0` once took one shader pass from 64
+  variants to 884,736 and the build from 12 seconds to an estimated day and a half.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
   `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a

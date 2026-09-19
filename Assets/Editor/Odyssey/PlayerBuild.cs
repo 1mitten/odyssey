@@ -79,6 +79,34 @@ namespace Odyssey.EditorTools
                 return;
             }
 
+            // **A runtime-found shader whose instancing variant is not in the build.** The
+            // shader being present is not enough: built-in variant stripping drops INSTANCING_ON
+            // unless a material asset switches instancing on, and every instanced material here is
+            // made at runtime. The symptom is the cruellest one this build has produced — tens of
+            // thousands of instances submitted every frame, no warning, and an empty world with
+            // the colonists still standing in it. See InstancingKeepAlive.
+            string[] uninstanced = InstancingKeepAlive.Missing();
+            if (uninstanced.Length > 0)
+            {
+                Fail("these shaders are drawn instanced at runtime but have no keep-alive "
+                     + "material, so the player would submit their draws into a variant that is "
+                     + "not there: " + string.Join(", ", uninstanced)
+                     + ". Run Odyssey.EditorTools.InstancingKeepAlive.Apply and commit the result.");
+                return;
+            }
+
+            // And one that exists but has had its instancing turned off, which looks identical.
+            string[] switchedOff = InstancingKeepAlive.NotInstanced();
+            if (switchedOff.Length > 0)
+            {
+                Fail("these keep-alive materials exist but have instancing switched off, which "
+                     + "makes them ordinary material assets and stops them keeping anything "
+                     + "alive: " + string.Join(", ", switchedOff)
+                     + ". Switch Enable GPU Instancing back on, or delete them and re-run "
+                     + "Odyssey.EditorTools.InstancingKeepAlive.Apply.");
+                return;
+            }
+
             string root = Path.GetDirectoryName(Application.dataPath)!;
             string output = Path.Combine(root, OutputFolder, executable);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);

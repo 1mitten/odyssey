@@ -6548,3 +6548,60 @@ characters". It took three attempts, and the first two are the instructive part.
   art`, which is the sentence none of the earlier runs could have produced whatever was wrong.
 - **Verified:** world generates in the player, no exceptions, no missing shaders. Fast tier 736 +
   445; EditMode **1837 total, 1823 passed, 0 failed**; build 386 MB, 0 errors.
+
+## 2026-09-19 — The third cause of the empty player, and the flag that hid it
+
+Two fixes had landed and the world still did not draw. This is the third cause, the wrong turn that
+was taken instead of it, and why neither was visible from the editor.
+
+- **The build could not finish at all, and that was a separate fault.** A cold build was compiling
+  **884,736** variants of URP/Lit's `ForwardLit` fragment pass, at about six a second and falling —
+  roughly a day and a half. The previous night's run had died mid-way with *"Internal error
+  communicating with the shader compiler process… Protocol error - failed to read magic number"*,
+  which reads like a flaky tool and is not: it is what happens when sixteen compiler workers grind
+  at that for half an hour.
+- **The cause was an uncommitted working-tree change.**
+  `UniversalRenderPipelineGlobalSettings.asset` has `m_StripUnusedVariants: 1` in git and had been
+  flipped to `0` locally, in all three places the asset stores it. The build log says what that
+  cost in one line: *After built-in stripping: 884,736 → After scriptable stripping: 884,736* —
+  URP's stripper ran and removed nothing. `PC_RPAsset.asset` was dirty in the same way and for the
+  same reason: its `m_Prefilter*` fields are a cache the build preprocessor writes, and with
+  stripping off the build had written back a version that prefilters nothing.
+- **Restoring the committed value took the same pass to 64 variants and the build to 12 seconds**,
+  386 MB — which is exactly the *"385 MB and 11 s before, 385 MB and 11 s after"* recorded when
+  always-including URP/Lit was first measured. That measurement was honest; the flip came later.
+  The build does not write the flag, so this was a person or an editor UI, once.
+- **And the world was still empty, which is the part worth keeping.** A diagnostic in the player
+  reported `draws 1731 instances 43921 chunks 104 materials 22 surround 18192`, with URP/Lit
+  found, supported and carrying five passes. The renderer was doing all of its work and none of it
+  reached the screen.
+- **Always-included keeps the shader; it does not keep the variant.** `INSTANCING_ON` comes from
+  `#pragma multi_compile_instancing`, and Unity's **built-in** stripping — the 226-million-to-384
+  step, which runs whatever URP's setting is — drops that axis unless some **material asset** has
+  instancing switched on. Every instanced material in this game is built at runtime from
+  `Shader.Find`, so there was none. `Graphics.RenderMeshInstanced` then draws into a variant that
+  does not exist, silently.
+- **This is almost certainly why the flag was flipped.** Switching URP's stripping off is a
+  plausible thing to reach for when variants are going missing. It does keep them — along with
+  884,734 others.
+- **The fix is one instancing-enabled material asset per kept shader**, under
+  `Assets/Resources/OdysseyKeepAlive`. Measured, because the received wisdom is that this is
+  expensive: it doubles the kept variants on the pass that matters and does nothing else — 64 →
+  128 fragment, 16 → 32 vertex, which is the instancing axis and only that. 386 MB either way.
+- **A ShaderVariantCollection was the alternative and is worse.** It has to name the keyword
+  combination, and which combination a runtime material lands in is the pipeline's business — a
+  named combination is a guess that goes stale when a quality setting moves. An instancing-enabled
+  material states the one thing we actually know.
+- **A test whose name claimed more than its assertion is why nobody looked here.**
+  `TheInstancedVariantOfTheLitShaderIsKept` only asserted the shader's name was on a list. Being on
+  that list is precisely what did *not* keep the instanced variant. It is now
+  `TheLitShaderIsOnTheAlwaysIncludedList`, and `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+  asserts the thing the old name promised — including that a keep-alive has not had its instancing
+  switched off, because present is not the same as right.
+- **`ShaderInclusion`'s header said "PlayScene.Build calls it" and nothing did**, from the day it
+  was written. Corrected rather than propagated into the new file. This is the same shape as the
+  note that cost three passes the night before: a sentence about the system that was never true.
+- **Verified:** player built from a clean tree in 14 s, 386 MB, 0 errors; run headless with
+  `-odyssey-newgame`, the log is 94 lines with no exceptions and no missing shaders, and a
+  screenshot shows terrain, trees, grass and a colonist. Fast tier 736 Sim + 445 Hud. Both content
+  gates clean.

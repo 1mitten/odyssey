@@ -840,3 +840,45 @@ subsystem under suspicion had not run.
 - **The fix is to make it reachable**: `-odyssey-newgame` boots a player straight into a colony,
   so a build can be smoke-tested without a person clicking. A check nobody can run from a
   terminal is a check that will be skipped.
+
+## Keeping the shader is not keeping the variant
+
+**2026-09-19, the third cause of the empty player build**, after the missing shaders and the
+missing content pack had both been found and fixed and the world still did not draw.
+
+A diagnostic in the player reported `draws 1731 instances 43921 chunks 104 materials 22 surround
+18192`, with `Universal Render Pipeline/Lit` found, supported and carrying its five passes. The
+renderer submitted everything, every frame, and none of it appeared. `INSTANCING_ON` comes from
+`#pragma multi_compile_instancing`, and Unity's **built-in** variant stripping drops that axis
+unless a **material asset** in the build has instancing switched on. Every instanced material in
+this game is created at runtime from `Shader.Find`, so there was none, and
+`Graphics.RenderMeshInstanced` drew into a variant that was not there. It does not warn.
+
+- **The check:** `InstancingKeepAlive` ships one instancing-enabled material per kept shader under
+  `Assets/Resources/OdysseyKeepAlive`, `PlayerBuild` refuses without them, and
+  `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial` fails the tier — including when a
+  keep-alive exists but has had its instancing switched off, because present is not the same as
+  right.
+- **The pattern is one rule with two owners, again.** "This shader is in the build" and "the
+  variant this draw needs is in the build" are different claims with different mechanisms, and the
+  fix for the first was reported as covering the second.
+- **A test name that claims more than its assertion actively hides the bug.**
+  `TheInstancedVariantOfTheLitShaderIsKept` only asserted that a name appeared in a list — and
+  appearing in that list is exactly what did not keep the instanced variant. It was green
+  throughout, and its name is why nobody looked here.
+
+## Check the working tree before believing the committed settings
+
+**Same day.** A cold player build was compiling **884,736** variants of one pass — about a day and
+a half — and had died the night before with *"Internal error communicating with the shader
+compiler process"*, which reads like a flaky tool. The cause was an **uncommitted** change:
+`UniversalRenderPipelineGlobalSettings.asset` has `m_StripUnusedVariants: 1` in git and had been
+flipped to `0` locally. Restoring it took the same pass to 64 variants and the build to 12 seconds.
+
+- **The check:** `git diff HEAD -- ProjectSettings/ Assets/Settings/` before diagnosing any
+  build-shaped problem. A settings asset that Unity rewrites on its own is easy to stop reading,
+  and a one-character flip inside 20 lines of migration churn is invisible in a glance.
+- **The build log states it plainly when you know the line to want:** *After built-in stripping:
+  884,736 → After scriptable stripping: 884,736* — a stripper that returns its input untouched.
+- **The flip was probably a fix attempt for the bug above.** Switching stripping off does keep the
+  instancing variants. It keeps 884,734 others with them.
