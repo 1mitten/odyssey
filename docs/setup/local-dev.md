@@ -42,6 +42,12 @@ Or from the editor menu: **Odyssey → Phase 0 → Run Synty inventory**. If `As
 
 ## 5. Install the Unity MCP server (IvanMurzak/Unity-MCP)
 
+> **Not installed in this project as of 2026-09-15, and not to be re-added for CI** — the plugin
+> keeps the editor alive after a batch run and logs an authorisation error mid-run that fails
+> whichever test is executing (`docs/lessons.md`, "Running Unity from a script"). It is fine for an
+> interactive editor session; keep it out of the manifest that CI reads, or gate it behind a define
+> constraint. `scripts/unity.sh` is the command surface that works everywhere.
+
 Why this one: explicit Linux binaries, Unity 6000.3 named in its own tooling, stdio and streamable-HTTP transports, EditMode/PlayMode test execution, console retrieval, and genuine editor C# execution via Roslyn, with no Python or Node needed on the editor side. Comparison and runner-up in `docs/research/unity-mcp-server.md`.
 
 1. Install the package into the project. Either **OpenUPM** (`openupm add com.ivanmurzak.unity.mcp`, requires `npm i -g openupm-cli`) or Package Manager → *Add package from git URL* using the URL in the project's README at https://github.com/IvanMurzak/Unity-MCP.

@@ -6,6 +6,16 @@ This file is written to be executed by a session with no other context. Read `CL
 
 **Before any of this begins:** Phase 3 ends with a hard stop for the owner's approval (brief §6). No unit below is started until that approval is given.
 
+## Status, 2026-09-19
+
+**The live status is the track table in `CLAUDE.md`** — this file stopped being the place to read
+it on 2026-09-16, and the table below is kept as the record of that date rather than rewritten.
+Since then: M3 has everything but stairs (`U44`); MS, WS1–WS3, RP and CL are done; the baseline
+audit of 2026-09-19 (`docs/audit/2026-09-19-baseline.md`) added the **HT** hardening track below,
+which is the next thing this plan schedules and which **waits for approval before any unit
+starts**. Gates on 2026-09-19: fast tier 753 Sim + 449 Hud; Unity EditMode 1,872 total, 1,858
+passed, 0 failed; PlayMode 82 total, 75–77 passed, 0 failed.
+
 ## Status, 2026-09-16
 
 | Milestone | State |
@@ -240,6 +250,39 @@ economy written down beside the previous one; and the owner has played it and ju
 **Not in scope, and §6 of the design says why for each:** quality, yield, the passion mood buff,
 traits, health capacities, carried load, and the skill-table reshuffle `15-skills.md` §6 leaves
 open.
+
+---
+
+## HT — Hardening (baseline audit, 2026-09-19)
+
+The audit (`docs/audit/2026-09-19-baseline.md`) measured the tick at the scale target under edits
+for the first time, read the seven largest files, and ranked what would hurt when the board grows.
+These are the units that came out of it, **in the order they should be taken**. HT1, HT2 and HT3
+share no files and can run in parallel on separate branches. None starts until the owner approves
+the audit's §8.
+
+**The one number to hold in mind.** A tick that mines one cell at 250 × 250 × 40 costs **1.19 ms**
+against **0.065 ms** at rest, all of it `NavGraph.Rebuild` recomputing every district (24,000
+regions) for a change in one block. At speed 3 that is 3.6 ms of the frame before rendering.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **HT1 The navigation rebuild is local** | M | — | First the measurement: `NavGraph.Rebuild` reports its segments — flood, portals, adjacency, districts, estimate — through the existing `PhaseSink`, and a busy arm of `TickBenchmarkTests` (one mined cell a tick, 50 colonists, scale target) prints them. Then districts are recomputed only for the components the affected zones touch, and district ids stop being renumbered from zero (nothing compares them for order; they are not saved or hashed). **Done when the edit-tick arm measures under 0.2 ms at the scale target** on the machine that measured 1.19, with every path checksum, every golden and `NavGraphStatisticsTests`' region counts unchanged, and the incremental result tested against a full rebuild as its oracle over random edit sequences — the support solver's pattern. Design section in `docs/design/05-ai-and-jobs.md` beside §6. |
+| **HT2 Hygiene** ∥ | S | — | One PR. `tools/dotnet/Directory.Build.props` turns on the .NET analysers at `latest` with warnings as errors for Sim, Contracts and Hud, and an `.editorconfig` at the root carries the style rules; unused packages and built-in modules leave `Packages/manifest.json` (`ai.navigation`, `analytics`, `collab-proxy`, `multiplayer.center`, `purchasing`, `timeline`, `visualscripting`, `xr.legacyinputhelpers`, `2d.sprite`, `2d.tilemap`; modules `physics2d`, `cloth`, `vehicles`, `wind`, `vr`, `xr`, `terrain`, `terrainphysics` — `ugui` only after a grep proves nothing needs it); the ~40 `*Check` and `*Probe` tools move under `Assets/Editor/Odyssey/Probes/` with their own asmdef gated on `ODYSSEY_PROBES`, and `scripts/unity.sh shot` sets it; `docs/setup/local-dev.md` states the Python floor (3.11 with today's fix; say 3.11+). Both tiers green, **and a player build smoke run**, because removing packages is build-shaped. |
+| **HT3 The event seam** ∥ | M | — | A sim-side `EventLog` any system appends to (`tick, kind, cell, subject, value`), drained into the snapshot by a contributor as `EventView` rows keyed by a name the emitter mints — the `PawnAspect` shape, so `Sim.Contracts` gains one struct and no enum. **Not hashed, not saved.** ADR 0004 amended. The alert chime and `AlertModel` read events instead of inferring from the pawn list, with the control that the starvation chime fires from the event and does not fire without it. Design: `docs/design/05-ai-and-jobs.md` gains a §7, and the M6 storyteller row in `03-systems-catalogue.md` names it as the channel incidents will write into. |
+| **HT4 The Burst decision** | S | — | A decision, not a build: ADR 0005 amended to say `Odyssey.Sim` stays UnityEngine-free, hot paths are declared as kernel interfaces in the Sim with the managed implementation beside them, and `Odyssey.Sim.Native` (referencing Burst, Collections, Mathematics) implements the same interfaces and is chosen by the composition root; a Unity-tier test asserts both kernels hash identically on the D1 workload. The assembly itself is created by the first unit that needs a kernel — on today's numbers M4's grid propagation, not pathfinding. The queue's *needs the owner* row closes. |
+| **HT5 The monolith cuts** | M each | HT2 | One PR per file, behaviour-preserving, in the audit's order (§4d-i): **(a)** the bootstrap's overlay drawing → `WorldOverlays` and the renderer's fourteen primitives → `OverlayDrawer` together, plus the three per-frame string allocations fixed by comparing inputs; **(b)** `PawnFigureDirector.Pose` re-sectioned into its nine named steps, and the five per-figure aspect scans replaced by one walk of `PawnAspects` per `Sync`; **(c)** `HudShell`'s three cadence allocations removed, then `HudShell.Start` → `StartScreenView` with forwarding properties for the eleven test files; **(d)** `PlayScene`'s catalogue table and builders → `ModuleCatalogueBuilder`; **(e)** `ConstructionGrid`'s bed ownership → `BedRegistry`. Each: both tiers green, every golden identical, the screenshot probes that touch the file re-shot and identical, and the design doc that owns the line gains a line saying what moved where. |
+| **HT6 The busy-colony arm** | S | HT1 | A third arm of `TickBenchmarkTests`: fifty colonists with standing mine, fell and haul orders for 60,000 ticks, printing think cost per pawn, hauls per day and nav rebuilds; its economy is the first `soak-runs.md` entry since WS2/WS3 re-baked the goldens. **The number decides whether per-region item listers are built**; if it does, they are one class beside `ColonyItems` keyed by `NavGraph.RegionOfCell`. |
+| **HT7 The slice channel** | S | — | `GridMirrorContributor` writes the per-layer slice only when a subscriber has asked, the way `CellDetail` is asked for; the snapshot tests are unchanged and a control asserts the channel is empty when nobody asks. |
+| **HT8 Frame time at the scale target** | S | Unity | A `FrameTimeTests` arm at 250 × 250 × 40 with fifty figures and three hundred standing orders, plus a draw-call count with `SubmitToGpu=false`. Its numbers decide the two behaviour-changing steps HT5 leaves optional — batching the per-order marks, and frustum culling in `ChunkRenderer.Render` — and either explain or retire the city's 0.88 → 1.56 ms note in `CLAUDE.md`. |
+| **HT9 The input harness** | M | Unity | OQ-40: a PlayMode test presses a mouse button and the game sees it, proven by a control that fails when the input is withheld; `InputHarnessTests` and `FloorToolClickTests` un-ignore together. Three silent failures on this line are the argument for its size. |
+
+**Gate:** both tiers green after each unit; HT1's number recorded in ADR 0005 beside OQ-19's; the
+playtest queue gains no rows from HT1–HT4 and HT6–HT8 (nothing player-visible) and one per HT5 cut
+(a re-shot probe is a picture, not a play).
+
+**What this track does not touch.** Stairs (`U44`) and the ten-day gate close M3 exactly as
+planned; WS4 stays held; every owner deferral in the section below stands.
 
 ---
 
