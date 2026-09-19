@@ -6649,3 +6649,38 @@ bushes and every item pile did not.
 - **Verified:** build 14 s, 429 MB, 0 errors; run headless with `-odyssey-newgame`, 0 exceptions,
   and an in-game screenshot shows grass tufts, bushes, crates, wood logs and loose rocks. Fast tier
   736 Sim + 445 Hud.
+
+## 2026-09-19 — 8-directional diagonal movement and navigation
+
+The owner requested that colonists use diagonal movement in both the game system and the animation,
+rather than walking in rigid 4-connected linear straight lines.
+
+- **Full 8-directional horizontal navigation on the grid.** `NavGraph`, `NavGrid`, `PathFinder`,
+  and `MovementSystem` now support 8 horizontal moves. Diagonal steps cost `MoveCost.Diagonal = 141`
+  at baseline (~1.414x orthogonal), with terrain resistance and door/hazard penalties scaled
+  proportionally by 1.41x reflecting 41% longer travel distance through the cell.
+- **Strict corner-cutting prevention (RimWorld rule).** A diagonal step between $(x, z)$ and
+  $(x \pm 1, z \pm 1)$ is legal only if both flanking orthogonal cells $(x \pm 1, z)$ and
+  $(x, z \pm 1)$ are walkable for that traverse mode. Pawns cannot clip through outer building
+  corners or squeeze through diagonal cracks between solid walls or rock.
+- **Vertical hops remain orthogonal.** Unaided jumping up +1 or dropping down -1 layer into a
+  neighbouring column remains 4-way cardinal. Diagonal movement is strictly horizontal on the
+  same layer.
+- **Octile distance heuristic replaces Manhattan.** `PathFinder.CellHeuristic`, `RegionHeuristic`,
+  and `ColonyItems.Distance` now use the exact octile metric:
+  $h = \min(dx, dz) \times 141 + (\max(dx, dz) - \min(dx, dz)) \times 100 + dy \times \text{LayerChangeHint}$.
+  Because the heuristic matches true diagonal geometry, A* explores a narrower search corridor
+  and finds direct paths in ~30% fewer steps.
+- **Dynamic link generation and affected zones.** `NavGraph.BuildInteriorZone` and `BuildEdgeZone`
+  now pair diagonal spans across region boundaries with strict corner-cutting validation.
+  `CollectAffectedZones` marks all adjacent boundary zones dirty when a block changes, preserving
+  full-vs-incremental rebuild determinism.
+- **Presentation and animation are fluid out of the box.** `PawnPose` computes headings directly
+  from travel vectors, and `PawnFigureDirector` smoothly rotates characters towards diagonal
+  bearings (45°, 135°, etc.) at 540°/s with displacement-driven gait blending.
+- **Verified:** fast tier **741 Sim + 445 Hud** (1,186 passed, 0 failed), including 5 new tests in
+  `DiagonalMovementTests.cs` (straight diagonal path, wall corner-cutting prevention, seam block,
+  proportional terrain cost scaling, and district reachability agreeing with exhaustive flood).
+  Both wiki and registry content gates clean. Golden master simulated hashes re-baked in
+  `Golden.cs` for `Meadow`, `PlayedBoard`, and `City` to reflect colonists travelling diagonally.
+

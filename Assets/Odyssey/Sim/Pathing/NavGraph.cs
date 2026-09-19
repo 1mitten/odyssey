@@ -373,11 +373,23 @@ namespace Odyssey.Sim.Pathing
                 // scratch on round 2 of the randomised-edit fixture.</para>
                 if (y > 0) AddInteriorAndNeighbours(b - perLayer, bx, bz);
 
-                // The four shared boundaries.
-                if (bx + 1 < BlocksX) _affectedZoneSet.Add(BlockCount + b);
-                if (bz + 1 < BlocksZ) _affectedZoneSet.Add(2 * BlockCount + b);
-                if (bx > 0) _affectedZoneSet.Add(BlockCount + b - 1);
-                if (bz > 0) _affectedZoneSet.Add(2 * BlockCount + b - BlocksX);
+                // Shared boundaries (orthogonal and diagonal).
+                for (int dz = -1; dz <= 1; dz++)
+                {
+                    int nbz = bz + dz;
+                    if ((uint)nbz >= (uint)BlocksZ) continue;
+                    int row = y * perLayer + nbz * BlocksX;
+                    if (bx + 1 < BlocksX) _affectedZoneSet.Add(BlockCount + row + bx);
+                    if (bx > 0) _affectedZoneSet.Add(BlockCount + row + bx - 1);
+                }
+
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int nbx = bx + dx;
+                    if ((uint)nbx >= (uint)BlocksX) continue;
+                    if (bz + 1 < BlocksZ) _affectedZoneSet.Add(2 * BlockCount + y * perLayer + bz * BlocksX + nbx);
+                    if (bz > 0) _affectedZoneSet.Add(2 * BlockCount + y * perLayer + (bz - 1) * BlocksX + nbx);
+                }
 
                 if (_connectorsByBlock.TryGetValue(b, out List<int>? ids))
                     for (int k = 0; k < ids.Count; k++) _affectedZoneSet.Add(3 * BlockCount + ids[k]);
@@ -389,10 +401,14 @@ namespace Odyssey.Sim.Pathing
             void AddInteriorAndNeighbours(int block, int bx, int bz)
             {
                 _affectedZoneSet.Add(block);
-                if (bx > 0) _affectedZoneSet.Add(block - 1);
-                if (bx + 1 < BlocksX) _affectedZoneSet.Add(block + 1);
-                if (bz > 0) _affectedZoneSet.Add(block - BlocksX);
-                if (bz + 1 < BlocksZ) _affectedZoneSet.Add(block + BlocksX);
+                for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+                    int nbx = bx + dx, nbz = bz + dz;
+                    if ((uint)nbx < (uint)BlocksX && (uint)nbz < (uint)BlocksZ)
+                        _affectedZoneSet.Add(block + dz * BlocksX + dx);
+                }
             }
         }
 
@@ -617,6 +633,8 @@ namespace Odyssey.Sim.Pathing
 
                     if (x + 1 < x1) TryPair(block, c, c + 1);
                     if (z + 1 < z1) TryPair(block, c, c + strideZ);
+                    if (x + 1 < x1 && z + 1 < z1) TryPair(block, c, c + 1 + strideZ, c + 1, c + strideZ);
+                    if (x + 1 < x1 && z > z0) TryPair(block, c, c + 1 - strideZ, c + 1, c - strideZ);
 
                     if (_regionKind[_cellRegion[c]] != RegionKind.Impassable)
                         TryFallEdges(block, c, x, z, y);
@@ -631,6 +649,7 @@ namespace Odyssey.Sim.Pathing
         void BuildEdgeZone(int block, int delta)
         {
             BlockBounds(block, out int x0, out int x1, out int z0, out int z1, out int y);
+            int strideZ = Size.SizeX;
             if (delta == 1)
             {
                 if (x1 >= Size.SizeX || x1 != x0 + BlockSize) return;
@@ -638,6 +657,10 @@ namespace Odyssey.Sim.Pathing
                 {
                     int c = Size.Index(x1 - 1, z, y);
                     TryPair(BlockCount + block, c, c + 1);
+                    if (z + 1 < Size.SizeZ)
+                        TryPair(BlockCount + block, c, c + 1 + strideZ, c + 1, c + strideZ);
+                    if (z > 0)
+                        TryPair(BlockCount + block, c, c + 1 - strideZ, c + 1, c - strideZ);
                 }
             }
             else
@@ -647,17 +670,25 @@ namespace Odyssey.Sim.Pathing
                 {
                     int c = Size.Index(x, z1 - 1, y);
                     TryPair(2 * BlockCount + block, c, c + delta);
+                    if (x + 1 < Size.SizeX)
+                        TryPair(2 * BlockCount + block, c, c + delta + 1, c + delta, c + 1);
+                    if (x > 0)
+                        TryPair(2 * BlockCount + block, c, c + delta - 1, c + delta, c - 1);
                 }
             }
         }
 
-        void TryPair(int zone, int c, int n)
+        void TryPair(int zone, int c, int n, int corner1 = -1, int corner2 = -1)
         {
             int ra = _cellRegion[c];
             int rb = _cellRegion[n];
             if (ra == NoRegion || rb == NoRegion || ra == rb) return;
             if (_regionKind[ra] == RegionKind.Impassable || _regionKind[rb] == RegionKind.Impassable) return;
 
+            byte mask = ModeMaskFor(c, n, corner1, corner2);
+            if (mask == 0) return;
+
+            bool diag = corner1 >= 0;
             int a = ra < rb ? ra : rb;
             int b = ra < rb ? rb : ra;
             int cellA = ra < rb ? c : n;
@@ -672,30 +703,46 @@ namespace Odyssey.Sim.Pathing
             _linkKind[id] = LinkKind.Span;
             _linkCellA[id] = cellA;
             _linkCellB[id] = cellB;
-            _linkCostAB[id] = StepCost(cellB);
-            _linkCostBA[id] = StepCost(cellA);
+            _linkCostAB[id] = StepCost(cellB, diag);
+            _linkCostBA[id] = StepCost(cellA, diag);
             _linkOneWay[id] = false;
             _linkSpan[id] = 1;
-            _linkMode[id] = ModeMaskFor(cellA, cellB);
+            _linkMode[id] = mask;
             _pairScratch[key] = id;
         }
 
-        int StepCost(int targetCell)
+        int StepCost(int targetCell, bool diagonal = false)
         {
             NavFlags f = Grid.Flags[targetCell];
-            int cost = MoveCost.Orthogonal + Grid.ExtraCost(targetCell);
-            if ((f & NavFlags.Door) != 0 && (f & NavFlags.DoorOpen) == 0) cost += MoveCost.DoorOpening;
-            if ((f & NavFlags.Hazard) != 0) cost += MoveCost.HazardPenalty;
+            int baseCost = diagonal ? MoveCost.Diagonal : MoveCost.Orthogonal;
+            int extra = Grid.ExtraCost(targetCell);
+            if (diagonal && extra > 0) extra = (extra * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+            int cost = baseCost + extra;
+            if ((f & NavFlags.Door) != 0 && (f & NavFlags.DoorOpen) == 0)
+            {
+                int door = MoveCost.DoorOpening;
+                if (diagonal) door = (door * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += door;
+            }
+            if ((f & NavFlags.Hazard) != 0)
+            {
+                int hazard = MoveCost.HazardPenalty;
+                if (diagonal) hazard = (hazard * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += hazard;
+            }
             return cost;
         }
 
-        byte ModeMaskFor(int cellA, int cellB)
+        byte ModeMaskFor(int cellA, int cellB, int corner1 = -1, int corner2 = -1)
         {
             byte mask = 0;
             for (int m = 0; m < TraverseModes.Count; m++)
             {
                 var mode = (TraverseMode)m;
-                if (Grid.CanEnter(cellA, mode) && Grid.CanEnter(cellB, mode)) mask |= (byte)(1 << m);
+                if (!Grid.CanEnter(cellA, mode) || !Grid.CanEnter(cellB, mode)) continue;
+                if (corner1 >= 0 && !Grid.CanWalkInto(corner1, mode)) continue;
+                if (corner2 >= 0 && !Grid.CanWalkInto(corner2, mode)) continue;
+                mask |= (byte)(1 << m);
             }
 
             return mask;
@@ -1271,9 +1318,18 @@ namespace Odyssey.Sim.Pathing
             {
                 int dx = Math.Abs(a.X - b.X);
                 int dz = Math.Abs(a.Z - b.Z);
-                if (dx + dz != 1) return false;
+                if (dx + dz == 1)
+                    return Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode);
 
-                return Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode);
+                if (dx == 1 && dz == 1)
+                {
+                    if (!Grid.CanEnter(from, mode) || !Grid.CanWalkInto(to, mode)) return false;
+                    int c1 = Size.Index(a.X, b.Z, a.Y);
+                    int c2 = Size.Index(b.X, a.Z, a.Y);
+                    return Grid.CanWalkInto(c1, mode) && Grid.CanWalkInto(c2, mode);
+                }
+
+                return false;
             }
 
             if (IsHop(a, b))
