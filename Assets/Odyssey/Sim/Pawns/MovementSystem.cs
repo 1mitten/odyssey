@@ -200,7 +200,10 @@ namespace Odyssey.Sim.Pawns
                 return MoveCost.Fall;
             }
 
-            return _ctx.Nav.Grid.EnterCost(to, mode);
+            CellRef pa = _ctx.Size.FromIndex(from);
+            CellRef pb = _ctx.Size.FromIndex(to);
+            bool diagonal = pa.X != pb.X && pa.Z != pb.Z;
+            return _ctx.Nav.Grid.EnterCost(to, mode, diagonal);
         }
     }
 }

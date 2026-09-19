@@ -333,7 +333,12 @@ namespace Odyssey.Sim.Pathing
             int bz = brem / _sizeX;
             int bx = brem - bz * _sizeX;
 
-            return (Math.Abs(ax - bx) + Math.Abs(az - bz)) * MoveCost.Orthogonal
+            int dx = Math.Abs(ax - bx);
+            int dz = Math.Abs(az - bz);
+            int min = dx < dz ? dx : dz;
+            int max = dx < dz ? dz : dx;
+
+            return min * MoveCost.Diagonal + (max - min) * MoveCost.Orthogonal
                    + Math.Abs(ay - by) * LayerChangeHint;
         }
 
@@ -400,6 +405,11 @@ namespace Odyssey.Sim.Pathing
                 if (z > 0) Relax(c, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
                 if (z + 1 < _size.SizeZ) Relax(c, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
 
+                if (x > 0 && z > 0) RelaxDiagonal(c, c - 1 - _sizeX, c - 1, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
+                if (x + 1 < _sizeX && z > 0) RelaxDiagonal(c, c + 1 - _sizeX, c + 1, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
+                if (x > 0 && z + 1 < _size.SizeZ) RelaxDiagonal(c, c - 1 + _sizeX, c - 1, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
+                if (x + 1 < _sizeX && z + 1 < _size.SizeZ) RelaxDiagonal(c, c + 1 + _sizeX, c + 1, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
+
                 // A hop: one block up or one block down, into the column next door. Unaided
                 // vertical movement is exactly this and nothing else (owner, 2026-09-16) — the
                 // cell entered has a floor, so no route can end in mid-air the way a climb could.
@@ -457,6 +467,14 @@ namespace Odyssey.Sim.Pathing
             // is exactly how a colonist is supposed to reach one.
             if (!_grid.CanWalkInto(n, mode)) return;
             RelaxExplicit(from, n, g + _grid.EnterCost(n, mode), goal, mode, stamp, rstamp, constrained);
+        }
+
+        void RelaxDiagonal(int from, int n, int c1, int c2, int g, int goal, TraverseMode mode,
+            int stamp, int rstamp, bool constrained)
+        {
+            if (!_grid.CanWalkInto(n, mode)) return;
+            if (!_grid.CanWalkInto(c1, mode) || !_grid.CanWalkInto(c2, mode)) return;
+            RelaxExplicit(from, n, g + _grid.EnterCost(n, mode, diagonal: true), goal, mode, stamp, rstamp, constrained);
         }
 
         /// <summary>
@@ -519,14 +537,14 @@ namespace Odyssey.Sim.Pathing
                 if (r >= 0 && (_regionStamp[r] == rstamp || _regionStamp[r] == -rstamp))
                 {
                     int d = _regionG[r];
-                    return d == 0 ? Manhattan(cell, goal) : d;
+                    return d == 0 ? Octile(cell, goal) : d;
                 }
             }
 
-            return Manhattan(cell, goal);
+            return Octile(cell, goal);
         }
 
-        int Manhattan(int a, int b)
+        int Octile(int a, int b)
         {
             int ay = a / _layerStride;
             int arem = a - ay * _layerStride;
@@ -538,7 +556,12 @@ namespace Odyssey.Sim.Pathing
             int bz = brem / _sizeX;
             int bx = brem - bz * _sizeX;
 
-            return (Math.Abs(ax - bx) + Math.Abs(az - bz)) * MoveCost.Orthogonal
+            int dx = Math.Abs(ax - bx);
+            int dz = Math.Abs(az - bz);
+            int min = dx < dz ? dx : dz;
+            int max = dx < dz ? dz : dx;
+
+            return min * MoveCost.Diagonal + (max - min) * MoveCost.Orthogonal
                    + Math.Abs(ay - by) * LayerChangeHint;
         }
 

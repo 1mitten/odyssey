@@ -115,7 +115,7 @@ namespace Odyssey.Sim.Pathing
         public const int Orthogonal = 100;
 
         /// <summary>
-        /// Reserved. The MVP search is 4-connected — see the note on <see cref="PathFinder"/>.
+        /// What entering a cell diagonally costs at baseline (100 * sqrt(2) rounded to int).
         /// </summary>
         public const int Diagonal = 141;
 
@@ -424,14 +424,27 @@ namespace Odyssey.Sim.Pathing
         /// </summary>
         public bool CanWalkInto(int index, TraverseMode mode) => CanEnter(index, mode);
 
-        /// <summary>The cost of stepping into this cell, orthogonally, for this mode.</summary>
-        public int EnterCost(int index, TraverseMode mode)
+        /// <summary>The cost of stepping into this cell, orthogonally or diagonally, for this mode.</summary>
+        public int EnterCost(int index, TraverseMode mode, bool diagonal = false)
         {
             NavFlags f = Flags[index];
-            int cost = MoveCost.Orthogonal + CostByClass[CostClass[index]];
+            int baseCost = diagonal ? MoveCost.Diagonal : MoveCost.Orthogonal;
+            int terrainExtra = CostByClass[CostClass[index]];
+            if (diagonal && terrainExtra > 0)
+                terrainExtra = (terrainExtra * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+            int cost = baseCost + terrainExtra;
             if ((f & NavFlags.Door) != 0 && (f & NavFlags.DoorOpen) == 0)
-                cost += mode == TraverseMode.IgnoreDoors ? MoveCost.DoorBash : MoveCost.DoorOpening;
-            if ((f & NavFlags.Hazard) != 0) cost += MoveCost.HazardPenalty;
+            {
+                int doorCost = mode == TraverseMode.IgnoreDoors ? MoveCost.DoorBash : MoveCost.DoorOpening;
+                if (diagonal) doorCost = (doorCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += doorCost;
+            }
+            if ((f & NavFlags.Hazard) != 0)
+            {
+                int hazardCost = MoveCost.HazardPenalty;
+                if (diagonal) hazardCost = (hazardCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += hazardCost;
+            }
             return cost;
         }
     }

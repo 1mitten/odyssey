@@ -115,7 +115,8 @@ namespace Odyssey.Tests.Sim
             TestContext.WriteLine(report);
             Report(report);
 
-            Assert.That(steps, Is.EqualTo(60), "a 4-connected walk of 30 by 30 is 60 steps");
+            Assert.That(steps, Is.EqualTo(30), "an 8-connected walk of 30 by 30 is 30 diagonal steps");
+            Assert.That(turns, Is.EqualTo(0), "a straight diagonal walk takes zero turns");
         }
 
         /// <summary>

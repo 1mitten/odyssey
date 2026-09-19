@@ -215,7 +215,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7415324713255390796UL,
-            Simulated = 16863583305294978295UL,
+            Simulated = 11878595623063687696UL,
         };
 
         /// <summary>
@@ -232,7 +232,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 4458515928023308940UL,
-            Simulated = 1174039887129915637UL,
+            Simulated = 14541313576350770742UL,
         };
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 15543912199131212387UL,
+            Simulated = 10223758098092909442UL,
         };
     }
 }
