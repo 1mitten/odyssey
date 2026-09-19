@@ -62,6 +62,11 @@ namespace Odyssey.Tests.Sim
                 Step(p.Z > 0, c - size.SizeX);
                 Step(p.Z + 1 < size.SizeZ, c + size.SizeX);
 
+                if (p.X > 0 && p.Z > 0) StepDiag(c - 1 - size.SizeX, c - 1, c - size.SizeX);
+                if (p.X + 1 < size.SizeX && p.Z > 0) StepDiag(c + 1 - size.SizeX, c + 1, c - size.SizeX);
+                if (p.X > 0 && p.Z + 1 < size.SizeZ) StepDiag(c - 1 + size.SizeX, c - 1, c + size.SizeX);
+                if (p.X + 1 < size.SizeX && p.Z + 1 < size.SizeZ) StepDiag(c + 1 + size.SizeX, c + 1, c + size.SizeX);
+
                 for (int e = nav.FirstPortalEdge(c); e != -1; e = nav.PortalEdgeNext(e))
                 {
                     if (!TraverseModes.Allows(nav.PortalEdgeMode(e), mode)) continue;
@@ -72,6 +77,15 @@ namespace Odyssey.Tests.Sim
                 {
                     if (!inBounds || seen.Contains(n)) return;
                     if (!nav.Grid.CanEnter(n, mode)) return;
+                    seen.Add(n);
+                    queue.Enqueue(n);
+                }
+
+                void StepDiag(int n, int c1, int c2)
+                {
+                    if (seen.Contains(n)) return;
+                    if (!nav.Grid.CanEnter(n, mode)) return;
+                    if (!nav.Grid.CanWalkInto(c1, mode) || !nav.Grid.CanWalkInto(c2, mode)) return;
                     seen.Add(n);
                     queue.Enqueue(n);
                 }
