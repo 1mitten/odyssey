@@ -284,6 +284,34 @@ matter what"*):**
   quarter second, then each falls to its hashed spot, staggered 40 ms apart and accelerating,
   and from landing they are the static handful the seed day draws. The drop's clock is the
   kneel age past its threshold, so no state is timed twice.
+- **The tilled-earth swap was asking the wrong layer, and had never fired** (found 2026-09-19
+  from the owner's flush screenshots). A zone is painted on the air the colonist stands in;
+  the soil it tills is the cell beneath her feet — and `DrawnTerrain` asked the zone at the
+  ground cell itself, so the answer was always no. Every brown tile the owner had ever seen
+  was the translucent cover, the plots' own tufts never left, and the photo sheet had said
+  "carrots growing out of grass" twice before anybody believed it. The swap and the tuft pull
+  both ask one layer up now, and `TilledGroundAsksTheZoneOneLayerUp` pins it.
+- **The cover is the ground's own mesh, drawn again over itself and tinted** (owner,
+  2026-09-19, with the screenshots that prove it: *"not flush against the tile and
+  constantly have thicker borders, have gaps, part missing and isn't uniform from different
+  angles"*). The terrain quad is draped onto the relief field's tangent plane and rippled
+  inside its own cell; the first cover was a flat plate at the cell centre's height, which
+  sank into the ripple's convex corners and floated over the concave ones — gaps, thick
+  borders and missing parts that changed with the bearing. `DrawZoneCover` places the drawn
+  terrain's own module with the same drape and lifts it a mark's height along the drape's
+  own up: identical geometry, one constant offset, flush from every angle by construction.
+  Judged flush and uniform in the photo sheet.
+- **The yield is laid off the soil, and nothing is sown where a yield still lies** (owner,
+  2026-09-19: *"you cannot sow unless the tile has been harvested"… "harvested materials
+  should not be laid on the soil and should look to be moved off it"*). The harvest hunts a
+  cell outside every zone within three before it falls back to the felling argument, and the
+  sowing scan refuses a cell that still carries a pile. The flow reads: pull → yield on the
+  grass beside the plot → hauled to the stockpile → the tile re-sown.
+- **A high number of carrots per tile is twelve drawn, seventy-five stacked** (owner:
+  *"make a judgement call"*). The heap ramp stays the identity up to a dozen — five grew,
+  five lie there — then holds at twelve so a store square is a proper heap without every
+  extra carrot redrawing it; the stack limit rises to 75, the same as wood and stone, and
+  `ItemHeap.Most` rises with it so rubble's full stacks grow the same way.
 - **The meadow is pulled off the plot's border** (owner, 2026-09-19: *"remove the grass
   graphics from the garden plots automatically … it makes it jarring to see with the grass
   graphics still appearing on the plots"*). A zoned cell's own tufts already died with the

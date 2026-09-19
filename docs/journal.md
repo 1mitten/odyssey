@@ -7256,3 +7256,24 @@ cancel now mark the side neighbours' chunks - a border cell's neighbours can liv
 chunk, and without the mark that chunk would keep its fringe until something else happened to
 re-mesh it. The clamp touches only clumps that would have crossed; the ring everywhere else is
 where it always was, which the scatter stability test still pins.
+
+
+### The cover learns the ground's shape, and the earth finally tills (2026-09-19)
+
+The owner's flush screenshots carried two faults, and the second was hiding under the first.
+The cover itself was a flat plate on draped, rippled ground - it sank into convex corners and
+floated over concave ones, so every tile showed gaps, thick borders or missing parts that
+changed with the bearing. DrawZoneCover now draws the drawn terrain's own module with the same
+drape, lifted a mark's height along the drape's own up: identical geometry, one constant
+offset, flush by construction, judged so in the photo sheet.
+
+And under it: the tilled-earth swap had never fired. A zone is painted on the air the
+colonist stands in, and DrawnTerrain asked the zone at the ground cell itself - always no.
+Every brown tile the owner had ever seen was the translucent cover; the plots' own tufts had
+never left; and the photo sheet had said "carrots growing out of grass" twice before anybody
+believed it. The swap and the tuft pull both ask one layer up now.
+
+The flow asks landed with the same photographs: the yield is laid off the soil (the harvest
+hunts a cell outside every zone before it falls back to the felling argument), nothing is sown
+where a pile still lies, and the judgement call on pile size is twelve drawn and seventy-five
+stacked - the identity to a yield kept, the store square a proper heap.
