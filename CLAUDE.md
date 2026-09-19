@@ -186,6 +186,7 @@ this file.
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
+| The sub-tile sidestep, crowd and tree avoidance | `docs/design/25-pawn-steering.md` |
 | Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |

@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Odyssey.Sim.Contracts;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Rendering
@@ -96,6 +97,72 @@ namespace Odyssey.Presentation.Rendering
             float dx = heading.x * invMag;
             float dz = heading.z * invMag;
             return new Vector3(dz, 0f, -dx);
+        }
+
+        /// <summary>
+        /// How far short of square-on two paths start counting as converging, and how far past it
+        /// they count as fully opposed. Cosines of the angle between the two headings.
+        /// </summary>
+        public const float ConvergingFrom = 0.2f;
+
+        /// <summary>See <see cref="ConvergingFrom"/>.</summary>
+        public const float OpposedBy = 0.6f;
+
+        /// <summary>The range at which another colonist starts to be given room, in metres.</summary>
+        public const float CrowdFarRadius = 3.0f;
+
+        /// <summary>The range at which room-giving is at its full width, in metres.</summary>
+        public const float CrowdNearRadius = 1.5f;
+
+        /// <summary>
+        /// How much room another colonist at this distance is given: 0 at
+        /// <see cref="CrowdFarRadius"/> and beyond, 1 at <see cref="CrowdNearRadius"/> and inside,
+        /// smoothly between. Continuous at both ends, which is the whole point — the hard 3.0 m
+        /// cut-off it replaces moved a figure 0.6 m sideways between one tick and the next.
+        /// </summary>
+        public static float Proximity(float distance) =>
+            SmoothStep((CrowdFarRadius - distance) / (CrowdFarRadius - CrowdNearRadius));
+
+        /// <summary>
+        /// Where a colonist is at this instant, interpolated along the step it is taking, or its
+        /// cell centre when it is standing. Three-dimensional: a colonist on the storey above is
+        /// three metres away, not nought (<c>CellMetrics.SizeY</c>).
+        /// </summary>
+        public static Vector3 WhereItIsNow(in PawnView pawn)
+        {
+            Vector3 at = CellMetrics.FloorCentre(pawn.Cell);
+            if (!pawn.Moving) return at;
+            float s = Mathf.Clamp01(pawn.MovePerMille > 0
+                ? pawn.MovePerMille * 0.001f
+                : pawn.MovePercent * 0.01f);
+            return at + (CellMetrics.FloorCentre(pawn.NextCell) - at) * s;
+        }
+
+        /// <summary>
+        /// How much this other colonist counts as being in the way, 0 to 1.
+        ///
+        /// <para>A colonist standing still is wholly in the way. One that is moving is in the way
+        /// to the extent that it is coming the other way: nothing at all when it walks the same
+        /// line as you, ramping in from square-on to head-on. It replaces a <c>dot &lt; -0.5</c>
+        /// test, which switched the entire sidestep on and off as the other colonist turned.</para>
+        ///
+        /// <para>The ramp opens just <i>before</i> square-on and is only fully open past
+        /// <c>0.6</c>, so crossing traffic gets about a sixth of the envelope and head-on gets all
+        /// of it. Crossing was given nothing at all before, and it is the case a player is most
+        /// likely to be looking at — two colonists converging on one doorway. Starting a little
+        /// below square-on rather than exactly at it is what keeps two colonists on gently
+        /// converging lines from ignoring each other until the last moment.</para>
+        /// </summary>
+        public static float InTheWay(Vector3 headingDir, in PawnView other)
+        {
+            if (!other.Moving) return 1f;
+
+            Vector3 otherHeading = CellMetrics.FloorCentre(other.NextCell) - CellMetrics.FloorCentre(other.Cell);
+            otherHeading.y = 0f;
+            if (otherHeading.sqrMagnitude < 1e-6f) return 1f;
+
+            float opposed = -Vector3.Dot(headingDir, otherHeading.normalized);
+            return SmoothStep((opposed + ConvergingFrom) / (OpposedBy + ConvergingFrom));
         }
 
         /// <summary>

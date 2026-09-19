@@ -42,12 +42,28 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world = null) =>
-            Of(in pawn, tickAlpha, movePerTick, out heading, world, default);
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, default, out _);
 
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world,
-            ReadOnlySpan<PawnView> otherPawns)
+            ReadOnlySpan<PawnView> otherPawns) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, out _);
+
+        /// <summary>
+        /// The same pose, with the sub-tile steering it applied handed back separately.
+        ///
+        /// <para><b>Separated because the two things want different treatment downstream.</b>
+        /// Locomotion is what the gait is solved from and must never be damped; steering is a
+        /// sway the figure is allowed to ease into, and is precisely the term that must not reach
+        /// <c>ObserveSpeed</c> — a 0.6 m sidestep inside a tenth of a second reads there as six
+        /// metres a second, which is past the fastest gait this cast owns, so the legs broke into
+        /// a run every time a colonist gave way. See <see cref="PawnFigureDirector"/>.</para>
+        /// </summary>
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, out Vector3 steer)
         {
+            steer = Vector3.zero;
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
             if (!pawn.Moving)
             {
@@ -114,115 +130,81 @@ namespace Odyssey.Presentation.Rendering
             float s = wading ? t : pace.At(t);
             Vector3 along = GroundRelief.Lift(from + travel * s);
 
-            // Sub-tile lateral steering: veer around oncoming traffic, stationary pawns, and trees.
-            Vector3 lateralOffset = Vector3.zero;
+            // **Sub-tile lateral steering: veer around oncoming traffic, standing colonists and
+            // trees — and do it with one continuous number.**
+            //
+            // <para>Everything here is a <i>signed lateral scalar</i>, positive to the pawn's own
+            // right, summed and then clamped. The first version chose between candidate vectors by
+            // taking whichever was longest, and that is what the owner saw as a vibration
+            // (2026-09-19): two candidates of nearly equal length pointing opposite ways swap the
+            // winner on any tick where a distance twitches, and the drawn position jumps the full
+            // width of the envelope and back. A sum has no winner to swap, and two obstacles on
+            // opposite sides now do the sensible thing — they hold the pawn in the middle — rather
+            // than fighting over it.</para>
+            //
+            // <para><b>No hard thresholds.</b> Every gate that was a boolean is now a ramp. The
+            // gates that were booleans were: an oncoming test that switched the whole 0.6 m on at
+            // <c>dot &lt; -0.5</c>; a set of cell-sharing tests that forced the weight to 1.0
+            // regardless of distance, so two pawns three metres apart who happened to share a
+            // destination snapped sideways; and a 3.0 m cut-off. Each of them moved the figure by
+            // up to 0.6 m between one tick and the next, and the ones keyed to cell identity
+            // flickered as pawns re-planned, which is the buzz rather than the single lurch.</para>
+            //
+            // <para><b>Distance is three-dimensional.</b> It was measured in x and z alone, so a
+            // colonist on the terrace above another, three metres straight up, was nought metres
+            // away and got the full sidestep — on a board whose whole surface is 3 m terrace
+            // risers. Including the vertical term costs nothing and needs no layer test: a pawn a
+            // storey up is simply out of range.</para>
+            float lateral = 0f;
             if (heading.sqrMagnitude > 1e-4f)
             {
-                // 1. Passing traffic / stationary pawns
-                if (otherPawns.Length > 0)
+                Vector3 hereNow = from + travel * s;
+                Vector3 headingDir = heading.normalized;
+                float envelope = SteeringCurve.Bell(s);
+
+                // 1. Passing traffic and standing colonists.
+                float crowd = 0f;
+                for (int i = 0; i < otherPawns.Length; i++)
                 {
-                    for (int i = 0; i < otherPawns.Length; i++)
-                    {
-                        ref readonly var other = ref otherPawns[i];
-                        if (other.Id == pawn.Id) continue;
+                    ref readonly var other = ref otherPawns[i];
+                    if (other.Id == pawn.Id) continue;
 
-                        if (other.Moving)
-                        {
-                            Vector3 otherHeading = new Vector3(
-                                CellMetrics.FloorCentre(other.NextCell).x - CellMetrics.FloorCentre(other.Cell).x,
-                                0f,
-                                CellMetrics.FloorCentre(other.NextCell).z - CellMetrics.FloorCentre(other.Cell).z);
+                    float near = SteeringCurve.Proximity(
+                        Vector3.Distance(hereNow, SteeringCurve.WhereItIsNow(in other)));
+                    if (near <= 0f) continue;
 
-                            if (otherHeading.sqrMagnitude > 1e-4f)
-                            {
-                                float dot = Vector3.Dot(heading.normalized, otherHeading.normalized);
-                                if (dot < -0.5f)
-                                {
-                                    bool swappingCells = (pawn.Cell == other.NextCell && pawn.NextCell == other.Cell);
-                                    bool sharingNext = (pawn.NextCell == other.NextCell);
-                                    bool sharingCell = (pawn.Cell == other.Cell);
-
-                                    Vector3 nomA = CellMetrics.FloorCentre(pawn.Cell) + travel * s;
-                                    Vector3 otherTravel = CellMetrics.FloorCentre(other.NextCell) - CellMetrics.FloorCentre(other.Cell);
-                                    float otherS = Mathf.Clamp01(other.MovePerMille > 0 ? other.MovePerMille * 0.001f : other.MovePercent * 0.01f);
-                                    Vector3 nomB = CellMetrics.FloorCentre(other.Cell) + otherTravel * otherS;
-                                    float dist = Vector2.Distance(new Vector2(nomA.x, nomA.z), new Vector2(nomB.x, nomB.z));
-
-                                    if (swappingCells || sharingNext || sharingCell || dist < 3.0f)
-                                    {
-                                        float weight = swappingCells || sharingNext || sharingCell
-                                            ? 1.0f
-                                            : SteeringCurve.SmoothStep(Mathf.Clamp01((3.0f - dist) / 1.5f));
-                                        Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s) * weight;
-                                        if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
-                                            lateralOffset = passDisp;
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (other.Cell == pawn.NextCell || other.Cell == pawn.Cell)
-                            {
-                                Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s);
-                                if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
-                                    lateralOffset = passDisp;
-                            }
-                            else
-                            {
-                                Vector3 otherPos = CellMetrics.FloorCentre(other.Cell);
-                                Vector3 nomA = CellMetrics.FloorCentre(pawn.Cell) + travel * s;
-                                float dist = Vector2.Distance(new Vector2(nomA.x, nomA.z), new Vector2(otherPos.x, otherPos.z));
-                                if (dist < 2.5f)
-                                {
-                                    float weight = SteeringCurve.SmoothStep(Mathf.Clamp01((2.5f - dist) / 1.5f));
-                                    Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s) * weight;
-                                    if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
-                                        lateralOffset = passDisp;
-                                }
-                            }
-                        }
-                    }
+                    float weight = near * SteeringCurve.InTheWay(headingDir, in other);
+                    if (weight > crowd) crowd = weight;
                 }
+                lateral += SteeringCurve.MaxLateralOffset * envelope * crowd;
 
-                // 2. In-cell and flanking static obstacles (e.g. tree trunks)
+                // 2. In-cell and flanking static obstacles — tree trunks, chiefly.
                 if (world != null)
                 {
-                    // A. Current cell contains an obstacle
+                    // A. The cell being crossed holds one: go round it on the right.
                     if (world.HasObstacle(pawn.Cell))
-                    {
-                        Vector3 obstDisp = SteeringCurve.ObstacleDisplacement(heading, s);
-                        if (obstDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
-                            lateralOffset = obstDisp;
-                    }
+                        lateral += SteeringCurve.MaxLateralOffset * envelope;
 
-                    // B. Diagonal step cutting past corner obstacles
+                    // B. A diagonal step cuts the corner between two cells, and a trunk standing
+                    // in either of them is what the corner is cut through. Pushed away from the
+                    // corner along the lateral axis only: a deflection with a component along the
+                    // path would slow the step down and speed it up again, which reads as a
+                    // hesitation rather than as a sidestep.
                     if (travel.x != 0f && travel.z != 0f)
                     {
-                        CellRef c1 = new CellRef(pawn.Cell.X + (travel.x > 0f ? 1 : -1), pawn.Cell.Z, pawn.Cell.Y);
-                        CellRef c2 = new CellRef(pawn.Cell.X, pawn.Cell.Z + (travel.z > 0f ? 1 : -1), pawn.Cell.Y);
-                        if (world.HasObstacle(c1))
-                        {
-                            Vector3 cornerDir = CellMetrics.FloorCentre(c1) - (from + to) * 0.5f;
-                            cornerDir.y = 0f;
-                            Vector3 avoid = -cornerDir.normalized * (SteeringCurve.MaxLateralOffset * SteeringCurve.Bell(s));
-                            if (avoid.sqrMagnitude > lateralOffset.sqrMagnitude)
-                                lateralOffset = avoid;
-                        }
-                        else if (world.HasObstacle(c2))
-                        {
-                            Vector3 cornerDir = CellMetrics.FloorCentre(c2) - (from + to) * 0.5f;
-                            cornerDir.y = 0f;
-                            Vector3 avoid = -cornerDir.normalized * (SteeringCurve.MaxLateralOffset * SteeringCurve.Bell(s));
-                            if (avoid.sqrMagnitude > lateralOffset.sqrMagnitude)
-                                lateralOffset = avoid;
-                        }
+                        Vector3 right = SteeringCurve.LateralRight(heading);
+                        Vector3 midpoint = (from + to) * 0.5f;
+                        var acrossX = new CellRef(pawn.Cell.X + (travel.x > 0f ? 1 : -1), pawn.Cell.Z, pawn.Cell.Y);
+                        var acrossZ = new CellRef(pawn.Cell.X, pawn.Cell.Z + (travel.z > 0f ? 1 : -1), pawn.Cell.Y);
+                        lateral += CornerPush(world, acrossX, right, midpoint, envelope);
+                        lateral += CornerPush(world, acrossZ, right, midpoint, envelope);
                     }
                 }
             }
 
-            if (lateralOffset.sqrMagnitude > SteeringCurve.HardClampedMax * SteeringCurve.HardClampedMax)
-                lateralOffset = lateralOffset.normalized * SteeringCurve.HardClampedMax;
+            lateral = Mathf.Clamp(lateral, -SteeringCurve.HardClampedMax, SteeringCurve.HardClampedMax);
+            Vector3 lateralOffset = SteeringCurve.LateralRight(heading) * lateral;
+            steer = lateralOffset;
 
             along += lateralOffset;
 
@@ -240,6 +222,26 @@ namespace Odyssey.Presentation.Rendering
                     WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, s), along.z);
 
             return OnTheDrawnGround(along, pawn, s, world, pace);
+        }
+
+        /// <summary>
+        /// How hard a trunk standing in a corner cell pushes the pawn sideways, signed to the
+        /// pawn's own right. Zero when that cell holds nothing.
+        ///
+        /// <para>Lateral only. The first version pushed along <c>-(corner - midpoint)</c> whole,
+        /// which has a component along the path as well as across it, so the figure slowed into
+        /// the corner and accelerated out of it — a hesitation, not a sidestep, and one more thing
+        /// feeding the speed observation that drives the gait.</para>
+        /// </summary>
+        static float CornerPush(WorldRenderModel world, CellRef corner, Vector3 right,
+            Vector3 midpoint, float envelope)
+        {
+            if (!world.HasObstacle(corner)) return 0f;
+            Vector3 toCorner = CellMetrics.FloorCentre(corner) - midpoint;
+            toCorner.y = 0f;
+            float side = Vector3.Dot(toCorner.normalized, right);
+            if (side > -1e-4f && side < 1e-4f) return 0f;
+            return (side > 0f ? -1f : 1f) * SteeringCurve.MaxLateralOffset * envelope;
         }
 
         /// <summary>

@@ -836,3 +836,35 @@ Two separate faults wearing one message.
   `SpawnPawnRefusesAColumnWithNowhereToStandAndSaysSoTruthfully`. The fast tier proves none of the
   shell half — `HudShell` is Presentation and does not compile there — so the anchor's own three
   paths remain a by-hand test (`docs/design/18-debug-menu.md`).
+
+## A rule with a threshold in it, sampled every tick
+
+**2026-09-19, the sub-tile sidestep.** Owner: *"the colonists sometimes vibrate quickly — as if it's
+fighting something or a indecision or a check that is happening — it's mostly smooth — but then
+vibrates with an odd movement."*
+
+A sidestep computed per frame from four boolean gates: an oncoming test at `dot < -0.5`, a set of
+cell-sharing tests that forced the weight to its maximum whatever the distance, a distance measured
+in x and z alone, and a choice between candidate offsets by whichever was **longest**. Measured on a
+crowd of twenty over fifty seconds, the offset moved more than 5 cm in a single tick **85 times**,
+the worst of them the full 0.600 m envelope in one sixtieth of a second.
+
+- **The pattern is not "a threshold", it is "a threshold sampled continuously".** Each gate is
+  defensible as a decision. What makes it a vibration is that it is re-decided sixty times a second
+  off inputs — another pawn's cell, its heading, a distance — that twitch across the boundary. Any
+  rule evaluated every tick against live neighbours has to enter through a ramp.
+- **`max` has a winner, and a winner can be swapped.** Two candidates of near-equal length pointing
+  opposite ways swap on any twitch, and the figure crosses the whole envelope and comes back.
+  Summing signed scalars and clamping once has no winner to swap, and does something sensible when
+  two things push from opposite sides.
+- **A distance that ignores an axis is a distance that is sometimes zero.** x/z-only made a colonist
+  on the terrace above nought metres away, on a board whose entire surface is 3 m terrace risers.
+- **Damping the wrong quantity hides the fault and adds a second one.** A previous pass answered the
+  snapping by rate-limiting the *whole drawn position* at 5.5 m/s. That damps the colonist's own
+  walking: the figure lags its own locomotion and then surges, and — because the sidestep was still
+  inside the position the speed was observed from — a 0.6 m swerve read as 6 m/s and threw the legs
+  into a run. Damp the term that steps, not the sum it is part of.
+- **The check:** `SteeringContinuityTests`, six cases, one per gate removed. And the measurement
+  that found it: drive `PawnPose.Of` over a real ticking colony and count per-tick changes in the
+  lateral offset. Reading the code suggested three wrong culprits first; the counter found it in one
+  run. `docs/design/25-pawn-steering.md` §6 has the numbers.

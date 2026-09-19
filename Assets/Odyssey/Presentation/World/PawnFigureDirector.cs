@@ -955,9 +955,10 @@ namespace Odyssey.Presentation.World
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
                 if (!CanDraw(pawns[i].Id)) continue;
 
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, World, pawns);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
+                    World, pawns, out Vector3 steer);
                 Figure figure = Lease(pawns[i].Id, position);
-                Pose(figure, in pawns[i], position, heading, deltaTime, running);
+                Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
             }
@@ -1134,6 +1135,18 @@ namespace Odyssey.Presentation.World
         public const float SpeedSmoothing = 0.35f;
 
         /// <summary>
+        /// How fast the drawn sidestep chases the one the steering asks for, in metres a second.
+        ///
+        /// <para>1.2 m/s crosses the full 0.6 m envelope in half a second, which is about the time
+        /// a person takes to lean out of somebody's way. It is deliberately slower than a walk: a
+        /// sidestep that arrives faster than the colonist is travelling reads as a flinch. Nothing
+        /// continuous needs it — the envelope and the proximity curve already ease themselves —
+        /// so this is doing work only where an input genuinely steps, which is another colonist
+        /// stopping or setting off.</para>
+        /// </summary>
+        public const float SwayRate = 1.2f;
+
+        /// <summary>
         /// How far the stroke clock moves in a frame, at the pawn's published rate: a thousandth
         /// of the rate per mille of the frame's time. The whole of the WS2 stroke-clock change —
         /// a fast worker visibly swings faster, a novice labours — and the reason it is a
@@ -1172,7 +1185,7 @@ namespace Odyssey.Presentation.World
             if (!_frame.TryGetPawnAspect(id, CarryAspects.Thing, out thing)) thing = -1;
         }
 
-        void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
+        void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading, Vector3 steer,
             float frameTime, bool running)
         {
             // **The one clock every ease in this method runs on, and it stops when the world
@@ -1482,10 +1495,25 @@ namespace Odyssey.Presentation.World
             // nothing about ticks. A figure that has just been leased has no previous position
             // worth differencing, hence Settled.
             bool settled = figure.Settled;
-            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled,
+
+            // **The gait is solved from walking, not from swerving.** `position` carries the
+            // sub-tile sidestep the steering asked for; `walked` is the same pose without it.
+            // A 0.6 m sidestep taken inside a tenth of a second is six metres a second, which is
+            // past the fastest gait this cast owns, so giving way to somebody threw the legs into
+            // a run and back — the "gait blend flicker" an earlier pass went looking for in the
+            // blend and did not find, because it was never in the blend.
+            Vector3 walked = position - steer;
+            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, walked, deltaTime, settled,
                 hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
             figure.Settled = true;
-            figure.SimPosition = position;
+            figure.SimPosition = walked;
+
+            // Ease into the sidestep (owner: "motion to that position or close to (be forgiving)").
+            // The sidestep only — see Figure.Steer for why the whole position must not be eased.
+            figure.Steer = settled && deltaTime > 1e-5f
+                ? Vector3.MoveTowards(figure.Steer, steer, SwayRate * deltaTime)
+                : steer;
+            position = walked + figure.Steer;
 
             // Step up to the work. See WorkStance for why the drawn place and the simulated place
             // are allowed to differ, and by how much.
@@ -1555,24 +1583,7 @@ namespace Odyssey.Presentation.World
             if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
                 drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
 
-            // **Motion to position rather than snapping (owner rule: "the rule must be to motion to
-            // that position or close to (be forgiving)").**
-            //
-            // When colonists dodge obstacles or pass each other in dense crowds, lateral target offsets
-            // can shift rapidly as other pawns turn or enter the detection radius. Moving towards the
-            // target at a bounded rate guarantees that the figure physically sways and glides into
-            // position without ever teleporting, snapping, or spiking speed observation.
-            const float MaxAdjustmentSpeed = 5.5f; // metres per second
-            if (!settled || (drawn - figure.DrawnPosition).sqrMagnitude > 9f || deltaTime <= 1e-5f)
-            {
-                figure.DrawnPosition = drawn;
-            }
-            else
-            {
-                figure.DrawnPosition = Vector3.MoveTowards(figure.DrawnPosition, drawn, MaxAdjustmentSpeed * deltaTime);
-            }
-
-            figure.Transform.position = figure.DrawnPosition;
+            figure.Transform.position = drawn;
 
             // Turn towards the heading rather than snapping to it.
             //
@@ -1602,11 +1613,11 @@ namespace Odyssey.Presentation.World
             // The swing needs no separate fix and must not be given one: SwingAxis is built from
             // figure.right and figure.forward, so the plane an axe travels in tilts with the body
             // for free, which is what a woodcutter on a slope actually does.
-            GroundRelief.SlopeAt(figure.DrawnPosition.x, figure.DrawnPosition.z, out float slopeX, out float slopeZ);
+            GroundRelief.SlopeAt(drawn.x, drawn.z, out float slopeX, out float slopeZ);
             Quaternion wanted = Footing.LeanTo(Footing.GroundNormal(slopeX, slopeZ));
             figure.Lean = settled ? Footing.Settle(figure.Lean, wanted, deltaTime) : wanted;
 
-            figure.GroundY = figure.DrawnPosition.y - GroundRelief.HeightAt(figure.DrawnPosition.x, figure.DrawnPosition.z);
+            figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
             figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
 
             // Laid down last, over everything above, because lying is a statement about the whole
@@ -1931,7 +1942,7 @@ namespace Odyssey.Presentation.World
             figure.SeenSerial = -1;
             figure.WorkCentre = at;
             figure.SimPosition = at;
-            figure.DrawnPosition = at;
+            figure.Steer = Vector3.zero;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
             Desynchronise(figure, pawn);

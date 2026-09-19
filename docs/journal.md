@@ -6659,3 +6659,61 @@ reason to refuse" is corrected in place — in bounds it was; standable it was n
   - Unity EditMode: **1,864 total, 1,850 passed, 0 failed**.
   - Unity PlayMode: **82 total, 77 passed, 0 failed**.
   - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.
+
+## 2026-09-19 — the vibration: a rule with a threshold in it, sampled every tick
+
+Owner, after the crowd playtest the spawn fix unblocked: *"it seems better but the colonists
+sometimes vibrate quickly — as if it's fighting something or a indecision or a check that is
+happening — it's mostly smooth — but then vibrates with an odd movement."*
+
+**Measured before diagnosed**, and that was worth the twenty minutes. Reading the code produced
+three confident candidates — the path bias, the `MoveTowards` rate limit, the gait blend — and the
+first two were wrong. A probe that ticks a real colony of twenty for 3,000 ticks and counts
+per-tick changes in the lateral offset found it in one run: **85 changes over 5 cm in a single
+tick, worst case the full 0.600 m envelope in one sixtieth of a second.**
+
+All of them were thresholds being re-decided sixty times a second: `dot < -0.5` for "is this
+colonist oncoming"; a `swappingCells || sharingNext || sharingCell` override that forced the weight
+to 1.0 whatever the distance and flickered as pawns re-planned; a distance measured in x and z
+alone, which made a colonist on the terrace above **nought metres away** on a board that is 3 m
+terrace risers from end to end; and a choice between candidate offsets by whichever was longest,
+which swaps winner — and therefore sign — on any twitch.
+
+The rewrite is one continuous signed scalar: a bell envelope over the step, a smoothstepped
+proximity in three dimensions, a smoothstepped converging factor, obstacle terms summed rather than
+competing, and one clamp at the end. Crossing traffic gets room now, which it never did.
+
+**And the previous pass's `MoveTowards` came out.** It rate-limited the *whole drawn position* at
+5.5 m/s to satisfy the owner's "motion to that position or close to (be forgiving)". That damps the
+colonist's own walking — the figure lags the gait its legs are playing and then surges to catch up —
+and it left the sidestep inside the position `ObserveSpeed` differences, so a 0.6 m swerve read as
+6 m/s, past the fastest gait this cast owns, and threw the legs into a run. That is the "gait blend
+flicker" the pass before it went looking for in the blend and did not find. The rule is honoured on
+the right quantity instead: the **sidestep alone** eases at 1.2 m/s, and `PawnPose.Of` hands it back
+separately so the gait is solved from walking rather than from swerving.
+
+Design is `docs/design/25-pawn-steering.md`; the pattern is in `docs/bug-patterns.md`.
+
+- *Measured*, 20 colonists, 3,000 ticks, 59,303 moving samples:
+
+  | | Before | After |
+  |---|---|---|
+  | asked-for sidestep: jumps over 5 cm in a tick | 85 | 52 |
+  | **drawn sidestep: jumps over 5 cm in a tick** | **85** | **0** |
+  | drawn sidestep: worst single tick | 0.600 m | **0.020 m** |
+  | drawn sidestep: mean lag behind the asked-for one | — | 0.0016 m |
+
+  The 52 that remain are the one input that cannot be made continuous — somebody stopping, setting
+  off or turning — which is exactly what the sway is for.
+
+- *Verified:*
+  - Fast tier: **749 Sim + 445 Hud = 1,194 passed, 0 failed**.
+  - Unity EditMode: **1,870 total, 1,856 passed, 0 failed** (six new `SteeringContinuityTests`).
+  - Unity PlayMode: **82 total, 75 passed, 0 failed** — run in a scratch worktree with no Synty
+    junction, so `AvatarSheetTests`' two art tests skip; nothing regressed.
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.
+
+- *Noted, not changed:* the simulation-side path bias is dead code. `PathFinder.Occupancy` and
+  `MoveCost.OccupiedBias` are implemented and tested, and **nothing in the build sets them**.
+  Switching it on moves planned routes and therefore every golden hash, so it wants its own change
+  with a re-bake, not a line in this one.
