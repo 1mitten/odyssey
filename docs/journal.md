@@ -7225,3 +7225,20 @@ as felled wood does, and TheYieldIsHauledToTheStockpileLikeWood pins it rather t
 owner's word for it. CropCheck photographs the field through the shipped catalogue - stages,
 ripe tile, pile - because every carrot judgement until now came from the owner playing the
 game, and twice what was being looked at was not what the code drew.
+
+### The fourth play day: the seed earns its day (2026-09-19)
+
+The owner asked for the seeds to fall from a bundle in the hand, reported a flicker - appear,
+disappear, appear - and asked that the sprout wait a day. All three were one fault wearing
+three faces: the kneel gesture is sticky by contract, so a kneel nobody cleared leaked through
+the walk to the next plot and the specks gated on it flashed under the sower's feet as she
+crossed fallow tiles; the sprout art arrived at growth nought because stage one began at zero;
+and the drop itself had no motion at all. The drivers now author the gesture's END on the same
+boundary the plant record lands; the first daylight day is stage nought (below 25 per cent,
+32,500 of 130,000 ticks) and draws nothing but the specks; and the specks fall - clustered at
+the hand for a beat, then staggered and accelerating to their hashed spots, timed off the kneel
+age past its threshold so nothing is timed twice. The fourth ask, carrots piled upright, was
+ItemHeap's tip: the carrot row lies down, Place tips each lump ninety degrees before its yaw
+and lifts it half a girth, and the armful inherits the lie. CropCheck's pile shot frames the
+pile alone now - the first framing put a field of upright carrots behind it and the picture
+answered every question about orientation with more of the same shape.

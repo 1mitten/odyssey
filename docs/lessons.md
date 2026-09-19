@@ -2125,6 +2125,21 @@ gap, and it costs five lines.
 And when a view field has a "nought means none" encoding beside it, write the publish site and
 the read site in the same sentence and check them against each other; the off-by-one that cost
 three sessions lives exactly in the space between two people each being locally correct.
+## A sticky view field leaks its last value into the next toil - whoever gates on it must author its end
+
+**2026-09-19, the seed-speck flicker.** `PawnView.Gesture` is deliberately sticky: a flag set
+for one tick would be missed between frames at speed three, so it stands until the next
+gesture. That contract is right, and it has a cost nobody had paid yet: a sow kneel nobody
+cleared carried `Sow` through the whole walk to the next plot, and the seed specks - gated on
+the gesture, with an age tracker that already read "old" - flashed under the sower's feet on
+every fallow tile she crossed. The owner watched seeds "appear immediately ... then
+disappear - then it appears again" for two sessions before it was read as one fault.
+
+The rule: **a momentary state that is sticky for the frame rate's sake must be un-stuck by
+the same code that sticks it.** The drivers now clear the gesture on the boundary the work
+completes (and on displacement), so the value's lifetime is the toil's lifetime. If you are
+about to gate a drawing on a sticky field, first ask who ends it - and if the answer is
+"nobody", that is the bug, found in advance.
 ## A Unity build rewrites settings assets it was never asked to touch
 
 **2026-09-19, the first player build this project had ever run.** `scripts/unity.sh build`

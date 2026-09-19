@@ -50,7 +50,7 @@ stage 3 from ⅔**. Harvestable only at full growth (the reference's 65% early-h
 hook, §8). Three drawn stages — sprout, half-grown, mature — map to the Farm pack's small,
 medium and large carrot prefabs, with primitive fallbacks on pack-less checkouts.
 
-## 3. Growth: a window, a counter, and three re-meshes
+## 3. Growth: a window, a counter, and four re-meshes
 
 **The daylight window is ticks of day 15,000–47,499 inclusive** — hours 06:00 to 18:59 on the
 60,000-tick day, 32,500 growing ticks, the reference's 13-hour growing day and its 1.846×
@@ -126,6 +126,15 @@ the hands; instead the toil begins `PawnGesture.Sow`, the pickup's own solved kn
 (`Gesture.Sow`: down quickly, a hold stretched over most of the motion, up slowly) so the hold
 *is* the work. The gesture runs on its own clock timed against the carrot's `sowWorkTicks` at the
 tuned rate — the one approximation in the reuse, accepted "for now" with the owner's own words.
+
+**And the gesture's END is the driver's to author.** The gesture is sticky by contract — a
+flag set for a single tick would be missed between frames — so a kneel nobody cleared leaked
+through the whole walk to the next plot, and the seed specks, gated on the gesture, flashed
+under the sower's feet on every fallow tile she crossed: the owner watched seeds "appear
+immediately … then disappear — then it appears again" (2026-09-19). Both drivers now clear it
+(`BeginGesture(None)`) on the same boundary the deferred plant record lands, so the specks
+hand over to the planted cell's own without a gap, and no walker carries a kneel. The
+displacement path (WalkBack) clears it too, for the same reason.
 
 **The harvest kneels too** (owner, 2026-09-19: *"the colonists still use their axe to harvest
 … use the same pose as sowing bending down"*). `HarvestJobDriver` reports no work focus either, so
@@ -264,6 +273,24 @@ matter what"*):**
   from the owner playing the game, and twice what was being looked at was not what the code
   drew. Its own gap, recorded rather than hidden: the zone tint and the seed specks are the
   bootstrap's overlay draws and no sheet of the mesher's can show them.
+- **The seed day is a stage of its own (nought)** (owner, 2026-09-19: *"the seeds should stay
+  there at first — the sprouting should appear after a day rather than immediately"*). Below
+  25% growth — exactly one daylight window, 32,500 of 130,000 ticks — `StageOfTicks` answers
+  nought, the mesher draws no plant, and the specks are the crop. The count is still the
+  yield; only the art waits. A seed sown at dusk waits the night out first.
+- **The seeds fall from a bundle at the hand** (owner, 2026-09-19: *"an animation that
+  basically starts from a bundle of seeds from a hand and then the seed fall onto their
+  destinations"*). At the half-kneel threshold the specks draw clustered at hand height for a
+  quarter second, then each falls to its hashed spot, staggered 40 ms apart and accelerating,
+  and from landing they are the static handful the seed day draws. The drop's clock is the
+  kneel age past its threshold, so no state is timed twice.
+- **The pile lies down** (owner, 2026-09-19: *"the carrots hauled and piled should be
+  horizontal on the floor and not stuck in the ground"*). `ItemHeap.Recipe` carries a
+  `LyingDown` flag; the carrot row sets it, and `Place` tips each carrot 90° before its yaw
+  and lifts it half a girth (`LyingLift`), because the mesh pivots at its base and a tip
+  about that pivot buries the body. The armful inherits the lie. Verified by eye and by
+  arithmetic in `CropCheck` — the pile shot frames the pile alone, after the first framing
+  answered a question about orientation with a field of upright carrots behind it.
 - **Carrying needed no change and now has a test.** The owner's "carried back like wood" is
   what already happens — the yield drops as a loose haulable pile exactly as a felled trunk
   drops one — and `TheYieldIsHauledToTheStockpileLikeWood` pins it, so a carrot that stops
