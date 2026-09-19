@@ -384,6 +384,36 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void TheLandingIsAnEdgeAndHappensExactlyOnce()
+        {
+            // The sound of a load touching down hangs off this, and the obvious way to write it —
+            // poll FallFinished — fires every frame from the landing until the next carry, which
+            // would turn one thud into a buzz. An edge needs both sides of the step.
+            const float Step = 1f / 60f;
+
+            int landings = 0;
+            float before = 0f;
+            for (float after = Step; after < CarryHandover.FallSeconds * 3f; after += Step)
+            {
+                if (CarryHandover.FallLanded(before, after)) landings++;
+                before = after;
+            }
+
+            Assert.That(landings, Is.EqualTo(1), "a load lands once, however long the fall is watched");
+        }
+
+        [Test]
+        public void TheLandingIsNotMissedByALongFrame()
+        {
+            // A frame longer than the whole fall is a stall, a load screen, or a step taken on a
+            // paused game the instant it resumes. The load has still landed and must still be
+            // heard to land, once.
+            Assert.That(CarryHandover.FallLanded(0f, CarryHandover.FallSeconds * 4f), Is.True);
+            Assert.That(CarryHandover.FallLanded(CarryHandover.FallSeconds, 99f), Is.False,
+                "a fall that had already finished does not land a second time");
+        }
+
+        [Test]
         public void ADropTakesLongerThanAPickUp()
         {
             // A load is lowered under control and released; it is taken up in one movement.

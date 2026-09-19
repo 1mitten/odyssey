@@ -3,7 +3,8 @@
 //
 // Editor menu:  Odyssey > Build > Fix always-included shaders
 // Headless:     scripts/unity.sh exec Odyssey.EditorTools.ShaderInclusion.Apply
-// Automatic:    PlayScene.Build calls it, and PlayerBuild refuses to build without it.
+// Automatic:    PlayerBuild refuses to build without it. Nothing calls Apply for you -- the
+//               claim that PlayScene.Build did was wrong from the day it was written (2026-09-19).
 //
 // **The fault this exists to prevent, measured 2026-09-19 on the first player build this project
 // ever ran.** The owner's report was "there is no terrain — no graphics, terrain etc, apart from

@@ -2163,3 +2163,19 @@ format when the real answer is that the file is not there.
 - **A green test tier says nothing about whether the game builds.** The tiers compile the Editor
   and Test assemblies; a player build is the only thing that compiles the *player* assembly set.
   A stray `using UnityEditor` in Presentation passes every test here and fails only there.
+
+## A silenced batch command plus a stale log reads as success
+
+**2026-09-19.** `bash scripts/unity.sh build >/dev/null 2>&1` followed by `grep 'PlayerBuild:
+succeeded' Logs/build.log` reported a 14-second build that had never run: a PlayMode run was
+holding the project lock, `unity.sh` refused with *"this project is locked and a Unity process is
+running"*, and the grep matched the **previous** build's line in an untouched log. The giveaway was
+a duration identical to the last run's, down to the seventh decimal.
+
+- **Check the artefact, not the log.** `ls Build/Win64/Odyssey.exe` and the log's mtime answer in
+  one line what the log's contents cannot.
+- **Do not send a batch command's output to /dev/null when its exit path matters.** `unity.sh`
+  prints the lock refusal on stderr and exits non-zero; both were thrown away.
+- **Only one Unity may hold a project.** A background `test playmode` and a foreground `build` in
+  the same worktree are mutually exclusive, and the second one loses silently if you are not
+  reading its output.

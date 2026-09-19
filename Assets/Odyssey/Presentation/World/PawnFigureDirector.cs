@@ -544,6 +544,27 @@ namespace Odyssey.Presentation.World
         public event Action<int, Vector3>? BlowLanded;
 
         /// <summary>
+        /// A load has just come up off the ground into a pair of arms, at the point on the
+        /// ground it came from.
+        ///
+        /// Raised on the edge the simulation hands the thing over, which is the middle of the
+        /// lift crouch — the frame the hands are on the pile — and therefore the frame the sound
+        /// belongs to. Published for the same reason <see cref="BlowLanded"/> is: the one place
+        /// that knows when a load changes hands should not have to know what follows.
+        /// </summary>
+        public event Action<Vector3>? LoadLifted;
+
+        /// <summary>
+        /// A load has just finished settling out of the arms onto the ground, at the point it
+        /// landed.
+        ///
+        /// <b>Raised at the end of the fall, not the start of it.</b> The thud is the load
+        /// arriving; a sound fired when the hands opened would play under a load still visibly in
+        /// the air, which reads as the colonist dropping something they are still holding.
+        /// </summary>
+        public event Action<Vector3>? LoadSet;
+
+        /// <summary>
         /// Whether the last <see cref="Sync"/> saw a world that was advancing.
         ///
         /// Read off the snapshot, never inferred, and public because it is the one bit of state
@@ -1426,6 +1447,7 @@ namespace Odyssey.Presentation.World
                 // jump of however much the terrain was doing underfoot.
                 figure.HandoverFrom = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
                 figure.HandoverClock = 0f;
+                LoadLifted?.Invoke(figure.HandoverFrom);
             }
             else if (carryDef < 0 && figure.CarryDef >= 0 && figure.CarryPlaced)
             {
@@ -1438,8 +1460,22 @@ namespace Odyssey.Presentation.World
 
             if (figure.HandoverClock < CarryHandover.RaiseSeconds)
                 figure.HandoverClock += deltaTime;
+
+            // The fall crossing its own end is the load touching down. Detected on the edge and
+            // not by polling `FallFinished`, which is true forever afterwards; the clock parks at
+            // float.MaxValue between carries, so a figure that has never set anything down never
+            // crosses anything.
+            //
+            // Sounded from the colonist's own feet rather than the cell the load landed in, which
+            // only the renderer knows: at most one cell out, and the carry sound's full-volume
+            // radius is fourteen metres, so nothing audible turns on the difference.
             if (figure.ReleasedClock < CarryHandover.FallSeconds)
+            {
+                float before = figure.ReleasedClock;
                 figure.ReleasedClock += deltaTime;
+                if (CarryHandover.FallLanded(before, figure.ReleasedClock))
+                    LoadSet?.Invoke(GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell)));
+            }
 
             figure.CarryDef = carryDef;
             figure.CarryStack = carryStack;

@@ -13,6 +13,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
@@ -183,6 +184,14 @@ namespace Odyssey.Presentation.Bootstrap
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
         AudioDirector? _audio;
+
+        /// <summary>
+        /// The title screen's bed. Owned by the root rather than by the session, because it is
+        /// the sound of there being no session: it is built once at <see cref="Start"/>, it
+        /// survives every world being made and torn down, and it is the only piece of audio that
+        /// exists before a colony does.
+        /// </summary>
+        MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
@@ -295,8 +304,84 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            PointContentAtTheShippedPack();
             WarnIfTheSceneIsStale();
-            if (buildOnPlay) BuildSession();
+
+            // Before the session, so that a player who boots straight into a colony never hears
+            // a menu bed start under it. Sync decides whether it plays at all, and the first
+            // thing it will see is a world.
+            _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
+
+            if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
+        }
+
+        /// <summary>The switch that boots a player straight into a colony. See below.</summary>
+        public const string NewGameArgument = "-odyssey-newgame";
+
+        /// <summary>
+        /// Whether this player was told to skip the menus and generate a world at once.
+        ///
+        /// <para><b>So that a build can be smoke-tested without a person clicking.</b> The first
+        /// player build this project made was empty (2026-09-19) and the reason took three
+        /// attempts to find, because everything I could run from a terminal stopped at the main
+        /// screen — where nothing loads the content pack, nothing generates a world and nothing
+        /// draws terrain. A clean log from a player sitting on a menu proves almost nothing, and
+        /// I twice reported a fix on the strength of one.</para>
+        ///
+        /// <para>It exists for the same reason <c>PlayScene.Measure</c> does: the alternative is
+        /// judging a build by looking at it, and nobody can look at a build in CI.</para>
+        /// </summary>
+        static bool StartedFromTheCommandLine()
+        {
+            foreach (string argument in Environment.GetCommandLineArgs())
+                if (argument == NewGameArgument) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// In a built player, read the content pack from <c>StreamingAssets</c>.
+        ///
+        /// <para><b>Because a player has no repository to walk up to</b>, and the world is made
+        /// of the pack: the terrain table, the materials, the pawn tuning. <c>ContentPack</c>
+        /// finds its Defs by looking for a directory holding both <c>Assets</c> and
+        /// <c>ProjectSettings</c>, which exists on a dev machine and nowhere else, and it throws
+        /// when it cannot. World generation then never runs and the scene is empty but for the
+        /// figures the start flow had already made — which is exactly what the owner saw on the
+        /// first player build this project ever produced (2026-09-19): <i>"there is no terrain —
+        /// there seemed to be no graphics, terrain etc, apart from characters"</i>.</para>
+        ///
+        /// <para><b>This is the half of the arrangement that lives in the composition root, and
+        /// <c>ContentPack.FindRoot</c> named it before either half was written</b> — "copy it
+        /// into StreamingAssets at build time, and the composition root then calls UseRoot with
+        /// Application.streamingAssetsPath. That is why UseRoot exists and why nothing in this
+        /// assembly mentions Unity." <c>ContentPackBuild</c> is the other half, and the two share
+        /// one spelling of the path rather than agreeing by coincidence.</para>
+        ///
+        /// <para><b>Only outside the editor</b>, and deliberately. In the editor the repository
+        /// is right there and is the one live copy anybody edits; pointing at a staged duplicate
+        /// would mean Def changes silently not taking effect on Play. The staged copy is removed
+        /// after every build for the same reason — one source of truth, which CLAUDE.md lists as
+        /// a standing rule.</para>
+        /// </summary>
+        static void PointContentAtTheShippedPack()
+        {
+            if (Application.isEditor) return;
+
+            string root = System.IO.Path.Combine(
+                Application.streamingAssetsPath, "Odyssey", "Defs", ContentPack.CoreId);
+
+            if (!System.IO.Directory.Exists(root))
+            {
+                // Said out loud rather than left to the loader's own exception, because that one
+                // reports the directory it searched *from* and not the one it was told to use.
+                Debug.LogError(
+                    $"[Odyssey] the content pack is not in this build ({root}). The world cannot " +
+                    "be generated. It is copied in by ContentPackBuild at build time — build " +
+                    "through scripts/unity.sh build rather than Unity's own Build Settings.");
+                return;
+            }
+
+            ContentPack.UseRoot(root);
         }
 
         /// <summary>
@@ -677,7 +762,12 @@ namespace Odyssey.Presentation.Bootstrap
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
                 _daylight.Apply(_world.CurrentTick);
             }
-            if (_figures != null) _figures.BlowLanded += OnBlowLanded;
+            if (_figures != null)
+            {
+                _figures.BlowLanded += OnBlowLanded;
+                _figures.LoadLifted += OnLoadLifted;
+                _figures.LoadSet += OnLoadSet;
+            }
 
             if (cameraRig != null)
             {
@@ -725,6 +815,13 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void OnBlowLanded(int workStyle, Vector3 edge) =>
             _audio?.PlayOneShot(SoundIds.ForBlow(workStyle), edge);
+
+        /// <summary>A load came up off the ground: the lighter of the two carry sounds, from the
+        /// spot it was lying on.</summary>
+        void OnLoadLifted(Vector3 from) => _audio?.PlayOneShot(SoundIds.CarryLift, from);
+
+        /// <summary>And a load touched down: the heavier one, from where it landed.</summary>
+        void OnLoadSet(Vector3 at) => _audio?.PlayOneShot(SoundIds.CarryDrop, at);
 
         void OnGameSpeedRequested(int speed)
         {
@@ -911,6 +1008,12 @@ namespace Odyssey.Presentation.Bootstrap
 
         void LateUpdate()
         {
+            // Above the guard below, because the menus are exactly the state the guard returns
+            // on: no world, nothing rendered, and a title screen that still wants a bed under it.
+            // Unscaled, because a fade that is part of the interface must not care that the game
+            // behind it is paused or running at six times speed.
+            _menuBed?.Sync(Time.unscaledDeltaTime, wanted: _world == null);
+
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
@@ -2143,10 +2246,13 @@ namespace Odyssey.Presentation.Bootstrap
         {
             TeardownSession();
 
-            // And the studio itself, which teardown deliberately leaves standing: it is not part
-            // of a session, so this is the only place its rig and its one render texture go.
+            // And the two things teardown deliberately leaves standing, because neither is part
+            // of a session: the portrait studio's rig and its one render texture, and the menu
+            // bed, which is the sound of there being no session at all.
             _portraits?.Dispose();
             _portraits = null;
+            _menuBed?.Dispose();
+            _menuBed = null;
         }
 
         /// <summary>
@@ -2434,7 +2540,12 @@ namespace Odyssey.Presentation.Bootstrap
                 if (Directors != null) Directors.Slice.LayerChanged -= OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested -= OnGameSpeedRequested;
             }
-            if (_figures != null) _figures.BlowLanded -= OnBlowLanded;
+            if (_figures != null)
+            {
+                _figures.BlowLanded -= OnBlowLanded;
+                _figures.LoadLifted -= OnLoadLifted;
+                _figures.LoadSet -= OnLoadSet;
+            }
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();

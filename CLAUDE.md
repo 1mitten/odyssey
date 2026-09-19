@@ -196,6 +196,10 @@ this file.
 | The white selection cursor sitting flush | `docs/design/23-flush-selection-cursor.md` |
 | Input cases, modality, live portraits | `docs/design/09-ui-and-input.md` |
 | Panels | `docs/design/10-ui-panel-catalogue.md` |
+| Alert chimes, and what picks one | `docs/design/24-alert-sounds.md` |
+| The carry sounds, and their mix | `docs/design/24-carrying.md` §12 |
+| The title screen's bed, and the hand-over into a world | `docs/design/17-start-flow.md` §12 |
+| The audio framework itself | ADR 0010, `docs/reference/audio-sourcing.md` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
 
 ### What runs today
@@ -282,11 +286,11 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **736 Sim + 445 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **741 Sim + 445 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-19 on the
-  carried load and its three playtest fixes: EditMode **1834 total, 1820 passed, 0 failed** (24 added by `CarryPoseTests`).
+  alert chimes, the carry sounds and the title bed: EditMode **1857 total, 1843 passed, 0 failed**.
   PlayMode, the same day: **82 total, 77 passed, 0 failed**.
   `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
   `TheRosterBarFollowsTheColonyIntoANewSession`.
@@ -300,6 +304,22 @@ invisible where the game is played.
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
   person — so check `Get-CimInstance Win32_Process -Filter "Name='Unity.exe'"` before concluding a
   batch run failed, and do not kill a process that might be somebody's open editor.
+- **Player build** (`scripts/unity.sh build`, ~15 s, 386 MB into gitignored `Build/`): the only
+  thing that compiles the *player* assembly set and the only thing that can fail on a stripped
+  shader or a path under `Assets/` read at runtime. **Two green tiers say nothing about whether
+  the game runs** — both compile and run in the editor's domain, where every shader and every
+  variant exists always. Smoke-test it with `Build/Win64/Odyssey.exe -odyssey-newgame -logFile <path>`,
+  which boots straight into a colony; a clean log from the main menu proves nothing, and that
+  mistake cost three passes on 2026-09-19. Three separate faults had to be fixed before the first
+  player drew anything: `ShaderInclusion` (runtime-found shaders), `ContentPackBuild` (the Defs,
+  via `StreamingAssets`), `InstancingKeepAlive` (the `INSTANCING_ON` variant, which
+  always-included does *not* keep) and `SyntyInstancingKeepAlive` (the same variant for the
+  **pack's own** Shader Graph shaders, which no `Shader.Find` ever names and which arrive on
+  prefabs with instancing off — staged for the build and deleted after, because a keep-alive for a
+  licensed shader must never be committed). Each was invisible until the one before it was fixed.
+- **Before diagnosing anything build-shaped, `git diff HEAD -- ProjectSettings/ Assets/Settings/`.**
+  An uncommitted flip of URP's `m_StripUnusedVariants` to `0` once took one shader pass from 64
+  variants to 884,736 and the build from 12 seconds to an estimated day and a half.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
   `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
@@ -386,6 +406,29 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   (`docs/design/21-ladders-and-climbing.md` §3): whether they read as a ladder rather than a shrug,
   whether a step of 0.46 of a leg is too big at the play camera, and whether arriving in an open
   shaft cell and stepping sideways looks like arriving or like hovering.
+- **Nobody has heard the alert chimes.** Five of the owner's recordings replaced the synthesised
+  two-note sine on 2026-09-19, loudness-matched to −18 LUFS. Two of them play today: `alert-normal`
+  when an idle-colonists row appears, `alert-negative` when a starving or breaking one does.
+  Questions a measurement cannot answer: whether −18 LUFS is right in a quiet room against the
+  ambience bed and the work sounds, and whether the raid siren at 9.54 s and the joining fanfare at
+  5.77 s are alerts or cutscene stings — the bake deliberately did not shorten them
+  (`docs/design/24-alert-sounds.md` §6). **The chime had effectively never fired before this**: the
+  audio side carried a starvation threshold on a scale a hundred times out, so there is no prior
+  impression to compare against.
+- **Nobody has heard the title screen.** A 151-second loop fades in over eight seconds on the
+  main screens, fades out over four when a world arrives, crosses with the outdoor bed's own
+  four-second arrival, and never plays in a colony. It is a **sub-bass drone** — almost everything
+  below 500 Hz — so it will read completely differently on laptop speakers from headphones, and
+  that is the first question to ask if the level seems wrong. Open: whether Volume 0.18 survives
+  real speakers, whether eight seconds of arrival is patient or broken, and whether the four-second
+  hand-over is seamless or a hole (`docs/design/17-start-flow.md` §12).
+- **Nobody has heard a colonist pick anything up.** One recording became two sounds on
+  2026-09-19 — `carry-lift` resampled up and brightened, `carry-drop` down and dulled, three takes
+  each — and they fire on every leg of every haul, which makes the mix the whole question. They
+  sit at Volume 0.40 against the axe's 0.85 and die at 120 m against its 200. Open: whether 0.40
+  survives six haulers rather than one; whether lift and drop are actually told apart at the
+  default camera height, which is not the same test as telling them apart side by side; and
+  whether the drop wants to be heavier still (`docs/design/24-carrying.md` §12).
 - **Nobody has seen the falls move.** Whether the streaks read as falling water or as a pattern
   sliding down a pane cannot be judged in a still, and stills are all anybody has looked at.
 - **The shallow stream reads pale at the play camera.** Raising the alpha is the obvious fix;

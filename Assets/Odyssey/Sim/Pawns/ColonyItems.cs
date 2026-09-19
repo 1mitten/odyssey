@@ -377,7 +377,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Approximate travel cost between two cells: Manhattan on the layer plus a per-layer
+        /// Approximate travel cost between two cells: Octile on the layer plus a per-layer
         /// charge. An item three metres away horizontally but ten storeys down is not close, and
         /// a Euclidean measure would say it was.
         /// </summary>
@@ -388,7 +388,9 @@ namespace Odyssey.Sim.Pawns
             int dx = pa.X > pb.X ? pa.X - pb.X : pb.X - pa.X;
             int dz = pa.Z > pb.Z ? pa.Z - pb.Z : pb.Z - pa.Z;
             int dy = pa.Y > pb.Y ? pa.Y - pb.Y : pb.Y - pa.Y;
-            return (dx + dz) * 100 + dy * layerCostEstimate;
+            int min = dx < dz ? dx : dz;
+            int max = dx < dz ? dz : dx;
+            return min * 141 + (max - min) * 100 + dy * layerCostEstimate;
         }
 
         /// <summary>A thing at a cell is on exactly one of the two listers, by where the cell is.</summary>

@@ -143,8 +143,40 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, Chop),
             new("pick", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, Pick),
-            new("alert", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+            // The five alert chimes, baked from the owner's notification recordings by
+            // tools/audio/bake_alerts.sh: dead air trimmed, every one loudness-matched to
+            // -18 LUFS with a -1.5 dBTP ceiling, 6 ms guard fades, 44.1 kHz 16-bit PCM.
+            //
+            // **The two that fire in play are decompressed; the three that do not are not.** A
+            // chime has to sound on the frame the row appears, so normal and negative sit in
+            // memory as PCM (168 KB apiece, and no decode at the moment they play). The three
+            // fanfares are seconds long, rare and not latency-critical, so they ride ADPCM
+            // compressed in memory at about a third the size — 1.3 MB of alerts in total rather
+            // than 2.8 MB.
+            //
+            // **None of them is forced to mono.** Unity's importer peak-normalises the downmix
+            // when forceToMono is on, which would throw away the loudness match the bake exists
+            // to produce; normal, negative and happy are mono in the file already, and the two
+            // stereo fanfares keep their width because an alert plays 2D and has nowhere else
+            // to get any.
+            // The two ends of a carry, three takes each. Mono, because a carried thing is
+            // somewhere; PCM decompressed on load, because they are a third of a second long and
+            // fire constantly — a decode at the moment of play, times every hauler on the board,
+            // is the one case where the cheap import class plainly wins. 240 KB for all six.
+            new("carry-lift", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("carry-drop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
+            new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: false, loadInBackground: false, Alert),
+            new("alert-happy", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: false, loadInBackground: false, placeholder: null),
+            new("alert-joined", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: false, loadInBackground: false, placeholder: null),
+            new("alert-raid", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: false, loadInBackground: false, placeholder: null),
             // The forest beds are minutes long, so they stream rather than sit in memory: a
             // three-minute stereo bed decompressed on load is eighteen megabytes of RAM to play
             // something the player is not supposed to notice. Streaming costs ~200 KB a voice.
@@ -158,6 +190,12 @@ namespace Odyssey.EditorTools
             // almost nothing and keeps a thirty-five-second loop under a megabyte.
             new("campfire", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: true, loadInBackground: false, Fire),
+            // The title screen's bed: two and a half minutes, so it streams from disc like the
+            // outdoor beds rather than sitting in memory. No placeholder — a menu with no bed is
+            // a quiet menu, which is a perfectly good menu, and three sine waves held as a chord
+            // would be the same test tone the music rows decline for the same reason.
+            new("menu-bed", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
             // No placeholder: see ClipSpec.Placeholder. A phase with no track is a case the
             // director already handles — the bed plays alone and nothing fades in over it.
             new("music-day", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
@@ -509,6 +547,29 @@ namespace Odyssey.EditorTools
             // what the same sound would be given in a first-person game. The alternative is to
             // move the ears to the camera's focus, which would let these be ground distances
             // again; it is written up as open in CLAUDE.md.
+            AudioCatalogue.SoundDef CarrySound(string id, string clip) =>
+                new AudioCatalogue.SoundDef
+                {
+                    Id = id,
+                    Clips = Variants(clip),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.4f, VolumeVariance = 0.14f, PitchVariance = 0.07f,
+                    SpatialBlend = 1f, MinDistance = 14f, MaxDistance = 120f,
+                    Priority = 150, Cooldown = 0.1f,
+                };
+
+            AudioCatalogue.SoundDef AlertSound(string id, string clip, float volume,
+                float cooldown = 2f) =>
+                new AudioCatalogue.SoundDef
+                {
+                    Id = id,
+                    Clips = Variants(clip),
+                    Bus = SoundBus.Alerts,
+                    Volume = volume, VolumeVariance = 0f, PitchVariance = 0f,
+                    SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
+                    Priority = 16, Cooldown = cooldown,
+                };
+
             catalogue.Sounds.Clear();
             catalogue.Sounds.AddRange(new[]
             {
@@ -534,15 +595,35 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 210f,
                     Priority = 120, Cooldown = 0.12f,
                 },
-                new AudioCatalogue.SoundDef
-                {
-                    Id = SoundIds.AlertStarving,
-                    Clips = Variants("alert"),
-                    Bus = SoundBus.Alerts,
-                    Volume = 0.9f, VolumeVariance = 0f, PitchVariance = 0f,
-                    SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
-                    Priority = 16, Cooldown = 2f,
-                },
+                // The two ends of a carry (design 24 §12). **The quietest placed sounds in the
+                // game, and deliberately.** This fires on every leg of every haul, so the
+                // question is not whether it can be heard but whether a colony of six haulers is
+                // still somewhere you want to be. It sits at 0.4 against the axe's 0.85 and dies
+                // at 120 m against the axe's 200, which puts it under the work rather than
+                // beside it: near the colonist you are watching it is a scuff of material, and
+                // across the board it is gone.
+                //
+                // Pitch variance is the axe's rather than the pick's, on top of three baked
+                // takes, because the takes already differ by four per cent of rate and the two
+                // together are what stop a stockpile run sounding like one file on repeat.
+                CarrySound(SoundIds.CarryLift, "carry-lift"),
+                CarrySound(SoundIds.CarryDrop, "carry-drop"),
+                // The alerts. Zero variance on all five: a chime is a signal and a signal that
+                // wobbles reads as a fault, which is the opposite of what the work sounds want
+                // variance for. 2D, top voice priority, and a cooldown long enough that two
+                // conditions crossing together cannot stack into a chord.
+                //
+                // Volume carries the last two decibels of the loudness match. The bake gets
+                // every clip inside 2 dB of -18 LUFS, but normal is a peaky bell and stops at
+                // -20 against the true-peak ceiling rather than being squashed into range, so
+                // it is given the headroom back here — which is what this field is for.
+                AlertSound(SoundIds.AlertNormal, "alert-normal", 0.95f),
+                AlertSound(SoundIds.AlertNegative, "alert-negative", 0.9f),
+                AlertSound(SoundIds.AlertHappy, "alert-happy", 0.9f),
+                AlertSound(SoundIds.AlertJoined, "alert-joined", 0.9f),
+                // The raid siren carries its own crescendo and is nine seconds long; a second
+                // one starting over the first would be a mess, so its cooldown covers the clip.
+                AlertSound(SoundIds.AlertRaid, "alert-raid", 0.9f, cooldown: 10f),
             });
 
             // The campfire: in the library, played by nothing. A looping sound that belongs to a
@@ -594,6 +675,21 @@ namespace Odyssey.EditorTools
                     Volume = 0.22f, FadeSeconds = 8f, ArrivalFadeSeconds = 4f,
                 },
             });
+
+            // The title screen's bed. **Deliberately the quietest thing in the catalogue**
+            // (owner: "keep it really low in the mix by default"): 0.18 against the day bed's
+            // 0.28, on a clip peak-normalised to the same BedPeak, so the two are directly
+            // comparable and this one sits well under.
+            //
+            // Arriving takes eight seconds and leaving takes four. Asymmetric on purpose — the
+            // bed should already be the air by the time the player has read the menu, and it has
+            // to be gone before the world it is handing over to has finished arriving. The
+            // outdoor bed fades in over four, so the two cross rather than queue.
+            catalogue.Menu = Clip("menu-bed") == null ? null : new AudioCatalogue.PhaseTrackDef
+            {
+                Phase = MusicPhase.None, Clip = Require("menu-bed"),
+                Volume = 0.18f, FadeSeconds = 4f, ArrivalFadeSeconds = 8f,
+            };
 
             // Music is optional. A row is written only when there is a track to point it at, so
             // a project with no music licensed plays the world and nothing else — which is a

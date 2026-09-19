@@ -137,18 +137,6 @@ namespace Odyssey.Tests.Sim
     /// the same reasoning recorded two entries down, and this entry is the re-bake the unit's row
     /// promised would be deliberate.</para>
     ///
-    /// <para><b>Moved for the growing zones (U46), 2026-09-18, and all six numbers again.</b>
-    /// <c>GrowingZones</c> registers hashed state on every colony, and an empty contribution
-    /// still contributes its count — the same shape as the edifice list's first re-bake. Nothing
-    /// about generation or simulation moved: the fields are new and empty, and both numbers move
-    /// in every case for it.</para>
-    ///
-    /// <para><b>Moved for the growing jobs (U47), 2026-09-18, and all six numbers again.</b>
-    /// <c>Work_Growing</c> and <c>Skill_Growing</c> made every pawn's work-priority and skill
-    /// arrays one slot longer, and the pawn hash walks both — the same shape as the tenth job's
-    /// extra tally slot, seen from the pawn side this time. Both numbers move in every case,
-    /// including the barren meadow, and nothing about generation or simulation moved.</para>
-    ///
     /// <para><b>Moved a ninth time, 2026-09-18, by the terrace guard, and <i>only the wooded
     /// board</i>.</b> <c>TreePass</c> refuses a tree in a cell at the foot of a terrace step,
     /// because presentation fills that cell with a bank and the tree is sheared off by it — see
@@ -167,6 +155,12 @@ namespace Odyssey.Tests.Sim
     /// colonist who never hops cannot notice what hopping costs. That is the control, and it is a
     /// sharper one than usual: it separates "the price changed" from "everything moved".</para>
     ///
+    /// <para><b>The other two cases did not move at all, and that is the control.</b> The barren
+    /// meadow grows no trees and the ruined city's generator has no <c>TreePass</c> in it, so a
+    /// guard on tree placement can reach neither — measured by running the whole table and reading
+    /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
+    /// else moving would have meant something had come along uninvited.</para>
+    ///
     /// <para><b>Moved an eleventh time the same day, when the growing branch met main a second
     /// time, and the meadow is the control again.</b> Main had re-baked for the terrace guard and
     /// the hop’s price; the growing side had re-baked for the zones and the growing work. Each
@@ -181,12 +175,17 @@ namespace Odyssey.Tests.Sim
     /// stayed on the growing side’s value because its generator has no <c>TreePass</c>, while its
     /// <see cref="Simulated"/> moved for the hop alone, which is exactly what the tenth entry
     /// predicts for it.</para>
+    /// <para><b>Moved a twelfth time the same day, by main's own carry sounds and the title
+    /// screen's bed (PR #133), and only the simulation moved.</b> All three
+    /// <see cref="Case.Simulated"/> values are this merge's own measurement — the growing
+    /// side's walks and #133's sounds in one run, neither parent's. And <b>every
+    /// <see cref="Case.Generated"/> value landed on the growing side's own numbers to the
+    /// digit</b>, which is the cleanest signature this file has ever shown: PR #133 touched no
+    /// board, so the union's generated worlds are byte-for-byte the ones the eleventh entry
+    /// below measured. The merge that sat between — main's #129 and #130 — moved nothing here
+    /// at all, carried items and player shaders being hash-silent, which is why it has no
+    /// entry of its own.</para>
     ///
-    /// <para><b>The other two cases did not move at all, and that is the control.</b> The barren
-    /// meadow grows no trees and the ruined city's generator has no <c>TreePass</c> in it, so a
-    /// guard on tree placement can reach neither — measured by running the whole table and reading
-    /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
-    /// else moving would have meant something had come along uninvited.</para>
     /// </summary>
     public static class Golden
     {
@@ -242,7 +241,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 17287400559466587244UL,
-            Simulated = 15649756692576152247UL,
+            Simulated = 17699815835464548868UL,
         };
 
         /// <summary>
@@ -259,7 +258,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 8724219219982949137UL,
-            Simulated = 7454526726644784434UL,
+            Simulated = 18276276831126387969UL,
         };
 
         /// <summary>
@@ -296,7 +295,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13906133993818225881UL,
-            Simulated = 2442616034903591755UL,
+            Simulated = 7576706804963637440UL,
         };
     }
 }
