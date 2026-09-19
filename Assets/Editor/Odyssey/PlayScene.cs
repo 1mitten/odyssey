@@ -84,6 +84,30 @@ namespace Odyssey.EditorTools
         /// <summary>Batchmode entry point. Exits the editor with 0 on success, 1 on failure.</summary>
         public static void Build() => BuildInternal(Application.isBatchMode);
 
+        /// <summary>
+        /// Make the scene this tool generates the one a player build ships.
+        ///
+        /// <para><b>Because the two had never been made to agree, and nothing noticed for
+        /// months.</b> The build settings still carried the Unity template's
+        /// <c>SampleScene.unity</c> on 2026-09-19, long after that file stopped existing, and it
+        /// went unseen because nothing in this repository had ever built a player — both test
+        /// tiers run in the editor's own domain and never read the list. Generating a scene and
+        /// leaving a hand-maintained pointer at it is the kind of second source of truth the
+        /// project's own convention exists to avoid: scenes here are generated, not
+        /// hand-authored, so that they are reproducible.</para>
+        ///
+        /// <para>Idempotent, and it writes nothing when the list already says this. A no-op save
+        /// of <c>EditorBuildSettings.asset</c> is a spurious diff on every scene rebuild.</para>
+        /// </summary>
+        static void RegisterInBuildSettings()
+        {
+            EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes;
+            if (scenes.Length == 1 && scenes[0].enabled && scenes[0].path == ScenePath) return;
+
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            Debug.Log($"[PlayScene] build settings now ship {ScenePath} and nothing else.");
+        }
+
         [MenuItem("Odyssey/Presentation/Rebuild module catalogue")]
         public static void RebuildCatalogueFromMenu() => RebuildInternal(exitWhenDone: false);
 
@@ -940,6 +964,7 @@ namespace Odyssey.EditorTools
                 Directory.CreateDirectory(Path.GetFullPath("Assets/Scenes"));
                 AssetDatabase.Refresh();
                 EditorSceneManager.SaveScene(scene, ScenePath);
+                RegisterInBuildSettings();
                 Debug.Log($"[PlayScene] saved {ScenePath}. " +
                           $"Catalogue: {catalogue.ResolvedPrefabCount()}/{catalogue.Entries.Count} rows have art.");
             }
