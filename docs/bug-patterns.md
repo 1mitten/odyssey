@@ -33,6 +33,7 @@ Every occurrence so far:
 | What layer does a run land on? | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | a deck with a hole in it |
 | **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
 | Is this cell the foot of a terrace step? | `BankLayout` (render mirror), `TerraceFoot` (cell grid) | allowed on purpose: different data, pinned cell-by-cell by `TerraceFootTests` |
+| **When is a colonist starving?** | `AlertModel.StarveAt` (120, of 1000), `AlertWatch.StarveThreshold` (12, of a scale that does not exist) | **the alert chime fired at 1.2% food instead of 12%, which is to say never — and its three unit tests all passed, because they fed the watcher literal numbers rather than a published pawn** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -181,6 +182,62 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-19 — The volume you set on the title screen was never saved
+
+Found while wiring the title-screen bed to the player's faders; never reported, and not the sort of
+thing a player would report.
+
+`SettingsPresenter.ApplyBusDb` opened with `if (audio == null || _director == null) return;`. The
+audio director is built from a world, so `audio` is null every moment before one exists — and the
+settings page is perfectly reachable from the main screen. Moving a volume slider there wrote
+nothing to `AudioSettingsStore` and therefore nothing to PlayerPrefs.
+
+**The shape worth recognising: a guard that protects the last line of a method by skipping the
+first two.** The null check was correct about the director and wrong about everything above it.
+Ask of any early return: *which of the things below this line actually needed the thing I am
+checking?*
+
+**Stopped by** writing the store unconditionally and pushing to the director only if it exists.
+`MenuAmbience` reads the same store, so the title screen's Music fader now moves the bed drawn
+under it. `docs/design/17-start-flow.md` §12.
+
+### 2026-09-19 — Eight seconds of fade that lasted one frame
+
+Caught by its own test on the first run, and recorded because of *which* test caught it.
+
+`MenuAmbience` uses a long fade the first time it arrives and the ordinary one afterwards. The
+latch for "has arrived" was set on the first `Sync` rather than on the level reaching full, so the
+eight-second arrival fade governed one sixtieth of a second and the remaining 7.98 ran at the
+four-second leaving fade — the bed up in half the time it was written to take.
+
+**Both endpoints were correct.** Silent at nought seconds, full at eight. Any test asserting the
+ends would have passed. The one that failed asserted the level was between 0.2 and 0.6 at
+four-tenths of the way through, and got 0.80.
+
+**The lesson is about the test, not the code: a fade is a curve, so assert somewhere along it.**
+The same applies to anything with a shape — an ease, a ramp, a cost curve. Checking that it starts
+where it should and ends where it should tests the clamps.
+
+### 2026-09-19 — The alert chime that could not fire (P1)
+
+Not reported as a bug. The owner said the alert sounds were *nasty* and supplied replacements; the
+reason they had rarely been heard turned up while wiring the new ones in.
+
+`AlertWatch` decided when a colonist was starving by testing the published food need against
+`StarveThreshold = 12`, with a comment reading *"food, in the published 0–100 units"*. Food is
+published **0–1000**, and `AlertModel.StarveAt` — the threshold the red panel row uses — is 120. So
+the chime fired at a hundredth of the food the warning is for: a colonist reaching 1.2% is one who
+is already dying.
+
+**Three unit tests covered the watcher and all three passed**, because each fed it literal `13`,
+`5` and `0` rather than a pawn from a published frame. A test that restates the constant it is
+testing cannot catch the constant being wrong — it can only catch the *code* being wrong. The unit
+under test was the number.
+
+**Stopped by** deleting the second owner outright. `AlertChimeWatch` reads the alerts panel's own
+rows, so "what is an alert" has one answer, dismissal silences the sound for free, and a scale
+change cannot desynchronise the two again. `docs/design/24-alert-sounds.md`.
 
 ### 2026-09-19 — Every dear step began with the figure standing still (P5)
 

@@ -66,6 +66,10 @@ namespace Odyssey.Presentation.Ui
         readonly LedgerModel _ledger = new LedgerModel();
         readonly AlertModel _alerts = new AlertModel();
 
+        /// <summary>Which alert rows have already chimed. Beside the model rather than in
+        /// the audio director because the panel is what knows an alert has appeared.</summary>
+        readonly Audio.AlertChimeWatch _chimes = new Audio.AlertChimeWatch();
+
         OdysseyBootstrap? _boot;
         SliceCameraRig? _rig;
         HudDirectors? _directors;

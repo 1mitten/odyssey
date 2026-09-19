@@ -924,6 +924,12 @@ namespace Odyssey.Presentation.Ui
             if (world == null) return;
             _alerts.Refresh(world.Views.Current, Time.unscaledTimeAsDouble);
 
+            // The chime rides the row, so it is raised here and not in the audio director's own
+            // frame: a sound that arrives on a different tick from the line it belongs to reads
+            // as two events. The watch decides what is new; a clone with no catalogue gets a
+            // null director and silence, like every other sound.
+            if (_chimes.Step(_alerts.Rows) is { } chime) _boot.Audio?.PlayAlert(chime);
+
             while (_alertViews.Count < _alerts.Rows.Count) _alertViews.Add(NewAlertRow());
             while (_alertViews.Count > _alerts.Rows.Count)
             {

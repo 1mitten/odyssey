@@ -134,7 +134,6 @@ namespace Odyssey.Presentation.Audio
 
         readonly Dictionary<string, Bed> _beds = new();
 
-        readonly AlertWatch _watch = new();
 
         /// <summary>Diagnostic counters, for the developer overlay and the tests. A test that
         /// wants to know why nothing played reads these instead of guessing.</summary>
@@ -251,15 +250,19 @@ namespace Odyssey.Presentation.Audio
         }
 
         /// <summary>
-        /// The whole frame's audio: step the clock, lay the ambience, ride the music and its
-        /// duck, and raise any alert the published pawn list has crossed into.
+        /// The whole frame's audio: step the clock, lay the ambience and ride the music and
+        /// its duck.
+        ///
+        /// <para>Alerts are not raised here. A chime belongs to a row appearing in the alerts
+        /// panel, and the panel owns when that is — see <see cref="AlertChimeWatch"/>, which
+        /// calls <see cref="PlayAlert"/> from the HUD's own refresh.</para>
         ///
         /// Called once per frame from the composition root's LateUpdate, after the figures have
         /// synced, so a blow that landed this frame sounds on the same frame its chips fly.
         /// </summary>
         /// <param name="deltaTime">Seconds since the last Sync. Drives the director's clock.</param>
-        /// <param name="frame">The published world. Read for the pawn list (alerts) and the tick
-        /// (music phase); never for anything the mirror owns.</param>
+        /// <param name="frame">The published world. Read for the tick (music phase); never for
+        /// anything the mirror owns.</param>
         /// <param name="listener">The camera's position — what "near" means for a one-shot.</param>
         /// <param name="focus">The camera's focus point — what "near" means for an environment.
         /// The focus and not the camera itself, because the camera is tens of metres up in the
@@ -276,9 +279,6 @@ namespace Odyssey.Presentation.Audio
             StepAmbience(deltaTime, focus, activeLayer);
             StepPhaseLoops(deltaTime, frame.Tick, activeLayer);
 
-            AudioAlert fired = _watch.Step(frame.Pawns);
-            if ((fired & AudioAlert.Starving) != 0)
-                PlayAlert(SoundIds.AlertStarving);
         }
 
         /// <summary>

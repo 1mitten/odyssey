@@ -495,3 +495,117 @@ asked in the fast tier rather than at the keyboard.
   stores one is how two sources of truth start.
 - **A named world.** The colony's name is still the scenario's. Naming it belongs with the same
   screen as choosing a board, and both wait for the rest of `MS`.
+
+## 12. The title screen's bed (2026-09-19)
+
+> "on the main title screen - fade this audio in but fade it out and fade in the game audio when
+> entering a new world for seamless - play it on repeat on the main title screen … make sure this
+> doesn't play during the game at all - only the main screens - and keep it really low in the mix
+> by default."
+
+### What it is
+
+A deep drone, and deeper than it looks. Measured by band, from the owner's source:
+
+| Band | Level |
+|---|---|
+| 20–120 Hz | −26.6 dB — almost all of it |
+| 120–500 Hz | −38.4 dB |
+| 500–2000 Hz | −62.3 dB |
+| 2000–6000 Hz | −85.5 dB — effectively silence |
+
+Two consequences worth knowing before anybody retunes it. It reads as −27.6 LUFS integrated, which
+looks very quiet on paper and is mostly K-weighting doing what it does to sub-bass; its actual peak
+is −11.4 dBFS. And it will behave **completely differently on laptop speakers** (nearly inaudible)
+from headphones or anything with a woofer (a presence you feel). If the level ever reads as wrong,
+the first question is what it was heard on.
+
+It is also genuinely wide — sum and difference are within 2.4 dB, so the channels are close to
+decorrelated. **It is not folded to mono**; the width is most of what makes a bed read as
+everywhere rather than as over there, and here it is nearly all there is.
+
+### The loop
+
+The whole 157 s is kept. The last six seconds are blended into the first six and the blended tail
+dropped, giving a seamless 151 s loop — the same thing `AudioSetup.CrossfadeTail` does for the
+synthesised beds, because a bed plays for as long as somebody sits on the title screen and a click
+at the loop point becomes a metronome. Measured at the seam: 0.4% of full scale, which is inside
+the signal's own sample-to-sample step.
+
+Peak-normalised to `AudioSetup.BedPeak` (0.5, i.e. −6 dBFS), the level every bed in the game is
+normalised to, so that catalogue `Volume` means the same thing across all of them. Peak and not
+loudness, because R128 has strong opinions about sub-bass that have nothing to do with how loud
+this will seem. Left at its native 24 kHz: there is nothing above 500 Hz worth keeping and
+resampling to 44.1 would add eight megabytes of nothing to the repository.
+
+`tools/audio/bake_menu_bed.sh`.
+
+### Where it plays, and where it does not
+
+`MenuAmbience` — one looping 2D voice with a fade, owned by `OdysseyBootstrap` and **not by the
+session**. It is built in `Start`, it survives every world being made and torn down, and it is
+disposed with the component.
+
+**Why it is not in `AudioDirector`.** The director is built *from a world* — its grid size, its
+terrain mirror, its surface layer — and the composition root's frame loop returns before touching
+it while `_world` is null. The menu is precisely the state in which there is no world. The
+alternative was making the director constructible without one, which means a half-built director
+whose beds and probe wait for a second initialisation nobody can see in the constructor. A title
+screen wants one voice and a fade.
+
+`_menuBed.Sync(Time.unscaledDeltaTime, wanted: _world == null)` sits **above** the world guard in
+`LateUpdate`. `wanted` is the whole rule: there is a world, or there is not.
+
+- Unscaled, because a fade that is part of the interface must not care that the game behind it is
+  paused or running at six times speed.
+- A player who boots straight into a colony (`-odyssey-newgame`, or `buildOnPlay`) never hears it
+  start: the first thing `Sync` sees is a world.
+
+### The hand-over
+
+| | Seconds | Why |
+|---|---|---|
+| Menu bed arriving, first time | 8 | it should already be the air by the time the player has read the menu |
+| Menu bed leaving | 4 | it has to be **gone** before the world it hands to has finished arriving |
+| Menu bed arriving, after that | 4 | quit-to-menu is the clock turning over, not the game arriving |
+| Outdoor bed arriving | 4 | unchanged — `ArrivalFadeSeconds`, which already existed for exactly this |
+
+The two four-second fades run at the same time, so the beds **cross rather than queue**. Two tests
+pin the relationship against the shipped catalogue rather than against constants, so retuning by
+ear stays free and drifting into a gap or an overlap fails.
+
+**The arrival latch is on reaching full, not on the first frame.** The first version set it on the
+first `Sync`, so the eight-second fade governed one sixtieth of a second and the remaining 7.98 ran
+at the four-second leaving fade — a bed up in half the time it was written to take. Only a test
+that looked at it part-way through could see that, and one did.
+
+### The mix
+
+**Volume 0.18**, against the day bed's 0.28 and the night bed's 0.22, on a clip normalised to the
+same peak — so the three are directly comparable and this one sits well under. A test asserts both
+ends of that: below every world bed, and not below 0.1, because the failure this guards against is
+somebody tuning by ear into either a bed nobody can hear or one that competes with the colony.
+
+It rides the **Music bus**, not Ambience. It is a menu track, and a player who turns music off
+should get a silent title screen.
+
+**It reads the player's stored faders rather than keeping any.** `AudioSettingsStore` is the one
+owner; `MenuAmbience` loads it each step while it is audible. A second copy of the five bus faders
+would be a second owner of a rule, which this project has paid for more than once
+(`docs/bug-patterns.md` P1).
+
+That turned up a real gap on the way: `SettingsPresenter.ApplyBusDb` returned early when the audio
+director was null — which is every moment before a world is built — so **a player who set their
+volumes on the title screen had them silently discarded**, and the Music fader drawn on that very
+page did nothing to the bed under it. The store is now written whether or not a colony exists.
+
+### Open, for a person at the keyboard
+
+- **Whether 0.18 survives a real pair of speakers.** This is a sub-bass bed; the number that is
+  right on headphones may be inaudible on a laptop. It is one slider.
+- **Whether eight seconds of arrival is patient or broken.** Nothing announces that a bed is on its
+  way in, so a player who clicks New game within four seconds of launch will have heard almost
+  nothing of it.
+- **Whether four seconds of hand-over reads as seamless**, or whether the gap between the menu bed
+  going and the outdoor bed's first birds is a hole. The two overlap by design; only an ear can say
+  whether the overlap is enough.

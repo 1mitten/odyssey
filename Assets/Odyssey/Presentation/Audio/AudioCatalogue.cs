@@ -122,6 +122,17 @@ namespace Odyssey.Presentation.Audio
         /// are standing in it, as against the water bed, which is what is near you.</summary>
         public List<PhaseTrackDef> Outdoor = new();
 
+        /// <summary>
+        /// The title screen's bed, played by <see cref="MenuAmbience"/> and by nothing else.
+        ///
+        /// <para>A <see cref="PhaseTrackDef"/> although it has no phase, because the four fields
+        /// that matter are the four it already has: the clip, how loud, how long it takes to go,
+        /// and the different — longer — fade it uses when it is arriving rather than changing.
+        /// Inventing a fifth def shape for one track would be four identical fields and a new
+        /// name to learn.</para>
+        /// </summary>
+        public PhaseTrackDef? Menu;
+
         public AmbienceDef? FindAmbience(string id)
         {
             for (int i = 0; i < Ambience.Count; i++)
