@@ -126,7 +126,22 @@ the hands; instead the toil begins `PawnGesture.Sow`, the pickup's own solved kn
 (`Gesture.Sow`: down quickly, a hold stretched over most of the motion, up slowly) so the hold
 *is* the work. The gesture runs on its own clock timed against the carrot's `sowWorkTicks` at the
 tuned rate — the one approximation in the reuse, accepted "for now" with the owner's own words.
-Harvest keeps its swing: cutting a ripe crop is a cut, and nothing was asked of it.
+
+**The harvest kneels too** (owner, 2026-09-19: *"the colonists still use their axe to harvest
+… use the same pose as sowing bending down"*). `HarvestJobDriver` reports no work focus either, so
+the axe the computed swing would summon never appears, and the pull begins the same
+`PawnGesture.Sow` kneel — pulling a carrot is the same reach at the same soil as seeding one, so
+the pose is shared rather than forked. The gesture is timed against `sowWorkTicks` while the work
+pays `harvestWorkTicks` (200 vs 170), which is the same "for now" approximation one line up
+inherited by the second caller.
+
+**The seed specks wait out half the kneel** (owner, 2026-09-19: *"it should have a delay so the
+colonist is actually bent down for some time and seeds appear"*). The gate is the kneel gesture's
+own age on the frame clock — `Gesture.SeedSpecksAfter`, half the motion, which is the middle of
+the hold — measured by the serial-differs tracker the bootstrap keeps per pawn, the same test the
+figure director uses to fire a pose. Nothing in the simulation stores "how long has she been
+kneeling": the specks are a drawing of the kneel and owe their timing to the kneel's own clock,
+which is why the delay lives on `Gesture` beside the timing it scales with.
 
 The continuous loop needs no code beyond that: a harvested cell is an unplanted cell in a zone,
 which is exactly what `SowWorkGiver` scans for, so it re-enters the queue the same tick. Resow
@@ -226,6 +241,34 @@ unchanged by the yield. What scales with a real farm is the instance count and t
 O(planted) every 250 ticks (0.006 ms a tick in the soak), neither of which has shown in a frame. Both caveats are recorded rather than papered over; the soak-run ledger
 (`docs/milestones/soak-runs.md`, 2026-09-18) holds the sim-side numbers.
 
+**What the first play day earned, 2026-09-19 (owner: *"single carrot is always displayed no
+matter what"*):**
+
+- **A published plant now carries the handle the contract promises — and this was the whole
+  "one carrot" mystery.** `PlantView.Plant`'s contract says `PlantHandle` (nought-based); the
+  contributor was publishing `_cropAt`, which is one-based so that nought can mean fallow, and
+  `UpdateCrops` adds one of its own on arrival — so the carrot landed on slot two of a
+  one-plant table, where `CropModule`'s bounds guard quietly answered nought and **a ripe field
+  drew nothing at all**. Every render test fed the contract's nought-based bytes and passed
+  while the game fed different ones; `APublishedPlantCarriesItsHandleAndNotTheCropSlot` now
+  reads the real contributor back, which is the only test that can see a convention. The one
+  carrot the owner saw standing was the *pile* (below) — the plot itself was bare.
+- **The pile is a heap.** `ItemHeap` had no row for carrots, so a five-carrot harvest drew as
+  one prop in the middle of the cell — exactly the "one carrot after harvest" of the playtest.
+  The recipe's `Full` is the carrot's own `yieldCount`, which makes the ramp the identity up to
+  a yield: five grew, five lie there. `CropCheck`'s pile photograph reads as five-plus scattered
+  carrots with their tops on.
+- **`CropCheck` photographs the field through the shipped catalogue** — stages one to three and
+  the pile, from the play bearing and close up (`scripts/unity.sh shot
+  Odyssey.EditorTools.CropCheck.Run`). It exists because every carrot judgement until now came
+  from the owner playing the game, and twice what was being looked at was not what the code
+  drew. Its own gap, recorded rather than hidden: the zone tint and the seed specks are the
+  bootstrap's overlay draws and no sheet of the mesher's can show them.
+- **Carrying needed no change and now has a test.** The owner's "carried back like wood" is
+  what already happens — the yield drops as a loose haulable pile exactly as a felled trunk
+  drops one — and `TheYieldIsHauledToTheStockpileLikeWood` pins it, so a carrot that stops
+  being haulable or a stockpile that stops accepting one fails a build instead of sitting in
+  the field forever.
 ## 7. UI
 
 The build palette gains its **Zones** category (the key `ui.arch.category.zones` and the tool
@@ -288,6 +331,10 @@ planting.
   the other way.
 - **~7 tiles per colonist is arithmetic, not play.** The reference ships 10+ as a rule of thumb;
   ours is fatter, and nobody has felt whether fat is right.
+- **The second play day's fixes are sheet-judged only** — the harvest kneel, the half-kneel seed
+  delay, the five-carrot ripe tile and the five-carrot pile are photographed (`CropCheck`) and
+  none has been played. The ripe tile and the pile are arithmetic under the photo; the delay is
+  the one that wants a wristwatch.
 - **The frame figure belongs to a young field.** §6's 2.92 ms was measured with 537 crops standing
   and none ripe; whether a fully sown, fully ripe two-thousand-cell field holds the budget has not
   been watched, and the ~one-draw-call-per-crop line in §6 is the reason to watch it before the

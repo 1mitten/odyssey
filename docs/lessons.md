@@ -2105,6 +2105,26 @@ run on the branch, because nothing else ever reads those bytes. Generated metas 
 *(Also worth its sentence: `git diff main -- Assets/` from a worktree lists files main has and
 the worktree does not, so a naive "missing meta" audit reports phantom files. Test the `.cs`
 exists before blaming its `.meta`.)*
+## A bounds guard turned a contract mismatch into silence, and hand-built test data kept it invisible
+
+**2026-09-19, the growing branch's "one carrot" mystery.** `PlantView.Plant`'s contract promises a
+nought-based `PlantHandle`; the contributor published the one-based crop slot instead, and the
+render mirror added one of its own on arrival. The carrot therefore asked for slot two of a
+one-plant table - where `CropModule`'s bounds guard, written to keep a future def count mismatch
+from crashing the renderer, quietly answered nought, and a ripe field drew nothing at all. No
+error, no log, no missing art: a guard meant to fail safe failed silent, and the fault surfaced
+as the owner's word "one carrot" three sessions later.
+
+The reason every test was green is the part worth keeping: the render tests hand-built their
+`PlantView`s from the contract's convention, so the bytes the tests fed and the bytes the game
+fed were different numbers meaning the same plant. **Pin the contributor, not the consumer's
+interpretation of it** - a test that reads the real snapshot back
+(`APublishedPlantCarriesItsHandleAndNotTheCropSlot`) is the only kind that can see a convention
+gap, and it costs five lines.
+
+And when a view field has a "nought means none" encoding beside it, write the publish site and
+the read site in the same sentence and check them against each other; the off-by-one that cost
+three sessions lives exactly in the space between two people each being locally correct.
 ## A Unity build rewrites settings assets it was never asked to touch
 
 **2026-09-19, the first player build this project had ever run.** `scripts/unity.sh build`

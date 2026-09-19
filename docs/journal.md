@@ -6732,3 +6732,26 @@ underground, and five carrots a tile drew as one - young plants sit on the soil 
 mature root insets. The third ask, the small click area, was the pile eating the tile: an item
 lying in a field now carries the field's growing row in its own pane, so the tile answers
 wherever on it the click lands.
+
+### One carrot, three causes (2026-09-19)
+
+The owner's third play day opened with an interview, and the answers split "single carrot is
+always displayed" into three separate truths. The one carrot standing in a ripe tile was the
+biggest find of the branch: PlantView's contract promises a nought-based PlantHandle, the
+contributor was publishing the one-based crop slot, and the render mirror added one of its own -
+the carrot landed on slot two of a one-plant table, CropModule's bounds guard answered nought,
+and a ripe field drew nothing at all. Every render test fed the contract's own bytes and passed;
+APublishedPlantCarriesItsHandleAndNotTheCropSlot now reads the real contributor back. The one
+carrot after harvest was ItemHeap having no carrots row, so a five-stack drew as one prop; the
+recipe's Full is the carrot's own yieldCount, which makes the ramp the identity - five grew,
+five lie there. And the axe on the plot was the harvest driver's work focus, never changed when
+the sower's was; the pull now kneels with the same PawnGesture.Sow the sow uses.
+
+Two smaller settles ride the same day. The seed specks wait out half the kneel - the gate is
+the gesture's own age on the frame clock, a delay that lives on Gesture beside the timing it
+scales with, because nothing in the simulation stores how long a colonist has been kneeling.
+And "carried back like wood" was already true: the yield drops as a loose haulable pile exactly
+as felled wood does, and TheYieldIsHauledToTheStockpileLikeWood pins it rather than leaving the
+owner's word for it. CropCheck photographs the field through the shipped catalogue - stages,
+ripe tile, pile - because every carrot judgement until now came from the owner playing the
+game, and twice what was being looked at was not what the code drew.
