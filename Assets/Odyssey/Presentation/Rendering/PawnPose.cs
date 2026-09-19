@@ -150,7 +150,10 @@ namespace Odyssey.Presentation.Rendering
 
                                     if (swappingCells || sharingNext || sharingCell || dist < 3.0f)
                                     {
-                                        Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s);
+                                        float weight = swappingCells || sharingNext || sharingCell
+                                            ? 1.0f
+                                            : SteeringCurve.SmoothStep(Mathf.Clamp01((3.0f - dist) / 1.5f));
+                                        Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s) * weight;
                                         if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
                                             lateralOffset = passDisp;
                                     }
@@ -165,16 +168,56 @@ namespace Odyssey.Presentation.Rendering
                                 if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
                                     lateralOffset = passDisp;
                             }
+                            else
+                            {
+                                Vector3 otherPos = CellMetrics.FloorCentre(other.Cell);
+                                Vector3 nomA = CellMetrics.FloorCentre(pawn.Cell) + travel * s;
+                                float dist = Vector2.Distance(new Vector2(nomA.x, nomA.z), new Vector2(otherPos.x, otherPos.z));
+                                if (dist < 2.5f)
+                                {
+                                    float weight = SteeringCurve.SmoothStep(Mathf.Clamp01((2.5f - dist) / 1.5f));
+                                    Vector3 passDisp = SteeringCurve.PassingDisplacement(heading, s) * weight;
+                                    if (passDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
+                                        lateralOffset = passDisp;
+                                }
+                            }
                         }
                     }
                 }
 
-                // 2. In-cell static obstacles (e.g. tree trunks)
-                if (world != null && world.HasObstacle(pawn.Cell))
+                // 2. In-cell and flanking static obstacles (e.g. tree trunks)
+                if (world != null)
                 {
-                    Vector3 obstDisp = SteeringCurve.ObstacleDisplacement(heading, s);
-                    if (obstDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
-                        lateralOffset = obstDisp;
+                    // A. Current cell contains an obstacle
+                    if (world.HasObstacle(pawn.Cell))
+                    {
+                        Vector3 obstDisp = SteeringCurve.ObstacleDisplacement(heading, s);
+                        if (obstDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
+                            lateralOffset = obstDisp;
+                    }
+
+                    // B. Diagonal step cutting past corner obstacles
+                    if (travel.x != 0f && travel.z != 0f)
+                    {
+                        CellRef c1 = new CellRef(pawn.Cell.X + (travel.x > 0f ? 1 : -1), pawn.Cell.Z, pawn.Cell.Y);
+                        CellRef c2 = new CellRef(pawn.Cell.X, pawn.Cell.Z + (travel.z > 0f ? 1 : -1), pawn.Cell.Y);
+                        if (world.HasObstacle(c1))
+                        {
+                            Vector3 cornerDir = CellMetrics.FloorCentre(c1) - (from + to) * 0.5f;
+                            cornerDir.y = 0f;
+                            Vector3 avoid = -cornerDir.normalized * (SteeringCurve.MaxLateralOffset * SteeringCurve.Bell(s));
+                            if (avoid.sqrMagnitude > lateralOffset.sqrMagnitude)
+                                lateralOffset = avoid;
+                        }
+                        else if (world.HasObstacle(c2))
+                        {
+                            Vector3 cornerDir = CellMetrics.FloorCentre(c2) - (from + to) * 0.5f;
+                            cornerDir.y = 0f;
+                            Vector3 avoid = -cornerDir.normalized * (SteeringCurve.MaxLateralOffset * SteeringCurve.Bell(s));
+                            if (avoid.sqrMagnitude > lateralOffset.sqrMagnitude)
+                                lateralOffset = avoid;
+                        }
+                    }
                 }
             }
 

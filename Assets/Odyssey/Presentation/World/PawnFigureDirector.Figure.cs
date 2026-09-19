@@ -70,6 +70,15 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public Vector3 SimPosition;
 
+            /// <summary>
+            /// Where the figure was physically drawn last frame.
+            /// Rather than snapping across sudden lateral avoidance or crowd dodging shifts,
+            /// the figure motions towards the target drawn position at a bounded maximum rate,
+            /// enforcing the user rule that crowd and obstacle dodging must motion smoothly
+            /// to position or close to (be forgiving).
+            /// </summary>
+            public Vector3 DrawnPosition;
+
             public float Speed;
 
             /// <summary>The bearing the figure is actually drawn at, which chases the target.</summary>

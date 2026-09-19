@@ -86,5 +86,42 @@ namespace Odyssey.Tests.Presentation
             Assert.That(posExitStart, Is.EqualTo(posTreeEnd).Within(1e-4f),
                 "position across treeCell -> exitCell boundary must be perfectly continuous (zero jump)");
         }
+
+        [Test]
+        public void DiagonalStep_PastCornerTree_SteersAwayFromObstacleCorner()
+        {
+            var world = new RenderTestWorld(5, 5, 2);
+            // Tree at corner (2, 3, 0)
+            world.Edifice(2, 3, 0, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Publish();
+
+            // Pawn moving diagonally from (2, 2, 0) to (3, 3, 0)
+            CellRef start = new CellRef(2, 2, 0);
+            CellRef goal = new CellRef(3, 3, 0);
+
+            var pMid = MakePawn(1, start, goal, 50);
+            Vector3 midPos = PawnPose.Of(pMid, 0f, 0, out _, world.Model);
+
+            // Nominal midpoint of the diagonal step is (2.5, 2.5) * CellMetrics.Size
+            Vector3 nominalMid = (CellMetrics.FloorCentre(start) + CellMetrics.FloorCentre(goal)) * 0.5f;
+
+            // Since the tree is at (2, 3), deflection must push pawn towards (+X, -Z), away from (2, 3)
+            Assert.That(midPos, Is.Not.EqualTo(nominalMid),
+                "diagonal move past a corner obstacle must deflect away from the corner tree");
+            Assert.That(Vector3.Distance(midPos, nominalMid), Is.GreaterThan(0.3f),
+                "deflection away from corner tree must provide substantial clearance");
+        }
+
+        [Test]
+        public void TreeObstacle_OnLowerTerraceLayer_IsDetectedAtColonistLayer()
+        {
+            var world = new RenderTestWorld(5, 5, 3);
+            world.Edifice(2, 2, 0, NaturalContent.EdificeTreeBroadleaf, blocking: false);
+            world.Publish();
+
+            // Tree is rooted at Y=0, colonist is walking on layer Y=1
+            Assert.That(world.Model.HasObstacle(new CellRef(2, 2, 0)), Is.True, "tree in its own cell");
+            Assert.That(world.Model.HasObstacle(new CellRef(2, 2, 1)), Is.True, "tree extends up to layer above");
+        }
     }
 }

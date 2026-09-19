@@ -6594,11 +6594,26 @@ pawns), with anticipatory steering before reaching the obstacle.
     and arrival stops. Peak clearance ($0.60\text{ m}$) occurs at cell centre ($s = 0.5$) abreast of the trunk.
   - *Verified:* `StepTransition_IntoAndOutOfTreeCell_IsContinuous` in `ObstacleSteeringTests.cs` confirms
     delta across entry and exit boundaries is strictly under 0.1 mm (< $10^{-4}\text{ m}$).
-- **Verified:**
-  - Fast tier: **746 Sim + 445 Hud = 1,191 passed, 0 failed** (`AvoidancePathingTests.cs`, `SteeringCurveTests.cs`).
-  - Unity EditMode: **1858 total, 1844 passed, 0 failed** (`ObstacleSteeringTests.cs`, `PawnPassingTests.cs`).
-  - Unity PlayMode: **82 total, 77 passed, 0 failed** (frame times and presentation intact).
-  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
-
-
-
+- **Enforced motion-to-position and tree avoidance across crowds and slopes (2026-09-19).**
+  - *Owner request:* In crowd scenarios with many colonists, figures were snapping to positions when getting
+    around each other, and sometimes colonists walked straight through trees. Mandated rule: *"we need to prevent
+    snapping to other positions - the rule must be to motion to that postion or close to (be forgiving)."*
+  - *Motion-to-position rule in `PawnFigureDirector`:* Added `DrawnPosition` to `Figure`. Rather than snapping
+    `figure.Transform.position = drawn`, the figure motions towards `drawn` at a bounded maximum rate
+    (`MaxAdjustmentSpeed = 5.5f` m/s) using `Vector3.MoveTowards`. Sudden lateral shifts across crowd passing,
+    flanking obstacles, or direction reversals smoothly glide and sway into position rather than teleporting.
+    Ground relief sampling and footing lean follow `figure.DrawnPosition`.
+  - *Tree avoidance vertical coverage on slopes/terraces (`WorldRenderModel.HasObstacle`):* Trees rooted on
+    slopes and terraces at `cell.Y - 1` extend up into `cell.Y`. `HasObstacle` now checks both `cell.Y` and
+    `cell.Y - 1`, ensuring trees on slopes/terrace steps are recognized by presentation steering.
+  - *Diagonal corner tree deflection (`PawnPose.cs`):* Moving diagonally past a corner cell holding a tree
+    now calculates a deflection vector away from the corner trunk, preventing diagonal moves from cutting corners
+    through tree trunks.
+  - *Continuous crowd proximity weighting (`PawnPose.cs`):* Replaced hard boolean distance threshold (`dist < 3.0f`)
+    with continuous `SteeringCurve.SmoothStep` proximity weighting. Approaching and departing pawns ramp their
+    passing offset smoothly from 0 at 3.0 m to peak clearance at $\le 1.5\text{ m}$, eliminating boundary pops.
+  - *Verified:*
+    - Fast tier: **746 Sim + 445 Hud = 1,191 passed, 0 failed**.
+    - Unity EditMode: **1,861 total, 1,847 passed, 0 failed** (new tests `DiagonalStep_PastCornerTree_SteersAwayFromObstacleCorner`, `TreeObstacle_OnLowerTerraceLayer_IsDetectedAtColonistLayer`, `PassingEncounter_DistanceThreshold_ScalesSmoothlyWithoutThresholdPop`).
+    - Unity PlayMode: **82 total, 77 passed, 0 failed**.
+    - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.

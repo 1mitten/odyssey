@@ -1555,7 +1555,24 @@ namespace Odyssey.Presentation.World
             if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
                 drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
 
-            figure.Transform.position = drawn;
+            // **Motion to position rather than snapping (owner rule: "the rule must be to motion to
+            // that position or close to (be forgiving)").**
+            //
+            // When colonists dodge obstacles or pass each other in dense crowds, lateral target offsets
+            // can shift rapidly as other pawns turn or enter the detection radius. Moving towards the
+            // target at a bounded rate guarantees that the figure physically sways and glides into
+            // position without ever teleporting, snapping, or spiking speed observation.
+            const float MaxAdjustmentSpeed = 5.5f; // metres per second
+            if (!settled || (drawn - figure.DrawnPosition).sqrMagnitude > 9f || deltaTime <= 1e-5f)
+            {
+                figure.DrawnPosition = drawn;
+            }
+            else
+            {
+                figure.DrawnPosition = Vector3.MoveTowards(figure.DrawnPosition, drawn, MaxAdjustmentSpeed * deltaTime);
+            }
+
+            figure.Transform.position = figure.DrawnPosition;
 
             // Turn towards the heading rather than snapping to it.
             //
@@ -1585,11 +1602,11 @@ namespace Odyssey.Presentation.World
             // The swing needs no separate fix and must not be given one: SwingAxis is built from
             // figure.right and figure.forward, so the plane an axe travels in tilts with the body
             // for free, which is what a woodcutter on a slope actually does.
-            GroundRelief.SlopeAt(drawn.x, drawn.z, out float slopeX, out float slopeZ);
+            GroundRelief.SlopeAt(figure.DrawnPosition.x, figure.DrawnPosition.z, out float slopeX, out float slopeZ);
             Quaternion wanted = Footing.LeanTo(Footing.GroundNormal(slopeX, slopeZ));
             figure.Lean = settled ? Footing.Settle(figure.Lean, wanted, deltaTime) : wanted;
 
-            figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
+            figure.GroundY = figure.DrawnPosition.y - GroundRelief.HeightAt(figure.DrawnPosition.x, figure.DrawnPosition.z);
             figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
 
             // Laid down last, over everything above, because lying is a statement about the whole
@@ -1914,6 +1931,7 @@ namespace Odyssey.Presentation.World
             figure.SeenSerial = -1;
             figure.WorkCentre = at;
             figure.SimPosition = at;
+            figure.DrawnPosition = at;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
             Desynchronise(figure, pawn);

@@ -232,14 +232,27 @@ namespace Odyssey.Presentation.World
             if (!Size.Contains(cell.X, cell.Z, cell.Y)) return false;
             int index = Size.Index(cell);
             ushort def = _edifice[index];
-            return def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount;
+            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            if (cell.Y > 0)
+            {
+                ushort defBelow = _edifice[index - Size.LayerStride];
+                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+            }
+            return false;
         }
 
         public bool HasObstacle(int index)
         {
             if ((uint)index >= (uint)_edifice.Length) return false;
             ushort def = _edifice[index];
-            return def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount;
+            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            int below = index - Size.LayerStride;
+            if (below >= 0 && (uint)below < (uint)_edifice.Length)
+            {
+                ushort defBelow = _edifice[below];
+                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+            }
+            return false;
         }
 
         /// <summary>

@@ -116,5 +116,37 @@ namespace Odyssey.Tests.Presentation
             Assert.That(pos.x - baseX, Is.GreaterThan(0.5f),
                 "walking pawn must veer to the side of the tile around the stationary pawn");
         }
+
+        [Test]
+        public void PassingEncounter_DistanceThreshold_ScalesSmoothlyWithoutThresholdPop()
+        {
+            // Pawn 1 moving North (0, 0) -> (0, 1)
+            // Pawn 2 moving South (0, 4) -> (0, 3)
+            CellRef p1From = new CellRef(0, 0, 0);
+            CellRef p1To = new CellRef(0, 1, 0);
+
+            // Test at distance just above 3.0 m vs just below 3.0 m
+            // At 3.05 m distance, weight is 0.
+            // At 2.95 m distance, weight is small (~0.003), completely avoiding any 60 cm cliff!
+            var p1 = MakePawn(1, p1From, p1To, 50); // at z = 1.25 m
+            float baseX = CellMetrics.FloorCentre(p1From).x;
+
+            // Pawn 2 at z = 4.25 m (distance = 3.00 m)
+            var p2JustAt = MakePawn(2, new CellRef(0, 4, 0), new CellRef(0, 3, 0), 10);
+            var pairJustAt = new[] { p1, p2JustAt };
+            Vector3 posJustAt = PawnPose.Of(p1, 0f, 0, out _, null, pairJustAt);
+
+            // Pawn 2 at z = 4.15 m (distance = 2.90 m)
+            var p2Close = MakePawn(2, new CellRef(0, 4, 0), new CellRef(0, 3, 0), 14);
+            var pairClose = new[] { p1, p2Close };
+            Vector3 posClose = PawnPose.Of(p1, 0f, 0, out _, null, pairClose);
+
+            float offsetJustAt = Mathf.Abs(posJustAt.x - baseX);
+            float offsetClose = Mathf.Abs(posClose.x - baseX);
+
+            // Offset at transition entry must be very small (< 0.10 m), eliminating threshold pops
+            Assert.That(offsetJustAt, Is.LessThan(0.01f), "at 3.0m threshold boundary, offset must be near zero");
+            Assert.That(offsetClose, Is.LessThan(0.10f), "just inside threshold, offset begins with a gentle smooth curve");
+        }
     }
 }
