@@ -507,8 +507,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>What is growing, as a <see cref="PlantHandle"/> value.</summary>
         public readonly byte Plant;
 
-        /// <summary>The drawn stage, 1–3: sprout, half-grown, mature. Harvestability is not this —
-        /// it is the simulation's own rule, and the giver, not the picture, decides.</summary>
+        /// <summary>The drawn stage, 0–3: sown-not-sprouted
+        /// (the seed day — specks and no plant), sprout, half-grown, mature. Harvestability is
+        /// not this — it is the simulation's own rule, and the giver, not the picture, decides.</summary>
         public readonly byte Stage;
 
         /// <summary>How far through growing, 0–255 quantised.</summary>

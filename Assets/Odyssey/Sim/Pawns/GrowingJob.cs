@@ -156,6 +156,9 @@ namespace Odyssey.Sim.Pawns
             if (!StillInReach(ctx, Pawn, cell, layersAbove: 0, layersBelow: 0))
             {
                 WalkBack();
+                // The kneel is over the moment the stance is: a sticky gesture carried across
+                // the walk back would draw seeds under a sower who is only returning.
+                Pawn.BeginGesture(PawnGesture.None);
                 return JobStatus.Ongoing;
             }
 
@@ -163,6 +166,14 @@ namespace Odyssey.Sim.Pawns
             // lift toil established: begun once at the toil's start, ended by its own clock, so
             // the rise lands as the settle begins. WalkBack zeroes the progress, so a sower
             // displaced mid-hold kneels again on return rather than finishing a kneel it left.
+            //
+            // And the END is the driver's to author, not the clock's: the gesture is sticky by
+            // contract (a flag set for one tick would be missed between frames), so a kneel
+            // nobody cleared leaked through the whole walk to the next plot — and the seed
+            // specks, gated on the gesture, flashed under the sower's feet on every fallow tile
+            // she crossed (owner, 2026-09-19: seeds "appear immediately … then disappear — then
+            // it appears again"). Cleared here, at the boundary where the work is over, the
+            // specks cut on the same tick the plant record lands and takes over the cell.
             if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Sow);
 
             PlantDef plant = zones.Plant(zones.ZonePlantAt(cell));
@@ -173,6 +184,7 @@ namespace Odyssey.Sim.Pawns
             Work(ctx);
             if (ToilProgress < plant.sowWorkTicks * Rates.Scale) return JobStatus.Ongoing;
 
+            Pawn.BeginGesture(PawnGesture.None);
             ctx.Defer(_ => Sowed(ctx, cell));
 
             // The seed is in; the colonist straightens up before walking off.
@@ -250,13 +262,16 @@ namespace Odyssey.Sim.Pawns
             if (!StillInReach(ctx, Pawn, cell, layersAbove: 0, layersBelow: 0))
             {
                 WalkBack();
+                Pawn.BeginGesture(PawnGesture.None);
                 return JobStatus.Ongoing;
             }
 
             // The pull kneels like the sow (owner, 2026-09-19): begun with the work and held
             // while it runs, so the harvest reads as the same bending reach at the same soil.
             // WalkBack zeroes the progress, so a puller displaced mid-hold kneels again on
-            // return rather than finishing a kneel it left.
+            // return rather than finishing a kneel it left — and the END is authored with the
+            // same line as the sower's, for the same reason: the gesture is sticky, and nobody
+            // else will clear it.
             if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Sow);
 
             PlantDef plant = zones.Plant(zones.CropPlant(cell));
@@ -264,6 +279,7 @@ namespace Odyssey.Sim.Pawns
             Work(ctx);
             if (ToilProgress < plant.harvestWorkTicks * Rates.Scale) return JobStatus.Ongoing;
 
+            Pawn.BeginGesture(PawnGesture.None);
             ctx.Defer(_ => Harvested(ctx, cell, plant));
 
             // The crop is down; the colonist straightens up before walking off.

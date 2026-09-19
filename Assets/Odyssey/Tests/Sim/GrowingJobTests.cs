@@ -142,6 +142,42 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void TheKneelEndsWithTheToilAndNotWithTheWalkToTheNextPlot()
+        {
+            // The gesture is sticky by contract - a flag set for one tick would be missed
+            // between frames - so a kneel nobody cleared leaked through the whole walk to the
+            // next plot, and the seed specks gated on it flashed under the sower's feet on
+            // every fallow tile she crossed (owner, 2026-09-19: seeds "appear immediately ...
+            // then disappear - then it appears again"). The driver owns the end now: cleared
+            // on the same boundary the plant record lands, so the specks hand over without a
+            // gap and no walker carries them.
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            Sow(colony, colony.Start);
+
+            bool knelt = false, planted = false, stranded = false;
+            for (int tick = 0; tick < 8_000 && !planted; tick++)
+            {
+                colony.World.Tick();
+                planted = zones.IsPlanted(Size.Index(colony.Start));
+                foreach (var pawn in colony.Pawns.Pawns.All)
+                {
+                    if (pawn.Gesture == PawnGesture.Sow) knelt = true;
+                    // Planted and still kneeling: the seed is in and the gesture should already
+                    // have ended - the plant record and the cleared gesture land on the same
+                    // tick boundary, so there is no window where both stand. Watched on the
+                    // planted tick itself, which is the one frame the two could share.
+                    if (planted && pawn.Gesture == PawnGesture.Sow) stranded = true;
+                }
+            }
+            Assert.That(planted, Is.True, "the field was never sown");
+            Assert.That(knelt, Is.True, "the sower never knelt at the plot");
+            Assert.That(stranded, Is.False,
+                "the kneel outlived the toil: a sticky gesture carried into the next walk, " +
+                "and the seed specks would flash under her feet on every tile she crosses");
+        }
+
+        [Test]
         public void AHarvesterKneelsRatherThanChops()
         {
             ColonyWorld colony = Field(colonists: 1);

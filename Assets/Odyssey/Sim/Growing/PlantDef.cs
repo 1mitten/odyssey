@@ -70,18 +70,30 @@ namespace Odyssey.Sim.Growing
         }
 
         /// <summary>
-        /// The drawn stage for this many accumulated ticks: 1 below 45 per cent grown, 2 below
-        /// 85, 3 from there. The third band was a third wide, and for more than a day of it the
-        /// field stood full of full-size carrots that were correctly not ripe - which read, in
-        /// play, as sowers planting beside a harvest nobody was taking (owner, 2026-09-18). The
-        /// big art now arrives close enough to ripeness that what looks pickable nearly is.
-        /// Stages are what re-meshes, and there are three of them in a crop's lifetime —
-        /// <see cref="PlantGrowthSystem"/> marks a chunk dirty on nothing else.
+        /// The drawn stage for this many accumulated ticks: <b>0 — the seed day</b> below 25 per
+        /// cent grown, then 1 below 45, 2 below 85, 3 from there. Stage 0 draws nothing but the
+        /// seed specks: a seed that went into the soil this morning should not stand a sprout by
+        /// the afternoon, and the sprout art arriving at growth nought was exactly that fault
+        /// (owner, 2026-09-19: *"the seeds should stay there at first — at those flowers
+        /// sprouting or whatever should appear after a day"*). 25 per cent is one daylight
+        /// window's worth of the carrot's four — 32,500 of 130,000 ticks — so the sprout comes
+        /// up after the first full day of light, and a seed sown at dusk waits the night out
+        /// first, which is what a seed does.
+        ///
+        /// <para>Before the seed day was a stage, 1 began at growth nought; the third band was
+        /// a third wide, and for more than a day of it the field stood full of full-size carrots
+        /// that were correctly not ripe — which read, in play, as sowers planting beside a
+        /// harvest nobody was taking (owner, 2026-09-18). The big art now arrives close enough
+        /// to ripeness that what looks pickable nearly is.</para>
+        ///
+        /// <para>Stages are what re-meshes — <see cref="PlantGrowthSystem"/> marks a chunk
+        /// dirty on nothing else — and the seed day makes the crop's lifetime four of them, the
+        /// new one spending its whole mark on bare soil.</para>
         /// </summary>
         public int StageOfTicks(int ticks)
         {
             int milli = Milligrowth(ticks);
-            return milli < 450 ? 1 : milli < 850 ? 2 : 3;
+            return milli < 250 ? 0 : milli < 450 ? 1 : milli < 850 ? 2 : 3;
         }
     }
 }

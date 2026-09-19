@@ -362,7 +362,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(plants[0].CellIndex, Is.EqualTo(Size.Index(cell)));
             Assert.That(plants[0].Plant, Is.EqualTo(PlantHandle.Carrot),
                 "the published plant is the crop slot, one-based, not the handle the contract promises");
-            Assert.That(plants[0].Stage, Is.EqualTo(1), "a freshly sown seed is a sprout");
+            Assert.That(plants[0].Stage, Is.EqualTo(0),
+                "a freshly sown seed is in its seed day - specks and no plant");
         }
 
     }

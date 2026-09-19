@@ -107,6 +107,23 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void TheFirstDayIsTheSeedDayAndTheSproutComesAfterIt()
+        {
+            PlantDef carrot = ContentPack.Plants()[0];
+
+            // 25 per cent of the carrot is one daylight window - 32,500 of 130,000 ticks - and
+            // below it the drawn stage is nought: the seed lies in the soil and nothing stands
+            // above it. The owner asked for exactly that reading (2026-09-19: "the seeds should
+            // stay there at first - the sprouting should appear after a day rather than
+            // immediately"), and a whole daylight day is what a day of growth actually is here.
+            Assert.That(carrot.StageOfTicks(0), Is.EqualTo(0),
+                "a seed that went in this morning does not sprout by the afternoon");
+            Assert.That(carrot.StageOfTicks(32_250), Is.EqualTo(0));
+            Assert.That(carrot.StageOfTicks(32_500), Is.EqualTo(1),
+                "the sprout stands after the first full day of light");
+        }
+
+        [Test]
         public void CrossingAStageDirtiesTheChunkAndGrowingWithinItDoesNot()
         {
             var chunks = new ChunkGrid(FieldSize);
