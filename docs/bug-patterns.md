@@ -762,3 +762,45 @@ the draft did not consider it at all.
 - **Matching the two halves needs an identity, not a description.** The falling item is drawn from
   a different list by code that never saw the hands; the def and the stack cannot pick it out of a
   stockpile of the same commodity. Publish the id.
+
+## A shader found at runtime is a shader the build throws away
+
+**2026-09-19, the empty world.** Owner: *"there is no terrain — no graphics, terrain etc, apart
+from characters."* Only in a player build; the editor was perfect.
+
+Everything in the world is drawn with `Graphics.RenderMeshInstanced` using materials created **at
+runtime** from `Shader.Find(...)` with `enableInstancing = true` — `ChunkRenderer`,
+`MaterialCache`, `ModuleLibrary`, `TreeMaterials`, `ColonistMaterials`. A runtime-created material
+is not an asset, so the build's shader collector never sees it and Unity ships only what assets
+reference. Measured in the built player: `Odyssey/Water`, `Odyssey/Tree`, `Odyssey/Character`,
+`Odyssey/Outline` and `Odyssey/GradientSky` were **absent altogether**; `Universal Render
+Pipeline/Lit` was present only in the non-instanced variants Synty's prefab materials use.
+
+Characters were the one visible thing because they alone are GameObjects wearing real material
+assets — and they drew in the pack's own colours, because the shader that recolours them had gone
+with the rest. *"Everything is missing except the one thing that is a GameObject"* is the
+signature of this fault.
+
+- **The check:** every `Shader.Find` name belongs in `ShaderInclusion.Required`, which forces the
+  shader and all its variants into the build. `ShaderInclusionTests` derives the list from the
+  source, so the two cannot drift — it found two names the hand-written list had missed on its
+  very first run.
+- **Measured cost of always-including URP/Lit: none.** 385 MB and 11 s before and after. The fear
+  that all-variants would be ruinous was worth testing rather than designing around.
+- **No test in this repository could have caught it.** The editor has every shader and every
+  variant, always, and both tiers run in the editor's own domain. Only a player build fails on
+  this, and until that day nothing had ever made one.
+
+## One rule, two places, and only one of them knew — the null guard edition
+
+**2026-09-19, `SettingsPresenter`.** A `NullReferenceException` every frame in a player build,
+never in the editor. `Attach` dereferenced `_bootstrap.Directors.Overlays` while its own comment
+three lines above explains that attaching deliberately does **not** wait for `Directors` to
+exist. `OnDestroy` had guarded that exact dereference since it was written.
+
+- **The tell was already in the file**: the same expression guarded in one method and bare in
+  another. When you find that, the bare one is the bug, not the guarded one.
+- **The build had been saying so**: `CS8602: Dereference of a possibly null reference` at that
+  line, in every build log, unread.
+- The fix is not a guard but a second waiter — `HookDeveloperOverlay`, which waits on `Directors`
+  where `Attach` waits on `Preferences` — because the two genuinely wait on different things.
