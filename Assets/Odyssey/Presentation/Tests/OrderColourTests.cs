@@ -74,5 +74,31 @@ namespace Odyssey.Presentation.Tests
                 Assert.That(colour.a, Is.InRange(0.2f, 0.8f), $"{kind}'s marker is {colour.a:0.00} alpha");
             }
         }
+
+        /// <summary>
+        /// The growing-zone tint is a colour no order uses, and it reads as a field: earthy
+        /// brown, worked soil, with the ground showing through (owner, 2026-09-18 — the first
+        /// green was hard to see on the surface). It is the one overlay on the board that is not
+        /// an order, so the distinctness argument <see cref="EveryKindOfOrderHasItsOwnColour"/>
+        /// makes extends to it — a zone painted in a felling green would be a field of cells that
+        /// look ordered for something.
+        /// </summary>
+        [Test]
+        public void TheZoneTintIsAColourNoOrderUses()
+        {
+            Color zone = OdysseyBootstrap.ZoneTintColour;
+
+            foreach (DesignationKind kind in Enum.GetValues(typeof(DesignationKind)))
+            {
+                if (kind == DesignationKind.None) continue;
+                Assert.That(zone, Is.Not.EqualTo(OdysseyBootstrap.OrderColour(kind)),
+                    $"the zone tint is indistinguishable from a {kind} order");
+            }
+
+            Assert.That(zone.r, Is.GreaterThan(zone.g), "it does not read as soil");
+            Assert.That(zone.g, Is.GreaterThan(zone.b), "it does not read as soil");
+            Assert.That(zone.a, Is.InRange(0.2f, 0.8f),
+                $"the zone tint is {zone.a:0.00} alpha — the soil must show through and a tint nobody sees is worse than none");
+        }
     }
 }

@@ -29,7 +29,16 @@ namespace Odyssey.Presentation.Rendering
     public static class ItemHeap
     {
         /// <summary>The most rocks any one stack will ever draw. A cap on the instance count.</summary>
-        public const int Most = 7;
+        public const int Most = 12;
+
+        /// <summary>
+        /// How far a lying lump is lifted off its cell floor, in metres: half the girth of the
+        /// widest thing that lies down, because the placement tips the mesh about the base
+        /// Unity pivots it on and the tip otherwise buries the body in the ground it should
+        /// lie on. A constant rather than a per-row number because it is the pivot's fault
+        /// and not the carrot's.
+        /// </summary>
+        public const float LyingLift = 0.06f;
 
         /// <summary>
         /// What one kind of rubble looks like on the floor.
@@ -68,8 +77,17 @@ namespace Odyssey.Presentation.Rendering
             /// </summary>
             public readonly bool CarriedAsHeap;
 
+            /// <summary>
+            /// Whether each lump lies on its side rather than stands up. A carrot stood on its
+            /// base is growing art; the same mesh in a heap is a carrot planted in the floor
+            /// (owner, 2026-09-19: "the carrots hauled and piled should be horizontal on the
+            /// floor and not stuck in the ground"). Tipping is the renderer's, not the
+            /// catalogue's, because the armful wants the same lie and has no catalogue row.
+            /// </summary>
+            public readonly bool LyingDown;
+
             public Recipe(int fewest, int biggest, int full, float spread, float sizeJitter,
-                bool carriedAsHeap = true)
+                bool carriedAsHeap = true, bool lyingDown = false)
             {
                 Fewest = fewest;
                 Biggest = biggest;
@@ -77,6 +95,7 @@ namespace Odyssey.Presentation.Rendering
                 Spread = spread;
                 SizeJitter = sizeJitter;
                 CarriedAsHeap = carriedAsHeap;
+                LyingDown = lyingDown;
             }
         }
 
@@ -85,7 +104,9 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// What a mine leaves is a heap, and so is wood — a null row means "one prop, in the
         /// middle of the cell", which is what every item did before this existed and what rations
-        /// in a crate still do.
+        /// in a crate still do — as does a pulled harvest, which is loose carrots and
+        /// nothing more: a pile saying "one carrot" where five came out of the plot is the
+        /// fault the carrots row below exists to fix.
         ///
         /// The three that are heaps share a shape and differ in silhouette, because items carry
         /// no per-item tint and shape is the only axis there is: stone is squat boulders, iron ore
@@ -110,6 +131,15 @@ namespace Odyssey.Presentation.Rendering
             new Recipe(2, Most, 75, 0.62f, 0.22f),       // stone
             new Recipe(2, 6, 75, 0.55f, 0.20f),          // iron ore
             new Recipe(3, Most, 75, 0.66f, 0.18f),       // coal
+            // **Carrots, and the numbers that are not like the others'.** A pulled harvest is
+            // loose carrots and nothing contains them (owner, 2026-09-19: the pile drew one
+            // prop where five had come out of the plot). The ramp stays the identity up to a
+            // dozen - five grew, five lie there - and then holds at twelve, so a store square
+            // is a proper heap of carrots without every extra carrot redrawing the pile (the
+            // owner's ask: "a high number of carrots you can pile into 1 tile", the judgement
+            // call ours: twelve drawn, seventy-five stacked, the same limit as wood and stone).
+            // Carried as the rubble armful, which three cradled carrots read as naturally.
+            new Recipe(1, Most, 12, 0.45f, 0.18f, lyingDown: true),   // carrots
         };
 
         /// <summary>Whether this item kind is drawn as scattered rubble at all.</summary>
@@ -191,7 +221,16 @@ namespace Odyssey.Presentation.Rendering
                 float yaw = Fraction(seed, (uint)(101 + i * 7)) * 360f;
                 float size = 1f + (Fraction(seed, (uint)(211 + i * 13)) * 2f - 1f) * recipe.SizeJitter;
 
-                into[i] = Matrix4x4.TRS(at, Quaternion.Euler(0f, yaw, 0f), new Vector3(size, size, size));
+                // A lying lump is tipped ninety degrees before the bearing turns it, so the yaw
+                // chooses which way along the floor it lies rather than which way it faces - and
+                // it comes up off the floor by half a girth, because the mesh pivots at its base
+                // and a tip about that pivot buries the body in the tile it is meant to lie on.
+                Quaternion bearing = recipe.LyingDown
+                    ? Quaternion.Euler(90f, yaw, 0f)
+                    : Quaternion.Euler(0f, yaw, 0f);
+                if (recipe.LyingDown) at.y += LyingLift;
+
+                into[i] = Matrix4x4.TRS(at, bearing, new Vector3(size, size, size));
             }
 
             return rocks;
@@ -236,7 +275,8 @@ namespace Odyssey.Presentation.Rendering
         public static int Armful(uint seed, Vector3 at, Quaternion facing, in Recipe recipe,
             System.Span<Matrix4x4> into)
         {
-            var held = new Recipe(ArmfulRocks, ArmfulRocks, 1, ArmfulSpread, recipe.SizeJitter);
+            var held = new Recipe(ArmfulRocks, ArmfulRocks, 1, ArmfulSpread, recipe.SizeJitter,
+                lyingDown: recipe.LyingDown);
             int rocks = Place(1, seed, Vector3.zero, held, into);
 
             Matrix4x4 frame = Matrix4x4.TRS(at, facing, Vector3.one);

@@ -49,6 +49,17 @@ namespace Odyssey.Hud
         /// demolish a colony.</para>
         /// </summary>
         Deconstruct = 5,
+
+        /// <summary>
+        /// Paint soil for planting. Every cell of the box becomes a growing-zone cell, sown and
+        /// re-sown for as long as the zone stands.
+        ///
+        /// <para>Like <see cref="Build"/>, it is not fully described by its own name: which crop
+        /// goes in rides with it, as <see cref="DesignateDirector.Plant"/>. And like every order,
+        /// whether a cell can actually be farmed is the simulation's answer, not this one — a box
+        /// over a stream is refused cell by cell and silently.</para>
+        /// </summary>
+        GrowZone = 6,
     }
 
     /// <summary>
@@ -106,6 +117,13 @@ namespace Odyssey.Hud
         /// needs a mine before it needs a builder.
         /// </summary>
         public int Stuff { get; private set; } = StuffHandle.Wood;
+
+        /// <summary>
+        /// What <see cref="DesignateTool.GrowZone"/> plants, as a <c>PlantHandle</c> value. Carrot
+        /// because it is the only crop there is; the field stays chosen when the tool is put down,
+        /// on the same reasoning as <see cref="Building"/> and <see cref="Stuff"/>.
+        /// </summary>
+        public int Plant { get; private set; } = PlantHandle.Carrot;
 
         /// <summary>
         /// The facing a rotatable thing will be placed at, 0–3: north, east, south, west. Kept
@@ -187,6 +205,21 @@ namespace Odyssey.Hud
             if (Stuff == stuff) return;
             Stuff = stuff;
             BuildChoiceChanged?.Invoke(Building, Stuff);
+        }
+
+        /// <summary>Raised when the crop changes, so the plant picker can mark the chosen one.</summary>
+        public event Action<int>? PlantChanged;
+
+        /// <summary>
+        /// Choose the crop. It does <b>not</b> arm the tool, exactly as <see cref="ChooseStuff"/>
+        /// does not: choosing what a zone grows is a statement about the next box, not an order to
+        /// paint one.
+        /// </summary>
+        public void ChoosePlant(int plant)
+        {
+            if (Plant == plant) return;
+            Plant = plant;
+            PlantChanged?.Invoke(plant);
         }
 
         /// <summary>Is a box being drawn right now?</summary>
@@ -349,8 +382,20 @@ namespace Odyssey.Hud
         /// removes the thing it was never meant to do, which is drag an order down into the
         /// ground.</para>
         /// </summary>
-        CellRef OnTheWorkingLayer(CellRef cell) =>
-            WorkingLayer is int y && y > cell.Y ? new CellRef(cell.X, cell.Z, y) : cell;
+        /// <remarks>
+        /// <para><b>A growing zone lifts one, unconditionally.</b> The zone's cell is not the soil
+        /// the pointer names but the air above it, because that is where the sower stands and where
+        /// the crop grows — the simulation reads fertility from the cell below and refuses the cell
+        /// that is walked into (<c>GrowingZones.SiteAllows</c>). The pointer can only ever name a
+        /// surface, so the +1 is the smallest correction that puts the order where it means; and it
+        /// is a lift, never a drop, which keeps the rule above intact when a slice is raised.</para>
+        /// </remarks>
+        CellRef OnTheWorkingLayer(CellRef cell)
+        {
+            if (_tool == DesignateTool.GrowZone)
+                return new CellRef(cell.X, cell.Z, cell.Y + 1);
+            return WorkingLayer is int y && y > cell.Y ? new CellRef(cell.X, cell.Z, y) : cell;
+        }
 
         /// <summary>
         /// Move the far corner. Ignored unless a drag is running.

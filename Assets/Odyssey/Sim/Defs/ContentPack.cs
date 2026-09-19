@@ -75,6 +75,9 @@ namespace Odyssey.Sim.Defs
         /// <summary>The ore deposits, each naming the terrain it is made of.</summary>
         public static NaturalContent.OreKind[] Ores() => WorldContent.OresFromDefs(Core);
 
+        /// <summary>The crops, in the handle order the zones and crops channels carry.</summary>
+        public static Growing.PlantDef[] Plants() => WorldContent.PlantsFromDefs(Core);
+
         /// <summary>
         /// Forget the loaded pack and any root set by <see cref="UseRoot"/>, so the next read goes
         /// back to the repository's own content. For a test that loaded a pack of its own.
