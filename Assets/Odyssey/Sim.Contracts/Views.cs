@@ -100,6 +100,34 @@ namespace Odyssey.Sim.Contracts
         public readonly int MovePerMille;
 
         /// <summary>
+        /// How much of this step the pawn retires in one tick, in the same thousandths as
+        /// <see cref="MovePerMille"/>. Zero when it is not stepping, or when whoever built this
+        /// view did not say.
+        ///
+        /// <para><b>Published because nothing outside the simulation can work it out.</b> A frame
+        /// that lands between two ticks carries the figure on rather than waiting, and to do that
+        /// it needs the rate. Presentation used to infer it: a global <c>movePerTick</c> from the
+        /// Defs, added to a percentage as though every step cost <c>MoveCost.Orthogonal</c>. It is
+        /// wrong twice over — the colonist's own pace and condition scale the rate (design 17
+        /// §4a), and the step's price includes the terrain being entered, which no amount of
+        /// looking at the two cells can recover.</para>
+        ///
+        /// <para><b>The symptom of inferring it was the figure walking backwards.</b> Whenever the
+        /// guess ran ahead of what the tick actually retired, the next frame — taking the newly
+        /// published figure — drew the colonist behind where the last frame had put her. Measured
+        /// on the wooded meadow at two frames to the tick: <b>3,172 frames in 59,000</b> moved a
+        /// colonist backwards along her own step, by up to <b>10.9 mm</b>, and the vertical
+        /// sawtooth that came with it on the terrace banks is what the owner reported as vibrating
+        /// where there is a terrain step (2026-09-19).</para>
+        ///
+        /// <para><b>Truncated down, deliberately.</b> An under-estimate makes the frame after a
+        /// tick jump very slightly forward; an over-estimate makes it go backwards, and only one of
+        /// those is visible. So the extrapolation is never allowed to promise more than the tick
+        /// delivers.</para>
+        /// </summary>
+        public readonly int MoveDeltaPerMille;
+
+        /// <summary>
         /// Is the pawn part way through a step at all?
         ///
         /// <para><b>Ask this rather than <c>MovePercent > 0</c>.</b> A percent rounds a step's first
@@ -187,9 +215,10 @@ namespace Odyssey.Sim.Contracts
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
-            bool asleep = false, int movePerMille = 0)
+            bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0)
         {
             MovePerMille = movePerMille;
+            MoveDeltaPerMille = moveDeltaPerMille;
             Asleep = asleep;
             Gesture = gesture;
             GestureSerial = gestureSerial;

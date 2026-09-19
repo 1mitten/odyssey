@@ -100,9 +100,29 @@ namespace Odyssey.Presentation.Rendering
             // has ever noticed it, and at 134 mm up a terrace once the climb was drawn in strides.
             // See PawnView.MovePerMille. Zero means the publisher did not say, which is every
             // hand-built fixture, so the percent still answers for them.
+            // **How far this frame carries the figure past the tick it sits on, and where that
+            // number has to come from** (2026-09-19).
+            //
+            // <para>The simulation publishes the rate — <see cref="PawnView.MoveDeltaPerMille"/> —
+            // because it is the only thing that can. Presentation used to infer it from a global
+            // <c>movePerTick</c> out of the Defs, added to a percentage as though every step cost
+            // <c>MoveCost.Orthogonal</c>. That is wrong by the colonist's own pace and condition,
+            // and wrong again by the price of the terrain being entered, which is inside the step
+            // cost and cannot be recovered from the two cells. **Whenever the guess ran ahead of
+            // what the tick actually retired, the figure walked backwards**: 3,172 frames in
+            // 59,000 on the wooded meadow, by up to 10.9 mm, with a vertical sawtooth wherever a
+            // terrace bank turned that into a change of height. That is the owner's "vibrates and
+            // moves oddly, particularly where there is a terrain step tile".</para>
+            //
+            // <para><c>movePerTick</c> is the fallback for a hand-built fixture that publishes no
+            // rate, and it keeps the old meaning — a cost unit as a hundredth of a step — because
+            // that is what those fixtures were written against.</para>
+            float carried = pawn.MoveDeltaPerMille > 0
+                ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
+                : movePerTick * tickAlpha;
             float percent = pawn.MovePerMille > 0
-                ? pawn.MovePerMille * 0.1f + movePerTick * tickAlpha
-                : pawn.MovePercent + movePerTick * tickAlpha;
+                ? pawn.MovePerMille * 0.1f + carried
+                : pawn.MovePercent + carried;
 
             // Along `travel` and not along `heading`: the bearing has had its vertical part taken
             // out on purpose, and a pawn that moved along it would climb a shaft without going

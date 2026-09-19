@@ -153,7 +153,7 @@ namespace Odyssey.Sim.Pawns
                 // own cost makes the glide take exactly as long as the step does, whatever it is.
                 var cell = size.FromIndex(pawn.Cell);
                 var nextCell = cell;
-                int movePercent = 0, movePerMille = 0;
+                int movePercent = 0, movePerMille = 0, moveDeltaPerMille = 0;
                 if (pawn.HasPath)
                 {
                     nextCell = size.FromIndex(pawn.Path[pawn.PathIndex]);
@@ -173,6 +173,16 @@ namespace Odyssey.Sim.Pawns
                     movePerMille = (int)((long)pawn.MoveProgress * 1000 / cost);
                     if (movePerMille < 0) movePerMille = 0;
                     else if (movePerMille > 1000) movePerMille = 1000;
+
+                    // And how much of the step one tick retires, which is the only number a frame
+                    // between two ticks can honestly carry the figure on by. It belongs here and
+                    // nowhere else: the rate is this colonist's own (pace and condition) and the
+                    // cost is this step's own (the terrain being entered is priced into it), so
+                    // presentation cannot recover it from the two cells. See
+                    // PawnView.MoveDeltaPerMille for what inferring it cost.
+                    moveDeltaPerMille = (int)((long)pawn.MoveRatePerMille() * 1000 / cost);
+                    if (moveDeltaPerMille < 0) moveDeltaPerMille = 0;
+                    else if (moveDeltaPerMille > 1000) moveDeltaPerMille = 1000;
                 }
 
                 // What the pawn is working on, if anything. Asked of the driver rather than
@@ -194,7 +204,8 @@ namespace Odyssey.Sim.Pawns
                     pawn.Gesture,
                     pawn.GestureSerial,
                     pawn.Asleep,
-                    movePerMille));
+                    movePerMille,
+                    moveDeltaPerMille));
 
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.

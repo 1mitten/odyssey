@@ -868,3 +868,37 @@ the worst of them the full 0.600 m envelope in one sixtieth of a second.
   that found it: drive `PawnPose.Of` over a real ticking colony and count per-tick changes in the
   lateral offset. Reading the code suggested three wrong culprits first; the counter found it in one
   run. `docs/design/25-pawn-steering.md` §6 has the numbers.
+
+## Inferring a number the simulation already knows
+
+**2026-09-19, the walk that went backwards.** Owner, after the steering fix: *"it happens sometimes
+when colonists are walking, particularly where there is a terrain step tile it starts to vibrate and
+move oddly mostly at the beginning of the frames when going up — so it still exists just less of
+it."*
+
+Presentation carries a figure on past the tick it sits on, and needs the rate to do it. It inferred
+the rate: a global `movePerTick` from the Defs, added to a percentage as though every step cost
+`MoveCost.Orthogonal`. Wrong by the step's geometry (a hop up is 240, not 100), wrong by the
+colonist's own pace and condition, and — the one that makes it unfixable where it stood — wrong by
+the price of the terrain being entered, which is inside the step cost and cannot be recovered from
+the two cells. **An over-estimate draws the next frame behind the last one.** Measured on the real
+board: 3,172 frames of 59,000 moved a colonist backwards along her own step, up to 10.9 mm.
+
+- **The pattern:** presentation deriving a quantity the simulation computed exactly and threw away.
+  The fix is never a better derivation — the third of those three errors has no derivation — it is
+  to publish the number. `PawnView.MoveDeltaPerMille` costs one int in a view that is not saved and
+  not hashed.
+- **Truncate an estimate towards the side you can't see.** Under-estimating makes the frame after a
+  tick jump slightly forward; over-estimating makes it go backwards. Only one of those is visible,
+  so the published rate is floored.
+- **Where it hides.** Backward travel on flat ground is a few millimetres of stutter nobody names.
+  On a terrace bank the same backward travel is *downward* travel, so it becomes a visible vertical
+  buzz — which is why the report was about step tiles and why every flat-ground fixture was clean.
+- **Every cheap fixture missed it, and that is the lesson for the check.** A hand-built world grows
+  no banks (`BankLayout` reads generated terrain), and a hand-built `PawnView` publishes no rate, so
+  it takes the fallback path rather than the one the game takes. `WalkContinuityTests` therefore
+  ticks a real colony over a real generated board. Two earlier passes at this vibration measured
+  hand-built fixtures and found them clean.
+- **Bisect before believing the last diagnosis.** The obvious reading was that the previous fix had
+  not gone far enough. Running the same measurement with the steering switched off gave numbers
+  identical to the frame, which said in one run that this was a different fault.

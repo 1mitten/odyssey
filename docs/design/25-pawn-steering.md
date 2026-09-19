@@ -104,6 +104,49 @@ turning — and the sway is what they are for. The drawn figure cannot move side
 1.2 m/s under any input, and tracks within two millimetres on average, so the damper is invisible in
 ordinary play and only does work where an input really steps.
 
+## 6b. The sub-tick term, and why the simulation has to publish the rate
+
+*Added 2026-09-19, second playtest: "it happens sometimes when colonists are walking, particularly
+where there is a terrain step tile it starts to vibrate and move oddly ... mostly at the beginning
+... when going up."*
+
+**This was not the steering at all.** Bisecting the steering out of the measurement changed nothing,
+to the frame.
+
+A frame that lands between two ticks carries the figure on rather than waiting, which is what keeps
+a walk smooth on a display faster than the tick. To carry it on you need the rate, and presentation
+was **inferring** it: a global `movePerTick` out of the Defs, added to a percentage as though every
+step cost `MoveCost.Orthogonal`. That is wrong three ways.
+
+1. `MoveCost.Orthogonal` is 100, so a cost unit is a percent — for an orthogonal step and nothing
+   else. A diagonal is 141, a hop up a terrace is 240, a ladder 540.
+2. The rate is the colonist's own: pace and condition scale it (design 17 §4a).
+3. **The step's price includes the terrain being entered**, and no amount of looking at the two
+   cells recovers that. This is the one that makes the whole approach unfixable in presentation.
+
+**The symptom of an over-estimate is walking backwards.** When the guess ran ahead of what the tick
+retired, the next frame — taking the newly published figure — drew the colonist behind where the
+last frame had put her. On a terrace bank that backward travel is also *downward* travel, which is
+why a step tile is where it shows and flat ground is where it hides.
+
+So `PawnView.MoveDeltaPerMille` is published: how much of *this* step *this* colonist retires in one
+tick, computed where both numbers are known. **Truncated down, deliberately** — an under-estimate
+makes the frame after a tick jump very slightly forward, an over-estimate makes it go backwards, and
+only one of those can be seen.
+
+`WalkContinuityTests` runs a real colony over a real generated board for this, because every cheaper
+fixture missed it: a hand-built world grows no banks, and a hand-built `PawnView` publishes no rate,
+so it takes the fallback path rather than the one the game takes.
+
+Measured on the wooded meadow, twelve colonists, 2,500 ticks, two frames to the tick:
+
+| | Before | After |
+|---|---|---|
+| frames drawing a colonist **backwards** along her own step | 3,172 of 59,000 | **0** |
+| worst backward frame | 10.9 mm | **0** |
+| frames reversing vertically, walking on the flat | 1,406 (2.5%) | **0** |
+| frames reversing vertically, climbing | 2 | **0** |
+
 ## 7. Left alone on purpose
 
 - **The simulation-side path bias is not wired.** `PathFinder.Occupancy` and

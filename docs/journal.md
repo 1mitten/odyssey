@@ -6717,3 +6717,56 @@ Design is `docs/design/25-pawn-steering.md`; the pattern is in `docs/bug-pattern
   `MoveCost.OccupiedBias` are implemented and tested, and **nothing in the build sets them**.
   Switching it on moves planned routes and therefore every golden hash, so it wants its own change
   with a re-bake, not a line in this one.
+
+## 2026-09-19 — the vibration, part two: presentation was inferring a number the simulation knew
+
+Owner, after the steering fix: *"it seems better but the colonists sometimes vibrate quickly ... it
+happens sometimes when colonists are walking, particularly where there is a terrain step tile it
+starts to vibrate and move oddly mostly at the beginning of the frames when going up — so it still
+exists just less of it."*
+
+**The obvious reading was that the steering fix had not gone far enough, and it was wrong.** Running
+the same measurement with the steering switched off gave numbers identical to the frame. One run,
+and this was a different fault.
+
+Presentation carries a figure on past the tick it sits on, so a display faster than the tick does
+not show the same position twice. To carry it on you need the rate, and it was **inferring** the
+rate from a global `movePerTick` out of the Defs, added to a percentage as though every step cost
+`MoveCost.Orthogonal`. Wrong by the geometry (a hop up is 240, not 100); wrong by the colonist's own
+pace and condition; and wrong by the price of the terrain being entered, which lives inside the step
+cost and cannot be recovered from the two cells at all. **An over-estimate draws the next frame
+behind the last one.** On flat ground that is a few millimetres of stutter nobody names; on a
+terrace bank, backward travel is *downward* travel, so it becomes a visible vertical buzz — which is
+exactly why the report was about step tiles.
+
+So the number is published now — `PawnView.MoveDeltaPerMille`, how much of *this* step *this*
+colonist retires in one tick, computed where both halves are known. Truncated down on purpose: an
+under-estimate makes the frame after a tick jump slightly forward, an over-estimate makes it go
+backwards, and only one of those can be seen. It is a view field, so nothing is saved or hashed.
+
+**A false start worth recording.** The first fix scaled the inferred term by a step cost derived
+from the two cells — orthogonal, diagonal, or `NavGraph.HopCost`. It measured beautifully on a
+hand-built terrace (346 vertical reversals in 480 frames, down to nought) and then measured almost
+nothing on the real board, because the terrain price is in the cost and geometry cannot see it. That
+code is gone; deriving the step cost in presentation is not a thing to try again.
+
+**Every cheap fixture missed this, twice.** A hand-built world grows no banks — `BankLayout` reads
+generated terrain — and a hand-built `PawnView` publishes no rate, so it takes the fallback path
+rather than the one the game takes. `WalkContinuityTests` therefore ticks a real colony over a real
+generated board, and asserts that no frame ever draws a colonist behind where the last one did.
+
+- *Measured*, wooded meadow, 12 colonists, 2,500 ticks, two frames to the tick:
+
+  | | Before | After |
+  |---|---|---|
+  | frames drawing a colonist **backwards** along her own step | 3,172 of 59,000 | **0** |
+  | worst backward frame | 10.9 mm | **0** |
+  | frames reversing vertically, walking on the flat | 1,406 (2.5%) | **0** |
+  | frames reversing vertically, climbing | 2 | **0** |
+
+- *Verified:*
+  - Fast tier: **749 Sim + 445 Hud = 1,194 passed, 0 failed**.
+  - Unity EditMode: **1,872 total, 1,858 passed, 0 failed** (two new `WalkContinuityTests`).
+  - Unity PlayMode: **82 total, 75 passed, 0 failed** — scratch worktree with no Synty junction, so
+    `AvatarSheetTests`' two art cases skip.
+  - Content gates: both clean.
