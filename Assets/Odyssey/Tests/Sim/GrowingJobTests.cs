@@ -142,6 +142,97 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void AHarvesterKneelsRatherThanChops()
+        {
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            Sow(colony, colony.Start);
+            colony.World.Intents.Submit(new Intent(IntentKind.DebugRipen, colony.Start));
+            colony.World.Tick();
+            Assume.That(zones.IsRipe(Size.Index(colony.Start)), Is.True, "the crop never ripened");
+
+            // The pull is the sow's own kneel: while the crop is coming up the harvester is down
+            // at the soil and no work focus is reported — a focus would summon the computed swing
+            // and the axe it carries, and the harvest must not chop (owner, 2026-09-19).
+            bool knelt = false, working = false, harvested = false;
+            for (int tick = 0; tick < 5_000 && !harvested; tick++)
+            {
+                colony.World.Tick();
+                harvested = !zones.IsPlanted(Size.Index(colony.Start));
+                foreach (var pawn in colony.Pawns.Pawns.All)
+                {
+                    bool harvesting = pawn.CurrentJob != null &&
+                        colony.Pawns.Content.Jobs[pawn.CurrentJob.DefIndex].driver == JobIndex.Harvest;
+                    if (harvesting && pawn.Gesture == PawnGesture.Sow) knelt = true;
+                    if (harvesting && pawn.Driver != null && pawn.Driver.WorkFocus >= 0) working = true;
+                }
+            }
+            Assert.That(harvested, Is.True, "the crop was never pulled");
+            Assert.That(knelt, Is.True, "the harvester never knelt at the plot");
+            Assert.That(working, Is.False,
+                "harvesting reported a work focus and would have drawn the axe");
+        }
+
+        [Test]
+        public void TheYieldIsHauledToTheStockpileLikeWood()
+        {
+            // The owner's carry-back question (2026-09-19: "the harvest should be carried back
+            // like wood"), and the answer is that it already is: the yield drops as a loose
+            // haulable pile exactly as a felled trunk drops one, and the haul scan that carries
+            // wood to the stockpile asks only whether a thing is haulable and where it may go.
+            // This test exists so that stays true — a carrot that somehow stopped being haulable
+            // or a stockpile that stopped accepting one would otherwise surface as a pile that
+            // sits in the field forever, which is what the owner watched.
+            ColonyWorld colony = Field();
+            var zones = colony.Growing!;
+            Sow(colony, colony.Start);
+            colony.World.Intents.Submit(new Intent(IntentKind.DebugRipen, colony.Start));
+            colony.World.Tick();
+
+            int harvestedAt = -1;
+            for (int end = 0; end <= 60_000 && harvestedAt < 0; end += 100)
+            {
+                colony.World.Tick(100);
+                if (!zones.IsPlanted(Size.Index(colony.Start))) harvestedAt = colony.World.CurrentTick;
+            }
+            Assume.That(harvestedAt, Is.GreaterThan(0), "the crop was never pulled");
+            Assume.That(CarrotsOnTheGround(colony), Is.GreaterThan(0), "no pile was dropped");
+
+            // A day and a half is the wood test's own allowance: walking, sleeping and the
+            // sowing the field immediately begins again all come ahead of the haul.
+            colony.World.Tick(90_000);
+
+            Assert.That(CarrotsInStockpiles(colony), Is.GreaterThan(0),
+                "the harvest pile was never carried to a stockpile");
+        }
+
+        static int CarrotsOnTheGround(ColonyWorld colony)
+        {
+            int total = 0;
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (!item.Despawned && item.DefIndex == ItemIndex.Carrots && item.Cell >= 0)
+                    total += item.Stack;
+            }
+            return total;
+        }
+
+        static int CarrotsInStockpiles(ColonyWorld colony)
+        {
+            int total = 0;
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.Despawned || item.DefIndex != ItemIndex.Carrots || item.Cell < 0) continue;
+                if (colony.Pawns.Items.IsStockpileCell(item.Cell)) total += item.Stack;
+            }
+            return total;
+        }
+
+        [Test]
         public void AFieldIsSownRipensYieldsAndSowsAgain()
         {
             ColonyWorld colony = Field();

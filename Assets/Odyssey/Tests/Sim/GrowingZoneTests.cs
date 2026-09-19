@@ -338,5 +338,32 @@ namespace Odyssey.Tests.Sim
             Assert.That(crop.Stage, Is.EqualTo(3), "past the 85 per cent band, grown draws as the mature stage");
             Assert.That(crop.Growth, Is.GreaterThan(0), "and the quantised bar has moved off zero");
         }
+
+        [Test]
+        public void APublishedPlantCarriesItsHandleAndNotTheCropSlot()
+        {
+            // The view contract says Plant is a PlantHandle, which is nought-based; _cropAt is
+            // one-based so nought can mean fallow. The first contributor published _cropAt
+            // itself, the render mirror added one of its own, and the carrot landed on slot two
+            // of a one-plant table - where CropModule's bounds guard quietly answered nought and
+            // a ripe field drew nothing at all, while every render test fed the contract's own
+            // bytes and passed. Only a test that reads the real contributor back can see the
+            // difference between the two conventions, so this is that test.
+            var (grid, zones) = Meadow();
+            var cell = new CellRef(2, 2, Layer);
+            Assert.That(zones.Designate(cell, PlantHandle.Carrot), Is.EqualTo(IntentRejection.None));
+            zones.Sow(Size.Index(cell));
+
+            SimWorld world = zones.Attach(new SimWorldBuilder().WithSeed(1u).WithSize(Size)).Build();
+            world.Tick();
+
+            System.ReadOnlySpan<PlantView> plants = world.Views.Current.Plants;
+            Assert.That(plants.Length, Is.EqualTo(1), "the sown cell published no plant");
+            Assert.That(plants[0].CellIndex, Is.EqualTo(Size.Index(cell)));
+            Assert.That(plants[0].Plant, Is.EqualTo(PlantHandle.Carrot),
+                "the published plant is the crop slot, one-based, not the handle the contract promises");
+            Assert.That(plants[0].Stage, Is.EqualTo(1), "a freshly sown seed is a sprout");
+        }
+
     }
 }

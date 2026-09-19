@@ -195,9 +195,9 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// Walk into a ripe crop cell, cut it, and leave what it yielded on the ground.
+    /// Walk into a ripe crop cell, pull it up, and leave what it yielded on the ground.
     ///
-    /// <para>The same one-cell shape as sowing — walk in, swing, focus the plot — and the same
+    /// <para>The same one-cell shape as sowing — walk in, kneel, work the plot — and the same
     /// per-plant pricing, from <c>harvestWorkTicks</c>. The crop comes up and the yield goes
     /// down in one deferred edit: a scan running that tick sees fallow soil and a pile of
     /// carrots or neither, never one without the other.</para>
@@ -208,11 +208,15 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class HarvestJobDriver : JobDriver
     {
-        /// <summary>The row being cut, once the walk is over. As sowing: target and destination
-        /// are the one cell, and the figure has to face the plant it is cutting.</summary>
-        /// <para>Nothing during the settle toil — the crop is already in the pile.</para>
-        public override int WorkFocus =>
-            ToilIndex != 1 ? -1 : Job.TargetCell >= 0 ? Job.TargetCell : Job.DestCell;
+        /// <summary>
+        /// Never a work focus: the harvest is a pull from the soil at kneeling reach, not a
+        /// swing at a trunk (owner, 2026-09-19 — "the colonists still use their axe to harvest
+        /// … use the same pose as sowing"). A focus would summon the computed swing and the axe
+        /// it carries, and nothing about pulling a carrot asks for either; the pose is the
+        /// <see cref="PawnGesture.Sow"/> kneel the toil begins below, re-timed for the harvest
+        /// it now also serves. Nothing during the settle toil — the crop is already in the pile.
+        /// </summary>
+        public override int WorkFocus => -1;
 
         public override bool TryMakeReservations(PawnContext ctx)
         {
@@ -248,6 +252,12 @@ namespace Odyssey.Sim.Pawns
                 WalkBack();
                 return JobStatus.Ongoing;
             }
+
+            // The pull kneels like the sow (owner, 2026-09-19): begun with the work and held
+            // while it runs, so the harvest reads as the same bending reach at the same soil.
+            // WalkBack zeroes the progress, so a puller displaced mid-hold kneels again on
+            // return rather than finishing a kneel it left.
+            if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Sow);
 
             PlantDef plant = zones.Plant(zones.CropPlant(cell));
             ToilProgress += Pawn.WorkRatePerMille(WorkTypeIndex.Growing);

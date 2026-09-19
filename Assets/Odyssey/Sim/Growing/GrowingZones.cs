@@ -495,9 +495,16 @@ namespace Odyssey.Sim.Growing
                 int index = _planted[i];
                 PlantDef def = _plants[_cropAt[index] - 1];
                 int ticks = _growthAt[index];
+                // The handle, not _cropAt: the view's contract says PlantHandle, which is
+                // nought-based, and _cropAt is one-based so that nought can mean fallow. The
+                // first version published _cropAt itself, the render mirror added its own one,
+                // and the carrot landed on slot two of a one-plant table — where CropModule's
+                // bounds guard quietly returned nought and a ripe field drew nothing at all,
+                // while every render test fed the contract's nought and passed. The count the
+                // tests pin and the field the game draws now come off the same byte.
                 writer.AddPlant(new PlantView(
                     index,
-                    _cropAt[index],
+                    (byte)(_cropAt[index] - 1),
                     (byte)def.StageOfTicks(ticks),
                     (byte)(def.Milligrowth(ticks) * 255 / 1000)));
             }
