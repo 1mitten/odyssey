@@ -957,3 +957,35 @@ a player, and it is invisible in the editor, which has every variant always.
 - **A list of "shaders we use" built from `Shader.Find` call sites cannot see a shader that arrives
   on a prefab.** `ShaderInclusion` derives its list from the source and is right about what it
   covers; the pack's shaders were never in its domain, and nothing said so.
+
+## What a thing is drawn on is not the surface it is picked at
+
+**Symptom.** Clicking a bed is *"really specific"* (owner, 2026-09-19). Some parts of the drawn
+bed select it, some select its other cell, and the far end selects the grass behind it. Nothing in
+the pane, the model or the footprint is wrong, and both cells of the bed answer bed facts correctly
+when a test asks them directly.
+
+**The real cause.** `SlicePicker` resolves a **non-occluding** cell by crossing that cell's *floor
+plane*. A bed does not occlude, so the only surface it offered a ray was the floor underneath it —
+while the bed itself is drawn 0.70 m up. At the play camera's 48° elevation, a surface 0.70 m high
+is drawn `0.70 / tan(48°)` ≈ **0.63 m, a quarter of a cell**, nearer the viewer than the floor it
+stands on. So the clickable bed sat a quarter cell behind the drawn one, in every direction the
+camera faces.
+
+**The measurement that found it.** A throwaway probe test that swept a 48° ray along the bed in
+quarter cells and *printed the cell that came back*, twice: once aimed at the floor and once at
+`BedShape.MattressTop`. The floor column was perfect and the mattress column was shifted by one
+quarter-cell step throughout. Three sessions of reading `SlicePicker`, `CellDetailContributor` and
+`InspectModel` had found nothing, because **nothing in any of them is wrong**. Two runs of a probe
+that printed a table found it exactly.
+
+**The check that catches the next one.** `BedPickHeightTests` aims at the mattress — at what a
+player aims at — along the whole length of the bed in tenths of a cell, and requires the cell under
+the pointer. A check of the two cell centres alone would have passed *before* the fix: the drift is
+a quarter cell and a centre has half a cell of slack either side. **Test the ends of a thing, not
+its middle**, whenever the complaint is that something is fiddly rather than broken.
+
+**The general shape.** Anything drawn standing above its cell floor that does not occlude has this
+fault, and the seam is now `WorldRenderModel.StandHeight`. A bed is the only thing that answers
+today. The next non-occluding thing that stands up adds a line there — and if it does not, it will
+be a quarter cell out and nobody will know why.

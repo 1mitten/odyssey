@@ -176,7 +176,8 @@ this file.
 | The Build palette's three layouts | `docs/design/17-build-palette-layouts.md` |
 | Floors, slabs, support, collapse | `docs/design/17-floors-and-collapse.md` |
 | Paving | `docs/design/18-paving.md` |
-| Beds, furniture, quality tiers | `docs/design/20-beds.md` |
+| Beds, furniture, quality tiers, who owns one | `docs/design/20-beds.md` |
+| How a pile on the ground says its size | `docs/design/24-pile-reading.md` |
 | The debug menu | `docs/design/18-debug-menu.md` |
 | The start screen, saving, loading | `docs/design/17-start-flow.md` |
 | Colonist select | `docs/design/18-colonist-select.md` |
@@ -334,6 +335,22 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 "futile searches for unreachable targets" explanation was **falsified by its own follow-up**.
 
 ### Waiting on the owner
+
+- **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
+  `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three
+  log bundles as it fills instead of one bundle for ever; the inspect title reads `Wood × 27`
+  rather than saying the count in the pane's smallest line; the bed picker marks who sleeps here
+  (`✓`), who sleeps elsewhere (`•`) and who has nowhere (blank); and a colonist who reaches an
+  unowned bed claims it, **unless claiming it would leave a bedless colonist without one**.
+  A **second** click on a cell now looks past what is lying in it and shows the tile, and a third
+  comes back round to the thing. And a bed is clickable **where it is drawn**: the picker resolved
+  a non-occluding cell at its floor plane while the bed stands 0.70 m up, which at 48° put the
+  clickable bed a quarter of a cell behind the drawn one (`docs/bug-patterns.md`).
+  Open questions a picture cannot answer: whether three bundles read as a full tile or merely as
+  "some wood", whether the title is findable where the state line was not, whether the wordless
+  mark column reads or wants its words back, and whether the second click reads as a cycle or as
+  the game ignoring the first one. Unity EditMode **1871 total, 1857 passed, 0 failed**; PlayMode
+  **82 total, 77 passed, 0 failed**.
 
 - **The carried load has had one playtest and passed** (2026-09-19, `docs/design/24-carrying.md`).
   Three faults found and fixed — swinging arms, a load that would not turn, and both hand-overs

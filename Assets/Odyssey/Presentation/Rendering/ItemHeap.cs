@@ -19,9 +19,8 @@ namespace Odyssey.Presentation.Rendering
     /// drop is two or three rocks and a full stockpile square is a heap of them. That was the
     /// owner's second decision — a bigger pile should look bigger — and count carries it better
     /// than size would: eight stone scaled down to a quarter of a boulder reads as one small rock,
-    /// where three rocks read as three rocks. What else in the game does this is a short list —
-    /// mine spoil and a pulled harvest, both genuinely heaps of identical lumps and neither of
-    /// them containerised — which is the cost.</para>
+    /// where three rocks read as three rocks. Nothing else in the game does this, which is the
+    /// cost; rubble is the only thing we own that is genuinely a heap of identical lumps.</para>
     ///
     /// <para><b>Free, or nearly.</b> Items are already grouped by def and submitted instanced, so
     /// seven rocks in a cell are seven matrices in a buffer that was going to be submitted anyway,
@@ -58,44 +57,67 @@ namespace Odyssey.Presentation.Rendering
             /// <summary>How much bigger or smaller than its catalogue size a rock may be drawn.</summary>
             public readonly float SizeJitter;
 
-            public Recipe(int fewest, int biggest, int full, float spread, float sizeJitter)
+            /// <summary>
+            /// Whether a carried load of this is drawn as a heap in the arms too.
+            ///
+            /// <para>True for rubble, which is what this class was written for: three rocks
+            /// cradled read as an armful. False for wood, whose prop is a bound log pile — one
+            /// bundle is a load a person carries and three bundles stacked in two hands is a
+            /// circus act. The ground heap and the armful are separate questions and were only
+            /// ever the same answer because rubble was the only thing that scattered.</para>
+            /// </summary>
+            public readonly bool CarriedAsHeap;
+
+            public Recipe(int fewest, int biggest, int full, float spread, float sizeJitter,
+                bool carriedAsHeap = true)
             {
                 Fewest = fewest;
                 Biggest = biggest;
                 Full = full;
                 Spread = spread;
                 SizeJitter = sizeJitter;
+                CarriedAsHeap = carriedAsHeap;
             }
         }
 
         /// <summary>
-        /// The heap recipes, by item def index, in <c>ItemIndex</c> order.
+        /// The rubble recipes, by item def index, in <c>ItemIndex</c> order.
         ///
-        /// Rations come in a crate and wood comes in a bundle, and both are drawn by their own
-        /// prop exactly as before — a null row means "one prop, in the middle of the cell", which
-        /// is what every item did before this existed.
+        /// What a mine leaves is a heap, and so is wood — a null row means "one prop, in the
+        /// middle of the cell", which is what every item did before this existed and what rations
+        /// in a crate still do — as does a pulled harvest, which is loose carrots and
+        /// nothing more: a pile saying "one carrot" where five came out of the plot is the
+        /// fault the carrots row below exists to fix.
         ///
-        /// <para>The mine's three share a shape and differ in silhouette, because items carry
+        /// The three that are heaps share a shape and differ in silhouette, because items carry
         /// no per-item tint and shape is the only axis there is: stone is squat boulders, iron ore
         /// is taller shards, coal is low rubble. The spreads differ with them — a shard needs less
-        /// floor than a boulder.</para>
-        ///
-        /// <para><b>Carrots are a heap because nothing contains them</b> (owner, 2026-09-19: the
-        /// harvest pile "single carrot … not many carrots visually in the ground as there should
-        /// be" — one prop in the middle of the cell was exactly that fault). And alone of the
-        /// heaps its <see cref="Recipe.Full"/> is the count a harvest actually drops: the carrot's
-        /// own <c>yieldCount</c> is five, and five carrots coming out of a plot that drew five
-        /// plants is the pile saying out loud what the plot just said — so the ramp from one to
-        /// full is the identity, and only past a yield does it stop and the cap hold it.</para>
+        /// floor than a boulder.
         /// </summary>
         static readonly Recipe?[] Recipes =
         {
             null,                                        // meal
             null,                                        // salvage
-            null,                                        // wood
+
+            // **Wood, and the reason its numbers are not stone's.** The owner could not tell a
+            // tile of 3 wood from a tile of 75 (2026-09-19) — and could not, because every stack
+            // drew the one LogPile prop at the one place. It scatters now like the rubble does,
+            // but one to three bundles rather than two to seven: a bound pile of logs is a wide
+            // prop where a boulder is a small one, and seven of them in a 2.5 m cell is a
+            // log-jam rather than a stock. One, two, three is also the ramp asked for in the
+            // same breath — a third, two thirds, full — and a tree yields 27 into a limit of 75,
+            // so those three steps land near one tree, two trees and a full square.
+            new Recipe(1, 3, 75, 0.52f, 0.10f, carriedAsHeap: false),   // wood
+
             new Recipe(2, Most, 75, 0.62f, 0.22f),       // stone
             new Recipe(2, 6, 75, 0.55f, 0.20f),          // iron ore
             new Recipe(3, Most, 75, 0.66f, 0.18f),       // coal
+            // **Carrots, and the one number that is not like the others.** A pulled harvest is
+            // loose carrots and nothing contains them (owner, 2026-09-19: the pile drew one
+            // prop where five had come out of the plot). Alone of the heaps its Full is the
+            // count a harvest actually drops - the carrot's own yieldCount - so the ramp from
+            // one to a yield is the identity: five grew, five lie there. Carried as the rubble
+            // armful, which three cradled carrots read as naturally.
             new Recipe(1, Most, 7, 0.45f, 0.18f),        // carrots
         };
 

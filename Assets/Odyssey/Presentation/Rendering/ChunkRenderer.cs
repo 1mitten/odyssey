@@ -1000,7 +1000,10 @@ namespace Odyssey.Presentation.Rendering
                 // colonist was drawn at a yaw of exactly nought and a log pointed north for ever.
                 Quaternion turned = Quaternion.Euler(0f, yaw, 0f);
 
-                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                // Not every heap is carried as one: wood scatters on the floor and is carried as
+                // the single bundle it was before, because the prop is a bound log pile and three
+                // of those in two hands is not a load. See Recipe.CarriedAsHeap.
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap) && heap.CarriedAsHeap)
                 {
                     // The armful turns as one thing — about the cradle, not each rock about
                     // itself. ItemHeap lays its sunflower out on the world axes, so spinning the

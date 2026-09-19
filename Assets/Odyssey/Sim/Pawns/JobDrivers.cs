@@ -185,12 +185,17 @@ namespace Odyssey.Sim.Pawns
 
                 if (Job.TargetCell < 0 || Pawn.Cell == Job.TargetCell)
                 {
+                    Claim(ctx);
                     NextToil();
                     return JobStatus.Ongoing;
                 }
 
                 JobStatus walk = GotoCell(ctx, Job.TargetCell);
-                if (walk == JobStatus.Succeeded) NextToil();
+                if (walk == JobStatus.Succeeded)
+                {
+                    Claim(ctx);
+                    NextToil();
+                }
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
 
@@ -204,6 +209,21 @@ namespace Odyssey.Sim.Pawns
 
             if (Job.TargetCell < 0) Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
             return JobStatus.Succeeded;
+        }
+
+        /// <summary>
+        /// Arriving in a bed nobody owns makes it hers, where the colony can spare it
+        /// (<c>ConstructionGrid.TryClaimForSleeper</c> holds the rule and the exception).
+        ///
+        /// <para>On arrival, once, rather than every tick of the sleep: the rule counts beds and
+        /// colonists, and a colony of fifty asking it sixty times a second would be the only
+        /// thing in this driver that costs anything. Not on the collapse branch either — a body
+        /// that goes down on the way to a bed has not reached it, and does not get to own it.</para>
+        /// </summary>
+        void Claim(PawnContext ctx)
+        {
+            if (Job.TargetCell < 0 || Pawn.Cell != Job.TargetCell) return;
+            ctx.Construction?.TryClaimForSleeper(Job.TargetCell, Pawn.Id);
         }
 
         public override void Cleanup(PawnContext ctx, JobStatus status) => Pawn.Asleep = false;

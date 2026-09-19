@@ -313,7 +313,15 @@ namespace Odyssey.Hud
                 {
                     if (things[i].Id != Thing) continue;
                     ThingView thing = things[i];
-                    Title = ItemLabels.Label(thing.DefIndex);
+
+                    // **The count is the title, not a footnote.** It was on the state line under
+                    // it and the owner read the pane twice without seeing it (2026-09-19: "when I
+                    // click on wood I can't see how many is this pile"). A pile's size is the
+                    // first thing asked of it, and the title is where the eye lands — so the
+                    // headline is "Wood × 27" and the line below says where it is lying.
+                    Title = thing.Stack > 1
+                        ? ItemLabels.Label(thing.DefIndex) + " × " + thing.Stack
+                        : ItemLabels.Label(thing.DefIndex);
                     Subtitle = "item";
                     Stack = thing.Stack;
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
