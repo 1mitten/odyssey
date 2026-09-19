@@ -64,6 +64,25 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// The seed day draws no plant: stage nought is the specks' day, and the module that
+        /// arrived at growth nought was a sprout standing by afternoon (owner, 2026-09-19).
+        /// The count is still the yield - the plot knows what it will give - and only the art
+        /// waits, which is why this asserts the module and not the count.
+        /// </summary>
+        [Test]
+        public void TheSeedDayDrawsNoPlantAndStillKnowsItsYield()
+        {
+            var world = Field();
+            int cell = world.Index(3, 3, 2);
+
+            world.Model.UpdateCrops(new PlantView[] { new PlantView(cell, 0, 0, 0) });
+            Assert.That(world.Model.CropModule(cell), Is.EqualTo(0),
+                "a seed in the soil stands nothing above it for its first day of light");
+            Assert.That(world.Model.CropCount(cell), Is.EqualTo(5),
+                "the plot still answers its yield: what waits is the art, not the count");
+        }
+
+        /// <summary>
         /// The crop goes through the ordinary bucket machinery: one instance of the stage's
         /// module in the chunk it stands in, exactly as a tuft or a wall panel is. A second way
         /// of drawing crops — a renderer of its own, a GameObject per plant — is what this test

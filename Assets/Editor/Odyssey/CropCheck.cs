@@ -207,11 +207,31 @@ namespace Odyssey.EditorTools
                 SyncAndShoot(world, model, figures, active, camera, slice, y, movePerTick,
                     "crop-3-close", close: true);
 
-                // The pile: five carrots where a harvest would drop them.
+                // The pile: five carrots where a harvest would drop them, photographed on its
+                // own - the field behind a pile of upright carrots is a mirror that answers
+                // any question about orientation with more of the same shape.
                 int pileCell = size.Index(fx + FieldWidth, fz, y);
                 pawns.Items.Spawn(ItemIndex.Carrots, pileCell, 5);
-                SyncAndShoot(world, model, figures, active, camera, slice, y, movePerTick,
-                    "crop-4-pile", close: true);
+                CellRef pileAt = size.FromIndex(pileCell);
+                world.Tick();
+                model.UpdateCrops(world.Views.Current.Plants);
+                model.UpdateZones(world.Views.Current.Zones);
+                figures.Sync(world.Views.Current, y, slice, 0f, movePerTick, FrameSeconds);
+                figures.Evaluate(FrameSeconds);
+                Vector3 pileFocus = GroundRelief.Lift(CellMetrics.FloorCentre(pileAt)) + Vector3.up * 0.2f;
+                PlayScene.Shoot(camera, pileFocus, 50f, 45f, 4f, "Logs/crop-4-pile.png");
+
+                // The arithmetic beside the picture: each drawn carrot's own up axis, which
+                // must come back near horizontal now that the pile lies down.
+                if (ItemHeap.TryRecipe(ItemIndex.Carrots, out ItemHeap.Recipe heap))
+                {
+                    var placements = new Matrix4x4[ItemHeap.Most];
+                    int drawn = ItemHeap.Place(5, 1u, Vector3.zero, heap, placements);
+                    var tilts = new System.Text.StringBuilder();
+                    for (int i = 0; i < drawn; i++)
+                        tilts.Append((placements[i].rotation * Vector3.up).y.ToString("0.00")).Append(' ');
+                    Debug.Log($"[Crop] pile carrots' up-axis y: {tilts}(0 is lying, 1 is standing)");
+                }
 
                 Debug.Log($"[Crop] ripe cell {field[0]} draws {model.CropCount(field[0])} carrot(s); " +
                           $"a five-stack pile draws " +

@@ -32,6 +32,15 @@ namespace Odyssey.Presentation.Rendering
         public const int Most = 7;
 
         /// <summary>
+        /// How far a lying lump is lifted off its cell floor, in metres: half the girth of the
+        /// widest thing that lies down, because the placement tips the mesh about the base
+        /// Unity pivots it on and the tip otherwise buries the body in the ground it should
+        /// lie on. A constant rather than a per-row number because it is the pivot's fault
+        /// and not the carrot's.
+        /// </summary>
+        public const float LyingLift = 0.06f;
+
+        /// <summary>
         /// What one kind of rubble looks like on the floor.
         ///
         /// <see cref="Full"/> is presentation's own idea of a full stack, not the simulation's
@@ -68,8 +77,17 @@ namespace Odyssey.Presentation.Rendering
             /// </summary>
             public readonly bool CarriedAsHeap;
 
+            /// <summary>
+            /// Whether each lump lies on its side rather than stands up. A carrot stood on its
+            /// base is growing art; the same mesh in a heap is a carrot planted in the floor
+            /// (owner, 2026-09-19: "the carrots hauled and piled should be horizontal on the
+            /// floor and not stuck in the ground"). Tipping is the renderer's, not the
+            /// catalogue's, because the armful wants the same lie and has no catalogue row.
+            /// </summary>
+            public readonly bool LyingDown;
+
             public Recipe(int fewest, int biggest, int full, float spread, float sizeJitter,
-                bool carriedAsHeap = true)
+                bool carriedAsHeap = true, bool lyingDown = false)
             {
                 Fewest = fewest;
                 Biggest = biggest;
@@ -77,6 +95,7 @@ namespace Odyssey.Presentation.Rendering
                 Spread = spread;
                 SizeJitter = sizeJitter;
                 CarriedAsHeap = carriedAsHeap;
+                LyingDown = lyingDown;
             }
         }
 
@@ -118,7 +137,7 @@ namespace Odyssey.Presentation.Rendering
             // count a harvest actually drops - the carrot's own yieldCount - so the ramp from
             // one to a yield is the identity: five grew, five lie there. Carried as the rubble
             // armful, which three cradled carrots read as naturally.
-            new Recipe(1, Most, 7, 0.45f, 0.18f),        // carrots
+            new Recipe(1, Most, 7, 0.45f, 0.18f, lyingDown: true),   // carrots
         };
 
         /// <summary>Whether this item kind is drawn as scattered rubble at all.</summary>
@@ -200,7 +219,16 @@ namespace Odyssey.Presentation.Rendering
                 float yaw = Fraction(seed, (uint)(101 + i * 7)) * 360f;
                 float size = 1f + (Fraction(seed, (uint)(211 + i * 13)) * 2f - 1f) * recipe.SizeJitter;
 
-                into[i] = Matrix4x4.TRS(at, Quaternion.Euler(0f, yaw, 0f), new Vector3(size, size, size));
+                // A lying lump is tipped ninety degrees before the bearing turns it, so the yaw
+                // chooses which way along the floor it lies rather than which way it faces - and
+                // it comes up off the floor by half a girth, because the mesh pivots at its base
+                // and a tip about that pivot buries the body in the tile it is meant to lie on.
+                Quaternion bearing = recipe.LyingDown
+                    ? Quaternion.Euler(90f, yaw, 0f)
+                    : Quaternion.Euler(0f, yaw, 0f);
+                if (recipe.LyingDown) at.y += LyingLift;
+
+                into[i] = Matrix4x4.TRS(at, bearing, new Vector3(size, size, size));
             }
 
             return rocks;
@@ -245,7 +273,8 @@ namespace Odyssey.Presentation.Rendering
         public static int Armful(uint seed, Vector3 at, Quaternion facing, in Recipe recipe,
             System.Span<Matrix4x4> into)
         {
-            var held = new Recipe(ArmfulRocks, ArmfulRocks, 1, ArmfulSpread, recipe.SizeJitter);
+            var held = new Recipe(ArmfulRocks, ArmfulRocks, 1, ArmfulSpread, recipe.SizeJitter,
+                lyingDown: recipe.LyingDown);
             int rocks = Place(1, seed, Vector3.zero, held, into);
 
             Matrix4x4 frame = Matrix4x4.TRS(at, facing, Vector3.one);

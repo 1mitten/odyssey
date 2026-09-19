@@ -1217,13 +1217,14 @@ namespace Odyssey.Presentation.Bootstrap
             // speckled white tiny dots to indicate it's sown"). A sown cell is a dark tile until
             // the sprout's first stage is big enough to read, so the sowing itself is invisible
             // for the first hours; the specks are the feedback, one handful per planted cell.
-            // First stage only: the specks are the seed, and they germinate away once there is
-            // a plant to see (owner: "seeds should disappear after some growth - and carrot
-            // starts appearing").
+            // The seed day and the sprout only: the specks are the seed, and they germinate away
+            // once there is a plant to see (owner, 2026-09-19: "the seeds should stay there at
+            // first - the sprouting should appear after a day rather than immediately" - which
+            // made the first day a stage of its own, nought, that draws specks and no plant).
             System.ReadOnlySpan<PlantView> planted = snapshot.Plants;
             for (int i = 0; i < planted.Length; i++)
             {
-                if (planted[i].Stage != 1) continue;
+                if (planted[i].Stage > 1) continue;
                 CellRef cell = size.FromIndex(planted[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
                 _renderer.DrawSeedSpecks(cell, SeedSpeckColour);
@@ -1247,7 +1248,8 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 if (pawns[i].JobDef != JobIndex.Sow) continue;
                 if (pawns[i].Gesture != PawnGesture.Sow) continue;
-                if (!KneelIsOldEnough(pawns[i].Id, pawns[i].GestureSerial)) continue;
+                float kneelAge = KneelAge(pawns[i].Id, pawns[i].GestureSerial);
+                if (kneelAge < Gesture.SeedSpecksAfter) continue;
                 CellRef at = pawns[i].Cell;
                 if (at.Y < lowest || at.Y > highest) continue;
                 int atIndex = size.Index(at.X, at.Z, at.Y);
@@ -1258,7 +1260,11 @@ namespace Odyssey.Presentation.Bootstrap
                 for (int p = 0; p < planted.Length; p++)
                     if (planted[p].CellIndex == atIndex) { taken = false; break; }
                 if (!taken) continue;
-                _renderer.DrawSeedSpecks(at, SeedSpeckColour);
+                // How long since the handful opened: the bundle shows at the hand, the specks
+                // scatter and fall to their spots, and from then they are the seeds. The age
+                // past its threshold is the drop's own clock, so nothing else is timed.
+                _renderer.DrawSeedSpecks(at, SeedSpeckColour,
+                    kneelAge - Gesture.SeedSpecksAfter);
             }
         }
 
@@ -1274,21 +1280,21 @@ namespace Odyssey.Presentation.Bootstrap
         readonly Dictionary<int, (byte Serial, float Started)> _gestureBegan = new();
 
         /// <summary>
-        /// Whether this pawn's current gesture has been running for at least
-        /// <see cref="Gesture.SeedSpecksAfter"/> — the delay the seed
-        /// specks owe the kneel. A serial never seen before records now and answers false, the
-        /// figure-director rule that keeps a colonist walking into view from playing a gesture
-        /// it never made: here it keeps the first frame of a kneel from counting as aged.
+        /// How long this pawn's current gesture has been running, in seconds — or -1 on
+        /// the first frame a serial is seen, the figure-director rule that keeps a colonist
+        /// walking into view from playing a gesture it never made. The seed specks read it
+        /// twice: once against <see cref="Gesture.SeedSpecksAfter"/> for the delay the kneel
+        /// is owed, and once past it, as the drop's own clock.
         /// </summary>
-        bool KneelIsOldEnough(PawnId pawn, byte serial)
+        float KneelAge(PawnId pawn, byte serial)
         {
             int id = pawn.Value;
             if (!_gestureBegan.TryGetValue(id, out var began) || began.Serial != serial)
             {
                 _gestureBegan[id] = (serial, Time.time);
-                return false;
+                return -1f;
             }
-            return Time.time - began.Started >= Gesture.SeedSpecksAfter;
+            return Time.time - began.Started;
         }
 
         /// <summary>

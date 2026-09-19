@@ -356,7 +356,10 @@ namespace Odyssey.Presentation.World
         public int CropModule(int index)
         {
             byte plant = _cropPlant[index];
-            if (plant == 0) return 0;
+            // Stage nought is the seed day: the specks are the plant, and there is no module
+            // to draw. Guarded on its own line because it once fell through to the slot
+            // arithmetic and would have indexed backwards off the table.
+            if (plant == 0 || _cropStage[index] == 0) return 0;
             int slot = (plant - 1) * 3 + _cropStage[index] - 1;
             return slot < _cropModules.Length ? _cropModules[slot] : 0;
         }
@@ -410,7 +413,7 @@ namespace Odyssey.Presentation.World
                     if (priorCell == freshCell) old++;
                     PlantView view = plants[now];
                     _cropPlant[view.CellIndex] = (byte)(view.Plant + 1);
-                    _cropStage[view.CellIndex] = (byte)Math.Clamp((int)view.Stage, 1, 3);
+                    _cropStage[view.CellIndex] = (byte)Math.Clamp((int)view.Stage, 0, 3);
                     _cropScratch[now] = view.CellIndex;
                     now++;
                 }

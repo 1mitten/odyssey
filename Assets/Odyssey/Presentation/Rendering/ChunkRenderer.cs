@@ -1707,7 +1707,7 @@ namespace Odyssey.Presentation.Rendering
         /// clear of the ground the way a mark is, and cast no shadows — a shadow the size of the
         /// fleck itself would double it.
         /// </summary>
-        public void DrawSeedSpecks(CellRef cell, Color colour)
+        public void DrawSeedSpecks(CellRef cell, Color colour, float sinceDrop = -1f)
         {
             Material material = BracketMaterial(colour);
             var rp = new RenderParams(material)
@@ -1721,8 +1721,25 @@ namespace Odyssey.Presentation.Rendering
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
             centre.y += MarkLift;
 
+            // The drop, when the caller has one running: a handful held at the sower's hand
+            // height for a beat, then each seed falling to its own spot, staggered so they
+            // scatter rather than move as one board (owner, 2026-09-19: "an animation that
+            // starts from a bundle of seeds from a hand and then the seed fall onto their
+            // destinations"). The fall accelerates - a seed is dropped, not lowered - and once
+            // every seed is down the call degenerates to the static handful the sown cell
+            // draws until it sprouts, which is why the landed positions are the same hashed
+            // spots both ways: the handoff from dropping to lying there is invisible by
+            // construction, not by luck.
             const int Specks = 6;
             const float Size = 0.045f;
+            const float HandHeight = 0.5f;
+            const float BundleSeconds = 0.25f;
+            const float FallSeconds = 0.35f;
+            const float FallStagger = 0.04f;
+            bool dropping = sinceDrop >= 0f &&
+                sinceDrop < BundleSeconds + FallSeconds + FallStagger * (Specks - 1);
+            Vector3 hand = centre + Vector3.up * HandHeight;
+
             for (int i = 0; i < Specks; i++)
             {
                 // A cheap per-cell-per-speck hash: the cell's own index twisted by the speck's,
@@ -1734,6 +1751,16 @@ namespace Odyssey.Presentation.Rendering
                 float oz = (((h >> 16) & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 0.7f);
 
                 Vector3 at = centre + new Vector3(ox, 0f, oz);
+                if (dropping)
+                {
+                    float into = sinceDrop - BundleSeconds - i * FallStagger;
+                    if (into < 0f) at = hand;
+                    else
+                    {
+                        float t = Mathf.Clamp01(into / FallSeconds);
+                        at = Vector3.Lerp(hand, at, t * t);
+                    }
+                }
                 Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                     Matrix4x4.TRS(at, Quaternion.identity, new Vector3(Size, Size * 0.5f, Size)));
             }

@@ -198,6 +198,39 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void ACarrotPileLiesOnTheFloorAndNotStuckInIt()
+        {
+            // The carrot's own art stands base-down, which is right while it grows and wrong
+            // on a heap: a pile of carrots planted upright in the tile is a nursery bed, not a
+            // harvest (owner, 2026-09-19). The lie is read off the placement's own rotation -
+            // the mesh's up axis must come back near horizontal, whatever the yaw said.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Carrots, out ItemHeap.Recipe carrot), Is.True);
+            var placements = new Matrix4x4[ItemHeap.Most];
+            var floor = new Vector3(12.5f, 9f, 40f);
+
+            int carrots = ItemHeap.Place(5, 7u, floor, carrot, placements);
+            for (int i = 0; i < carrots; i++)
+            {
+                Vector3 up = placements[i].rotation * Vector3.up;
+                Assert.That(Mathf.Abs(up.y), Is.LessThan(0.1f),
+                    "carrot " + i + " still points its top at the sky - it is planted, not piled");
+                Assert.That(((Vector3)placements[i].GetColumn(3)).y,
+                    Is.EqualTo(floor.y + ItemHeap.LyingLift).Within(1e-4f),
+                    "carrot " + i + " is not resting on the floor");
+            }
+
+            // And stone, which never lay down, still stands: the tip is a per-row answer.
+            ItemHeap.Recipe stone = StoneRecipe();
+            int rocks = ItemHeap.Place(5, 7u, floor, stone, placements);
+            for (int i = 0; i < rocks; i++)
+            {
+                Vector3 up = placements[i].rotation * Vector3.up;
+                Assert.That(up.y, Is.GreaterThan(0.9f),
+                    "a boulder was tipped over by a recipe that never asked to lie");
+            }
+        }
+
+        [Test]
         public void AWoodPileGrowsInThreeStepsAndNeverBecomesALogJam()
         {
             // The owner's "a third, two thirds, full". The prop is a bound log pile, which is
