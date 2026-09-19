@@ -3,6 +3,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -725,7 +726,8 @@ namespace Odyssey.Presentation.Rendering
         public void RenderActors(
             WorldSnapshot snapshot, int activeLayer, SliceSettings slice, Material material,
             float tickAlpha = 0f, int movePerTick = 0,
-            System.Collections.Generic.HashSet<int>? drawnAsFigures = null)
+            System.Collections.Generic.HashSet<int>? drawnAsFigures = null,
+            ICarriedLoads? carried = null)
         {
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
 
@@ -795,8 +797,22 @@ namespace Odyssey.Presentation.Rendering
                     SubmitInstances(ColonistModule(variant),
                         _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
 
-            RenderThings(snapshot.Things, lowest, highest, material);
+            RenderThings(snapshot, lowest, highest, material, carried, tickAlpha, movePerTick);
         }
+
+        /// <summary>
+        /// Where a load rides on a colonist drawn as an instanced stand-in rather than as a live
+        /// figure, as a fraction of a cell's height above the pawn's feet.
+        ///
+        /// <para>Those colonists are the ones past the figure cap, which is to say the ones
+        /// furthest from the camera, and they have no arms to measure a cradle off. A flat waist
+        /// offset is the honest answer: at that distance the question is whether the colonist is
+        /// carrying something, not how well they are holding it. Design 24 §5a.</para>
+        /// </summary>
+        public const float StandInCarryHeight = 0.36f;
+
+        /// <summary>And how far in front of them, in metres.</summary>
+        public const float StandInCarryReach = 0.35f;
 
         // ---- loose items ----------------------------------------------------------------------
 
@@ -815,9 +831,11 @@ namespace Odyssey.Presentation.Rendering
         /// draw per item, which is what the stand-in marker did — costs a call for every ration
         /// crate on a map that will eventually hold thousands of them.
         /// </summary>
-        void RenderThings(System.ReadOnlySpan<ThingView> things, int lowest, int highest, Material fallback)
+        void RenderThings(WorldSnapshot snapshot, int lowest, int highest,
+            Material fallback, ICarriedLoads? carried, float tickAlpha, int movePerTick)
         {
-            if (things.Length == 0) return;
+            System.ReadOnlySpan<ThingView> things = snapshot.Things;
+            if (things.Length == 0 && snapshot.PawnCount == 0) return;
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
 
@@ -867,10 +885,108 @@ namespace Odyssey.Presentation.Rendering
                     Vector3.one));
             }
 
+            RenderCarriedLoads(snapshot, carried, lowest, highest, tickAlpha, movePerTick);
+
             for (int def = 0; def < _itemCounts.Length; def++)
                 if (_itemCounts[def] > 0)
                     SubmitInstances(_model.Library[_itemModules[def]], _itemPlacements[def],
                         _itemCounts[def], ref _itemMatrices);
+        }
+
+        /// <summary>
+        /// Draw what the colonists are holding, into the same instanced batches as the piles they
+        /// came off. Design 24 §5a.
+        ///
+        /// <para><b>Between the ground items and the submit, on purpose.</b> A carried rock is
+        /// one more matrix in a buffer that was going to be submitted anyway, so the whole feature
+        /// costs no draw call at all — and it is the same mesh, the same material and the same
+        /// size as the pile it was picked up from, which is the owner's "true scale" decision
+        /// enforced by construction rather than by a constant that could drift.</para>
+        ///
+        /// <para><b>Placed by the figure director where there is a figure, and approximated where
+        /// there is not.</b> Past the figure cap a colonist is an instanced stand-in with no arms
+        /// to measure, and it is also a long way off; a flat waist offset answers the only
+        /// question anybody is asking at that distance, which is whether they are carrying
+        /// something.</para>
+        ///
+        /// <para><b>Culled on the pawn's layer, not the load's</b>, because the load has no cell —
+        /// that is the whole of what carrying means to the item store — and a colonist and what
+        /// she is holding must appear and disappear together.</para>
+        /// </summary>
+        void RenderCarriedLoads(WorldSnapshot snapshot, ICarriedLoads? carried,
+            int lowest, int highest, float tickAlpha, int movePerTick)
+        {
+            // **Driven off the aspect rows, not off the pawns, and that is the performance
+            // decision.** Carrying is sparse: most colonists are holding nothing most of the time,
+            // so there are a handful of these rows against a thousand aspects on a colony of
+            // fifty. Walking the pawns instead would mean an aspect scan per pawn — fifty scans of
+            // a thousand rows every frame to find three loads. This is one scan, and then a
+            // per-carrier lookup that only carriers pay for. It is also exactly what
+            // TryGetPawnAspect's own remarks recommend for a reader that wants one key across
+            // every pawn.
+            var rows = snapshot.PawnAspects;
+
+            for (int r = 0; r < rows.Length; r++)
+            {
+                if (rows[r].Key != CarryAspects.Carrying) continue;
+
+                int def = rows[r].Value;
+                if (def < 0) continue;
+
+                PawnId pawnId = rows[r].Pawn;
+                if (!snapshot.TryGetPawn(pawnId, out PawnView pawn)) continue;
+
+                // Culled on the pawn's layer because the load has no cell of its own — that is
+                // the whole of what carrying means to the item store — and a colonist and what
+                // she is holding must come into view and leave it together.
+                if (pawn.Cell.Y < lowest || pawn.Cell.Y > highest) continue;
+
+                if (!snapshot.TryGetPawnAspect(pawnId, CarryAspects.Stack, out int stack))
+                    stack = 1;
+
+                Vector3 at;
+                if (carried != null && carried.HasFigureFor(pawnId.Value))
+                {
+                    // A live figure answers for itself, or answers no — empty-handed on its own
+                    // reckoning, or holding something the swim placeholder is hiding. Either way
+                    // the renderer must not second-guess it with a stand-in load, or a wading
+                    // colonist's bundle would reappear at her waist the frame the pose hid it.
+                    if (!carried.TryGetCarried(pawnId.Value, out _, out _, out at)) continue;
+                }
+                else
+                {
+                    Vector3 body = PawnPose.Of(pawn, tickAlpha, movePerTick,
+                        out Vector3 heading, _model);
+                    if (heading.sqrMagnitude < 1e-6f) heading = Vector3.forward;
+                    at = body
+                        + Vector3.up * (CellMetrics.SizeY * StandInCarryHeight)
+                        + heading.normalized * StandInCarryReach;
+                }
+
+                ResolvedModule? module = ItemModule(def);
+                if (module == null || module.IsEmpty || !module.UsesArt) continue;
+
+                // The load's own identity, not the pawn's: a heap picked up keeps the bearings and
+                // sizes it had on the ground, so the rocks in her arms are the rocks that were in
+                // the pile. The stack stands in for the item id, which is not published — two
+                // colonists carrying the same commodity will hold it the same way round, which is
+                // a great deal less noticeable than a heap reshuffling itself as it is lifted.
+                uint seed = unchecked((uint)(def * 2654435761u + (uint)stack));
+
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                {
+                    int rocks = ItemHeap.Armful(seed, at, heap, _heapPlacements);
+                    for (int rock = 0; rock < rocks; rock++) AppendItem(def, _heapPlacements[rock]);
+                    continue;
+                }
+
+                // Never lifted by GroundRelief, unlike everything in RenderThings: the relief is a
+                // correction for a thing lying on ground that is a shallow field rather than a
+                // plane, and this thing is not on the ground. Lifting it would raise it off the
+                // hands by however much the terrain happened to be doing underfoot.
+                AppendItem(def, Matrix4x4.TRS(
+                    at, Quaternion.Euler(0f, FacingOf(pawnId, Vector3.zero), 0f), Vector3.one));
+            }
         }
 
         void EnsureItemModules()

@@ -316,6 +316,38 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public float WorkDip;
 
+            /// <summary>
+            /// The item def index this colonist has in its arms, or -1 for empty-handed. Design 24.
+            ///
+            /// <para>Carried on the figure for the same reason <see cref="WorkJob"/> is: the pose
+            /// pass runs later, over figures alone, with no snapshot in scope.</para>
+            /// </summary>
+            public int CarryDef = -1;
+
+            /// <summary>How many are in the load. The arms ignore it; the inspect pane does not.</summary>
+            public int CarryStack;
+
+            /// <summary>
+            /// How much of a carrier this figure is, 0 empty-handed and 1 in the full scoop. Eased
+            /// by <see cref="CarryPose.Settle"/>, so the arms fold into the cradle as the lift's
+            /// crouch releases them rather than snapping there on one frame.
+            /// </summary>
+            public float CarryWeight;
+
+            /// <summary>
+            /// Where the load was drawn on the last posed frame, and whether there was one.
+            ///
+            /// <para>Recorded rather than recomputed because the renderer needs it <em>after</em>
+            /// the pose pass has run — the cradle is measured off palms that do not exist until
+            /// the arms have been posed. Recomputing it on the renderer's side would mean reading
+            /// bones a frame late, which is the drift that would show up as a load lagging behind
+            /// the hands that hold it.</para>
+            /// </summary>
+            public Vector3 CarryAt;
+
+            /// <summary>Whether <see cref="CarryAt"/> was written this frame. See it for why.</summary>
+            public bool CarryPlaced;
+
             static FittedTool[] NewTools()
             {
                 var tools = new FittedTool[WorkStyle.Count];

@@ -6359,3 +6359,60 @@ colonists at certain points and smoother is preferred and predictable."*
 - **Re-verified on the merge with main** (head turning, the flush selection cursor), this time on
   the real checkout with the packs: fast tier **730 + 438**, Long **21**, EditMode **1798 total,
   1784 passed, 0 failed**, PlayMode **82 total, 77 passed, 0 failed**, both content gates clean.
+
+## 2026-09-19 — The load that was never there
+
+The report was that a colonist picks something up and it vanishes. The obvious reading is that
+nothing about carrying is built, and that reading is wrong in an expensive way: **two of the
+owner's three beats already existed.** `JobDriver.LiftToil` is a whole timed toil of 48 ticks, the
+grasp lands at tick 24 in the middle of the drawn crouch's floor hold, and `PawnGesture.Stow` is
+already reported when a load goes into a stockpile *or* into a build site. A session that had
+believed the symptom would have rewritten the stoop.
+
+What was actually missing was one thing: `ColonyItems.PickUp` sets `item.Cell = -1` and delists
+it, so the load leaves the view feed and nothing downstream can draw it.
+
+- **The interview's water question rested on a false premise, in both directions.** It asked what
+  happens when a colonist *swims* with a load. Deep water is impassable — the pathfinder routes
+  round a lake rather than pricing a swim nobody survives — so no hauler ever swims one. But
+  shallow water takes `WaterLine.Weight` to 1 on the owner's own 2026-09-17 decision, and
+  `SwimPose` strokes **both arms**. The case is therefore the common one, not a hypothetical, and
+  the honest answer to "no special case" is a bundle swinging about in a swimmer's arms. Put back
+  to the owner with the correction, the answer was to hide the load in water for now and decide
+  later. `CarryPose.Drawn` is the single place that does it.
+- **The draft designed the pose the wrong way round and the code does not.** It proposed computing
+  a cradle point from hip height and solving both hands to it. Arm length varies across the 61
+  rigs by more than the cradle does, so a solved point puts a short-armed colonist at full stretch
+  and a long-armed one folded against its chest — two people carrying the same log in visibly
+  different postures. Authoring the shoulder and elbow angles and then *measuring* where the palms
+  ended up gives every rig the same posture, which is the thing a viewer reads. Only `Clearance`
+  is solved, along the one axis where an authored angle fails outright rather than merely looks
+  wrong: a load inside the colonist's own chest.
+- **The stance waits for the gesture; the load does not.** A lift hands the thing over half way
+  through the crouch, so for its second half the pawn is carrying while the gesture owns both
+  arms. Letting the carry weight ease in there takes it to full strength unseen, and the frame the
+  crouch lets go the arms snap into the cradle. Holding the target at nought until the gesture
+  ends makes the fold start from where the rise left the hands. The load is unaffected either way,
+  because it follows the palms and not the stance — which is also what makes it travel *up out of*
+  the crouch instead of appearing at the waist.
+- **Drawn off the aspect rows, not off the pawns, and that is the performance decision.** Carrying
+  is sparse. Walking the pawns would mean an aspect scan per pawn — fifty scans of a thousand rows
+  every frame to find three loads. One scan of the rows, then a lookup only carriers pay for.
+- **It costs no draw call.** The load joins the same instanced batch as the pile it came off, so a
+  carried rock is one more matrix in a buffer that was going to be submitted anyway — and it is
+  the same mesh at the same scale as the ground prop by construction, rather than by a constant
+  that could drift.
+- **A partial delivery reports the stow twice on one tick** and it is harmless. The snapshot
+  publishes once a tick, so presentation never sees the intermediate serial. Worth writing down
+  because it looks like a double motion and is not, and because it is a property of the publish
+  cadence rather than of the drivers.
+- **`DropCarried`'s deliberate silence was reversed rather than worked around.** Its comment argued
+  at length that an abandoning drop is a different motion from a stow, which was right while
+  nothing was drawn and is wrong once the load is visible — the alternative to a motion is a
+  commodity teleporting out of somebody's arms. The distinction is recorded as deferred, with the
+  note that the second gesture belongs *there* and not in a second drop path, because two owners
+  for one rule is this project's commonest fault.
+- **Verified:** fast tier **735 Sim + 445 Hud**; EditMode **1824 total, 1810 passed, 0 failed**;
+  PlayMode **82 total, 77 passed, 0 failed**; both content gates clean with no CSV change, since
+  this adds no named thing. **No golden moved** — gestures and aspects are neither saved nor
+  hashed, and the goldens ran green unchanged, which is the measurement rather than the assumption.

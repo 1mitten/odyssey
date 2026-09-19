@@ -1,7 +1,9 @@
 # 24 — Carrying
 
-**Status:** designed, not built. Numbers below marked *proposed* are invited tuning.
+**Status:** built, unplayed. Numbers marked *proposed* are invited tuning.
 **Owner interview:** 2026-09-19. **Branch:** `claude/carried-items`.
+**Measured:** fast tier 735 Sim + 445 Hud; EditMode 1824 total, 1810 passed, 0 failed; PlayMode 82
+total, 77 passed, 0 failed. Both content gates pass with no CSV change — this adds no named thing.
 
 ---
 
@@ -73,36 +75,53 @@ on the activity line, which is where it now lives anyway.
 
 ## 4. The carry pose
 
-### 4a. Solved, not authored
+### 4a. Authored angles, measured cradle — and the draft had this backwards
 
 `13-gestures.md` §3 draws the line: author the angles when the figure aims at something whose
 position the arithmetic does not know; solve to a point when it must meet something it does. The
-axe swing is the first kind. **The carry is the second** — the hands must arrive under a load whose
-size we know exactly, so the pose is solved and is then correct on all sixty-one rigs without a
-contact sheet per rig.
+first draft of this document put the carry on the solved side — compute a cradle from hip height,
+drive both hands to it with `Grasp`/`TwoBoneIk` — and that is wrong, for a reason the line does
+not cover.
 
-Concretely: a **cradle point** is computed in the figure's own frame, the load is placed with its
-base on it, and both hands are driven to it by `Grasp` / `TwoBoneIk`, which is the same machinery
-that already seats an axe haft in a fist.
+**Arm length varies across the sixty-one rigs by more than the cradle does.** A solved point is
+the same place on every body, so a short-armed colonist reaches it at full stretch with its elbows
+flared while a long-armed one holds it folded against its chest. Two colonists then carry the same
+log in visibly different postures. Authoring the shoulder and the elbow gives every rig the same
+*posture* — which is the thing a viewer actually reads at this camera — and lets the load sit
+wherever that rig's arms genuinely are.
+
+So: the angles are authored, the palms are then asked where they ended up, and the load's base
+goes at their midpoint. `HandGrip.Palm` supplies the palms, because a humanoid hand bone is the
+wrist and a load seated on two wrists sits a hand's breadth behind where the arms hold it — the
+same measurement the tool grip already needed.
+
+**One thing is still solved**, along the one axis where an authored angle can fail outright rather
+than merely look wrong: `Clearance`. A rig whose arms are short enough to bring the load inside its
+own chest gets it pushed forward until it is clear. A wood bundle drawn through a colonist's ribs
+is not a pose that wants tuning.
 
 ### 4b. Everything is a fraction or an angle, never a metre
 
-The packs differ in proportion and the director scales them besides. A 0.4 m cradle is a waist on
-one colonist and a chest on another. So, as with `Gesture.Depth` and every constant in `SwimPose`:
+The packs differ in proportion and the director scales them besides. So, as with `Gesture.Depth`
+and every constant in `SwimPose` — all of these live in `CarryPose` and are settable, so a harness
+can sweep them for a contact sheet without a recompile:
 
 | Number | *Proposed* | Reasoning |
 |---|---|---|
-| `CradleRise` | **1.10 × hip height** | The load rests just above the hip crest, which is where forearms naturally come to rest. Below the hip and it reads as dangling; at the sternum it is the hug the owner rejected |
-| `CradleForward` | **0.55 × shoulder width**, forward of the chest | Far enough out that the prop clears the torso mesh at the widest of the 61 bodies. Too near and a wood bundle intersects the ribs; too far and the colonist is presenting it |
-| `CradleSpan` | **0.60 × shoulder width** | How far apart the two palms sit. Hands inside this are under the load's middle and it looks pinched; wider and the elbows flare |
-| `ElbowBend` | **−75°** | Forearms near horizontal. Not 90°: a right angle reads as a waiter's tray |
-| `ShoulderPitch` | **−15°** from vertical | The upper arms hang, slightly forward. This is not a lift — the weight is on the forearms, not the shoulders |
-| `SpineLean` | **6°** backward | The counter-lean of somebody carrying weight in front. Small on purpose: at the play camera's 48° a big lean reads as falling over |
-| `EaseSeconds` | **0.20 s** | How long the arms take to reach the carry from wherever they were, and to release it. Matches `ClimbEaseSeconds`' order so nothing in the figure snaps |
+| `ElbowBend` | **−75°** | Forearms up towards horizontal. Not 90°: a right angle is a waiter's tray, load balanced rather than held. Fifteen under it puts the hands slightly above the elbows, which is what stops a load sliding off the front and what makes the arms read as *under* it |
+| `ShoulderPitch` | **−15°** | The upper arms hang, barely forward. The weight of a scooped load is on the forearms, not the shoulders; past about thirty the colonist is presenting the thing to somebody |
+| `SpineLean` | **6°** backward | The counter-lean of somebody carrying weight in front. Far less than life, because the play camera looks down at 48°: the lean foreshortens to almost nothing while the same angle on a walking figure reads as falling over backwards |
+| `Clearance` | **0.50 × shoulder width** | The fault guard of §4a, not a taste. Half a shoulder width clears a barrel-chested rig with a little to spare |
+| `EaseSeconds` | **0.20 s** | How long the arms take to fold in and let go. The order of `ClimbEaseSeconds`, so nothing about the figure arrives on one frame — it matters most coming out of the lift |
+| `HideAfloatAbove` | **0.5** | Where the load stops being drawn in water. A placeholder, §5c |
+| `ItemHeap.ArmfulRocks` | **3** | Rocks in an armful, constant. §3a |
+| `ItemHeap.ArmfulSpread` | **0.17 m** | Tighter than the floor heap's 0.55–0.66, or the rocks orbit her |
+| `ItemHeap.ArmfulStagger` | **0.055 m** | Each rock above the last, so an armful is a heap held rather than three rocks on an invisible shelf |
 
-**The load's base sits on the cradle point, not its centre.** Placing by centre buries half a wood
-bundle in the forearms; the arms are meant to be *underneath*, which is the owner's whole word for
-it.
+**The load's base sits on the cradle point, not its centre.** Every item prop has its origin on the
+floor — that is how `ItemHeap` places a rock at a cell's floor centre and has it lie on the ground
+— so a matrix built at the palms puts the bottom of the load on them. Placing by centre buries half
+a wood bundle in the forearms.
 
 ### 4c. The rule this pose must not break
 
@@ -195,15 +214,19 @@ will stroke both arms while holding a bundle in them, and the load will swing ab
 hands. Taking the owner's answer literally (no special case, the load rides the hands) produces
 that.
 
-**Decision, recorded as accepted rather than as right:** ship it with no special case, because the
-owner asked for no special case, and because the alternatives both cost more than a first
-playtest is worth —
+**Decision (owner, 2026-09-19, once the premise was corrected):** *"Make the item disappear for now
+when swimming for ease and decide later."* So the load is hidden above `CarryPose.HideAfloatAbove`
+= 0.5 swim weight, and `CarryPose.Drawn` is the single place that decides, so a grep for the name
+finds every caller on the day it is settled properly.
 
-- hold the load clear of the water with one arm and stroke with the other: a second solved pose;
-- suppress the float while carrying: reverses a decision the owner already took on its own merits.
+It is a hard cut and it will pop mid-step, which is the "for ease" part. The two real answers,
+both deferred:
 
-**This is the first thing in this document I expect to be reversed.** It goes in the playtest table
-by name.
+- hold the load clear of the water with one arm and stroke with the other — a second solved pose;
+- suppress the float while carrying — reverses a decision the owner already took on its own merits.
+
+Note what hiding does **not** do: the simulation is untouched, so the load is still in her arms and
+still arrives. This is a drawing decision only, which is the same bargain `WaterLine` itself makes.
 
 ## 6. The three beats, end to end
 
@@ -235,8 +258,15 @@ bones rather than authoring an offset.
 | Case | What happens |
 |---|---|
 | **Into a stockpile** | `PutDown` already fires `PawnGesture.Stow`. The load lowers with the hands through the crouch and, on the frame it reaches the floor, becomes the ground heap. The reverse of §6a, and the two must share the handover instant so neither double-draws nor blinks |
-| **Into a build site** | The material is consumed by the site. No stow gesture today — the delivery driver clears `Job.CarriedItem` at `BuildJob.cs:368`. **It should fire `Stow` too**, so the load lowers rather than vanishing from the hands. One line, one of the two sim-side exceptions in §7 |
-| **Interrupted mid-haul** | `JobDriver.DropCarried` puts the load on the nearest cell with room. It must now fire `Stow` as well — the other exception |
+| **Into a build site** | The material is consumed by the site. **Already reports the stow** — `BuildJob.cs:363`, on the argument that "the stoop is the same motion whether the load goes on the floor or into a frame". The design draft claimed this was missing; it was not, and nothing needed doing |
+| **Interrupted mid-haul** | `JobDriver.DropCarried` puts the load on the nearest cell with room. **This is the one sim-side change** — it must now fire `Stow`, where it deliberately said nothing |
+
+A partial delivery reports the stow twice on one tick: once at `BuildJob.cs:363` and again through
+`Cleanup`'s `DropCarried` for the remainder. **That is harmless and worth knowing why**, because
+it looks like a double motion and is not: the snapshot publishes once per tick, so presentation
+never sees the intermediate serial and fires exactly one stow. It is a property of reporting a
+gesture as a field read once rather than as an event queue, and anything that changed the publish
+cadence would break it.
 
 ### 6d. The comment that has to change
 
@@ -257,16 +287,19 @@ motion, and when there is a second one to draw, this is where it goes.
 
 ## 7. What touches the simulation
 
-Two lines, both of them a gesture report and neither of them state:
+Less than the draft expected. **One gesture report and two published aspects**, none of them
+state:
 
-1. `JobDriver.DropCarried` fires `PawnGesture.Stow`.
-2. `BuildJob`'s delivery fires `PawnGesture.Stow` when the material is consumed.
+1. `JobDriver.DropCarried` fires `PawnGesture.Stow`, where it deliberately said nothing (§6d).
+2. `PawnRegistry` publishes `odyssey.pawn.carrying` and `.stack` while a job holds a load.
 
-Gestures are **not saved and not hashed** (`Views.cs:18`), so neither changes the state hash and
-**no golden needs re-baking**. That is worth stating explicitly, because the last change in this
-area moved all three goldens and cost a session.
+Gestures and aspects are both **not saved and not hashed** (`Views.cs:18`, `Views.cs:298`), so
+none of this changes the state hash and **no golden needs re-baking** — confirmed, not assumed:
+the fast tier's 735 Sim tests, goldens included, passed unchanged. Worth stating explicitly,
+because the last change in this area moved all three goldens and cost a session.
 
-Everything else — the pose, the cradle, the placement, the two aspects — is presentation.
+Everything else — the pose, the cradle, the placement, the armful, the activity line — is
+presentation.
 
 ## 8. The activity line
 
@@ -298,21 +331,41 @@ a string the wiki cannot correct. This is a content change and carries its CSV r
 Everything in §4 and §5a is arithmetic over transforms and belongs in the fast tiers, not in a
 screenshot.
 
+As built, in three files.
+
+**`CarryPoseTests`** (Unity tier — the fast tier compiles neither Presentation nor Editor, so
+green seconds prove nothing here):
+
 | Test | Asserts |
 |---|---|
-| `CarryRigTests.CradleClearsTheTorso` | the cradle point is outside the chest bounds on every one of the 61 rigs — the "bundle through the ribs" fault |
-| `CarryRigTests.CradleIsAWaistNotAChest` | the cradle is between hip height and sternum height, as a fraction, on every rig |
-| `CarryRigTests.BothPalmsReachTheLoad` | residual from `Grasp` is under tolerance for both hands |
-| `CarryRigTests.PlacementIsAbsolute` | running the pass twice leaves an identical matrix — §4c, the fault that made an axe spin |
-| `CarryRigTests.TheLoadSitsOnTheForearmsNotThroughThem` | the prop's base, not its centre, is at the cradle |
-| `CarryHandoverTests.TheLoadIsNeverInTwoPlaces` | across the grasp tick and the stow tick, the load is drawn in the hands **or** on the ground, never both and never neither |
-| `CarryHandoverTests.TheLoadFollowsTheHandsThroughTheGesture` | at grasp + 1 tick the load is near the floor, not at the waist |
-| `PawnAspectTests` (extend) | both keys published exactly while `Job.CarriedItem >= 0`, and absent otherwise |
-| `RegistryTests` (extend) | the activity-line pattern and every item name resolve |
-| Existing `PawnTests` lift assertions | unchanged — the thing is on the ground while bending, in the arms before the toil ends |
+| `TheLoadSitsBetweenTheHands` | two arms holding one thing hold it between them |
+| `ALoadHeldCloseIsPushedClearOfTheChest` | the "bundle through the ribs" fault, §4a |
+| `ALoadAlreadyClearIsLeftExactlyWhereTheHandsPutIt` | the clearance is a floor, not a target — otherwise "carried" becomes "held at arm's length" |
+| `TheClearanceIsMeasuredAlongTheFacingAndNotAsADistance` | fails only for a colonist reaching sideways, which is exactly why it is written down |
+| `TheCradleIsPushedAlongTheFacingWhicheverWayTheColonistIsTurned` | never a world axis, never a bone's |
+| `ARigWithNoShouldersIsLeftAlone` | a non-Humanoid prefab goes on walking, as it already does for arms and legs |
+| `ThePlacementIsAbsolute` | feeding the answer back in changes nothing — §4c, the fault that made an axe spin |
+| `TheStanceEasesOnAndOffInTheTimeItSays` | and `APausedWorldHoldsTheStanceWhereItIs`: delta zero is the identity |
+| `ALoadGoesUnderWaterWithItsCarrier` | the §5c placeholder, stated so it cannot be removed silently |
+| four armful tests | constant count, tighter than the floor heap, staggered not flat, and stable frame to frame |
 
-Fast tier compiles neither Presentation nor Editor, so `CarryRigTests` are Unity-tier: green
-seconds prove nothing here.
+**`CarryTests`** (fast tier, Sim):
+
+| Test | Asserts |
+|---|---|
+| `TheCarryAspectsAreSpeltTheWayPresentationSpellsThem` | load-bearing: the two assemblies agree by string and nothing else |
+| `AnEmptyHandedColonistPublishesNoLoad` | absence is the answer, which is what makes it free |
+| `TheLoadIsPublishedFromTheGraspAndNotBefore` | both ends are faults and they are different ones |
+| `TheLoadIsNeverInTwoPlacesAndNeverInNone` | every tick of a whole haul: on the floor **xor** in the arms |
+| `AJobThatEndsMidCarryReportsPuttingTheLoadDown` | §6d, including that the serial moved |
+
+**`CarryLabelTests`** (fast tier, Hud): the spelling twin, the composition with and without a load,
+`OneOfSomethingIsNotCountedAtYou`, `EveryWordOnTheLineComesFromTheRegistry` (no letter on the line
+was written in C#), and `TheLineIsNotRebuiltWhileNothingAboutItChanges` — reference identity, ADR
+0003 F1.
+
+The existing `PawnTests` lift assertions are unchanged and still pass: the thing is on the ground
+while she bends, in her arms before the toil ends.
 
 ## 11. What only a person at the keyboard can answer
 
@@ -323,10 +376,13 @@ Deliberately short. Anything a test can decide is in §10 instead.
 2. **Does a single wood bundle read at the play camera at true scale?** The owner chose true scale
    over an enlargement; this is the question that choice rests on.
 3. **Is the amount missed?** Nothing on the board says how much any more.
-4. **The stream** (§5c) — a hauler wading with both arms stroking. Expected to fail.
+4. **The stream** (§5c) — the load now vanishes as she wades in and reappears as she comes out.
+   Whether that pop is worse than the swinging bundle it replaces is the whole question, and it is
+   the one thing here built as a placeholder rather than as an answer.
 5. **Does the interrupted stow look like tidying up when it should look like abandoning?** The
    owner accepted this knowingly; the question is whether it is noticeable.
 6. **Does the load leave the hands cleanly at a build site**, or does it look deleted?
+7. **Does an armful of three rocks read as "some stone"** at true scale, or as three pebbles?
 
 ---
 

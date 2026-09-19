@@ -676,3 +676,42 @@ appearance instead.
 - **The slab art itself is exact** — 2.5000 m across, flat on top to the micrometre, the top face
   the full width of the piece, 40 vertices. Measured 2026-09-18 by `SlabTopFaceProbe`. A seam
   artefact is not the art's size, shape or flatness.
+
+## A symptom that names a missing feature usually names a missing half of one
+
+**2026-09-19, the carried load.** "A colonist picks something up and it disappears" reads as
+*carrying is not built*. Two of its three beats were: the stoop is a timed toil, the grasp lands
+in the middle of the drawn crouch, and the stow was already reported at a stockpile and at a build
+site. The one missing piece was that `ColonyItems.PickUp` delists the item, so it leaves the view
+feed. Had the symptom been believed, the fix would have rewritten `LiftToil` — and `LiftTicks`
+moved all three goldens the day it landed.
+
+- **The check:** before building what a report asks for, grep for the half that already exists. A
+  one-line grep is cheaper than a wasted session, and this is the third time that sentence has
+  been written in this repo.
+- **Sibling of "a rule that asks the built world and misses the order":** both are cases of the
+  observable state hiding work that has already happened.
+
+## A pose solved to a point is not more robust than one authored as angles
+
+**2026-09-19, the carry stance.** The rule in `13-gestures.md` §3 — solve when the figure must
+meet something whose position we know — is about *reach*, and reading it as "solving is always
+safer across rigs" gets the carry backwards. Arm length varies across the 61 rigs by more than the
+cradle does, so a cradle computed from hip height and solved to puts a short-armed colonist at
+full stretch and a long-armed one folded against its chest: same point, two postures. Authored
+angles give the same *posture* and let the point fall where each rig's arms are.
+
+- **The check:** ask which of the two a viewer actually reads. For a reach it is the point; for a
+  stance it is the posture. Solve only the axis where an authored angle fails outright rather than
+  merely looks wrong — here, a load inside the colonist's own chest.
+
+## Two assemblies that cannot see each other agree by spelling and nothing else
+
+**Standing, tightened 2026-09-19.** `Odyssey.Hud` may not reference `Odyssey.Sim`, so a pawn
+aspect's name is a string literal on each side. Nothing links them: change one and the feature
+silently stops working, with no compile error and no failing test unless one was written for it.
+
+- **The check:** every aspect key gets a test on **both** sides — the Sim side asserting
+  `SomeAspects.Key == AspectKey.Of("the.literal")`, the Hud side asserting its own constant equals
+  the same literal. `ColonistNames.RollSeedAspect` established the pattern; `CarryAspects` follows
+  it. A key with only one of the two tests is a key with no guarantee.
