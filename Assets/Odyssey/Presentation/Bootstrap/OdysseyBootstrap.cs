@@ -1133,11 +1133,18 @@ namespace Odyssey.Presentation.Bootstrap
             // owner watched seeds appear on a tile she merely walked over. The kneel plays only
             // in the work toil, and a cell that already stands a plant draws its own specks (or
             // its plants) and none of these.
+            //
+            // And not from the first frame of the kneel either (owner, 2026-09-19: "it should
+            // have a delay so the colonist is actually bent down for some time and seeds
+            // appear"): the specks wait out <see cref="Gesture.SeedSpecksAfter"/>
+            // of the kneel, measured on the serial's own clock below, so the ground stays bare
+            // while she is only arriving at the soil.
             System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 if (pawns[i].JobDef != JobIndex.Sow) continue;
                 if (pawns[i].Gesture != PawnGesture.Sow) continue;
+                if (!KneelIsOldEnough(pawns[i].Id, pawns[i].GestureSerial)) continue;
                 CellRef at = pawns[i].Cell;
                 if (at.Y < lowest || at.Y > highest) continue;
                 int atIndex = size.Index(at.X, at.Z, at.Y);
@@ -1150,6 +1157,35 @@ namespace Odyssey.Presentation.Bootstrap
                 if (!taken) continue;
                 _renderer.DrawSeedSpecks(at, SeedSpeckColour);
             }
+        }
+
+        /// <summary>
+        /// When each pawn's current gesture began, on the frame clock: pawn id to the serial it
+        /// was last seen wearing and the time that serial was first seen in. The same
+        /// serial-differs test the figure director uses to fire a pose, answering a lazier
+        /// question — not "did it just begin" but "has it been running this long" — which is
+        /// what a drawn effect that should wait out part of a hold needs and no snapshot field
+        /// carries. Never cleared: a stale entry costs one dictionary slot per pawn the colony
+        /// has ever had, and a pawn that kneels again bumps its serial and re-times itself.
+        /// </summary>
+        readonly Dictionary<int, (byte Serial, float Started)> _gestureBegan = new();
+
+        /// <summary>
+        /// Whether this pawn's current gesture has been running for at least
+        /// <see cref="Gesture.SeedSpecksAfter"/> — the delay the seed
+        /// specks owe the kneel. A serial never seen before records now and answers false, the
+        /// figure-director rule that keeps a colonist walking into view from playing a gesture
+        /// it never made: here it keeps the first frame of a kneel from counting as aged.
+        /// </summary>
+        bool KneelIsOldEnough(PawnId pawn, byte serial)
+        {
+            int id = pawn.Value;
+            if (!_gestureBegan.TryGetValue(id, out var began) || began.Serial != serial)
+            {
+                _gestureBegan[id] = (serial, Time.time);
+                return false;
+            }
+            return Time.time - began.Started >= Gesture.SeedSpecksAfter;
         }
 
         /// <summary>

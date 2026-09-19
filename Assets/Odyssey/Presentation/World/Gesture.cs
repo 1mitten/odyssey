@@ -130,5 +130,21 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static readonly Gesture Sow = new Gesture(
             seconds: 2.6f, depth: 0.33f, downEnds: 0.16f, holdEnds: 0.84f);
+
+        /// <summary>
+        /// How old a sow kneel must be before the seed specks may appear, in seconds of the
+        /// gesture's own clock. Half the motion, which is the middle of the hold — the figure
+        /// is down at the soil and working before the ground shows anything (owner, 2026-09-19:
+        /// *"it should have a delay so the colonist is actually bent down for some time and
+        /// seeds appear"*).
+        ///
+        /// <para><b>A property of the gesture, not a number in the caller.</b> The specks are
+        /// gated on this wherever they are drawn, so retiming the kneel retimes the seeds with
+        /// it and the two cannot disagree — the same argument that gives every swing its price
+        /// in one owner. Measured on the <see cref="GestureSerial"/> clock presentation keeps
+        /// for each figure, because the specks are a drawing of the kneel and owe their timing
+        /// to nothing the simulation stores.</para>
+        /// </summary>
+        public static float SeedSpecksAfter => Sow.Seconds * 0.5f;
     }
 }

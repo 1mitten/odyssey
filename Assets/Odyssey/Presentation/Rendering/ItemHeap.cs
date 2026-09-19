@@ -19,8 +19,9 @@ namespace Odyssey.Presentation.Rendering
     /// drop is two or three rocks and a full stockpile square is a heap of them. That was the
     /// owner's second decision — a bigger pile should look bigger — and count carries it better
     /// than size would: eight stone scaled down to a quarter of a boulder reads as one small rock,
-    /// where three rocks read as three rocks. Nothing else in the game does this, which is the
-    /// cost; rubble is the only thing we own that is genuinely a heap of identical lumps.</para>
+    /// where three rocks read as three rocks. What else in the game does this is a short list —
+    /// mine spoil and a pulled harvest, both genuinely heaps of identical lumps and neither of
+    /// them containerised — which is the cost.</para>
     ///
     /// <para><b>Free, or nearly.</b> Items are already grouped by def and submitted instanced, so
     /// seven rocks in a cell are seven matrices in a buffer that was going to be submitted anyway,
@@ -68,16 +69,24 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// The rubble recipes, by item def index, in <c>ItemIndex</c> order.
+        /// The heap recipes, by item def index, in <c>ItemIndex</c> order.
         ///
-        /// Only what a mine leaves is a heap. Rations come in a crate and wood comes in a bundle,
-        /// and both are drawn by their own prop exactly as before — a null row means "one prop,
-        /// in the middle of the cell", which is what every item did before this existed.
+        /// Rations come in a crate and wood comes in a bundle, and both are drawn by their own
+        /// prop exactly as before — a null row means "one prop, in the middle of the cell", which
+        /// is what every item did before this existed.
         ///
-        /// The three that are heaps share a shape and differ in silhouette, because items carry
+        /// <para>The mine's three share a shape and differ in silhouette, because items carry
         /// no per-item tint and shape is the only axis there is: stone is squat boulders, iron ore
         /// is taller shards, coal is low rubble. The spreads differ with them — a shard needs less
-        /// floor than a boulder.
+        /// floor than a boulder.</para>
+        ///
+        /// <para><b>Carrots are a heap because nothing contains them</b> (owner, 2026-09-19: the
+        /// harvest pile "single carrot … not many carrots visually in the ground as there should
+        /// be" — one prop in the middle of the cell was exactly that fault). And alone of the
+        /// heaps its <see cref="Recipe.Full"/> is the count a harvest actually drops: the carrot's
+        /// own <c>yieldCount</c> is five, and five carrots coming out of a plot that drew five
+        /// plants is the pile saying out loud what the plot just said — so the ramp from one to
+        /// full is the identity, and only past a yield does it stop and the cap hold it.</para>
         /// </summary>
         static readonly Recipe?[] Recipes =
         {
@@ -87,6 +96,7 @@ namespace Odyssey.Presentation.Rendering
             new Recipe(2, Most, 75, 0.62f, 0.22f),       // stone
             new Recipe(2, 6, 75, 0.55f, 0.20f),          // iron ore
             new Recipe(3, Most, 75, 0.66f, 0.18f),       // coal
+            new Recipe(1, Most, 7, 0.45f, 0.18f),        // carrots
         };
 
         /// <summary>Whether this item kind is drawn as scattered rubble at all.</summary>

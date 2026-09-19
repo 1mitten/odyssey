@@ -24,7 +24,7 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void OnlyWhatAMineLeavesIsDrawnAsAHeap()
+        public void OnlyLooseLumpsAreDrawnAsHeaps()
         {
             // Rations come in a crate and wood comes in a bundle. A heap is for lumps.
             Assert.That(ItemHeap.IsHeap(ItemIndex.Meal), Is.False);
@@ -33,6 +33,30 @@ namespace Odyssey.Tests.Presentation
             Assert.That(ItemHeap.IsHeap(ItemIndex.Stone), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.IronOre), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.Coal), Is.True);
+
+            // And a pulled harvest: nothing contains a carrot, and the pile saying "one carrot"
+            // where five came out of the plot is the fault the owner watched (2026-09-19).
+            Assert.That(ItemHeap.IsHeap(ItemIndex.Carrots), Is.True);
+        }
+
+        [Test]
+        public void AFreshCarrotHarvestDrawsItsOwnCount()
+        {
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Carrots, out ItemHeap.Recipe carrot), Is.True,
+                "carrots are a heap");
+
+            // Five plants stood on the plot, five carrots lie on the ground: the pile's count
+            // says out loud what the plot just said (owner, 2026-09-19). Up to a yield the ramp
+            // is the identity, which is what a Full set to the yield count buys.
+            Assert.That(ItemHeap.RockCount(1, carrot), Is.EqualTo(1));
+            Assert.That(ItemHeap.RockCount(3, carrot), Is.EqualTo(3));
+            Assert.That(ItemHeap.RockCount(5, carrot), Is.EqualTo(5),
+                "a five-carrot harvest drew some other number of carrots");
+
+            // And past it the cap holds, exactly as stone's does.
+            int full = ItemHeap.RockCount(40, carrot);
+            Assert.That(full, Is.EqualTo(carrot.Biggest));
+            Assert.That(full, Is.LessThanOrEqualTo(ItemHeap.Most));
         }
 
         [Test]
