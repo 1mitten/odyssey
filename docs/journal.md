@@ -6019,6 +6019,346 @@ Three owner asks in one branch, and the first turned out to be the biggest.
   - **Asserted rather than looked at:** Added `Assets/Odyssey/Presentation/Tests/SelectionCursorTests.cs` verifying the 8-stub topology, exact 8 mm clearance on flat ground and ~8° slopes, straight bank shear slopes, corner rises, and water placement elevation.
   - **Verified:** fast tier **724 Sim + 438 Hud**; EditMode **1752 total, 1738 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
 
+- **Colonist head turning and procedural gaze (2026-09-18, on `claude/colonist-head-turn`).**
+  Colonists previously maintained rigid, forward-locked heads throughout all activities — chopping trees, mining rock, hauling, climbing ladders, and wandering across the meadow.
+  - **Architecture & Seams:**
+    - Presentation-only procedural kinematics (`Assets/Odyssey/Presentation/World/HeadLookKinematics.cs` and `PawnFigureDirector.cs`), completely decoupled from simulation and determinism (`Odyssey.Sim` untouched, zero hash impact).
+    - Transforms applied directly to `Neck` and `Head` bones immediately following `Graph.Evaluate()` in `PawnFigureDirector.ApplyGazePose(deltaTime)`. Runs cleanly on top of `PlayableGraph` without requiring `OnAnimatorIK`.
+    - World-axis rotation application (`rot * bone.rotation` around `chest.up` and `chest.right`): bone rotations are applied around chest reference frame axes rather than arbitrary local bone orientations, ensuring cross-rig consistency across all Synty models.
+    - Reference frame decoupling from Chest/Spine: yaw and pitch are calculated relative to the colonist's upper torso orientation, ensuring that terrain slopes, locomotion leans, and crouch animations do not produce unnatural axial roll.
+  - **Anatomical 30/70 Partition & Limits:**
+    - Distributed 30% to `Neck` and 70% to `Head` (research `e-06-head-look-kinematics.md`). Low-poly character meshes have minimal neck topology; applying 100% to head causes severe mesh twisting/pinching, while rotating neck alone produces a stiff robotic column. 30/70 gives natural cervical curvature without polygon collapse.
+    - Clamped to natural anatomical limits: yaw $\pm 60^\circ$, pitch down $-40^\circ$ (depression), pitch up $+35^\circ$ (elevation).
+    - Cubic smoothstep rear hemisphere attenuation: targets beyond $60^\circ$ yaw attenuate to 0 weight by $95^\circ$, preventing backward neck-snapping when a target moves behind the character.
+    - Smooth damping via `Mathf.SmoothDampAngle` ($300^\circ$/s max speed, 0.12s smooth time) produces organic saccadic head movement.
+  - **6-Tier Pre-emptive Gaze Arbiter:**
+    1. `SleepLock` (Tier 6): When asleep or in a bed, gaze weight immediately drops to 0, leaving the sleeper pose natural and resting.
+    2. `LadderTraversal` (Tier 5): Climbing pawns look up ($+30^\circ$ pitch) when ascending or down ($-35^\circ$ pitch) when descending.
+    3. `WorkFocus` (Tier 4): Working pawns dynamically track `WorkCentre` in world space, actively looking at the tree trunk while chopping, rock face while mining, or ground crop while sowing/harvesting.
+    4. `SocialPassing` (Tier 3): Detects oncoming colonists within 6 m (~2.5 cells) and turns gaze toward the passing colonist's head for 1.3 s with a 20 s cooldown.
+    5. `AmbientWander` (Tier 2): Idle and walking pawns occasionally look around ($\pm 15^\circ$ to $\pm 35^\circ$ yaw, $\pm 8^\circ$ pitch) for 1.2–1.8 s.
+    6. `PathForward` (Tier 1): Default forward-facing gaze (3.0–6.0 s dwell), with job-specific posture pitch offsets (hauling/delivering carries $-12^\circ$ downward tilt; eating carries $-25^\circ$ downward gaze).
+  - **Zero Allocations & Deterministic Cadence:**
+    - `LookGazeState` is a pure struct stored inline in `PawnFigureDirector.Figure` (0 B GC.Alloc).
+    - Cadence and ambient glance angles are derived from lightweight pseudo-random hashing seeded by pawn ID and state timers, completely independent of `UnityEngine.Random`.
+  - **Tests & Verification:**
+    - Unit test suite in `Assets/Odyssey/Presentation/Tests/HeadLookKinematicsTests.cs` (15 tests covering look-at trigonometry, reference frames, rear attenuation, limits, 30/70 partition, head-only fallback, ladder angles, hauling/eating posture offsets, and smooth neutral return).
+    - Fast tier: **724 Sim + 438 Hud passed**.
+    - EditMode: **1767 total, 1753 passed, 0 failed**.
+    - PlayMode: **82 total, 77 passed, 0 failed**.
+    - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
+- **Head turning refinement: pure cervical axial swivel and felling target elevation (2026-09-18, on `claude/colonist-head-turn`).**
+  Owner PlayMode testing reported two distinct visual issues: (1) heads tilting in strange ways instead of cleanly swivelling left/right sat on the neck, and (2) colonists chopping trees looking down at the ground rather than at the tree trunk.
+  - **Root Causes:**
+    1. Using `refFrame = Chest` coupled with a 30% rotation on `Neck` rotated the head around an oblique axis whenever the chest leaned during walking or swung during an axe stroke, forcing the skull into an eccentric cone and inducing severe ear-to-shoulder roll (lateral flexion).
+    2. Odyssey cell origins are at floor level ($Y = 0$). Colonists have eye height at $Y \approx 1.4$ m. Directing `WorkFocus` at `figure.WorkCentre` aimed at the dirt roots 2.5 m away ($\approx -35^\circ$ pitch), pulling the head down to its maximum chin-chest depression limit.
+  - **Refined Kinematics & Fixes (`docs/research/e-07-head-axial-rotation-and-felling-gaze.md`):**
+    1. **Pure Head-Only Rotation Sat on Neck (0% Neck, 100% Head):** The `Neck` bone remains static as a stable mounting post. Rotation is applied solely to the `Head` bone around the neck's longitudinal cervical axis (`neck.up` in world space) for yaw and transverse condyle axis (`neck.right`) for pitch. This produces clean left/right looking around sat on the neck with mathematically $0.0^\circ$ ear-to-shoulder roll.
+    2. **Felling & Mining Work Target Elevation (+1.30m):** `TargetWorldPosition` during `WorkFocus` is elevated by $+1.30$ m above cell base floor level (`figure.WorkCentre + Vector3.up * 1.30f`). This brings the gaze to near-level ($\approx -2.3^\circ$), keeping the colonist focused directly on the tree trunk notch and foliage.
+  - **Tests & Verification:**
+    - Updated `Assets/Odyssey/Presentation/Tests/HeadLookKinematicsTests.cs`: verified Neck remains untouched (`Quaternion.identity`), Head receives 100% of yaw and pitch with exact $0.0^\circ$ roll, and felling target elevation yields $-2.3^\circ \pm 1.0^\circ$ pitch.
+    - Fast tier: **724 Sim + 438 Hud passed**.
+    - EditMode: **1767 total, 1753 passed, 0 failed**.
+    - PlayMode: **82 total, 77 passed, 0 failed**.
+    - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
+- **Head turning: eliminating ear-to-shoulder roll with orthonormal LookRotation (2026-09-18, on `claude/colonist-head-turn`).**
+  Owner testing identified that while walking around and chopping, colonist heads were rolling (lateral tilt) rather than cleanly yawing left/right and pitching up/down: *"the head is rolling, - it needs to yaw to look left and right and pitch up and down slightly. When walking around"*.
+  - **Empirical Diagnosis & Root Causes:**
+    1. **Additive Multiplication on Swaying/Pitched Bones:** `ApplyAdditiveRotation` previously used `head.rotation = headRot * head.rotation`. In locomotion clips (walk/run), the pelvis and spine sway laterally with each step. In work poses (felling/mining), the spine is pitched and twisted by the diagonal axe swing (`SwingAxis` has 30° tilt). Multiplying an incremental rotation onto an already-swayed/twisted bone compounded with the torso tilt, converting horizontal yaw into diagonal ear-to-shoulder roll.
+    2. **Un-yawed Pitch Axis Cross-Product:** Applying yaw and pitch via separate Euler-style factors (`yawRot * pitchRot`) without turning the pitch axis with the yaw produced cross-axis roll proportional to $\sin(\text{yaw}) \times \sin(\text{pitch})$ whenever both angles were active.
+    3. **Double Application in Test/Editor Loops:** `PawnFigureDirector` runs `ApplyGazePose` in both `Sync` and `Evaluate`. Because the Synty locomotion clips do not key the `Head` bone, `Graph.Evaluate` never reset the head rotation between the two passes, causing additive angles to double within a single frame in editor harnesses.
+  - **The Orthonormal Solution (`HeadLookKinematics.ApplyAdditiveRotation`):**
+    - Head orientation is computed from the smoothed gaze angles as an **absolute orientation** rather than an incremental delta:
+      1. Construct the gaze direction in body space: `localDir = Quaternion.Euler(-pitch, yaw, 0f) * Vector3.forward`.
+      2. Transform to world space: `worldDir = referenceFrame.TransformDirection(localDir)`.
+      3. Align the head via `Quaternion.LookRotation(worldDir, yawAxis)`.
+    - By construction, `Quaternion.LookRotation(worldDir, yawAxis)` forces the head's local upright to align strictly with the body's upright (`figure.Transform.up`), guaranteeing **mathematically $0.0^\circ$ ear-to-shoulder roll** regardless of spine bending or torso tilt.
+    - Because the target orientation is absolute, running across both `Sync` and `Evaluate` produces the identical rotation and **cannot accumulate or drift**.
+    - During ambient wandering and walking, the head turns cleanly left and right in pure yaw, nodding slightly in pitch, with zero lateral tilt.
+    - During chopping and mining, the head faces squarely at the tree trunk/rock face at chest level ($+1.30$ m) with level ears, confirmed visually in contact sheets `Logs/swing-impact.png` and `Logs/swing-4.png`.
+  - **Verified:** fast tier **724 Sim + 438 Hud passed**; EditMode **1767 total, 1753 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content gates clean.
+
+
+
+### Nothing grows at the foot of a terrace step (2026-09-18, branch `claude/terrace-foot-guard`)
+
+Owner: *"The flat side of the terrain where the height changes, we created a façade of terrain but
+the problem is that things generate in those tiles … Trees shouldn't be generated in those spots
+because they get clipped by this façaded terrain."* The design is
+`docs/design/22-terrace-steps.md`; what is worth keeping is why it could not be one line.
+
+- **The bank is a façade, and that was the point until something stood in one.** A bank fills the
+  empty cell at the foot of a terrace step from the floor to the rim above, and nothing in
+  `Odyssey.Sim` knows it exists — not pathable, not saved, not hashed, like ground relief and grass
+  tufts. That was harmless while the only question was what to draw. It stopped being harmless when
+  the generator put a tree in the cell: the wedge of hillside shears the trunk off. A *walking*
+  colonist is fine, because `PawnPose` lifts a figure onto the bank's surface — which is the reason
+  the fault reads as an art bug rather than as a placement one.
+- **The rule had to be stated twice, so it is checked rather than trusted.** `BankLayout` reads the
+  render mirror; worldgen has a `CellGrid` and no mirror. One function could not serve both, so
+  there is a second owner — `TerraceFoot.IsFoot` — and `TerraceFootTests` walks **every cell** of
+  seven boards requiring the two answers to be identical: a one-layer step, flat ground, a two-layer
+  riser, a rock face, a plateau corner, a notch, a quarry, ground under a roof. Four of those seven
+  are boards where the interesting answer is *no bank*, which is where two copies of a rule usually
+  drift apart.
+- **The diagonal is the clause a hand-written guard would have missed.** A bank stands against an
+  orthogonal step, or — where there is none — against a diagonal one: the outside-corner piece that
+  wraps a convex corner, added when a run of banks was found to have a square bite out of it at
+  every corner. So the guard reads eight neighbours, not four.
+- **"Which terrains are earth" became one list on the way past.** It was `GroundLook.IsEarth`, a
+  drawing judgement, and the step test needs the same judgement — earth spills down a step, stone is
+  sheer. It is now `NaturalContent.IsEarth` with `GroundLook` calling it. A second copy would have
+  been wrong the first time a soil was added and the symptom would have been a tree in a bank.
+- **Measured, not estimated: 122 of some 1,600 would-be trees on the played board**, about one in
+  thirteen, all along terrace edges (seeds 1, 7 and 42 give 122, 118, 122). The density roll is
+  still drawn per column whatever the terrain, so the guard thins the wood along steps without
+  reshuffling it anywhere else.
+- **Three pinned numbers moved and the shape of the move is the evidence.** The wooded golden's two
+  values and the six `dry` hashes in `WaterTests` moved, because a tree is an edifice in the grid.
+  The barren meadow's golden, the ruined city's golden and all six `barren` hashes are
+  byte-for-byte what they were — measured by running the tables before re-baking and reading which
+  assertions failed. A guard on `TreePass` can reach no board that has no `TreePass`, and anything
+  else moving would have meant something had come along uninvited.
+- **What was deliberately not done.** The owner also reported a colonist sleeping in one and
+  disappearing: *"not sure what to do to prevent sleeping in that spot"*. Two candidates are written
+  down in §4 of the design — refuse the lie-down spot, or refuse a bed there — and both change the
+  state hash, so they want a decision rather than a guess. The predicate is in place for whichever
+  is chosen. Walking is untouched on purpose: the cell is the take-off cell for the hop, and the
+  bank is drawn there to make that hop legible.
+- **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1756 total, 1742 passed,
+  0 failed**; PlayMode **82 total, 77 passed, 0 failed**; both content checks current.
+
+### A colonist climbed a terrace faster than one walking beside it (2026-09-18, branch `claude/terrace-foot-guard`)
+
+Owner, after the first look in play: *"Would it be possible to make the terrace step, if going down
+the terrace step, you go a bit faster and if you going up, you go a bit slower … ensure the
+animation/motion adjusts accordingly."* Then, having watched one: *"The colonists looked too fast
+going up definitely … should be much slower."* The design is `docs/design/22-terrace-steps.md` §4b.
+
+- **The asymmetry already existed, and was not the point.** Up was 135, down 50, flat 100 — down
+  already 2.7 times quicker than up. The first answer to the question was therefore "it already does
+  this", with the numbers. What the question found was a different fault underneath it.
+- **The fault was in metres per second, not in the ratio.** A hop is *drawn* along the slope between
+  two cell centres: 2.5 m across and 3.0 m up is **3.91 m**. At 135 — 2.25 s — that is **1.74 m/s**,
+  against **1.50 m/s** for walking a flat cell. Climbing a terrace was literally quicker than
+  strolling beside it. Nobody had measured the drawn path; the cost had only ever been compared with
+  the cost of a flat cell, where 135 against 100 looks like effort.
+- **So the new price is derived, and it is bounded on both sides.** Floor **156**, where a climb
+  stops being drawn faster than a walk; ceiling **290**, `StairUp`, past which a colonist walks to a
+  stair rather than hopping one block and a terraced board stops being crossable. **240** — 4.0 s,
+  0.98 m/s along the slope — sits between them, and is still 11% quicker than the 270 that read as
+  *stuck* the last time this constant was retuned. Both bounds are now assertions, so the fault
+  cannot come back as a tuning.
+- **The motion had to land with the price, or 240 would have been 270 again.** 270 failed because a
+  slow slide up a bank is a colonist stuck on a hill. A hop is now drawn as a hop: `HopArc` gathers
+  for 0.48 s, leaves the ground on a **solved parabola** that passes exactly 0.35 m over the lip and
+  comes down onto it as the step ends.
+- **The arc takes the real rise, and the first cut did not.** A colonist standing in the cell at the
+  foot of a terrace is already half way up the bank, so the climb is about 1.5 m and not the 3.0 m
+  of a layer. The first version added a fixed arch to a fixed climb and cleared the lip by **15 cm
+  while claiming 35** — the two curves were fighting each other. Caught by the test that asserts the
+  clearance on the board rather than on the curve, which is why that test was written that way.
+- **A drop is a square, and the number fell out of what was already written down.** `MoveCost.Drop`
+  is 0.83 s; a 3.0 m free fall takes 0.78 s; the difference is the step off the edge. The implied
+  acceleration is 9.78 m/s², and the test pins it to gravity — so retuning the drop fails a test
+  instead of quietly making colonists fall at the wrong speed.
+- **One clamp replaced a hand-faded lift.** The descent used to fade its bank rise out over the step
+  because taking the ground's maximum would hold the figure to the edge and drop it 1.5 m in a
+  frame. With a ballistic curve the maximum is right for both halves: the body stays on the slope
+  until the slope falls away faster than it does. Fewer rules, and the one that is left is physical.
+- **The gait is held through a hop, because it is solved from horizontal speed and a hop is not
+  ground locomotion.** Measured: a drop crosses a cell at 3.0 m/s, past the fastest gait this cast
+  owns (2.60 m/s), so stepping off a terrace pinned the run cycle and rate-stretched it for eight
+  tenths of a second. A climb at 240 is the opposite — 0.63 m/s across the cell, a third of the idle
+  blended in, a dawdle. Holding the stride covers both; the price is a few frames of sliding during
+  the gather, which is why the gather is short.
+- **A stair would have been drawn vaulting up its own stairwell.** `NavGraph.IsHop` is pure geometry
+  — one layer, one cell across — which is exactly the shape of a stair step. The simulation
+  separates them with `UpperEndIsABlockTop`: you hop onto ground and take a stair to a storey. That
+  second clause is in `PawnPose.IsDrawnAsAHop` with a test, written now, before `U44` lands, because
+  nothing would have failed when it did.
+- **The re-bake has the sharpest control this table has had.** Both boards with steps on them moved
+  their `Simulated` value and nothing else moved at all — no `Generated` value, because a price is
+  not content and nothing is placed differently, and **not one number on the barren meadow**, which
+  is a flat table with no step to hop.
+- **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1771 total, 1757 passed,
+  0 failed**; PlayMode **82 total, 77 passed, 0 failed**, so the frame budget is unmoved by the arc.
+
+### The climb stopped being a jump and became four strides (2026-09-18, branch `claude/terrace-foot-guard`)
+
+Owner, on the arc that had just landed: *"when going up hill - it looks like they jump a bit and not
+flat with the terrain - which they should be. The motion animation, doesn't quite match, would it be
+possible they take actual steps up the terrain in a few motions."*
+
+- **The arc was answering the simulation's word rather than the board's picture.** The simulation
+  calls this step a *hop* — `MoveCost.JumpUp`, "a colonist can jump if they need to get up a +1
+  height block" — so the first cut drew a jump: a solved parabola over the lip. But the board has a
+  **bank** under that step, and `BankMesh.HeightAt` is a plane from the lower floor to the upper
+  rim: a walkable ramp the whole way. A body arcing over a surface it could be walking on is a body
+  ignoring the ground it is on, and that is exactly what the owner saw. The lesson is small and
+  general: *the drawn motion has to answer to what is drawn, not to what the mechanic is called.*
+- **So the climb became a function of height rather than of time.** `HopArc.Stepped` takes the
+  drawn ground under the walker, the height being climbed on to and the whole rise, and hands back
+  the tread the figure has its weight on. The shape of the bank therefore decides where the strides
+  fall: flat ground gives no rise, steep ground gives them close together. Nothing about it is
+  parameterised on the duration, so retuning the price cannot change the stepping.
+- **The stride count comes out of the height.** `PreferredTread` is 0.4 m, so a terrace's 1.5 m is
+  four strides of 0.375 m and a layer-high climb is eight. Fixing the *count* instead would draw a
+  small step and a tall one in the same number of motions, which is the thing that would read as
+  wrong at whichever end was not tuned for.
+- **Stepping means leading the slope, and there is no way round it.** The figure is drawn at the
+  tread it has stepped on to while the ramp beneath catches up — up to two thirds of a tread ahead,
+  because your hips go up when your foot does. Quantising the other way makes the body sink into the
+  hillside and the clamp then erases the whole effect. The honest alternative is foot IK, which is a
+  different piece of work; the lever meanwhile is `PreferredTread`, where smaller reads as gliding
+  and larger as floating.
+- **A sheer face nearly shipped as a three-metre teleport.** A bank is refused against rock, inside a
+  working and under a roof. There the ground under the walker is flat for the first half of the step
+  and jumps a whole layer at the midpoint, because that is what `over` does — so a purely
+  ground-driven climb would have drawn a colonist standing still and then teleporting. Caught by
+  reasoning about the fixture rather than by a test, and then given both: the straight chord sits
+  under the strides as a floor, and `ASheerFaceIsClimbedSmoothlyRatherThanInStrides` measures the
+  largest single frame of such a climb.
+- **What is still owed is the cadence.** The gait is held through a hop, so the legs keep the rhythm
+  they arrived with while the body pushes up each tread. If that reads as sliding, the answer is a
+  computed climb pose in the manner of `WorkSwing` — no pack we own has the clip — rather than
+  solving the gait from a speed that swings between a push and a plant.
+- **Not verified in Unity at the time of writing.** The owner's editor is open on this worktree
+  (`odyssey-inspect`, the Play scene), which locks the project against a batch run, and
+  `docs/lessons.md` is explicit that one must not be killed. The fast tier does not compile
+  presentation, so this revision has its arithmetic reviewed and not run. Verified on a scratch
+  worktree instead — see the commit that follows.
+
+### The stride that could not be drawn, and the two teleports it found (2026-09-18, branch `claude/terrace-foot-guard`)
+
+The stepping climb of the previous entry did not survive its first honest measurement, and what it
+turned up had been in the game far longer than it had.
+
+- **A percent was too coarse to draw a stride with.** `PawnView.MovePercent` is a whole percent of
+  the step, and the sub-tick term cannot rescue it: at 60 frames and 60 ticks a second there is about
+  one frame to a tick and the leftover is nearly nought, so the figure advances by whatever the
+  published number advanced. On a flat cell that is exactly one point a tick, because a flat cell
+  costs 100 — which is why nobody has ever seen it. On a 240-tick hop it is a whole point every 2.4
+  ticks: two frames still, then a jump. Measured at **25 mm on the flat and 134 mm up a terrace**
+  once the climb was drawn in strides, against the 50 mm `BankFootingTests` allows a frame.
+- **The probe that said so was wrong twice before it was right**, which is the lesson worth keeping.
+  The first version sampled only at `tickAlpha = 0`, so both arms of the comparison collapsed to the
+  same number and appeared to exonerate the sub-tick term; the second measured per percent, which is
+  a granularity the game no longer has. `PawnView.MovePerMille` is the fix — ten times the
+  resolution, published beside the percent rather than instead of it — and `BankFootingTests.WorstJump`
+  now samples per mille, because an instrument coarser than the thing it measures reports
+  quantisation as a teleport.
+- **Then the sheer face, which had been snapping 1.51 m since hops were first drawn.** With no bank
+  there is no ramp, so the ground under the walker is flat for half the step and jumps a whole layer
+  at the midpoint, when the cell it is over changes. Every climb curve timed across the whole step
+  therefore reached half its height and was then clamped the rest of the way in one frame. **No test
+  saw it because every fixture had a bank in it** — the same shape as the grass-tuft and bank faults
+  before it: the fixture chose the case. A sheer climb now hauls up over the first half and walks
+  forward over the second, peaking at 38 mm a frame.
+- **And its mirror, 657 mm, on a sheer drop.** The clamp holds the figure on the upper floor until
+  the boundary — rightly, it is standing on the ledge — so a fall timed across the whole step was
+  66 cm below the ledge by the time the clamp let go. Timed into the second half instead, the release
+  is continuous and what is left is 250 mm a frame: three metres inside the 25 ticks that half of
+  `MoveCost.Drop` buys. That one is geometry, not curve, and it is pinned rather than papered over.
+- **The stride is as concentrated as the frame budget allows.** 50 mm a frame is twice what an honest
+  frame of walking moves, and a terrace's 1.5 m of rise inside half a 240-tick step is 25 mm a frame
+  spread evenly. Concentrating it into a fraction *P* of each stride multiplies that by 1.5/*P*, so a
+  third failed at 57 mm and a half passes at 38. Making the push snappier means slowing the climb,
+  not steepening the curve.
+- **Every one of these was found by measuring rather than by reading.** Three of the four were the
+  opposite of what the code suggested, which is the fourth time this project has recorded that
+  sentence.
+- **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1776 total, 1762 passed,
+  0 failed**; PlayMode **82 total, 75 passed, 0 failed**. Both Unity tiers ran on a scratch worktree
+  because the owner's editor held `odyssey-inspect`, and that is why PlayMode passed 75 where the
+  same suite passes 77 on the real checkout: a scratch worktree has no `Assets/Synty` junction, so
+  the two portrait tests skip for want of the packs. Nothing this branch touches goes near them.
+
+### The ramp is one slope and the game charged it as two steps (2026-09-19, branch `claude/terrace-foot-guard`)
+
+Owner, on the third look: *"The slowness needs to start happening much earlier when entering the
+beginning of the tile while going up and then reaching the top back to normal — it seems to be doing
+it 75% up — you slow down and then you seem to still go slow on the flat so it's out of sync."* The
+design is `docs/design/22-terrace-steps.md` §4c.
+
+- **A seam, not a curve.** The bank spans one cell; a step spans two half-cells. So the drawn ramp is
+  split down the middle of the foot cell between two steps priced for different things: the walk
+  *into* the cell at flat-grass price, drawn at **1.9 m/s**, and the hop *out* of it at 240, drawn at
+  0.62 — which also kept paying that price across the flat top. Both of the owner's complaints are
+  that one seam, from either side of it.
+- **The same fault as the first report, one step earlier.** A step priced for flat ground was being
+  drawn along 3.2 m of path. That is exactly what `MoveCost.JumpUp` was re-derived for two days ago;
+  nobody had asked the question of the step *before* the hop.
+- **So the simulation learned that a slope is a slope.** A terrace foot carries a cost class of its
+  own, worth `JumpUp − Orthogonal`, and that subtraction lives in `NavGrid.cs` beside the hop price
+  because the two must be equal: if they differ, a colonist changes speed half way up a slope that
+  does not change. `HopPriceHasOneOwnerTests` refused the first attempt, which named `MoveCost.JumpUp`
+  from the content table — rightly, and the fix was to put the arithmetic where the guard allows it
+  rather than to exempt the line.
+- **A cell carries one cost, so walking *along* a terrace foot is slow too.** That was the owner's
+  choice between three options, and it is the honest one: the figure is drawn part way up a tilted
+  surface whichever way it crosses. Colonists now prefer the flat line one cell out.
+- **Presentation spends each step's time where the climbing is.** `StepPace` models a step as three
+  heights and weights its two halves by what they cost to cross, a metre of rise counting 2.3 metres
+  of ground — derived from the prices rather than chosen, so it cannot drift from them. On flat
+  ground the two halves weigh the same and the pacing is the identity, which is what keeps an
+  ordinary walk untouched.
+- **The goldens did not move, and that needed explaining rather than accepting.** A cost change that
+  shifts no hash is either inert or lucky. It is lucky: the three golden windows are a flat meadow, a
+  start clearing chosen for being flat, and a city of pavement — not a bank between them. So
+  `TerraceSlopeCostTests` asserts the price directly, including that mining the step away takes the
+  slope with it, which is the case `NavGraph.MarkDirty` had to grow a neighbour scan for: a cost that
+  reads the cells *beside* a cell is the first one this grid has had.
+- **Four regressions, and three of them were instruments.** The one real bug was walking *off* a
+  bank: `HopArc.Stepped` returned `max(ground, landing)` where there was nothing to climb, which
+  pinned the figure at the top of the ramp for the whole step and dropped it 1.5 m in the last frame
+  — caught by a test that has been measuring that crossing since long before any of this. The other
+  three were tests sampling the ground at the clock's position rather than the figure's, which are
+  the same thing only while time is distance. They are not any more, and that is the change working.
+- **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1781 total, 1767 passed,
+  0 failed**; PlayMode **82 total, 75 passed, 0 failed** (the scratch worktree has no Synty
+  junction, so the two portrait tests skip there — see the previous entry).
+
+### Two inventions removed, and the hitch that was there all along (2026-09-19, branch `claude/terrace-foot-guard`)
+
+Owner: *"It still doesn't look quite right — can we keep it simple and it's a consistently slow speed
+from top to bottom and motions exactly just above the terrace surface as it jolts and jitters the
+colonists at certain points and smoother is preferred and predictable."*
+
+- **Both of the things that jolted were mine.** A hop up a terrace has been drawn three ways in two
+  days: a solved parabola over the lip (reported as jumping), strides up the treads (reported as
+  jolting), and now the ramp itself. The board had answered the question before either was written —
+  `BankMesh.HeightAt` is a plane, so there is a surface the whole way and the right height for a
+  climbing figure is that surface, sampled where it stands. **The lesson is the general one: when a
+  drawn thing already exists, read it; do not model it.** A model of a surface can disagree with the
+  surface, and the three-height model does exactly that at a corner, where the bank is two planes.
+- **The strides could not have been smooth, and the arithmetic says so.** A stride is a hold and a
+  push: it concentrates a climb's motion into part of its time, by construction. The only question
+  was how much, and the answer — capped by the 50 mm a frame may move — was a rhythm either way.
+  Something asked for as *a few motions* and something asked for as *smooth and predictable* are the
+  same request read two ways, and the second reading is the one that survives contact.
+- **The smoothness test then found a hitch that predates every bit of this.** `MovePercent` is a
+  whole percent, so a 240-tick step spends its first 2.4 ticks at nought percent — and every reader
+  gated on `MovePercent > 0` drew the figure standing still through them and caught it up in one
+  frame. Measured at **30 mm against the 10 mm a frame that climb moves**. It has been in the game
+  since any step cost more than 100 and nobody has ever reported it, because on a flat cell it does
+  not happen at all. `PawnView.Moving` is the fix, and the pose, the climb phase and the gait hold
+  all read it.
+- **A test that measures variation rather than a maximum is what caught both.** A hold-and-push
+  rhythm passes "no frame moves more than 50 mm" comfortably. `AClimbIsSmoothFrameToFrameAllTheWayUp`
+  requires the largest frame on the ramp to be under 1.5× the smallest, which is a statement about
+  *evenness*, and it is the assertion the owner's word "predictable" translates into.
+- **What is left, measured:** 9.9 to 12.3 mm a frame all the way up the ramp — the spread is per-mille
+  rounding and nothing else — and one 30 mm frame where the ramp's 0.62 m/s meets the flat top's
+  1.5 m/s. That junction is the terrain changing and is left alone.
+- **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1777 total, 1763 passed,
+  0 failed**; PlayMode **82 total, 75 passed, 0 failed** (scratch worktree, so the two portrait
+  tests skip for want of the Synty junction).
+- **Re-verified on the merge with main** (head turning, the flush selection cursor), this time on
+  the real checkout with the packs: fast tier **730 + 438**, Long **21**, EditMode **1798 total,
+  1784 passed, 0 failed**, PlayMode **82 total, 77 passed, 0 failed**, both content gates clean.
 80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
 all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
 render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written

@@ -173,10 +173,17 @@ namespace Odyssey.Tests.Sim
         ///
         /// <para><b>The counts are small, and that is itself the finding.</b> On seed 1 the demo
         /// takes 9 connector steps against 31 hops: most of its vertical movement is now hops, not
-        /// stairs, because a hop costs 135 against a stair's 290 and the city is built of
-        /// one-block rubble. M2's claim that an ordinary day exercises the stair connectors is
-        /// therefore weaker than it was — true, but carried by single figures. Widening the gap
-        /// again means making the map want a stair, not tuning this test.</para>
+        /// stairs, because a hop is cheaper than a stair's 290 and the city is built of one-block
+        /// rubble. M2's claim that an ordinary day exercises the stair connectors is therefore
+        /// weaker than it was — true, but carried by single figures. Widening the gap again means
+        /// making the map want a stair, not tuning this test.</para>
+        ///
+        /// <para><b>The gap narrowed on 2026-09-18</b>, when <c>MoveCost.JumpUp</c> went from 135 to
+        /// 240 against that same 290 — so a hop is now barely cheaper than a stair and this balance
+        /// is closer than it has ever been. The counts above were measured before that and are not
+        /// re-measured here, because what this test asserts is a ratio between two configurations
+        /// and not either count. If it ever starts failing on the threshold, read this paragraph
+        /// first: the fix is the map, or the price, and not the number in the assertion.</para>
         ///
         /// <para>It is one test running both configurations rather than two tests with a magic
         /// number each, because the claim is a comparison and nothing else. "Never touches a stair"

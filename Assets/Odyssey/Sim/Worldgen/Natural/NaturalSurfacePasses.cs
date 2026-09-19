@@ -286,6 +286,18 @@ namespace Odyssey.Sim.Worldgen.Natural
                 int treeIndex = groundIndex + ctx.Size.LayerStride;
                 if (treeIndex >= ctx.Size.CellCount) continue;           // no room above; cannot happen after the clamp
 
+                // **Nothing grows at the foot of a terrace step.** The cell is walkable and stays
+                // walkable, but presentation fills it with a bank — a wedge of hillside spilling
+                // down from the ground above — and a tree standing in one is sheared off by it
+                // (owner, 2026-09-18). The step is geometry, not luck, so this is a guard at
+                // generation rather than a look fixed afterwards. See TerraceFoot, and
+                // docs/design/22-terrace-steps.md for what may be allowed back into these cells.
+                if (TerraceFoot.IsFoot(ctx.Grid, x, z, surface + 1))
+                {
+                    ctx.Report.TreesRefusedOnTerraceSteps++;
+                    continue;
+                }
+
                 ushort def = species < gen.broadleafChance
                     ? NaturalContent.EdificeTreeBroadleaf
                     : NaturalContent.EdificeTreeConifer;

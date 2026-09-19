@@ -185,6 +185,15 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float? ForceSwim { get; set; }
 
+        /// <summary>Force every figure to look at this world point. Harness only.</summary>
+        public Vector3? ForceGazeTarget { get; set; }
+
+        /// <summary>Force every figure to these gaze angles (pitch x, yaw y). Harness only.</summary>
+        public Vector2? ForceGazeAngles { get; set; }
+
+        /// <summary>Force every figure to this gaze priority. Harness only.</summary>
+        public GazePriority? ForceGazePriority { get; set; }
+
         /// <summary>
         /// How far the last drawn crouch took the hips below where the animation had them, in
         /// metres.
@@ -268,6 +277,15 @@ namespace Odyssey.Presentation.World
 
         /// <summary>The same for the working hand's palm. Diagnostic.</summary>
         public Vector3 MeasuredPalmLocal { get; private set; }
+
+        /// <summary>Maximum absolute gaze yaw applied on the last posed frame, in degrees. Diagnostic.</summary>
+        public float MeasuredGazeYaw { get; private set; }
+
+        /// <summary>Maximum absolute gaze pitch applied on the last posed frame, in degrees. Diagnostic.</summary>
+        public float MeasuredGazePitch { get; private set; }
+
+        /// <summary>Highest active gaze priority applied on the last posed frame. Diagnostic.</summary>
+        public GazePriority ActiveGazePriority { get; private set; }
 
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
@@ -870,6 +888,8 @@ namespace Odyssey.Presentation.World
             Retire();
             ApplyFooting();
             ApplyWorkPose();
+            CheckSocialGreetings();
+            ApplyGazePose(deltaTime);
         }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
@@ -897,6 +917,7 @@ namespace Odyssey.Presentation.World
             }
             ApplyFooting();
             ApplyWorkPose();
+            ApplyGazePose(deltaTime);
             // The chips as well: under the player loop Unity steps them, and in an editor tool
             // with no player loop nothing does, so a photographed blow would throw wood that
             // never moved. Stepping them here costs the game nothing, because the game never
@@ -998,12 +1019,31 @@ namespace Odyssey.Presentation.World
         /// weight to 99% idle in ten frames, 0.167 s: a figure that visibly snapped to a standing
         /// pose the instant the player pressed space. Held instead, it keeps the stride it was
         /// drawn in and picks the walk straight back up when the world moves again.</para>
+        ///
+        /// <para><b>And held through a hop, for the same reason in a different disguise</b>
+        /// (2026-09-18). A hop is not ground locomotion: after the gather the figure is in the air,
+        /// and the horizontal speed it happens to be carrying there is an artefact of what the step
+        /// costs. Measured both ways at the old price: a drop crossed a cell at <b>3.0 m/s</b>,
+        /// past the fastest gait this cast owns (2.60 m/s), so a colonist stepping off a terrace
+        /// pinned to the run cycle, played it rate-stretched for eight tenths of a second and
+        /// snapped back to a walk. A climb at the new price is the opposite fault — 0.63 m/s across
+        /// the cell, which blends a third of the idle in and reads as a dawdle up the hillside,
+        /// which is precisely what the last retune of <c>MoveCost.JumpUp</c> produced and was
+        /// rejected for. Holding the stride the figure arrived with covers both: the legs keep the
+        /// cadence they had, and the <see cref="HopArc"/> does the talking.</para>
+        ///
+        /// <para>The cost of holding is that the cadence does not answer to the strides the climb
+        /// is drawn in: the body pushes up on to each tread and the legs keep the rhythm they
+        /// arrived with. If the feet ever read as sliding up the bank, this is the line to look at
+        /// — and the honest answer then is a climb pose, which no pack we own contains, rather than
+        /// solving the gait from a speed that swings between a push and a plant.</para>
         /// </summary>
         public static float ObserveSpeed(float previous, Vector3 simPosition, Vector3 position,
-            float deltaTime, bool settled)
+            float deltaTime, bool settled, bool hopping = false)
         {
             if (!settled) return 0f;
             if (deltaTime <= 1e-5f) return previous;
+            if (hopping) return previous;
 
             Vector3 moved = position - simPosition;
             moved.y = 0f;
@@ -1153,7 +1193,7 @@ namespace Odyssey.Presentation.World
             // If lifts ever land this has to become a question about the connector's KIND rather
             // than its geometry, because a lift is vertical and you stand in it.
             bool straightUp = pawn.NextCell.X == pawn.Cell.X && pawn.NextCell.Z == pawn.Cell.Z;
-            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y && straightUp
+            figure.ClimbPhase = pawn.Moving && pawn.NextCell.Y != pawn.Cell.Y && straightUp
                 ? HeldClimbPhase ?? Mathf.Clamp01(pawn.MovePercent * 0.01f)
                 : -1f;
 
@@ -1292,7 +1332,8 @@ namespace Odyssey.Presentation.World
             // nothing about ticks. A figure that has just been leased has no previous position
             // worth differencing, hence Settled.
             bool settled = figure.Settled;
-            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled);
+            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled,
+                hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
             figure.Settled = true;
             figure.SimPosition = position;
 
@@ -1417,6 +1458,7 @@ namespace Odyssey.Presentation.World
             }
 
             Blend(figure, figure.Speed, running);
+            UpdateFigureGaze(figure, in pawn, deltaTime, running);
         }
 
         /// <summary>
@@ -1464,6 +1506,178 @@ namespace Odyssey.Presentation.World
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
                 figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
             }
+        }
+
+        void UpdateFigureGaze(Figure figure, in PawnView pawn, float deltaTime, bool running)
+        {
+            if (!running) return;
+
+            if (figure.Gaze.SocialCooldown > 0f)
+                figure.Gaze.SocialCooldown -= deltaTime;
+
+            // Posture pitch offsets from job (e.g. hauling goods, eating meals)
+            if (pawn.JobDef == JobHandle.Haul || pawn.JobDef == JobHandle.Deliver)
+                figure.Gaze.PosturePitchOffset = -12f;
+            else if (pawn.JobDef == JobHandle.Eat)
+                figure.Gaze.PosturePitchOffset = -25f;
+            else
+                figure.Gaze.PosturePitchOffset = 0f;
+
+            // Tier 6: SleepLock
+            if (pawn.Asleep || figure.SleepWeight > 0.001f)
+            {
+                figure.Gaze.ActivePriority = GazePriority.SleepLock;
+                figure.Gaze.HasTarget = false;
+                figure.Gaze.IsGlancing = false;
+                figure.Gaze.GazeWeight = 0f;
+                return;
+            }
+
+            // Tier 5: LadderTraversal
+            if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
+            {
+                figure.Gaze.ActivePriority = GazePriority.LadderTraversal;
+                figure.Gaze.HasTarget = false;
+                figure.Gaze.IsGlancing = true;
+                bool up = pawn.NextCell.Y > pawn.Cell.Y;
+                bool down = pawn.NextCell.Y < pawn.Cell.Y;
+                float pitch = up ? 30f : down ? -35f : 5f;
+                figure.Gaze.AmbientAngles = new Vector2(pitch, 0f);
+                figure.Gaze.GazeWeight = figure.ClimbWeight;
+                return;
+            }
+
+            // Tier 4: WorkFocus
+            if (pawn.Working && figure.WorkWeight > 0.001f)
+            {
+                figure.Gaze.ActivePriority = GazePriority.WorkFocus;
+                figure.Gaze.HasTarget = true;
+                // Elevate target +1.30m above cell floor base (WorkCentre) to focus on the tree trunk notch / rock face at eye/chest level:
+                figure.Gaze.TargetWorldPosition = figure.WorkCentre + Vector3.up * 1.30f;
+                figure.Gaze.IsGlancing = false;
+                figure.Gaze.GazeWeight = figure.WorkWeight;
+                return;
+            }
+
+            // If an active social greeting glance is running:
+            if (figure.Gaze.ActivePriority == GazePriority.SocialPassing)
+            {
+                figure.Gaze.StateTimer += deltaTime;
+                if (figure.Gaze.StateTimer < figure.Gaze.StateDuration && figure.Gaze.HasTarget)
+                {
+                    figure.Gaze.GazeWeight = 1f;
+                    return;
+                }
+                figure.Gaze.HasTarget = false;
+                figure.Gaze.ActivePriority = GazePriority.PathForward;
+                figure.Gaze.StateTimer = 0f;
+            }
+
+            // Tier 2 & 1: Ambient wander / Path forward
+            figure.Gaze.HasTarget = false;
+            figure.Gaze.StateTimer += deltaTime;
+
+            if (figure.Gaze.StateDuration <= 0f)
+            {
+                figure.Gaze.StateDuration = ForwardDwellDuration(figure.Pawn, 0);
+            }
+
+            if (figure.Gaze.StateTimer >= figure.Gaze.StateDuration)
+            {
+                figure.Gaze.StateTimer = 0f;
+                figure.Gaze.IsGlancing = !figure.Gaze.IsGlancing;
+
+                if (figure.Gaze.IsGlancing)
+                {
+                    figure.Gaze.StateDuration = 1.2f + (Math.Abs(PseudoHash(figure.Pawn, (int)(figure.Speed * 100))) % 70) * 0.01f;
+                    float yaw = PickGlanceYaw(figure.Pawn, (int)(figure.Gaze.StateDuration * 10));
+                    float pitch = PickGlancePitch(figure.Pawn, (int)(figure.Gaze.StateDuration * 10));
+                    figure.Gaze.AmbientAngles = new Vector2(pitch, yaw);
+                    figure.Gaze.ActivePriority = GazePriority.AmbientWander;
+                }
+                else
+                {
+                    figure.Gaze.StateDuration = ForwardDwellDuration(figure.Pawn, (int)figure.Speed);
+                    figure.Gaze.AmbientAngles = Vector2.zero;
+                    figure.Gaze.ActivePriority = GazePriority.PathForward;
+                }
+            }
+            else
+            {
+                figure.Gaze.ActivePriority = figure.Gaze.IsGlancing ? GazePriority.AmbientWander : GazePriority.PathForward;
+            }
+
+            figure.Gaze.GazeWeight = 1f;
+        }
+
+        void CheckSocialGreetings()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure a = _figures[i];
+                if (a.Pawn < 0 || a.Transform == null) continue;
+                if (a.Gaze.ActivePriority >= GazePriority.WorkFocus) continue;
+                if (a.Gaze.SocialCooldown > 0f) continue;
+
+                Vector3 posA = a.Transform.position;
+                Vector3 fwdA = a.Transform.forward;
+
+                for (int j = 0; j < _figures.Count; j++)
+                {
+                    if (i == j) continue;
+                    Figure b = _figures[j];
+                    if (b.Pawn < 0 || b.Transform == null) continue;
+                    if (b.SleepWeight > 0.5f) continue;
+
+                    Vector3 posB = b.Transform.position;
+                    if (Mathf.Abs(posA.y - posB.y) > 1.5f) continue;
+
+                    float dx = posB.x - posA.x;
+                    float dz = posB.z - posA.z;
+                    float distSq = dx * dx + dz * dz;
+                    if (distSq > 36f || distSq < 0.25f) continue;
+
+                    Vector3 toB = new Vector3(dx, 0f, dz).normalized;
+                    if (Vector3.Dot(fwdA, toB) > 0.42f)
+                    {
+                        a.Gaze.ActivePriority = GazePriority.SocialPassing;
+                        a.Gaze.HasTarget = true;
+                        a.Gaze.TargetWorldPosition = b.Head != null ? b.Head.position : (posB + Vector3.up * 1.5f);
+                        a.Gaze.StateTimer = 0f;
+                        a.Gaze.StateDuration = 1.3f;
+                        a.Gaze.SocialCooldown = 20f;
+                        break;
+                    }
+                }
+            }
+        }
+
+        static int PseudoHash(int seed, int nonce)
+        {
+            uint h = (uint)(seed * 374761393 + nonce * 668265263);
+            h = (h ^ (h >> 13)) * 1274126177;
+            return (int)(h ^ (h >> 16));
+        }
+
+        static float ForwardDwellDuration(int pawn, int step)
+        {
+            int h = Math.Abs(PseudoHash(pawn, step));
+            return 3.0f + (h % 30) * 0.1f;
+        }
+
+        static float PickGlanceYaw(int pawn, int step)
+        {
+            int h = PseudoHash(pawn, step);
+            float sign = (h & 1) == 0 ? 1f : -1f;
+            int mag = Math.Abs(h >> 1) % 21;
+            return sign * (15f + mag);
+        }
+
+        static float PickGlancePitch(int pawn, int step)
+        {
+            int h = PseudoHash(pawn, step + 101);
+            int val = (Math.Abs(h) % 19) - 8;
+            return val;
         }
 
         /// <summary>

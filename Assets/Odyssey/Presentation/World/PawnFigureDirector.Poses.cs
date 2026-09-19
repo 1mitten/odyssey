@@ -891,5 +891,56 @@ namespace Odyssey.Presentation.World
 
             return true;
         }
+
+        /// <summary>
+        /// Applies procedural gaze and head turning across all active figures.
+        ///
+        /// Runs after ApplyWorkPose at the end of both Sync and Evaluate.
+        /// Uses 30% Neck and 70% Head distribution, resolving targets via the 6-tier
+        /// priority arbiter with smooth damping and anatomical angle clamping.
+        /// </summary>
+        void ApplyGazePose(float deltaTime)
+        {
+            MeasuredGazeYaw = 0f;
+            MeasuredGazePitch = 0f;
+            ActiveGazePriority = GazePriority.None;
+
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0 || figure.Head == null) continue;
+
+                // Harness overrides
+                if (ForceGazeAngles.HasValue)
+                {
+                    figure.Gaze.CurrentAngles = ForceGazeAngles.Value;
+                    figure.Gaze.GazeWeight = 1f;
+                    figure.Gaze.ActivePriority = ForceGazePriority ?? GazePriority.WorkFocus;
+                }
+                else if (ForceGazeTarget.HasValue)
+                {
+                    figure.Gaze.TargetWorldPosition = ForceGazeTarget.Value;
+                    figure.Gaze.HasTarget = true;
+                    figure.Gaze.GazeWeight = 1f;
+                    figure.Gaze.ActivePriority = ForceGazePriority ?? GazePriority.WorkFocus;
+                }
+
+                Transform refFrame = figure.Transform;
+                Vector3 headPivot = figure.Head.position;
+
+                HeadLookKinematics.UpdateDampedAngles(ref figure.Gaze, refFrame, headPivot, deltaTime);
+
+                Vector3 yawAxis = figure.Transform.up;
+                Vector3 pitchAxis = figure.Transform.right;
+                HeadLookKinematics.ApplyAdditiveRotation(
+                    figure.Neck, figure.Head, yawAxis, pitchAxis, figure.Gaze.CurrentAngles, figure.Gaze.GazeWeight);
+
+                float absYaw = Mathf.Abs(figure.Gaze.CurrentAngles.y);
+                float absPitch = Mathf.Abs(figure.Gaze.CurrentAngles.x);
+                if (absYaw > Mathf.Abs(MeasuredGazeYaw)) MeasuredGazeYaw = figure.Gaze.CurrentAngles.y;
+                if (absPitch > Mathf.Abs(MeasuredGazePitch)) MeasuredGazePitch = figure.Gaze.CurrentAngles.x;
+                if (figure.Gaze.ActivePriority > ActiveGazePriority) ActiveGazePriority = figure.Gaze.ActivePriority;
+            }
+        }
     }
 }

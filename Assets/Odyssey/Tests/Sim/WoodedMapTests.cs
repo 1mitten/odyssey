@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Tests.Sim
@@ -194,6 +195,45 @@ namespace Odyssey.Tests.Sim
                 Assert.That(grid.IsWalkable(cell), Is.True, $"the clearing is not walkable at {gx},{gz}");
                 Assert.That(TopOf(grid, gx, gz), Is.EqualTo(layer - 1), $"the clearing steps at {gx},{gz}");
             }
+        }
+
+        /// <summary>
+        /// **No tree grows at the foot of a terrace step.** Presentation fills that cell with a
+        /// bank — a wedge of hillside spilling down from the ground above — and a tree standing in
+        /// one is sheared off by it, which is what the owner reported on 2026-09-18.
+        ///
+        /// <para>Stated over the generated board rather than over a hand-built step, because the
+        /// interesting cases are the ones nobody would think to build: the cell diagonally off a
+        /// convex corner, the column beside an outcrop that happens to be exactly one layer proud,
+        /// the grass beside a stream channel. <c>TerraceFootTests</c> is the other half — it is what
+        /// says this guard and the mesher mean the same thing by a step.</para>
+        /// </summary>
+        [Test]
+        public void NoTreeStandsAtTheFootOfATerraceStep()
+        {
+            var (grid, outcome) = Generate(120, 120, 16);
+
+            foreach (var tree in outcome.Natural!.Trees)
+                Assert.That(TerraceFoot.IsFoot(grid, tree.CellIndex), Is.False,
+                    $"a tree stands at cell {tree.CellIndex}, at the foot of a terrace step, " +
+                    "where the bank will shear it off");
+        }
+
+        /// <summary>
+        /// And the guard is doing something. A guard that never fires is indistinguishable from no
+        /// guard at all, and this is the number to read if the wood ever looks thinned: on the
+        /// played board it is a few dozen out of some thousands.
+        /// </summary>
+        [Test]
+        public void TheTerraceGuardRefusesSomeTrees()
+        {
+            var (_, outcome) = Generate(120, 120, 16);
+            var report = outcome.Natural!.Report;
+
+            Assert.That(report.TreesRefusedOnTerraceSteps, Is.GreaterThan(0),
+                "no tree was refused on a terraced, wooded board, so the guard is not running");
+            Assert.That(report.TreesRefusedOnTerraceSteps, Is.LessThan(report.Trees),
+                "the guard took more of the wood than it left, which is not a guard but a felling");
         }
 
         [Test]

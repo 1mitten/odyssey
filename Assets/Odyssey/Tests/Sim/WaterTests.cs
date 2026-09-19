@@ -74,15 +74,25 @@ namespace Odyssey.Tests.Sim
         /// <para>What this test is for is unchanged and still holds: with <c>water = false</c> the
         /// water passes must draw nothing at all, so a dry map is exactly the map the rest of the
         /// generator makes. The numbers are the baseline for that, not for anything else.</para>
+        ///
+        /// <para><b>Re-based a second time on 2026-09-18, by the terrace guard, and the shape of
+        /// the re-base is the evidence.</b> <c>TreePass</c> now refuses a tree in a cell at the foot
+        /// of a terrace step, because presentation fills that cell with a bank and the tree is
+        /// sheared off by it (<c>TerraceFoot</c>). A wooded board therefore holds a few dozen fewer
+        /// trees, and a tree is an edifice in the grid, so every <c>dry</c> number below moved.
+        /// <b>Every <c>barren</c> number is byte-for-byte the one this table already held</b> —
+        /// measured, not assumed — which is exactly right: the bare board grows no trees, so a
+        /// guard on tree placement cannot touch it. Anything else moving would have meant something
+        /// else had come along with it.</para>
         /// </remarks>
         static readonly (GridSize size, uint seed, ulong dry, ulong barren)[] BeforeWater =
         {
-            (new GridSize(64, 64, 20), 1u, 0x3f6b1d0968b85c2dUL, 0x5ba75a6d28bea325UL),
-            (new GridSize(64, 64, 20), 7u, 0x2f80966928cab2f8UL, 0x5ba75a6d28bea325UL),
-            (new GridSize(64, 64, 20), 42u, 0xc41b0cde5c7f5e37UL, 0x5ba75a6d28bea325UL),
-            (new GridSize(120, 120, 16), 1u, 0x9be4e464f6eee813UL, 0xc0dc37cc3b1edd25UL),
-            (new GridSize(120, 120, 16), 7u, 0x9545d7795fa27142UL, 0xc0dc37cc3b1edd25UL),
-            (new GridSize(120, 120, 16), 42u, 0x672c6cde141b1bb0UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(64, 64, 20), 1u, 0x5911510576db1f4cUL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 7u, 0xba365f4d6969037aUL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 42u, 0xb6ea29eda6833100UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(120, 120, 16), 1u, 0x0ffd97de5fbe075cUL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 7u, 0x312abe0d7a34cce1UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 42u, 0x7dc9cb380f55e99bUL, 0xc0dc37cc3b1edd25UL),
         };
 
         [Test]

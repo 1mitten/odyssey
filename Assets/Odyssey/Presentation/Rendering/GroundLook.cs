@@ -38,14 +38,14 @@ namespace Odyssey.Presentation.Rendering
         /// stay jagged; water because it is a surface with a shader of its own and never a block.
         /// Marsh is included: it is ground that happens to be wet, and it is drawn as a block like
         /// any other soil.</para>
+        ///
+        /// <para>The list itself moved to <see cref="NaturalContent.IsEarth"/> when the simulation
+        /// came to need the same judgement — <see cref="Odyssey.Sim.Worldgen.TerraceFoot"/> asks
+        /// whether a terrace step is soil a bank would spill down. The reasoning above is why the
+        /// list is what it is; the list is kept in one place so that adding a soil cannot change
+        /// how the ground draws without changing where a bank stands.</para>
         /// </summary>
-        public static bool IsEarth(ushort terrain) =>
-            terrain == NaturalContent.TerrainGrass ||
-            terrain == NaturalContent.TerrainBareEarth ||
-            terrain == NaturalContent.TerrainPackedGravel ||
-            terrain == NaturalContent.TerrainSand ||
-            terrain == NaturalContent.TerrainSubsoil ||
-            terrain == NaturalContent.TerrainMarsh;
+        public static bool IsEarth(ushort terrain) => NaturalContent.IsEarth(terrain);
 
         /// <summary>Which of <see cref="GroundMesh.Variants"/> tops this cell wears.</summary>
         public static int Variant(int x, int z, int y) =>

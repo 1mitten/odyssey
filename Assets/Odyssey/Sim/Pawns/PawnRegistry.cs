@@ -132,7 +132,7 @@ namespace Odyssey.Sim.Pawns
                 // own cost makes the glide take exactly as long as the step does, whatever it is.
                 var cell = size.FromIndex(pawn.Cell);
                 var nextCell = cell;
-                int movePercent = 0;
+                int movePercent = 0, movePerMille = 0;
                 if (pawn.HasPath)
                 {
                     nextCell = size.FromIndex(pawn.Path[pawn.PathIndex]);
@@ -143,6 +143,15 @@ namespace Odyssey.Sim.Pawns
                     movePercent = (int)((long)pawn.MoveProgress * 100 / cost);
                     if (movePercent < 0) movePercent = 0;
                     else if (movePercent > 100) movePercent = 100;
+
+                    // The same ratio at ten times the resolution. A percent is too coarse to draw
+                    // with on any step that does not cost 100: the figure then advances a whole
+                    // point every few ticks and stands still in between, which is 25 mm on the
+                    // flat and 134 mm up a terrace once the climb is drawn in strides. See
+                    // PawnView.MovePerMille, where that measurement is recorded.
+                    movePerMille = (int)((long)pawn.MoveProgress * 1000 / cost);
+                    if (movePerMille < 0) movePerMille = 0;
+                    else if (movePerMille > 1000) movePerMille = 1000;
                 }
 
                 // What the pawn is working on, if anything. Asked of the driver rather than
@@ -163,7 +172,8 @@ namespace Odyssey.Sim.Pawns
                     workFocus >= 0 ? size.FromIndex(workFocus) : cell,
                     pawn.Gesture,
                     pawn.GestureSerial,
-                    pawn.Asleep));
+                    pawn.Asleep,
+                    movePerMille));
 
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.

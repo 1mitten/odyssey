@@ -136,12 +136,12 @@ namespace Odyssey.Tests.Sim
     /// boards at 850 to 1,150 a tick instead of in step. WS2's rate work moved none of these by
     /// the same reasoning recorded two entries down, and this entry is the re-bake the unit's row
     /// promised would be deliberate.</para>
-    /// </summary>
-    /// <para><b>Moved for the growing zones, 2026-09-18, and all six numbers again.</b>
-    /// U46 registers <c>GrowingZones</c> as hashed state on every colony, and an empty
-    /// contribution still contributes its count — the same shape as the edifice list's first
-    /// re-bake. Nothing about generation or simulation moved: the fields are new and empty,
-    /// and both numbers move in every case for it.</para>
+    ///
+    /// <para><b>Moved for the growing zones (U46), 2026-09-18, and all six numbers again.</b>
+    /// <c>GrowingZones</c> registers hashed state on every colony, and an empty contribution
+    /// still contributes its count — the same shape as the edifice list's first re-bake. Nothing
+    /// about generation or simulation moved: the fields are new and empty, and both numbers move
+    /// in every case for it.</para>
     ///
     /// <para><b>Moved for the growing jobs (U47), 2026-09-18, and all six numbers again.</b>
     /// <c>Work_Growing</c> and <c>Skill_Growing</c> made every pawn's work-priority and skill
@@ -149,18 +149,45 @@ namespace Odyssey.Tests.Sim
     /// extra tally slot, seen from the pawn side this time. Both numbers move in every case,
     /// including the barren meadow, and nothing about generation or simulation moved.</para>
     ///
-    /// <para><b>Moved a ninth time, 2026-09-18, when the growing branch met the rates branch at
-    /// the merge, and the shape is the predicted one.</b> Two branches had each re-baked
-    /// <see cref="Case.Simulated"/> for their own reason — pace rolls on one, growing state and
-    /// pawn arrays on the other — so neither side's numbers could survive the union and the
-    /// merged values were measured, not composed. The signature was checked before it was
-    /// trusted: <b>all three <see cref="Case.Simulated"/> moved and no <see cref="Case.Generated"/>
-    /// one did</b> — generation is byte-identical to both parents, and only the simulation's
-    /// reach into it moved. Along the way the merge caught growing's two work toils still
-    /// banking plain ticks in <c>ToilProgress</c>, the mixed-unit fault WS1's review had already
-    /// fixed everywhere else; they now pay at the pawn's rate like every driver, which is why
-    /// no Simulated number here is either parent's.</para>
+    /// <para><b>Moved a ninth time, 2026-09-18, by the terrace guard, and <i>only the wooded
+    /// board</i>.</b> <c>TreePass</c> refuses a tree in a cell at the foot of a terrace step,
+    /// because presentation fills that cell with a bank and the tree is sheared off by it — see
+    /// <c>TerraceFoot</c>. So the played board grows a few dozen fewer trees, and both its numbers
+    /// moved: <c>Generated</c> because a tree is an edifice in the grid and the grid is hashed
+    /// before the first tick, and <c>Simulated</c> because it inherits that board.</para>
     ///
+    /// <para><b>Moved a tenth time the same day, by the hop's price, and this time the two boards
+    /// with steps in them moved and the flat one did not.</b> <c>MoveCost.JumpUp</c> went from 135
+    /// to 240 because the owner saw a colonist climb a terrace faster than one walked beside it —
+    /// the arithmetic is in the constant's own comment. A price is not content and nothing is
+    /// placed differently, so <b>no <see cref="Case.Generated"/> value moved</b>; the wooded board
+    /// and the ruined city both have one-block steps on them, so their colonists reach a different
+    /// state over 10,000 ticks and both <c>Simulated</c> values did. <b>The barren meadow did not
+    /// move at all</b> — <c>MakeBarren</c> is one flat table, there is no step on it to hop, and a
+    /// colonist who never hops cannot notice what hopping costs. That is the control, and it is a
+    /// sharper one than usual: it separates "the price changed" from "everything moved".</para>
+    ///
+    /// <para><b>Moved an eleventh time the same day, when the growing branch met main a second
+    /// time, and the meadow is the control again.</b> Main had re-baked for the terrace guard and
+    /// the hop’s price; the growing side had re-baked for the zones and the growing work. Each
+    /// side’s numbers are true only of its own code, so neither side’s table survives and the
+    /// merged values below are the merged run’s. Read the shape: <b>the barren meadow did not
+    /// move at all from the growing side’s values</b> — both of main’s changes are step-priced,
+    /// <c>MakeBarren</c> has no step to guard or hop, so its board and its walks are byte-for-byte
+    /// what the growing side measured. The wooded board’s <see cref="Generated"/> is this
+    /// merge’s own — the terrace guard’s few dozen fewer trees plus growing’s counted fields,
+    /// each of which alone had already moved one parent — and its <see cref="Simulated"/> adds
+    /// the hop’s price to the growing side’s walks. The ruined city’s <see cref="Generated"/>
+    /// stayed on the growing side’s value because its generator has no <c>TreePass</c>, while its
+    /// <see cref="Simulated"/> moved for the hop alone, which is exactly what the tenth entry
+    /// predicts for it.</para>
+    ///
+    /// <para><b>The other two cases did not move at all, and that is the control.</b> The barren
+    /// meadow grows no trees and the ruined city's generator has no <c>TreePass</c> in it, so a
+    /// guard on tree placement can reach neither — measured by running the whole table and reading
+    /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
+    /// else moving would have meant something had come along uninvited.</para>
+    /// </summary>
     public static class Golden
     {
         /// <summary>One world, pinned: how to build it, how long to run it, and what it came to.</summary>
@@ -214,7 +241,6 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-
             Generated = 17287400559466587244UL,
             Simulated = 15649756692576152247UL,
         };
@@ -232,9 +258,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-
-            Generated = 2087747500389239450UL,
-            Simulated = 9003281370732817788UL,
+            Generated = 8724219219982949137UL,
+            Simulated = 7454526726644784434UL,
         };
 
         /// <summary>
@@ -270,9 +295,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-
             Generated = 13906133993818225881UL,
-            Simulated = 2284462309605410277UL,
+            Simulated = 2442616034903591755UL,
         };
     }
 }

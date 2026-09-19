@@ -154,6 +154,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **M1** world, **M2** pawns | **Done and reported** — `docs/milestones/M1-report.md`, `M2-report.md`. Both went further than the plan asked. |
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. The card is identity alone — name, age, occupation — at 76 px, which is the face plus its padding on both sides, and **a card is now asserted to clear its own avatar by that padding**; the skills live in the detail pane beside it, two columns and a heading. |
+| **TS** terrace steps | **In review — PR #126**, branch `claude/terrace-foot-guard`. Nothing generates at the foot of a step any more (`TerraceFoot`, a sim-side copy of the bank rule checked cell-by-cell against `BankLayout`), and crossing one is priced and drawn against the path it is *drawn* along rather than against a flat cell: the foot cell is a **slope** costing what the hop out of it costs, `PawnPose.StepPace` spends each step's time where its climbing is, and a climbing figure is drawn on the ramp surface itself. Came out of four owner reports in two days; the arithmetic and every rejected alternative are in `docs/design/22-terrace-steps.md` §4b–4c. Three faults older than the work fell out of it: a 1.51 m teleport climbing a sheer face, its 657 mm mirror on a sheer drop, and a two-frame hitch at the start of every step costing more than a flat cell. |
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 
@@ -184,6 +185,7 @@ this file.
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
+| Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
@@ -211,7 +213,13 @@ but it is not what the scene loads.
 **Movement is walk, stair, ladder and a one-block hop.** Climbing was removed as a mechanic (owner,
 2026-09-16). Every cell a pawn can be in has something under it. **A hop's price has one owner** —
 `NavGraph.HopCost`, enforced by `HopPriceHasOneOwnerTests`, because the cell search, the region
-graph and the mover must agree and a disagreement fails silently.
+graph and the mover must agree and a disagreement fails silently. **Every step is priced against the
+path it is drawn along, not against a flat cell** (2026-09-18/19). A terrace climb is one ramp
+charged as two steps — the walk into the foot cell and the hop out of it — so the foot cell carries
+a **slope** cost class worth `JumpUp − Orthogonal`, and both halves cost 240; `PawnPose.StepPace`
+then spends each step's time where its climbing is, so the flats are walked and the ramp is climbed
+at one speed. Walking *along* a terrace foot is slow too, and colonists prefer the flat line one
+cell out: that is a decision, not a side effect. `docs/design/22-terrace-steps.md` §4b–4c.
 
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
@@ -241,6 +249,12 @@ invisible where the game is played.
   are simulated. The one deliberate exception is the saved **view** (camera, slice, selection,
   speed), which is `ISaveable` and pointedly *not* `IStateHashable`: determinism is the hash's
   business and where the camera points cannot affect a tick.
+- **But a façade that fills a cell the simulation can fill is a bug waiting to be reported.** The
+  bank at the foot of a terrace step fills its cell floor to rim, and worldgen grew trees inside it
+  (2026-09-18). Every other façade is drawn on ground that stays empty. Ask it of any new one: *can
+  the simulation put something where this is drawn?* If it can, the rule needs a sim-side copy —
+  `TerraceFoot`, checked cell-by-cell against `BankLayout` — and the guard goes where the thing is
+  placed. `docs/design/22-terrace-steps.md`.
 - **Content is written once.** The XML under `Assets/Odyssey/Defs/Core` is the only copy of the pawn
   tuning and the world tables. Callers go through `ContentPack.Pawns()` and `WorldContent.Table`.
 - **Content values are pinned by fingerprints, and they earn their keep.** Editing rock's
@@ -339,6 +353,24 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **The coloured wood has had two playtests; the rounds since have not been played** — the cherry
   and flame canopies read as scarlet at the play camera and are the first to veto, and the measured
   tenth-of-a-stop the new shader costs was deliberately not papered over with a gain.
+- **The climb has been drawn three ways in two days and only the third is unseen.** A parabola over
+  the lip read as jumping; strides up the treads read as jolting; it is now the ramp surface itself,
+  sampled where the figure stands, at 9.9–12.3 mm a frame (`docs/design/22-terrace-steps.md` §4b).
+  If anything still jitters, the one junction left is where the ramp's 0.62 m/s meets the flat top's
+  1.5 m/s — one 30 mm frame — and the honest fix there is a slower flat, not a smoother curve.
+- **The whole terrace climb is now eight seconds and nobody has watched one.** Two steps of 240:
+  flat ground at a walk, 3.9 m of ramp at 0.62 m/s in four strides, then the top at a walk again
+  (`docs/design/22-terrace-steps.md` §4c). The lever is `MoveCost.JumpUp` — the slope cost, the
+  pacing weight and the stride count are all derived from it. Also unwatched: colonists preferring
+  a flat detour to walking along the foot of a terrace, which is the deliberate consequence of
+  pricing that cell as a slope.
+- **The new hop wants the same look the old one just failed.** `MoveCost.JumpUp` went 135 → 240 and
+  the motion became an arc (`docs/design/22-terrace-steps.md` §4b) because a colonist climbed a
+  terrace at 1.74 m/s against a walk's 1.50. The open questions a still cannot answer: whether 4.0 s
+  to get up one block now reads as effort or as **stuck** — the exact failure of the 270 this
+  replaces — whether 0.35 m over the lip is a hop or a hurdle, and whether holding the gait through
+  the step shows as the feet sliding during the half-second gather. If it reads as stuck, the pose
+  is the thing to look at before the price.
 - **Nobody has seen a colonist climb a ladder since the pose was written for one.** Four angles
   branch on a ladder against a rock face and all four are invited tuning
   (`docs/design/21-ladders-and-climbing.md` §3): whether they read as a ladder rather than a shrug,
@@ -371,6 +403,11 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **No health model**, so fall damage is designed with a number and nothing to apply it to, a
   colonist rides a collapsing floor down unharmed, and the debug menu has no kill or heal.
 - **No fog of war**, so a sealed cavern is visible if the player scrolls the layer down.
+- **A colonist can still lie down inside a terrace bank.** Trees are guarded out of those cells at
+  generation (`TerraceFoot`, `docs/design/22-terrace-steps.md`), and a walking figure is lifted onto
+  the ramp, but a body lying down is not: sleep on the ground at the foot of a step and the façade
+  hides you. §4 of that document holds the two candidate fixes and why neither was guessed at — both
+  move the state hash. An item dropped in one has the same problem and is unreported.
 - **A skill level buys nothing a player can feel** — experience is complete and no rate reads it.
   That is the whole of WS.
 - **Nothing tests that a click reaches the game.** A PlayMode test cannot press a button (input
