@@ -40,6 +40,19 @@ namespace Odyssey.Presentation.Audio
         public const string WorkPick = SoundPrefix + "work.pick";
 
         /// <summary>
+        /// A load coming up off the ground and into a colonist's arms. The lighter, quicker,
+        /// brighter half of one recording — see <c>tools/audio/bake_carry.sh</c> for why the two
+        /// ends of a carry are the same sound resampled rather than two sounds.
+        /// </summary>
+        public const string CarryLift = SoundPrefix + "carry.lift";
+
+        /// <summary>
+        /// A load going back down out of them: onto a stockpile, into a building site, or
+        /// wherever an interrupted haul set it. The heavier, slower, duller half.
+        /// </summary>
+        public const string CarryDrop = SoundPrefix + "carry.drop";
+
+        /// <summary>
         /// The neutral chime: something has happened that is worth a glance and is nobody's
         /// emergency. What an <see cref="Hud.AlertSeverity.Notice"/> row sounds like.
         /// </summary>

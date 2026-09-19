@@ -6760,3 +6760,63 @@ a green row in a panel whose job is problems is a design question rather than a 
 Unity EditMode **1848 total, 1834 passed, 0 failed**. `docs/design/24-alert-sounds.md` holds the
 decisions; ADR 0010's alert clause is amended in place rather than rewritten, because its playback
 half — 2D, own bus, starts the duck — is exactly as decided and only the trigger moved.
+
+## 2026-09-19 — One recording, two ends of a carry
+
+The owner asked for pickup and drop sounds on the carry animation, from one supplied recording,
+*"process and alter sound to distinguish pick up and drop … clarify the sound to me because it will
+played often … also blend it into the environment."* Three requirements, and the second and third
+are in tension with the first: a sound distinct enough to tell apart is a sound loud enough to
+notice, and this one plays on every leg of every haul.
+
+**The distinguishing is done by resampling, not by pitch-shifting.** The lift runs at ×1.14 and the
+drop at ×0.82, which moves pitch and length together — up two and a half semitones and an eighth
+shorter, down three and a half and a fifth longer. That is the right transform here *precisely
+because it is not a clean pitch shift*: a bigger, heavier object really does sound both lower and
+longer, so the artefact is the effect. A formant-preserving shift would have given two sounds of
+the same size at different pitches, which the ear hears as one sample played twice. EQ seals it —
+a high-pass and a shelf at 3 kHz on the way up, body at 220 Hz and a low-pass at 5.5 kHz on the way
+down.
+
+**Three takes of each**, at rates spread four per cent either side, on top of the catalogue's own
+±7% per-play pitch. This will be the most repeated sound in the game once footsteps exist, and one
+sample is recognisable as a sample within three or four plays.
+
+**Blending into the environment is a mix decision and it is the whole of the third requirement.**
+Volume 0.40 against the axe's 0.85, dying at 120 m against its 200, priority 150 against its 120.
+Under the work rather than beside it. The short range is as much about the frame as the mix — the
+director culls by range before it spends a voice, so a stockpile run at the far end of the board
+costs nothing — and the low priority means an axe or a chime takes the voice when the pool is full,
+which is the right way round: a hauler is the background of a colony.
+
+**The drop fires at the end of the fall and not the start**, which is the one thing here that is a
+fault rather than a taste. The load is visibly in the air for another third of a second after the
+hands open, so a sound at the release reads as a colonist dropping something they are still
+holding. That needed an edge rather than a condition: `CarryHandover.FallFinished` is true forever
+afterwards, so polling it turns one thud into a buzz. `FallLanded(before, after)` takes both sides
+of the frame step, fires exactly once, and still fires when a frame is longer than the whole fall —
+a stall, a load screen, or a step taken the instant a paused game resumes. Both ends are published
+as events from the figure director, `LoadLifted` and `LoadSet`, for the same reason `BlowLanded` is.
+
+**Two things about the processing were worth the hour they cost.**
+
+The bake for the alert chimes uses two-pass `loudnorm`, and reusing it was the obvious move. It
+cannot be used: EBU R128's integrated loudness is gated in 400 ms blocks, these clips are under
+half a second, and `loudnorm` reports `-inf` and refuses its own second pass. Peak-ceilinged RMS is
+what a one-shot wants anyway — what matters about an impact is how hard it hits, not how loud it is
+over time — so that is what `bake_carry.sh` does, and it says why in its header so the next person
+does not repeat the experiment.
+
+And the first working version came out **pinned at 0 dBFS on every clip**, three and a half
+decibels hotter than the gain it had computed. The measurement pass ran the filter chain into
+`-f null`, which is a pass cheaper; the stereo-to-mono downmix lands differently on the null muxer
+than it does on a WAV, so the level it measured was not the level it wrote. The script now writes
+the file first and measures the bytes that will ship. **Measure the artefact, not a proxy for it**
+— which is the same lesson as `docs/lessons.md`' entry about checking that the edit an experiment
+relies on actually applied, in a different costume.
+
+The source was also very quiet, −44.6 LUFS with peaks at −28 dBFS: quiet enough that the whole
+signal sits below the level a denoiser takes for noise and below the level a silence trim takes for
+silence. Run either on the raw file and the clip comes out empty. Gain first, then clean.
+
+Unity EditMode **1850 total, 1836 passed, 0 failed**. `docs/design/24-carrying.md` §12.

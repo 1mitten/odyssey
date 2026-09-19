@@ -197,6 +197,7 @@ this file.
 | Input cases, modality, live portraits | `docs/design/09-ui-and-input.md` |
 | Panels | `docs/design/10-ui-panel-catalogue.md` |
 | Alert chimes, and what picks one | `docs/design/24-alert-sounds.md` |
+| The carry sounds, and their mix | `docs/design/24-carrying.md` §12 |
 | The audio framework itself | ADR 0010, `docs/reference/audio-sourcing.md` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
 
@@ -284,11 +285,11 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **736 Sim + 445 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **741 Sim + 445 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-19 on the
-  carried load and its three playtest fixes: EditMode **1834 total, 1820 passed, 0 failed** (24 added by `CarryPoseTests`).
+  alert chimes and the two carry sounds: EditMode **1850 total, 1836 passed, 0 failed**.
   PlayMode, the same day: **82 total, 77 passed, 0 failed**.
   `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
   `TheRosterBarFollowsTheColonyIntoANewSession`.
@@ -413,6 +414,13 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   (`docs/design/24-alert-sounds.md` §6). **The chime had effectively never fired before this**: the
   audio side carried a starvation threshold on a scale a hundred times out, so there is no prior
   impression to compare against.
+- **Nobody has heard a colonist pick anything up.** One recording became two sounds on
+  2026-09-19 — `carry-lift` resampled up and brightened, `carry-drop` down and dulled, three takes
+  each — and they fire on every leg of every haul, which makes the mix the whole question. They
+  sit at Volume 0.40 against the axe's 0.85 and die at 120 m against its 200. Open: whether 0.40
+  survives six haulers rather than one; whether lift and drop are actually told apart at the
+  default camera height, which is not the same test as telling them apart side by side; and
+  whether the drop wants to be heavier still (`docs/design/24-carrying.md` §12).
 - **Nobody has seen the falls move.** Whether the streaks read as falling water or as a pattern
   sliding down a pane cannot be judged in a still, and stills are all anybody has looked at.
 - **The shallow stream reads pale at the play camera.** Raising the alpha is the obvious fix;

@@ -748,7 +748,12 @@ namespace Odyssey.Presentation.Bootstrap
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
                 _daylight.Apply(_world.CurrentTick);
             }
-            if (_figures != null) _figures.BlowLanded += OnBlowLanded;
+            if (_figures != null)
+            {
+                _figures.BlowLanded += OnBlowLanded;
+                _figures.LoadLifted += OnLoadLifted;
+                _figures.LoadSet += OnLoadSet;
+            }
 
             if (cameraRig != null)
             {
@@ -796,6 +801,13 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void OnBlowLanded(int workStyle, Vector3 edge) =>
             _audio?.PlayOneShot(SoundIds.ForBlow(workStyle), edge);
+
+        /// <summary>A load came up off the ground: the lighter of the two carry sounds, from the
+        /// spot it was lying on.</summary>
+        void OnLoadLifted(Vector3 from) => _audio?.PlayOneShot(SoundIds.CarryLift, from);
+
+        /// <summary>And a load touched down: the heavier one, from where it landed.</summary>
+        void OnLoadSet(Vector3 at) => _audio?.PlayOneShot(SoundIds.CarryDrop, at);
 
         void OnGameSpeedRequested(int speed)
         {

@@ -159,6 +159,14 @@ namespace Odyssey.EditorTools
             // to produce; normal, negative and happy are mono in the file already, and the two
             // stereo fanfares keep their width because an alert plays 2D and has nowhere else
             // to get any.
+            // The two ends of a carry, three takes each. Mono, because a carried thing is
+            // somewhere; PCM decompressed on load, because they are a third of a second long and
+            // fire constantly — a decode at the moment of play, times every hauler on the board,
+            // is the one case where the cheap import class plainly wins. 240 KB for all six.
+            new("carry-lift", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
+            new("carry-drop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -533,6 +541,17 @@ namespace Odyssey.EditorTools
             // what the same sound would be given in a first-person game. The alternative is to
             // move the ears to the camera's focus, which would let these be ground distances
             // again; it is written up as open in CLAUDE.md.
+            AudioCatalogue.SoundDef CarrySound(string id, string clip) =>
+                new AudioCatalogue.SoundDef
+                {
+                    Id = id,
+                    Clips = Variants(clip),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.4f, VolumeVariance = 0.14f, PitchVariance = 0.07f,
+                    SpatialBlend = 1f, MinDistance = 14f, MaxDistance = 120f,
+                    Priority = 150, Cooldown = 0.1f,
+                };
+
             AudioCatalogue.SoundDef AlertSound(string id, string clip, float volume,
                 float cooldown = 2f) =>
                 new AudioCatalogue.SoundDef
@@ -570,6 +589,19 @@ namespace Odyssey.EditorTools
                     SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 210f,
                     Priority = 120, Cooldown = 0.12f,
                 },
+                // The two ends of a carry (design 24 §12). **The quietest placed sounds in the
+                // game, and deliberately.** This fires on every leg of every haul, so the
+                // question is not whether it can be heard but whether a colony of six haulers is
+                // still somewhere you want to be. It sits at 0.4 against the axe's 0.85 and dies
+                // at 120 m against the axe's 200, which puts it under the work rather than
+                // beside it: near the colonist you are watching it is a scuff of material, and
+                // across the board it is gone.
+                //
+                // Pitch variance is the axe's rather than the pick's, on top of three baked
+                // takes, because the takes already differ by four per cent of rate and the two
+                // together are what stop a stockpile run sounding like one file on repeat.
+                CarrySound(SoundIds.CarryLift, "carry-lift"),
+                CarrySound(SoundIds.CarryDrop, "carry-drop"),
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two

@@ -22,6 +22,7 @@ putting a file of the same name in the same folder.
 | `chop.wav` | An axe biting into a tree trunk — the felling stroke landing. Dull; wood does not ring. | 0.2–0.8 s | no | mono |
 | `pick.wav` | A pick striking stone — the mining stroke landing. A click and a short ring. | 0.2–0.8 s | no | mono |
 | ~~`alert.wav`~~ | **Supplied 2026-09-19** and split into five: `alert-normal`, `alert-negative`, `alert-happy`, `alert-joined`, `alert-raid`. See `docs/design/24-alert-sounds.md` — the sourcing note below still applies to any future chime. |  |  |  |
+| `carry-lift.wav`, `carry-drop.wav` | **Supplied 2026-09-19** as one recording and split into two by `tools/audio/bake_carry.sh`. See `docs/design/24-carrying.md` §12. | | | |
 | `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. Its level is driven by how much water is near the camera, so what is wanted is the sound of standing beside a stream, not of approaching one. | 15–90 s | **yes, seamlessly** | mono |
 | `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
 | `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
@@ -65,7 +66,7 @@ the lossless master.
 
 | Sound | Imported as | Why |
 |---|---|---|
-| chop, pick, `alert-normal`, `alert-negative` | PCM, decompress on load | no decode at all at the instant it plays |
+| chop, pick, carry-lift, carry-drop, `alert-normal`, `alert-negative` | PCM, decompress on load | no decode at all at the instant it plays |
 | `alert-happy`, `alert-joined`, `alert-raid` | ADPCM, compressed in memory | seconds long, rare, and nothing is waiting on the frame they start |
 | water, ambience-day, ambience-night | ADPCM, decompress on load | Unity's own answer for noisy sounds played in quantity — 3.5× smaller than PCM, near-free to decode |
 | music | Vorbis, streamed from disc | decompressed Vorbis costs ~10× its compressed size in memory, and a track is long |

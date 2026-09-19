@@ -66,6 +66,34 @@ MonoBehaviour:
     MaxDistance: 210
     Priority: 120
     Cooldown: 0.12
+  - Id: odyssey.sound.carry.lift
+    Clips:
+    - {fileID: 8300000, guid: 8c0367daba1a9d87cc1c9487df7a539d, type: 3}
+    - {fileID: 8300000, guid: 010c5de6b1c6dd79ea4e37f05246afa9, type: 3}
+    - {fileID: 8300000, guid: b2a05312daf4e90147432a3cd9ef5236, type: 3}
+    Bus: 3
+    Volume: 0.4
+    VolumeVariance: 0.14
+    PitchVariance: 0.07
+    SpatialBlend: 1
+    MinDistance: 14
+    MaxDistance: 120
+    Priority: 150
+    Cooldown: 0.1
+  - Id: odyssey.sound.carry.drop
+    Clips:
+    - {fileID: 8300000, guid: ede57fb9c8cbf580427e48aa4bc4a047, type: 3}
+    - {fileID: 8300000, guid: a394e76c8795c8cad148abfb3330ba61, type: 3}
+    - {fileID: 8300000, guid: 69bcabfe73608868d75b18f95a9cd2e0, type: 3}
+    Bus: 3
+    Volume: 0.4
+    VolumeVariance: 0.14
+    PitchVariance: 0.07
+    SpatialBlend: 1
+    MinDistance: 14
+    MaxDistance: 120
+    Priority: 150
+    Cooldown: 0.1
   - Id: odyssey.sound.alert.normal
     Clips:
     - {fileID: 8300000, guid: 4fbee70b8ee55175ff8cf6688ed11531, type: 3}

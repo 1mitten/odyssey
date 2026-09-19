@@ -79,6 +79,18 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether a fall that began this long ago is over.</summary>
         public static bool FallFinished(float elapsed) => elapsed >= FallSeconds;
 
+        /// <summary>
+        /// Whether a fall crossed its own end between two elapsed times — the frame the load
+        /// touches down, and the only frame it does.
+        ///
+        /// <para>This exists so that the sound of a load landing has a rule rather than a
+        /// condition. <see cref="FallFinished"/> is true forever after the landing, so anything
+        /// that polls it fires every frame for the rest of the carry; what is wanted is the edge,
+        /// and an edge needs both sides of the step. Design 24 §12.</para>
+        /// </summary>
+        public static bool FallLanded(float before, float after) =>
+            before < FallSeconds && after >= FallSeconds;
+
         static float Phase(float elapsed, float seconds) =>
             seconds <= 1e-4f ? 1f : Mathf.Clamp01(elapsed / seconds);
     }
