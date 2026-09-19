@@ -117,6 +117,18 @@ namespace Odyssey.Presentation.Audio
         /// birds are gone and something else has started.</summary>
         public const string AmbienceOutdoorNight = AmbiencePrefix + "outdoor.night";
 
+        /// <summary>
+        /// The bed behind the title screen, the load list and the world-setup page — and behind
+        /// nothing else.
+        ///
+        /// <para><b>It is the one sound that is explicitly not part of the colony.</b> Everything
+        /// else in this file is something happening in a world; this plays when there is no world
+        /// and stops the moment there is one, crossing with the outdoor bed's own arrival fade.
+        /// It rides the Music bus rather than Ambience because that is what it is — a menu track —
+        /// and because a player who turns music off should get a silent title screen.</para>
+        /// </summary>
+        public const string AmbienceMenu = AmbiencePrefix + "menu";
+
         /// <summary>The daytime track.</summary>
         public const string MusicDay = MusicPrefix + "day";
 

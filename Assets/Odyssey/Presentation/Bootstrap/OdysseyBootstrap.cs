@@ -184,6 +184,14 @@ namespace Odyssey.Presentation.Bootstrap
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
         AudioDirector? _audio;
+
+        /// <summary>
+        /// The title screen's bed. Owned by the root rather than by the session, because it is
+        /// the sound of there being no session: it is built once at <see cref="Start"/>, it
+        /// survives every world being made and torn down, and it is the only piece of audio that
+        /// exists before a colony does.
+        /// </summary>
+        MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
@@ -298,6 +306,12 @@ namespace Odyssey.Presentation.Bootstrap
         {
             PointContentAtTheShippedPack();
             WarnIfTheSceneIsStale();
+
+            // Before the session, so that a player who boots straight into a colony never hears
+            // a menu bed start under it. Sync decides whether it plays at all, and the first
+            // thing it will see is a world.
+            _menuBed = new MenuAmbience(audioCatalogue, transform, gameObject.layer);
+
             if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
         }
 
@@ -950,6 +964,12 @@ namespace Odyssey.Presentation.Bootstrap
 
         void LateUpdate()
         {
+            // Above the guard below, because the menus are exactly the state the guard returns
+            // on: no world, nothing rendered, and a title screen that still wants a bed under it.
+            // Unscaled, because a fade that is part of the interface must not care that the game
+            // behind it is paused or running at six times speed.
+            _menuBed?.Sync(Time.unscaledDeltaTime, wanted: _world == null);
+
             if (_renderer == null || _model == null || _world == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
@@ -2034,10 +2054,13 @@ namespace Odyssey.Presentation.Bootstrap
         {
             TeardownSession();
 
-            // And the studio itself, which teardown deliberately leaves standing: it is not part
-            // of a session, so this is the only place its rig and its one render texture go.
+            // And the two things teardown deliberately leaves standing, because neither is part
+            // of a session: the portrait studio's rig and its one render texture, and the menu
+            // bed, which is the sound of there being no session at all.
             _portraits?.Dispose();
             _portraits = null;
+            _menuBed?.Dispose();
+            _menuBed = null;
         }
 
         /// <summary>
@@ -2325,7 +2348,12 @@ namespace Odyssey.Presentation.Bootstrap
                 if (Directors != null) Directors.Slice.LayerChanged -= OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested -= OnGameSpeedRequested;
             }
-            if (_figures != null) _figures.BlowLanded -= OnBlowLanded;
+            if (_figures != null)
+            {
+                _figures.BlowLanded -= OnBlowLanded;
+                _figures.LoadLifted -= OnLoadLifted;
+                _figures.LoadSet -= OnLoadSet;
+            }
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();

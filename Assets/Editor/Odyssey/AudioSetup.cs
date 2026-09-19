@@ -190,6 +190,12 @@ namespace Odyssey.EditorTools
             // almost nothing and keeps a thirty-five-second loop under a megabyte.
             new("campfire", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: true, loadInBackground: false, Fire),
+            // The title screen's bed: two and a half minutes, so it streams from disc like the
+            // outdoor beds rather than sitting in memory. No placeholder — a menu with no bed is
+            // a quiet menu, which is a perfectly good menu, and three sine waves held as a chord
+            // would be the same test tone the music rows decline for the same reason.
+            new("menu-bed", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, placeholder: null),
             // No placeholder: see ClipSpec.Placeholder. A phase with no track is a case the
             // director already handles — the bed plays alone and nothing fades in over it.
             new("music-day", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
@@ -669,6 +675,21 @@ namespace Odyssey.EditorTools
                     Volume = 0.22f, FadeSeconds = 8f, ArrivalFadeSeconds = 4f,
                 },
             });
+
+            // The title screen's bed. **Deliberately the quietest thing in the catalogue**
+            // (owner: "keep it really low in the mix by default"): 0.18 against the day bed's
+            // 0.28, on a clip peak-normalised to the same BedPeak, so the two are directly
+            // comparable and this one sits well under.
+            //
+            // Arriving takes eight seconds and leaving takes four. Asymmetric on purpose — the
+            // bed should already be the air by the time the player has read the menu, and it has
+            // to be gone before the world it is handing over to has finished arriving. The
+            // outdoor bed fades in over four, so the two cross rather than queue.
+            catalogue.Menu = Clip("menu-bed") == null ? null : new AudioCatalogue.PhaseTrackDef
+            {
+                Phase = MusicPhase.None, Clip = Require("menu-bed"),
+                Volume = 0.18f, FadeSeconds = 4f, ArrivalFadeSeconds = 8f,
+            };
 
             // Music is optional. A row is written only when there is a track to point it at, so
             // a project with no music licensed plays the world and nothing else — which is a

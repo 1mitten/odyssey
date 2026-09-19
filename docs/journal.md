@@ -6820,3 +6820,66 @@ signal sits below the level a denoiser takes for noise and below the level a sil
 silence. Run either on the raw file and the clip comes out empty. Gain first, then clean.
 
 Unity EditMode **1850 total, 1836 passed, 0 failed**. `docs/design/24-carrying.md` §12.
+
+## 2026-09-19 — A bed for the title screen, and the volume slider that was never saved
+
+The owner supplied a deep-space drone for the main screen: fade it in, loop it, fade it out into
+the game audio when a world arrives, never play it in a colony, keep it really low.
+
+**Where it plays was the only hard part, and it was hard for a structural reason.** `AudioDirector`
+is built *from a world* — its grid size, its terrain mirror, its surface layer — and
+`OdysseyBootstrap.LateUpdate` returns before touching it while `_world` is null. The menus are
+precisely the state in which there is no world, so there is no audio of any kind on the title
+screen and never has been. Making the director constructible without a world was the obvious move
+and the wrong one: it would leave a half-built director whose beds and probe wait for a second
+initialisation that nothing in the constructor hints at. A title screen wants one looping 2D voice
+and a fade, so `MenuAmbience` is one looping 2D voice and a fade, owned by the root rather than by
+the session — built once, surviving every world made and torn down, disposed with the component.
+`Sync(unscaledDeltaTime, wanted: _world == null)` sits above the guard, and `wanted` is the whole
+rule.
+
+**It reads the player's faders rather than keeping any.** The temptation was a small `_busDb[5]`
+of its own, which is a second owner of a rule and precisely the fault I had deleted from the alert
+path earlier the same day. `AudioSettingsStore` is the one owner and this is a second reader:
+`AudioSettingsStore.Load()` each step while the bed is audible, which is five PlayerPrefs lookups
+against an in-memory dictionary, on a menu, and stops entirely once a world exists.
+
+**That turned up a real gap.** `SettingsPresenter.ApplyBusDb` began `if (audio == null …) return;`
+— and `audio` is null every moment before a world is built, while the settings page is perfectly
+reachable from the main screen. So a player who set their volumes on the title screen had them
+**silently discarded**, and would have found the Music fader drawn on that very page doing nothing
+to the bed underneath it. The store is now written whether or not a colony exists, and the director
+is pushed to only if it is there. Not a bug anybody had reported, and not one anybody would have
+reported as a bug — "I set the volume and it didn't stick" is the sort of thing a player assumes
+they imagined.
+
+**The fades are asymmetric on purpose.** Eight seconds arriving, because the bed should already be
+the air by the time the player has read the menu; four leaving, because it has to be *gone* before
+the world it is handing to has finished arriving. The outdoor bed's `ArrivalFadeSeconds` is already
+four, so the two cross rather than queue — and that relationship is pinned by tests that read the
+shipped catalogue rather than restating constants, so retuning by ear stays free and drifting into
+a gap fails.
+
+**The arrival latch was wrong first time, and only a test that looked mid-fade could see it.** I
+set `_arrived` on the first `Sync` rather than on reaching full, so the eight-second fade governed
+one sixtieth of a second and the remaining 7.98 ran at the four-second leaving fade. Both endpoints
+were correct — silent at nought, full at eight — so any test that checked the two ends would have
+passed. The one that caught it asserted the level was between 0.2 and 0.6 at four-tenths of the
+way through, and got 0.80.
+
+**On the clip.** Deeper than it looks: 20–120 Hz carries almost all of it, 2 kHz and above is
+effectively silence. That explains its −27.6 LUFS, which is mostly K-weighting doing what it does
+to sub-bass against an actual peak of −11.4 dBFS, and it means **this will behave completely
+differently on laptop speakers from headphones** — worth knowing before anybody retunes the level.
+It is also genuinely wide, sum and difference within 2.4 dB, so it is emphatically not folded to
+mono: the width is most of what makes a bed read as everywhere rather than as over there, and here
+it is nearly all there is. The whole 157 s is kept, with the last six seconds blended into the
+first six and the blended tail dropped — a seamless 151 s loop, measured at 0.4% of full scale at
+the seam. Peak-normalised to the same `BedPeak` every other bed uses, so catalogue `Volume` means
+the same thing across all three; left at its native 24 kHz, because resampling a signal with
+nothing above 500 Hz to 44.1 would add eight megabytes of nothing to the repository.
+
+Volume 0.18 against the day bed's 0.28. Music bus, not Ambience — it is a menu track, and a player
+who turns music off should get a silent title screen.
+
+Unity EditMode **1857 total, 1843 passed, 0 failed**. `docs/design/17-start-flow.md` §12.

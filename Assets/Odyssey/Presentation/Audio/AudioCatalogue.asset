@@ -185,3 +185,9 @@ MonoBehaviour:
     Volume: 0.22
     FadeSeconds: 8
     ArrivalFadeSeconds: 4
+  Menu:
+    Phase: 0
+    Clip: {fileID: 8300000, guid: 3f2fc19b93a23adcfe084ed805531f97, type: 3}
+    Volume: 0.18
+    FadeSeconds: 4
+    ArrivalFadeSeconds: 8

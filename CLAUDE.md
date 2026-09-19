@@ -198,6 +198,7 @@ this file.
 | Panels | `docs/design/10-ui-panel-catalogue.md` |
 | Alert chimes, and what picks one | `docs/design/24-alert-sounds.md` |
 | The carry sounds, and their mix | `docs/design/24-carrying.md` §12 |
+| The title screen's bed, and the hand-over into a world | `docs/design/17-start-flow.md` §12 |
 | The audio framework itself | ADR 0010, `docs/reference/audio-sourcing.md` |
 | Icons | `docs/design/11-icon-library.md`, ADR 0007 |
 
@@ -289,7 +290,7 @@ invisible where the game is played.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-19 on the
-  alert chimes and the two carry sounds: EditMode **1850 total, 1836 passed, 0 failed**.
+  alert chimes, the carry sounds and the title bed: EditMode **1857 total, 1843 passed, 0 failed**.
   PlayMode, the same day: **82 total, 77 passed, 0 failed**.
   `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
   `TheRosterBarFollowsTheColonyIntoANewSession`.
@@ -414,6 +415,13 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   (`docs/design/24-alert-sounds.md` §6). **The chime had effectively never fired before this**: the
   audio side carried a starvation threshold on a scale a hundred times out, so there is no prior
   impression to compare against.
+- **Nobody has heard the title screen.** A 151-second loop fades in over eight seconds on the
+  main screens, fades out over four when a world arrives, crosses with the outdoor bed's own
+  four-second arrival, and never plays in a colony. It is a **sub-bass drone** — almost everything
+  below 500 Hz — so it will read completely differently on laptop speakers from headphones, and
+  that is the first question to ask if the level seems wrong. Open: whether Volume 0.18 survives
+  real speakers, whether eight seconds of arrival is patient or broken, and whether the four-second
+  hand-over is seamless or a hole (`docs/design/17-start-flow.md` §12).
 - **Nobody has heard a colonist pick anything up.** One recording became two sounds on
   2026-09-19 — `carry-lift` resampled up and brightened, `carry-drop` down and dulled, three takes
   each — and they fire on every leg of every haul, which makes the mix the whole question. They
