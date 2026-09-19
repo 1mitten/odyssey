@@ -2303,3 +2303,13 @@
 }
 .bedowner__row:hover { background-color: rgba(255, 255, 255, 0.05); }
 .bedowner__name { color: rgba(255, 255, 255, 0.72); }
+
+/* The mark column: a tick for whoever sleeps in this bed, a dot for a colonist who has one
+   somewhere else, nothing at all for a colonist with no bed. Fixed width so the names below it
+   all start at the same x and the column reads down as a list of who is housed. */
+.bedowner__mark {
+    width: 14px;
+    color: rgba(255, 255, 255, 0.34);
+    -unity-text-align: middle-left;
+}
+.bedowner__mark--this { color: rgb(238, 250, 253); }

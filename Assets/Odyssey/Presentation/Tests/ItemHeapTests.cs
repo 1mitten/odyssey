@@ -24,12 +24,15 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void OnlyWhatAMineLeavesIsDrawnAsAHeap()
+        public void RationsAreACrateAndEverythingElseScatters()
         {
-            // Rations come in a crate and wood comes in a bundle. A heap is for lumps.
+            // A crate holds whatever is in it and looks the same either way, so a meal is one
+            // prop for ever. Everything a colony stocks by the armful says its amount by
+            // spreading: wood joined the list on 2026-09-19, when a tile of 3 and a tile of 75
+            // were the same picture.
             Assert.That(ItemHeap.IsHeap(ItemIndex.Meal), Is.False);
-            Assert.That(ItemHeap.IsHeap(ItemIndex.Wood), Is.False);
 
+            Assert.That(ItemHeap.IsHeap(ItemIndex.Wood), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.Stone), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.IronOre), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.Coal), Is.True);
@@ -171,5 +174,42 @@ namespace Odyssey.Tests.Presentation
             var cramped = new Matrix4x4[2];
             Assert.That(ItemHeap.Place(stone.Full, 3u, Vector3.zero, stone, cramped), Is.EqualTo(2));
         }
+
+        [Test]
+        public void AWoodPileGrowsInThreeStepsAndNeverBecomesALogJam()
+        {
+            // The owner's "a third, two thirds, full". The prop is a bound log pile, which is
+            // wide — three of them is what a 2.5 m cell holds before they read as a log jam, so
+            // wood caps lower than rubble does and the cap is the point of this test.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Wood, out ItemHeap.Recipe wood), Is.True);
+
+            Assert.That(ItemHeap.RockCount(1, wood), Is.EqualTo(1), "a single log is one bundle");
+            Assert.That(ItemHeap.RockCount(wood.Full, wood), Is.EqualTo(3), "a full tile is three");
+            Assert.That(ItemHeap.RockCount(wood.Full * 2, wood), Is.EqualTo(3), "and never a fourth");
+
+            // Monotonic, or a pile that grew would sometimes look smaller.
+            int last = 0;
+            for (int stack = 1; stack <= wood.Full; stack++)
+            {
+                int now = ItemHeap.RockCount(stack, wood);
+                Assert.That(now, Is.GreaterThanOrEqualTo(last), $"stack {stack} drew fewer than {stack - 1}");
+                last = now;
+            }
+        }
+
+        [Test]
+        public void WoodIsCarriedAsOneBundleThoughItScattersOnTheFloor()
+        {
+            // The two questions are separate and only rubble answers both the same way. A load
+            // of logs was tuned on the ground's own terms on 2026-09-19 ("when you turn a
+            // direction the logs don't turn with you"); scattering it in the arms would undo
+            // that look for the sake of a ramp that only matters where the wood is lying.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Wood, out ItemHeap.Recipe wood), Is.True);
+            Assert.That(wood.CarriedAsHeap, Is.False);
+
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Stone, out ItemHeap.Recipe stone), Is.True);
+            Assert.That(stone.CarriedAsHeap, Is.True);
+        }
+
     }
 }

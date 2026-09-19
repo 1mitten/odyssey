@@ -93,3 +93,14 @@ tools/dotnet/*/TestResults/
 # Standalone player builds. A player has the licensed Synty content baked into it, so this is
 # the one artefact that must never be committed. scripts/unity.sh build writes here.
 /Build/
+
+# The content pack staged into StreamingAssets for a player build. ContentPackBuild copies it
+# in and takes it out again; the only committed copy is Assets/Odyssey/Defs. See docs/lessons.md.
+/Assets/StreamingAssets/Odyssey/
+/Assets/StreamingAssets/Odyssey.meta
+
+# Instancing keep-alive materials for the pack shaders, staged by SyntyInstancingKeepAlive
+# for the duration of a player build and removed after. They reference licensed shaders by GUID,
+# so they must never be committed. See the header of that file.
+/Assets/Resources/OdysseySyntyKeepAlive/
+/Assets/Resources/OdysseySyntyKeepAlive.meta

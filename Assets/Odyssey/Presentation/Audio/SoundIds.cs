@@ -39,8 +39,56 @@ namespace Odyssey.Presentation.Audio
         /// <summary>A pick striking stone: the mining stroke landing.</summary>
         public const string WorkPick = SoundPrefix + "work.pick";
 
-        /// <summary>The chime for a colonist past starving. The one alert the snapshot can raise today.</summary>
-        public const string AlertStarving = SoundPrefix + "alert.starving";
+        /// <summary>
+        /// A load coming up off the ground and into a colonist's arms. The lighter, quicker,
+        /// brighter half of one recording — see <c>tools/audio/bake_carry.sh</c> for why the two
+        /// ends of a carry are the same sound resampled rather than two sounds.
+        /// </summary>
+        public const string CarryLift = SoundPrefix + "carry.lift";
+
+        /// <summary>
+        /// A load going back down out of them: onto a stockpile, into a building site, or
+        /// wherever an interrupted haul set it. The heavier, slower, duller half.
+        /// </summary>
+        public const string CarryDrop = SoundPrefix + "carry.drop";
+
+        /// <summary>
+        /// The neutral chime: something has happened that is worth a glance and is nobody's
+        /// emergency. What an <see cref="Hud.AlertSeverity.Notice"/> row sounds like.
+        /// </summary>
+        public const string AlertNormal = SoundPrefix + "alert.normal";
+
+        /// <summary>
+        /// The chime for a colonist starving, breaking, cold, hurt — anything the player is
+        /// being asked to go and fix. What a <see cref="Hud.AlertSeverity.Warning"/> or
+        /// <see cref="Hud.AlertSeverity.Danger"/> row sounds like.
+        /// </summary>
+        public const string AlertNegative = SoundPrefix + "alert.negative";
+
+        /// <summary>
+        /// The chime for something going right. <b>In the library, played by nothing.</b>
+        ///
+        /// <para>There is no <c>Good</c> severity on <see cref="Hud.AlertRow"/> and no event
+        /// that would carry one: a visitor arriving, a trade closing and a research project
+        /// finishing are all things the game does not have yet. The clip is imported, mixed and
+        /// named so that the day one of them lands the sound is already there and the work is
+        /// whatever raises it — the same bargain <see cref="Campfire"/> makes.</para>
+        /// </summary>
+        public const string AlertHappy = SoundPrefix + "alert.happy";
+
+        /// <summary>
+        /// A colonist has joined the colony. <b>In the library, played by nothing</b> — a pawn
+        /// arriving from outside is not a thing that happens yet. See <see cref="AlertHappy"/>
+        /// for why the row exists in advance.
+        /// </summary>
+        public const string AlertJoined = SoundPrefix + "alert.joined";
+
+        /// <summary>
+        /// A raid. <b>In the library, and the one unplayed chime that is already wired</b>:
+        /// <see cref="AlertChime.RaidKey"/> is declared in <c>icon-keys.csv</c>, so the moment
+        /// something raises an alert row under that key this sound plays with no code change.
+        /// </summary>
+        public const string AlertRaid = SoundPrefix + "alert.raid";
 
         /// <summary>
         /// A campfire burning. **In the library, not yet in the game.**
@@ -68,6 +116,18 @@ namespace Odyssey.Presentation.Audio
         /// <summary>The same, after dark. A different world rather than a quieter one: the day's
         /// birds are gone and something else has started.</summary>
         public const string AmbienceOutdoorNight = AmbiencePrefix + "outdoor.night";
+
+        /// <summary>
+        /// The bed behind the title screen, the load list and the world-setup page — and behind
+        /// nothing else.
+        ///
+        /// <para><b>It is the one sound that is explicitly not part of the colony.</b> Everything
+        /// else in this file is something happening in a world; this plays when there is no world
+        /// and stops the moment there is one, crossing with the outdoor bed's own arrival fade.
+        /// It rides the Music bus rather than Ambience because that is what it is — a menu track —
+        /// and because a player who turns music off should get a silent title screen.</para>
+        /// </summary>
+        public const string AmbienceMenu = AmbiencePrefix + "menu";
 
         /// <summary>The daytime track.</summary>
         public const string MusicDay = MusicPrefix + "day";
@@ -119,94 +179,108 @@ namespace Odyssey.Presentation.Audio
         }
     }
 
-    /// <summary>The alerts audio can raise. One exists today; the list grows when the alert
-    /// system (design 10, region A5) does, and the chime ids land beside it in
-    /// <see cref="SoundIds"/>.</summary>
-    [Flags]
-    public enum AudioAlert
+    /// <summary>
+    /// Which chime an alert row gets.
+    ///
+    /// <para><b>Severity first, key second.</b> The alerts panel already sorts every condition
+    /// into notice, warning and danger, and that is the distinction a chime can carry: "look
+    /// when you can" against "go and fix it". So the default is the severity's sound and nothing
+    /// has to be listed here to be audible — the nineteen <c>ui.alert.*</c> keys in
+    /// <c>icon-keys.csv</c> that nothing raises yet will chime correctly on the day they are
+    /// implemented, without anybody remembering to come back to this file.</para>
+    ///
+    /// <para><see cref="Overrides"/> is for the few conditions that want their own sound
+    /// because severity undersells them. A raid is a danger like a starving colonist is a
+    /// danger, and they should plainly not make the same noise.</para>
+    /// </summary>
+    public static class AlertChime
     {
-        None = 0,
+        /// <summary>The raid alert's key, as <c>docs/design/icon-keys.csv</c> declares it.
+        /// Nothing raises it yet; the row below is what makes that a seam rather than a
+        /// to-do.</summary>
+        public const string RaidKey = "ui.alert.raid";
 
-        /// <summary>A colonist's food need has crossed into starvation.</summary>
-        Starving = 1 << 0,
+        /// <summary>Conditions whose own sound beats their severity's. Ordinal, and short
+        /// enough that a linear scan is cheaper than a dictionary.</summary>
+        static readonly (string Key, string Sound)[] Overrides =
+        {
+            (RaidKey, SoundIds.AlertRaid),
+        };
+
+        /// <summary>The sound a row makes when it first appears.</summary>
+        public static string For(string key, Hud.AlertSeverity severity)
+        {
+            for (int i = 0; i < Overrides.Length; i++)
+                if (string.Equals(Overrides[i].Key, key, StringComparison.Ordinal))
+                    return Overrides[i].Sound;
+            return ForSeverity(severity);
+        }
+
+        /// <summary>The default chime for a severity: a notice is worth a glance, and everything
+        /// else is worth getting up for.</summary>
+        public static string ForSeverity(Hud.AlertSeverity severity) =>
+            severity == Hud.AlertSeverity.Notice ? SoundIds.AlertNormal : SoundIds.AlertNegative;
     }
 
     /// <summary>
-    /// Watches the published pawn list and raises an <see cref="AudioAlert"/> the moment a need
-    /// crosses its threshold — once, not every frame, and not again until the need has recovered
-    /// past a re-arm point.
+    /// Turns the alerts panel's rows into chimes: one sound the moment a row appears, and
+    /// nothing at all for a row that is merely still there.
     ///
-    /// The hysteresis is the whole point of the class. A need sitting at the threshold flaps
-    /// either side of it for hours of game time, and a chime per flap is worse than no warning at
-    /// all; the re-arm band (recover to <see cref="RearmAbove"/> before the crossing can fire
-    /// again) is how thermostats solve the same problem.
+    /// <para><b>Why it reads the panel rather than the pawns.</b> It used to read the published
+    /// pawn list and carry its own starvation threshold, which was a second owner of a rule
+    /// <see cref="Hud.AlertModel"/> already owned — and the two had drifted: the audio copy
+    /// tested food against 12 on a scale that runs to 1000, so the chime fired at a hundredth
+    /// of the food the red row appears at, which is to say never. Reading the rows means the
+    /// sound and the panel cannot disagree about what an alert is, and a row the player has
+    /// dismissed is silent for free.</para>
     ///
-    /// Reads only the published <see cref="Sim.Contracts.PawnView"/> list, the way ADR 0004 says
-    /// presentation learns anything: no sim object is touched, and a fixed tick with a fixed pawn
-    /// list raises exactly the same alert in a test as in the game.
+    /// <para><b>One chime, not one per row.</b> Several conditions can cross on the same frame;
+    /// they chime once between them, at the loudest severity present, because one sound saying
+    /// "something needs you" is the message and the panel is what says what.</para>
+    ///
+    /// <para><b>The first step is silent.</b> The watch arms itself on whatever is already on
+    /// screen when a world arrives, so loading a save with a hungry colonist does not chime at
+    /// the player before they have found the mouse.</para>
     /// </summary>
-    public sealed class AlertWatch
+    public sealed class AlertChimeWatch
     {
-        /// <summary>
-        /// Food, in the published 0–100 units, at which the starving chime fires. 12% is deep
-        /// hunger rather than peckishness — by then the colonist has been visibly hungry on the
-        /// roster for a long while and the chime is the "now it matters" signal.
-        /// </summary>
-        public const int StarveThreshold = 12;
+        readonly HashSet<int> _sounded = new();
+        readonly HashSet<int> _present = new();
+        bool _armed;
+
+        /// <summary>Rows sounded so far, for a test and for the developer overlay.</summary>
+        public int Sounding => _sounded.Count;
 
         /// <summary>
-        /// Food a colonist must recover to before the starving alert can fire for them again.
-        /// A wide band, because eating one meal clears the condition outright and the only thing
-        /// the band really guards against is a need oscillating around the threshold.
+        /// Step one refresh of the panel and return the sound to play, or <c>null</c>.
         /// </summary>
-        public const int RearmAbove = 30;
-
-        readonly List<(int Pawn, bool Raised)> _raised = new();
-
-        /// <summary>
-        /// Step over one published frame and return any alerts that fire on it. Several colonists
-        /// can cross at once; they chime once between them, because one sound carrying "somebody
-        /// is starving" is the message, and the roster is what says who.
-        /// </summary>
-        public AudioAlert Step(System.ReadOnlySpan<Sim.Contracts.PawnView> pawns)
+        public string? Step(IReadOnlyList<Hud.AlertRow> rows)
         {
-            AudioAlert fired = AudioAlert.None;
+            _present.Clear();
 
-            for (int i = 0; i < pawns.Length; i++)
+            string? chime = null;
+            Hud.AlertSeverity loudest = default;
+
+            for (int i = 0; i < rows.Count; i++)
             {
-                int pawn = pawns[i].Id.Value;
-                bool already = Raised(pawn);
+                Hud.AlertRow row = rows[i];
+                _present.Add(row.DismissKey);
 
-                if (pawns[i].Food <= StarveThreshold)
-                {
-                    SetRaised(pawn, true);
-                    if (!already) fired |= AudioAlert.Starving;
-                }
-                else if (already && pawns[i].Food >= RearmAbove)
-                {
-                    SetRaised(pawn, false);
-                }
+                if (!_armed || _sounded.Contains(row.DismissKey)) continue;
+                if (chime != null && row.Severity <= loudest) continue;
+
+                loudest = row.Severity;
+                chime = AlertChime.For(row.Key, row.Severity);
             }
 
-            return fired;
-        }
+            // What is on screen is what has been sounded. A row that clears drops out, so the
+            // condition returning is a new alert and chimes again — which is the behaviour a
+            // player expects and the reason this is not a set that only grows.
+            _sounded.Clear();
+            foreach (int key in _present) _sounded.Add(key);
 
-        bool Raised(int pawn)
-        {
-            for (int i = 0; i < _raised.Count; i++)
-                if (_raised[i].Pawn == pawn) return _raised[i].Raised;
-            return false;
-        }
-
-        void SetRaised(int pawn, bool raised)
-        {
-            for (int i = 0; i < _raised.Count; i++)
-            {
-                if (_raised[i].Pawn != pawn) continue;
-                _raised[i] = (pawn, raised);
-                return;
-            }
-            _raised.Add((pawn, raised));
+            _armed = true;
+            return chime;
         }
     }
 }

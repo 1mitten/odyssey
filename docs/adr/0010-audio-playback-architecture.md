@@ -68,9 +68,14 @@ class, `PhaseLoop`, used twice.
 **Music and alerts are 2D and ride their own buses.** Music crossfades between day and night
 tracks from the tick, through `GameClock` — the one place ticks become hours — with two
 ping-ponged voices so a phase change is a crossfade and never a gap. Alerts chime 2D (an alert
-is *for the player*, not from a position), start the duck, and are raised by `AlertWatch`
-from the published pawn list with hysteresis so a need oscillating at the threshold chimes
-once, not per frame.
+is *for the player*, not from a position) and start the duck.
+
+> **Amended 2026-09-19.** Alerts were raised here by `AlertWatch`, reading the published pawn
+> list against its own starvation threshold. That was a second owner of a rule `AlertModel`
+> already held, and the two had drifted onto different scales, so the chime effectively never
+> fired. Alerts are now raised by `AlertChimeWatch` from the alerts panel's own rows, at the
+> refresh that builds them, with the sound chosen by severity. The playback half of this
+> decision — 2D, own bus, starts the duck — is unchanged. See `docs/design/24-alert-sounds.md`.
 
 **Trigger sources are what presentation already knows.** The frame a tool lands is
 `WorkSwing.Lands` — the same stroke clock that flies the chips — published by

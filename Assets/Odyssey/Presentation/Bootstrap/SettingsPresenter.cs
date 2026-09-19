@@ -377,14 +377,20 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void ApplyBusDb(SettingsBus bus)
         {
-            AudioDirector? audio = _bootstrap?.Audio;
-            if (audio == null || _director == null) return;
+            if (_director == null) return;
 
             SoundBus sound = ToSoundBus(bus);
             float db = _director.BusDb(bus);
+
+            // **The store is written whether or not a colony exists.** This used to return early
+            // on a null director — which is every moment before a world is built — so a player
+            // who set their volumes on the title screen, where the settings page is perfectly
+            // reachable, had them silently discarded. It also left the title screen's own bed
+            // deaf to the Music fader that is drawn right there on the page: MenuAmbience reads
+            // this store, so writing it is how the slider reaches the sound under it.
             _audioStore.SetDb(sound, db);
             _audioStore.Save();
-            audio.SetBusDb(sound, db);
+            _bootstrap?.Audio?.SetBusDb(sound, db);
         }
 
         /// <summary>

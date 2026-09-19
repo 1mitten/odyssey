@@ -476,6 +476,112 @@ Deliberately short. Anything a test can decide is in §10 instead.
 
 ---
 
+## 12. The sound of a carry
+
+*Added 2026-09-19 on `claude/alert-sounds`, from one recording the owner supplied
+(`item-pick.mp3`).*
+
+### What it is
+
+A soft mid-range scuff — material being handled, most of its energy between 250 and 800 Hz with a
+second lobe up to 2.5 kHz. Not a click, not a thud with a transient; closer to a bag of stones
+being shifted. **It is deliberately the quietest placed sound in the game**, because of when it
+plays: every leg of every haul, and a colony of six haulers is a near-continuous stream of it.
+
+### One recording, two sounds
+
+Played unchanged at both ends of a carry it would say *something happened* twice and never say
+which — which is the whole of what a player needs to hear from a hauler they are not watching. So
+each end is **resampled rather than pitch-shifted**, which moves pitch and length together:
+
+| | Rate | Result | Colour |
+|---|---|---|---|
+| **lift** | ×1.14 | up ~2½ semitones, an eighth shorter — 0.38 s | high-pass 170 Hz, +2.5 dB shelf at 3 kHz |
+| **drop** | ×0.82 | down ~3½ semitones, a fifth longer — 0.53 s | +3 dB shelf at 220 Hz, low-pass 5.5 kHz |
+
+**Resampling is right here precisely because it is not a clean pitch shift.** A bigger, heavier
+object really does sound both lower *and* longer, so the artefact is the effect. A
+formant-preserving shift would give two sounds of the same size at different pitches, which reads
+as one sample played twice. The EQ then seals it: brightness for a thing leaving the ground, body
+and a dulled top for a thing arriving on it.
+
+**Three takes of each**, at rates spread ±4% around those centres, and the catalogue adds ±7%
+per-play pitch on top. One sample is recognisable as a sample within three or four plays, and this
+one gets more plays than anything else in the game.
+
+### Where they fire
+
+| Sound | Moment | Point |
+|---|---|---|
+| `carry.lift` | the edge the simulation hands the thing over — the middle of the lift crouch, the frame the hands are on the pile | where the pile was lying |
+| `carry.drop` | **the end of the fall**, not the start | the colonist's feet — at most a cell from where it landed, and the sound's full-volume radius is 14 m |
+
+The drop is the one with a rule worth naming. `CarryHandover.FallFinished` is true forever after
+the landing, so anything that polls it turns one thud into a buzz; `CarryHandover.FallLanded`
+takes both sides of the frame step and is true exactly once, including when a frame is longer than
+the whole fall (a stall, a load screen, a step taken the instant a paused game resumes).
+
+Both are published as events from `PawnFigureDirector` — `LoadLifted`, `LoadSet` — for the reason
+`BlowLanded` is: the one place that knows when a load changes hands should not have to know what
+follows.
+
+**Firing the drop when the hands open would be wrong**, not merely early. The load is still
+visibly in the air for another third of a second, so the sound would read as the colonist dropping
+something they are still holding.
+
+### Blending it into the environment
+
+This is the part that is tuning rather than plumbing, and all of it is in the catalogue:
+
+| | Carry | The axe, for comparison |
+|---|---|---|
+| Volume | **0.40** | 0.85 |
+| Max distance | **120 m** | 200 m |
+| Priority (0 = first served) | **150** | 120 |
+| Cooldown | 0.10 s | 0.15 s |
+
+Under the work rather than beside it. The short range is as much a performance decision as a mix
+one — the director culls by range *before* it spends a voice, so a distant stockpile run costs
+nothing at all. The low priority means an axe, a chime or anything else wins the voice when the
+pool is full, which is the right way round: a hauler is the background of a colony and the thing
+being built is the foreground.
+
+### Processing notes
+
+The source is very quiet — −44.6 LUFS, peaks at −28 dBFS. Two things follow.
+
+**Gain first, then denoise, then trim.** The whole signal sits below the level a denoiser takes
+for noise and below the level a silence trim takes for silence; run either on the raw file and the
+clip comes out empty. It is lifted 24 dB into a working range first.
+
+**Levelling is peak-ceilinged RMS, not EBU R128.** The alert chimes use two-pass `loudnorm` and
+the obvious move was to reuse it. It cannot be: R128's integrated loudness is gated in 400 ms
+blocks, these clips are under half a second, and `loudnorm` duly reports −inf and refuses the
+second pass. Peak-ceilinged RMS is what a one-shot wants anyway — what matters about an impact is
+how hard it hits, not how loud it is over time. All six land at −3.0 dBFS peak, mean −21.8 to
+−22.7.
+
+**And the level is measured on the written file, not on the filter chain.** Measuring through
+`-f null` is a pass cheaper and gave an answer 3.5 dB out, because the stereo-to-mono downmix
+lands differently on the null muxer than on a WAV; every clip came back pinned at 0 dBFS before
+that was found. The script measures the bytes that will ship.
+
+`normalize: 0` in the import metas, against Unity's default of 1. With `forceToMono` set the
+importer peak-normalises the downmix, which would throw away the levelling. The files are already
+mono so it is inert today, and it is set anyway because the day somebody drops a stereo take in
+beside these is not the day to rediscover it.
+
+### Open, for a person at the keyboard
+
+- **Whether 0.40 is the right level**, and whether the answer changes with six haulers rather than
+  one. This is the number most likely to be wrong, and it is one slider.
+- **Whether lift and drop are actually distinguishable in play**, with the colonist small on
+  screen and the camera at its default height. They are plainly different side by side; that is
+  not the same test.
+- **Whether the drop wants to be lower still.** ×0.82 was chosen to stay recognisably the same
+  material. ×0.7 would read as heavier and less like its sibling.
+- **Whether three takes is enough** once a stockpile run is watched end to end.
+
 ## Cross-references
 
 - `docs/design/13-gestures.md` — solved versus authored; the lift and the stow
@@ -484,3 +590,5 @@ Deliberately short. Anything a test can decide is in §10 instead.
 - `docs/design/21-ladders-and-climbing.md` — why a hauler cannot go up
 - `docs/design/17-rates-and-stats.md` — WS, and why the move rate is untouched
 - `docs/bug-patterns.md` — one rule with two owners, which §6d exists to avoid
+- `docs/design/24-alert-sounds.md` — the other half of the 2026-09-19 audio work, and
+  `tools/audio/bake_alerts.sh`, whose levelling this one deliberately does not share

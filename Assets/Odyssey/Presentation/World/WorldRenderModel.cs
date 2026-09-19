@@ -441,6 +441,28 @@ namespace Odyssey.Presentation.World
             return -1;
         }
 
+        /// <summary>
+        /// How far above this cell's floor the thing in it is <b>drawn</b>, in metres, for
+        /// anything that stands up without occluding. Zero for everything else.
+        ///
+        /// <para><b>This is a picking question, not a rendering one.</b> An occluding edifice
+        /// fills its cell and the picker meets it head-on; a bed does not, and before 2026-09-19
+        /// the only surface it offered a ray was the floor underneath it. At the play camera a
+        /// surface 0.70 m up is drawn a quarter of a cell nearer the viewer than that floor, so
+        /// where the bed was drawn and where it could be clicked disagreed by a quarter cell —
+        /// measured, and reported by the owner as a bed being "really specific" to click.</para>
+        ///
+        /// <para>A bed is the only thing that answers today, and the shape it answers with is
+        /// <see cref="BedShape"/>'s own, because two copies of a height is how one of them gets
+        /// corrected on its own — the same argument that put the bed's shape in one place to
+        /// begin with. The next non-occluding thing that stands up adds a line here.</para>
+        /// </summary>
+        public float StandHeight(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return 0f;
+            return _edifice[index] == CoreContent.EdificeBed ? BedShape.Size.y : 0f;
+        }
+
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
 

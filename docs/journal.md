@@ -6516,6 +6516,140 @@ nothing but characters. In the editor the same commit is perfect.
   build with a runtime-found shader off the list, so the next one fails loudly instead of
   shipping an empty world.
 
+## 2026-09-19 — Two wrong answers before the empty build gave up its cause
+
+The owner's report after the first player build was "no terrain, no graphics, apart from
+characters". It took three attempts, and the first two are the instructive part.
+
+- **First answer: shader stripping.** Real, measured, and not the cause. Every shader the game
+  finds at runtime was genuinely absent from the player, the log said so, and fixing it was
+  worth doing. But I reported it as *the* fix on the strength of a clean player log — and the
+  player had been sitting on the main screen, where none of the renderer under suspicion runs.
+- **Second answer: the same mistake again.** A cleaner log, still from a menu. I had proved the
+  shaders were missing and never proved that was *why* the world was empty. Those are different
+  claims and I ran them together.
+- **The real cause was written down in the code before the problem existed.**
+  `ContentPack.FindRoot` walks up for a directory holding `Assets` and `ProjectSettings`, and its
+  own remarks say: "A built player has neither directory and would land in the throw below, which
+  is deliberate. Nothing in CI or scripts/ builds a player, so shipping the pack is not solved
+  here rather than solved wrongly here" — and it names the answer, `UseRoot` with
+  `Application.streamingAssetsPath`. `UseRoot` had existed, unused, waiting for the day somebody
+  built a player. That day was four hours earlier.
+- **A deliberate limitation outlives the sentence that justified it.** "Nothing builds a player"
+  was true when written and false the moment `unity.sh build` landed. The note was findable and I
+  did not find it until the third pass, because I was looking at the renderer.
+- **The fix is the one the note specified.** `ContentPackBuild` stages `Assets/Odyssey/Defs` into
+  `StreamingAssets` before a build and removes it after, so the repository keeps exactly one copy
+  of the pawn tuning and the world tables — the standing rule in CLAUDE.md. The composition root
+  calls `UseRoot` outside the editor only, so Def edits still take effect immediately on Play.
+- **And the reason it took three passes is now fixed too.** `-odyssey-newgame` boots a player
+  straight into a colony, so a build can be smoke-tested from a terminal. The log that finally
+  settled it reads `world 120x120x16 seed 1 generated in 61 ms … catalogue 121/138 rows have
+  art`, which is the sentence none of the earlier runs could have produced whatever was wrong.
+- **Verified:** world generates in the player, no exceptions, no missing shaders. Fast tier 736 +
+  445; EditMode **1837 total, 1823 passed, 0 failed**; build 386 MB, 0 errors.
+
+## 2026-09-19 — The third cause of the empty player, and the flag that hid it
+
+Two fixes had landed and the world still did not draw. This is the third cause, the wrong turn that
+was taken instead of it, and why neither was visible from the editor.
+
+- **The build could not finish at all, and that was a separate fault.** A cold build was compiling
+  **884,736** variants of URP/Lit's `ForwardLit` fragment pass, at about six a second and falling —
+  roughly a day and a half. The previous night's run had died mid-way with *"Internal error
+  communicating with the shader compiler process… Protocol error - failed to read magic number"*,
+  which reads like a flaky tool and is not: it is what happens when sixteen compiler workers grind
+  at that for half an hour.
+- **The cause was an uncommitted working-tree change.**
+  `UniversalRenderPipelineGlobalSettings.asset` has `m_StripUnusedVariants: 1` in git and had been
+  flipped to `0` locally, in all three places the asset stores it. The build log says what that
+  cost in one line: *After built-in stripping: 884,736 → After scriptable stripping: 884,736* —
+  URP's stripper ran and removed nothing. `PC_RPAsset.asset` was dirty in the same way and for the
+  same reason: its `m_Prefilter*` fields are a cache the build preprocessor writes, and with
+  stripping off the build had written back a version that prefilters nothing.
+- **Restoring the committed value took the same pass to 64 variants and the build to 12 seconds**,
+  386 MB — which is exactly the *"385 MB and 11 s before, 385 MB and 11 s after"* recorded when
+  always-including URP/Lit was first measured. That measurement was honest; the flip came later.
+  The build does not write the flag, so this was a person or an editor UI, once.
+- **And the world was still empty, which is the part worth keeping.** A diagnostic in the player
+  reported `draws 1731 instances 43921 chunks 104 materials 22 surround 18192`, with URP/Lit
+  found, supported and carrying five passes. The renderer was doing all of its work and none of it
+  reached the screen.
+- **Always-included keeps the shader; it does not keep the variant.** `INSTANCING_ON` comes from
+  `#pragma multi_compile_instancing`, and Unity's **built-in** stripping — the 226-million-to-384
+  step, which runs whatever URP's setting is — drops that axis unless some **material asset** has
+  instancing switched on. Every instanced material in this game is built at runtime from
+  `Shader.Find`, so there was none. `Graphics.RenderMeshInstanced` then draws into a variant that
+  does not exist, silently.
+- **This is almost certainly why the flag was flipped.** Switching URP's stripping off is a
+  plausible thing to reach for when variants are going missing. It does keep them — along with
+  884,734 others.
+- **The fix is one instancing-enabled material asset per kept shader**, under
+  `Assets/Resources/OdysseyKeepAlive`. Measured, because the received wisdom is that this is
+  expensive: it doubles the kept variants on the pass that matters and does nothing else — 64 →
+  128 fragment, 16 → 32 vertex, which is the instancing axis and only that. 386 MB either way.
+- **A ShaderVariantCollection was the alternative and is worse.** It has to name the keyword
+  combination, and which combination a runtime material lands in is the pipeline's business — a
+  named combination is a guess that goes stale when a quality setting moves. An instancing-enabled
+  material states the one thing we actually know.
+- **A test whose name claimed more than its assertion is why nobody looked here.**
+  `TheInstancedVariantOfTheLitShaderIsKept` only asserted the shader's name was on a list. Being on
+  that list is precisely what did *not* keep the instanced variant. It is now
+  `TheLitShaderIsOnTheAlwaysIncludedList`, and `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+  asserts the thing the old name promised — including that a keep-alive has not had its instancing
+  switched off, because present is not the same as right.
+- **`ShaderInclusion`'s header said "PlayScene.Build calls it" and nothing did**, from the day it
+  was written. Corrected rather than propagated into the new file. This is the same shape as the
+  note that cost three passes the night before: a sentence about the system that was never true.
+- **Verified:** player built from a clean tree in 14 s, 386 MB, 0 errors; run headless with
+  `-odyssey-newgame`, the log is 94 lines with no exceptions and no missing shaders, and a
+  screenshot shows terrain, trees, grass and a colonist. Fast tier 736 Sim + 445 Hud. Both content
+  gates clean.
+
+## 2026-09-19 — The fourth cause: the pack's own shaders were never on anybody's list
+
+The owner, on the build that had just been reported working: *"None of the items like meals, wood,
+stone are visible"*, then *"no grass either"*. Terrain, trees, rock and colonists drew. Grass tufts,
+bushes and every item pile did not.
+
+- **The renderer was again doing all of its work.** A diagnostic reported `things=7
+  itemInstances=19 kindsDrawn=3 kindsWithArt=6` — items existed, had art and were submitted, and
+  none of them reached the screen. The same signature as the terrain fault two hours earlier, which
+  is what made it obvious where to look and nearly made it obvious in the wrong place.
+- **The material told the truth as soon as it was asked.** Logging the material behind each item
+  def gave: `mat='Generic_01_A' shader='Synty/Generic_Standard' instancing=False
+  kw=[_ALPHATEST_ON _EMISSION _NORMALMAP]` and `shader='Synty/Generic_Basic'`. **Props are not drawn
+  with URP/Lit at all.** They wear the pack's own Shader Graph shaders, which `ShaderInclusion`
+  never mentions because nothing ever calls `Shader.Find` for them — they ship because prefabs
+  reference them.
+- **And every material asset that references them has instancing off.** `ModuleLibrary` takes the
+  prefab's `sharedMaterial` as it is, and `DressGround` explicitly returns the licensed source
+  untouched when no adjustment is wanted. Built-in stripping therefore kept no instanced variant of
+  those shaders, and `Graphics.RenderMeshInstanced` drew into a variant that was not there.
+- **Terrain and trees were visible for the one reason that hid this**: `DressGround`'s *other*
+  branch clones with `enableInstancing = true`, and `TreeMaterials` builds its own material. The
+  two paths through one function differ in exactly the property that decides whether a thing is
+  visible in a player, and only the cloning one had ever been exercised by anything that drew.
+- **The fix cannot be committed, and that shapes it.** A keep-alive material for a pack shader
+  references licensed content by GUID: committing one would put pack content in the repository and
+  would dangle on a clone without the pack. So `SyntyInstancingKeepAlive` creates them before a
+  build and deletes them after — the same bargain `ContentPackBuild` makes with the Defs. On a
+  machine with no pack it finds nothing and does nothing.
+- **Derived from the catalogue, and the difference is 54 MB and six minutes.** The first version
+  scanned all 385 materials in the pack: **126** distinct shader/keyword combinations, 440 MB, 6m42s.
+  Reading the module catalogue instead — the single place where an id becomes a mesh, and the same
+  list `ModuleLibrary` reads at runtime — gives **8** combinations, 429 MB and 8 s. The 43 MB over
+  the 386 MB baseline is the price of instanced variants for the pack's shaders and is not
+  avoidable while props are drawn instanced.
+- **Four causes, one symptom, and each fix made the next one visible.** Missing shaders, missing
+  content pack, missing instancing variant for our shaders, missing instancing variant for the
+  pack's. Nothing but a player build can see any of them, and each was invisible until the one
+  before it was fixed — which is the argument for `unity.sh build` being a gate rather than a
+  thing somebody remembers to run.
+- **Verified:** build 14 s, 429 MB, 0 errors; run headless with `-odyssey-newgame`, 0 exceptions,
+  and an in-game screenshot shows grass tufts, bushes, crates, wood logs and loose rocks. Fast tier
+  736 Sim + 445 Hud.
+
 ## 2026-09-19 — 8-directional diagonal movement and navigation
 
 The owner requested that colonists use diagonal movement in both the game system and the animation,
@@ -6549,6 +6683,308 @@ rather than walking in rigid 4-connected linear straight lines.
   proportional terrain cost scaling, and district reachability agreeing with exhaustive flood).
   Both wiki and registry content gates clean. Golden master simulated hashes re-baked in
   `Golden.cs` for `Meadow`, `PlayedBoard`, and `City` to reflect colonists travelling diagonally.
+
+
+## 2026-09-19 — Five real chimes, and the one they replaced could never have fired
+
+The owner supplied five notification recordings and called the sound already in the game *nasty*.
+It was: `AudioSetup.Alert()` synthesised a 0.6 s two-note sine, 830 Hz stepping down to 622 Hz,
+and the file it wrote sounded exactly like the two lines of trigonometry that made it. Replacing
+it was meant to be an afternoon of ffmpeg and a catalogue row.
+
+**The thing worth writing down is what turned up on the way.** `AlertWatch` — the only path from
+the simulation to a chime — tested the published food need against `StarveThreshold = 12`, under a
+comment reading *"food, in the published 0–100 units"*. Food is published 0–1000. `AlertModel`, the
+red row on screen, uses `StarveAt = 120`. So the chime was set to fire at a hundredth of the food
+the warning exists for, which is to say at a colonist who is already dying, long after the panel
+had given up shouting. Nobody had reported it, because a sound that never plays sounds like a
+sound you have not triggered yet.
+
+Its three unit tests passed. They fed the watcher literal `13`, `5` and `0` — numbers chosen to
+straddle the constant — so they proved the comparison worked and could never have noticed that the
+constant was on a scale that does not exist. **A test that restates the number it is testing tests
+the code around the number.** That is a variant of P1 worth having in the register beside the hop
+price and the ladder face: not two owners disagreeing, but two owners on different *units*.
+
+So the fix is not a corrected constant. `AlertWatch` is gone. `AlertChimeWatch` reads the alerts
+panel's own rows and returns a sound when one appears; `AlertModel` is the single owner of what an
+alert is, of its hysteresis, of its severity and of whether the player dismissed it. The chime is
+raised from `HudShell.RefreshAlerts`, in the same pass that builds the row, because a sound landing
+on a different frame from the line it belongs to reads as two events rather than one. A pleasant
+side-effect: `AudioDirector.Sync` no longer walks the pawn list every frame, so the whole change is
+a small saving on the frame rather than a cost.
+
+**The mapping is severity first, key second**, and that was the deliberate decision rather than the
+obvious one. The obvious shape is a table from alert key to sound, which is correct and which would
+have covered the three alerts that exist. But `icon-keys.csv` declares twenty-two `ui.alert.*` keys
+and nineteen of them are unimplemented; a key-first table means every one of those arrives silent,
+and the person who implements fire or a hull breach has to know that a second file wants editing.
+Severity-first means an unknown key already chimes — correctly, because the panel had to pick a
+severity for it to be drawn at all — and `AlertChime.Overrides` exists only for conditions severity
+undersells. It has one row: `ui.alert.raid`, because a raid and a starving colonist are both
+`Danger` and must obviously not make the same noise. That row is also the seam doing its job in
+advance: the raid siren is imported, mixed and mapped, and the day something raises that key it
+plays with no code change.
+
+**On the files themselves.** The five arrived spanning −14.5 to −24.5 LUFS. Ten decibels is the
+difference between a chime that startles and one that is missed entirely, and no amount of
+catalogue tuning fixes it properly, because `Volume` is where the *mix* lives — how important a
+sound is — and it should not be absorbing how loud somebody's export happened to be. So
+`tools/audio/bake_alerts.sh` matches them: two-pass EBU R128 to −18 LUFS with a −1.5 dBTP ceiling,
+which lands every clip inside two decibels of every other. `alert-normal` stops at −20 because it
+is a peaky bell and the true-peak ceiling binds before the loudness target does; squashing the
+transient to reach −18 would have been changing the sound to satisfy a number, so it keeps its
+crest and gets the two decibels back as catalogue `Volume` 0.95. That is the division of labour the
+catalogue comment already claimed and this is the first case that tested it.
+
+The raid siren also carried half a second of silence before it started — half a second of nothing
+after an alarm has been raised — so the bake trims dead air at −45 dB in and −50 dB out with 6 ms
+guard fades. Raid 10.73 → 9.54 s, joined 6.38 → 5.77 s, normal 1.96 → 1.57 s. **It does not
+compress, EQ or shorten anything musical, and the script says so in its header**, because the
+moment a bake tool starts making taste decisions nobody can tell which sound they are listening to.
+Whether nine and a half seconds is an alert or a cutscene sting is a question for the owner, and it
+is in the design doc as one.
+
+Import class splits on whether the sound is on a critical frame. `normal` and `negative` fire in
+play and are PCM decompressed on load, 168 KB each, no decode at the instant they sound. `happy`,
+`joined` and `raid` are seconds long, rare and not latency-critical, so they ride ADPCM compressed
+in memory: 1.3 MB of alerts in total rather than 2.8. None is forced to mono — Unity's importer
+peak-normalises the downmix when `forceToMono` is set, which would throw away the loudness match
+the bake exists to produce, and that trap is worth remembering the next time somebody tidies a
+stereo clip.
+
+Three of the five are in the library and played by nothing, which is `SoundIds.Campfire`'s bargain
+and the same words are used for it. `happy` needs an `AlertSeverity.Good` that does not exist, and
+a green row in a panel whose job is problems is a design question rather than a plumbing one.
+
+Unity EditMode **1848 total, 1834 passed, 0 failed**. `docs/design/24-alert-sounds.md` holds the
+decisions; ADR 0010's alert clause is amended in place rather than rewritten, because its playback
+half — 2D, own bus, starts the duck — is exactly as decided and only the trigger moved.
+
+## 2026-09-19 — One recording, two ends of a carry
+
+The owner asked for pickup and drop sounds on the carry animation, from one supplied recording,
+*"process and alter sound to distinguish pick up and drop … clarify the sound to me because it will
+played often … also blend it into the environment."* Three requirements, and the second and third
+are in tension with the first: a sound distinct enough to tell apart is a sound loud enough to
+notice, and this one plays on every leg of every haul.
+
+**The distinguishing is done by resampling, not by pitch-shifting.** The lift runs at ×1.14 and the
+drop at ×0.82, which moves pitch and length together — up two and a half semitones and an eighth
+shorter, down three and a half and a fifth longer. That is the right transform here *precisely
+because it is not a clean pitch shift*: a bigger, heavier object really does sound both lower and
+longer, so the artefact is the effect. A formant-preserving shift would have given two sounds of
+the same size at different pitches, which the ear hears as one sample played twice. EQ seals it —
+a high-pass and a shelf at 3 kHz on the way up, body at 220 Hz and a low-pass at 5.5 kHz on the way
+down.
+
+**Three takes of each**, at rates spread four per cent either side, on top of the catalogue's own
+±7% per-play pitch. This will be the most repeated sound in the game once footsteps exist, and one
+sample is recognisable as a sample within three or four plays.
+
+**Blending into the environment is a mix decision and it is the whole of the third requirement.**
+Volume 0.40 against the axe's 0.85, dying at 120 m against its 200, priority 150 against its 120.
+Under the work rather than beside it. The short range is as much about the frame as the mix — the
+director culls by range before it spends a voice, so a stockpile run at the far end of the board
+costs nothing — and the low priority means an axe or a chime takes the voice when the pool is full,
+which is the right way round: a hauler is the background of a colony.
+
+**The drop fires at the end of the fall and not the start**, which is the one thing here that is a
+fault rather than a taste. The load is visibly in the air for another third of a second after the
+hands open, so a sound at the release reads as a colonist dropping something they are still
+holding. That needed an edge rather than a condition: `CarryHandover.FallFinished` is true forever
+afterwards, so polling it turns one thud into a buzz. `FallLanded(before, after)` takes both sides
+of the frame step, fires exactly once, and still fires when a frame is longer than the whole fall —
+a stall, a load screen, or a step taken the instant a paused game resumes. Both ends are published
+as events from the figure director, `LoadLifted` and `LoadSet`, for the same reason `BlowLanded` is.
+
+**Two things about the processing were worth the hour they cost.**
+
+The bake for the alert chimes uses two-pass `loudnorm`, and reusing it was the obvious move. It
+cannot be used: EBU R128's integrated loudness is gated in 400 ms blocks, these clips are under
+half a second, and `loudnorm` reports `-inf` and refuses its own second pass. Peak-ceilinged RMS is
+what a one-shot wants anyway — what matters about an impact is how hard it hits, not how loud it is
+over time — so that is what `bake_carry.sh` does, and it says why in its header so the next person
+does not repeat the experiment.
+
+And the first working version came out **pinned at 0 dBFS on every clip**, three and a half
+decibels hotter than the gain it had computed. The measurement pass ran the filter chain into
+`-f null`, which is a pass cheaper; the stereo-to-mono downmix lands differently on the null muxer
+than it does on a WAV, so the level it measured was not the level it wrote. The script now writes
+the file first and measures the bytes that will ship. **Measure the artefact, not a proxy for it**
+— which is the same lesson as `docs/lessons.md`' entry about checking that the edit an experiment
+relies on actually applied, in a different costume.
+
+The source was also very quiet, −44.6 LUFS with peaks at −28 dBFS: quiet enough that the whole
+signal sits below the level a denoiser takes for noise and below the level a silence trim takes for
+silence. Run either on the raw file and the clip comes out empty. Gain first, then clean.
+
+Unity EditMode **1850 total, 1836 passed, 0 failed**. `docs/design/24-carrying.md` §12.
+
+## 2026-09-19 — A bed for the title screen, and the volume slider that was never saved
+
+The owner supplied a deep-space drone for the main screen: fade it in, loop it, fade it out into
+the game audio when a world arrives, never play it in a colony, keep it really low.
+
+**Where it plays was the only hard part, and it was hard for a structural reason.** `AudioDirector`
+is built *from a world* — its grid size, its terrain mirror, its surface layer — and
+`OdysseyBootstrap.LateUpdate` returns before touching it while `_world` is null. The menus are
+precisely the state in which there is no world, so there is no audio of any kind on the title
+screen and never has been. Making the director constructible without a world was the obvious move
+and the wrong one: it would leave a half-built director whose beds and probe wait for a second
+initialisation that nothing in the constructor hints at. A title screen wants one looping 2D voice
+and a fade, so `MenuAmbience` is one looping 2D voice and a fade, owned by the root rather than by
+the session — built once, surviving every world made and torn down, disposed with the component.
+`Sync(unscaledDeltaTime, wanted: _world == null)` sits above the guard, and `wanted` is the whole
+rule.
+
+**It reads the player's faders rather than keeping any.** The temptation was a small `_busDb[5]`
+of its own, which is a second owner of a rule and precisely the fault I had deleted from the alert
+path earlier the same day. `AudioSettingsStore` is the one owner and this is a second reader:
+`AudioSettingsStore.Load()` each step while the bed is audible, which is five PlayerPrefs lookups
+against an in-memory dictionary, on a menu, and stops entirely once a world exists.
+
+**That turned up a real gap.** `SettingsPresenter.ApplyBusDb` began `if (audio == null …) return;`
+— and `audio` is null every moment before a world is built, while the settings page is perfectly
+reachable from the main screen. So a player who set their volumes on the title screen had them
+**silently discarded**, and would have found the Music fader drawn on that very page doing nothing
+to the bed underneath it. The store is now written whether or not a colony exists, and the director
+is pushed to only if it is there. Not a bug anybody had reported, and not one anybody would have
+reported as a bug — "I set the volume and it didn't stick" is the sort of thing a player assumes
+they imagined.
+
+**The fades are asymmetric on purpose.** Eight seconds arriving, because the bed should already be
+the air by the time the player has read the menu; four leaving, because it has to be *gone* before
+the world it is handing to has finished arriving. The outdoor bed's `ArrivalFadeSeconds` is already
+four, so the two cross rather than queue — and that relationship is pinned by tests that read the
+shipped catalogue rather than restating constants, so retuning by ear stays free and drifting into
+a gap fails.
+
+**The arrival latch was wrong first time, and only a test that looked mid-fade could see it.** I
+set `_arrived` on the first `Sync` rather than on reaching full, so the eight-second fade governed
+one sixtieth of a second and the remaining 7.98 ran at the four-second leaving fade. Both endpoints
+were correct — silent at nought, full at eight — so any test that checked the two ends would have
+passed. The one that caught it asserted the level was between 0.2 and 0.6 at four-tenths of the
+way through, and got 0.80.
+
+**On the clip.** Deeper than it looks: 20–120 Hz carries almost all of it, 2 kHz and above is
+effectively silence. That explains its −27.6 LUFS, which is mostly K-weighting doing what it does
+to sub-bass against an actual peak of −11.4 dBFS, and it means **this will behave completely
+differently on laptop speakers from headphones** — worth knowing before anybody retunes the level.
+It is also genuinely wide, sum and difference within 2.4 dB, so it is emphatically not folded to
+mono: the width is most of what makes a bed read as everywhere rather than as over there, and here
+it is nearly all there is. The whole 157 s is kept, with the last six seconds blended into the
+first six and the blended tail dropped — a seamless 151 s loop, measured at 0.4% of full scale at
+the seam. Peak-normalised to the same `BedPeak` every other bed uses, so catalogue `Volume` means
+the same thing across all three; left at its native 24 kHz, because resampling a signal with
+nothing above 500 Hz to 44.1 would add eight megabytes of nothing to the repository.
+
+Volume 0.18 against the day bed's 0.28. Music bus, not Ambience — it is a menu track, and a player
+who turns music off should get a silent title screen.
+
+Unity EditMode **1857 total, 1843 passed, 0 failed**. `docs/design/17-start-flow.md` §12.
+
+## 2026-09-19 — Two asks that were half built already, and a rule with an exception
+
+Owner, in one message: the bed submenu should say who is already housed; and *"when I click on wood
+I can't see how many is this pile — can we combine piles up to a maximum"* with a third/two-thirds/
+full graphic. Then, a minute later: *"can you auto assign a bed if it's been unoccupied or not
+claimed for a while so colonists find an empty bed to sleep in — instead on the floor where
+possible."*
+
+**Grounding first paid for itself twice.** Two of the three things in the pile request were already
+in the code: `ColonyItems.Spawn` has merged stacks to `stackLimit` (75 for wood) since it was
+written, and the inspect pane has printed "27 in the pile" since 2026-09-17 — in the state line, in
+the pane's smallest grey type, where the owner read it and did not see it. So the pile work was not
+"build stacking and a counter"; it was **move the number to where the eye lands and let wood into
+the ramp that already existed**. `ItemHeap` had drawn stone, ore and coal as a growing scatter for
+weeks; wood's row was `null`.
+
+The same check reframed the bed ask. `TrySleep` has always let anyone sleep in an unowned bed — an
+unowned bed is a shared pool — so nobody was on the floor *for want of finding* a free bed.
+Auto-assignment does not get anyone off the floor. What it buys is that who sleeps where stops
+being redecided every night by whoever is nearest, which is what makes a tick in the picker worth
+drawing.
+
+**And it needed an exception, or it would have caused the complaint it was asked to fix.** Claiming
+takes a bed out of the shared pool permanently. Two beds between three colonists, with a naive
+claim-on-sleep, means the first two privatise them and the third sleeps on the floor for ever — a
+strictly worse colony than before the feature. So the claim is conditional on the pool still
+covering everyone who has none: `UnownedBedCount() - 1 >= bedless others`. With a bed each,
+everybody claims and nothing is lost; short of beds, nobody claims and they stay shared.
+`TooFewBedsToGoRoundAreLeftInTheSharedPool` is the test that holds it.
+
+Three smaller decisions worth keeping:
+
+- **The claim is on arrival, once.** Not every sleeping tick — the rule counts beds and colonists,
+  and fifty colonists asking it sixty times a second would be the only thing in `SleepJobDriver`
+  that cost anything. Not on the collapse branch either: a body that goes down on the way to a bed
+  has not reached it.
+- **Wood scatters on the floor but is still one bundle in the arms** (`Recipe.CarriedAsHeap`). The
+  two were the same answer only because rubble was the only thing that scattered. `Armful` draws a
+  fixed three, so letting wood through unchanged would have put three bound log piles in two hands
+  — undoing a load the owner had looked at and tuned the same week.
+- **Three bundles, not seven.** `SM_Prop_LogPile_01` is a wide prop where a boulder is a small one.
+  Seven in a 2.5 m cell is a log-jam. Three is also exactly the third/two-thirds/full ramp asked
+  for, reached through the mechanism already in the game rather than three new props.
+
+The "unoccupied for a while" half — taking a bed back off an owner who has stopped using it — is
+**not built and is recorded as open**. One bed per colonist is enforced at assignment and there is
+no death model, so there is no state a staleness timer could fire on. A mechanism with nothing to
+trigger it is a thing a later session would have to delete.
+
+Fast tier **745 Sim + 446 Hud**, Long tier **21**. The ten-day goldens did not move, and the reason
+is worth writing down: the scenario's own sleeping spots carry no edifice record, so `AssignOwnerAt`
+refuses them and `UnownedBedCount` does not see them. They were never ownable and still are not.
+
+`docs/design/24-pile-reading.md` (new), `docs/design/20-beds.md` §13 and §13a.
+
+## 2026-09-19 (later) — A quarter of a cell, found by printing a table
+
+Owner, after the first round: clicking a tile that has wood in it always gets the wood and never
+the tile; and clicking a bed "seems to be really specific" when either of its two cells should do.
+
+The first is a straightforward precedence problem with a two-rung answer — thing, then cell, then
+thing — read off the selection rather than kept in a counter, so nothing has to remember to reset
+it. Worth noting that the precedence it modifies was **itself a fix**: a pile on bare ground used to
+be unselectable because the click fell through to the cell. Both reports are real and the answer is
+an order, not a winner.
+
+**The second one is the entry for `docs/bug-patterns.md`.** Reading the code found nothing, because
+nothing in it is wrong: `SlicePicker` returns both bed cells correctly, `CellDetailContributor`
+publishes bed facts for both, `InspectModel` renders them from either. Three files, all correct, and
+a bug the owner can feel.
+
+So: a probe test that swept a 48° ray along the bed in quarter cells and **printed the cell that
+came back** — once aimed at the floor, once aimed at `BedShape.MattressTop`. The floor column was
+perfect. The mattress column was shifted by exactly one quarter-cell step, all the way along:
+
+```
+aim at the grass in front of the bed  ->  the bed
+aim at the near half of the bed       ->  the bed's OTHER cell
+aim at the far end of the bed         ->  the grass behind it
+```
+
+`SlicePicker` resolves a **non-occluding** cell by crossing that cell's floor plane, and a bed is
+drawn 0.70 m above its floor. At the play camera's 48°, `0.70 / tan(48°)` = 0.63 m — a quarter of a
+cell. Where the bed is drawn and where it can be clicked had never agreed, in any direction the
+camera faces.
+
+`WorldRenderModel.StandHeight` is the fix and the seam: a cell whose edifice stands without
+occluding offers its own top plane to the ray, first, because it is nearer. It also means a bed now
+shadows the sliver of ground behind it, which is what it is drawn doing.
+
+Two lessons, both already in the catalogue in other clothes:
+
+- **Reading three correct files does not find a bug that is in the space between them.** Measure.
+  The memory note says this and it has now been right every time.
+- **Test the ends, not the middle.** `BedPickHeightTests` walks the bed in tenths of a cell, because
+  a check of the two cell centres alone would have passed *before* the fix — the drift is a quarter
+  cell and a centre has half a cell of slack either side. That is the general rule for any report
+  whose word is "fiddly" rather than "broken".
+
+Fast **745 Sim + 449 Hud**, EditMode **1871 total, 1857 passed, 0 failed**, PlayMode **82/77/0**.
+No simulation change, so no golden moved and the Long tier was not re-run.
 
 ## 2026-09-19 — Soft crowd avoidance and sub-tile visual lateral steering
 

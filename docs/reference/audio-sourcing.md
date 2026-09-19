@@ -21,10 +21,12 @@ putting a file of the same name in the same folder.
 |---|---|---|---|---|
 | `chop.wav` | An axe biting into a tree trunk — the felling stroke landing. Dull; wood does not ring. | 0.2–0.8 s | no | mono |
 | `pick.wav` | A pick striking stone — the mining stroke landing. A click and a short ring. | 0.2–0.8 s | no | mono |
-| `alert.wav` | The chime for "a colonist is starving". Heard over the music, which ducks for it. Must read as *attention*, not as alarm — it will fire in a quiet room. | 0.5–1.5 s | no | stereo |
+| ~~`alert.wav`~~ | **Supplied 2026-09-19** and split into five: `alert-normal`, `alert-negative`, `alert-happy`, `alert-joined`, `alert-raid`. See `docs/design/24-alert-sounds.md` — the sourcing note below still applies to any future chime. |  |  |  |
+| `carry-lift.wav`, `carry-drop.wav` | **Supplied 2026-09-19** as one recording and split into two by `tools/audio/bake_carry.sh`. See `docs/design/24-carrying.md` §12. | | | |
 | `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. Its level is driven by how much water is near the camera, so what is wanted is the sound of standing beside a stream, not of approaching one. | 15–90 s | **yes, seamlessly** | mono |
 | `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
 | `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
+| `menu-bed.wav` | **Supplied 2026-09-19.** The title screen's bed, and the one sound that must never be heard in a colony. See `docs/design/17-start-flow.md` §12. | 151 s | **yes, seamlessly** | stereo |
 | `music-day.wav` | The daytime track. Plays from 06:00 to 19:00 game time, crossfading in over 3 s. | any | **yes, seamlessly** | stereo |
 | `music-night.wav` | The night-time track. 19:00 to 06:00, crossfading over 4 s. | any | **yes, seamlessly** | stereo |
 
@@ -44,8 +46,8 @@ times an hour. The game also varies pitch by ±7% and volume by ±14% on every p
 do not need to be dramatically different — different enough that the ear stops recognising the
 sample.
 
-`water`, `alert`, the two outdoor beds and the music tracks do not take variants; one of each is
-right.
+`water`, the alert chimes, the two outdoor beds and the music tracks do not take variants; one
+of each is right.
 
 **If only one take exists, variants can be made from it** — the pick is one recorded strike
 resampled to seven pitches, three of them dulled to stand in for a glancing blow. Pitch is most
@@ -65,7 +67,9 @@ the lossless master.
 
 | Sound | Imported as | Why |
 |---|---|---|
-| chop, pick, alert | PCM, decompress on load | no decode at all at the instant it plays |
+| chop, pick, carry-lift, carry-drop, `alert-normal`, `alert-negative` | PCM, decompress on load | no decode at all at the instant it plays |
+| `alert-happy`, `alert-joined`, `alert-raid` | ADPCM, compressed in memory | seconds long, rare, and nothing is waiting on the frame they start |
+| menu-bed | Vorbis, streamed from disc | two and a half minutes of bed nobody should pay memory for |
 | water, ambience-day, ambience-night | ADPCM, decompress on load | Unity's own answer for noisy sounds played in quantity — 3.5× smaller than PCM, near-free to decode |
 | music | Vorbis, streamed from disc | decompressed Vorbis costs ~10× its compressed size in memory, and a track is long |
 
@@ -82,7 +86,7 @@ the lossless master.
   already squashed cannot be turned back up.
 - **Mono for anything with a position.** `chop`, `pick` and `water` are placed in the world and a
   stereo file cannot be placed; the importer flattens them, and it flattens them better if they
-  were recorded mono in the first place. `alert`, the outdoor beds and the music are 2D and keep
+  were recorded mono in the first place. The alert chimes, the outdoor beds and the music are 2D and keep
   their stereo image — the outdoor bed is the air itself rather than a thing in the air, and a
   wide stereo field is most of what makes it read as everywhere rather than as over there.
 

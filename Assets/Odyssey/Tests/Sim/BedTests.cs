@@ -614,6 +614,109 @@ namespace Odyssey.Tests.Sim
                 "the unowned bed is the free bed: nobody checks into somebody else's");
         }
 
+        // ---- the bed a colonist claims for herself ---------------------------------------------
+
+        /// <summary>A colony of one, so the pool arithmetic below has one obvious answer.</summary>
+        static ColonyWorld Alone()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 1;
+            scenario.beds = 0;
+            return ColonyWorld.Build(Size, Seed, scenario);
+        }
+
+        /// <summary>
+        /// <b>A colonist who sleeps in a bed nobody owns wakes up owning it</b> (owner,
+        /// 2026-09-19: "auto assign a bed if it's been unoccupied or not claimed for a while").
+        ///
+        /// <para>Before this, an unowned bed was a hotel: whoever was nearest that night took it,
+        /// and the pane could never answer "where does she sleep?" with anything but "wherever she
+        /// was standing". Claiming on arrival makes the answer stable, and makes the picker's tick
+        /// mean something the player did not have to set by hand.</para>
+        /// </summary>
+        [Test]
+        public void ASleeperClaimsTheUnownedBedSheLiesDownIn()
+        {
+            ColonyWorld colony = Alone();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+            Assume.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(0), "nobody owns it yet");
+
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 6_000 && !pawn.Asleep; i++) colony.World.Tick();
+
+            Assert.That(pawn.Asleep, Is.True, "she found the bed");
+            Assert.That(pawn.Cell, Is.EqualTo(head));
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(pawn.Id.Value),
+                "and it is hers now, without the player assigning it");
+        }
+
+        /// <summary>
+        /// <b>And never at somebody else's expense.</b> Claiming takes a bed out of the shared
+        /// pool for good, so a colony short of beds must not let the early risers privatise the
+        /// few it has and leave the rest on the floor for ever. Three colonists and one bed: it
+        /// stays everybody's.
+        /// </summary>
+        [Test]
+        public void TooFewBedsToGoRoundAreLeftInTheSharedPool()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 6_000 && !pawn.Asleep; i++) colony.World.Tick();
+
+            Assume.That(pawn.Asleep, Is.True);
+            Assume.That(pawn.Cell, Is.EqualTo(head), "she slept in the one bed");
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(0),
+                "one bed between three is nobody's: claiming it would strand the other two");
+        }
+
+        /// <summary>
+        /// The rule stated directly, without a night passing: a colonist who already has a bed
+        /// does not collect a second, which is the one-bed-per-colonist rule seen from the
+        /// auto-claim side.
+        /// </summary>
+        [Test]
+        public void AColonistWithABedDoesNotClaimAnother()
+        {
+            ColonyWorld colony = Alone();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int first = OpenFootprint(colony, out int firstFoot);
+            int second = AnotherOpenFootprint(colony, first, firstFoot, out _);
+            Assume.That(first, Is.GreaterThanOrEqualTo(0));
+            Assume.That(second, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, first);
+            RaiseABed(colony, second);
+            Assume.That(Assign(colony, first, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+
+            Assert.That(colony.Construction.TryClaimForSleeper(second, pawn.Id), Is.False);
+            Assert.That(colony.Construction.BedOwnerAt(second), Is.EqualTo(0));
+            Assert.That(colony.Construction.BedOwnerAt(first), Is.EqualTo(pawn.Id.Value),
+                "and the bed she has is untouched");
+        }
+
+        /// <summary>A bed somebody else owns is not on offer to the claim either.</summary>
+        [Test]
+        public void AnOwnedBedIsNeverClaimedOutFromUnderItsOwner()
+        {
+            ColonyWorld colony = Fresh();
+            var owner = colony.Pawns.Pawns.All[0];
+            var other = colony.Pawns.Pawns.All[1];
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+            Assume.That(Assign(colony, head, owner.Id.Value), Is.EqualTo(IntentRejection.None));
+
+            Assert.That(colony.Construction.TryClaimForSleeper(head, other.Id), Is.False);
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(owner.Id.Value));
+        }
+
         // ---- a bed and the floors: above, below, and one storey up (the owner's use case) ------
 
         /// <summary>

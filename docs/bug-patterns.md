@@ -33,6 +33,7 @@ Every occurrence so far:
 | What layer does a run land on? | `Place`'s per-cell lift, and `DrawRunGhosts` (no lift at all) | a deck with a hole in it |
 | **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
 | Is this cell the foot of a terrace step? | `BankLayout` (render mirror), `TerraceFoot` (cell grid) | allowed on purpose: different data, pinned cell-by-cell by `TerraceFootTests` |
+| **When is a colonist starving?** | `AlertModel.StarveAt` (120, of 1000), `AlertWatch.StarveThreshold` (12, of a scale that does not exist) | **the alert chime fired at 1.2% food instead of 12%, which is to say never — and its three unit tests all passed, because they fed the watcher literal numbers rather than a published pawn** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -181,6 +182,62 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-19 — The volume you set on the title screen was never saved
+
+Found while wiring the title-screen bed to the player's faders; never reported, and not the sort of
+thing a player would report.
+
+`SettingsPresenter.ApplyBusDb` opened with `if (audio == null || _director == null) return;`. The
+audio director is built from a world, so `audio` is null every moment before one exists — and the
+settings page is perfectly reachable from the main screen. Moving a volume slider there wrote
+nothing to `AudioSettingsStore` and therefore nothing to PlayerPrefs.
+
+**The shape worth recognising: a guard that protects the last line of a method by skipping the
+first two.** The null check was correct about the director and wrong about everything above it.
+Ask of any early return: *which of the things below this line actually needed the thing I am
+checking?*
+
+**Stopped by** writing the store unconditionally and pushing to the director only if it exists.
+`MenuAmbience` reads the same store, so the title screen's Music fader now moves the bed drawn
+under it. `docs/design/17-start-flow.md` §12.
+
+### 2026-09-19 — Eight seconds of fade that lasted one frame
+
+Caught by its own test on the first run, and recorded because of *which* test caught it.
+
+`MenuAmbience` uses a long fade the first time it arrives and the ordinary one afterwards. The
+latch for "has arrived" was set on the first `Sync` rather than on the level reaching full, so the
+eight-second arrival fade governed one sixtieth of a second and the remaining 7.98 ran at the
+four-second leaving fade — the bed up in half the time it was written to take.
+
+**Both endpoints were correct.** Silent at nought seconds, full at eight. Any test asserting the
+ends would have passed. The one that failed asserted the level was between 0.2 and 0.6 at
+four-tenths of the way through, and got 0.80.
+
+**The lesson is about the test, not the code: a fade is a curve, so assert somewhere along it.**
+The same applies to anything with a shape — an ease, a ramp, a cost curve. Checking that it starts
+where it should and ends where it should tests the clamps.
+
+### 2026-09-19 — The alert chime that could not fire (P1)
+
+Not reported as a bug. The owner said the alert sounds were *nasty* and supplied replacements; the
+reason they had rarely been heard turned up while wiring the new ones in.
+
+`AlertWatch` decided when a colonist was starving by testing the published food need against
+`StarveThreshold = 12`, with a comment reading *"food, in the published 0–100 units"*. Food is
+published **0–1000**, and `AlertModel.StarveAt` — the threshold the red panel row uses — is 120. So
+the chime fired at a hundredth of the food the warning is for: a colonist reaching 1.2% is one who
+is already dying.
+
+**Three unit tests covered the watcher and all three passed**, because each fed it literal `13`,
+`5` and `0` rather than a pawn from a published frame. A test that restates the constant it is
+testing cannot catch the constant being wrong — it can only catch the *code* being wrong. The unit
+under test was the number.
+
+**Stopped by** deleting the second owner outright. `AlertChimeWatch` reads the alerts panel's own
+rows, so "what is an alert" has one answer, dismissal silences the sound for free, and a scale
+change cannot desynchronise the two again. `docs/design/24-alert-sounds.md`.
 
 ### 2026-09-19 — Every dear step began with the figure standing still (P5)
 
@@ -804,6 +861,134 @@ exist. `OnDestroy` had guarded that exact dereference since it was written.
   line, in every build log, unread.
 - The fix is not a guard but a second waiter — `HookDeveloperOverlay`, which waits on `Directors`
   where `Attach` waits on `Preferences` — because the two genuinely wait on different things.
+
+## The content pack does not exist in a player, and the code said so years before it mattered
+
+**2026-09-19, the empty world — the real cause.** After a shader fix that was a genuine but
+*different* fault, the owner reported again: *"No graphics came up in the build… apart from the
+characters."*
+
+`ContentPack.FindRoot` locates the Defs by walking up for a directory holding both `Assets` and
+`ProjectSettings`. A built player has neither, so it throws, world generation never runs, and the
+scene is empty but for the figures the start flow had already made. Its own remarks predicted
+this in full: *"A built player has neither directory and would land in the throw below, which is
+deliberate. Nothing in CI or scripts/ builds a player, so shipping the pack is not solved here
+rather than solved wrongly here."* `UseRoot` exists for exactly this and had never been called.
+
+- **The check:** anything the game reads from a path under `Assets/` at runtime is absent from a
+  player. `ContentPackBuild` stages the pack into `StreamingAssets` for the build and removes it
+  after, so the repository keeps one copy; the composition root calls `UseRoot` outside the
+  editor.
+- **A deliberate limitation outlives the sentence that made it deliberate.** "Nothing builds a
+  player" was true when written and stopped being true the hour a build command was added. When
+  you write *"X is not solved because nobody does Y"*, the note has to be found by whoever first
+  does Y — a grep for `StreamingAssets` found it, but only after two wrong answers.
+
+## A clean log from a program sitting on its main menu proves nothing
+
+**Same day, and it cost two wrong diagnoses.** Twice I ran the player from a terminal, saw a
+clean log, and reported a fix. Both times the player had stopped at the main screen, where
+nothing loads the content pack, nothing generates a world and nothing draws terrain — the entire
+subsystem under suspicion had not run.
+
+- **The check:** before believing a smoke test, confirm the code under suspicion actually
+  executed. The log that mattered says `world 120x120x16 seed 1 generated in 61 ms`; the two that
+  did not say anything of the sort, and their silence read as success.
+- **The fix is to make it reachable**: `-odyssey-newgame` boots a player straight into a colony,
+  so a build can be smoke-tested without a person clicking. A check nobody can run from a
+  terminal is a check that will be skipped.
+
+## Keeping the shader is not keeping the variant
+
+**2026-09-19, the third cause of the empty player build**, after the missing shaders and the
+missing content pack had both been found and fixed and the world still did not draw.
+
+A diagnostic in the player reported `draws 1731 instances 43921 chunks 104 materials 22 surround
+18192`, with `Universal Render Pipeline/Lit` found, supported and carrying its five passes. The
+renderer submitted everything, every frame, and none of it appeared. `INSTANCING_ON` comes from
+`#pragma multi_compile_instancing`, and Unity's **built-in** variant stripping drops that axis
+unless a **material asset** in the build has instancing switched on. Every instanced material in
+this game is created at runtime from `Shader.Find`, so there was none, and
+`Graphics.RenderMeshInstanced` drew into a variant that was not there. It does not warn.
+
+- **The check:** `InstancingKeepAlive` ships one instancing-enabled material per kept shader under
+  `Assets/Resources/OdysseyKeepAlive`, `PlayerBuild` refuses without them, and
+  `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial` fails the tier — including when a
+  keep-alive exists but has had its instancing switched off, because present is not the same as
+  right.
+- **The pattern is one rule with two owners, again.** "This shader is in the build" and "the
+  variant this draw needs is in the build" are different claims with different mechanisms, and the
+  fix for the first was reported as covering the second.
+- **A test name that claims more than its assertion actively hides the bug.**
+  `TheInstancedVariantOfTheLitShaderIsKept` only asserted that a name appeared in a list — and
+  appearing in that list is exactly what did not keep the instanced variant. It was green
+  throughout, and its name is why nobody looked here.
+
+## Check the working tree before believing the committed settings
+
+**Same day.** A cold player build was compiling **884,736** variants of one pass — about a day and
+a half — and had died the night before with *"Internal error communicating with the shader
+compiler process"*, which reads like a flaky tool. The cause was an **uncommitted** change:
+`UniversalRenderPipelineGlobalSettings.asset` has `m_StripUnusedVariants: 1` in git and had been
+flipped to `0` locally. Restoring it took the same pass to 64 variants and the build to 12 seconds.
+
+- **The check:** `git diff HEAD -- ProjectSettings/ Assets/Settings/` before diagnosing any
+  build-shaped problem. A settings asset that Unity rewrites on its own is easy to stop reading,
+  and a one-character flip inside 20 lines of migration churn is invisible in a glance.
+- **The build log states it plainly when you know the line to want:** *After built-in stripping:
+  884,736 → After scriptable stripping: 884,736* — a stripper that returns its input untouched.
+- **The flip was probably a fix attempt for the bug above.** Switching stripping off does keep the
+  instancing variants. It keeps 884,734 others with them.
+
+## Two paths through one function, and only one of them was ever drawn
+
+**2026-09-19, the fourth cause of the empty player.** Terrain and trees drew; grass tufts, bushes
+and every item pile did not. `ModuleLibrary.DressGround` clones the pack's material with
+`enableInstancing = true` when it needs an adjustment, and **returns the licensed source untouched
+when it does not** — and the source has instancing off. Props take the second path. The property
+that differs between the two branches is exactly the one that decides whether a thing is visible in
+a player, and it is invisible in the editor, which has every variant always.
+
+- **The check:** `SyntyInstancingKeepAlive` stages an instancing-enabled material per distinct
+  (shader, keyword set) the module catalogue can draw, for the duration of a build.
+- **Ask what the material actually is before theorising about the shader.** One log line —
+  `mat='Generic_01_A' shader='Synty/Generic_Standard' instancing=False kw=[...]` — ended a search
+  that had been aimed at URP/Lit, which the props do not use at all.
+- **A list of "shaders we use" built from `Shader.Find` call sites cannot see a shader that arrives
+  on a prefab.** `ShaderInclusion` derives its list from the source and is right about what it
+  covers; the pack's shaders were never in its domain, and nothing said so.
+
+## What a thing is drawn on is not the surface it is picked at
+
+**Symptom.** Clicking a bed is *"really specific"* (owner, 2026-09-19). Some parts of the drawn
+bed select it, some select its other cell, and the far end selects the grass behind it. Nothing in
+the pane, the model or the footprint is wrong, and both cells of the bed answer bed facts correctly
+when a test asks them directly.
+
+**The real cause.** `SlicePicker` resolves a **non-occluding** cell by crossing that cell's *floor
+plane*. A bed does not occlude, so the only surface it offered a ray was the floor underneath it —
+while the bed itself is drawn 0.70 m up. At the play camera's 48° elevation, a surface 0.70 m high
+is drawn `0.70 / tan(48°)` ≈ **0.63 m, a quarter of a cell**, nearer the viewer than the floor it
+stands on. So the clickable bed sat a quarter cell behind the drawn one, in every direction the
+camera faces.
+
+**The measurement that found it.** A throwaway probe test that swept a 48° ray along the bed in
+quarter cells and *printed the cell that came back*, twice: once aimed at the floor and once at
+`BedShape.MattressTop`. The floor column was perfect and the mattress column was shifted by one
+quarter-cell step throughout. Three sessions of reading `SlicePicker`, `CellDetailContributor` and
+`InspectModel` had found nothing, because **nothing in any of them is wrong**. Two runs of a probe
+that printed a table found it exactly.
+
+**The check that catches the next one.** `BedPickHeightTests` aims at the mattress — at what a
+player aims at — along the whole length of the bed in tenths of a cell, and requires the cell under
+the pointer. A check of the two cell centres alone would have passed *before* the fix: the drift is
+a quarter cell and a centre has half a cell of slack either side. **Test the ends of a thing, not
+its middle**, whenever the complaint is that something is fiddly rather than broken.
+
+**The general shape.** Anything drawn standing above its cell floor that does not occlude has this
+fault, and the seam is now `WorldRenderModel.StandHeight`. A bed is the only thing that answers
+today. The next non-occluding thing that stands up adds a line there — and if it does not, it will
+be a quarter cell out and nobody will know why.
 
 ## The caller's guess taken as the caller's instruction
 

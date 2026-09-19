@@ -531,6 +531,73 @@ was judged by the owner when it landed and is held by `BuildCursorTests`; it is 
 the ghosts alone read too sparse. Their remarks say so, so a later session does not delete them as
 tidying — or wonder why they are there.
 
+### 13. A bed claims its own sleeper (owner, 2026-09-19)
+
+Two asks in one breath: *"when you have one selected the sub menu should be clear who is already
+assigned a bed and who is unassigned a bed for clarity"*, and *"can you auto assign a bed if it's
+been unoccupied or not claimed for a while so colonists find an empty bed to sleep in — instead on
+the floor where possible"*.
+
+**The second one was already half true, and the half that was missing is not the half it sounds
+like.** `TrySleep` has always let anyone sleep in a bed nobody owns — an unowned bed is a shared
+pool, and a colonist only ends up on the floor when there is no free bed within reach, not because
+she failed to find one. So auto-assignment does not, on its own, get anyone off the floor. What it
+buys is that **who sleeps where stops being redecided every night** by whoever happens to be
+nearest, which is what makes the picker's marks worth reading and what makes "she sleeps there"
+a fact the pane can state.
+
+**The rule.** A colonist who *reaches* a bed nobody owns takes it as her own
+(`ConstructionGrid.TryClaimForSleeper`, called from `SleepJobDriver` on arrival).
+
+**The exception, which is the whole of the design.** Claiming takes a bed out of the shared pool
+for good, so the claim happens only when the pool would still hold a bed for every colonist who
+has none:
+
+> `UnownedBedCount() - 1 >= (colonists with no bed, excluding this one)`
+
+With a bed each, everybody claims on their first night and nothing is lost. **With two beds
+between three colonists nobody ever claims**, the pair stay shared, and the third is not stranded
+on the floor for ever because the first two got in early. Without that clause the feature would
+have caused exactly the complaint it was asked to fix.
+
+Three things it deliberately does not do:
+
+- **Not on the collapse branch.** A body that goes down on the way to a bed has not reached it and
+  does not get to own it (`SleepJobDriver.Claim` tests `Pawn.Cell == Job.TargetCell`).
+- **Not every tick.** The rule counts beds and colonists; asked sixty times a second by a colony
+  of fifty it would be the only thing in that driver that cost anything. It is asked once, on
+  arrival.
+- **Not on the scenario's own sleeping spots.** Those carry no edifice record, so `AssignOwnerAt`
+  refuses them and `UnownedBedCount` does not see them — which is why the ten-day goldens are
+  unchanged by this. They were never ownable and still are not.
+
+The "unoccupied for a while" half of the ask — taking a bed *back* off an owner who has stopped
+using it — is **not built**. With one bed per colonist enforced at assignment and no death model,
+there is no way to reach a bed whose owner will never return, so a staleness timer would be a
+mechanism with nothing to fire on. It goes in §12 rather than into the code.
+
+### 13a. The picker says who is housed, without saying so
+
+The picker was a list of bare names, and using it meant remembering who you had already given a bed
+to. It now carries a mark column, 14 px, ahead of the name:
+
+| Mark | Means |
+|---|---|
+| `✓` | sleeps in **this** bed |
+| `•` | has a bed **somewhere else** — picking them moves them, and releases the old one |
+| *(blank)* | **no bed at all** |
+
+The owner's words were *"no status and just a tick next to their name and also indicate the others
+already have a bed assigned"*, so there are no words in the column: a `has a bed` / `no bed` column
+is three times the reading for the same fact, and at three colonists it is longer than the names it
+annotates. **The blank is the row the eye is hunting for**, which is why the colonist with nowhere
+to sleep is the one with nothing beside her name rather than the one with a badge. The words exist
+in the tooltips for anyone who hovers.
+
+The marks come from `ConstructionGrid.PawnOwnsABed` and `BedOwnerAt` — asked of the one owner of
+the edifice list on each open, never tallied a second time in the shell, because a second tally is
+a thing that goes stale and this popover is rebuilt on open precisely so nothing in it can.
+
 ## 12. Open
 
 - **Real two-tile bed art** — replaces the placeholder; the only art question in this line.
@@ -544,3 +611,5 @@ tidying — or wonder why they are there.
 - **"Slept in own bed" memory and the room bonus** — rooms first; a-05 already holds the
   reference shape (bedroom validity, per-bed barracks scoring, the impressiveness tiers).
 - Double beds (2×2), medical beds, guest rules — nothing wants them yet.
+- **Releasing a bed its owner has stopped using** — the other half of the 2026-09-19 ask. Wants a
+  death or a departure model first; until one exists there is no state it could fire on (§13).

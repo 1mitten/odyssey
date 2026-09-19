@@ -66,9 +66,49 @@ MonoBehaviour:
     MaxDistance: 210
     Priority: 120
     Cooldown: 0.12
-  - Id: odyssey.sound.alert.starving
+  - Id: odyssey.sound.carry.lift
     Clips:
-    - {fileID: 8300000, guid: f7674ef5cf57a0f408f9dd417ac6c26a, type: 3}
+    - {fileID: 8300000, guid: 8c0367daba1a9d87cc1c9487df7a539d, type: 3}
+    - {fileID: 8300000, guid: 010c5de6b1c6dd79ea4e37f05246afa9, type: 3}
+    - {fileID: 8300000, guid: b2a05312daf4e90147432a3cd9ef5236, type: 3}
+    Bus: 3
+    Volume: 0.4
+    VolumeVariance: 0.14
+    PitchVariance: 0.07
+    SpatialBlend: 1
+    MinDistance: 14
+    MaxDistance: 120
+    Priority: 150
+    Cooldown: 0.1
+  - Id: odyssey.sound.carry.drop
+    Clips:
+    - {fileID: 8300000, guid: ede57fb9c8cbf580427e48aa4bc4a047, type: 3}
+    - {fileID: 8300000, guid: a394e76c8795c8cad148abfb3330ba61, type: 3}
+    - {fileID: 8300000, guid: 69bcabfe73608868d75b18f95a9cd2e0, type: 3}
+    Bus: 3
+    Volume: 0.4
+    VolumeVariance: 0.14
+    PitchVariance: 0.07
+    SpatialBlend: 1
+    MinDistance: 14
+    MaxDistance: 120
+    Priority: 150
+    Cooldown: 0.1
+  - Id: odyssey.sound.alert.normal
+    Clips:
+    - {fileID: 8300000, guid: 4fbee70b8ee55175ff8cf6688ed11531, type: 3}
+    Bus: 4
+    Volume: 0.95
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 2
+  - Id: odyssey.sound.alert.negative
+    Clips:
+    - {fileID: 8300000, guid: a9c034c4abf5635c45b6cabe6131658c, type: 3}
     Bus: 4
     Volume: 0.9
     VolumeVariance: 0
@@ -78,6 +118,42 @@ MonoBehaviour:
     MaxDistance: 500
     Priority: 16
     Cooldown: 2
+  - Id: odyssey.sound.alert.happy
+    Clips:
+    - {fileID: 8300000, guid: 1a507fd13a939645fc4443d6df39a60f, type: 3}
+    Bus: 4
+    Volume: 0.9
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 2
+  - Id: odyssey.sound.alert.joined
+    Clips:
+    - {fileID: 8300000, guid: 10f2137545c010000332025906f0efac, type: 3}
+    Bus: 4
+    Volume: 0.9
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 2
+  - Id: odyssey.sound.alert.raid
+    Clips:
+    - {fileID: 8300000, guid: 02fcb5b8911a50d2e416298656ff3b5b, type: 3}
+    Bus: 4
+    Volume: 0.9
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 10
   - Id: odyssey.sound.campfire
     Clips:
     - {fileID: 8300000, guid: a97e41f278ac2b14b94ec85c94a90269, type: 3}
@@ -109,3 +185,9 @@ MonoBehaviour:
     Volume: 0.22
     FadeSeconds: 8
     ArrivalFadeSeconds: 4
+  Menu:
+    Phase: 0
+    Clip: {fileID: 8300000, guid: 3f2fc19b93a23adcfe084ed805531f97, type: 3}
+    Volume: 0.18
+    FadeSeconds: 4
+    ArrivalFadeSeconds: 8

@@ -407,12 +407,11 @@ namespace Odyssey.Presentation.Ui
                         return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}";
                     }
                 case InspectSubject.Item:
-                    // A pile is counted, not just named — "27 in the pile" is the question a
-                    // click on a heap of wood is asking (owner, 2026-09-17). A lone thing has no
-                    // count worth saying, and says what it is doing instead.
-                    return _inspect.Stack > 1
-                        ? _inspect.Stack + " in the pile"
-                        : "item on the ground";
+                    // The count used to be said here — "27 in the pile" — and it was missed
+                    // (owner, 2026-09-19). It moved into the title, where the eye lands, and
+                    // saying it twice would only teach the pane to be skimmed. So this line
+                    // stopped counting and went back to saying where the thing is.
+                    return _inspect.Stack > 1 ? "a pile on the ground" : "item on the ground";
                 case InspectSubject.Cell:
                     // A site is the one thing a cell still says in a sentence — what it is
                     // waiting for, or how much longer. Every other fact the tile has is a row
@@ -737,12 +736,27 @@ namespace Odyssey.Presentation.Ui
             }
 
             _bedPickerRows!.Clear();
-            _bedPickerRows.Add(BedPickerRow("No owner", -1));
+            _bedPickerRows.Add(BedPickerRow("No owner", -1, BedPickerMark.None));
             var frame = world.Views.Current;
             var pawns = frame.Pawns;
+
+            // Who sleeps where, asked of the one place that knows. The picker used to be a list
+            // of bare names, and the owner had to remember who he had already housed to use it
+            // (2026-09-19: "the sub menu should be clear who is already assigned a bed and who is
+            // unassigned"). The grid is the single owner of the edifice list, so it is asked
+            // rather than a second tally being kept here and going stale.
+            var sites = _boot?.Colony?.Construction;
+            int here = sites != null ? sites.BedOwnerAt(_inspect.Cell) : 0;
+
             for (int i = 0; i < pawns.Length; i++)
-                _bedPickerRows.Add(BedPickerRow(
-                    ColonistNames.Of(frame, pawns[i].Id), pawns[i].Id.Value));
+            {
+                int id = pawns[i].Id.Value;
+                BedPickerMark mark =
+                    id == here && here != 0 ? BedPickerMark.ThisBed
+                    : sites != null && sites.PawnOwnsABed(id) ? BedPickerMark.AnotherBed
+                    : BedPickerMark.None;
+                _bedPickerRows.Add(BedPickerRow(ColonistNames.Of(frame, pawns[i].Id), id, mark));
+            }
 
             _bedPickerAnchor = anchor;
             _bedPicker.style.display = DisplayStyle.Flex;
@@ -769,15 +783,41 @@ namespace Odyssey.Presentation.Ui
             if (_bedPicker != null) _bedPicker.style.display = DisplayStyle.None;
         }
 
-        VisualElement BedPickerRow(string label, int pawnId)
+        /// <summary>
+        /// What a name in the picker carries beside it. No words: the owner asked for "just a
+        /// tick next to their name and also indicate the others already have a bed assigned"
+        /// (2026-09-19), and a column of "has a bed" / "no bed" would be three times the reading
+        /// for the same fact. A tick is this bed, a dot is a bed somewhere else, and a blank is
+        /// a colonist with nowhere of her own — which is the row the eye is hunting for, so it
+        /// is the one with nothing on it.
+        /// </summary>
+        enum BedPickerMark { None, ThisBed, AnotherBed }
+
+        VisualElement BedPickerRow(string label, int pawnId, BedPickerMark mark)
         {
             var row = new VisualElement();
             row.AddToClassList("bedowner__row");
+
+            // The mark sits in its own fixed-width column rather than in front of the name, so
+            // every name in the list starts at the same x and the column can be read down.
+            var flag = HudText.Make(
+                mark switch { BedPickerMark.ThisBed => "✓", BedPickerMark.AnotherBed => "•", _ => string.Empty },
+                HudTextRole.Body, ussClass: "bedowner__mark");
+            if (mark == BedPickerMark.ThisBed) flag.AddToClassList("bedowner__mark--this");
+            row.Add(flag);
+
             row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
 
             CellRef cell = _inspect.Cell;
             int pick = pawnId;
-            row.tooltip = pick < 0 ? "Leave the bed unowned" : "Give this bed to " + label;
+            row.tooltip = pick < 0
+                ? "Leave the bed unowned"
+                : mark switch
+                {
+                    BedPickerMark.ThisBed => label + " sleeps here already",
+                    BedPickerMark.AnotherBed => "Move " + label + " here from another bed",
+                    _ => "Give this bed to " + label,
+                };
             row.RegisterCallback<ClickEvent>(_ =>
             {
                 _boot?.World?.Intents.Submit(new Intent(IntentKind.AssignBedOwner, cell, pick));
