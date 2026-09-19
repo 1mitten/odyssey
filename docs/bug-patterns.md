@@ -882,3 +882,21 @@ flipped to `0` locally. Restoring it took the same pass to 64 variants and the b
   884,736 → After scriptable stripping: 884,736* — a stripper that returns its input untouched.
 - **The flip was probably a fix attempt for the bug above.** Switching stripping off does keep the
   instancing variants. It keeps 884,734 others with them.
+
+## Two paths through one function, and only one of them was ever drawn
+
+**2026-09-19, the fourth cause of the empty player.** Terrain and trees drew; grass tufts, bushes
+and every item pile did not. `ModuleLibrary.DressGround` clones the pack's material with
+`enableInstancing = true` when it needs an adjustment, and **returns the licensed source untouched
+when it does not** — and the source has instancing off. Props take the second path. The property
+that differs between the two branches is exactly the one that decides whether a thing is visible in
+a player, and it is invisible in the editor, which has every variant always.
+
+- **The check:** `SyntyInstancingKeepAlive` stages an instancing-enabled material per distinct
+  (shader, keyword set) the module catalogue can draw, for the duration of a build.
+- **Ask what the material actually is before theorising about the shader.** One log line —
+  `mat='Generic_01_A' shader='Synty/Generic_Standard' instancing=False kw=[...]` — ended a search
+  that had been aimed at URP/Lit, which the props do not use at all.
+- **A list of "shaders we use" built from `Shader.Find` call sites cannot see a shader that arrives
+  on a prefab.** `ShaderInclusion` derives its list from the source and is right about what it
+  covers; the pack's shaders were never in its domain, and nothing said so.

@@ -6605,3 +6605,47 @@ was taken instead of it, and why neither was visible from the editor.
   `-odyssey-newgame`, the log is 94 lines with no exceptions and no missing shaders, and a
   screenshot shows terrain, trees, grass and a colonist. Fast tier 736 Sim + 445 Hud. Both content
   gates clean.
+
+## 2026-09-19 — The fourth cause: the pack's own shaders were never on anybody's list
+
+The owner, on the build that had just been reported working: *"None of the items like meals, wood,
+stone are visible"*, then *"no grass either"*. Terrain, trees, rock and colonists drew. Grass tufts,
+bushes and every item pile did not.
+
+- **The renderer was again doing all of its work.** A diagnostic reported `things=7
+  itemInstances=19 kindsDrawn=3 kindsWithArt=6` — items existed, had art and were submitted, and
+  none of them reached the screen. The same signature as the terrain fault two hours earlier, which
+  is what made it obvious where to look and nearly made it obvious in the wrong place.
+- **The material told the truth as soon as it was asked.** Logging the material behind each item
+  def gave: `mat='Generic_01_A' shader='Synty/Generic_Standard' instancing=False
+  kw=[_ALPHATEST_ON _EMISSION _NORMALMAP]` and `shader='Synty/Generic_Basic'`. **Props are not drawn
+  with URP/Lit at all.** They wear the pack's own Shader Graph shaders, which `ShaderInclusion`
+  never mentions because nothing ever calls `Shader.Find` for them — they ship because prefabs
+  reference them.
+- **And every material asset that references them has instancing off.** `ModuleLibrary` takes the
+  prefab's `sharedMaterial` as it is, and `DressGround` explicitly returns the licensed source
+  untouched when no adjustment is wanted. Built-in stripping therefore kept no instanced variant of
+  those shaders, and `Graphics.RenderMeshInstanced` drew into a variant that was not there.
+- **Terrain and trees were visible for the one reason that hid this**: `DressGround`'s *other*
+  branch clones with `enableInstancing = true`, and `TreeMaterials` builds its own material. The
+  two paths through one function differ in exactly the property that decides whether a thing is
+  visible in a player, and only the cloning one had ever been exercised by anything that drew.
+- **The fix cannot be committed, and that shapes it.** A keep-alive material for a pack shader
+  references licensed content by GUID: committing one would put pack content in the repository and
+  would dangle on a clone without the pack. So `SyntyInstancingKeepAlive` creates them before a
+  build and deletes them after — the same bargain `ContentPackBuild` makes with the Defs. On a
+  machine with no pack it finds nothing and does nothing.
+- **Derived from the catalogue, and the difference is 54 MB and six minutes.** The first version
+  scanned all 385 materials in the pack: **126** distinct shader/keyword combinations, 440 MB, 6m42s.
+  Reading the module catalogue instead — the single place where an id becomes a mesh, and the same
+  list `ModuleLibrary` reads at runtime — gives **8** combinations, 429 MB and 8 s. The 43 MB over
+  the 386 MB baseline is the price of instanced variants for the pack's shaders and is not
+  avoidable while props are drawn instanced.
+- **Four causes, one symptom, and each fix made the next one visible.** Missing shaders, missing
+  content pack, missing instancing variant for our shaders, missing instancing variant for the
+  pack's. Nothing but a player build can see any of them, and each was invisible until the one
+  before it was fixed — which is the argument for `unity.sh build` being a gate rather than a
+  thing somebody remembers to run.
+- **Verified:** build 14 s, 429 MB, 0 errors; run headless with `-odyssey-newgame`, 0 exceptions,
+  and an in-game screenshot shows grass tufts, bushes, crates, wood logs and loose rocks. Fast tier
+  736 Sim + 445 Hud.

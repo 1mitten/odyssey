@@ -308,8 +308,11 @@ invisible where the game is played.
   which boots straight into a colony; a clean log from the main menu proves nothing, and that
   mistake cost three passes on 2026-09-19. Three separate faults had to be fixed before the first
   player drew anything: `ShaderInclusion` (runtime-found shaders), `ContentPackBuild` (the Defs,
-  via `StreamingAssets`) and `InstancingKeepAlive` (the `INSTANCING_ON` variant, which
-  always-included does *not* keep). `PlayerBuild` refuses on all three.
+  via `StreamingAssets`), `InstancingKeepAlive` (the `INSTANCING_ON` variant, which
+  always-included does *not* keep) and `SyntyInstancingKeepAlive` (the same variant for the
+  **pack's own** Shader Graph shaders, which no `Shader.Find` ever names and which arrive on
+  prefabs with instancing off — staged for the build and deleted after, because a keep-alive for a
+  licensed shader must never be committed). Each was invisible until the one before it was fixed.
 - **Before diagnosing anything build-shaped, `git diff HEAD -- ProjectSettings/ Assets/Settings/`.**
   An uncommitted flip of URP's `m_StripUnusedVariants` to `0` once took one shader pass from 64
   variants to 884,736 and the build from 12 seconds to an estimated day and a half.

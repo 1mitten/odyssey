@@ -98,3 +98,9 @@ tools/dotnet/*/TestResults/
 # in and takes it out again; the only committed copy is Assets/Odyssey/Defs. See docs/lessons.md.
 /Assets/StreamingAssets/Odyssey/
 /Assets/StreamingAssets/Odyssey.meta
+
+# Instancing keep-alive materials for the pack shaders, staged by SyntyInstancingKeepAlive
+# for the duration of a player build and removed after. They reference licensed shaders by GUID,
+# so they must never be committed. See the header of that file.
+/Assets/Resources/OdysseySyntyKeepAlive/
+/Assets/Resources/OdysseySyntyKeepAlive.meta
