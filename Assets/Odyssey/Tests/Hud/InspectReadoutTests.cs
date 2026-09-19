@@ -42,7 +42,10 @@ namespace Odyssey.Tests.Hud
         {
             InspectModel model = LookingAt(FrameWithPile(ItemHandle.Wood, 27), new ThingId(7));
 
-            Assert.That(model.Title, Is.EqualTo("Wood"));
+            // The count is in the headline, not under it. It lived on the state line until
+            // 2026-09-19, where the owner read the pane and did not see it at all — so a pile
+            // says its size where the eye lands, the way the growing pane says "Carrot × 5".
+            Assert.That(model.Title, Is.EqualTo("Wood × 27"));
             Assert.That(model.Subtitle, Is.EqualTo("item"));
             Assert.That(model.Stack, Is.EqualTo(27));
             Assert.That(model.ItemIconKey, Is.EqualTo("ui.res.wood"),
@@ -55,6 +58,17 @@ namespace Odyssey.Tests.Hud
             InspectModel model = LookingAt(FrameWithPile(ItemHandle.Salvage, 1), new ThingId(7));
 
             Assert.That(model.Title, Is.EqualTo("Scrap"));
+        }
+
+        [Test]
+        public void AThingLyingOnItsOwnIsNotCountedAtAll()
+        {
+            // "Wood × 1" is a pile of one, which is a stilted way of saying "a log". The count
+            // is only worth the width when there is a number to learn from it.
+            InspectModel model = LookingAt(FrameWithPile(ItemHandle.Wood, 1), new ThingId(7));
+
+            Assert.That(model.Title, Is.EqualTo("Wood"));
+            Assert.That(model.Stack, Is.EqualTo(1));
         }
 
         [Test]

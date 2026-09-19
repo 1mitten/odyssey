@@ -57,22 +57,35 @@ namespace Odyssey.Presentation.Rendering
             /// <summary>How much bigger or smaller than its catalogue size a rock may be drawn.</summary>
             public readonly float SizeJitter;
 
-            public Recipe(int fewest, int biggest, int full, float spread, float sizeJitter)
+            /// <summary>
+            /// Whether a carried load of this is drawn as a heap in the arms too.
+            ///
+            /// <para>True for rubble, which is what this class was written for: three rocks
+            /// cradled read as an armful. False for wood, whose prop is a bound log pile — one
+            /// bundle is a load a person carries and three bundles stacked in two hands is a
+            /// circus act. The ground heap and the armful are separate questions and were only
+            /// ever the same answer because rubble was the only thing that scattered.</para>
+            /// </summary>
+            public readonly bool CarriedAsHeap;
+
+            public Recipe(int fewest, int biggest, int full, float spread, float sizeJitter,
+                bool carriedAsHeap = true)
             {
                 Fewest = fewest;
                 Biggest = biggest;
                 Full = full;
                 Spread = spread;
                 SizeJitter = sizeJitter;
+                CarriedAsHeap = carriedAsHeap;
             }
         }
 
         /// <summary>
         /// The rubble recipes, by item def index, in <c>ItemIndex</c> order.
         ///
-        /// Only what a mine leaves is a heap. Rations come in a crate and wood comes in a bundle,
-        /// and both are drawn by their own prop exactly as before — a null row means "one prop,
-        /// in the middle of the cell", which is what every item did before this existed.
+        /// What a mine leaves is a heap, and so is wood — a null row means "one prop, in the
+        /// middle of the cell", which is what every item did before this existed and what rations
+        /// in a crate still do.
         ///
         /// The three that are heaps share a shape and differ in silhouette, because items carry
         /// no per-item tint and shape is the only axis there is: stone is squat boulders, iron ore
@@ -83,7 +96,17 @@ namespace Odyssey.Presentation.Rendering
         {
             null,                                        // meal
             null,                                        // salvage
-            null,                                        // wood
+
+            // **Wood, and the reason its numbers are not stone's.** The owner could not tell a
+            // tile of 3 wood from a tile of 75 (2026-09-19) — and could not, because every stack
+            // drew the one LogPile prop at the one place. It scatters now like the rubble does,
+            // but one to three bundles rather than two to seven: a bound pile of logs is a wide
+            // prop where a boulder is a small one, and seven of them in a 2.5 m cell is a
+            // log-jam rather than a stock. One, two, three is also the ramp asked for in the
+            // same breath — a third, two thirds, full — and a tree yields 27 into a limit of 75,
+            // so those three steps land near one tree, two trees and a full square.
+            new Recipe(1, 3, 75, 0.52f, 0.10f, carriedAsHeap: false),   // wood
+
             new Recipe(2, Most, 75, 0.62f, 0.22f),       // stone
             new Recipe(2, 6, 75, 0.55f, 0.20f),          // iron ore
             new Recipe(3, Most, 75, 0.66f, 0.18f),       // coal

@@ -6883,3 +6883,105 @@ Volume 0.18 against the day bed's 0.28. Music bus, not Ambience — it is a menu
 who turns music off should get a silent title screen.
 
 Unity EditMode **1857 total, 1843 passed, 0 failed**. `docs/design/17-start-flow.md` §12.
+
+## 2026-09-19 — Two asks that were half built already, and a rule with an exception
+
+Owner, in one message: the bed submenu should say who is already housed; and *"when I click on wood
+I can't see how many is this pile — can we combine piles up to a maximum"* with a third/two-thirds/
+full graphic. Then, a minute later: *"can you auto assign a bed if it's been unoccupied or not
+claimed for a while so colonists find an empty bed to sleep in — instead on the floor where
+possible."*
+
+**Grounding first paid for itself twice.** Two of the three things in the pile request were already
+in the code: `ColonyItems.Spawn` has merged stacks to `stackLimit` (75 for wood) since it was
+written, and the inspect pane has printed "27 in the pile" since 2026-09-17 — in the state line, in
+the pane's smallest grey type, where the owner read it and did not see it. So the pile work was not
+"build stacking and a counter"; it was **move the number to where the eye lands and let wood into
+the ramp that already existed**. `ItemHeap` had drawn stone, ore and coal as a growing scatter for
+weeks; wood's row was `null`.
+
+The same check reframed the bed ask. `TrySleep` has always let anyone sleep in an unowned bed — an
+unowned bed is a shared pool — so nobody was on the floor *for want of finding* a free bed.
+Auto-assignment does not get anyone off the floor. What it buys is that who sleeps where stops
+being redecided every night by whoever is nearest, which is what makes a tick in the picker worth
+drawing.
+
+**And it needed an exception, or it would have caused the complaint it was asked to fix.** Claiming
+takes a bed out of the shared pool permanently. Two beds between three colonists, with a naive
+claim-on-sleep, means the first two privatise them and the third sleeps on the floor for ever — a
+strictly worse colony than before the feature. So the claim is conditional on the pool still
+covering everyone who has none: `UnownedBedCount() - 1 >= bedless others`. With a bed each,
+everybody claims and nothing is lost; short of beds, nobody claims and they stay shared.
+`TooFewBedsToGoRoundAreLeftInTheSharedPool` is the test that holds it.
+
+Three smaller decisions worth keeping:
+
+- **The claim is on arrival, once.** Not every sleeping tick — the rule counts beds and colonists,
+  and fifty colonists asking it sixty times a second would be the only thing in `SleepJobDriver`
+  that cost anything. Not on the collapse branch either: a body that goes down on the way to a bed
+  has not reached it.
+- **Wood scatters on the floor but is still one bundle in the arms** (`Recipe.CarriedAsHeap`). The
+  two were the same answer only because rubble was the only thing that scattered. `Armful` draws a
+  fixed three, so letting wood through unchanged would have put three bound log piles in two hands
+  — undoing a load the owner had looked at and tuned the same week.
+- **Three bundles, not seven.** `SM_Prop_LogPile_01` is a wide prop where a boulder is a small one.
+  Seven in a 2.5 m cell is a log-jam. Three is also exactly the third/two-thirds/full ramp asked
+  for, reached through the mechanism already in the game rather than three new props.
+
+The "unoccupied for a while" half — taking a bed back off an owner who has stopped using it — is
+**not built and is recorded as open**. One bed per colonist is enforced at assignment and there is
+no death model, so there is no state a staleness timer could fire on. A mechanism with nothing to
+trigger it is a thing a later session would have to delete.
+
+Fast tier **745 Sim + 446 Hud**, Long tier **21**. The ten-day goldens did not move, and the reason
+is worth writing down: the scenario's own sleeping spots carry no edifice record, so `AssignOwnerAt`
+refuses them and `UnownedBedCount` does not see them. They were never ownable and still are not.
+
+`docs/design/24-pile-reading.md` (new), `docs/design/20-beds.md` §13 and §13a.
+
+## 2026-09-19 (later) — A quarter of a cell, found by printing a table
+
+Owner, after the first round: clicking a tile that has wood in it always gets the wood and never
+the tile; and clicking a bed "seems to be really specific" when either of its two cells should do.
+
+The first is a straightforward precedence problem with a two-rung answer — thing, then cell, then
+thing — read off the selection rather than kept in a counter, so nothing has to remember to reset
+it. Worth noting that the precedence it modifies was **itself a fix**: a pile on bare ground used to
+be unselectable because the click fell through to the cell. Both reports are real and the answer is
+an order, not a winner.
+
+**The second one is the entry for `docs/bug-patterns.md`.** Reading the code found nothing, because
+nothing in it is wrong: `SlicePicker` returns both bed cells correctly, `CellDetailContributor`
+publishes bed facts for both, `InspectModel` renders them from either. Three files, all correct, and
+a bug the owner can feel.
+
+So: a probe test that swept a 48° ray along the bed in quarter cells and **printed the cell that
+came back** — once aimed at the floor, once aimed at `BedShape.MattressTop`. The floor column was
+perfect. The mattress column was shifted by exactly one quarter-cell step, all the way along:
+
+```
+aim at the grass in front of the bed  ->  the bed
+aim at the near half of the bed       ->  the bed's OTHER cell
+aim at the far end of the bed         ->  the grass behind it
+```
+
+`SlicePicker` resolves a **non-occluding** cell by crossing that cell's floor plane, and a bed is
+drawn 0.70 m above its floor. At the play camera's 48°, `0.70 / tan(48°)` = 0.63 m — a quarter of a
+cell. Where the bed is drawn and where it can be clicked had never agreed, in any direction the
+camera faces.
+
+`WorldRenderModel.StandHeight` is the fix and the seam: a cell whose edifice stands without
+occluding offers its own top plane to the ray, first, because it is nearer. It also means a bed now
+shadows the sliver of ground behind it, which is what it is drawn doing.
+
+Two lessons, both already in the catalogue in other clothes:
+
+- **Reading three correct files does not find a bug that is in the space between them.** Measure.
+  The memory note says this and it has now been right every time.
+- **Test the ends, not the middle.** `BedPickHeightTests` walks the bed in tenths of a cell, because
+  a check of the two cell centres alone would have passed *before* the fix — the drift is a quarter
+  cell and a centre has half a cell of slack either side. That is the general rule for any report
+  whose word is "fiddly" rather than "broken".
+
+Fast **745 Sim + 449 Hud**, EditMode **1871 total, 1857 passed, 0 failed**, PlayMode **82/77/0**.
+No simulation change, so no golden moved and the Long tier was not re-run.

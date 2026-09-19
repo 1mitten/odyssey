@@ -252,11 +252,40 @@ namespace Odyssey.Presentation.CameraRig
                     return true;
                 }
 
+                float floorY = slabMin + FloorHeightAt(x, z);
+
+                // **A thing you walk over is still a thing you can see the top of.** A bed does
+                // not occlude, so before this the only surface it offered a ray was the floor
+                // underneath it — and at the play camera's 48° a surface 0.70 m up is drawn a
+                // quarter of a cell nearer the viewer than the floor it stands on. Measured, on
+                // 2026-09-19: aiming at the far end of a drawn bed picked the grass behind it,
+                // aiming at its near half picked its other cell, and aiming at the grass in
+                // front picked the bed. The owner's words were that clicking a bed "seems to be
+                // really specific".
+                //
+                // So a standing edifice offers its own top plane as well, and offers it first
+                // because it is the nearer of the two. The cell is claimed only where the ray
+                // crosses that plane *inside this cell's own footprint*, which is what the two
+                // bounds say — so a bed shadows the sliver of ground behind it exactly as it is
+                // drawn to, and nothing else changes.
+                float stand = model.StandHeight(index);
+                if (stand > 0f)
+                {
+                    float tTop = FloorCrossing(ray, floorY + stand);
+                    if (tTop >= t - 1e-4f && tTop <= tCellEnd)
+                    {
+                        cell = new CellRef(x, z, layer);
+                        thing = true;
+                        hitAt = tTop;
+                        return true;
+                    }
+                }
+
                 // Per cell, against that cell's own drawn floor rather than once against the
                 // layer's flat plane. This is the whole of the relief's effect on picking: the
                 // ground the player is aiming at is the tilted one, so that is the surface the ray
                 // has to meet.
-                float tFloor = floors ? FloorCrossing(ray, slabMin + FloorHeightAt(x, z)) : float.MaxValue;
+                float tFloor = floors ? FloorCrossing(ray, floorY) : float.MaxValue;
 
                 if (tFloor >= t - 1e-4f && tFloor <= tCellEnd
                     && Owner(model, index, layer, out CellRef owner, out thing))

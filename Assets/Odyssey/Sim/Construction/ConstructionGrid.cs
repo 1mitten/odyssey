@@ -1390,12 +1390,28 @@ namespace Odyssey.Sim.Construction
         /// the bed names it. See <see cref="IntentKind.AssignBedOwner"/> for the shape; the rules
         /// live here because this is the one owner of the edifice list.
         /// </summary>
-        public IntentRejection HandleAssignOwner(Intent intent)
+        public IntentRejection HandleAssignOwner(Intent intent) => AssignOwner(intent.Cell, intent.A);
+
+        /// <summary>
+        /// The whole of bed ownership, as both the player's intent and the sleeper's own
+        /// auto-claim reach it. <paramref name="pawnId"/> below zero releases the bed.
+        /// </summary>
+        public IntentRejection AssignOwner(CellRef cell, int pawn)
         {
-            if (!_grid.Contains(intent.Cell.X, intent.Cell.Z, intent.Cell.Y))
+            if (!_grid.Contains(cell.X, cell.Z, cell.Y))
                 return IntentRejection.OutOfBounds;
 
-            int index = _grid.Index(intent.Cell);
+            return AssignOwnerAt(_grid.Index(cell), pawn);
+        }
+
+        /// <summary>
+        /// <see cref="AssignOwner"/> by whole-world cell index, which is the shape the sleep
+        /// driver holds a bed in. The bounds check is the caller's; an index out of the edifice
+        /// list is refused here as it is there.
+        /// </summary>
+        public IntentRejection AssignOwnerAt(int index, int pawn)
+        {
+            if (index < 0 || index >= _grid.Edifice.Length) return IntentRejection.OutOfBounds;
             int handle = _grid.Edifice[index];
             if (handle < 0 || handle >= _edifices.Count) return IntentRejection.NotPermitted;
 
@@ -1404,7 +1420,7 @@ namespace Odyssey.Sim.Construction
                 return IntentRejection.NotPermitted;
 
             // -1 is the interface's "release"; 0 is the record's "nobody" — the same answer.
-            int pawnId = intent.A < 0 ? 0 : intent.A;
+            int pawnId = pawn < 0 ? 0 : pawn;
             if (pawnId != 0 && _pawns.Get(new PawnId(pawnId)) == null)
                 return IntentRejection.NotPermitted;
             if (placed.Owner == pawnId) return IntentRejection.AlreadyInThatState;
@@ -1439,6 +1455,73 @@ namespace Odyssey.Sim.Construction
 
         /// <summary>Who owns the bed at this cell, or 0 where no bed stands here or it is nobody's.</summary>
         public int BedOwnerAt(int cell) => BedAt(cell).Owner;
+
+        /// <summary><see cref="BedOwnerAt(int)"/> by cell reference, which is how the pane holds one.</summary>
+        public int BedOwnerAt(CellRef cell) =>
+            _grid.Contains(cell.X, cell.Z, cell.Y) ? BedOwnerAt(_grid.Index(cell)) : 0;
+
+        /// <summary>Whether this colonist already has a bed of her own somewhere on the map.</summary>
+        public bool PawnOwnsABed(int pawnId)
+        {
+            if (pawnId <= 0) return false;
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice bed = _edifices[i];
+                if (bed.Def == CoreContent.EdificeBed && !bed.Removed && bed.Owner == pawnId)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>Built beds nobody owns — the shared pool anyone may sleep in.</summary>
+        public int UnownedBedCount()
+        {
+            int free = 0;
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice bed = _edifices[i];
+                if (bed.Def == CoreContent.EdificeBed && !bed.Removed && bed.Built && bed.Owner == 0)
+                    free++;
+            }
+            return free;
+        }
+
+        /// <summary>
+        /// A colonist who has just reached a bed nobody owns takes it as her own — the "not
+        /// claimed" half of the owner's rule of 2026-09-19, so that who sleeps where settles
+        /// instead of being redecided every night by whoever is nearest.
+        ///
+        /// <para><b>But never at somebody else's expense.</b> An unowned bed is the shared pool:
+        /// anyone may sleep in one, and claiming takes it out of that pool for good. So the claim
+        /// happens only when the pool would still hold a bed for every colonist who has none —
+        /// two beds between three colonists stay unowned and shared for ever, and the third does
+        /// not end up on the floor because the first two got in early. With a bed each, all of
+        /// them claim on their first night and nothing is lost.</para>
+        ///
+        /// <para>Returns whether the bed was claimed. It is a no-op on a bed that is already
+        /// owned, including by this colonist.</para>
+        /// </summary>
+        public bool TryClaimForSleeper(int cell, PawnId pawn)
+        {
+            if (cell < 0 || cell >= _grid.Edifice.Length) return false;
+            if (BedOwnerAt(cell) != 0) return false;
+            if (PawnOwnsABed(pawn.Value)) return false;
+
+            int bedlessOthers = 0;
+            var all = _pawns.All;
+            for (int i = 0; i < all.Count; i++)
+            {
+                Pawns.Pawn other = all[i];
+                if (other.Id.Value == pawn.Value) continue;
+                if (!PawnOwnsABed(other.Id.Value)) bedlessOthers++;
+            }
+
+            // One bed leaves the pool if this succeeds; what is left must still cover everyone
+            // else who has none.
+            if (UnownedBedCount() - 1 < bedlessOthers) return false;
+
+            return AssignOwnerAt(cell, pawn.Value) == IntentRejection.None;
+        }
 
         /// <summary>
         /// The bed record a cell points at, or a record whose <c>Def</c> is not a bed. Either cell

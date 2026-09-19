@@ -115,6 +115,74 @@ namespace Odyssey.Tests.Hud
             Assert.That(director.Thing, Is.EqualTo(new ThingId(4)));
         }
 
+        /// <summary>
+        /// <b>A second click on the same cell looks past what is lying in it.</b>
+        ///
+        /// <para>A thing wins the first click and should — a pile of wood is what the player
+        /// pointed at. But a stockpile is wall-to-wall things, and there was no way at all to
+        /// reach the tile under one (owner, 2026-09-19: "it seems to be difficult to click on a
+        /// tile with wood in — always the item takes precedence when clicking on a tile, then
+        /// clicking on again would then go to the tile info").</para>
+        /// </summary>
+        [Test]
+        public void ASecondClickOnAPileShowsTheTileUnderIt()
+        {
+            var ground = new CellRef(5, 5, 0);
+            var pileAt = new CellRef(5, 5, 1);
+            var snapshot = FrameWith(PawnId.None, default, new ThingId(4), pileAt);
+            var director = new SelectionDirector();
+
+            director.Pick(ground, PawnId.None, snapshot);
+            Assume.That(director.HasThing, Is.True, "the first click is the pile");
+
+            director.Pick(ground, PawnId.None, snapshot);
+            Assert.That(director.HasThing, Is.False, "the second click is the tile under it");
+            Assert.That(director.Cell, Is.EqualTo(ground), "and the cell is still held");
+
+            director.Pick(ground, PawnId.None, snapshot);
+            Assert.That(director.Thing, Is.EqualTo(new ThingId(4)),
+                "a third click comes back round to the pile: two rungs and a loop");
+        }
+
+        [Test]
+        public void ClickingAwayAndBackStartsAtThePileAgain()
+        {
+            // The cycle is read off the selection rather than kept in a counter, so going
+            // somewhere else resets it with nothing to remember to reset.
+            var ground = new CellRef(5, 5, 0);
+            var pileAt = new CellRef(5, 5, 1);
+            var snapshot = FrameWith(PawnId.None, default, new ThingId(4), pileAt);
+            var director = new SelectionDirector();
+
+            director.Pick(ground, PawnId.None, snapshot);
+            director.Pick(ground, PawnId.None, snapshot);
+            Assume.That(director.HasThing, Is.False);
+
+            director.Pick(new CellRef(1, 1, 0), PawnId.None, snapshot);
+            director.Pick(ground, PawnId.None, snapshot);
+
+            Assert.That(director.Thing, Is.EqualTo(new ThingId(4)),
+                "coming back to a pile shows the pile, however the cell was left");
+        }
+
+        [Test]
+        public void AColonistIsNeverCycledPastIntoTheCellSheStandsIn()
+        {
+            // The cycle belongs to the thing tier alone. A colonist clicked twice is the same
+            // colonist, because a pick that lands on one selects them and the cell under their
+            // feet is not part of the selection at all.
+            var at = new CellRef(5, 5, 0);
+            var pawn = new PawnId(2);
+            var snapshot = FrameWith(pawn, at, ThingId.None, default);
+            var director = new SelectionDirector();
+
+            director.Pick(at, pawn, snapshot);
+            director.Pick(at, pawn, snapshot);
+
+            Assert.That(director.HasPawn, Is.True);
+            Assert.That(director.Cell, Is.Null, "a colonist pick clears the cell tier, twice over");
+        }
+
         [Test]
         public void APickOnBareGroundKeepsTheCellAndNothingElse()
         {
