@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
@@ -35,10 +36,34 @@ namespace Odyssey.Presentation.Rendering
         /// <paramref name="world"/> is what lets a pawn stand on a bank rather than in one; see
         /// <see cref="BankLayout"/>. Null is a pawn on flat cells, which is what the arithmetic
         /// tests want and what a caller with no mirror to hand gets.
+        ///
+        /// <paramref name="otherPawns"/> optionally provides nearby pawns to calculate mutual
+        /// right-hand passing lateral offsets.
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
-            out Vector3 heading, WorldRenderModel? world = null)
+            out Vector3 heading, WorldRenderModel? world = null) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, default, out _);
+
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, out _);
+
+        /// <summary>
+        /// The same pose, with the sub-tile steering it applied handed back separately.
+        ///
+        /// <para><b>Separated because the two things want different treatment downstream.</b>
+        /// Locomotion is what the gait is solved from and must never be damped; steering is a
+        /// sway the figure is allowed to ease into, and is precisely the term that must not reach
+        /// <c>ObserveSpeed</c> — a 0.6 m sidestep inside a tenth of a second reads there as six
+        /// metres a second, which is past the fastest gait this cast owns, so the legs broke into
+        /// a run every time a colonist gave way. See <see cref="PawnFigureDirector"/>.</para>
+        /// </summary>
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, out Vector3 steer)
         {
+            steer = Vector3.zero;
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
             if (!pawn.Moving)
             {
@@ -75,9 +100,29 @@ namespace Odyssey.Presentation.Rendering
             // has ever noticed it, and at 134 mm up a terrace once the climb was drawn in strides.
             // See PawnView.MovePerMille. Zero means the publisher did not say, which is every
             // hand-built fixture, so the percent still answers for them.
+            // **How far this frame carries the figure past the tick it sits on, and where that
+            // number has to come from** (2026-09-19).
+            //
+            // <para>The simulation publishes the rate — <see cref="PawnView.MoveDeltaPerMille"/> —
+            // because it is the only thing that can. Presentation used to infer it from a global
+            // <c>movePerTick</c> out of the Defs, added to a percentage as though every step cost
+            // <c>MoveCost.Orthogonal</c>. That is wrong by the colonist's own pace and condition,
+            // and wrong again by the price of the terrain being entered, which is inside the step
+            // cost and cannot be recovered from the two cells. **Whenever the guess ran ahead of
+            // what the tick actually retired, the figure walked backwards**: 3,172 frames in
+            // 59,000 on the wooded meadow, by up to 10.9 mm, with a vertical sawtooth wherever a
+            // terrace bank turned that into a change of height. That is the owner's "vibrates and
+            // moves oddly, particularly where there is a terrain step tile".</para>
+            //
+            // <para><c>movePerTick</c> is the fallback for a hand-built fixture that publishes no
+            // rate, and it keeps the old meaning — a cost unit as a hundredth of a step — because
+            // that is what those fixtures were written against.</para>
+            float carried = pawn.MoveDeltaPerMille > 0
+                ? pawn.MoveDeltaPerMille * 0.1f * tickAlpha
+                : movePerTick * tickAlpha;
             float percent = pawn.MovePerMille > 0
-                ? pawn.MovePerMille * 0.1f + movePerTick * tickAlpha
-                : pawn.MovePercent + movePerTick * tickAlpha;
+                ? pawn.MovePerMille * 0.1f + carried
+                : pawn.MovePercent + carried;
 
             // Along `travel` and not along `heading`: the bearing has had its vertical part taken
             // out on purpose, and a pawn that moved along it would climb a shaft without going
@@ -105,6 +150,84 @@ namespace Odyssey.Presentation.Rendering
             float s = wading ? t : pace.At(t);
             Vector3 along = GroundRelief.Lift(from + travel * s);
 
+            // **Sub-tile lateral steering: veer around oncoming traffic, standing colonists and
+            // trees — and do it with one continuous number.**
+            //
+            // <para>Everything here is a <i>signed lateral scalar</i>, positive to the pawn's own
+            // right, summed and then clamped. The first version chose between candidate vectors by
+            // taking whichever was longest, and that is what the owner saw as a vibration
+            // (2026-09-19): two candidates of nearly equal length pointing opposite ways swap the
+            // winner on any tick where a distance twitches, and the drawn position jumps the full
+            // width of the envelope and back. A sum has no winner to swap, and two obstacles on
+            // opposite sides now do the sensible thing — they hold the pawn in the middle — rather
+            // than fighting over it.</para>
+            //
+            // <para><b>No hard thresholds.</b> Every gate that was a boolean is now a ramp. The
+            // gates that were booleans were: an oncoming test that switched the whole 0.6 m on at
+            // <c>dot &lt; -0.5</c>; a set of cell-sharing tests that forced the weight to 1.0
+            // regardless of distance, so two pawns three metres apart who happened to share a
+            // destination snapped sideways; and a 3.0 m cut-off. Each of them moved the figure by
+            // up to 0.6 m between one tick and the next, and the ones keyed to cell identity
+            // flickered as pawns re-planned, which is the buzz rather than the single lurch.</para>
+            //
+            // <para><b>Distance is three-dimensional.</b> It was measured in x and z alone, so a
+            // colonist on the terrace above another, three metres straight up, was nought metres
+            // away and got the full sidestep — on a board whose whole surface is 3 m terrace
+            // risers. Including the vertical term costs nothing and needs no layer test: a pawn a
+            // storey up is simply out of range.</para>
+            float lateral = 0f;
+            if (heading.sqrMagnitude > 1e-4f)
+            {
+                Vector3 hereNow = from + travel * s;
+                Vector3 headingDir = heading.normalized;
+                float envelope = SteeringCurve.Bell(s);
+
+                // 1. Passing traffic and standing colonists.
+                float crowd = 0f;
+                for (int i = 0; i < otherPawns.Length; i++)
+                {
+                    ref readonly var other = ref otherPawns[i];
+                    if (other.Id == pawn.Id) continue;
+
+                    float near = SteeringCurve.Proximity(
+                        Vector3.Distance(hereNow, SteeringCurve.WhereItIsNow(in other)));
+                    if (near <= 0f) continue;
+
+                    float weight = near * SteeringCurve.InTheWay(headingDir, in other);
+                    if (weight > crowd) crowd = weight;
+                }
+                lateral += SteeringCurve.MaxLateralOffset * envelope * crowd;
+
+                // 2. In-cell and flanking static obstacles — tree trunks, chiefly.
+                if (world != null)
+                {
+                    // A. The cell being crossed holds one: go round it on the right.
+                    if (world.HasObstacle(pawn.Cell))
+                        lateral += SteeringCurve.MaxLateralOffset * envelope;
+
+                    // B. A diagonal step cuts the corner between two cells, and a trunk standing
+                    // in either of them is what the corner is cut through. Pushed away from the
+                    // corner along the lateral axis only: a deflection with a component along the
+                    // path would slow the step down and speed it up again, which reads as a
+                    // hesitation rather than as a sidestep.
+                    if (travel.x != 0f && travel.z != 0f)
+                    {
+                        Vector3 right = SteeringCurve.LateralRight(heading);
+                        Vector3 midpoint = (from + to) * 0.5f;
+                        var acrossX = new CellRef(pawn.Cell.X + (travel.x > 0f ? 1 : -1), pawn.Cell.Z, pawn.Cell.Y);
+                        var acrossZ = new CellRef(pawn.Cell.X, pawn.Cell.Z + (travel.z > 0f ? 1 : -1), pawn.Cell.Y);
+                        lateral += CornerPush(world, acrossX, right, midpoint, envelope);
+                        lateral += CornerPush(world, acrossZ, right, midpoint, envelope);
+                    }
+                }
+            }
+
+            lateral = Mathf.Clamp(lateral, -SteeringCurve.HardClampedMax, SteeringCurve.HardClampedMax);
+            Vector3 lateralOffset = SteeringCurve.LateralRight(heading) * lateral;
+            steer = lateralOffset;
+
+            along += lateralOffset;
+
             // **A step with water at either end is drawn by its two ends, not by the ground under
             // it.** Ground-following is right wherever there is ground; between a waterline and
             // the bank above it there is none, and the first version — the float added on top of
@@ -119,6 +242,26 @@ namespace Odyssey.Presentation.Rendering
                     WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, s), along.z);
 
             return OnTheDrawnGround(along, pawn, s, world, pace);
+        }
+
+        /// <summary>
+        /// How hard a trunk standing in a corner cell pushes the pawn sideways, signed to the
+        /// pawn's own right. Zero when that cell holds nothing.
+        ///
+        /// <para>Lateral only. The first version pushed along <c>-(corner - midpoint)</c> whole,
+        /// which has a component along the path as well as across it, so the figure slowed into
+        /// the corner and accelerated out of it — a hesitation, not a sidestep, and one more thing
+        /// feeding the speed observation that drives the gait.</para>
+        /// </summary>
+        static float CornerPush(WorldRenderModel world, CellRef corner, Vector3 right,
+            Vector3 midpoint, float envelope)
+        {
+            if (!world.HasObstacle(corner)) return 0f;
+            Vector3 toCorner = CellMetrics.FloorCentre(corner) - midpoint;
+            toCorner.y = 0f;
+            float side = Vector3.Dot(toCorner.normalized, right);
+            if (side > -1e-4f && side < 1e-4f) return 0f;
+            return (side > 0f ? -1f : 1f) * SteeringCurve.MaxLateralOffset * envelope;
         }
 
         /// <summary>

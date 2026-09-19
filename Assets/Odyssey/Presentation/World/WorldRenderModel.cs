@@ -286,6 +286,38 @@ namespace Odyssey.Presentation.World
         public bool IsBlocking(int index) => (_flags[index] & (byte)CellFlags.BlockingEdifice) != 0;
 
         /// <summary>
+        /// True if this cell contains an in-cell obstacle such as a tree trunk.
+        /// Used by presentation steering to manoeuvre colonists to the side of the tile.
+        /// </summary>
+        public bool HasObstacle(CellRef cell)
+        {
+            if (!Size.Contains(cell.X, cell.Z, cell.Y)) return false;
+            int index = Size.Index(cell);
+            ushort def = _edifice[index];
+            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            if (cell.Y > 0)
+            {
+                ushort defBelow = _edifice[index - Size.LayerStride];
+                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+            }
+            return false;
+        }
+
+        public bool HasObstacle(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return false;
+            ushort def = _edifice[index];
+            if (def >= NaturalContent.FirstEdifice && def < NaturalContent.EdificeCount) return true;
+            int below = index - Size.LayerStride;
+            if (below >= 0 && (uint)below < (uint)_edifice.Length)
+            {
+                ushort defBelow = _edifice[below];
+                if (defBelow >= NaturalContent.FirstEdifice && defBelow < NaturalContent.EdificeCount) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Has the colony cut into this cell — is what you can see of it a face somebody made?
         ///
         /// <para>This is <see cref="CellFlags.Discovered"/> read for its other meaning, and the

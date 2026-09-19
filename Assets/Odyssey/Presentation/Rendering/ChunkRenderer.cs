@@ -759,7 +759,7 @@ namespace Odyssey.Presentation.Rendering
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
                 // and it is shared with the animated figures so the two cannot disagree.
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model, pawns);
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap. Same object, same answer.
@@ -974,7 +974,7 @@ namespace Odyssey.Presentation.Rendering
                 else
                 {
                     Vector3 body = PawnPose.Of(pawn, tickAlpha, movePerTick,
-                        out Vector3 heading, _model);
+                        out Vector3 heading, _model, snapshot.Pawns);
                     if (heading.sqrMagnitude < 1e-6f) heading = Vector3.forward;
                     yaw = FacingOf(pawnId, heading);
                     at = body

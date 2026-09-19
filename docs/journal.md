@@ -6985,6 +6985,227 @@ Two lessons, both already in the catalogue in other clothes:
 
 Fast **745 Sim + 449 Hud**, EditMode **1871 total, 1857 passed, 0 failed**, PlayMode **82/77/0**.
 No simulation change, so no golden moved and the Long tier was not re-run.
+
+## 2026-09-19 — Soft crowd avoidance and sub-tile visual lateral steering
+
+The owner requested that colonists no longer walk straight through one another, item piles, or trees,
+and instead manoeuvre naturally to the side of a tile (or pass on the right when meeting oncoming
+pawns), with anticipatory steering before reaching the obstacle.
+
+- **Two-tier separation (Sim path bias + Presentation lateral steering).** Following the clean room
+  analysis of prior art (RimWorld's `PawnPathCost` and crowd passing), avoidance is split:
+  1. *Simulation (pure C#):* `MoveCost.OccupiedBias = 30` added to local cell expansion in `PathFinder`
+     when a cell is occupied by a standing pawn, encouraging planners to prefer empty adjacent tiles
+     or corridor branches when available without hard-blocking or dirtying the D4 macro-region graph.
+  2. *Presentation (view-side smoothing):* Sub-tile lateral offsets are applied purely in presentation
+     (`PawnPose.Of`), modifying neither the simulation grid, save state, nor state hashes.
+- **Save/load determinism preserved.** Global `PawnContext.Paths.Occupancy` defaults to null to guarantee
+  that paths re-planned across save/reload boundaries cannot drift the tick state hash due to transient
+  crowd layout variations. The occupancy predicate is provided via `PathOptions` and `PathService` for
+  callers requesting live soft avoidance.
+- **Kinematics and $C^1$ bell envelope (`SteeringCurve.cs`).**
+  Lateral displacement follows $B(t) = 16t^2(1-t)^2$ peaking at $1.0$ at midpoint ($t=0.5$), with zero
+  value and zero first derivative at cell boundaries ($t=0, 1$). This guarantees $C^1$ continuity and
+  eliminates velocity/acceleration jerks at cell transitions.
+- **Mutual right-hand passing.** When opposing pawns meet ($\vec{d}_1 \cdot \vec{d}_2 < -0.5$), both
+  veer to their right along the lateral normal $(dz, 0, -dx)$ by up to $0.60\text{ m}$. Together they
+  achieve $1.20\text{ m}$ mutual clearance ($\ge 1.0\text{ m}$ target) while remaining well within the
+  $2.5\text{ m}$ tile half-width ($1.25\text{ m}$), leaving $0.65\text{ m}$ buffer to corridor walls.
+- **Anticipatory obstacle deflection.** For static obstacles like tree trunks (`WorldRenderModel.HasObstacle`),
+  `AnticipatoryLeadIn(t)` begins veering right during the second half of the preceding cell ($t \in [0.5, 1.0]$),
+  smoothing the trajectory before crossing into the obstacle cell where lateral offset is maintained around the trunk.
+- **Ground relief integration.** Lateral steering displacement is added to `along` before `OnTheDrawnGround`,
+  so bank rise and terrain relief are sampled at the exact steered feet position.
+- **Visual boundary snap and gait flicker fixed (2026-09-19).**
+  - *Symptom:* The owner reported that when passing a tree, towards the end of the animation there was a
+    sudden snap/jolt to another position and the animation flickered quickly.
+  - *Cause:* `AnticipatoryLeadIn` had ramped up lateral displacement during the approaching cell, reaching
+    $0.60\text{ m}$ at the cell boundary ($s = 1.0$). Upon crossing the boundary into the obstacle cell,
+    the offset jumped from $0.60\text{ m}$ to $0.42\text{ m}$ (or to $0.0\text{ m}$ upon stopping/arriving),
+    and rotated sharply if the path changed heading. This 18–60 cm single-frame displacement spiked
+    `PawnFigureDirector.ObserveSpeed` to 10–36 m/s, causing `GaitBlend` to flicker into a sprint before settling.
+  - *Fix:* Obstacle deflection is governed strictly within the obstacle cell by the $C^1$ bell curve
+    $B(s) = 16s^2(1-s)^2$. At cell entry ($s = 0$) and exit ($s = 1$), lateral offset and derivative are
+    identically zero, guaranteeing perfect position and velocity continuity across all boundaries, turns,
+    and arrival stops. Peak clearance ($0.60\text{ m}$) occurs at cell centre ($s = 0.5$) abreast of the trunk.
+  - *Verified:* `StepTransition_IntoAndOutOfTreeCell_IsContinuous` in `ObstacleSteeringTests.cs` confirms
+    delta across entry and exit boundaries is strictly under 0.1 mm (< $10^{-4}\text{ m}$).
+- **Enforced motion-to-position and tree avoidance across crowds and slopes (2026-09-19).**
+  - *Owner request:* In crowd scenarios with many colonists, figures were snapping to positions when getting
+    around each other, and sometimes colonists walked straight through trees. Mandated rule: *"we need to prevent
+    snapping to other positions - the rule must be to motion to that postion or close to (be forgiving)."*
+  - *Motion-to-position rule in `PawnFigureDirector`:* Added `DrawnPosition` to `Figure`. Rather than snapping
+    `figure.Transform.position = drawn`, the figure motions towards `drawn` at a bounded maximum rate
+    (`MaxAdjustmentSpeed = 5.5f` m/s) using `Vector3.MoveTowards`. Sudden lateral shifts across crowd passing,
+    flanking obstacles, or direction reversals smoothly glide and sway into position rather than teleporting.
+    Ground relief sampling and footing lean follow `figure.DrawnPosition`.
+  - *Tree avoidance vertical coverage on slopes/terraces (`WorldRenderModel.HasObstacle`):* Trees rooted on
+    slopes and terraces at `cell.Y - 1` extend up into `cell.Y`. `HasObstacle` now checks both `cell.Y` and
+    `cell.Y - 1`, ensuring trees on slopes/terrace steps are recognized by presentation steering.
+  - *Diagonal corner tree deflection (`PawnPose.cs`):* Moving diagonally past a corner cell holding a tree
+    now calculates a deflection vector away from the corner trunk, preventing diagonal moves from cutting corners
+    through tree trunks.
+  - *Continuous crowd proximity weighting (`PawnPose.cs`):* Replaced hard boolean distance threshold (`dist < 3.0f`)
+    with continuous `SteeringCurve.SmoothStep` proximity weighting. Approaching and departing pawns ramp their
+    passing offset smoothly from 0 at 3.0 m to peak clearance at $\le 1.5\text{ m}$, eliminating boundary pops.
+  - *Verified:*
+    - Fast tier: **746 Sim + 445 Hud = 1,191 passed, 0 failed**.
+    - Unity EditMode: **1,861 total, 1,847 passed, 0 failed** (new tests `DiagonalStep_PastCornerTree_SteersAwayFromObstacleCorner`, `TreeObstacle_OnLowerTerraceLayer_IsDetectedAtColonistLayer`, `PassingEncounter_DistanceThreshold_ScalesSmoothlyWithoutThresholdPop`).
+    - Unity PlayMode: **82 total, 77 passed, 0 failed**.
+    - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.
+
+## 2026-09-19 — the crowd playtest could not start: the debug spawn had never worked
+
+The avoidance work above needs a crowd, and the owner could not make one: *"Every time I tried to
+generate more colonists — I get this warning message `[Odyssey] the simulation refused 1293 x
+SpawnPawn: OutOfBounds`."*
+
+**The message was wrong in both of its interesting parts**, which is why it read as a mystery.
+
+*`OutOfBounds` was a lie.* `DebugAnchorCell` returned the middle of the map at the **active slice
+layer**, and `HandleSpawnPawn` treated that layer as an instruction. The play camera looks down at
+open ground, so the slice layer is the air several storeys above the terrain: the cell was inside
+the map, had nothing to stand on, and the handler's one rejection for "not walkable" happened to be
+spelled `OutOfBounds`. Every debug spawn since the row was written has been refused; nobody had
+pressed it before (it is on the standing "nobody has pressed Play on the debug menu" list).
+
+*1,293 was a lie.* Nothing in the build had ever called `IntentBus.ClearRejected`, so the list grew
+for the life of the session and `ReportRejections` re-counted the whole of it every frame. A handful
+of clicks became a four-figure count within seconds — and a four-figure count is what makes a reader
+look for a loop submitting intents rather than for one wrong cell.
+
+**The fix keeps the seam.** The tempting repair was a widening walkable search inside `HudShell`,
+and a first pass wrote one: 150 lines of two-pass radial search. It could not compile, and the
+reason it could not compile is the design answer — **presentation has no access to `CellGrid` at
+all**, by the snapshot-read/intent-write rule. The shell cannot know what is standable. So the
+split is: the shell names the **column** the player means (selected colonist, else selected cell,
+else the cell under the camera's focus — not the middle of the map, which is a place nobody is
+looking at and hundreds of metres from the colony), and the simulation settles the layer.
+`CellGrid.NearestWalkableInColumn` is the one owner of that fall for a spawn; `FirstFloorAtOrBelow`,
+which has existed all along for exactly this question, does it for a resource grant, which shares
+the anchor and so shared the fault. A column with genuinely nowhere to stand now answers
+`NotPermitted`.
+
+Recorded in `docs/bug-patterns.md` as *the caller's guess taken as the caller's instruction*, and
+the design doc's claim that the anchor was "always in bounds, so the two action rows never have a
+reason to refuse" is corrected in place — in bounds it was; standable it was not.
+
+- *Verified:*
+  - Fast tier: **749 Sim + 445 Hud = 1,194 passed, 0 failed** (three new `DebugIntentTests`).
+  - Unity EditMode: **1,864 total, 1,850 passed, 0 failed**.
+  - Unity PlayMode: **82 total, 77 passed, 0 failed**.
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.
+
+## 2026-09-19 — the vibration: a rule with a threshold in it, sampled every tick
+
+Owner, after the crowd playtest the spawn fix unblocked: *"it seems better but the colonists
+sometimes vibrate quickly — as if it's fighting something or a indecision or a check that is
+happening — it's mostly smooth — but then vibrates with an odd movement."*
+
+**Measured before diagnosed**, and that was worth the twenty minutes. Reading the code produced
+three confident candidates — the path bias, the `MoveTowards` rate limit, the gait blend — and the
+first two were wrong. A probe that ticks a real colony of twenty for 3,000 ticks and counts
+per-tick changes in the lateral offset found it in one run: **85 changes over 5 cm in a single
+tick, worst case the full 0.600 m envelope in one sixtieth of a second.**
+
+All of them were thresholds being re-decided sixty times a second: `dot < -0.5` for "is this
+colonist oncoming"; a `swappingCells || sharingNext || sharingCell` override that forced the weight
+to 1.0 whatever the distance and flickered as pawns re-planned; a distance measured in x and z
+alone, which made a colonist on the terrace above **nought metres away** on a board that is 3 m
+terrace risers from end to end; and a choice between candidate offsets by whichever was longest,
+which swaps winner — and therefore sign — on any twitch.
+
+The rewrite is one continuous signed scalar: a bell envelope over the step, a smoothstepped
+proximity in three dimensions, a smoothstepped converging factor, obstacle terms summed rather than
+competing, and one clamp at the end. Crossing traffic gets room now, which it never did.
+
+**And the previous pass's `MoveTowards` came out.** It rate-limited the *whole drawn position* at
+5.5 m/s to satisfy the owner's "motion to that position or close to (be forgiving)". That damps the
+colonist's own walking — the figure lags the gait its legs are playing and then surges to catch up —
+and it left the sidestep inside the position `ObserveSpeed` differences, so a 0.6 m swerve read as
+6 m/s, past the fastest gait this cast owns, and threw the legs into a run. That is the "gait blend
+flicker" the pass before it went looking for in the blend and did not find. The rule is honoured on
+the right quantity instead: the **sidestep alone** eases at 1.2 m/s, and `PawnPose.Of` hands it back
+separately so the gait is solved from walking rather than from swerving.
+
+Design is `docs/design/25-pawn-steering.md`; the pattern is in `docs/bug-patterns.md`.
+
+- *Measured*, 20 colonists, 3,000 ticks, 59,303 moving samples:
+
+  | | Before | After |
+  |---|---|---|
+  | asked-for sidestep: jumps over 5 cm in a tick | 85 | 52 |
+  | **drawn sidestep: jumps over 5 cm in a tick** | **85** | **0** |
+  | drawn sidestep: worst single tick | 0.600 m | **0.020 m** |
+  | drawn sidestep: mean lag behind the asked-for one | — | 0.0016 m |
+
+  The 52 that remain are the one input that cannot be made continuous — somebody stopping, setting
+  off or turning — which is exactly what the sway is for.
+
+- *Verified:*
+  - Fast tier: **749 Sim + 445 Hud = 1,194 passed, 0 failed**.
+  - Unity EditMode: **1,870 total, 1,856 passed, 0 failed** (six new `SteeringContinuityTests`).
+  - Unity PlayMode: **82 total, 75 passed, 0 failed** — run in a scratch worktree with no Synty
+    junction, so `AvatarSheetTests`' two art tests skip; nothing regressed.
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` clean.
+
+- *Noted, not changed:* the simulation-side path bias is dead code. `PathFinder.Occupancy` and
+  `MoveCost.OccupiedBias` are implemented and tested, and **nothing in the build sets them**.
+  Switching it on moves planned routes and therefore every golden hash, so it wants its own change
+  with a re-bake, not a line in this one.
+
+## 2026-09-19 — the vibration, part two: presentation was inferring a number the simulation knew
+
+Owner, after the steering fix: *"it seems better but the colonists sometimes vibrate quickly ... it
+happens sometimes when colonists are walking, particularly where there is a terrain step tile it
+starts to vibrate and move oddly mostly at the beginning of the frames when going up — so it still
+exists just less of it."*
+
+**The obvious reading was that the steering fix had not gone far enough, and it was wrong.** Running
+the same measurement with the steering switched off gave numbers identical to the frame. One run,
+and this was a different fault.
+
+Presentation carries a figure on past the tick it sits on, so a display faster than the tick does
+not show the same position twice. To carry it on you need the rate, and it was **inferring** the
+rate from a global `movePerTick` out of the Defs, added to a percentage as though every step cost
+`MoveCost.Orthogonal`. Wrong by the geometry (a hop up is 240, not 100); wrong by the colonist's own
+pace and condition; and wrong by the price of the terrain being entered, which lives inside the step
+cost and cannot be recovered from the two cells at all. **An over-estimate draws the next frame
+behind the last one.** On flat ground that is a few millimetres of stutter nobody names; on a
+terrace bank, backward travel is *downward* travel, so it becomes a visible vertical buzz — which is
+exactly why the report was about step tiles.
+
+So the number is published now — `PawnView.MoveDeltaPerMille`, how much of *this* step *this*
+colonist retires in one tick, computed where both halves are known. Truncated down on purpose: an
+under-estimate makes the frame after a tick jump slightly forward, an over-estimate makes it go
+backwards, and only one of those can be seen. It is a view field, so nothing is saved or hashed.
+
+**A false start worth recording.** The first fix scaled the inferred term by a step cost derived
+from the two cells — orthogonal, diagonal, or `NavGraph.HopCost`. It measured beautifully on a
+hand-built terrace (346 vertical reversals in 480 frames, down to nought) and then measured almost
+nothing on the real board, because the terrain price is in the cost and geometry cannot see it. That
+code is gone; deriving the step cost in presentation is not a thing to try again.
+
+**Every cheap fixture missed this, twice.** A hand-built world grows no banks — `BankLayout` reads
+generated terrain — and a hand-built `PawnView` publishes no rate, so it takes the fallback path
+rather than the one the game takes. `WalkContinuityTests` therefore ticks a real colony over a real
+generated board, and asserts that no frame ever draws a colonist behind where the last one did.
+
+- *Measured*, wooded meadow, 12 colonists, 2,500 ticks, two frames to the tick:
+
+  | | Before | After |
+  |---|---|---|
+  | frames drawing a colonist **backwards** along her own step | 3,172 of 59,000 | **0** |
+  | worst backward frame | 10.9 mm | **0** |
+  | frames reversing vertically, walking on the flat | 1,406 (2.5%) | **0** |
+  | frames reversing vertically, climbing | 2 | **0** |
+
+- *Verified:*
+  - Fast tier: **749 Sim + 445 Hud = 1,194 passed, 0 failed**.
+  - Unity EditMode: **1,872 total, 1,858 passed, 0 failed** (two new `WalkContinuityTests`).
+  - Unity PlayMode: **82 total, 75 passed, 0 failed** — scratch worktree with no Synty junction, so
+    `AvatarSheetTests`' two art cases skip.
+  - Content gates: both clean.
 80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
 all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
 render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written

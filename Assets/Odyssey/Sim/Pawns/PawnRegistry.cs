@@ -35,6 +35,20 @@ namespace Odyssey.Sim.Pawns
         public Pawn? Get(PawnId id) => _byId.TryGetValue(id.Value, out int index) ? _pawns[index] : null;
 
         /// <summary>
+        /// True if any pawn is currently stationary in this cell (no active path).
+        /// Used by the pathfinder to apply soft crowd avoidance bias.
+        /// </summary>
+        public bool IsCellOccupiedByStandingPawn(int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                var p = _pawns[i];
+                if (p.Cell == cell && !p.HasPath) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Build a colonist at a cell. This is the whole public API for making a pawn: one call,
         /// no partially-initialised intermediate state, and the driver pool built up front so no
         /// job start ever allocates.
@@ -51,8 +65,17 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Debug menu: <c>IntentKind.SpawnPawn</c>. A cell that is not walkable is refused rather
-        /// than spawning a colonist nobody can reach or path out of.
+        /// Debug menu: <c>IntentKind.SpawnPawn</c>. The intent names a <em>column</em>: the
+        /// colonist arrives at the walkable cell nearest the layer asked for, and the command is
+        /// refused only when the whole column has nowhere to stand — never a colonist nobody can
+        /// reach or path out of.
+        ///
+        /// <para><b>The layer is the caller's guess, not its instruction.</b> The debug menu says
+        /// "near the camera", and the camera's own layer over open ground is the air above the
+        /// terrain, so a rule that took the layer literally refused every spawn the menu sent —
+        /// and said <c>OutOfBounds</c> while doing it, for a cell that was plainly in bounds. See
+        /// <see cref="Odyssey.Sim.World.CellGrid.NearestWalkableInColumn"/>, which is the one
+        /// owner of that fall.</para>
         ///
         /// <para>Passions are rolled here off <see cref="Spawn"/>'s own <c>RollSeed</c> (the world's,
         /// since nothing here asks for one of its own — U40), exactly as
@@ -65,8 +88,8 @@ namespace Odyssey.Sim.Pawns
         {
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
-            int index = _ctx.Size.Index(cell);
-            if (!_ctx.Cells.IsWalkable(index)) return IntentRejection.OutOfBounds;
+            int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
+            if (index < 0) return IntentRejection.NotPermitted;
             Pawn pawn = Spawn(index);
             pawn.RollPassions();
             return IntentRejection.None;
@@ -132,7 +155,7 @@ namespace Odyssey.Sim.Pawns
                 // own cost makes the glide take exactly as long as the step does, whatever it is.
                 var cell = size.FromIndex(pawn.Cell);
                 var nextCell = cell;
-                int movePercent = 0, movePerMille = 0;
+                int movePercent = 0, movePerMille = 0, moveDeltaPerMille = 0;
                 if (pawn.HasPath)
                 {
                     nextCell = size.FromIndex(pawn.Path[pawn.PathIndex]);
@@ -152,6 +175,16 @@ namespace Odyssey.Sim.Pawns
                     movePerMille = (int)((long)pawn.MoveProgress * 1000 / cost);
                     if (movePerMille < 0) movePerMille = 0;
                     else if (movePerMille > 1000) movePerMille = 1000;
+
+                    // And how much of the step one tick retires, which is the only number a frame
+                    // between two ticks can honestly carry the figure on by. It belongs here and
+                    // nowhere else: the rate is this colonist's own (pace and condition) and the
+                    // cost is this step's own (the terrain being entered is priced into it), so
+                    // presentation cannot recover it from the two cells. See
+                    // PawnView.MoveDeltaPerMille for what inferring it cost.
+                    moveDeltaPerMille = (int)((long)pawn.MoveRatePerMille() * 1000 / cost);
+                    if (moveDeltaPerMille < 0) moveDeltaPerMille = 0;
+                    else if (moveDeltaPerMille > 1000) moveDeltaPerMille = 1000;
                 }
 
                 // What the pawn is working on, if anything. Asked of the driver rather than
@@ -173,7 +206,8 @@ namespace Odyssey.Sim.Pawns
                     pawn.Gesture,
                     pawn.GestureSerial,
                     pawn.Asleep,
-                    movePerMille));
+                    movePerMille,
+                    moveDeltaPerMille));
 
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.

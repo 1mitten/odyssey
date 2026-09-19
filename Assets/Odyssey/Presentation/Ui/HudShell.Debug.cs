@@ -1,7 +1,9 @@
 #nullable enable
 using Odyssey.Hud;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Odyssey.Presentation.Ui
@@ -138,6 +140,7 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
+
         /// A day a press. The day's length is read from the content rather than written here, so
         /// a retuned calendar does not leave this row skipping some other amount.
         /// </summary>
@@ -155,16 +158,37 @@ namespace Odyssey.Presentation.Ui
             world.Intents.Submit(new Intent(IntentKind.DebugRipen, DebugAnchorCell(world)));
         }
 
-        /// <summary>
-        /// Where a debug spawn or grant lands: the selected colonist's cell, since that is the one
-        /// point on the board the player has already told the HUD they are looking at; failing
-        /// that, the middle of the active slice layer, which is always in bounds.
+
+        /// Which <em>column</em> a debug spawn or grant is aimed at. Not which cell: the shell
+        /// reads snapshots and never the cell grid, so it cannot know what is standable, and
+        /// <see cref="Odyssey.Sim.World.CellGrid.NearestWalkableInColumn"/> resolves the layer on
+        /// the simulation's side of the seam.
+        ///
+        /// <para>The order is the selected colonist, then the selected cell, then the camera's
+        /// own focus — each one a place the player has already said they are looking at. The
+        /// camera is the row's own promise ("near the camera"); the middle of the map, which is
+        /// what this used to return, is a place nobody is looking at and was usually the air
+        /// above a hillside three hundred metres from the colony.</para>
         /// </summary>
         CellRef DebugAnchorCell(Odyssey.Sim.SimWorld world)
         {
-            if (_directors!.Selection.Cell is { } selected) return selected;
-            int layer = _directors.Slice.ActiveLayer;
-            return new CellRef(world.Size.SizeX / 2, world.Size.SizeZ / 2, layer);
+            int layer = _directors?.Slice.ActiveLayer ?? 0;
+
+            if (_directors != null && _directors.Selection.HasPawn &&
+                world.Views.Current.TryGetPawn(_directors.Selection.Pawn, out PawnView selectedPawn))
+                return selectedPawn.Cell;
+
+            if (_directors?.Selection.Cell is { } selectedCell) return selectedCell;
+
+            int x = world.Size.SizeX / 2;
+            int z = world.Size.SizeZ / 2;
+            if (_rig != null)
+            {
+                Vector3 focus = _rig.Focus;
+                x = Mathf.Clamp(Mathf.FloorToInt(focus.x / CellMetrics.SizeXZ), 0, world.Size.SizeX - 1);
+                z = Mathf.Clamp(Mathf.FloorToInt(focus.z / CellMetrics.SizeXZ), 0, world.Size.SizeZ - 1);
+            }
+            return new CellRef(x, z, Mathf.Clamp(layer, 0, world.Size.SizeY - 1));
         }
 
         const int DebugGiveAmount = 50;

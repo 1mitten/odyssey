@@ -121,6 +121,44 @@ namespace Odyssey.Sim.World
         }
 
         /// <summary>
+        /// The walkable cell nearest a named layer in one column, or -1 if the column has none.
+        ///
+        /// <para>Exists because the interface names a <em>column</em> and cannot name a layer. The
+        /// HUD reads snapshots, not the grid, so a debug spawn aimed "near the camera" arrives as
+        /// the camera's own layer — which on open ground is the air several storeys above the
+        /// terrain, and every such command was refused. The column is the part the player means;
+        /// which cell in it can be stood in is the grid's business, and this is where that is
+        /// answered once for everything that asks.</para>
+        ///
+        /// <para>Downwards first at equal distance, because the camera sits above the terrain and
+        /// a colonist added under it should land on the ground rather than on whatever ledge
+        /// happens to be the same number of layers up.</para>
+        /// </summary>
+        public int NearestWalkableInColumn(int x, int z, int preferredY)
+        {
+            if (x < 0 || x >= Size.SizeX || z < 0 || z >= Size.SizeZ) return -1;
+            int from = preferredY < 0 ? 0 : preferredY >= Size.SizeY ? Size.SizeY - 1 : preferredY;
+
+            for (int spread = 0; spread < Size.SizeY; spread++)
+            {
+                int down = from - spread;
+                if (down >= 0)
+                {
+                    int index = Size.Index(x, z, down);
+                    if (IsWalkable(index)) return index;
+                }
+                if (spread == 0) continue;
+                int up = from + spread;
+                if (up < Size.SizeY)
+                {
+                    int index = Size.Index(x, z, up);
+                    if (IsWalkable(index)) return index;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
         /// The cell itself if it has something to stand on, else the first one below it that does.
         ///
         /// <para>Where a thing ends up when whatever it was resting on is taken away. It is the
