@@ -113,7 +113,7 @@ namespace Odyssey.Tests.Sim
         // had moved the fingerprint that day, so neither parent's value described the union.
         // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
         // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 13615677002989434155UL;
+        const ulong ContentFingerprint = 16616720228185092649UL;
 
 
         [Test]

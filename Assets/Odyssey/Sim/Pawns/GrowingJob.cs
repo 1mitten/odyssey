@@ -34,6 +34,13 @@ namespace Odyssey.Sim.Pawns
                 int cell = cells[i];
                 if (zones.IsPlanted(cell)) continue;
 
+                // Nothing stands where a yield still lies (owner, 2026-09-19: "you cannot
+                // sow unless the tile has been harvested"). The pile normally lands off the
+                // soil now, but a packed board falls back to the plot itself and a failed
+                // haul can put one down anywhere - either way, a sower kneeling in a heap
+                // of carrots is a tile that has not been cleared, whatever its crop says.
+                if (ctx.Items.ItemAt(cell) != null) continue;
+
                 PlantDef plant = zones.Plant(zones.ZonePlantAt(cell));
                 if (!zones.SiteAllows(cell, plant)) continue;
 
@@ -298,12 +305,18 @@ namespace Odyssey.Sim.Pawns
             // Uproot tells the renderer itself — the same mark a zone cancel rides.
             zones.Uproot(cell);
 
-            // Where the crop stood, or the nearest cell nearby that can take the yield — the
-            // felling argument again: a row cut at once should gather into a few stacks, and
-            // nowhere within three cells that can take them is a board packed too solid for
-            // anything in the game to have produced.
+            // Off the soil first (owner, 2026-09-19: "harvested materials should not be laid on
+            // the soil and should look to be moved off it"): a yield dropped where it grew
+            // reads as a plot nobody cleared, and the sower who follows kneels in it. The
+            // nearest ground that is outside every zone wins; where nothing within three cells
+            // qualifies, the felling argument takes over - nowhere at all that can take the
+            // yield is a board packed too solid for anything in the game to have produced.
             int at = ctx.Items.NearestCellWithSpace(
-                ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 3);
+                ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 3,
+                accept: c => zones.ZonePlantAt(c) < 0);
+            if (at < 0)
+                at = ctx.Items.NearestCellWithSpace(
+                    ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 3);
             if (at >= 0) ctx.Items.Spawn(ItemIndex.Carrots, at, plant.yieldCount);
         }
     }

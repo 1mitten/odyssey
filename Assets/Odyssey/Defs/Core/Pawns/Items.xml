@@ -71,7 +71,7 @@
     <defName>Item_Carrots</defName>
     <label>carrots</label>
     <nutrition>180</nutrition>
-    <stackLimit>40</stackLimit>
+    <stackLimit>75</stackLimit>
   </ItemDef>
 
 </Defs>

@@ -308,10 +308,14 @@ namespace Odyssey.Tests.Sim
             }
             Assert.That(harvestedAt, Is.GreaterThan(0), "the ripe crop was never cut");
 
-            // The yield is where the crop stood, five to a sowing. Read within the same 100-tick
-            // step that saw the crop go: an eater needs a walk plus 300 ticks of eating to touch
-            // it, so nothing can have eaten one yet.
-            Assert.That(CarrotsAt(colony, index), Is.EqualTo(5), "one sowing's yield");
+            // The yield is five to a sowing, and it is OFF the plot (owner, 2026-09-19:
+            // "harvested materials should not be laid on the soil and should look to be moved
+            // off it"): the harvest hunts a cell outside every zone first, so the tile the crop
+            // stood in is bare on the tick it is cut and the sower who follows kneels in soil.
+            // Read within the same 100-tick step: an eater needs a walk plus 300 ticks of
+            // eating to touch it, so nothing can have eaten one yet.
+            Assert.That(CarrotsOnTheGround(colony), Is.EqualTo(5), "one sowing's yield");
+            Assert.That(CarrotsAt(colony, index), Is.EqualTo(0), "the yield was laid on the soil it grew in");
             Assert.That(zones.IsRipe(index), Is.False, "the cut cell is fallow");
 
             // And the loop closes: nobody queues anything, and the field sows itself again.
