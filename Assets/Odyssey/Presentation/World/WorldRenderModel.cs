@@ -376,6 +376,10 @@ namespace Odyssey.Presentation.World
             _zoned[index] && _terrain[index] == Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass
                 ? Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth
                 : _terrain[index];
+        /// <summary>Whether this cell is painted into a growing zone - the drawn-terrain
+        /// swap's own question, asked on its own for the tuft pass: a clump's mesh reaches
+        /// past its own cell, and the tufts beside a tilled tile are pulled off it.</summary>
+        public bool IsZoned(int index) => _zoned[index];
         /// <summary>
         /// Restamp the crop mirror from the published snapshot's crop channel.
         ///

@@ -366,5 +366,45 @@ namespace Odyssey.Tests.Sim
                 "a freshly sown seed is in its seed day - specks and no plant");
         }
 
+
+        [Test]
+        public void DesignatingACellMarksItsNeighboursChunksToo()
+        {
+            // A grass clump reaches a metre past the cell it stands in, so the tufts beside a
+            // freshly tilled tile are redrawn off it - and a tile at a chunk boundary has its
+            // neighbours in another chunk entirely. The designation must mark their chunks, or
+            // the border of a field would keep its fringe of meadow until something else
+            // happened to re-mesh that chunk.
+            const int Width = 60;  // three chunks wide at ChunkSize 25: 0-24, 25-49, 50-59
+            var size = new GridSize(Width, 8, 3);
+            var grid = new CellGrid(size);
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < Width; x++)
+            {
+                int ground = size.Index(x, z, Ground);
+                grid.Terrain[ground] = NaturalContent.TerrainGrass;
+                grid.Flags[ground] |= CellFlags.SolidTerrain;
+            }
+            var chunks = new ChunkGrid(size);
+            var zones = new GrowingZones(grid, ContentPack.Plants(), chunks);
+
+            // x 24 and x 25 are the boundary pair: the cell and its neighbour are in
+            // different chunks, which is the only arrangement this test can catch.
+            var at = new CellRef(24, 2, Layer);
+            Assert.That(chunks.ChunkIndexOfCell(25, 2, Layer),
+                Is.Not.EqualTo(chunks.ChunkIndexOfCell(24, 2, Layer)),
+                "the fixture no longer straddles a chunk boundary; widen the board");
+
+            Assert.That(zones.Designate(at, PlantHandle.Carrot), Is.EqualTo(IntentRejection.None));
+
+            int centre = chunks.ChunkIndexOfCell(24, 2, Layer);
+            Assert.That(chunks.IsDirty(centre), Is.True, "the zoned cell's own chunk");
+            Assert.That(chunks.IsDirty(chunks.ChunkIndexOfCell(25, 2, Layer)), Is.True,
+                "the east neighbour lives in another chunk and its tufts must re-mesh");
+            Assert.That(chunks.IsDirty(chunks.ChunkIndexOfCell(23, 2, Layer)), Is.True);
+            Assert.That(chunks.IsDirty(chunks.ChunkIndexOfCell(24, 1, Layer)), Is.True);
+            Assert.That(chunks.IsDirty(chunks.ChunkIndexOfCell(24, 3, Layer)), Is.True);
+        }
+
     }
 }

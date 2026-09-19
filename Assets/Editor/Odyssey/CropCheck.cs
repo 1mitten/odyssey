@@ -233,10 +233,16 @@ namespace Odyssey.EditorTools
                     Debug.Log($"[Crop] pile carrots' up-axis y: {tilts}(0 is lying, 1 is standing)");
                 }
 
+                // The border between tilled and grass, flat on: a clump overhanging the plot
+                // reads from above as a green smear on dark soil, which is what the owner
+                // called jarring - and what the pull-in has to have removed.
+                var edgeCell = new CellRef(fx + FieldWidth - 1, fz, y);
+                Vector3 edgeFocus = GroundRelief.Lift(CellMetrics.FloorCentre(edgeCell)) + Vector3.up * 0.25f;
+                PlayScene.Shoot(camera, edgeFocus, 28f, 90f, 5f, "Logs/crop-5-edge.png");
                 Debug.Log($"[Crop] ripe cell {field[0]} draws {model.CropCount(field[0])} carrot(s); " +
                           $"a five-stack pile draws " +
                           $"{(ItemHeap.TryRecipe(ItemIndex.Carrots, out var recipe) ? ItemHeap.RockCount(5, recipe).ToString() : "one prop (no recipe!)")}");
-                Debug.Log("[Crop] wrote Logs/crop-{1-sown,2-growing,3-ripe,3-close,4-pile}.png");
+                Debug.Log("[Crop] wrote Logs/crop-{1-sown,2-growing,3-ripe,3-close,4-pile,5-edge}.png");
             }
             catch (Exception error)
             {

@@ -300,10 +300,23 @@ namespace Odyssey.Presentation.Rendering
             // the same fault, a layer smaller and much harder to see.
             bool daylit = _model.OpenToTheSky(index, y);
 
+            // A clump is placed in a ring of its own cell but its mesh reaches a metre past
+            // it, and the tile beside a growing zone is tilled ground: before this pull, every
+            // border tile of a plot wore a fringe of meadow lying over it (owner, 2026-09-19:
+            // "remove the grass graphics from the garden plots ... it makes it jarring"). The
+            // neighbours are asked through the zone mirror, so a freshly painted field pulls
+            // its surrounding tufts in on the re-mesh the designation itself marks.
+            bool tilledXPlus = x + 1 < size.SizeX && _model.IsZoned(index + 1);
+            bool tilledXMinus = x > 0 && _model.IsZoned(index - 1);
+            bool tilledZPlus = z + 1 < size.SizeZ && _model.IsZoned(index + size.SizeX);
+            bool tilledZMinus = z > 0 && _model.IsZoned(index - size.SizeX);
+
             for (int slot = 0; slot < count; slot++)
             {
                 GroundScatter.Placement(x, z, slot,
                     out float offsetX, out float offsetZ, out float yaw, out float scale);
+                GroundScatter.PullInFromTilled(
+                    ref offsetX, ref offsetZ, tilledXPlus, tilledXMinus, tilledZPlus, tilledZMinus);
 
                 int which = GroundScatter.VariantFor(x, z, slot, _scatterModules.Length);
                 int module = _scatterModules[which];

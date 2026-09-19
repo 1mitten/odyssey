@@ -182,8 +182,9 @@ namespace Odyssey.Sim.Growing
 
             Paint(index, (byte)plant);
             // The ground under the cell changes with its zone - tilled rows arrive - so this is
-            // a remesh, the same mark a crop's appearance makes.
-            _chunks?.MarkDirty(_grid.Size.FromIndex(index));
+            // a remesh, the same mark a crop's appearance makes, and the tufts beside it move
+            // with it (see MarkCellAndSides).
+            MarkCellAndSides(index);
             return IntentRejection.None;
         }
 
@@ -202,10 +203,29 @@ namespace Odyssey.Sim.Growing
             _zoneAt[index] = -1;
             if (_cropAt[index] != 0) Uproot(index);
             if (zone.Cells.Count == 0) Dissolve(zone);
-            _chunks?.MarkDirty(_grid.Size.FromIndex(index));
+            MarkCellAndSides(index);
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// Mark a cell's chunk and the chunks its four side neighbours stand in. The ground
+        /// under a zoned cell changes with its zone - tilled rows arrive - and so do the tufts
+        /// beside it: a grass clump's mesh reaches a metre past its own cell, and the tuft
+        /// pass pulls those clumps off the tilled tile on the next mesh, which is a different
+        /// cell's draw and can live in a different chunk. Sides only, because that is as far
+        /// as a clump placed inside its own ring can reach.
+        /// </summary>
+        void MarkCellAndSides(int index)
+        {
+            if (_chunks == null) return;
+            var size = _grid.Size;
+            CellRef at = size.FromIndex(index);
+            _chunks.MarkDirty(at);
+            if (at.X + 1 < size.SizeX) _chunks.MarkDirty(new CellRef(at.X + 1, at.Z, at.Y));
+            if (at.X > 0) _chunks.MarkDirty(new CellRef(at.X - 1, at.Z, at.Y));
+            if (at.Z + 1 < size.SizeZ) _chunks.MarkDirty(new CellRef(at.X, at.Z + 1, at.Y));
+            if (at.Z > 0) _chunks.MarkDirty(new CellRef(at.X, at.Z - 1, at.Y));
+        }
         /// <summary>Join a cell into whatever same-plant ground touches it, or found a zone of its own.</summary>
         void Paint(int index, byte plant)
         {
