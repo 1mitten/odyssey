@@ -91,6 +91,41 @@ Held by `InspectReadoutTests`: the title of a 27-stack, and that a stack of one 
 **What no test can say** is whether three bundles read as "full" at the play camera, and whether the
 count in the title is now findable. Both are §6.
 
+## 6. Reaching the tile under a pile (owner, 2026-09-19, second look)
+
+> "it seems to be difficult to click on a tile with wood in — always the item takes precedence when
+> clicking on a tile, then clicking on again would then go to the tile info — is this possible"
+
+Yes, and it is the right shape. A thing wins the **first** click, which is correct — a pile of wood
+is what the player pointed at, and that precedence was itself a fix (`DirectorTests`, 2026-09-17: a
+pile resting on bare ground was unselectable because the click fell through to the cell).
+
+But the precedence was absolute, so **there was no way at all to reach the tile under a pile** — and
+a stockpile is wall-to-wall piles, which is precisely where a player wants to ask what the floor is,
+whether the zone reaches here, how fast it is to walk over.
+
+So: **thing, then cell, then thing again.** Two rungs and a loop, which is as deep as a repeated
+click can go before the player has to count what they are on.
+
+**The cycle is not a counter.** `SelectionDirector.Pick` reads it off the selection itself — the
+same cell, holding the thing already selected — so anything that clears or moves the selection
+starts it over with no flag to remember to reset, and a pile hauled away while its cell is held
+cannot leave the cycle stranded. A colonist is never cycled past: a pick that lands on one selects
+them and clears the cell tier outright, so clicking her twice is the same colonist both times.
+
+## 7. And the bed, which was a quarter of a cell out
+
+The same message reported a bed being *"really specific"* to click. Measured rather than reasoned
+about, and it was neither the pane nor the footprint: `SlicePicker` resolved a **non-occluding** cell
+at its floor plane, and a bed is drawn 0.70 m above that floor. At 48° that is **a quarter of a
+cell** of drift, so the far end of the drawn bed selected the grass behind it and the grass in front
+selected the bed.
+
+`WorldRenderModel.StandHeight` is the seam: a cell whose edifice stands without occluding offers its
+own top plane to the ray, and offers it first because it is nearer. Only a bed answers today; the
+next non-occluding thing that stands up adds a line, and the whole story is in `docs/bug-patterns.md`
+under *"What a thing is drawn on is not the surface it is picked at"*.
+
 ## 6. Open — for the keyboard
 
 - **Does a full tile read as full?** Three log piles at 0.52 m spread, versus one. If three still
@@ -99,3 +134,9 @@ count in the title is now findable. Both are §6.
   problem is the pane's shape rather than this line.
 - **Is 75 the right ceiling?** It is a shade under three trees to a tile. Lower makes stockpiles
   sprawl and the ramp coarser; higher makes a full tile mean less.
+- **Does the second click read as a cycle or as a misfire?** Nobody has clicked twice on a pile.
+  If it reads as the game ignoring the first click, the alternative is a modifier rather than a
+  repeat.
+- **Is the bed comfortable to click now?** It should be clickable exactly where it is drawn. The
+  tell that something is still wrong is a *direction*: if it is fiddly from one camera bearing and
+  fine from the opposite one, the drift has been reduced rather than removed.

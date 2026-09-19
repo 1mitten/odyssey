@@ -342,10 +342,15 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   rather than saying the count in the pane's smallest line; the bed picker marks who sleeps here
   (`✓`), who sleeps elsewhere (`•`) and who has nowhere (blank); and a colonist who reaches an
   unowned bed claims it, **unless claiming it would leave a bedless colonist without one**.
+  A **second** click on a cell now looks past what is lying in it and shows the tile, and a third
+  comes back round to the thing. And a bed is clickable **where it is drawn**: the picker resolved
+  a non-occluding cell at its floor plane while the bed stands 0.70 m up, which at 48° put the
+  clickable bed a quarter of a cell behind the drawn one (`docs/bug-patterns.md`).
   Open questions a picture cannot answer: whether three bundles read as a full tile or merely as
-  "some wood", whether the title is findable where the state line was not, and whether the
-  wordless mark column reads or wants its words back. Unity EditMode **1864 total, 1850 passed,
-  0 failed**; PlayMode **82 total, 77 passed, 0 failed**.
+  "some wood", whether the title is findable where the state line was not, whether the wordless
+  mark column reads or wants its words back, and whether the second click reads as a cycle or as
+  the game ignoring the first one. Unity EditMode **1871 total, 1857 passed, 0 failed**; PlayMode
+  **82 total, 77 passed, 0 failed**.
 
 - **The carried load has had one playtest and passed** (2026-09-19, `docs/design/24-carrying.md`).
   Three faults found and fixed — swinging arms, a load that would not turn, and both hand-overs

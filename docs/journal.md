@@ -6938,3 +6938,50 @@ is worth writing down: the scenario's own sleeping spots carry no edifice record
 refuses them and `UnownedBedCount` does not see them. They were never ownable and still are not.
 
 `docs/design/24-pile-reading.md` (new), `docs/design/20-beds.md` §13 and §13a.
+
+## 2026-09-19 (later) — A quarter of a cell, found by printing a table
+
+Owner, after the first round: clicking a tile that has wood in it always gets the wood and never
+the tile; and clicking a bed "seems to be really specific" when either of its two cells should do.
+
+The first is a straightforward precedence problem with a two-rung answer — thing, then cell, then
+thing — read off the selection rather than kept in a counter, so nothing has to remember to reset
+it. Worth noting that the precedence it modifies was **itself a fix**: a pile on bare ground used to
+be unselectable because the click fell through to the cell. Both reports are real and the answer is
+an order, not a winner.
+
+**The second one is the entry for `docs/bug-patterns.md`.** Reading the code found nothing, because
+nothing in it is wrong: `SlicePicker` returns both bed cells correctly, `CellDetailContributor`
+publishes bed facts for both, `InspectModel` renders them from either. Three files, all correct, and
+a bug the owner can feel.
+
+So: a probe test that swept a 48° ray along the bed in quarter cells and **printed the cell that
+came back** — once aimed at the floor, once aimed at `BedShape.MattressTop`. The floor column was
+perfect. The mattress column was shifted by exactly one quarter-cell step, all the way along:
+
+```
+aim at the grass in front of the bed  ->  the bed
+aim at the near half of the bed       ->  the bed's OTHER cell
+aim at the far end of the bed         ->  the grass behind it
+```
+
+`SlicePicker` resolves a **non-occluding** cell by crossing that cell's floor plane, and a bed is
+drawn 0.70 m above its floor. At the play camera's 48°, `0.70 / tan(48°)` = 0.63 m — a quarter of a
+cell. Where the bed is drawn and where it can be clicked had never agreed, in any direction the
+camera faces.
+
+`WorldRenderModel.StandHeight` is the fix and the seam: a cell whose edifice stands without
+occluding offers its own top plane to the ray, first, because it is nearer. It also means a bed now
+shadows the sliver of ground behind it, which is what it is drawn doing.
+
+Two lessons, both already in the catalogue in other clothes:
+
+- **Reading three correct files does not find a bug that is in the space between them.** Measure.
+  The memory note says this and it has now been right every time.
+- **Test the ends, not the middle.** `BedPickHeightTests` walks the bed in tenths of a cell, because
+  a check of the two cell centres alone would have passed *before* the fix — the drift is a quarter
+  cell and a centre has half a cell of slack either side. That is the general rule for any report
+  whose word is "fiddly" rather than "broken".
+
+Fast **745 Sim + 449 Hud**, EditMode **1871 total, 1857 passed, 0 failed**, PlayMode **82/77/0**.
+No simulation change, so no golden moved and the Long tier was not re-run.

@@ -123,6 +123,23 @@ namespace Odyssey.Hud
                 return;
             }
 
+            // **Clicking the same cell again looks past what is lying in it.** A thing wins the
+            // first click, because a pile of wood is what the player pointed at; but a stockpile
+            // is wall-to-wall things, and before this there was no way at all to reach the tile
+            // under one (owner, 2026-09-19: "it seems to be difficult to click on a tile with
+            // wood in — always the item takes precedence"). So the second click on the cell that
+            // is already showing its thing shows the cell instead, and a third goes back to the
+            // thing. Two rungs and a loop, which is as deep as a repeated click can go before
+            // the player has to count.
+            //
+            // The cycle is not a counter. It is read off the selection itself — same cell, and
+            // the thing it holds is the thing already selected — so anything that clears or
+            // moves the selection starts it over without a flag to remember to reset, and a
+            // thing that is hauled away while the cell is held cannot leave the cycle stranded.
+            bool wasShowingThisCellsThing = HasThing && cell.HasValue && Cell.HasValue
+                && Cell.Value.Equals(cell.Value);
+            ThingId shown = Thing;
+
             _pawns.Clear();
             Cell = cell;
             Thing = ThingId.None;
@@ -130,8 +147,11 @@ namespace Odyssey.Hud
             if (Cell.HasValue)
             {
                 ThingAt(snapshot, Cell.Value, out ThingId thing, out int def);
-                Thing = thing;
-                ThingDef = def;
+                if (!(wasShowingThisCellsThing && thing == shown))
+                {
+                    Thing = thing;
+                    ThingDef = def;
+                }
             }
             _missingFrames = 0;
             Changed?.Invoke(SelectionChange.Picked);
