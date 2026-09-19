@@ -29,7 +29,7 @@ namespace Odyssey.Presentation.Rendering
     public static class ItemHeap
     {
         /// <summary>The most rocks any one stack will ever draw. A cap on the instance count.</summary>
-        public const int Most = 7;
+        public const int Most = 12;
 
         /// <summary>
         /// How far a lying lump is lifted off its cell floor, in metres: half the girth of the
@@ -131,13 +131,15 @@ namespace Odyssey.Presentation.Rendering
             new Recipe(2, Most, 75, 0.62f, 0.22f),       // stone
             new Recipe(2, 6, 75, 0.55f, 0.20f),          // iron ore
             new Recipe(3, Most, 75, 0.66f, 0.18f),       // coal
-            // **Carrots, and the one number that is not like the others.** A pulled harvest is
+            // **Carrots, and the numbers that are not like the others'.** A pulled harvest is
             // loose carrots and nothing contains them (owner, 2026-09-19: the pile drew one
-            // prop where five had come out of the plot). Alone of the heaps its Full is the
-            // count a harvest actually drops - the carrot's own yieldCount - so the ramp from
-            // one to a yield is the identity: five grew, five lie there. Carried as the rubble
-            // armful, which three cradled carrots read as naturally.
-            new Recipe(1, Most, 7, 0.45f, 0.18f, lyingDown: true),   // carrots
+            // prop where five had come out of the plot). The ramp stays the identity up to a
+            // dozen - five grew, five lie there - and then holds at twelve, so a store square
+            // is a proper heap of carrots without every extra carrot redrawing the pile (the
+            // owner's ask: "a high number of carrots you can pile into 1 tile", the judgement
+            // call ours: twelve drawn, seventy-five stacked, the same limit as wood and stone).
+            // Carried as the rubble armful, which three cradled carrots read as naturally.
+            new Recipe(1, Most, 12, 0.45f, 0.18f, lyingDown: true),   // carrots
         };
 
         /// <summary>Whether this item kind is drawn as scattered rubble at all.</summary>

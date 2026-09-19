@@ -69,6 +69,45 @@ namespace Odyssey.Tests.Presentation
         /// The count is still the yield - the plot knows what it will give - and only the art
         /// waits, which is why this asserts the module and not the count.
         /// </summary>
+        /// <summary>
+        /// A zone is painted on the air the colonist stands in, and the soil it tills is the
+        /// cell beneath her feet - so the drawn-terrain swap and the tuft pull both ask the
+        /// zone ONE LAYER UP from the ground they are deciding about. The first version asked
+        /// the ground cell itself, the answer was always no, and the tilled-earth swap never
+        /// fired: every brown tile the owner had ever seen was the cover overlay (2026-09-19).
+        /// </summary>
+        [Test]
+        public void TilledGroundAsksTheZoneOneLayerUp()
+        {
+            var world = Field();
+            world.Solid(4, 4, 1, Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass);
+            world.Solid(5, 5, 1, Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass);
+            int zonedGround = world.Index(4, 4, 1);
+            int zonedAir = world.Index(4, 4, 2);
+
+            world.Publish();
+
+            Assert.That(world.Model.DrawnTerrain(zonedGround),
+                Is.EqualTo(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass),
+                "no zone, no swap");
+
+            world.Model.UpdateZones(new ZoneView[] { new ZoneView(zonedAir, 0) });
+
+            Assert.That(world.Model.IsZoned(zonedGround), Is.True,
+                "the ground under a zone is tilled ground");
+            Assert.That(world.Model.DrawnTerrain(zonedGround),
+                Is.EqualTo(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth),
+                "the swap fires through the layer ask");
+            Assert.That(world.Model.DrawnTerrain(world.Index(5, 5, 1)),
+                Is.EqualTo(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass),
+                "a neighbour outside the zone keeps its grass");
+            Assert.That(world.Model.IsZoned(world.Index(5, 5, 1)), Is.False);
+
+            world.Model.UpdateZones(System.Array.Empty<ZoneView>());
+            Assert.That(world.Model.DrawnTerrain(zonedGround),
+                Is.EqualTo(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass),
+                "an unpainted field reverts to what it was");
+        }
         [Test]
         public void TheSeedDayDrawsNoPlantAndStillKnowsItsYield()
         {

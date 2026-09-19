@@ -1379,6 +1379,51 @@ namespace Odyssey.Presentation.Rendering
         /// plates drew a border of ground between them and a field read as separate squares
         /// rather than one patch of soil.
         /// </summary>
+        /// <summary>
+        /// A growing zone's whole-tile cover: <b>the ground's own module, drawn again over
+        /// itself and tinted</b>, lifted a mark's height along the drape.
+        ///
+        /// <para><b>Why the terrain mesh and not a plate.</b> The terrain quad is draped -
+        /// sheared onto the relief field's tangent plane - and rippled inside its own cell,
+        /// and the first cover was a flat plate at the cell centre's height: it sank into the
+        /// ripple's convex corners and floated over the concave ones, so every tile showed
+        /// gaps, thick borders or missing parts depending on the bearing it was seen from
+        /// (owner, 2026-09-19, with the screenshots that prove it). Drawing the same mesh with
+        /// the same drape is flush by construction - identical geometry, one constant offset -
+        /// and uniform from every angle because there is nothing left to disagree with.</para>
+        ///
+        /// <para>Draped on the <i>ground</i> cell's floor so the module's top face lands where
+        /// the terrain's top face is: the cell handed in is the zone's air cell, and the
+        /// terrain that shows through it is the cell below. The sides of the ground box are
+        /// tinted with it, which is right where a plot meets a terrace edge - the soil column
+        /// is the plot - and buried everywhere else.</para>
+        /// </summary>
+        public void DrawZoneCover(CellRef cell, Color colour)
+        {
+            int airIndex = _model.Index(cell.X, cell.Z, cell.Y);
+            int groundIndex = airIndex - _model.Size.LayerStride;
+            ushort terrain = _model.DrawnTerrain(groundIndex);
+            int module = _model.TerrainModuleFor(terrain);
+            if (module == 0) return;
+
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            // The same drape the terrain below was placed with, at that cell's floor, and then
+            // lifted along the drape's own up: over a slope the lift stays perpendicular to
+            // the tilt rather than shearing the cover off its tile's uphill edge.
+            Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y - 1));
+            at *= Matrix4x4.Translate(Vector3.up * MarkLift);
+
+            var parts = _model.Library[module].Parts;
+            for (int p = 0; p < parts.Length; p++)
+                Graphics.RenderMesh(in rp, parts[p].Mesh, parts[p].Submesh, at * parts[p].Local);
+        }
         public void DrawCellMark(CellRef cell, Color colour, float inset)
         {
             Material material = BracketMaterial(colour);

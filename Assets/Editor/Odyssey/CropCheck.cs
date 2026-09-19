@@ -275,6 +275,16 @@ namespace Odyssey.EditorTools
             WorldSnapshot snapshot = world.Views.Current;
             model.UpdateCrops(snapshot.Plants);
             model.UpdateZones(snapshot.Zones);
+
+            // The zone cover the composition root draws, drawn here for the same reason it is
+            // drawn there: the cover is the ground's own mesh re-tinted, and only a photograph
+            // can say whether it sits flush - which is the question this sheet exists to answer
+            // for a board with real relief in it.
+            for (int i = 0; i < snapshot.Zones.Length; i++)
+            {
+                CellRef zoned = snapshot.Size.FromIndex(snapshot.Zones[i].CellIndex);
+                renderer.DrawZoneCover(zoned, Odyssey.Presentation.Bootstrap.OdysseyBootstrap.ZoneTintColour);
+            }
             for (int frame = 0; frame < 2; frame++)
             {
                 figures.Sync(snapshot, layer, slice, 0f, movePerTick, FrameSeconds);

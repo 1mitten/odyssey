@@ -1210,7 +1210,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 CellRef cell = size.FromIndex(zones[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
-                _renderer.DrawCellMark(cell, ZoneTintColour, inset: 0f);
+                _renderer.DrawZoneCover(cell, ZoneTintColour);
             }
 
             // The seed the sower left (owner, 2026-09-18: "some kind of seed on the surface like

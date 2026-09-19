@@ -373,13 +373,27 @@ namespace Odyssey.Presentation.World
         /// because GroundLook is already this namespace's static classifier.
         /// </summary>
         public ushort DrawnTerrain(int index) =>
-            _zoned[index] && _terrain[index] == Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass
+            IsZoned(index) && _terrain[index] == Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass
                 ? Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth
                 : _terrain[index];
-        /// <summary>Whether this cell is painted into a growing zone - the drawn-terrain
-        /// swap's own question, asked on its own for the tuft pass: a clump's mesh reaches
-        /// past its own cell, and the tufts beside a tilled tile are pulled off it.</summary>
-        public bool IsZoned(int index) => _zoned[index];
+        /// <summary>
+        /// Whether this GROUND cell is tilled - which asks the zone one layer up, because a
+        /// zone is painted on the air the colonist stands in and the soil it tills is the cell
+        /// beneath her feet. The first version asked the mirror at the ground cell itself and
+        /// the answer was always no: the tilled-earth swap never fired, the plots' own tufts
+        /// never left, and every brown tile the owner had ever seen was the cover overlay
+        /// rather than soil (found 2026-09-19, from the owner's flush screenshots and a photo
+        /// sheet that kept saying "carrots growing out of grass").
+        ///
+        /// <para>Asked for its own sake by the tuft pass, beside the drawn-terrain swap: a
+        /// clump's mesh reaches past its own cell, and the tufts beside a tilled tile are
+        /// pulled off it.</para>
+        /// </summary>
+        public bool IsZoned(int index)
+        {
+            int above = index + Size.LayerStride;
+            return above < _zoned.Length && _zoned[above];
+        }
         /// <summary>
         /// Restamp the crop mirror from the published snapshot's crop channel.
         ///
