@@ -70,6 +70,24 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public Vector3 SimPosition;
 
+            /// <summary>
+            /// The sub-tile sidestep this figure is actually drawn with, which chases the one
+            /// the pose asks for rather than taking it whole.
+            ///
+            /// <para>The owner's rule is that a dodge must "motion to that position or close to
+            /// (be forgiving)". It is <b>the sidestep alone</b> that is eased, never the whole
+            /// drawn position: rate-limiting the position damps the colonist's own walking, and
+            /// a figure that cannot keep up with its own locomotion lags behind the gait its legs
+            /// are playing and then surges to catch up. That surge, measured, is what a bounded
+            /// 5.5 m/s adjustment on the whole position produced.</para>
+            ///
+            /// <para>Nearly everything the steering reads is continuous now, so this has little
+            /// left to do; what it is for is the one input that genuinely cannot be — another
+            /// colonist stopping or setting off, which is a step change in whether it is in the
+            /// way.</para>
+            /// </summary>
+            public Vector3 Steer;
+
             public float Speed;
 
             /// <summary>The bearing the figure is actually drawn at, which chases the target.</summary>

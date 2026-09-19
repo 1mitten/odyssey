@@ -28,9 +28,27 @@ because the two cannot be open together.
 | Give wood / Give stone / Give food | Adds 50 units of the resource near the camera | `IntentKind.GiveResource` → `ColonyItems.HandleGiveResource` |
 | Invoke event | Disabled, with a tooltip explaining why | nothing — see below |
 
-"Near the camera" is the selected colonist's cell if one is selected, else the middle of the active
-slice layer (`HudShell.Debug.cs`, `DebugAnchorCell`) — always in bounds, so the two action rows never
-have a reason to refuse on a debug menu's own account.
+### "Near the camera" is a column, not a cell (corrected 2026-09-19)
+
+`DebugAnchorCell` names an **(x, z) column** and a layer that is only a guess: the selected
+colonist's cell, else the selected cell, else the cell under the camera's own focus at the active
+slice layer. The simulation decides which cell in that column the command lands in —
+`CellGrid.NearestWalkableInColumn` for a spawn, `CellGrid.FirstFloorAtOrBelow` for a grant. That
+split is forced rather than stylistic: **the shell reads snapshots and has no access to the cell
+grid at all**, so it cannot know what is standable, and the one place that does is the intent
+handler.
+
+It used to claim the middle of the active slice layer was "always in bounds, so the two action rows
+never have a reason to refuse". In bounds it was; standable it was not. Over open ground the active
+slice layer is the air several storeys above the terrain, so `HandleSpawnPawn` refused **every**
+spawn the menu sent — and reported it as `OutOfBounds`, for a cell in the middle of the map. The
+first crowd playtest could not add a single colonist. The layer is now the caller's guess and the
+grid's decision, and a refusal means the column genuinely has nowhere to stand, which reports
+truthfully as `NotPermitted`.
+
+The middle of the map was wrong on its own account too, quite apart from the layer: it is a place
+nobody is looking at, usually hundreds of metres from the colony, and the row says "near the
+camera". It is the camera's focus now, so the row does what it says.
 
 Both new intents wrap sim APIs that already existed and add no new mechanic: `PawnRegistry.Spawn`
 already built a colonist from nothing but a cell, and `ColonyItems.Spawn` plus the existing
@@ -68,11 +86,15 @@ usable at the keyboard. On next Play:
    readable, too big, or still needs a second pass — nobody has judged it yet.
 3. Click "Spawn colonist", "Give wood", "Give stone", "Give food" in turn. Confirm each lands near
    the camera and does not, for instance, spawn a colonist stuck in rock or drop resources through a
-   wall.
-4. Click "Invoke event". Confirm nothing happens and the tooltip explains why.
-5. Open Settings while the debug menu is open, and vice versa. Confirm each closes the other rather
+   wall. Do it once with nothing selected, once with a colonist selected, and once after scrolling
+   the slice layer well above the ground — the three paths through `DebugAnchorCell`.
+4. Hold the spawn row down for twenty colonists and watch the console. One refusal should print
+   one line saying `1 x`; a four-figure count means the rejection list has stopped being cleared
+   again.
+5. Click "Invoke event". Confirm nothing happens and the tooltip explains why.
+6. Open Settings while the debug menu is open, and vice versa. Confirm each closes the other rather
    than stacking.
-6. Judge whether the debug menu wants to look different from Settings at all — right now it is
+7. Judge whether the debug menu wants to look different from Settings at all — right now it is
    visually indistinguishable except for its rows, which may or may not be desirable for something
    explicitly not meant to look like ordinary game UI.
 

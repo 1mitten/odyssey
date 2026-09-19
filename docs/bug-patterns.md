@@ -989,3 +989,101 @@ its middle**, whenever the complaint is that something is fiddly rather than bro
 fault, and the seam is now `WorldRenderModel.StandHeight`. A bed is the only thing that answers
 today. The next non-occluding thing that stands up adds a line there — and if it does not, it will
 be a quarter cell out and nobody will know why.
+
+## The caller's guess taken as the caller's instruction
+
+**2026-09-19, the debug menu's spawn.** Owner: *"Every time I tried to generate more colonists — I
+get this warning message `[Odyssey] the simulation refused 1293 x SpawnPawn: OutOfBounds`."* The
+crowd playtest for pawn avoidance could not be run at all, because no colonist could be added.
+
+Two separate faults wearing one message.
+
+- **The refusal.** `DebugAnchorCell` returned the middle of the map *at the active slice layer*,
+  and `HandleSpawnPawn` took that layer as an instruction. Over open ground the slice layer is the
+  air several storeys above the terrain, so the cell was in bounds, unstandable, and refused —
+  every time, for the life of the feature. A caller that names a *column* and guesses at a layer is
+  the normal case wherever the interface is above the ground looking down; the layer is a guess and
+  the grid has to be the one to settle it. `CellGrid.NearestWalkableInColumn` is now the single
+  owner of that fall, for the spawn; `FirstFloorAtOrBelow`, which already existed, does it for the
+  grant.
+- **The lie in the reason.** In-bounds-but-unstandable answered `OutOfBounds`, which is the one
+  reading of the message that was definitely false and the one the eye goes to. It says
+  `NotPermitted` now. **A rejection reason is a diagnosis; a wrong one sends the next reader to the
+  wrong half of the code.**
+- **The four-figure count.** Nothing in the build had ever called `IntentBus.ClearRejected`, so the
+  list grew for the session and `ReportRejections` re-counted the whole of it every frame. One
+  click reported as 1,293 refusals a few seconds later — and *that* number is what makes a reader
+  hunt for a loop submitting intents, which does not exist. **A diagnostic that is itself wrong
+  costs more than no diagnostic**: the same handler's doc comment records that two playtests were
+  already spent on refusals being invisible, and this is the other edge of the same knife.
+- **The check:** `DebugIntentTests.SpawnPawnAimedAtTheAirFallsToTheGroundInThatColumn`,
+  `GiveResourceAimedAtTheAirLandsOnTheFloorBelow` and
+  `SpawnPawnRefusesAColumnWithNowhereToStandAndSaysSoTruthfully`. The fast tier proves none of the
+  shell half — `HudShell` is Presentation and does not compile there — so the anchor's own three
+  paths remain a by-hand test (`docs/design/18-debug-menu.md`).
+
+## A rule with a threshold in it, sampled every tick
+
+**2026-09-19, the sub-tile sidestep.** Owner: *"the colonists sometimes vibrate quickly — as if it's
+fighting something or a indecision or a check that is happening — it's mostly smooth — but then
+vibrates with an odd movement."*
+
+A sidestep computed per frame from four boolean gates: an oncoming test at `dot < -0.5`, a set of
+cell-sharing tests that forced the weight to its maximum whatever the distance, a distance measured
+in x and z alone, and a choice between candidate offsets by whichever was **longest**. Measured on a
+crowd of twenty over fifty seconds, the offset moved more than 5 cm in a single tick **85 times**,
+the worst of them the full 0.600 m envelope in one sixtieth of a second.
+
+- **The pattern is not "a threshold", it is "a threshold sampled continuously".** Each gate is
+  defensible as a decision. What makes it a vibration is that it is re-decided sixty times a second
+  off inputs — another pawn's cell, its heading, a distance — that twitch across the boundary. Any
+  rule evaluated every tick against live neighbours has to enter through a ramp.
+- **`max` has a winner, and a winner can be swapped.** Two candidates of near-equal length pointing
+  opposite ways swap on any twitch, and the figure crosses the whole envelope and comes back.
+  Summing signed scalars and clamping once has no winner to swap, and does something sensible when
+  two things push from opposite sides.
+- **A distance that ignores an axis is a distance that is sometimes zero.** x/z-only made a colonist
+  on the terrace above nought metres away, on a board whose entire surface is 3 m terrace risers.
+- **Damping the wrong quantity hides the fault and adds a second one.** A previous pass answered the
+  snapping by rate-limiting the *whole drawn position* at 5.5 m/s. That damps the colonist's own
+  walking: the figure lags its own locomotion and then surges, and — because the sidestep was still
+  inside the position the speed was observed from — a 0.6 m swerve read as 6 m/s and threw the legs
+  into a run. Damp the term that steps, not the sum it is part of.
+- **The check:** `SteeringContinuityTests`, six cases, one per gate removed. And the measurement
+  that found it: drive `PawnPose.Of` over a real ticking colony and count per-tick changes in the
+  lateral offset. Reading the code suggested three wrong culprits first; the counter found it in one
+  run. `docs/design/25-pawn-steering.md` §6 has the numbers.
+
+## Inferring a number the simulation already knows
+
+**2026-09-19, the walk that went backwards.** Owner, after the steering fix: *"it happens sometimes
+when colonists are walking, particularly where there is a terrain step tile it starts to vibrate and
+move oddly mostly at the beginning of the frames when going up — so it still exists just less of
+it."*
+
+Presentation carries a figure on past the tick it sits on, and needs the rate to do it. It inferred
+the rate: a global `movePerTick` from the Defs, added to a percentage as though every step cost
+`MoveCost.Orthogonal`. Wrong by the step's geometry (a hop up is 240, not 100), wrong by the
+colonist's own pace and condition, and — the one that makes it unfixable where it stood — wrong by
+the price of the terrain being entered, which is inside the step cost and cannot be recovered from
+the two cells. **An over-estimate draws the next frame behind the last one.** Measured on the real
+board: 3,172 frames of 59,000 moved a colonist backwards along her own step, up to 10.9 mm.
+
+- **The pattern:** presentation deriving a quantity the simulation computed exactly and threw away.
+  The fix is never a better derivation — the third of those three errors has no derivation — it is
+  to publish the number. `PawnView.MoveDeltaPerMille` costs one int in a view that is not saved and
+  not hashed.
+- **Truncate an estimate towards the side you can't see.** Under-estimating makes the frame after a
+  tick jump slightly forward; over-estimating makes it go backwards. Only one of those is visible,
+  so the published rate is floored.
+- **Where it hides.** Backward travel on flat ground is a few millimetres of stutter nobody names.
+  On a terrace bank the same backward travel is *downward* travel, so it becomes a visible vertical
+  buzz — which is why the report was about step tiles and why every flat-ground fixture was clean.
+- **Every cheap fixture missed it, and that is the lesson for the check.** A hand-built world grows
+  no banks (`BankLayout` reads generated terrain), and a hand-built `PawnView` publishes no rate, so
+  it takes the fallback path rather than the one the game takes. `WalkContinuityTests` therefore
+  ticks a real colony over a real generated board. Two earlier passes at this vibration measured
+  hand-built fixtures and found them clean.
+- **Bisect before believing the last diagnosis.** The obvious reading was that the previous fix had
+  not gone far enough. Running the same measurement with the steering switched off gave numbers
+  identical to the frame, which said in one run that this was a different fault.
