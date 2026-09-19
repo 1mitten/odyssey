@@ -170,16 +170,11 @@ namespace Odyssey.Presentation.Rendering
                 }
 
                 // 2. In-cell static obstacles (e.g. tree trunks)
-                if (world != null)
+                if (world != null && world.HasObstacle(pawn.Cell))
                 {
-                    bool currHasObstacle = world.HasObstacle(pawn.Cell);
-                    bool nextHasObstacle = world.HasObstacle(pawn.NextCell);
-                    if (currHasObstacle || nextHasObstacle)
-                    {
-                        Vector3 obstDisp = SteeringCurve.ObstacleDisplacement(heading, s, currHasObstacle, nextHasObstacle);
-                        if (obstDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
-                            lateralOffset = obstDisp;
-                    }
+                    Vector3 obstDisp = SteeringCurve.ObstacleDisplacement(heading, s);
+                    if (obstDisp.sqrMagnitude > lateralOffset.sqrMagnitude)
+                        lateralOffset = obstDisp;
                 }
             }
 

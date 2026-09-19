@@ -110,25 +110,24 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>
         /// Computes the lateral displacement vector to veer around an in-cell obstacle (e.g. tree trunk or item heap).
+        /// Follows the C^1 smooth bell curve B(progress) strictly within the obstacle cell so that
+        /// entry (s=0) and exit (s=1) boundaries have zero displacement and zero velocity jerk,
+        /// eliminating boundary snaps, speed observation spikes, and animation flickering.
         /// </summary>
-        public static Vector3 ObstacleDisplacement(Vector3 heading, float progress, bool isObstacleCell, bool isUpcomingObstacle, float maxOffset = MaxLateralOffset)
+        public static Vector3 ObstacleDisplacement(Vector3 heading, float progress, float maxOffset = MaxLateralOffset)
         {
-            float clampedMax = Mathf.Clamp(maxOffset, 0f, HardClampedMax);
-            float weight = 0f;
-            if (isObstacleCell)
-            {
-                // In the obstacle cell, veer to the side (maintaining offset around center)
-                weight = Mathf.Max(0.7f, Bell(progress));
-                if (progress >= 0.5f && !isUpcomingObstacle)
-                    weight = Mathf.Lerp(weight, 0f, SmoothStep((progress - 0.5f) * 2f));
-            }
-            else if (isUpcomingObstacle)
-            {
-                // Anticipate upcoming obstacle: start veering during second half of current cell
-                weight = AnticipatoryLeadIn(progress);
-            }
+            float magnitude = Mathf.Clamp(maxOffset, 0f, HardClampedMax) * Bell(progress);
+            return LateralRight(heading) * magnitude;
+        }
 
-            return LateralRight(heading) * (clampedMax * weight);
+        /// <summary>
+        /// Backwards-compatible overload for obstacle steering. Only applies displacement within the obstacle cell,
+        /// ensuring zero offset across tile boundaries to guarantee C^1 visual continuity.
+        /// </summary>
+        public static Vector3 ObstacleDisplacement(Vector3 heading, float progress, bool isObstacleCell, bool isUpcomingObstacle = false, float maxOffset = MaxLateralOffset)
+        {
+            if (!isObstacleCell) return Vector3.zero;
+            return ObstacleDisplacement(heading, progress, maxOffset);
         }
     }
 }

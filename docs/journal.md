@@ -6580,10 +6580,25 @@ pawns), with anticipatory steering before reaching the obstacle.
   smoothing the trajectory before crossing into the obstacle cell where lateral offset is maintained around the trunk.
 - **Ground relief integration.** Lateral steering displacement is added to `along` before `OnTheDrawnGround`,
   so bank rise and terrain relief are sampled at the exact steered feet position.
+- **Visual boundary snap and gait flicker fixed (2026-09-19).**
+  - *Symptom:* The owner reported that when passing a tree, towards the end of the animation there was a
+    sudden snap/jolt to another position and the animation flickered quickly.
+  - *Cause:* `AnticipatoryLeadIn` had ramped up lateral displacement during the approaching cell, reaching
+    $0.60\text{ m}$ at the cell boundary ($s = 1.0$). Upon crossing the boundary into the obstacle cell,
+    the offset jumped from $0.60\text{ m}$ to $0.42\text{ m}$ (or to $0.0\text{ m}$ upon stopping/arriving),
+    and rotated sharply if the path changed heading. This 18–60 cm single-frame displacement spiked
+    `PawnFigureDirector.ObserveSpeed` to 10–36 m/s, causing `GaitBlend` to flicker into a sprint before settling.
+  - *Fix:* Obstacle deflection is governed strictly within the obstacle cell by the $C^1$ bell curve
+    $B(s) = 16s^2(1-s)^2$. At cell entry ($s = 0$) and exit ($s = 1$), lateral offset and derivative are
+    identically zero, guaranteeing perfect position and velocity continuity across all boundaries, turns,
+    and arrival stops. Peak clearance ($0.60\text{ m}$) occurs at cell centre ($s = 0.5$) abreast of the trunk.
+  - *Verified:* `StepTransition_IntoAndOutOfTreeCell_IsContinuous` in `ObstacleSteeringTests.cs` confirms
+    delta across entry and exit boundaries is strictly under 0.1 mm (< $10^{-4}\text{ m}$).
 - **Verified:**
   - Fast tier: **746 Sim + 445 Hud = 1,191 passed, 0 failed** (`AvoidancePathingTests.cs`, `SteeringCurveTests.cs`).
   - Unity EditMode: **1858 total, 1844 passed, 0 failed** (`ObstacleSteeringTests.cs`, `PawnPassingTests.cs`).
   - Unity PlayMode: **82 total, 77 passed, 0 failed** (frame times and presentation intact).
   - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
 
 
