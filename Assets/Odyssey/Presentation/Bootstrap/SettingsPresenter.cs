@@ -51,9 +51,39 @@ namespace Odyssey.Presentation.Bootstrap
             _shell = GetComponent<Ui.HudShell>();
         }
 
+        /// <summary>Whether the overlay row has been seeded and subscribed. See <see cref="HookDeveloperOverlay"/>.</summary>
+        bool _overlayHooked;
+
+        /// <summary>
+        /// Seed the developer-overlay row from the board and follow it thereafter, the first frame
+        /// there is a board to ask.
+        ///
+        /// <para>Separate from <see cref="Attach"/> because the two wait on different things.
+        /// Attach waits on <c>Preferences</c>, which exists before any session does; this waits on
+        /// <c>Directors</c>, which does not exist until one is running. Folding them together
+        /// would mean either an Options panel nothing drives on the start screen, or a null
+        /// dereference once a game begins — the two faults this pair exists to avoid, and the
+        /// second of which shipped in the first player build.</para>
+        ///
+        /// <para>Idempotent, and cheap on the frames it does nothing: two null checks.</para>
+        /// </summary>
+        void HookDeveloperOverlay()
+        {
+            if (_overlayHooked || _director == null) return;
+
+            OverlayDirector? overlays = _bootstrap?.Directors?.Overlays;
+            if (overlays == null) return;
+
+            _overlayHooked = true;
+            _director.SeedDeveloperOverlay(overlays.DeveloperVisible);
+            overlays.Changed += SyncDeveloperOverlay;
+            ApplyDeveloperOverlay();
+        }
+
         void Update()
         {
             Attach();
+            HookDeveloperOverlay();
 
             Keyboard? keys = Keyboard.current;
             if (keys == null || _director == null) return;
@@ -198,8 +228,17 @@ namespace Odyssey.Presentation.Bootstrap
             // The overlay row starts telling the truth about the screen, and the backquote key
             // keeps it honest afterwards: whatever toggles the readout, the preference follows,
             // because the key never wrote anything down and this row does.
-            director.SeedDeveloperOverlay(_bootstrap.Directors.Overlays.DeveloperVisible);
-            _bootstrap.Directors.Overlays.Changed += SyncDeveloperOverlay;
+            // **Directors may not exist yet, and that is this method's own design.** The comment
+            // above `_bootstrap?.Preferences` says it in as many words: attaching is deliberately
+            // not made to wait for Directors, because the start screen's Options row must open a
+            // panel that something drives before any session exists. So the overlay row cannot be
+            // seeded here unconditionally — it is hooked up the frame Directors appears instead.
+            //
+            // **It threw every frame in a player build and never once in the editor** (2026-09-19,
+            // the first player build this project has run). `OnDestroy` has guarded this exact
+            // dereference since it was written, which is the tell: one rule, two places, and only
+            // one of them knew. The build warned about it as CS8602 and nothing was listening.
+            HookDeveloperOverlay();
 
             // Anything this machine has been told before is laid over the scene, and raises
             // OptionChanged as it goes, so the board catches up without a second code path.

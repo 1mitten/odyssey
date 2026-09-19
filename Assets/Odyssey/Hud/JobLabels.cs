@@ -1,4 +1,6 @@
 #nullable enable
+using Odyssey.Sim.Contracts;
+
 namespace Odyssey.Hud
 {
     /// <summary>
@@ -39,5 +41,64 @@ namespace Odyssey.Hud
             jobDef >= 0 && jobDef < IconKeys.Length ? IconKeys[jobDef] : Idle;
 
         public static string Label(int jobDef) => Registry.Label(IconKey(jobDef));
+
+        /// <summary>
+        /// The activity line for a colonist with something in her arms: what she is doing, then
+        /// what she is holding and how much of it. Design 24 §8.
+        ///
+        /// <para><b>This is where the amount lives now.</b> The load is drawn in her arms as a
+        /// constant armful whatever the stack (design 24 §3a), so the board no longer says how
+        /// much anybody is carrying and this line is the only thing that does. That is the trade
+        /// the owner took, and it is the reason this is on the activity line rather than tucked
+        /// into a tab: the line is already on the pane's face.</para>
+        ///
+        /// <para><b>Both names come from <see cref="Registry"/>, and only the punctuation does
+        /// not.</b> The rule <c>RegistryTests.NoPlayerFacingNameIsWrittenInCSharp</c> enforces is
+        /// that a thing's <em>name</em> may not be written here, or the wiki and the screen
+        /// disagree the first time somebody corrects one of the two copies. A separator and a
+        /// multiplication sign name nothing and belong to the layout.</para>
+        ///
+        /// <para>Allocates, so callers cache it against the three values it is built from —
+        /// <c>InspectModel</c> refreshes fifteen times a second and ADR 0003's flip condition F1
+        /// forbids a string per refresh.</para>
+        /// </summary>
+        /// <summary>
+        /// The name the simulation publishes a carried load's item def under.
+        ///
+        /// <para>A string literal and not a shared constant, on exactly the bargain
+        /// <see cref="ColonistNames.RollSeedAspect"/> makes and for the same reason: this assembly
+        /// cannot reference <c>Odyssey.Sim</c> at all, and a constant both sides imported would be
+        /// the shared file the <c>PawnAspect</c> seam exists to avoid. Tests on both sides hold
+        /// the two spellings together.</para>
+        /// </summary>
+        public const string CarryingAspect = "odyssey.pawn.carrying";
+
+        /// <summary>And how many are in it. See <see cref="CarryingAspect"/>.</summary>
+        public const string CarryStackAspect = "odyssey.pawn.carrying.stack";
+
+        static readonly AspectKey CarryingKey = AspectKey.Of(CarryingAspect);
+        static readonly AspectKey CarryStackKey = AspectKey.Of(CarryStackAspect);
+
+        /// <summary>
+        /// What this colonist has in her arms, or def -1 for empty-handed.
+        ///
+        /// <para>Absence is the answer rather than a sentinel: a pawn carrying nothing publishes
+        /// no row, which is what makes the aspect sparse and free.</para>
+        /// </summary>
+        public static void CarriedBy(WorldSnapshot snapshot, PawnId id, out int def, out int stack)
+        {
+            stack = 0;
+            if (!snapshot.TryGetPawnAspect(id, CarryingKey, out def)) { def = -1; return; }
+            if (!snapshot.TryGetPawnAspect(id, CarryStackKey, out stack)) stack = 1;
+        }
+
+        public static string Carrying(int jobDef, int carriedDef, int stack)
+        {
+            string doing = Label(jobDef);
+            if (carriedDef < 0) return doing;
+
+            string load = ItemLabels.Label(carriedDef);
+            return stack > 1 ? doing + " · " + load + " × " + stack : doing + " · " + load;
+        }
     }
 }

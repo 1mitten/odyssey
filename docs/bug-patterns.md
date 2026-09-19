@@ -676,3 +676,131 @@ appearance instead.
 - **The slab art itself is exact** — 2.5000 m across, flat on top to the micrometre, the top face
   the full width of the piece, 40 vertices. Measured 2026-09-18 by `SlabTopFaceProbe`. A seam
   artefact is not the art's size, shape or flatness.
+
+## A symptom that names a missing feature usually names a missing half of one
+
+**2026-09-19, the carried load.** "A colonist picks something up and it disappears" reads as
+*carrying is not built*. Two of its three beats were: the stoop is a timed toil, the grasp lands
+in the middle of the drawn crouch, and the stow was already reported at a stockpile and at a build
+site. The one missing piece was that `ColonyItems.PickUp` delists the item, so it leaves the view
+feed. Had the symptom been believed, the fix would have rewritten `LiftToil` — and `LiftTicks`
+moved all three goldens the day it landed.
+
+- **The check:** before building what a report asks for, grep for the half that already exists. A
+  one-line grep is cheaper than a wasted session, and this is the third time that sentence has
+  been written in this repo.
+- **Sibling of "a rule that asks the built world and misses the order":** both are cases of the
+  observable state hiding work that has already happened.
+
+## A pose solved to a point is not more robust than one authored as angles
+
+**2026-09-19, the carry stance.** The rule in `13-gestures.md` §3 — solve when the figure must
+meet something whose position we know — is about *reach*, and reading it as "solving is always
+safer across rigs" gets the carry backwards. Arm length varies across the 61 rigs by more than the
+cradle does, so a cradle computed from hip height and solved to puts a short-armed colonist at
+full stretch and a long-armed one folded against its chest: same point, two postures. Authored
+angles give the same *posture* and let the point fall where each rig's arms are.
+
+- **The check:** ask which of the two a viewer actually reads. For a reach it is the point; for a
+  stance it is the posture. Solve only the axis where an authored angle fails outright rather than
+  merely looks wrong — here, a load inside the colonist's own chest.
+
+## Two assemblies that cannot see each other agree by spelling and nothing else
+
+**Standing, tightened 2026-09-19.** `Odyssey.Hud` may not reference `Odyssey.Sim`, so a pawn
+aspect's name is a string literal on each side. Nothing links them: change one and the feature
+silently stops working, with no compile error and no failing test unless one was written for it.
+
+- **The check:** every aspect key gets a test on **both** sides — the Sim side asserting
+  `SomeAspects.Key == AspectKey.Of("the.literal")`, the Hud side asserting its own constant equals
+  the same literal. `ColonistNames.RollSeedAspect` established the pattern; `CarryAspects` follows
+  it. A key with only one of the two tests is a key with no guarantee.
+
+## A pose that is additive over a clip cannot be a stance
+
+**2026-09-19, the carry arms.** Every pose in `PawnFigureDirector` adds a world-space `Pitch` to
+whatever the walk clip put on the bone, which is right for a gesture laid over a gait. A carry is
+not a gesture: it is held for as long as a state holds, so added to a swinging arm it is a scoop
+that swings — and because the load follows the palms, the load swung with it. The owner reported
+it as being about the load.
+
+- **The check:** ask whether the pose is an *event* or a *state*. A state has to take the bones
+  off the clip first, back to a rest read off that rig at bind time, because sixty-one rigs have
+  sixty-one bind poses and a constant would be wrong on sixty of them.
+- **Write the rest, never blend to it.** `ApplyWorkPose` runs twice a frame and only one pass
+  starts from a freshly evaluated graph, so easing *towards* a rest integrates instead of
+  recomputing. Assigning a constant is the identity on the second pass; put the ease in the
+  angles.
+
+## A remembered value is only remembered for the path that writes it
+
+**2026-09-19, the load that would not turn.** A carried prop was drawn at
+`ChunkRenderer.FacingOf(pawnId)`, which looks like "which way is this colonist facing" and is
+actually "the last heading this loop drew a **stand-in** at". The same loop `continue`s past every
+pawn that has a live animated figure, so it never writes an entry for one — and every load on
+every real colonist was drawn at a yaw of exactly nought. A log pointed north for ever.
+
+- **The check:** before reading a cache, find the write. If the writer skips the cases the reader
+  cares about, the reader gets the default and the default is plausible — nought is a real yaw,
+  so nothing looks broken until something asymmetric (a log) is held in it.
+- **It repeated one layer down.** `ItemHeap` lays its sunflower out on the world axes, so the
+  armful had to be turned about the cradle as a cluster; rotating each rock in place would have
+  kept the shape and left the shape pointing north. The same fault twice in one feature.
+
+## An instant transfer drawn literally is a teleport
+
+**2026-09-19, the pickup and the drop.** The simulation moves a thing between a cell and a pair of
+hands in one tick, because there is nothing sensible in between. Drawn literally that is a jump of
+about a third of a metre in no time, at both ends — and the design draft asserted the pickup was
+continuous "for free" because the hands are at the floor on the grasp tick. True vertically, and
+it misses the lateral gap between the middle of a cell and a pair of palms. The drop was worse and
+the draft did not consider it at all.
+
+- **The check:** when presentation shows a state the simulation changes instantaneously, ask what
+  the two endpoints are *in world space*, not whether the tick is right. A continuous quantity on
+  one axis says nothing about the others.
+- **Matching the two halves needs an identity, not a description.** The falling item is drawn from
+  a different list by code that never saw the hands; the def and the stack cannot pick it out of a
+  stockpile of the same commodity. Publish the id.
+
+## A shader found at runtime is a shader the build throws away
+
+**2026-09-19, the empty world.** Owner: *"there is no terrain — no graphics, terrain etc, apart
+from characters."* Only in a player build; the editor was perfect.
+
+Everything in the world is drawn with `Graphics.RenderMeshInstanced` using materials created **at
+runtime** from `Shader.Find(...)` with `enableInstancing = true` — `ChunkRenderer`,
+`MaterialCache`, `ModuleLibrary`, `TreeMaterials`, `ColonistMaterials`. A runtime-created material
+is not an asset, so the build's shader collector never sees it and Unity ships only what assets
+reference. Measured in the built player: `Odyssey/Water`, `Odyssey/Tree`, `Odyssey/Character`,
+`Odyssey/Outline` and `Odyssey/GradientSky` were **absent altogether**; `Universal Render
+Pipeline/Lit` was present only in the non-instanced variants Synty's prefab materials use.
+
+Characters were the one visible thing because they alone are GameObjects wearing real material
+assets — and they drew in the pack's own colours, because the shader that recolours them had gone
+with the rest. *"Everything is missing except the one thing that is a GameObject"* is the
+signature of this fault.
+
+- **The check:** every `Shader.Find` name belongs in `ShaderInclusion.Required`, which forces the
+  shader and all its variants into the build. `ShaderInclusionTests` derives the list from the
+  source, so the two cannot drift — it found two names the hand-written list had missed on its
+  very first run.
+- **Measured cost of always-including URP/Lit: none.** 385 MB and 11 s before and after. The fear
+  that all-variants would be ruinous was worth testing rather than designing around.
+- **No test in this repository could have caught it.** The editor has every shader and every
+  variant, always, and both tiers run in the editor's own domain. Only a player build fails on
+  this, and until that day nothing had ever made one.
+
+## One rule, two places, and only one of them knew — the null guard edition
+
+**2026-09-19, `SettingsPresenter`.** A `NullReferenceException` every frame in a player build,
+never in the editor. `Attach` dereferenced `_bootstrap.Directors.Overlays` while its own comment
+three lines above explains that attaching deliberately does **not** wait for `Directors` to
+exist. `OnDestroy` had guarded that exact dereference since it was written.
+
+- **The tell was already in the file**: the same expression guarded in one method and bare in
+  another. When you find that, the bare one is the bug, not the guarded one.
+- **The build had been saying so**: `CS8602: Dereference of a possibly null reference` at that
+  line, in every build log, unread.
+- The fix is not a guard but a second waiter — `HookDeveloperOverlay`, which waits on `Directors`
+  where `Attach` waits on `Preferences` — because the two genuinely wait on different things.

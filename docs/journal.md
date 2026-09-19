@@ -6359,6 +6359,162 @@ colonists at certain points and smoother is preferred and predictable."*
 - **Re-verified on the merge with main** (head turning, the flush selection cursor), this time on
   the real checkout with the packs: fast tier **730 + 438**, Long **21**, EditMode **1798 total,
   1784 passed, 0 failed**, PlayMode **82 total, 77 passed, 0 failed**, both content gates clean.
+
+## 2026-09-19 — The load that was never there
+
+The report was that a colonist picks something up and it vanishes. The obvious reading is that
+nothing about carrying is built, and that reading is wrong in an expensive way: **two of the
+owner's three beats already existed.** `JobDriver.LiftToil` is a whole timed toil of 48 ticks, the
+grasp lands at tick 24 in the middle of the drawn crouch's floor hold, and `PawnGesture.Stow` is
+already reported when a load goes into a stockpile *or* into a build site. A session that had
+believed the symptom would have rewritten the stoop.
+
+What was actually missing was one thing: `ColonyItems.PickUp` sets `item.Cell = -1` and delists
+it, so the load leaves the view feed and nothing downstream can draw it.
+
+- **The interview's water question rested on a false premise, in both directions.** It asked what
+  happens when a colonist *swims* with a load. Deep water is impassable — the pathfinder routes
+  round a lake rather than pricing a swim nobody survives — so no hauler ever swims one. But
+  shallow water takes `WaterLine.Weight` to 1 on the owner's own 2026-09-17 decision, and
+  `SwimPose` strokes **both arms**. The case is therefore the common one, not a hypothetical, and
+  the honest answer to "no special case" is a bundle swinging about in a swimmer's arms. Put back
+  to the owner with the correction, the answer was to hide the load in water for now and decide
+  later. `CarryPose.Drawn` is the single place that does it.
+- **The draft designed the pose the wrong way round and the code does not.** It proposed computing
+  a cradle point from hip height and solving both hands to it. Arm length varies across the 61
+  rigs by more than the cradle does, so a solved point puts a short-armed colonist at full stretch
+  and a long-armed one folded against its chest — two people carrying the same log in visibly
+  different postures. Authoring the shoulder and elbow angles and then *measuring* where the palms
+  ended up gives every rig the same posture, which is the thing a viewer reads. Only `Clearance`
+  is solved, along the one axis where an authored angle fails outright rather than merely looks
+  wrong: a load inside the colonist's own chest.
+- **The stance waits for the gesture; the load does not.** A lift hands the thing over half way
+  through the crouch, so for its second half the pawn is carrying while the gesture owns both
+  arms. Letting the carry weight ease in there takes it to full strength unseen, and the frame the
+  crouch lets go the arms snap into the cradle. Holding the target at nought until the gesture
+  ends makes the fold start from where the rise left the hands. The load is unaffected either way,
+  because it follows the palms and not the stance — which is also what makes it travel *up out of*
+  the crouch instead of appearing at the waist.
+- **Drawn off the aspect rows, not off the pawns, and that is the performance decision.** Carrying
+  is sparse. Walking the pawns would mean an aspect scan per pawn — fifty scans of a thousand rows
+  every frame to find three loads. One scan of the rows, then a lookup only carriers pay for.
+- **It costs no draw call.** The load joins the same instanced batch as the pile it came off, so a
+  carried rock is one more matrix in a buffer that was going to be submitted anyway — and it is
+  the same mesh at the same scale as the ground prop by construction, rather than by a constant
+  that could drift.
+- **A partial delivery reports the stow twice on one tick** and it is harmless. The snapshot
+  publishes once a tick, so presentation never sees the intermediate serial. Worth writing down
+  because it looks like a double motion and is not, and because it is a property of the publish
+  cadence rather than of the drivers.
+- **`DropCarried`'s deliberate silence was reversed rather than worked around.** Its comment argued
+  at length that an abandoning drop is a different motion from a stow, which was right while
+  nothing was drawn and is wrong once the load is visible — the alternative to a motion is a
+  commodity teleporting out of somebody's arms. The distinction is recorded as deferred, with the
+  note that the second gesture belongs *there* and not in a second drop path, because two owners
+  for one rule is this project's commonest fault.
+- **Verified:** fast tier **735 Sim + 445 Hud**; EditMode **1824 total, 1810 passed, 0 failed**;
+  PlayMode **82 total, 77 passed, 0 failed**; both content gates clean with no CSV change, since
+  this adds no named thing. **No golden moved** — gestures and aspects are neither saved nor
+  hashed, and the goldens ran green unchanged, which is the measurement rather than the assumption.
+
+## 2026-09-19 — Three faults from the first look at a carried load
+
+The owner played it and reported three things. All three were real, and two of them the design
+document had explicitly claimed would not happen.
+
+- **"Much stiffer and static, because it's taken weight."** Every pose in the director is additive
+  over the walk clip, which is right for a gesture laid over a gait and wrong for a stance: added
+  to a swinging arm, a scoop is a scoop that swings, and the load follows the palms so the load
+  swung too. The owner read it as a fault in the load. The fix is to take the four arm bones off
+  the clip first, back to a rest read off each rig at bind time — a constant would be wrong on
+  sixty of the sixty-one. Written rather than blended, so the second of the two passes a frame is
+  the identity.
+- **"The logs don't turn with you."** One line. The yaw came from `ChunkRenderer.FacingOf`, which
+  reads like "which way is this colonist facing" and is really "the last heading this loop drew a
+  *stand-in* at" — and that loop skips every pawn with a live figure. So no real colonist ever had
+  an entry, every load drew at a yaw of exactly nought, and nothing looked broken until something
+  asymmetric was held in it. **The same fault existed one layer down**: `ItemHeap` lays its
+  sunflower on the world axes, so the armful had to be turned about the cradle as a cluster rather
+  than each rock about itself.
+- **"It should fall into position, and be raised out of pick up."** The draft asserted the pickup
+  was continuous for free, because the hands are at the floor on the grasp tick. True vertically;
+  it misses that the pile is at the middle of the cell and the palms are a third of a metre in
+  front of the colonist. The drop was worse and the draft did not consider it at all — `PutDown`
+  moves the item to its cell in the same instant it begins the stow, so the thing appeared at the
+  cell centre and the crouch then played over empty hands.
+- **`CarryHandover` draws both, and they are deliberately different curves.** The raise eases out
+  (quick off the floor, slowing into the cradle) and the fall eases in (slow out of the hands,
+  quickest at the floor), which is `Gesture`'s own asymmetry argument applied to a thing that
+  really is falling. Reverse them and a colonist places something delicately and then snatches it
+  off the ground. The raise is capped at 0.30 s against the 0.4 s of crouch left after the grasp,
+  or the load is still travelling once she has set off walking — `LiftTicks`'s original fault in a
+  new costume.
+- **The fall needed a third aspect.** A load set down stops being a load and becomes an item in a
+  cell, drawn from a different list by code that never saw the hands. The def and the stack cannot
+  match it — a stockpile of wood is full of loads that agree on both — so the `ThingId` is
+  published.
+- **Verified so far:** fast tier **736 Sim + 445 Hud**, both content gates clean. **The Unity tier
+  has not been run on these fixes**: an editor was open on the worktree (`odyssey-inspect`) when
+  they were finished, and the rule is not to batch-run against a project somebody may be playing.
+  Nearly all three fixes are in Presentation, which the fast tier does not compile, so that is a
+  real gap and not a formality.
+
+## 2026-09-19 — The carry re-measured, and what a new commodity inherits
+
+The three fixes went in against an open editor and could not be run past Unity at the time. Run
+now that it is closed: fast tier **736 Sim + 445 Hud**, EditMode **1834 total, 1820 passed, 0
+failed**, PlayMode **82 total, 77 passed, 0 failed**, both content gates clean. Nothing was wrong
+— but the gap was real rather than a formality, because almost all of that change lives in
+Presentation and the fast tier does not compile it.
+
+- **"Stones should get the same treatment and future big items."** They already do, and the useful
+  thing was to write down *why* rather than to build anything: the carry path is keyed on nothing
+  per-commodity. A def index reaches the renderer, a module is resolved for it, the yaw turns it
+  and `CarryHandover` is keyed on the thing's id and has never heard of what kind of thing it is.
+  The only opt-in is `ItemHeap.Recipes` — a row there makes a commodity an armful of several
+  instead of one prop, and a null row is what everything did before heaps existed.
+- **The missing guard was on `Armful`, not on the concept.** `ItemHeapTests` already held `Place`
+  to the buffer across every recipe and said nothing about `Armful`, which writes a different
+  count from a different recipe. `EveryHeapCommodityCanBeCarriedAsAnArmful` closes that, so a bad
+  recipe on the next commodity fails the Unity tier instead of showing up as rocks a metre from
+  somebody's hands.
+- **What a genuinely big item would still want is its own hold.** A girder is not scooped in two
+  arms at the waist. Nothing in the game is that size, so the decision belongs with whatever
+  introduces one — and the seam for it is `CarryPose`, not a special case in the renderer.
+
+## 2026-09-19 — The first player build was empty, and the editor could never have told us
+
+The owner ran `Build/Win64/Odyssey.exe` from the merge and reported no terrain, no graphics,
+nothing but characters. In the editor the same commit is perfect.
+
+- **Every shader this game asks for by name was being stripped.** The world is drawn entirely
+  through `Graphics.RenderMeshInstanced` with materials built at runtime from `Shader.Find`, and
+  a runtime material is not an asset, so nothing in the build referenced the shaders. Grepping
+  `Odyssey_Data` for their names returned nothing for all five of ours, and the player's own log
+  said it out loud: *"shader Odyssey/Outline not found; outlines are off"*.
+- **Characters were visible because they are the only thing that is not instanced.** They are
+  GameObjects wearing Synty's own material assets — real assets, so their shaders survived. They
+  also drew in the pack's colours rather than recoloured, because `Odyssey/Character` had gone
+  with the rest. That single exception is what makes the symptom diagnosable.
+- **The expensive option turned out to be free.** Always-including a shader forces all its
+  variants in, and the received wisdom is that doing this to URP/Lit is ruinous. Measured: 385 MB
+  and 11 s before, 385 MB and 11 s after. The fear was worth a measurement rather than a design.
+- **The test found two shaders the fix had missed**, `Odyssey/GradientSky` and `Standard`, on the
+  first run of the tier that was meant to confirm the fix. A hand-written list of runtime-found
+  shaders is a list that is short by one; `ShaderInclusionTests` derives it from the source
+  instead, which is the same bargain `RegistryTests` makes for player-facing names.
+- **A second, unrelated build-only fault in the same log.** `SettingsPresenter.Attach` threw a
+  `NullReferenceException` every frame on `_bootstrap.Directors.Overlays`, three lines below its
+  own comment explaining that attaching deliberately does not wait for `Directors`. `OnDestroy`
+  had guarded that exact expression since it was written — one rule, two places, one of them
+  knowing. The compiler had been printing `CS8602` at that line in every build log.
+- **Verified:** the player log went from 109 lines with a per-frame exception and two
+  shader-not-found warnings to **38 lines, clean**. Fast tier 736 + 445; EditMode **1837 total,
+  1823 passed, 0 failed**; build 385 MB, 0 errors.
+- **The gap this closes is a category, not a bug.** Two green tiers say nothing about whether the
+  game runs, because both compile and run in the editor's domain. `PlayerBuild` now refuses to
+  build with a runtime-found shader off the list, so the next one fails loudly instead of
+  shipping an empty world.
 80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
 all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
 render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written

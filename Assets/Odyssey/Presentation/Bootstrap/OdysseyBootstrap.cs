@@ -967,7 +967,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
-                    _tickAlpha, movePerTick, _figures?.Drawn);
+                    _tickAlpha, movePerTick, _figures?.Drawn, _figures);
 
             DrawStandingOrders(_world.Views.Current);
             DrawZones(_world.Views.Current);

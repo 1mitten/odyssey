@@ -231,6 +231,31 @@ namespace Odyssey.Hud
         CellRef _positionFor;
         bool _positionWritten;
 
+        // The three values the activity line is built from. Same argument as _positionFor above:
+        // "Hauling · Wood × 8" is a composed string and the pane refreshes fifteen times a
+        // second, so without this the model allocates one per refresh for as long as a colonist
+        // is selected. A colonist walking a long haul is exactly the case that would do it, since
+        // nothing about her changes for thirty seconds together.
+        int _jobFor = int.MinValue, _carriedFor = int.MinValue, _stackFor;
+
+        /// <summary>
+        /// What this colonist is doing, and what she is carrying while she does it. Design 24 §8.
+        ///
+        /// <para>Two sparse aspect reads, and an empty-handed colonist pays for one of them: the
+        /// absence of the row <em>is</em> the answer, so there is no sentinel to test.</para>
+        /// </summary>
+        void SetJob(WorldSnapshot snapshot, in PawnView pawn)
+        {
+            JobLabels.CarriedBy(snapshot, pawn.Id, out int carried, out int stack);
+
+            if (_jobFor == pawn.JobDef && _carriedFor == carried && _stackFor == stack) return;
+
+            _jobFor = pawn.JobDef;
+            _carriedFor = carried;
+            _stackFor = stack;
+            Job = JobLabels.Carrying(pawn.JobDef, carried, stack);
+        }
+
         void SetPosition(CellRef cell)
         {
             if (_positionWritten && _positionFor == cell) return;
@@ -257,7 +282,7 @@ namespace Odyssey.Hud
                     Tombstoned = false;
                     Title = ColonistNames.Of(snapshot, pawn.Id);
                     Subtitle = "colonist";
-                    Job = JobLabels.Label(pawn.JobDef);
+                    SetJob(snapshot, pawn);
                     JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     Food = pawn.Food;
                     Rest = pawn.Rest;

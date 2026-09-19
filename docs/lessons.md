@@ -2084,6 +2084,7 @@ through a shell heredoc into a Python one-liner and the backslash was eaten some
 the "fix" wrote the NUL straight back and the file still had one. Concatenating `bytes([92])` and
 `b"0"` is ugly and cannot be misread by anything in between.
 
+
 ## An empty guid in a committed .meta fails Unity one file away from the truth
 
 The first Unity editmode run on the growing branch failed with `CS0246: 'SowJobDriver' could not
@@ -2104,3 +2105,41 @@ run on the branch, because nothing else ever reads those bytes. Generated metas 
 *(Also worth its sentence: `git diff main -- Assets/` from a worktree lists files main has and
 the worktree does not, so a naive "missing meta" audit reports phantom files. Test the `.cs`
 exists before blaming its `.meta`.)*
+## A Unity build rewrites settings assets it was never asked to touch
+
+**2026-09-19, the first player build this project had ever run.** `scripts/unity.sh build`
+succeeded and left six unrelated files modified: `DefaultVolumeProfile.asset`, `PC_RPAsset.asset`,
+`UniversalRenderPipelineGlobalSettings.asset`, `GraphicsSettings.asset`, `ProjectSettings.asset`
+and `UnityConnectSettings.asset`. Unity populates build-target defaults and upgrades serialized
+fields the first time a target is built, and it does it silently.
+
+Two of them matter rather than being cosmetic:
+
+- `UnityConnectSettings.asset` had `m_Enabled: 0` turned to **1**, which switches Unity Analytics
+  on for the project. Nobody asked for that and committing it would have enabled it for everyone.
+- `PC_RPAsset.asset` had four URP prefiltering modes rewritten. Those decide which shader variants
+  exist, so committing them silently changes what the renderer can draw — in a file whose values
+  were settled by looking at pictures.
+
+**Always `git status` after a build, and revert everything you did not intend.** The build output
+itself is gitignored (`/Build/`); the settings churn is not, and it arrives looking exactly like
+part of the work you just did.
+
+## The build settings pointed at a scene that had not existed for months
+
+**Same day, found by that first build.** `EditorBuildSettings.asset` still listed the Unity
+template's `Assets/Scenes/SampleScene.unity`; the project's one real scene is generated as
+`Assets/Scenes/Play.unity`. Nothing had noticed because **nothing in this repository had ever
+built a player** — both test tiers run in the editor's own domain and never read that list.
+
+Unity's message for it is `'Assets/Scenes/SampleScene.unity' is an incorrect path for a scene
+file. BuildPlayer expects paths relative to the project folder`, which sends you to check the path
+format when the real answer is that the file is not there.
+
+- `PlayScene.Build` now registers the scene it generates, so the generated artefact and the
+  pointer at it cannot drift again — scenes here are generated rather than hand-authored
+  precisely so there is one source of truth.
+- `PlayerBuild` fails with the missing path named, rather than passing it to Unity.
+- **A green test tier says nothing about whether the game builds.** The tiers compile the Editor
+  and Test assemblies; a player build is the only thing that compiles the *player* assembly set.
+  A stray `using UnityEditor` in Presentation passes every test here and fails only there.

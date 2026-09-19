@@ -89,3 +89,7 @@ __pycache__/
 # of the tree on purpose: anything in here that turned out to matter belongs in docs/ instead.
 /.zcode/
 tools/dotnet/*/TestResults/
+
+# Standalone player builds. A player has the licensed Synty content baked into it, so this is
+# the one artefact that must never be committed. scripts/unity.sh build writes here.
+/Build/

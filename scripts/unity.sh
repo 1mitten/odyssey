@@ -4,6 +4,7 @@
 #   scripts/unity.sh which                      print the editor binary that will be used
 #   scripts/unity.sh inventory                  run the Synty inventory (docs/research/synty-inventory.md)
 #   scripts/unity.sh test editmode|playmode     run tests, results in TestResults/<Mode>.xml
+#   scripts/unity.sh build                      build a Win64 player into Build/ (gitignored)
 #   scripts/unity.sh exec Ns.Class.Method       run a static editor method in batchmode, then quit
 #   scripts/unity.sh open                       launch the editor GUI on this project
 #
@@ -240,6 +241,17 @@ case "$cmd" in
         -testPlatform "$platform" "$@"
     fi
     ;;
+  build)
+    # A standalone player. The one thing that compiles the PLAYER assembly set -- no UnityEditor,
+    # stripping as configured -- and the only thing that proves the scene and the shaders survive
+    # packaging. A `using UnityEditor` in Presentation passes both test tiers and fails here.
+    #
+    # Output goes to Build/, which is gitignored: a player has the licensed Synty content baked
+    # into it, so it is the one artefact that must never be committed.
+    UNITY="$(find_unity)"
+    run_batch Logs/build.log -nographics \
+      -executeMethod Odyssey.EditorTools.PlayerBuild.Windows64 "$@"
+    ;;
   exec)
     UNITY="$(find_unity)"
     method="${1:-}"
@@ -270,7 +282,7 @@ case "$cmd" in
     sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     ;;
   *)
-    echo "unity.sh: unknown command '$cmd' (try: which, inventory, test, exec, open, help)" >&2
+    echo "unity.sh: unknown command '$cmd' (try: which, inventory, test, build, exec, shot, open, help)" >&2
     exit 2
     ;;
 esac

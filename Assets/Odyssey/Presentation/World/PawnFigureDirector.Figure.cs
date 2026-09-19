@@ -316,6 +316,84 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public float WorkDip;
 
+            /// <summary>
+            /// The item def index this colonist has in its arms, or -1 for empty-handed. Design 24.
+            ///
+            /// <para>Carried on the figure for the same reason <see cref="WorkJob"/> is: the pose
+            /// pass runs later, over figures alone, with no snapshot in scope.</para>
+            /// </summary>
+            public int CarryDef = -1;
+
+            /// <summary>How many are in the load. The arms ignore it; the inspect pane does not.</summary>
+            public int CarryStack;
+
+            /// <summary>
+            /// How much of a carrier this figure is, 0 empty-handed and 1 in the full scoop. Eased
+            /// by <see cref="CarryPose.Settle"/>, so the arms fold into the cradle as the lift's
+            /// crouch releases them rather than snapping there on one frame.
+            /// </summary>
+            public float CarryWeight;
+
+            /// <summary>
+            /// Where the load was drawn on the last posed frame, and whether there was one.
+            ///
+            /// <para>Recorded rather than recomputed because the renderer needs it <em>after</em>
+            /// the pose pass has run — the cradle is measured off palms that do not exist until
+            /// the arms have been posed. Recomputing it on the renderer's side would mean reading
+            /// bones a frame late, which is the drift that would show up as a load lagging behind
+            /// the hands that hold it.</para>
+            /// </summary>
+            public Vector3 CarryAt;
+
+            /// <summary>Whether <see cref="CarryAt"/> was written this frame. See it for why.</summary>
+            public bool CarryPlaced;
+
+            /// <summary>
+            /// Which way the load is turned: the figure's own yaw at the moment it was placed.
+            ///
+            /// <para><b>The load turns with the colonist</b> (owner, 2026-09-19: "when you turn a
+            /// direction the logs don't turn with you and they should"). Taken from the figure
+            /// rather than from <c>FacingOf</c>, which is the renderer's memory of the last
+            /// heading it drew a colonist at — and it never writes an entry for a pawn that has a
+            /// live figure, because that loop skips them. Every load on a real colonist was
+            /// therefore drawn at a yaw of exactly nought.</para>
+            /// </summary>
+            public float CarryYaw;
+
+            /// <summary>
+            /// Where the load is easing from, while it is still arriving in or leaving the hands,
+            /// and how far through that it is. See <see cref="CarryHandover"/>.
+            /// </summary>
+            public Vector3 HandoverFrom;
+
+            /// <summary>Seconds into the current hand-over, or past its end when there is none.</summary>
+            public float HandoverClock = float.MaxValue;
+
+            /// <summary>
+            /// The thing this figure last let go of, and where its hands were when it did.
+            ///
+            /// <para>Kept after the load has left, because the load is then an item lying in a
+            /// cell drawn by the renderer, and the renderer is the only thing that knows where
+            /// that cell is. The figure supplies the other end of the fall.</para>
+            /// </summary>
+            public int ReleasedThing = -1;
+
+            /// <summary>Where the hands were at the release. See <see cref="ReleasedThing"/>.</summary>
+            public Vector3 ReleasedFrom;
+
+            /// <summary>Seconds since the release, or past the settle's end when there is none.</summary>
+            public float ReleasedClock = float.MaxValue;
+
+            /// <summary>The item the figure is holding, so a release knows what was let go of.</summary>
+            public int CarryThing = -1;
+
+            // ---- the arms as the rig authored them, for the carry's stiffness. See BindWorkBones.
+            public Quaternion RestRightUpperArm = Quaternion.identity;
+            public Quaternion RestRightLowerArm = Quaternion.identity;
+            public Quaternion RestLeftUpperArm = Quaternion.identity;
+            public Quaternion RestLeftLowerArm = Quaternion.identity;
+            public bool RestArmsBound;
+
             static FittedTool[] NewTools()
             {
                 var tools = new FittedTool[WorkStyle.Count];

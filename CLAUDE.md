@@ -157,6 +157,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **TS** terrace steps | **In review — PR #126**, branch `claude/terrace-foot-guard`. Nothing generates at the foot of a step any more (`TerraceFoot`, a sim-side copy of the bank rule checked cell-by-cell against `BankLayout`), and crossing one is priced and drawn against the path it is *drawn* along rather than against a flat cell: the foot cell is a **slope** costing what the hop out of it costs, `PawnPose.StepPace` spends each step's time where its climbing is, and a climbing figure is drawn on the ramp surface itself. Came out of four owner reports in two days; the arithmetic and every rejected alternative are in `docs/design/22-terrace-steps.md` §4b–4c. Three faults older than the work fell out of it: a 1.51 m teleport climbing a sheer face, its 657 mm mirror on a sheer drop, and a two-frame hitch at the start of every step costing more than a flat cell. |
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
+| **CL** the carried load | **Built, played once, three faults fixed; PR #129 ready to merge** (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -188,6 +189,7 @@ this file.
 | Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
+| Picking up, carrying, putting down, the armful | `docs/design/24-carrying.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
 | The build cursor and its drag gesture | `docs/design/19-build-cursor.md` |
@@ -280,11 +282,11 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **724 Sim + 438 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **736 Sim + 445 Hud**; Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the
-  flush selection cursor on terrain, floors, water, and banks: EditMode **1752 total, 1738 passed, 0 failed** (12 added by `SelectionCursorTests`).
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-19 on the
+  carried load and its three playtest fixes: EditMode **1834 total, 1820 passed, 0 failed** (24 added by `CarryPoseTests`).
   PlayMode, the same day: **82 total, 77 passed, 0 failed**.
   `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
   `TheRosterBarFollowsTheColonyIntoANewSession`.
@@ -313,6 +315,14 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 
 ### Waiting on the owner
 
+- **The carried load has had one playtest and passed** (2026-09-19, `docs/design/24-carrying.md`).
+  Three faults found and fixed — swinging arms, a load that would not turn, and both hand-overs
+  snapping — and the owner is happy to merge. What is still unjudged: the seven `CarryPose`
+  angles; whether a single wood bundle reads at true scale, which is the choice made over
+  enlarging it; and whether losing the amount from the arms is missed now that only the activity
+  line carries it. **The water case is a knowing placeholder** — the load vanishes as she wades in
+  and returns as she climbs out, and whether that pop is worse than the swinging bundle it
+  replaces is the question it exists to ask.
 - **Nobody has played the new starting kit** (2026-09-18, `docs/design/22-starting-kit.md`): 36
   meals, no scrap, 150 each of stone and wood. Five integers in one method with nothing deriving
   from them, and explicitly invited tuning. The question a test cannot answer is whether three or
@@ -462,7 +472,7 @@ The two that come up daily:
 - `docs/lessons.md` operational lessons (read it) · `docs/bug-patterns.md` the bug-pattern catalogue and fix register (read it before debugging a report) · `docs/journal.md` the narrative record of how the build got here (why a decision was made, what was measured, what was later falsified) · `docs/brief.md` governing brief · `docs/research/` research files and `INDEX.md` · `docs/reference/screenshots/` reference images and descriptions · `docs/setup/local-dev.md` dev-machine setup (§8 for Windows). Later phases add `docs/design/`, `docs/adr/`, `docs/plans/`, `docs/milestones/`.
 - The Unity project lives at the **repository root** (`Assets/`, `Packages/`, `ProjectSettings/`), created 2026-09-15 on the Windows dev machine (Unity 6000.3.24f1, Universal 3D template).
 - `Assets/Odyssey/` the game assemblies: `Sim.Contracts`, `Sim` (both UnityEngine-free), `Tests/Sim`. `Assets/Editor/Odyssey/` editor tooling: `SyntyInventory.cs`, `SyntyImport.cs`, `VisualBlockScene.cs`. `tools/dotnet/` mirror projects for the fast test tier. `Assets/Synty/` licensed packs, ignored by git.
-- `scripts/unity.sh` headless Unity wrapper (`inventory`, `test`, `exec`, `shot`, `open`, `which`; `shot` takes an optional method, e.g. `shot Odyssey.EditorTools.ScatterSheet.Shoot` for a contact sheet of candidate props) and `scripts/test-fast.sh` the no-Unity test tier.
+- `scripts/unity.sh` headless Unity wrapper (`inventory`, `test`, `build`, `exec`, `shot`, `open`, `which`; `shot` takes an optional method, e.g. `shot Odyssey.EditorTools.ScatterSheet.Shoot` for a contact sheet of candidate props) and `scripts/test-fast.sh` the no-Unity test tier.
 - `docs/wiki/` the generated content wiki (read it, never edit it — see the section above). `tools/wiki/build_wiki.py` builds it; `tools/icons/icons.py` is the icon pipeline (detect, contact, export, validate, emit-web) with 30 tests via `python3 -m unittest discover -s tools/icons -t tools/icons`; `tools/mockups/artifact_body.py` makes a mockup publishable. All three are standard library only, so they run in a container with no Unity.
 - `art-source/` owner-owned source art kept **outside** `Assets/` so Unity does not import it. `art-source/icons/sheets/` is where the eight icon sheets go.
 
