@@ -6481,3 +6481,37 @@ Presentation and the fast tier does not compile it.
 - **What a genuinely big item would still want is its own hold.** A girder is not scooped in two
   arms at the waist. Nothing in the game is that size, so the decision belongs with whatever
   introduces one — and the seam for it is `CarryPose`, not a special case in the renderer.
+
+## 2026-09-19 — The first player build was empty, and the editor could never have told us
+
+The owner ran `Build/Win64/Odyssey.exe` from the merge and reported no terrain, no graphics,
+nothing but characters. In the editor the same commit is perfect.
+
+- **Every shader this game asks for by name was being stripped.** The world is drawn entirely
+  through `Graphics.RenderMeshInstanced` with materials built at runtime from `Shader.Find`, and
+  a runtime material is not an asset, so nothing in the build referenced the shaders. Grepping
+  `Odyssey_Data` for their names returned nothing for all five of ours, and the player's own log
+  said it out loud: *"shader Odyssey/Outline not found; outlines are off"*.
+- **Characters were visible because they are the only thing that is not instanced.** They are
+  GameObjects wearing Synty's own material assets — real assets, so their shaders survived. They
+  also drew in the pack's colours rather than recoloured, because `Odyssey/Character` had gone
+  with the rest. That single exception is what makes the symptom diagnosable.
+- **The expensive option turned out to be free.** Always-including a shader forces all its
+  variants in, and the received wisdom is that doing this to URP/Lit is ruinous. Measured: 385 MB
+  and 11 s before, 385 MB and 11 s after. The fear was worth a measurement rather than a design.
+- **The test found two shaders the fix had missed**, `Odyssey/GradientSky` and `Standard`, on the
+  first run of the tier that was meant to confirm the fix. A hand-written list of runtime-found
+  shaders is a list that is short by one; `ShaderInclusionTests` derives it from the source
+  instead, which is the same bargain `RegistryTests` makes for player-facing names.
+- **A second, unrelated build-only fault in the same log.** `SettingsPresenter.Attach` threw a
+  `NullReferenceException` every frame on `_bootstrap.Directors.Overlays`, three lines below its
+  own comment explaining that attaching deliberately does not wait for `Directors`. `OnDestroy`
+  had guarded that exact expression since it was written — one rule, two places, one of them
+  knowing. The compiler had been printing `CS8602` at that line in every build log.
+- **Verified:** the player log went from 109 lines with a per-frame exception and two
+  shader-not-found warnings to **38 lines, clean**. Fast tier 736 + 445; EditMode **1837 total,
+  1823 passed, 0 failed**; build 385 MB, 0 errors.
+- **The gap this closes is a category, not a bug.** Two green tiers say nothing about whether the
+  game runs, because both compile and run in the editor's domain. `PlayerBuild` now refuses to
+  build with a runtime-found shader off the list, so the next one fails loudly instead of
+  shipping an empty world.

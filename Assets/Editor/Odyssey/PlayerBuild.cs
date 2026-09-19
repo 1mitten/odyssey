@@ -64,6 +64,21 @@ namespace Odyssey.EditorTools
                 return;
             }
 
+            // **A shader this game finds at runtime, not in the build.** The editor has every
+            // shader and every variant always, so nothing short of a player build can notice —
+            // and the symptom is not an error, it is an empty world with the characters still in
+            // it. Refused rather than fixed silently: the list is a committed project setting, so
+            // a build that quietly edited it would leave the next person a diff they did not make.
+            string[] stripped = ShaderInclusion.Missing();
+            if (stripped.Length > 0)
+            {
+                Fail("these shaders are found at runtime but are not in the always-included list, "
+                     + "so the player would draw nothing that uses them: "
+                     + string.Join(", ", stripped)
+                     + ". Run Odyssey.EditorTools.ShaderInclusion.Apply and commit the change.");
+                return;
+            }
+
             string root = Path.GetDirectoryName(Application.dataPath)!;
             string output = Path.Combine(root, OutputFolder, executable);
             Directory.CreateDirectory(Path.GetDirectoryName(output)!);
