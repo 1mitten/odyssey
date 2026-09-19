@@ -188,6 +188,7 @@ this file.
 | Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
+| Picking up, carrying, putting down | `docs/design/24-carrying.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
 | The build cursor and its drag gesture | `docs/design/19-build-cursor.md` |
