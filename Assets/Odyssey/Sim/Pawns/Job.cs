@@ -213,10 +213,20 @@ namespace Odyssey.Sim.Pawns
         /// carried, and the thing then existed nowhere at all.</para>
         ///
         /// <para>Shared rather than copied because there are two carriers now — a haul and a
-        /// delivery — and a third would have copied whichever it happened to read. It says nothing
-        /// to presentation, deliberately: this is a colonist dropping what it is holding, not
-        /// stowing it on purpose, and that is a different motion which nothing draws yet. See
-        /// <see cref="PutDown"/>.</para>
+        /// delivery — and a third would have copied whichever it happened to read.</para>
+        ///
+        /// <para><b>It reports the stow, and until 2026-09-19 it deliberately did not.</b> The old
+        /// reasoning was sound while nothing was drawn: this is a colonist dropping what it is
+        /// holding, not stowing it on purpose, and an abandoning drop is a different motion. But
+        /// the load is now in the colonist's arms where anyone can see it (design 24), and the
+        /// alternative to a motion is not "no motion" — it is the load teleporting out of her
+        /// hands on the frame she gets hungry. So the owner's call is to reuse the stow while
+        /// there is only one motion to reuse.</para>
+        ///
+        /// <para><b>The distinction is deferred, not abandoned.</b> Abandoning a load really is a
+        /// faster, shallower thing than setting it down, and when there is a second gesture to
+        /// draw, <em>here</em> is where it goes — not in a second drop path bolted on beside this
+        /// one. Two owners for one rule is the fault <c>docs/bug-patterns.md</c> lists first.</para>
         /// </summary>
         protected void DropCarried(PawnContext ctx)
         {
@@ -224,6 +234,10 @@ namespace Odyssey.Sim.Pawns
             var item = ctx.Items.Get(new ThingId(Job.CarriedItem));
             Job.CarriedItem = -1;
             if (item == null) return;
+
+            // Before the store, not after: the pawn is putting something down either way, and a
+            // board so full that the load is lost below still shows the motion that lost it.
+            Pawn.BeginGesture(PawnGesture.Stow);
 
             int at = ctx.Items.NearestCellWithSpace(
                 ctx.Cells, Pawn.Cell, item.DefIndex, item.Stack, DropSearchRadius);

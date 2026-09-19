@@ -174,6 +174,64 @@ namespace Odyssey.Presentation.Rendering
             return rocks;
         }
 
+        /// <summary>
+        /// Rocks in an armful. Design 24 §3a: the same number whatever the stack.
+        ///
+        /// <para><b>Constant, where the heap on the floor is not</b>, and the asymmetry is the
+        /// owner's decision rather than an oversight. The floor's count says how much is there
+        /// because it can — seven rocks in a 2.5 m cell is a legible range. Two arms cannot hold
+        /// seventy-five stone at true scale, so any honest scaling would run from one rock to
+        /// three, and the bottom of that is a colonist walking forty metres holding a single
+        /// pebble, which reads as a fault rather than as a light load. The amount moved to the
+        /// activity line instead.</para>
+        /// </summary>
+        public const int ArmfulRocks = 3;
+
+        /// <summary>How far from the middle of the armful the outermost rock sits, in metres.</summary>
+        public const float ArmfulSpread = 0.17f;
+
+        /// <summary>
+        /// How much higher each rock after the first sits, in metres, so an armful reads as a
+        /// heap held rather than as three rocks on an invisible shelf.
+        /// </summary>
+        public const float ArmfulStagger = 0.055f;
+
+        /// <summary>
+        /// Place the rocks of a carried armful about a point, turned to face the way its carrier
+        /// is, and return how many were written.
+        ///
+        /// <para>The same sunflower as <see cref="Place"/>, from the same seed, so the rocks in a
+        /// colonist's arms are the rocks that were in the pile: a heap picked up does not
+        /// rearrange itself on the way. Only the spread tightens and the count is fixed.</para>
+        ///
+        /// <para><b>The whole armful turns about <paramref name="at"/>, not each rock about
+        /// itself</b> (owner, 2026-09-19: a carried load should turn with its carrier). The
+        /// sunflower is laid out on the world axes, so rotating the rocks in place would leave
+        /// the cluster's shape pointing the same way however the colonist turned — which is the
+        /// bug one layer up, in the same words.</para>
+        /// </summary>
+        public static int Armful(uint seed, Vector3 at, Quaternion facing, in Recipe recipe,
+            System.Span<Matrix4x4> into)
+        {
+            var held = new Recipe(ArmfulRocks, ArmfulRocks, 1, ArmfulSpread, recipe.SizeJitter);
+            int rocks = Place(1, seed, Vector3.zero, held, into);
+
+            Matrix4x4 frame = Matrix4x4.TRS(at, facing, Vector3.one);
+
+            for (int i = 0; i < rocks; i++)
+            {
+                Vector4 column = into[i].GetColumn(3);
+                column.y += ArmfulStagger * i;
+                into[i].SetColumn(3, column);
+
+                // Composed, so a rock's own bearing and size survive the turn: the frame carries
+                // the offset round and the rock keeps whatever face it was showing.
+                into[i] = frame * into[i];
+            }
+
+            return rocks;
+        }
+
         /// <summary>A stable 0..1 from an id and a salt. Cheap, and the same on every machine.</summary>
         static float Fraction(uint seed, uint salt)
         {

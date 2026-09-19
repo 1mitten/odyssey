@@ -251,6 +251,7 @@ namespace Odyssey.Presentation.World
             MeasuredFootReach = 0f;
             SwimmingFigures = 0;
             SleepingFigures = 0;
+            CarryingFigures = 0;
             MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
 
@@ -282,6 +283,12 @@ namespace Odyssey.Presentation.World
                         ApplyClimbPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
+                    // Last of the five, and the only one that is a stance rather than an event.
+                    // Everything above it either moves the whole body somewhere else (sleep, swim,
+                    // climb) or is a motion that owns the arms for a moment (the lift, the stow),
+                    // and a colonist doing any of those has no business also holding a pose.
+                    else if (figure.CarryWeight > 0.001f)
+                        ApplyCarryPose(figure);
                     continue;
                 }
 
@@ -356,6 +363,139 @@ namespace Odyssey.Presentation.World
                 // leave. See <see cref="BlowLanded"/>.
                 BlowLanded?.Invoke(figure.Style, edge);
             }
+
+            // **A second pass, and the separation is the whole correctness argument.** The cradle
+            // is measured off the palms, and the palms are not where they will be drawn until
+            // every branch above has had its say — the crouch that pulls them to the floor, the
+            // work stance that takes one of them up a haft, the scoop that folds them in. Placing
+            // inside the loop would read whichever bones that figure's branch happened to leave,
+            // which is a load correct for a walking colonist and a frame late for a stooping one.
+            for (int i = 0; i < _figures.Count; i++) PlaceCarriedLoad(_figures[i]);
+        }
+
+        /// <summary>
+        /// Fold the arms into the scoop: upper arms forward a little, elbows up, spine back.
+        /// Design 24 §4.
+        ///
+        /// <para><b>Authored angles, not a solved target</b>, and the class remarks on
+        /// <see cref="CarryPose"/> hold the argument. What a viewer reads at this camera is the
+        /// posture, and the posture is the same on every rig only if the angles are.</para>
+        ///
+        /// <para>Scaled by the carry weight, exactly as the work pose is scaled by its own, so the
+        /// arms fold in and let go over a fifth of a second instead of arriving. The spine's lean
+        /// is <em>not</em> subtracted from the shoulders the way <c>Strike</c> subtracts it: there
+        /// the three angles were being tuned against a photograph and had to mean three
+        /// independent things, where here a spine that leans back and takes the shoulders with it
+        /// is precisely what a person carrying a load does.</para>
+        /// </summary>
+        void ApplyCarryPose(Figure figure)
+        {
+            if (figure.RightUpperArm == null || figure.LeftUpperArm == null) return;
+
+            float weight = Mathf.Clamp01(figure.CarryWeight);
+            Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+            // **Stiff, and the stiffness is the point** (owner, 2026-09-19: the arms "should be
+            // much stiffer and static held under the item rather than motioned because it's taken
+            // weight it's holding"). Everything else in this director is *additive* over whatever
+            // the walk clip gave, which is right for a gesture laid over a gait and wrong for a
+            // stance — added to a swinging arm, a scoop is a scoop that swings, and the load
+            // swings with it because the load follows the palms.
+            //
+            // So the arms are taken off the clip first, back to the rest the rig itself was
+            // authored in, and the scoop is built from there. What is left moving is the torso
+            // carrying them, which is what a person holding a weight in front of them looks like.
+            //
+            // **Written, not blended**, and that is what makes it safe to run twice in a frame:
+            // ApplyWorkPose runs at the end of both Sync and Evaluate and only one of them
+            // re-evaluates the graph first, so anything that eased towards a target from wherever
+            // the bone happened to be would be integrated rather than recomputed — the fault that
+            // made an axe spin. Assigning a constant is the identity on the second pass. The ease
+            // therefore lives in the angles below and never in the rest.
+            if (figure.RestArmsBound && weight > 0.001f)
+            {
+                figure.RightUpperArm.localRotation = figure.RestRightUpperArm;
+                figure.LeftUpperArm.localRotation = figure.RestLeftUpperArm;
+                if (figure.RightLowerArm != null)
+                    figure.RightLowerArm.localRotation = figure.RestRightLowerArm;
+                if (figure.LeftLowerArm != null)
+                    figure.LeftLowerArm.localRotation = figure.RestLeftLowerArm;
+            }
+
+            // Back, not forward: the sign is the difference between carrying a weight and bowing
+            // over it, and it is the one angle here where getting it wrong still looks deliberate.
+            Pitch(figure.Spine, axis, -CarryPose.SpineLean * weight);
+
+            Pitch(figure.RightUpperArm, axis, CarryPose.ShoulderPitch * weight);
+            Pitch(figure.LeftUpperArm, axis, CarryPose.ShoulderPitch * weight);
+            Pitch(figure.RightLowerArm, axis, CarryPose.ElbowBend * weight);
+            Pitch(figure.LeftLowerArm, axis, CarryPose.ElbowBend * weight);
+
+            CarryingFigures++;
+        }
+
+        /// <summary>
+        /// Work out where this figure's load sits, from the palms it ended the frame with.
+        ///
+        /// <para><b>Absolute every frame, never adjusted.</b> The load is a prop and the animation
+        /// graph has never heard of it, so this recomputes rather than nudges — the rule
+        /// <c>PlaceTool</c> states after an axe spent a day winding itself into a spin because a
+        /// world pose was written back as a local one, twice per frame, with nothing to converge
+        /// to. Running this pass twice must leave the same answer, and a test asserts it.</para>
+        ///
+        /// <para>Nothing is drawn here. The placement is recorded on the figure and the renderer
+        /// collects it, because the load belongs in the same instanced batch as the pile it came
+        /// off — see <see cref="TryGetCarried"/>.</para>
+        /// </summary>
+        void PlaceCarriedLoad(Figure figure)
+        {
+            figure.CarryPlaced = false;
+
+            if (figure.Pawn < 0 || figure.CarryDef < 0) return;
+
+            // A rig with no hands bound is not an error — a non-Humanoid prefab answers null to
+            // every bone and simply goes on walking, which is what the arms and the legs already
+            // do for it. It carries nothing visible, which is better than carrying something at
+            // the world origin.
+            if (figure.LeftGrip.Hand == null || figure.RightGrip.Hand == null) return;
+
+            // The owner's placeholder for the water case: a colonist afloat strokes with both arms
+            // and a load left in them swings about. CarryPose.Drawn is the one place that decides.
+            if (!CarryPose.Drawn(figure.SwimWeight)) return;
+
+            // The palm, not the wrist. A humanoid hand bone is the wrist, and a load seated on two
+            // wrists sits a hand's breadth behind where the arms actually hold it — the same
+            // measurement the tool grip needed, taken by the same call.
+            Vector3 left = HandGrip.Palm(figure.LeftGrip);
+            Vector3 right = HandGrip.Palm(figure.RightGrip);
+
+            // The chest is the centre line to measure clearance from. Falling back to the root is
+            // not a degradation worth guarding: a rig with no chest bone has no torso mesh to
+            // push the load out of either.
+            Vector3 chest = figure.Chest != null ? figure.Chest.position : figure.Transform.position;
+
+            float shoulders = figure.LeftUpperArm != null && figure.RightUpperArm != null
+                ? Vector3.Distance(figure.LeftUpperArm.position, figure.RightUpperArm.position)
+                : 0f;
+
+            Vector3 cradle = CarryPose.Cradle(
+                left, right, chest, figure.Transform.forward, shoulders);
+
+            // Still arriving. Eased out — quick off the floor, slowing into the cradle — which is
+            // a thing being lifted by somebody straightening up. See CarryHandover for why the
+            // raise and the fall are deliberately different curves.
+            figure.CarryAt = CarryHandover.RaiseFinished(figure.HandoverClock)
+                ? cradle
+                : Vector3.Lerp(figure.HandoverFrom, cradle,
+                    CarryHandover.Raised(figure.HandoverClock));
+
+            // **The load turns with the colonist.** Its own yaw, taken from the figure, because
+            // the renderer's FacingOf is a memory of the last heading it *drew a stand-in at* and
+            // it never records one for a pawn that has a live figure — so every load on a real
+            // colonist was drawn at a yaw of exactly nought, and a log stayed pointing north
+            // however she turned (owner, 2026-09-19).
+            figure.CarryYaw = figure.Yaw;
+            figure.CarryPlaced = true;
         }
 
         /// <summary>

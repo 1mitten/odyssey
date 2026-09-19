@@ -254,6 +254,10 @@ namespace Odyssey.Presentation.World
                 right ? HumanBodyBones.RightMiddleDistal : HumanBodyBones.LeftMiddleDistal),
         };
 
+        /// <summary>A bone's own local rotation, or identity where the rig has no such bone.</summary>
+        static Quaternion LocalOf(Transform? bone) =>
+            bone != null ? bone.localRotation : Quaternion.identity;
+
         void BindWorkBones(Figure figure, Animator animator)
         {
             if (!animator.isHuman) return;
@@ -280,6 +284,24 @@ namespace Odyssey.Presentation.World
             figure.RightUpperLeg = animator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
             figure.RightLowerLeg = animator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
             figure.RightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+
+            // The four arm bones as the prefab authored them, before any clip has been evaluated
+            // against this figure.
+            //
+            // **This is what "stiff" is measured against** (owner, 2026-09-19: a carried load
+            // "should be much stiffer and static held under the item rather than motioned because
+            // it's taken weight it's holding"). Every other pose in this director is *additive*
+            // over whatever the walk clip gave, which is right for a gesture laid on top of a
+            // gait and wrong for a stance: added to a swinging arm, a scoop is a scoop that
+            // swings. Cancelling the swing needs a rest to cancel it to, and a rest cannot be a
+            // constant — sixty-one rigs have sixty-one bind poses. So it is read off each rig
+            // once, here, and never again.
+            figure.RestRightUpperArm = LocalOf(figure.RightUpperArm);
+            figure.RestRightLowerArm = LocalOf(figure.RightLowerArm);
+            figure.RestLeftUpperArm = LocalOf(figure.LeftUpperArm);
+            figure.RestLeftLowerArm = LocalOf(figure.LeftLowerArm);
+            figure.RestArmsBound =
+                figure.RightUpperArm != null && figure.LeftUpperArm != null;
 
             // The fingers, so a hand can close on a haft instead of having one pass through it.
             // The Polygon rig maps thumb, index and middle at three joints each; no ring or little,

@@ -209,6 +209,26 @@ namespace Odyssey.Sim.Pawns
                 // publishes for every colonist and not only a working one: whatever draws a
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+
+                // What she has in her arms (design 24 §5b). Two rows, and only while there is
+                // something to publish — a carried thing has no cell, so it is delisted from the
+                // things below and this is the only channel by which anything can know it still
+                // exists. That absence is the whole of the owner's report: "it disappears and they
+                // walk off".
+                //
+                // Guarded on the item rather than on the id alone: a load despawned out from under
+                // a job would otherwise publish a def index of -1 into the renderer's table.
+                int carried = pawn.CurrentJob != null ? pawn.CurrentJob.CarriedItem : -1;
+                if (carried >= 0)
+                {
+                    var load = _ctx.Items.Get(new ThingId(carried));
+                    if (load != null && !load.Despawned)
+                    {
+                        writer.AddPawnAspect(pawn.Id, CarryAspects.Carrying, load.DefIndex);
+                        writer.AddPawnAspect(pawn.Id, CarryAspects.Stack, load.Stack);
+                        writer.AddPawnAspect(pawn.Id, CarryAspects.Thing, load.Id.Value);
+                    }
+                }
             }
 
             var items = _ctx.Items.Items;
