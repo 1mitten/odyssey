@@ -6458,3 +6458,26 @@ document had explicitly claimed would not happen.
   they were finished, and the rule is not to batch-run against a project somebody may be playing.
   Nearly all three fixes are in Presentation, which the fast tier does not compile, so that is a
   real gap and not a formality.
+
+## 2026-09-19 — The carry re-measured, and what a new commodity inherits
+
+The three fixes went in against an open editor and could not be run past Unity at the time. Run
+now that it is closed: fast tier **736 Sim + 445 Hud**, EditMode **1834 total, 1820 passed, 0
+failed**, PlayMode **82 total, 77 passed, 0 failed**, both content gates clean. Nothing was wrong
+— but the gap was real rather than a formality, because almost all of that change lives in
+Presentation and the fast tier does not compile it.
+
+- **"Stones should get the same treatment and future big items."** They already do, and the useful
+  thing was to write down *why* rather than to build anything: the carry path is keyed on nothing
+  per-commodity. A def index reaches the renderer, a module is resolved for it, the yaw turns it
+  and `CarryHandover` is keyed on the thing's id and has never heard of what kind of thing it is.
+  The only opt-in is `ItemHeap.Recipes` — a row there makes a commodity an armful of several
+  instead of one prop, and a null row is what everything did before heaps existed.
+- **The missing guard was on `Armful`, not on the concept.** `ItemHeapTests` already held `Place`
+  to the buffer across every recipe and said nothing about `Armful`, which writes a different
+  count from a different recipe. `EveryHeapCommodityCanBeCarriedAsAnArmful` closes that, so a bad
+  recipe on the next commodity fails the Unity tier instead of showing up as rocks a metre from
+  somebody's hands.
+- **What a genuinely big item would still want is its own hold.** A girder is not scooped in two
+  arms at the waist. Nothing in the game is that size, so the decision belongs with whatever
+  introduces one — and the seam for it is `CarryPose`, not a special case in the renderer.

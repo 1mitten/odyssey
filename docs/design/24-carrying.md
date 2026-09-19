@@ -1,12 +1,11 @@
 # 24 — Carrying
 
-**Status:** built; first playtest 2026-09-19 found three faults, all fixed (§4a-bis, §6a-bis, §6b)
-and **not yet re-run against Unity**. Numbers marked *proposed* are invited tuning.
-**Owner interview:** 2026-09-19. **Branch:** `claude/carried-items`.
-**Measured:** fast tier 736 Sim + 445 Hud. The first build measured EditMode 1824 / 1810 passed /
-0 failed and PlayMode 82 / 77 / 0; **the three fixes are almost entirely in Presentation, which
-the fast tier does not compile, so those numbers do not cover them.** Both content gates pass with
-no CSV change — this adds no named thing.
+**Status:** built, played once, three faults found and fixed (§4a-bis, §6a-bis, §6b), owner happy
+to merge. Numbers marked *proposed* remain invited tuning.
+**Owner interview:** 2026-09-19. **Branch:** `claude/carried-items`, PR #129.
+**Measured after the fixes:** fast tier **736 Sim + 445 Hud**; EditMode **1834 total, 1820 passed,
+0 failed**; PlayMode **82 total, 77 passed, 0 failed**. Both content gates pass with no CSV change
+— this adds no named thing.
 
 ---
 
@@ -388,6 +387,24 @@ a string the wiki cannot correct. This is a content change and carries its CSV r
 `--check` rebuilds in the same commit.
 
 ## 9. What deliberately is not done
+
+### 9a. What a new commodity inherits
+
+**Owner, 2026-09-19: "stones should get the same treatment and future big items."** They do, and
+nothing about the carry path is per-commodity — this is worth stating because it is the kind of
+thing a later session would otherwise re-implement for the next item.
+
+| | How a new item gets it |
+|---|---|
+| Held in the arms at all | Automatic. The aspect carries a def index; the renderer resolves a module for it |
+| Turned with its carrier | Automatic, both paths — a single prop takes the yaw, an armful is turned about the cradle as a cluster |
+| Raised out of the ground, and dropped back into it | Automatic. `CarryHandover` is keyed on the thing's id and knows nothing about what kind of thing it is |
+| Drawn as an armful of several rather than one prop | **Opt in**: add a row to `ItemHeap.Recipes`. A null row means one prop in the middle, which is what everything did before heaps existed |
+| A sane armful for a new heap | `EveryHeapCommodityCanBeCarriedAsAnArmful` walks every recipe, so a bad one fails the Unity tier rather than appearing as rocks a metre from somebody's hands |
+
+The one thing a genuinely **big** item would want is its own hold — a girder is not scooped in two
+arms at the waist. Nothing in the game is that size yet, and the decision belongs with whatever
+introduces one; the seam for it is `CarryPose`, not a special case in the renderer.
 
 | Not done | Why |
 |---|---|

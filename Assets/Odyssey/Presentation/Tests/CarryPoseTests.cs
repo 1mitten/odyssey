@@ -312,6 +312,49 @@ namespace Odyssey.Tests.Presentation
                     Is.EqualTo((Vector3)here[i].GetColumn(3) + at).Using(Vectors));
         }
 
+        /// <summary>
+        /// Every commodity that is drawn as a heap can be carried as an armful, and none of them
+        /// overruns the buffer.
+        ///
+        /// <para><b>Insurance for the next commodity, not a check on the three that exist</b>
+        /// (owner, 2026-09-19: "stones should get the same treatment and future big items"). The
+        /// carry path is already def-agnostic — a heap becomes an armful and everything else
+        /// becomes one prop, and both are turned and both settle — so a new commodity inherits
+        /// the lot. What it does not inherit is a sane recipe: `ItemHeapTests` holds `Place` to
+        /// the buffer and said nothing about `Armful`, which writes a different count from a
+        /// different recipe. This is the missing half of that guard.</para>
+        /// </summary>
+        [Test]
+        public void EveryHeapCommodityCanBeCarriedAsAnArmful()
+        {
+            Assert.That(ItemHeap.ArmfulRocks, Is.LessThanOrEqualTo(ItemHeap.Most),
+                "an armful cannot fit in the buffer every caller sizes to ItemHeap.Most");
+
+            var placements = new Matrix4x4[ItemHeap.Most];
+            int heaps = 0;
+
+            for (int def = 0; def < ItemIndex.Count; def++)
+            {
+                if (!ItemHeap.TryRecipe(def, out ItemHeap.Recipe recipe)) continue;
+                heaps++;
+
+                int rocks = ItemHeap.Armful(
+                    (uint)def, Vector3.zero, Quaternion.Euler(0f, 41f, 0f), recipe, placements);
+
+                Assert.That(rocks, Is.InRange(1, ItemHeap.Most), $"def {def} wrote {rocks} rocks");
+
+                for (int i = 0; i < rocks; i++)
+                {
+                    Vector3 scale = placements[i].lossyScale;
+                    Assert.That(scale.x, Is.GreaterThan(0f), $"def {def} rock {i} has no size");
+                    Assert.That(((Vector3)placements[i].GetColumn(3)).magnitude,
+                        Is.LessThan(1f), $"def {def} rock {i} is a metre from the hands");
+                }
+            }
+
+            Assert.That(heaps, Is.GreaterThan(0), "no commodity is drawn as a heap at all");
+        }
+
         // ---- the two hand-overs ------------------------------------------------------------
 
         [Test]
