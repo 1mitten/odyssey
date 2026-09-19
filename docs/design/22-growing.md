@@ -284,6 +284,17 @@ matter what"*):**
   quarter second, then each falls to its hashed spot, staggered 40 ms apart and accelerating,
   and from landing they are the static handful the seed day draws. The drop's clock is the
   kneel age past its threshold, so no state is timed twice.
+- **The meadow is pulled off the plot's border** (owner, 2026-09-19: *"remove the grass
+  graphics from the garden plots automatically … it makes it jarring to see with the grass
+  graphics still appearing on the plots"*). A zoned cell's own tufts already died with the
+  tilled-earth swap; what remained was the *neighbours'* — a grass clump's mesh is nearly
+  two metres across and stands in a ring up to 0.44 of a cell out, so clumps from unzoned
+  grass reached ~0.85 m over every border tile. `GroundScatter.PullInFromTilled` clamps a
+  clump's offset to where its reach (a metre, `ClumpReach`) stays on grass, asked through
+  the zone mirror at mesh time; and because a border cell's neighbours can live in another
+  chunk, designation and cancel now mark the side neighbours' chunks too. The clamp only
+  moves clumps that would have crossed — the ring everywhere else is where it always was,
+  which the stability rule in `GroundScatterTests` still pins.
 - **The pile lies down** (owner, 2026-09-19: *"the carrots hauled and piled should be
   horizontal on the floor and not stuck in the ground"*). `ItemHeap.Recipe` carries a
   `LyingDown` flag; the carrot row sets it, and `Place` tips each carrot 90° before its yaw

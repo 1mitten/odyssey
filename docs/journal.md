@@ -7242,3 +7242,17 @@ ItemHeap's tip: the carrot row lies down, Place tips each lump ninety degrees be
 and lifts it half a girth, and the armful inherits the lie. CropCheck's pile shot frames the
 pile alone now - the first framing put a field of upright carrots behind it and the picture
 answered every question about orientation with more of the same shape.
+
+
+### The meadow is pulled off the plot border (2026-09-19)
+
+The owner asked for the grass to come off the plots automatically. The plots' own tufts had
+gone with the tilled-earth swap months of sessions ago; what he was looking at was the
+neighbours' - a grass clump's mesh is nearly two metres across, standing in a ring up to 0.44
+of a cell out, so clumps from unzoned grass reached the better part of a metre over every
+border tile of a field. GroundScatter.PullInFromTilled clamps a clump's offset to where its
+metre of reach stays on grass, asked through the zone mirror at mesh time, and designation and
+cancel now mark the side neighbours' chunks - a border cell's neighbours can live in another
+chunk, and without the mark that chunk would keep its fringe until something else happened to
+re-mesh it. The clamp touches only clumps that would have crossed; the ring everywhere else is
+where it always was, which the scatter stability test still pins.
