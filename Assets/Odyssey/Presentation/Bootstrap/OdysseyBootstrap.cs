@@ -13,6 +13,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
@@ -295,8 +296,78 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            PointContentAtTheShippedPack();
             WarnIfTheSceneIsStale();
-            if (buildOnPlay) BuildSession();
+            if (buildOnPlay || StartedFromTheCommandLine()) BuildSession();
+        }
+
+        /// <summary>The switch that boots a player straight into a colony. See below.</summary>
+        public const string NewGameArgument = "-odyssey-newgame";
+
+        /// <summary>
+        /// Whether this player was told to skip the menus and generate a world at once.
+        ///
+        /// <para><b>So that a build can be smoke-tested without a person clicking.</b> The first
+        /// player build this project made was empty (2026-09-19) and the reason took three
+        /// attempts to find, because everything I could run from a terminal stopped at the main
+        /// screen — where nothing loads the content pack, nothing generates a world and nothing
+        /// draws terrain. A clean log from a player sitting on a menu proves almost nothing, and
+        /// I twice reported a fix on the strength of one.</para>
+        ///
+        /// <para>It exists for the same reason <c>PlayScene.Measure</c> does: the alternative is
+        /// judging a build by looking at it, and nobody can look at a build in CI.</para>
+        /// </summary>
+        static bool StartedFromTheCommandLine()
+        {
+            foreach (string argument in Environment.GetCommandLineArgs())
+                if (argument == NewGameArgument) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// In a built player, read the content pack from <c>StreamingAssets</c>.
+        ///
+        /// <para><b>Because a player has no repository to walk up to</b>, and the world is made
+        /// of the pack: the terrain table, the materials, the pawn tuning. <c>ContentPack</c>
+        /// finds its Defs by looking for a directory holding both <c>Assets</c> and
+        /// <c>ProjectSettings</c>, which exists on a dev machine and nowhere else, and it throws
+        /// when it cannot. World generation then never runs and the scene is empty but for the
+        /// figures the start flow had already made — which is exactly what the owner saw on the
+        /// first player build this project ever produced (2026-09-19): <i>"there is no terrain —
+        /// there seemed to be no graphics, terrain etc, apart from characters"</i>.</para>
+        ///
+        /// <para><b>This is the half of the arrangement that lives in the composition root, and
+        /// <c>ContentPack.FindRoot</c> named it before either half was written</b> — "copy it
+        /// into StreamingAssets at build time, and the composition root then calls UseRoot with
+        /// Application.streamingAssetsPath. That is why UseRoot exists and why nothing in this
+        /// assembly mentions Unity." <c>ContentPackBuild</c> is the other half, and the two share
+        /// one spelling of the path rather than agreeing by coincidence.</para>
+        ///
+        /// <para><b>Only outside the editor</b>, and deliberately. In the editor the repository
+        /// is right there and is the one live copy anybody edits; pointing at a staged duplicate
+        /// would mean Def changes silently not taking effect on Play. The staged copy is removed
+        /// after every build for the same reason — one source of truth, which CLAUDE.md lists as
+        /// a standing rule.</para>
+        /// </summary>
+        static void PointContentAtTheShippedPack()
+        {
+            if (Application.isEditor) return;
+
+            string root = System.IO.Path.Combine(
+                Application.streamingAssetsPath, "Odyssey", "Defs", ContentPack.CoreId);
+
+            if (!System.IO.Directory.Exists(root))
+            {
+                // Said out loud rather than left to the loader's own exception, because that one
+                // reports the directory it searched *from* and not the one it was told to use.
+                Debug.LogError(
+                    $"[Odyssey] the content pack is not in this build ({root}). The world cannot " +
+                    "be generated. It is copied in by ContentPackBuild at build time — build " +
+                    "through scripts/unity.sh build rather than Unity's own Build Settings.");
+                return;
+            }
+
+            ContentPack.UseRoot(root);
         }
 
         /// <summary>

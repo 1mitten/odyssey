@@ -35,6 +35,11 @@ namespace Odyssey.Tests.Presentation
     {
         const string InclusionFile = "Assets/Editor/Odyssey/ShaderInclusion.cs";
 
+        const string KeepAliveFolder = "Assets/Resources/OdysseyKeepAlive";
+
+        const string GlobalSettingsFile =
+            "Assets/Settings/UniversalRenderPipelineGlobalSettings.asset";
+
         static readonly string[] SourceRoots =
         {
             "Assets/Odyssey/Presentation",
@@ -86,15 +91,106 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void TheInstancedVariantOfTheLitShaderIsKept()
+        public void TheLitShaderIsOnTheAlwaysIncludedList()
         {
             // The expensive one, and the one that is easiest to argue away. URP/Lit *is* already
             // in the build without this — Synty's prefab materials reference it — so a reader
             // would reasonably conclude it need not be listed. It does: those materials are all
             // non-instanced, and every chunk, floor, wall and item in this game is drawn with a
             // variant none of them uses.
+            //
+            // **This test was called TheInstancedVariantOfTheLitShaderIsKept until 2026-09-19,
+            // and that name was false.** Being on the always-included list keeps the *shader*.
+            // It does not keep the instancing *variant*, which is a separate mechanism and was
+            // the third cause of the empty player — see the test below. A test whose name claims
+            // more than its assertion is worse than no test, because it is why nobody looked
+            // here for two of the three causes.
             string? inclusion = Read(InclusionFile);
             Assert.That(inclusion, Does.Contain("\"Universal Render Pipeline/Lit\""));
+        }
+
+        [Test]
+        public void EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial()
+        {
+            // **The mechanism that actually keeps INSTANCING_ON**, measured 2026-09-19. Unity's
+            // built-in variant stripping drops the instancing axis unless a *material asset* has
+            // instancing switched on, and every instanced material in this game is built at
+            // runtime from Shader.Find. Without these the player submits 1731 draw calls and
+            // 43921 instances a frame into a variant that is not there, draws nothing, and does
+            // not warn. InstancingKeepAlive holds the reasoning.
+            string? inclusion = Read(InclusionFile);
+            Assert.That(inclusion, Is.Not.Null);
+
+            var required = Regex.Matches(inclusion!, @"^\s*""([^""]+)"",\s*$",
+                                         RegexOptions.Multiline)
+                                .Select(match => match.Groups[1].Value)
+                                .ToArray();
+
+            Assert.That(required, Is.Not.Empty,
+                "no shader names were parsed out of the Required list, so this proves nothing");
+
+            string? folder = Find(KeepAliveFolder);
+            Assert.That(folder, Is.Not.Null,
+                $"{KeepAliveFolder} is missing — nothing keeps the instancing variants alive, and "
+                + "the player will draw an empty world with the colonists still in it");
+
+            var missing = new List<string>();
+            var notInstanced = new List<string>();
+
+            foreach (string name in required)
+            {
+                string file = Path.Combine(folder!, name.Replace('/', '_') + ".mat");
+                if (!File.Exists(file)) { missing.Add(name); continue; }
+
+                // Present is not the same as right: switching Enable GPU Instancing off turns it
+                // back into an ordinary material asset and it stops keeping anything alive.
+                // The serialised name, not the C# property name: `Material.enableInstancing`
+                // is written to the asset as `m_EnableInstancingVariants`. Reading for the
+                // property name compiles, runs, and fails every material — which this test did
+                // on its first run, and is why it reads a real file rather than trusting a
+                // constant.
+                if (!File.ReadAllText(file).Contains("m_EnableInstancingVariants: 1"))
+                    notInstanced.Add(name);
+            }
+
+            Assert.That(missing, Is.Empty,
+                "these shaders are kept in the build but have no instancing keep-alive material, "
+                + "so anything drawn with them instanced is invisible in a player and perfect in "
+                + "the editor: " + string.Join(", ", missing));
+
+            Assert.That(notInstanced, Is.Empty,
+                "these keep-alive materials have instancing switched off, which makes them "
+                + "ordinary materials that keep nothing: " + string.Join(", ", notInstanced));
+        }
+
+        [Test]
+        public void UrpVariantStrippingIsSwitchedOn()
+        {
+            // **Not a style preference — a build that finishes.** With
+            // `m_StripUnusedVariants: 0` the scriptable stripper returns its input untouched and
+            // URP/Lit's ForwardLit fragment pass goes from 64 variants to **884,736**, which
+            // measured out at roughly a day and a half of shader compilation. It had been flipped
+            // off in the working tree on 2026-09-19, uncommitted, and the only symptom was a
+            // build that died overnight with "Internal error communicating with the shader
+            // compiler process" — which reads like a flaky tool.
+            //
+            // This reads the asset as text on purpose. The value that matters is the one on disk
+            // in *this* working tree, not the one in git and not the one a live
+            // GraphicsSettings object would report after Unity has migrated it in memory.
+            string? settings = Read(GlobalSettingsFile);
+            Assert.That(settings, Is.Not.Null, $"{GlobalSettingsFile} is missing");
+
+            Assert.That(settings, Does.Not.Contain("m_StripUnusedVariants: 0"),
+                "URP's unused-variant stripping is switched off in "
+                + $"{GlobalSettingsFile}. Every shader variant of every kept shader will be "
+                + "compiled: this took one pass from 64 variants to 884,736 and the player build "
+                + "from 12 seconds to an estimated day and a half. If variants you need are being "
+                + "stripped, the answer is an instancing keep-alive material, not this flag — see "
+                + "InstancingKeepAlive and docs/bug-patterns.md.");
+
+            Assert.That(settings, Does.Contain("m_StripUnusedVariants: 1"),
+                $"{GlobalSettingsFile} no longer carries the stripping setting at all, so this "
+                + "test is proving nothing — find where it moved to.");
         }
 
         static IEnumerable<string> Sources()

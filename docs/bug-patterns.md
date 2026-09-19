@@ -804,3 +804,99 @@ exist. `OnDestroy` had guarded that exact dereference since it was written.
   line, in every build log, unread.
 - The fix is not a guard but a second waiter — `HookDeveloperOverlay`, which waits on `Directors`
   where `Attach` waits on `Preferences` — because the two genuinely wait on different things.
+
+## The content pack does not exist in a player, and the code said so years before it mattered
+
+**2026-09-19, the empty world — the real cause.** After a shader fix that was a genuine but
+*different* fault, the owner reported again: *"No graphics came up in the build… apart from the
+characters."*
+
+`ContentPack.FindRoot` locates the Defs by walking up for a directory holding both `Assets` and
+`ProjectSettings`. A built player has neither, so it throws, world generation never runs, and the
+scene is empty but for the figures the start flow had already made. Its own remarks predicted
+this in full: *"A built player has neither directory and would land in the throw below, which is
+deliberate. Nothing in CI or scripts/ builds a player, so shipping the pack is not solved here
+rather than solved wrongly here."* `UseRoot` exists for exactly this and had never been called.
+
+- **The check:** anything the game reads from a path under `Assets/` at runtime is absent from a
+  player. `ContentPackBuild` stages the pack into `StreamingAssets` for the build and removes it
+  after, so the repository keeps one copy; the composition root calls `UseRoot` outside the
+  editor.
+- **A deliberate limitation outlives the sentence that made it deliberate.** "Nothing builds a
+  player" was true when written and stopped being true the hour a build command was added. When
+  you write *"X is not solved because nobody does Y"*, the note has to be found by whoever first
+  does Y — a grep for `StreamingAssets` found it, but only after two wrong answers.
+
+## A clean log from a program sitting on its main menu proves nothing
+
+**Same day, and it cost two wrong diagnoses.** Twice I ran the player from a terminal, saw a
+clean log, and reported a fix. Both times the player had stopped at the main screen, where
+nothing loads the content pack, nothing generates a world and nothing draws terrain — the entire
+subsystem under suspicion had not run.
+
+- **The check:** before believing a smoke test, confirm the code under suspicion actually
+  executed. The log that mattered says `world 120x120x16 seed 1 generated in 61 ms`; the two that
+  did not say anything of the sort, and their silence read as success.
+- **The fix is to make it reachable**: `-odyssey-newgame` boots a player straight into a colony,
+  so a build can be smoke-tested without a person clicking. A check nobody can run from a
+  terminal is a check that will be skipped.
+
+## Keeping the shader is not keeping the variant
+
+**2026-09-19, the third cause of the empty player build**, after the missing shaders and the
+missing content pack had both been found and fixed and the world still did not draw.
+
+A diagnostic in the player reported `draws 1731 instances 43921 chunks 104 materials 22 surround
+18192`, with `Universal Render Pipeline/Lit` found, supported and carrying its five passes. The
+renderer submitted everything, every frame, and none of it appeared. `INSTANCING_ON` comes from
+`#pragma multi_compile_instancing`, and Unity's **built-in** variant stripping drops that axis
+unless a **material asset** in the build has instancing switched on. Every instanced material in
+this game is created at runtime from `Shader.Find`, so there was none, and
+`Graphics.RenderMeshInstanced` drew into a variant that was not there. It does not warn.
+
+- **The check:** `InstancingKeepAlive` ships one instancing-enabled material per kept shader under
+  `Assets/Resources/OdysseyKeepAlive`, `PlayerBuild` refuses without them, and
+  `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial` fails the tier — including when a
+  keep-alive exists but has had its instancing switched off, because present is not the same as
+  right.
+- **The pattern is one rule with two owners, again.** "This shader is in the build" and "the
+  variant this draw needs is in the build" are different claims with different mechanisms, and the
+  fix for the first was reported as covering the second.
+- **A test name that claims more than its assertion actively hides the bug.**
+  `TheInstancedVariantOfTheLitShaderIsKept` only asserted that a name appeared in a list — and
+  appearing in that list is exactly what did not keep the instanced variant. It was green
+  throughout, and its name is why nobody looked here.
+
+## Check the working tree before believing the committed settings
+
+**Same day.** A cold player build was compiling **884,736** variants of one pass — about a day and
+a half — and had died the night before with *"Internal error communicating with the shader
+compiler process"*, which reads like a flaky tool. The cause was an **uncommitted** change:
+`UniversalRenderPipelineGlobalSettings.asset` has `m_StripUnusedVariants: 1` in git and had been
+flipped to `0` locally. Restoring it took the same pass to 64 variants and the build to 12 seconds.
+
+- **The check:** `git diff HEAD -- ProjectSettings/ Assets/Settings/` before diagnosing any
+  build-shaped problem. A settings asset that Unity rewrites on its own is easy to stop reading,
+  and a one-character flip inside 20 lines of migration churn is invisible in a glance.
+- **The build log states it plainly when you know the line to want:** *After built-in stripping:
+  884,736 → After scriptable stripping: 884,736* — a stripper that returns its input untouched.
+- **The flip was probably a fix attempt for the bug above.** Switching stripping off does keep the
+  instancing variants. It keeps 884,734 others with them.
+
+## Two paths through one function, and only one of them was ever drawn
+
+**2026-09-19, the fourth cause of the empty player.** Terrain and trees drew; grass tufts, bushes
+and every item pile did not. `ModuleLibrary.DressGround` clones the pack's material with
+`enableInstancing = true` when it needs an adjustment, and **returns the licensed source untouched
+when it does not** — and the source has instancing off. Props take the second path. The property
+that differs between the two branches is exactly the one that decides whether a thing is visible in
+a player, and it is invisible in the editor, which has every variant always.
+
+- **The check:** `SyntyInstancingKeepAlive` stages an instancing-enabled material per distinct
+  (shader, keyword set) the module catalogue can draw, for the duration of a build.
+- **Ask what the material actually is before theorising about the shader.** One log line —
+  `mat='Generic_01_A' shader='Synty/Generic_Standard' instancing=False kw=[...]` — ended a search
+  that had been aimed at URP/Lit, which the props do not use at all.
+- **A list of "shaders we use" built from `Shader.Find` call sites cannot see a shader that arrives
+  on a prefab.** `ShaderInclusion` derives its list from the source and is right about what it
+  covers; the pack's shaders were never in its domain, and nothing said so.

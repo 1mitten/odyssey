@@ -6516,6 +6516,140 @@ nothing but characters. In the editor the same commit is perfect.
   build with a runtime-found shader off the list, so the next one fails loudly instead of
   shipping an empty world.
 
+## 2026-09-19 — Two wrong answers before the empty build gave up its cause
+
+The owner's report after the first player build was "no terrain, no graphics, apart from
+characters". It took three attempts, and the first two are the instructive part.
+
+- **First answer: shader stripping.** Real, measured, and not the cause. Every shader the game
+  finds at runtime was genuinely absent from the player, the log said so, and fixing it was
+  worth doing. But I reported it as *the* fix on the strength of a clean player log — and the
+  player had been sitting on the main screen, where none of the renderer under suspicion runs.
+- **Second answer: the same mistake again.** A cleaner log, still from a menu. I had proved the
+  shaders were missing and never proved that was *why* the world was empty. Those are different
+  claims and I ran them together.
+- **The real cause was written down in the code before the problem existed.**
+  `ContentPack.FindRoot` walks up for a directory holding `Assets` and `ProjectSettings`, and its
+  own remarks say: "A built player has neither directory and would land in the throw below, which
+  is deliberate. Nothing in CI or scripts/ builds a player, so shipping the pack is not solved
+  here rather than solved wrongly here" — and it names the answer, `UseRoot` with
+  `Application.streamingAssetsPath`. `UseRoot` had existed, unused, waiting for the day somebody
+  built a player. That day was four hours earlier.
+- **A deliberate limitation outlives the sentence that justified it.** "Nothing builds a player"
+  was true when written and false the moment `unity.sh build` landed. The note was findable and I
+  did not find it until the third pass, because I was looking at the renderer.
+- **The fix is the one the note specified.** `ContentPackBuild` stages `Assets/Odyssey/Defs` into
+  `StreamingAssets` before a build and removes it after, so the repository keeps exactly one copy
+  of the pawn tuning and the world tables — the standing rule in CLAUDE.md. The composition root
+  calls `UseRoot` outside the editor only, so Def edits still take effect immediately on Play.
+- **And the reason it took three passes is now fixed too.** `-odyssey-newgame` boots a player
+  straight into a colony, so a build can be smoke-tested from a terminal. The log that finally
+  settled it reads `world 120x120x16 seed 1 generated in 61 ms … catalogue 121/138 rows have
+  art`, which is the sentence none of the earlier runs could have produced whatever was wrong.
+- **Verified:** world generates in the player, no exceptions, no missing shaders. Fast tier 736 +
+  445; EditMode **1837 total, 1823 passed, 0 failed**; build 386 MB, 0 errors.
+
+## 2026-09-19 — The third cause of the empty player, and the flag that hid it
+
+Two fixes had landed and the world still did not draw. This is the third cause, the wrong turn that
+was taken instead of it, and why neither was visible from the editor.
+
+- **The build could not finish at all, and that was a separate fault.** A cold build was compiling
+  **884,736** variants of URP/Lit's `ForwardLit` fragment pass, at about six a second and falling —
+  roughly a day and a half. The previous night's run had died mid-way with *"Internal error
+  communicating with the shader compiler process… Protocol error - failed to read magic number"*,
+  which reads like a flaky tool and is not: it is what happens when sixteen compiler workers grind
+  at that for half an hour.
+- **The cause was an uncommitted working-tree change.**
+  `UniversalRenderPipelineGlobalSettings.asset` has `m_StripUnusedVariants: 1` in git and had been
+  flipped to `0` locally, in all three places the asset stores it. The build log says what that
+  cost in one line: *After built-in stripping: 884,736 → After scriptable stripping: 884,736* —
+  URP's stripper ran and removed nothing. `PC_RPAsset.asset` was dirty in the same way and for the
+  same reason: its `m_Prefilter*` fields are a cache the build preprocessor writes, and with
+  stripping off the build had written back a version that prefilters nothing.
+- **Restoring the committed value took the same pass to 64 variants and the build to 12 seconds**,
+  386 MB — which is exactly the *"385 MB and 11 s before, 385 MB and 11 s after"* recorded when
+  always-including URP/Lit was first measured. That measurement was honest; the flip came later.
+  The build does not write the flag, so this was a person or an editor UI, once.
+- **And the world was still empty, which is the part worth keeping.** A diagnostic in the player
+  reported `draws 1731 instances 43921 chunks 104 materials 22 surround 18192`, with URP/Lit
+  found, supported and carrying five passes. The renderer was doing all of its work and none of it
+  reached the screen.
+- **Always-included keeps the shader; it does not keep the variant.** `INSTANCING_ON` comes from
+  `#pragma multi_compile_instancing`, and Unity's **built-in** stripping — the 226-million-to-384
+  step, which runs whatever URP's setting is — drops that axis unless some **material asset** has
+  instancing switched on. Every instanced material in this game is built at runtime from
+  `Shader.Find`, so there was none. `Graphics.RenderMeshInstanced` then draws into a variant that
+  does not exist, silently.
+- **This is almost certainly why the flag was flipped.** Switching URP's stripping off is a
+  plausible thing to reach for when variants are going missing. It does keep them — along with
+  884,734 others.
+- **The fix is one instancing-enabled material asset per kept shader**, under
+  `Assets/Resources/OdysseyKeepAlive`. Measured, because the received wisdom is that this is
+  expensive: it doubles the kept variants on the pass that matters and does nothing else — 64 →
+  128 fragment, 16 → 32 vertex, which is the instancing axis and only that. 386 MB either way.
+- **A ShaderVariantCollection was the alternative and is worse.** It has to name the keyword
+  combination, and which combination a runtime material lands in is the pipeline's business — a
+  named combination is a guess that goes stale when a quality setting moves. An instancing-enabled
+  material states the one thing we actually know.
+- **A test whose name claimed more than its assertion is why nobody looked here.**
+  `TheInstancedVariantOfTheLitShaderIsKept` only asserted the shader's name was on a list. Being on
+  that list is precisely what did *not* keep the instanced variant. It is now
+  `TheLitShaderIsOnTheAlwaysIncludedList`, and `EveryKeptShaderAlsoHasAnInstancingKeepAliveMaterial`
+  asserts the thing the old name promised — including that a keep-alive has not had its instancing
+  switched off, because present is not the same as right.
+- **`ShaderInclusion`'s header said "PlayScene.Build calls it" and nothing did**, from the day it
+  was written. Corrected rather than propagated into the new file. This is the same shape as the
+  note that cost three passes the night before: a sentence about the system that was never true.
+- **Verified:** player built from a clean tree in 14 s, 386 MB, 0 errors; run headless with
+  `-odyssey-newgame`, the log is 94 lines with no exceptions and no missing shaders, and a
+  screenshot shows terrain, trees, grass and a colonist. Fast tier 736 Sim + 445 Hud. Both content
+  gates clean.
+
+## 2026-09-19 — The fourth cause: the pack's own shaders were never on anybody's list
+
+The owner, on the build that had just been reported working: *"None of the items like meals, wood,
+stone are visible"*, then *"no grass either"*. Terrain, trees, rock and colonists drew. Grass tufts,
+bushes and every item pile did not.
+
+- **The renderer was again doing all of its work.** A diagnostic reported `things=7
+  itemInstances=19 kindsDrawn=3 kindsWithArt=6` — items existed, had art and were submitted, and
+  none of them reached the screen. The same signature as the terrain fault two hours earlier, which
+  is what made it obvious where to look and nearly made it obvious in the wrong place.
+- **The material told the truth as soon as it was asked.** Logging the material behind each item
+  def gave: `mat='Generic_01_A' shader='Synty/Generic_Standard' instancing=False
+  kw=[_ALPHATEST_ON _EMISSION _NORMALMAP]` and `shader='Synty/Generic_Basic'`. **Props are not drawn
+  with URP/Lit at all.** They wear the pack's own Shader Graph shaders, which `ShaderInclusion`
+  never mentions because nothing ever calls `Shader.Find` for them — they ship because prefabs
+  reference them.
+- **And every material asset that references them has instancing off.** `ModuleLibrary` takes the
+  prefab's `sharedMaterial` as it is, and `DressGround` explicitly returns the licensed source
+  untouched when no adjustment is wanted. Built-in stripping therefore kept no instanced variant of
+  those shaders, and `Graphics.RenderMeshInstanced` drew into a variant that was not there.
+- **Terrain and trees were visible for the one reason that hid this**: `DressGround`'s *other*
+  branch clones with `enableInstancing = true`, and `TreeMaterials` builds its own material. The
+  two paths through one function differ in exactly the property that decides whether a thing is
+  visible in a player, and only the cloning one had ever been exercised by anything that drew.
+- **The fix cannot be committed, and that shapes it.** A keep-alive material for a pack shader
+  references licensed content by GUID: committing one would put pack content in the repository and
+  would dangle on a clone without the pack. So `SyntyInstancingKeepAlive` creates them before a
+  build and deletes them after — the same bargain `ContentPackBuild` makes with the Defs. On a
+  machine with no pack it finds nothing and does nothing.
+- **Derived from the catalogue, and the difference is 54 MB and six minutes.** The first version
+  scanned all 385 materials in the pack: **126** distinct shader/keyword combinations, 440 MB, 6m42s.
+  Reading the module catalogue instead — the single place where an id becomes a mesh, and the same
+  list `ModuleLibrary` reads at runtime — gives **8** combinations, 429 MB and 8 s. The 43 MB over
+  the 386 MB baseline is the price of instanced variants for the pack's shaders and is not
+  avoidable while props are drawn instanced.
+- **Four causes, one symptom, and each fix made the next one visible.** Missing shaders, missing
+  content pack, missing instancing variant for our shaders, missing instancing variant for the
+  pack's. Nothing but a player build can see any of them, and each was invisible until the one
+  before it was fixed — which is the argument for `unity.sh build` being a gate rather than a
+  thing somebody remembers to run.
+- **Verified:** build 14 s, 429 MB, 0 errors; run headless with `-odyssey-newgame`, 0 exceptions,
+  and an in-game screenshot shows grass tufts, bushes, crates, wood logs and loose rocks. Fast tier
+  736 Sim + 445 Hud.
+
 ## 2026-09-19 — 8-directional diagonal movement and navigation
 
 The owner requested that colonists use diagonal movement in both the game system and the animation,
