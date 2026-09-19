@@ -40,5 +40,19 @@ namespace Odyssey.Sim.Pawns
         /// item by id keeps presentation out of the item store.</para>
         /// </summary>
         public static readonly AspectKey Stack = AspectKey.Of("odyssey.pawn.carrying.stack");
+
+        /// <summary>
+        /// Which thing it is — the <c>ThingId</c>, so that a load can be recognised again after it
+        /// has left the arms.
+        ///
+        /// <para><b>Published for the sake of the drop, not the carry.</b> The moment a load is
+        /// set down it stops being a colonist's load and becomes an item lying in a cell, drawn by
+        /// the renderer from an entirely different list — and drawn, until this existed, at the
+        /// middle of that cell on the very frame the hands let go, a third of a metre from where
+        /// they were. The id is how the two halves recognise each other for the third of a second
+        /// it takes the thing to fall (<c>CarryHandover</c>). The def and the stack cannot do it:
+        /// a stockpile of wood is full of loads that match on both.</para>
+        /// </summary>
+        public static readonly AspectKey Thing = AspectKey.Of("odyssey.pawn.carrying.thing");
     }
 }

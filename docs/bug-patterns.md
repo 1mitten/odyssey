@@ -715,3 +715,50 @@ silently stops working, with no compile error and no failing test unless one was
   `SomeAspects.Key == AspectKey.Of("the.literal")`, the Hud side asserting its own constant equals
   the same literal. `ColonistNames.RollSeedAspect` established the pattern; `CarryAspects` follows
   it. A key with only one of the two tests is a key with no guarantee.
+
+## A pose that is additive over a clip cannot be a stance
+
+**2026-09-19, the carry arms.** Every pose in `PawnFigureDirector` adds a world-space `Pitch` to
+whatever the walk clip put on the bone, which is right for a gesture laid over a gait. A carry is
+not a gesture: it is held for as long as a state holds, so added to a swinging arm it is a scoop
+that swings — and because the load follows the palms, the load swung with it. The owner reported
+it as being about the load.
+
+- **The check:** ask whether the pose is an *event* or a *state*. A state has to take the bones
+  off the clip first, back to a rest read off that rig at bind time, because sixty-one rigs have
+  sixty-one bind poses and a constant would be wrong on sixty of them.
+- **Write the rest, never blend to it.** `ApplyWorkPose` runs twice a frame and only one pass
+  starts from a freshly evaluated graph, so easing *towards* a rest integrates instead of
+  recomputing. Assigning a constant is the identity on the second pass; put the ease in the
+  angles.
+
+## A remembered value is only remembered for the path that writes it
+
+**2026-09-19, the load that would not turn.** A carried prop was drawn at
+`ChunkRenderer.FacingOf(pawnId)`, which looks like "which way is this colonist facing" and is
+actually "the last heading this loop drew a **stand-in** at". The same loop `continue`s past every
+pawn that has a live animated figure, so it never writes an entry for one — and every load on
+every real colonist was drawn at a yaw of exactly nought. A log pointed north for ever.
+
+- **The check:** before reading a cache, find the write. If the writer skips the cases the reader
+  cares about, the reader gets the default and the default is plausible — nought is a real yaw,
+  so nothing looks broken until something asymmetric (a log) is held in it.
+- **It repeated one layer down.** `ItemHeap` lays its sunflower out on the world axes, so the
+  armful had to be turned about the cradle as a cluster; rotating each rock in place would have
+  kept the shape and left the shape pointing north. The same fault twice in one feature.
+
+## An instant transfer drawn literally is a teleport
+
+**2026-09-19, the pickup and the drop.** The simulation moves a thing between a cell and a pair of
+hands in one tick, because there is nothing sensible in between. Drawn literally that is a jump of
+about a third of a metre in no time, at both ends — and the design draft asserted the pickup was
+continuous "for free" because the hands are at the floor on the grasp tick. True vertically, and
+it misses the lateral gap between the middle of a cell and a pair of palms. The drop was worse and
+the draft did not consider it at all.
+
+- **The check:** when presentation shows a state the simulation changes instantaneously, ask what
+  the two endpoints are *in world space*, not whether the tick is right. A continuous quantity on
+  one axis says nothing about the others.
+- **Matching the two halves needs an identity, not a description.** The falling item is drawn from
+  a different list by code that never saw the hands; the def and the stack cannot pick it out of a
+  stockpile of the same commodity. Publish the id.

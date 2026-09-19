@@ -306,7 +306,8 @@ namespace Odyssey.Presentation.World
         /// <para>A scan over the figures, which are tens, in the same spirit as every aspect read
         /// here. It is called once per carrying pawn per frame and carrying pawns are few.</para>
         /// </summary>
-        public bool TryGetCarried(int pawnId, out int def, out int stack, out Vector3 at)
+        public bool TryGetCarried(
+            int pawnId, out int def, out int stack, out Vector3 at, out float yaw)
         {
             for (int i = 0; i < _figures.Count; i++)
             {
@@ -316,12 +317,47 @@ namespace Odyssey.Presentation.World
                 def = figure.CarryDef;
                 stack = figure.CarryStack;
                 at = figure.CarryAt;
+                yaw = figure.CarryYaw;
                 return figure.CarryPlaced && def >= 0;
             }
 
             def = -1;
             stack = 0;
             at = Vector3.zero;
+            yaw = 0f;
+            return false;
+        }
+
+        /// <summary>
+        /// A thing that has just left somebody's hands and has not finished falling to the floor:
+        /// where the hands were, and how long ago.
+        ///
+        /// <para>The figure keeps this after the load has gone because the renderer owns the other
+        /// end of the fall — only it knows which cell the thing landed in. Matched on the thing's
+        /// own id and not on its def, because a stockpile of wood is full of loads that match on
+        /// that.</para>
+        ///
+        /// <para>A scan over the figures, which are tens, and only for things that are actually
+        /// on the ground within reach of the camera.</para>
+        /// </summary>
+        public bool TryGetSettling(int thingId, out Vector3 from, out float elapsed)
+        {
+            if (thingId >= 0)
+            {
+                for (int i = 0; i < _figures.Count; i++)
+                {
+                    Figure figure = _figures[i];
+                    if (figure.ReleasedThing != thingId) continue;
+                    if (CarryHandover.FallFinished(figure.ReleasedClock)) break;
+
+                    from = figure.ReleasedFrom;
+                    elapsed = figure.ReleasedClock;
+                    return true;
+                }
+            }
+
+            from = Vector3.zero;
+            elapsed = 0f;
             return false;
         }
 
@@ -1125,13 +1161,15 @@ namespace Odyssey.Presentation.World
         /// no row at all, which is what makes the mechanism sparse and free. Two scans, like every
         /// other <c>TryGetPawnAspect</c> read here; the figures on screen are tens.</para>
         /// </summary>
-        void CarriedBy(PawnId id, out int def, out int stack)
+        void CarriedBy(PawnId id, out int def, out int stack, out int thing)
         {
             def = -1;
             stack = 0;
+            thing = -1;
             if (_frame == null) return;
             if (!_frame.TryGetPawnAspect(id, CarryAspects.Carrying, out def)) { def = -1; return; }
             if (!_frame.TryGetPawnAspect(id, CarryAspects.Stack, out stack)) stack = 1;
+            if (!_frame.TryGetPawnAspect(id, CarryAspects.Thing, out thing)) thing = -1;
         }
 
         void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
@@ -1372,9 +1410,40 @@ namespace Odyssey.Presentation.World
             // while the load, which follows the palms, comes with them. The load therefore appears
             // at the instant the simulation says it changed hands — the middle of the lift, where
             // the hands are at the floor — and travels up in them.
-            CarriedBy(pawn.Id, out int carryDef, out int carryStack);
+            CarriedBy(pawn.Id, out int carryDef, out int carryStack, out int carryThing);
+
+            // The two hand-overs. A thing changes hands in one instant because a thing is in a
+            // cell or in a pair of hands and there is nothing sensible in between — but the pile
+            // is at the middle of the cell and the palms are a third of a metre in front of the
+            // colonist, so drawn literally that instant is a teleport (owner, 2026-09-19).
+            //
+            // Both are recorded here, on the edge, and spent by the frames after it.
+            if (carryDef >= 0 && figure.CarryDef < 0)
+            {
+                // Up off the ground it was lying on. The lift toil requires the thing to be in the
+                // pawn's own cell, so that is where it was, and the relief lifts it exactly as the
+                // renderer lifted the pile a frame ago — anything else starts the raise with a
+                // jump of however much the terrain was doing underfoot.
+                figure.HandoverFrom = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
+                figure.HandoverClock = 0f;
+            }
+            else if (carryDef < 0 && figure.CarryDef >= 0 && figure.CarryPlaced)
+            {
+                // Down out of the hands. The figure keeps the id and the point; the renderer owns
+                // the other end of the fall, because only it knows which cell the thing landed in.
+                figure.ReleasedThing = figure.CarryThing;
+                figure.ReleasedFrom = figure.CarryAt;
+                figure.ReleasedClock = 0f;
+            }
+
+            if (figure.HandoverClock < CarryHandover.RaiseSeconds)
+                figure.HandoverClock += deltaTime;
+            if (figure.ReleasedClock < CarryHandover.FallSeconds)
+                figure.ReleasedClock += deltaTime;
+
             figure.CarryDef = carryDef;
             figure.CarryStack = carryStack;
+            figure.CarryThing = carryThing;
             //
             // **The stance waits for the gesture to finish, and the load does not.** A lift hands
             // the thing over half way through the crouch, so for the second half of it the pawn is

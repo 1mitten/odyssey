@@ -184,8 +184,8 @@ namespace Odyssey.Tests.Presentation
             Assert.That(ItemHeap.TryRecipe(ItemIndex.Stone, out ItemHeap.Recipe stone), Is.True);
 
             var placements = new Matrix4x4[ItemHeap.Most];
-            int small = ItemHeap.Armful(7u, Vector3.zero, stone, placements);
-            int large = ItemHeap.Armful(7u, Vector3.zero, stone, placements);
+            int small = ItemHeap.Armful(7u, Vector3.zero, Quaternion.identity, stone, placements);
+            int large = ItemHeap.Armful(7u, Vector3.zero, Quaternion.identity, stone, placements);
 
             Assert.That(small, Is.EqualTo(ItemHeap.ArmfulRocks));
             Assert.That(large, Is.EqualTo(ItemHeap.ArmfulRocks));
@@ -200,7 +200,7 @@ namespace Odyssey.Tests.Presentation
             Assert.That(ItemHeap.ArmfulSpread, Is.LessThan(stone.Spread));
 
             var placements = new Matrix4x4[ItemHeap.Most];
-            int rocks = ItemHeap.Armful(3u, Vector3.zero, stone, placements);
+            int rocks = ItemHeap.Armful(3u, Vector3.zero, Quaternion.identity, stone, placements);
 
             for (int i = 0; i < rocks; i++)
             {
@@ -219,7 +219,7 @@ namespace Odyssey.Tests.Presentation
             Assert.That(ItemHeap.TryRecipe(ItemIndex.Stone, out ItemHeap.Recipe stone), Is.True);
 
             var placements = new Matrix4x4[ItemHeap.Most];
-            int rocks = ItemHeap.Armful(5u, Vector3.zero, stone, placements);
+            int rocks = ItemHeap.Armful(5u, Vector3.zero, Quaternion.identity, stone, placements);
             Assert.That(rocks, Is.GreaterThan(1), "nothing to stagger");
 
             float first = ((Vector3)placements[0].GetColumn(3)).y;
@@ -237,11 +237,149 @@ namespace Odyssey.Tests.Presentation
 
             var first = new Matrix4x4[ItemHeap.Most];
             var again = new Matrix4x4[ItemHeap.Most];
-            int a = ItemHeap.Armful(99u, Vector3.one, stone, first);
-            int b = ItemHeap.Armful(99u, Vector3.one, stone, again);
+            int a = ItemHeap.Armful(99u, Vector3.one, Quaternion.identity, stone, first);
+            int b = ItemHeap.Armful(99u, Vector3.one, Quaternion.identity, stone, again);
 
             Assert.That(b, Is.EqualTo(a));
             for (int i = 0; i < a; i++) Assert.That(again[i], Is.EqualTo(first[i]));
+        }
+
+        [Test]
+        public void AnArmfulTurnsWithItsCarrier()
+        {
+            // **The owner's second report** (2026-09-19: "when you turn a direction the logs don't
+            // turn with you and they should"). The sunflower is laid out on the world axes, so a
+            // load that is not turned by its carrier's yaw keeps pointing the same way however she
+            // walks — and for a log, whose long axis is the thing you read, that is unmissable.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Stone, out ItemHeap.Recipe stone), Is.True);
+
+            var north = new Matrix4x4[ItemHeap.Most];
+            var east = new Matrix4x4[ItemHeap.Most];
+            int rocks = ItemHeap.Armful(4u, Vector3.zero, Quaternion.identity, stone, north);
+            ItemHeap.Armful(4u, Vector3.zero, Quaternion.Euler(0f, 90f, 0f), stone, east);
+
+            bool moved = false;
+            for (int i = 0; i < rocks; i++)
+            {
+                Vector3 a = north[i].GetColumn(3);
+                Vector3 b = east[i].GetColumn(3);
+                if ((a - b).sqrMagnitude > 1e-6f) moved = true;
+
+                Assert.That(a.y, Is.EqualTo(b.y).Within(1e-4f),
+                    "turning on the spot changed how high a rock sits");
+            }
+
+            Assert.That(moved, Is.True, "the armful did not turn at all");
+        }
+
+        [Test]
+        public void ATurnedArmfulKeepsItsShape()
+        {
+            // Turned about the cradle as one cluster, not each rock about itself. Spin them in
+            // place and the shape stays pointing north while every rock faces a new way, which
+            // looks like the load shivering rather than turning.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Stone, out ItemHeap.Recipe stone), Is.True);
+
+            var north = new Matrix4x4[ItemHeap.Most];
+            var turned = new Matrix4x4[ItemHeap.Most];
+            int rocks = ItemHeap.Armful(4u, Vector3.zero, Quaternion.identity, stone, north);
+            ItemHeap.Armful(4u, Vector3.zero, Quaternion.Euler(0f, 37f, 0f), stone, turned);
+
+            for (int i = 1; i < rocks; i++)
+            {
+                float before = Vector3.Distance(north[i].GetColumn(3), north[0].GetColumn(3));
+                float after = Vector3.Distance(turned[i].GetColumn(3), turned[0].GetColumn(3));
+                Assert.That(after, Is.EqualTo(before).Within(1e-4f),
+                    $"rock {i} moved relative to rock 0: the armful came apart in the turn");
+            }
+        }
+
+        [Test]
+        public void AnArmfulIsPlacedWhereItIsAsked()
+        {
+            // The cradle is the origin of the cluster, wherever the colonist is standing.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Stone, out ItemHeap.Recipe stone), Is.True);
+
+            var here = new Matrix4x4[ItemHeap.Most];
+            var there = new Matrix4x4[ItemHeap.Most];
+            var at = new Vector3(12f, 3f, -7f);
+
+            int rocks = ItemHeap.Armful(8u, Vector3.zero, Quaternion.identity, stone, here);
+            ItemHeap.Armful(8u, at, Quaternion.identity, stone, there);
+
+            for (int i = 0; i < rocks; i++)
+                Assert.That((Vector3)there[i].GetColumn(3),
+                    Is.EqualTo((Vector3)here[i].GetColumn(3) + at).Using(Vectors));
+        }
+
+        // ---- the two hand-overs ------------------------------------------------------------
+
+        [Test]
+        public void AHandoverStartsWhereItWasAndEndsWhereItIsGoing()
+        {
+            // The plainest property of both curves, and the one that must be exact rather than
+            // approximate: a raise that does not reach 1 leaves the load permanently short of the
+            // hands, and a fall that does not leaves a pile hovering above its own cell.
+            Assert.That(CarryHandover.Raised(0f), Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(CarryHandover.Raised(CarryHandover.RaiseSeconds), Is.EqualTo(1f).Within(1e-5f));
+            Assert.That(CarryHandover.Fallen(0f), Is.EqualTo(0f).Within(1e-5f));
+            Assert.That(CarryHandover.Fallen(CarryHandover.FallSeconds), Is.EqualTo(1f).Within(1e-5f));
+        }
+
+        [Test]
+        public void ALoadFallsAndIsNotLowered()
+        {
+            // The asymmetry is what makes one read as a drop and the other as a lift, and the
+            // direction is the part that is easy to get backwards. A load really is falling, so
+            // it is slowest leaving the hands and quickest at the floor. Reverse the two and a
+            // colonist appears to place something delicately and then snatch it off the ground.
+            Assert.That(CarryHandover.Fallen(CarryHandover.FallSeconds * 0.5f), Is.LessThan(0.5f),
+                "half way through the fall and already half way down: that is being lowered");
+
+            Assert.That(CarryHandover.Raised(CarryHandover.RaiseSeconds * 0.5f), Is.GreaterThan(0.5f),
+                "half way through the raise and not yet half up: that is a load being dragged");
+        }
+
+        [Test]
+        public void ADropTakesLongerThanAPickUp()
+        {
+            // A load is lowered under control and released; it is taken up in one movement.
+            // Gesture.Stow is the slower of the two crouches for exactly the same reason, so the
+            // body and the thing it is holding agree about which way round this goes.
+            Assert.That(CarryHandover.FallSeconds, Is.GreaterThan(CarryHandover.RaiseSeconds));
+        }
+
+        [Test]
+        public void ARaiseIsOverBeforeTheColonistHasFinishedStandingUp()
+        {
+            // The grasp lands at the middle of a 0.8 s crouch, so there are 0.4 s of rise left
+            // when the load appears. A raise longer than that has the load still travelling after
+            // she has set off walking — which is the fault LiftTicks was introduced to fix, in a
+            // new costume.
+            Assert.That(CarryHandover.RaiseSeconds, Is.LessThanOrEqualTo(0.4f));
+        }
+
+        [Test]
+        public void NeitherHandoverJumps()
+        {
+            // Sampled far finer than either will ever be drawn. A curve that tears puts the load
+            // across the screen for exactly long enough to be seen and not long enough to be
+            // caught by looking.
+            Assert.That(Smooth(CarryHandover.Raised, CarryHandover.RaiseSeconds), Is.True);
+            Assert.That(Smooth(CarryHandover.Fallen, CarryHandover.FallSeconds), Is.True);
+        }
+
+        static bool Smooth(System.Func<float, float> curve, float seconds)
+        {
+            const int Steps = 400;
+            float last = curve(0f);
+            for (int i = 1; i <= Steps; i++)
+            {
+                float now = curve(seconds * i / Steps);
+                if (Mathf.Abs(now - last) > 4f / Steps) return false;
+                last = now;
+            }
+            return true;
         }
 
         static readonly VectorComparer Vectors = new VectorComparer();

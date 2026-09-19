@@ -6416,3 +6416,45 @@ it, so the load leaves the view feed and nothing downstream can draw it.
   PlayMode **82 total, 77 passed, 0 failed**; both content gates clean with no CSV change, since
   this adds no named thing. **No golden moved** — gestures and aspects are neither saved nor
   hashed, and the goldens ran green unchanged, which is the measurement rather than the assumption.
+
+## 2026-09-19 — Three faults from the first look at a carried load
+
+The owner played it and reported three things. All three were real, and two of them the design
+document had explicitly claimed would not happen.
+
+- **"Much stiffer and static, because it's taken weight."** Every pose in the director is additive
+  over the walk clip, which is right for a gesture laid over a gait and wrong for a stance: added
+  to a swinging arm, a scoop is a scoop that swings, and the load follows the palms so the load
+  swung too. The owner read it as a fault in the load. The fix is to take the four arm bones off
+  the clip first, back to a rest read off each rig at bind time — a constant would be wrong on
+  sixty of the sixty-one. Written rather than blended, so the second of the two passes a frame is
+  the identity.
+- **"The logs don't turn with you."** One line. The yaw came from `ChunkRenderer.FacingOf`, which
+  reads like "which way is this colonist facing" and is really "the last heading this loop drew a
+  *stand-in* at" — and that loop skips every pawn with a live figure. So no real colonist ever had
+  an entry, every load drew at a yaw of exactly nought, and nothing looked broken until something
+  asymmetric was held in it. **The same fault existed one layer down**: `ItemHeap` lays its
+  sunflower on the world axes, so the armful had to be turned about the cradle as a cluster rather
+  than each rock about itself.
+- **"It should fall into position, and be raised out of pick up."** The draft asserted the pickup
+  was continuous for free, because the hands are at the floor on the grasp tick. True vertically;
+  it misses that the pile is at the middle of the cell and the palms are a third of a metre in
+  front of the colonist. The drop was worse and the draft did not consider it at all — `PutDown`
+  moves the item to its cell in the same instant it begins the stow, so the thing appeared at the
+  cell centre and the crouch then played over empty hands.
+- **`CarryHandover` draws both, and they are deliberately different curves.** The raise eases out
+  (quick off the floor, slowing into the cradle) and the fall eases in (slow out of the hands,
+  quickest at the floor), which is `Gesture`'s own asymmetry argument applied to a thing that
+  really is falling. Reverse them and a colonist places something delicately and then snatches it
+  off the ground. The raise is capped at 0.30 s against the 0.4 s of crouch left after the grasp,
+  or the load is still travelling once she has set off walking — `LiftTicks`'s original fault in a
+  new costume.
+- **The fall needed a third aspect.** A load set down stops being a load and becomes an item in a
+  cell, drawn from a different list by code that never saw the hands. The def and the stack cannot
+  match it — a stockpile of wood is full of loads that agree on both — so the `ThingId` is
+  published.
+- **Verified so far:** fast tier **736 Sim + 445 Hud**, both content gates clean. **The Unity tier
+  has not been run on these fixes**: an editor was open on the worktree (`odyssey-inspect`) when
+  they were finished, and the rule is not to batch-run against a project somebody may be playing.
+  Nearly all three fixes are in Presentation, which the fast tier does not compile, so that is a
+  real gap and not a formality.

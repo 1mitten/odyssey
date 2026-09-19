@@ -19,11 +19,21 @@ namespace Odyssey.Presentation.Rendering
     public interface ICarriedLoads
     {
         /// <summary>
-        /// The item def, the stack and the world point the load's base sits on, for one pawn.
-        /// False when this pawn has no live figure, or is empty-handed, or is holding something
-        /// that is deliberately not being drawn — a swimmer's, for now.
+        /// The item def, the stack, the world point the load's base sits on and the yaw it is
+        /// turned to, for one pawn. False when this pawn has no live figure, or is empty-handed,
+        /// or is holding something that is deliberately not being drawn — a swimmer's, for now.
         /// </summary>
-        bool TryGetCarried(int pawnId, out int def, out int stack, out Vector3 at);
+        bool TryGetCarried(int pawnId, out int def, out int stack, out Vector3 at, out float yaw);
+
+        /// <summary>
+        /// A thing that has just been put down and is still falling the last third of a metre out
+        /// of the hands that held it: where those hands were, and how long ago.
+        ///
+        /// <para>The renderer supplies the other end — the cell the thing landed in — because
+        /// that is the half it owns. False for everything that is simply lying there, which is
+        /// almost every item on the board almost all of the time.</para>
+        /// </summary>
+        bool TryGetSettling(int thingId, out Vector3 from, out float elapsed);
 
         /// <summary>
         /// Whether this pawn is drawn as a live figure at all.

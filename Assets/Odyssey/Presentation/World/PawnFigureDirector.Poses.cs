@@ -395,6 +395,33 @@ namespace Odyssey.Presentation.World
             float weight = Mathf.Clamp01(figure.CarryWeight);
             Vector3 axis = SwingAxis(figure.Transform, 0f);
 
+            // **Stiff, and the stiffness is the point** (owner, 2026-09-19: the arms "should be
+            // much stiffer and static held under the item rather than motioned because it's taken
+            // weight it's holding"). Everything else in this director is *additive* over whatever
+            // the walk clip gave, which is right for a gesture laid over a gait and wrong for a
+            // stance — added to a swinging arm, a scoop is a scoop that swings, and the load
+            // swings with it because the load follows the palms.
+            //
+            // So the arms are taken off the clip first, back to the rest the rig itself was
+            // authored in, and the scoop is built from there. What is left moving is the torso
+            // carrying them, which is what a person holding a weight in front of them looks like.
+            //
+            // **Written, not blended**, and that is what makes it safe to run twice in a frame:
+            // ApplyWorkPose runs at the end of both Sync and Evaluate and only one of them
+            // re-evaluates the graph first, so anything that eased towards a target from wherever
+            // the bone happened to be would be integrated rather than recomputed — the fault that
+            // made an axe spin. Assigning a constant is the identity on the second pass. The ease
+            // therefore lives in the angles below and never in the rest.
+            if (figure.RestArmsBound && weight > 0.001f)
+            {
+                figure.RightUpperArm.localRotation = figure.RestRightUpperArm;
+                figure.LeftUpperArm.localRotation = figure.RestLeftUpperArm;
+                if (figure.RightLowerArm != null)
+                    figure.RightLowerArm.localRotation = figure.RestRightLowerArm;
+                if (figure.LeftLowerArm != null)
+                    figure.LeftLowerArm.localRotation = figure.RestLeftLowerArm;
+            }
+
             // Back, not forward: the sign is the difference between carrying a weight and bowing
             // over it, and it is the one angle here where getting it wrong still looks deliberate.
             Pitch(figure.Spine, axis, -CarryPose.SpineLean * weight);
@@ -451,8 +478,23 @@ namespace Odyssey.Presentation.World
                 ? Vector3.Distance(figure.LeftUpperArm.position, figure.RightUpperArm.position)
                 : 0f;
 
-            figure.CarryAt = CarryPose.Cradle(
+            Vector3 cradle = CarryPose.Cradle(
                 left, right, chest, figure.Transform.forward, shoulders);
+
+            // Still arriving. Eased out — quick off the floor, slowing into the cradle — which is
+            // a thing being lifted by somebody straightening up. See CarryHandover for why the
+            // raise and the fall are deliberately different curves.
+            figure.CarryAt = CarryHandover.RaiseFinished(figure.HandoverClock)
+                ? cradle
+                : Vector3.Lerp(figure.HandoverFrom, cradle,
+                    CarryHandover.Raised(figure.HandoverClock));
+
+            // **The load turns with the colonist.** Its own yaw, taken from the figure, because
+            // the renderer's FacingOf is a memory of the last heading it *drew a stand-in at* and
+            // it never records one for a pawn that has a live figure — so every load on a real
+            // colonist was drawn at a yaw of exactly nought, and a log stayed pointing north
+            // however she turned (owner, 2026-09-19).
+            figure.CarryYaw = figure.Yaw;
             figure.CarryPlaced = true;
         }
 

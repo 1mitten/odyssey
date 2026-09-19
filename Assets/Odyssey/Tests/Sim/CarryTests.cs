@@ -39,6 +39,38 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(AspectKey.Of("odyssey.pawn.carrying")));
             Assert.That(CarryAspects.Stack,
                 Is.EqualTo(AspectKey.Of("odyssey.pawn.carrying.stack")));
+            Assert.That(CarryAspects.Thing,
+                Is.EqualTo(AspectKey.Of("odyssey.pawn.carrying.thing")));
+        }
+
+        /// <summary>
+        /// The load says <em>which</em> thing it is, so that it can be recognised again after it
+        /// has left the arms.
+        ///
+        /// <para>The def and the stack cannot do it — a stockpile of wood is full of loads that
+        /// match on both — and without it a thing set down appears at the middle of its cell on
+        /// the very frame the hands let go, a third of a metre from where they were. That is the
+        /// snap the owner reported on 2026-09-19, and the id is what lets presentation draw the
+        /// fall instead.</para>
+        /// </summary>
+        [Test]
+        public void TheLoadSaysWhichThingItIs()
+        {
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            colony.Stockpile(1, colony.Cell(12, 12, 0));
+
+            ThingId scrap = colony.Ctx.Items.Spawn(ItemIndex.Salvage, colony.Cell(6, 4, 0));
+
+            for (int i = 0; i < 3_000 && pawn.CurrentJob?.CarriedItem != scrap.Value; i++)
+                colony.World.Tick();
+            Assert.That(pawn.CurrentJob!.CarriedItem, Is.EqualTo(scrap.Value));
+
+            colony.World.Tick();
+            Assert.That(
+                colony.World.Views.Current.TryGetPawnAspect(pawn.Id, CarryAspects.Thing, out int id),
+                Is.True);
+            Assert.That(id, Is.EqualTo(scrap.Value));
         }
 
         [Test]

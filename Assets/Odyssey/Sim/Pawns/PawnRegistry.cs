@@ -226,6 +226,7 @@ namespace Odyssey.Sim.Pawns
                     {
                         writer.AddPawnAspect(pawn.Id, CarryAspects.Carrying, load.DefIndex);
                         writer.AddPawnAspect(pawn.Id, CarryAspects.Stack, load.Stack);
+                        writer.AddPawnAspect(pawn.Id, CarryAspects.Thing, load.Id.Value);
                     }
                 }
             }

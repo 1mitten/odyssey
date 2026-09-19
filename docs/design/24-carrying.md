@@ -1,9 +1,12 @@
 # 24 — Carrying
 
-**Status:** built, unplayed. Numbers marked *proposed* are invited tuning.
+**Status:** built; first playtest 2026-09-19 found three faults, all fixed (§4a-bis, §6a-bis, §6b)
+and **not yet re-run against Unity**. Numbers marked *proposed* are invited tuning.
 **Owner interview:** 2026-09-19. **Branch:** `claude/carried-items`.
-**Measured:** fast tier 735 Sim + 445 Hud; EditMode 1824 total, 1810 passed, 0 failed; PlayMode 82
-total, 77 passed, 0 failed. Both content gates pass with no CSV change — this adds no named thing.
+**Measured:** fast tier 736 Sim + 445 Hud. The first build measured EditMode 1824 / 1810 passed /
+0 failed and PlayMode 82 / 77 / 0; **the three fixes are almost entirely in Presentation, which
+the fast tier does not compile, so those numbers do not cover them.** Both content gates pass with
+no CSV change — this adds no named thing.
 
 ---
 
@@ -99,6 +102,31 @@ same measurement the tool grip already needed.
 than merely look wrong: `Clearance`. A rig whose arms are short enough to bring the load inside its
 own chest gets it pushed forward until it is clear. A wood bundle drawn through a colonist's ribs
 is not a pose that wants tuning.
+
+### 4a-bis. Stiff, because it has taken weight
+
+**Owner, 2026-09-19, on the first build:** *"arms and hands should be much stiffer and static held
+under the item rather than motioned because it's taken weight it's holding, so it's mostly static
+with little movement."*
+
+The first version was additive — `Pitch` adds a world-space rotation to whatever the walk clip put
+on the bone, which is right for a gesture laid over a gait and **wrong for a stance**. Added to a
+swinging arm, a scoop is a scoop that swings; and because the load follows the palms, the load
+swung with it. The load was doing exactly what the arms were doing, which is why the fault read as
+being about the load.
+
+So the carry takes the four arm bones **off the clip first**, back to the rest the rig itself was
+authored in, and builds the scoop from there. What is left moving is the torso carrying them,
+which is what a person holding a weight in front of them looks like.
+
+The rest pose cannot be a constant — sixty-one rigs have sixty-one bind poses — so it is read off
+each rig once in `BindWorkBones`, before any clip has been evaluated against it, and never again.
+
+**It is written, not blended, and that is what makes it safe.** `ApplyWorkPose` runs at the end of
+both `Sync` and `Evaluate` and only one of them re-evaluates the graph first (§4c), so anything
+that eased *towards* a rest from wherever the bone happened to be would be integrated rather than
+recomputed. Assigning a constant is the identity on the second pass. The ease therefore lives
+entirely in the angles.
 
 ### 4b. Everything is a fraction or an angle, never a metre
 
@@ -246,12 +274,57 @@ of it is that the load's placement follows the *hands* rather than the cradle un
 finishes — otherwise the object teleports to waist height while the colonist is still bent double,
 which is the magic-acquisition fault in a new costume.
 
+### 6a-bis. The two hand-overs — and the snap the draft said would not happen
+
+**Owner, 2026-09-19:** *"There needs to be a motion when you pickup and drop — instead of snapping
+to position it should fall it drop into position, and also be picked/raised out of pick up."*
+
+The draft asserted in §6a that the grasp instant gave a continuous pickup for free, because the
+hands are at the floor on that tick. That is true **vertically** and misses the rest: the pile is
+at the middle of the cell and the palms are a third of a metre in front of the colonist, so the
+load still crossed that gap in no time at all. The drop was worse and the draft did not consider
+it — `PutDown` moves the item to its cell in the same instant it begins the stow, so the thing
+appeared at the cell centre on the frame the hands let go and the crouch then played over empty
+hands.
+
+`CarryHandover` draws both. It is **drawing and nothing else**: the thing is in the hands, or in
+the cell, on the tick the simulation says so, exactly as before, and this governs only where it is
+drawn for the fraction of a second either side — the same bargain `WaterLine` makes for the float.
+
+| | Seconds | Curve | Why |
+|---|---|---|---|
+| **Raise** | 0.30 | eased **out** — quick off the floor, slowing into the cradle | A thing lifted by somebody straightening up, whose hands are fastest in the middle of the rise. Capped well under 0.4 s, which is what is left of the crouch after the grasp: longer and the load is still travelling after she has set off walking, which is the fault `LiftTicks` was introduced to fix |
+| **Fall** | 0.36 | eased **in** — slow out of the hands, quickest at the floor | A load really is falling. Longer than the raise, because a load is lowered under control and released where it is taken up in one movement — and `Gesture.Stow` is the slower crouch for the same reason |
+
+Reverse the two curves and a colonist appears to place something delicately and then snatch it off
+the floor.
+
+**The fall needs the item's id**, which is why there is a third aspect
+(`odyssey.pawn.carrying.thing`). The moment a load is set down it stops being a colonist's load
+and becomes an item in a cell, drawn from an entirely different list by a renderer that has no
+idea whose hands it was in. The def and the stack cannot make the match — a stockpile of wood is
+full of loads that agree on both.
+
+**The whole heap falls as one**, not rock by rock: a settling offset is applied to the cell, so
+the cluster keeps its shape and lands together. Per-rock would be a load coming apart in mid-air.
+
 ### 6b. Carrying
 
-Nothing to drive. The cradle is derived from the arms each frame, so the load bobs with the walk,
-turns with the yaw, tilts on the terrace relief and sinks in the stream, all for free and all
-without a line of code that knows about any of those things. That is the argument for solving from
-bones rather than authoring an offset.
+The cradle is derived from the arms each frame, so the load bobs with the walk, tilts on the
+terrace relief and sinks in the stream for free.
+
+**It does not turn for free, and the first build did not turn at all** (owner, 2026-09-19: *"when
+you turn a direction the logs don't turn with you and they should"*). The cause was one line: the
+yaw came from `ChunkRenderer.FacingOf`, which is the renderer's memory of the last heading it drew
+a **stand-in** at — and the colonist loop `continue`s past anyone who has a live figure, so it
+never records one for them. Every load on every real colonist was drawn at a yaw of exactly
+nought, and a log pointed north for ever.
+
+The yaw now comes off the figure (`Figure.CarryYaw`), which is the thing that actually knows. Two
+layers had the same fault: an armful of rubble is laid out on the world axes by `ItemHeap`, so it
+is turned **about the cradle as one cluster** rather than each rock about itself — spinning them
+in place would keep the shape and leave the shape pointing north, which is the identical bug one
+level down.
 
 ### 6c. Putting down
 

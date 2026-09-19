@@ -856,6 +856,22 @@ namespace Odyssey.Presentation.Rendering
 
                 Vector3 floor = CellMetrics.FloorCentre(cell);
 
+                // **A thing just put down is still falling out of the hands that held it.** The
+                // simulation transfers it in one instant, because a thing is in a cell or in a
+                // pair of hands and there is nothing sensible between — but the hands were a
+                // third of a metre in front of the colonist and rather higher than this cell's
+                // floor, so drawn literally that instant is a teleport. See CarryHandover.
+                //
+                // A whole-cell offset rather than a per-rock one: the heap keeps its own shape
+                // and the shape lands together, which is a load being set down. Settling each
+                // rock separately would be a load coming apart in mid-air.
+                Vector3 falling = Vector3.zero;
+                if (carried != null
+                    && carried.TryGetSettling(things[i].Id.Value, out Vector3 leftHands, out float since))
+                    falling = Vector3.Lerp(
+                        leftHands - GroundRelief.Lift(floor), Vector3.zero,
+                        CarryHandover.Fallen(since));
+
                 // Rubble is several rocks, and how many says how much. See ItemHeap: everything
                 // else on the floor is one prop, and stone drawn that way was a cairn standing in
                 // the cell rather than spoil lying in it.
@@ -871,7 +887,7 @@ namespace Odyssey.Presentation.Rendering
                     for (int rock = 0; rock < rocks; rock++)
                     {
                         Matrix4x4 placement = _heapPlacements[rock];
-                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3));
+                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3)) + falling;
                         placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
                         AppendItem(def, placement);
                     }
@@ -880,7 +896,7 @@ namespace Odyssey.Presentation.Rendering
                 }
 
                 AppendItem(def, Matrix4x4.TRS(
-                    GroundRelief.Lift(floor),
+                    GroundRelief.Lift(floor) + falling,
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -945,22 +961,25 @@ namespace Odyssey.Presentation.Rendering
                     stack = 1;
 
                 Vector3 at;
+                float yaw;
                 if (carried != null && carried.HasFigureFor(pawnId.Value))
                 {
                     // A live figure answers for itself, or answers no — empty-handed on its own
                     // reckoning, or holding something the swim placeholder is hiding. Either way
                     // the renderer must not second-guess it with a stand-in load, or a wading
                     // colonist's bundle would reappear at her waist the frame the pose hid it.
-                    if (!carried.TryGetCarried(pawnId.Value, out _, out _, out at)) continue;
+                    if (!carried.TryGetCarried(pawnId.Value, out _, out _, out at, out yaw))
+                        continue;
                 }
                 else
                 {
                     Vector3 body = PawnPose.Of(pawn, tickAlpha, movePerTick,
                         out Vector3 heading, _model);
                     if (heading.sqrMagnitude < 1e-6f) heading = Vector3.forward;
+                    yaw = FacingOf(pawnId, heading);
                     at = body
                         + Vector3.up * (CellMetrics.SizeY * StandInCarryHeight)
-                        + heading.normalized * StandInCarryReach;
+                        + Quaternion.Euler(0f, yaw, 0f) * Vector3.forward * StandInCarryReach;
                 }
 
                 ResolvedModule? module = ItemModule(def);
@@ -973,9 +992,21 @@ namespace Odyssey.Presentation.Rendering
                 // a great deal less noticeable than a heap reshuffling itself as it is lifted.
                 uint seed = unchecked((uint)(def * 2654435761u + (uint)stack));
 
+                // **The load is turned the way the colonist is** (owner, 2026-09-19: "when you
+                // turn a direction the logs don't turn with you and they should"). It reads as
+                // obvious and the first version did not do it: the yaw came from FacingOf, which
+                // is the renderer's memory of the last heading it drew a *stand-in* at, and the
+                // colonist loop skips anyone who has a live figure. So every load on every real
+                // colonist was drawn at a yaw of exactly nought and a log pointed north for ever.
+                Quaternion turned = Quaternion.Euler(0f, yaw, 0f);
+
                 if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
                 {
-                    int rocks = ItemHeap.Armful(seed, at, heap, _heapPlacements);
+                    // The armful turns as one thing — about the cradle, not each rock about
+                    // itself. ItemHeap lays its sunflower out on the world axes, so spinning the
+                    // rocks in place would keep the cluster's shape while the shape went on
+                    // pointing north: the same fault one layer down.
+                    int rocks = ItemHeap.Armful(seed, at, turned, heap, _heapPlacements);
                     for (int rock = 0; rock < rocks; rock++) AppendItem(def, _heapPlacements[rock]);
                     continue;
                 }
@@ -984,8 +1015,7 @@ namespace Odyssey.Presentation.Rendering
                 // correction for a thing lying on ground that is a shallow field rather than a
                 // plane, and this thing is not on the ground. Lifting it would raise it off the
                 // hands by however much the terrain happened to be doing underfoot.
-                AppendItem(def, Matrix4x4.TRS(
-                    at, Quaternion.Euler(0f, FacingOf(pawnId, Vector3.zero), 0f), Vector3.one));
+                AppendItem(def, Matrix4x4.TRS(at, turned, Vector3.one));
             }
         }
 
