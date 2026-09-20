@@ -232,31 +232,93 @@ namespace Odyssey.Presentation.Ui
             VisualElement header = _workPanel.Q(className: "panel__hdr");
             if (header == null) return;
 
-            // No subtitle beside the title (owner, 2026-09-20). It said "3 colonists · what they do,
-            // and when · 13h" and every part of that is answered better by the panel itself: the
-            // rows are the colonists, the two halves are the two questions, and the now-line is
-            // the hour.
+            header.style.height = 30;
+            header.style.marginBottom = 8;
+
+            Label titleLabel = header.Q<Label>(className: "panel__label");
+            VisualElement close = header.Q(className: "panel__close");
+            header.Clear();
+
+            // Work half: Colonist column (width 192) + Work columns (width 374) = 566px
+            var colonistHdr = new VisualElement();
+            colonistHdr.style.width = WorkGridLayout.LeftColumn;
+            colonistHdr.style.height = Length.Percent(100);
+            colonistHdr.style.flexShrink = 0;
+            colonistHdr.style.flexDirection = FlexDirection.Row;
+            colonistHdr.style.alignItems = Align.Center;
+            if (titleLabel != null) colonistHdr.Add(titleLabel);
+            header.Add(colonistHdr);
+
+            // Over the work columns: central controls with generous spacing
+            var workColsHdr = new VisualElement();
+            workColsHdr.style.width = WorkGridLayout.ColumnsPerPage * WorkGridLayout.Pitch;
+            workColsHdr.style.height = Length.Percent(100);
+            workColsHdr.style.flexShrink = 0;
+            workColsHdr.style.flexDirection = FlexDirection.Row;
+            workColsHdr.style.alignItems = Align.Center;
+            workColsHdr.style.justifyContent = Justify.Center;
+
+            var central = new VisualElement();
+            central.style.flexDirection = FlexDirection.Row;
+            central.style.alignItems = Align.Center;
 
             Label priorities = HudText.Make("Priorities", HudTextRole.Meta);
-            priorities.style.marginRight = 8;
-            header.Insert(header.childCount - 1, priorities);
+            priorities.style.marginRight = 10;
+            central.Add(priorities);
 
             var seg = new VisualElement();
             seg.AddToClassList("settings__tabs");
-            seg.style.marginRight = 8;
+            seg.style.marginTop = 0;
+            seg.style.marginBottom = 0;
+            seg.style.borderBottomWidth = 0;
+            seg.style.height = 24;
+            seg.style.alignItems = Align.Center;
             foreach (WorkGridMode mode in new[] { WorkGridMode.Simple, WorkGridMode.Detailed })
             {
                 Label chip = HudText.Make(mode == WorkGridMode.Simple ? "Simple" : "Detailed",
                     HudTextRole.Body, ussClass: "tab");
+                chip.style.height = 20;
+                chip.style.paddingLeft = 8;
+                chip.style.paddingRight = 8;
+                chip.style.paddingTop = 0;
+                chip.style.paddingBottom = 0;
+                chip.style.unityTextAlign = TextAnchor.MiddleCenter;
+                chip.style.justifyContent = Justify.Center;
                 WorkGridMode captured = mode;
                 chip.RegisterCallback<ClickEvent>(_ => _directors?.Work.SetMode(captured));
                 _workModeChips[mode] = chip;
                 seg.Add(chip);
             }
-            header.Insert(header.childCount - 1, seg);
+            central.Add(seg);
+            workColsHdr.Add(central);
+            header.Add(workColsHdr);
 
-            // The chips only. Not OnWorkModeChanged: that redraws the legend, which does not
-            // exist until BuildWork has finished with this.
+            // The seam divider matching the grid below (1px)
+            var hdrSeam = new VisualElement();
+            hdrSeam.style.width = WorkGridLayout.SectionDivider;
+            hdrSeam.style.height = Length.Percent(100);
+            hdrSeam.style.flexShrink = 0;
+            hdrSeam.style.backgroundColor = HudTokens.PanelBorder;
+            header.Add(hdrSeam);
+
+            // Schedule section of the header: aligned with the Schedule container at x = 567px
+            var schedHdr = new VisualElement();
+            schedHdr.style.height = Length.Percent(100);
+            schedHdr.style.flexDirection = FlexDirection.Row;
+            schedHdr.style.alignItems = Align.Center;
+            schedHdr.style.flexGrow = 1;
+
+            Label schedTitle = HudText.Make(Registry.Label("ui.tab.schedule"), HudTextRole.PanelLabel, ussClass: "panel__label");
+            schedTitle.style.marginLeft = 6;
+            schedHdr.Add(schedTitle);
+
+            var schedSpacer = new VisualElement { pickingMode = PickingMode.Ignore };
+            schedSpacer.style.flexGrow = 1;
+            schedHdr.Add(schedSpacer);
+
+            if (close != null) schedHdr.Add(close);
+            header.Add(schedHdr);
+
             SetWorkModeChips(WorkGridMode.Simple);
         }
 
@@ -378,7 +440,9 @@ namespace Odyssey.Presentation.Ui
                 () => { _work.SetColumnPage(_work.ColumnPage - 1); OnWorkColumnPageChanged(); },
                 () => { _work.SetColumnPage(_work.ColumnPage + 1); OnWorkColumnPageChanged(); },
                 out _workColumnPrev, out _workColumnNext, out _workColumnPageLabel);
-            _workColumnPager.style.marginLeft = 2;
+            _workColumnPager.style.marginTop = 0;
+            _workColumnPager.style.marginBottom = 0;
+            _workColumnPager.style.marginLeft = 8;
             strip.Add(_workColumnPager);
             _workHeaderBand.Add(strip);
 
@@ -475,17 +539,11 @@ namespace Odyssey.Presentation.Ui
             var band = new VisualElement();
             band.style.height = WorkGridLayout.HeaderBand;
 
-            // The schedule's own name, over the schedule (owner, 2026-09-20: "make a text title
-            // like Work but on the schedule control Schedule, positioned in the top left"). The
-            // panel's header names the panel; this names the half, in the same strip the work
-            // half puts its pager in.
+            // Spacer strip matching the work half's TitleStrip height, so the hours ruler aligns
+            // with the base of the rotated work labels. The Schedule title itself now lives in the
+            // window's header bar, aligned with the Work title.
             var strip = new VisualElement();
             strip.style.height = WorkGridLayout.TitleStrip;
-            strip.style.flexDirection = FlexDirection.Row;
-            strip.style.alignItems = Align.Center;
-            Label title = HudText.Make(Registry.Label("ui.tab.schedule"), HudTextRole.PanelLabel);
-            title.style.marginLeft = 4;
-            strip.Add(title);
             band.Add(strip);
 
             var hours = new VisualElement();

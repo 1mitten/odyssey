@@ -88,7 +88,7 @@ namespace Odyssey.Hud
         /// <para>Each control's own name and its own pager sit over that control rather than over
         /// the panel (owner, 2026-09-20), so nothing in this band belongs to a neighbour.</para>
         /// </summary>
-        public const int TitleStrip = 24;
+        public const int TitleStrip = 28;
 
         /// <summary>
         /// The whole header band: the title strip and the rotated labels beneath it.

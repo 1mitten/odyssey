@@ -187,6 +187,24 @@ namespace Odyssey.Tests.PlayMode
                     Object.Destroy(shot);
                 }
 
+                var workPanel = doc.rootVisualElement.Q(className: "work");
+                if (workPanel != null)
+                {
+                    if (debugPanel != null) debugPanel.style.display = DisplayStyle.None;
+                    if (panel != null) panel.style.display = DisplayStyle.None;
+                    boot.Directors?.Work.SetOpen(true);
+                    workPanel.style.display = DisplayStyle.Flex;
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    RenderTexture.active = target;
+                    var shotWork = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shotWork.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shotWork.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-work.png"), shotWork.EncodeToPNG());
+                    Object.Destroy(shotWork);
+                }
+
                 Object.Destroy(image);
                 Object.Destroy(target);
                 Object.Destroy(settings);
