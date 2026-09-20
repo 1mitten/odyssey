@@ -124,7 +124,7 @@ namespace Odyssey.Tests.Sim
         // ---- the table -----------------------------------------------------------------------
 
         [Test]
-        public void TheCurveTableIsTheEightAcceptedIntegers()
+        public void TheCurveTableIsTheTenAcceptedIntegers()
         {
             var content = ContentPack.Pawns();
 
@@ -144,11 +144,29 @@ namespace Odyssey.Tests.Sim
                 "the shallowest curve: skill buys quality here as well");
             Assert.That(construction.workRateSlopePerLevel, Is.EqualTo(75));
 
+            // Growing took cutting's curve exactly when it got one (SK1): the two plant work
+            // types, and the design once had felling training Growing outright, so a difference
+            // between them would need a justification nobody has measured.
+            var growing = content.WorkTypes[WorkTypeIndex.Growing];
+            Assert.That(growing.rateSkill, Is.EqualTo(SkillIndex.Growing));
+            Assert.That(growing.workRateBasePerMille, Is.EqualTo(cutting.workRateBasePerMille),
+                "growing and chopping are the two plant work types and share one curve");
+            Assert.That(growing.workRateSlopePerLevel, Is.EqualTo(cutting.workRateSlopePerLevel));
+
             var hauling = content.WorkTypes[WorkTypeIndex.Haul];
             Assert.That(hauling.rateSkill, Is.EqualTo(-1),
                 "hauling is a work type and not a skill (15-skills §6, and the reference agrees)");
             Assert.That(hauling.workRateBasePerMille, Is.EqualTo(Rates.Scale));
             Assert.That(hauling.workRateSlopePerLevel, Is.EqualTo(0));
+
+            // Every work type that names a skill must name one that exists, or the rate lookup
+            // reads off the end of the skill table the first time somebody works at it.
+            for (int w = 0; w < content.WorkTypes.Length; w++)
+            {
+                int skill = content.WorkTypes[w].rateSkill;
+                Assert.That(skill, Is.InRange(-1, SkillIndex.Count - 1),
+                    $"work type {w} drives its rate from a skill that does not exist");
+            }
         }
 
         [Test]
@@ -163,6 +181,49 @@ namespace Odyssey.Tests.Sim
 
             var construction = ContentPack.Pawns().WorkTypes[WorkTypeIndex.Construction];
             Assert.That(construction.WorkRatePerMille(20), Is.EqualTo(2_200), "2.20x");
+
+            // SK1. A novice grower breaks ground at 0.60x and a master at 2.60x, which is what
+            // makes the Growing skill worth levelling at all — before this it bought nothing.
+            var growing = ContentPack.Pawns().WorkTypes[WorkTypeIndex.Growing];
+            Assert.That(growing.WorkRatePerMille(0), Is.EqualTo(600), "a novice grower, 0.60x");
+            Assert.That(growing.WorkRatePerMille(1), Is.EqualTo(700), "the modal colonist, 0.70x");
+            Assert.That(growing.WorkRatePerMille(20), Is.EqualTo(2_600), "mastery, 2.60x");
+        }
+
+        /// <summary>
+        /// SK1, at the pawn seam rather than the def's: a grower's own work rate answers to her
+        /// Growing level, so the curve is actually wired to the skill the field trains and not
+        /// merely present in the table.
+        ///
+        /// <para>Before SK1 this work type had no <c>rateSkill</c>, so every grower — novice or
+        /// master — sowed at exactly the tuned speed, and the whole of the Growing skill bought
+        /// nothing. That is the regression this asserts against.</para>
+        /// </summary>
+        [Test]
+        public void AGrowersRateAnswersToHerGrowingLevel()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 1;
+            scenario.beds = 1;
+            ColonyWorld colony = ColonyWorld.Build(Size, 1u, scenario, barren: true);
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+
+            SkillDef skill = ContentPack.Pawns().Skills[SkillIndex.Growing];
+
+            pawn.Skills[SkillIndex.Growing] = 0;
+            int novice = pawn.WorkRatePerMille(WorkTypeIndex.Growing);
+
+            pawn.Skills[SkillIndex.Growing] = skill.MaxExperience;
+            int master = pawn.WorkRatePerMille(WorkTypeIndex.Growing);
+
+            Assert.That(pawn.SkillLevel(SkillIndex.Growing), Is.EqualTo(skill.maxLevel),
+                "the master is not at the top of the ladder");
+            Assert.That(master, Is.GreaterThan(novice),
+                "a master grower works no faster than a novice, so the curve is not wired");
+
+            // The ratio the table names, not one this test invents: 2,600 over 600.
+            Assert.That(master, Is.EqualTo(2_600));
+            Assert.That(novice, Is.EqualTo(600));
         }
 
         [Test]

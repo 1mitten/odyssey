@@ -46,6 +46,10 @@ namespace Odyssey.Hud
         ColonistStrip,
         Clock,
         Alerts,
+
+        /// <summary>The transient toast stack, under the alerts in the same column (SK4).</summary>
+        Toasts,
+
         DepthRail,
         OrdersStrip,
         Inspect,
@@ -97,8 +101,15 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly int CellRows;
 
+        /// <summary>
+        /// Toasts on screen right now (SK4). Zero hides the stack outright, which is its resting
+        /// state: a toast lasts six seconds and nothing raises one most of the time, so this is
+        /// zero whenever the coverage criterion is measured.
+        /// </summary>
+        public readonly int Toasts;
+
         public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
-                          int skillRows = 0, int cellRows = 0)
+                          int skillRows = 0, int cellRows = 0, int toasts = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
@@ -107,6 +118,7 @@ namespace Odyssey.Hud
             NeedRows = Math.Max(0, needRows);
             SkillRows = Math.Max(0, skillRows);
             CellRows = Math.Max(0, cellRows);
+            Toasts = Math.Max(0, toasts);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -1245,9 +1257,22 @@ namespace Odyssey.Hud
             boxes[HudRegion.Clock] = new HudRect(clockX, Edge, ClockWidth, ClockHeight);
 
             // ---- alerts, under the clock in the same column, hidden when there are none
+            float alertsTop = Edge + ClockHeight + Gap;
+            float alertsHeight = AlertsHeight(content.Alerts);
             boxes[HudRegion.Alerts] = content.Alerts <= 0
                 ? default
-                : new HudRect(clockX, Edge + ClockHeight + Gap, ClockWidth, AlertsHeight(content.Alerts));
+                : new HudRect(clockX, alertsTop, ClockWidth, alertsHeight);
+
+            // ---- toasts, under the alerts in the same column (SK4). Panel A6 puts the bulletin
+            // stack "right edge, below the alerts" and a toast is the passing member of that
+            // family, so it takes the same column and the same width. It is hidden when there are
+            // none, which is most of the time — so the coverage criterion, which is stated with
+            // nothing selected and no alerts, never sees it.
+            boxes[HudRegion.Toasts] = content.Toasts <= 0
+                ? default
+                : new HudRect(clockX,
+                    alertsTop + (content.Alerts <= 0 ? 0f : alertsHeight + Gap),
+                    ClockWidth, ToastsHeight(content.Toasts));
 
             // ---- colonist strip, centred in what is left between the two top corners
             int cards = VisibleCards(width, height, content.Colonists);
@@ -1312,6 +1337,15 @@ namespace Odyssey.Hud
         public static float AlertsHeight(int alerts) =>
             alerts <= 0 ? 0f : Frame + Pad + AlertHeaderBlock + alerts * AlertHeight +
                                (alerts - 1) * AlertGap + Pad;
+
+        /// <summary>
+        /// The toast stack's height (SK4). One row per toast at the alerts' own row height, and
+        /// <b>no header block</b>: an alerts panel earns a heading because it is a standing list a
+        /// player returns to, and a toast is a line that is already leaving. A heading over it
+        /// would also be the tallest thing in the stack for most of its life.
+        /// </summary>
+        public static float ToastsHeight(int toasts) =>
+            toasts <= 0 ? 0f : Frame + Pad + toasts * AlertHeight + (toasts - 1) * AlertGap + Pad;
 
         /// <summary>
         /// The rail's chrome: everything that is not a cell.

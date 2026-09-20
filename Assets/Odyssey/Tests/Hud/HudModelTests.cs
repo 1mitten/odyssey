@@ -434,24 +434,27 @@ namespace Odyssey.Tests.Hud
             // than taken from SkillCatalogue. Reading the key from the thing under test would make
             // this agree with itself whatever either side had been renamed to, and the name is the
             // whole contract: this assembly cannot reference Odyssey.Sim at all.
-            Skill(snapshot, id, "mining", level: 7, passion: 2, experience: 9_500);
+            Skill(snapshot, id, "mining", level: 7, passion: 2, experience: 9_500, progress: 375);
             Skill(snapshot, id, "cutting", level: 4, passion: 1, experience: 3_100);
             Skill(snapshot, id, "hauling", level: 2, passion: 0, experience: 1_400);
+            Skill(snapshot, id, "construction", level: 3, passion: 0, experience: 2_200);
+            Skill(snapshot, id, "growing", level: 1, passion: 2, experience: 1_100);
 
             var pane = new InspectModel();
             pane.SetColonist(id);
             pane.Refresh(snapshot);
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
-            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(2),
-                "mining and chopping are the two the simulation backs; hauling is a work type " +
-                "and not a skill in the design's list");
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(4),
+                "mining, chopping, construction and growing are the four the simulation backs; " +
+                "hauling is a work type and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
             Assert.That(mining.Name, Is.EqualTo("Mining"), "the registry's word for ui.skill.mining");
             Assert.That(mining.Level, Is.EqualTo(7));
             Assert.That(mining.Passion, Is.EqualTo(2));
             Assert.That(mining.Experience, Is.EqualTo(9_500));
+            Assert.That(mining.Progress, Is.EqualTo(375), "the bar arrives already divided (SK2)");
 
             // Chopping has a row of its own since 2026-09-18. It used to wear Growing's, so a
             // colonist who spent a day with an axe levelled up a skill called Growing and there
@@ -461,22 +464,40 @@ namespace Odyssey.Tests.Hud
             Assert.That(chopping.Name, Is.EqualTo("Chopping"), "the registry's word for ui.skill.cutting");
             Assert.That(chopping.Level, Is.EqualTo(4), "felling trains chopping");
 
+            // Growing and Construction came off the dead list on 2026-09-20 (SK5). Both had been
+            // greyed out here long after the simulation began training them — construction since
+            // U26 and growing since U47 — so the one screen that says what a colonist can do was
+            // denying two of the four things she actually does.
             SkillRow growing = pane.Skills.Single(s => s.IconKey == "ui.skill.growing");
-            Assert.That(growing.Live, Is.False, "nothing is planted yet, so growing trains on nothing");
+            Assert.That(growing.Live, Is.True, "sowing and harvest both train growing (U47)");
+            Assert.That(growing.Level, Is.EqualTo(1));
+
+            SkillRow construction = pane.Skills.Single(s => s.IconKey == "ui.skill.construction");
+            Assert.That(construction.Live, Is.True, "building, delivery and deconstruction all train it");
+            Assert.That(construction.Level, Is.EqualTo(3));
             // No row borrows another skill's work any more. The Note field stays — it is what a
             // row uses to explain itself when the mapping is not obvious — but nothing needs it,
             // and asserting a borrow that no longer exists would pin the very thing this change
             // removed.
             Assert.That(pane.Skills.Where(s => s.Live).Select(s => s.IconKey),
-                Is.EquivalentTo(new[] { "ui.skill.mining", "ui.skill.cutting" }),
+                Is.EquivalentTo(new[]
+                {
+                    "ui.skill.mining", "ui.skill.cutting",
+                    "ui.skill.construction", "ui.skill.growing",
+                }),
                 "the live rows are the simulation's own skills, each under its own name");
 
             foreach (SkillRow row in pane.Skills.Where(s => !s.Live))
             {
                 Assert.That(row.Level, Is.Zero, $"{row.IconKey} has no simulation and no number");
+                Assert.That(row.Progress, Is.Zero, $"{row.IconKey} has no simulation and no bar");
                 Assert.That(row.Reason, Is.Not.Empty,
                     $"{row.IconKey} is disabled without saying why, which the catalogue forbids");
             }
+
+            foreach (SkillRow row in pane.Skills.Where(s => s.Live))
+                Assert.That(row.Reason, Is.Empty,
+                    $"{row.IconKey} is live and still carries an excuse for not being");
         }
 
         /// <summary>
@@ -484,7 +505,7 @@ namespace Odyssey.Tests.Hud
         /// <c>Odyssey.Sim.Pawns.SkillAspects</c> uses. The literals are the contract.
         /// </summary>
         static void Skill(WorldSnapshot snapshot, PawnId pawn, string skill,
-                          int level, int passion, int experience)
+                          int level, int passion, int experience, int progress = 0)
         {
             snapshot.AddPawnAspect(new PawnAspect(
                 pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".level"), level));
@@ -492,6 +513,8 @@ namespace Odyssey.Tests.Hud
                 pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".passion"), passion));
             snapshot.AddPawnAspect(new PawnAspect(
                 pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".experience"), experience));
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".progress"), progress));
         }
 
         /// <summary>

@@ -113,7 +113,18 @@ namespace Odyssey.Tests.Sim
         // had moved the fingerprint that day, so neither parent's value described the union.
         // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
         // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 16616720228185092649UL;
+        //
+        // Moved a tenth time, 2026-09-20, by SK1: Work_Growing gained the curve the line above
+        // said it did not have. rateSkill 4, base 600, slope 100 — cutting's numbers exactly,
+        // because they are the two plant work types (docs/design/15-skills.md §8).
+        //
+        // NO GOLDEN MOVED, and that was worth checking rather than assuming: a rate change to a
+        // work type usually moves every Simulated hash, and this one moved none. The reason is
+        // that the golden worlds are bare seeds with no growing zone painted on them, so no sow
+        // or harvest job is ever created and this curve is never consulted. The field soak does
+        // exercise it, and asserts the loop's behaviour rather than a hash, so it is unmoved too.
+        // The day a golden window includes a zone, this value will move and that will be correct.
+        const ulong ContentFingerprint = 4333104343083629863UL;
 
 
         [Test]

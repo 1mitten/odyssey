@@ -7,13 +7,23 @@ namespace Odyssey.Hud
     /// <summary>
     /// The skills a colonist's record lists, in the order it lists them.
     ///
-    /// <para><b>This is the design's thirteen, not the simulation's three</b> (owner, 2026-09-17).
+    /// <para><b>This is the design's fourteen, not the simulation's four</b> (owner, 2026-09-17).
     /// The list in <c>docs/design/icon-keys.csv</c> is canon; it already has registry names, wiki
     /// entries and icon-map rows, and it is the list the game is being built towards. What the
-    /// simulation can actually train today is three of them, so the other rows draw as
+    /// simulation can actually train today is four of them, so the other rows draw as
     /// unavailable with the reason beside them — which is the idiom this interface already uses
     /// for a tab, a command or a panel that does not exist yet, and is better than a tab that
     /// hides the shape of the game until the last system lands.</para>
+    ///
+    /// <para><b>Construction and Growing were greyed out here long after they began working</b>
+    /// (fixed 2026-09-20, SK1/SK5). Construction has been fully simulated since U26 — three jobs
+    /// train it and it drives both a build's speed and its botch roll — and Growing since U47,
+    /// where sowing and harvest both train it. Both rows still said "nothing is built yet" and
+    /// "nothing is planted yet", so the one screen that tells a player what a colonist can do was
+    /// denying two of the four things she actually does. <b>A row's liveness is not documentation,
+    /// it is a claim about the simulation, and nothing was checking it</b> — which is why
+    /// <c>SkillCatalogueTests</c> now asserts the live set against the published aspect names
+    /// rather than against a list written here.</para>
     ///
     /// <para><b>Where the simulation's three go.</b> <c>Skill_Mining</c> is <c>ui.skill.mining</c>
     /// and needs no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
@@ -66,10 +76,13 @@ namespace Odyssey.Hud
             /// <summary>What the row says about itself beyond its name, or empty.</summary>
             public readonly string Note;
 
-            /// <summary>The three names this skill's numbers arrive under.</summary>
+            /// <summary>The four names this skill's numbers arrive under.</summary>
             public readonly AspectKey Level;
             public readonly AspectKey Passion;
             public readonly AspectKey Experience;
+
+            /// <summary>Per mille towards the next level, which the row's bar is drawn from (SK2).</summary>
+            public readonly AspectKey Progress;
 
             public Entry(string key, string skill, string reason, string note = "")
             {
@@ -80,6 +93,7 @@ namespace Odyssey.Hud
                 Level = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".level");
                 Passion = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".passion");
                 Experience = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".experience");
+                Progress = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".progress");
             }
 
             public bool Live => Skill.Length != 0;
@@ -92,11 +106,11 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly Entry[] All =
         {
-            new Entry("ui.skill.construction", NotSimulated, "nothing is built yet"),
+            new Entry("ui.skill.construction", "construction", string.Empty),
             new Entry("ui.skill.mining", "mining", string.Empty),
             new Entry("ui.skill.salvage", NotSimulated, "salvage is hauled, not stripped"),
             new Entry("ui.skill.cooking", NotSimulated, "meals are found, not made"),
-            new Entry("ui.skill.growing", NotSimulated, "nothing is planted yet"),
+            new Entry("ui.skill.growing", "growing", string.Empty),
             new Entry("ui.skill.cutting", "cutting", string.Empty),
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),

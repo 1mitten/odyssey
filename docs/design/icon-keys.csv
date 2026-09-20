@@ -299,6 +299,7 @@ ui.alert.powerloss,Power failure,ui.alert,M2,A net has gone dark
 ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
 ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
+ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
 ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
 ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us

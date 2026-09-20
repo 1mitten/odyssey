@@ -14,11 +14,11 @@ namespace Odyssey.Sim.Pawns
     /// does — and the shared file they would have lived in is the file aspects exist to stop
     /// people editing.</para>
     ///
-    /// <para><b>Three names per skill rather than one packed number.</b> A level, a passion and an
-    /// experience are three things the interface shows separately and three things that change on
-    /// different occasions; packing them into one int would save two rows a pawn and cost the
-    /// reader a decode it could get wrong. The published set is nine rows a colonist, which on a
-    /// colony of fifty is four hundred and fifty rows into a buffer that is reused.</para>
+    /// <para><b>Four names per skill rather than one packed number.</b> A level, a passion, an
+    /// experience and a progress are four things the interface shows separately and four things
+    /// that change on different occasions; packing them into one int would save rows a pawn and
+    /// cost the reader a decode it could get wrong. The published set is twenty rows a colonist,
+    /// which on a colony of fifty is a thousand rows into a buffer that is reused.</para>
     ///
     /// <para><b>Minted once.</b> <see cref="AspectKey.Of"/> walks the string, and the publish loop
     /// runs every tick for every colonist, so the keys are static and the loop only indexes them.
@@ -35,6 +35,18 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey[] Level = Mint("level");
         public static readonly AspectKey[] Passion = Mint("passion");
         public static readonly AspectKey[] Experience = Mint("experience");
+
+        /// <summary>
+        /// How far this skill stands towards its next level, per mille (SK2) — the number the
+        /// inspect pane's bar is drawn from.
+        ///
+        /// <para><b>A fourth row rather than arithmetic on the other side.</b> The experience is
+        /// already published, but the ladder that says how much of it buys a level is content in
+        /// <c>SkillDef.experienceToAdvance</c>, and a copy of it in the interface would be a
+        /// second source of truth for a tunable number. Deriving it here costs one integer a skill
+        /// and keeps the table where a mod can override it.</para>
+        /// </summary>
+        public static readonly AspectKey[] Progress = Mint("progress");
 
         /// <summary>
         /// The name a colonist's own roll seed goes out under (U40). Not a skill and so not under

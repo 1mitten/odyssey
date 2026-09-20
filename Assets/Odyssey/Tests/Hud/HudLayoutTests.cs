@@ -512,6 +512,87 @@ namespace Odyssey.Tests.Hud
                 "an order button is wider than the gutter it stands in");
         }
 
+        /// <summary>
+        /// SK4: the toast stack takes the alerts' column and sits under them, so the things the
+        /// colony is telling the player are one column and not two.
+        /// </summary>
+        [Test]
+        public void TheToastStackSitsUnderTheAlertsInTheSameColumn()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                var content = new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                             toasts: ToastModel.MaxRows);
+                var boxes = HudLayout.Solve(width, height, content);
+
+                HudRect alerts = boxes[HudRegion.Alerts];
+                HudRect toasts = boxes[HudRegion.Toasts];
+
+                Assert.That(toasts.Empty, Is.False, $"the toast stack is missing at {width}x{height}");
+                Assert.That(toasts.X, Is.EqualTo(alerts.X), "the two are not in one column");
+                Assert.That(toasts.Width, Is.EqualTo(alerts.Width), "the two are not one width");
+                Assert.That(toasts.Y, Is.GreaterThanOrEqualTo(alerts.Bottom),
+                    "the toasts are not under the alerts");
+            }
+        }
+
+        /// <summary>
+        /// With no alerts the stack rises to where they would have been rather than leaving their
+        /// gap behind it — a toast on an otherwise quiet screen should not float in the middle of
+        /// the gutter.
+        /// </summary>
+        [Test]
+        public void TheToastStackClosesUpWhenThereAreNoAlerts()
+        {
+            var boxes = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers, 0, toasts: 1));
+
+            HudRect clock = boxes[HudRegion.Clock];
+            HudRect toasts = boxes[HudRegion.Toasts];
+
+            Assert.That(boxes[HudRegion.Alerts].Empty, Is.True, "this case has no alerts");
+            Assert.That(toasts.Y, Is.EqualTo(clock.Bottom + HudLayout.Gap),
+                "with nothing above it the stack should sit straight under the clock");
+        }
+
+        /// <summary>
+        /// A toast costs the coverage budget nothing, because the budget is measured on a resting
+        /// screen and a toast lasts six seconds. This is what makes the stack affordable at all —
+        /// the ceiling is the owner's to reverse and this work does not spend any of it.
+        /// </summary>
+        [Test]
+        public void TheToastStackDoesNotSpendTheCoverageBudget()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                var resting = HudContent.NothingSelected(Colonists, 3, Layers);
+                var boxes = HudLayout.Solve(width, height, resting);
+
+                Assert.That(boxes[HudRegion.Toasts].Empty, Is.True,
+                    "a resting screen is showing a toast, so the coverage figure includes one");
+                Assert.That(HudLayout.Coverage(boxes, width, height),
+                    Is.LessThanOrEqualTo(HudLayout.CoverageCeiling));
+            }
+        }
+
+        /// <summary>
+        /// The stack has no header block, unlike the alerts panel: one row of toast is one row tall
+        /// plus its frame, and a heading would be the tallest thing in it for most of its life.
+        /// </summary>
+        [Test]
+        public void AToastRowIsARowAndNotAPanelWithAHeading()
+        {
+            Assert.That(HudLayout.ToastsHeight(0), Is.Zero, "no toasts is no box at all");
+
+            float one = HudLayout.ToastsHeight(1);
+            float two = HudLayout.ToastsHeight(2);
+
+            Assert.That(two - one, Is.EqualTo(HudLayout.AlertHeight + HudLayout.AlertGap),
+                "a second row should cost exactly one row and one gap");
+            Assert.That(one, Is.LessThan(HudLayout.AlertsHeight(1)),
+                "a toast row is drawing the alerts panel's heading block");
+        }
+
         static IEnumerable<HudContent> Cases()
         {
             yield return HudContent.NothingSelected(Colonists, 3, Layers);          // resting
@@ -530,6 +611,16 @@ namespace Odyssey.Tests.Hud
             // A tile readout: five facts is the fullest the meadow offers (order, walk, floor,
             // support — one of order/minable), and the pane it stands in is the narrow one.
             yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0, cellRows: 5);
+
+            // Toasts (SK4). The stack sits under the alerts in the same column, so the case that
+            // matters is a full stack UNDER a full alerts panel — the tallest that column can get,
+            // and the one that would run off the bottom of a 720p screen if it were going to.
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0,
+                                        toasts: ToastModel.MaxRows);
+            yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                        toasts: ToastModel.MaxRows);
+            yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows, toasts: ToastModel.MaxRows);
         }
 
         /// <summary>
