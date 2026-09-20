@@ -143,6 +143,7 @@ namespace Odyssey.Sim.World
                 _pawns.Nav.MarkDirty(cell);
             }
 
+            Pawns.Falling.DropFloatingItems(_pawns);
             _fallen.Clear();
         }
 

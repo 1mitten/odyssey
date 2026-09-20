@@ -819,6 +819,93 @@ namespace Odyssey.Tests.Sim
                 "half of a four-unit floor came back");
         }
 
+        [Test]
+        public void DeconstructingAFloorDropsItemsRestingOnItToFloorBelow()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            colony.World.Tick();
+            int slab = Above(ground);
+            RaiseNow(colony, slab, BuildingHandle.Floor);
+            colony.World.Tick();
+
+            ThingId id = colony.Pawns.Items.Spawn(ItemIndex.Wood, slab, 10);
+            var wood = colony.Pawns.Items.Get(id)!;
+            Assume.That(colony.Pawns.Items.ItemAt(slab), Is.Not.Null);
+
+            Assert.That(colony.Construction.RemoveSlab(colony.Pawns, slab, out _), Is.True);
+            colony.World.Tick();
+
+            Assert.That(colony.Grid.Floor[slab], Is.EqualTo(CoreContent.SlabNone), "the floor was removed");
+            Assert.That(colony.Pawns.Items.ItemAt(slab), Is.Null, "the item stayed on a cell with no floor");
+
+            int landing = colony.Grid.FirstFloorAtOrBelow(slab);
+            int landingY = Size.FromIndex(landing).Y;
+
+            Assert.That(wood.Cell, Is.Not.EqualTo(slab), "the item did not drop");
+            Assert.That(colony.Grid.HasFloor(wood.Cell), Is.True, "the item landed on a floor");
+            Assert.That(Size.FromIndex(wood.Cell).Y, Is.EqualTo(landingY), "the item landed on the landing floor layer");
+        }
+
+        [Test]
+        public void DeconstructingAFloorDropsStandingPawnWithoutThought()
+        {
+            ColonyWorld colony = Board();
+            Pawn pawn = TheColonist(colony);
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            colony.World.Tick();
+            int slab = Above(ground);
+            RaiseNow(colony, slab, BuildingHandle.Floor);
+            colony.World.Tick();
+
+            pawn.Cell = slab;
+            Assume.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.Fell), Is.False);
+
+            Assert.That(colony.Construction.RemoveSlab(colony.Pawns, slab, out _), Is.True);
+            colony.World.Tick();
+
+            Assert.That(colony.Grid.Floor[slab], Is.EqualTo(CoreContent.SlabNone));
+            Assert.That(pawn.Cell, Is.Not.EqualTo(slab), "the pawn did not drop out of mid-air");
+            Assert.That(colony.Grid.HasFloor(pawn.Cell), Is.True, "pawn is on a cell with a floor");
+            Assert.That(pawn.Memories.Exists(m => m.ThoughtIndex == ThoughtIndex.Fell), Is.False,
+                "an intentional floor deconstruction passes no distressed fall thought");
+        }
+
+        [Test]
+        public void DeconstructionRefundLandsOnFloorBelow()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            colony.World.Tick();
+            int slab = Above(ground);
+            RaiseNow(colony, slab, BuildingHandle.Floor);
+            colony.World.Tick();
+
+            Assert.That(colony.Designations.TryTakeApart(slab, out int building, out int stuff), Is.True);
+            DeconstructJobDriver.TakeApart(colony.Pawns, slab, building, stuff, tick: 7);
+
+            var items = colony.Pawns.Items.Items;
+            int found = 0;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var it = items[i];
+                if (it.Despawned || it.Cell < 0) continue;
+                Assert.That(colony.Grid.HasFloor(it.Cell), Is.True, $"item at {Size.FromIndex(it.Cell)} has no floor");
+                Assert.That(it.Cell, Is.Not.EqualTo(slab), "salvage spawned on the removed floor in mid-air");
+                found++;
+            }
+            Assert.That(found, Is.GreaterThan(0), "refund item was spawned");
+        }
+
         /// <summary>
         /// The control: a deck the generator stamped is the city's, exactly as a wall it stamped is.
         /// <c>SlabBuilt</c> is what says which, and only <c>ConstructionGrid.Raise</c> writes it.

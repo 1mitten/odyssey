@@ -94,11 +94,39 @@ namespace Odyssey.Sim.Pawns
             if (ctx.Cells.HasFloor(cell)) return;
 
             int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
-            if (landing == cell) return;
+            if (landing == cell)
+            {
+                ctx.Items.Despawn(resting);
+                return;
+            }
 
             int room = ctx.Items.NearestCellWithSpace(
-                ctx.Cells, landing, resting.DefIndex, resting.Stack, maxRadius: 3);
+                ctx.Cells, landing, resting.DefIndex, resting.Stack, maxRadius: 8);
             if (room >= 0) ctx.Items.MoveTo(resting, room);
+            else ctx.Items.Despawn(resting);
+        }
+
+        /// <summary>
+        /// Safety sweep: ensure no loose items on the entire board are suspended in mid-air.
+        ///
+        /// <para>Walks active items; any item resting on a cell without a floor is dropped to the
+        /// nearest real floor below. Returns the number of items that fell.</para>
+        /// </summary>
+        public static int DropFloatingItems(PawnContext ctx)
+        {
+            var items = ctx.Items.Items;
+            int dropped = 0;
+            for (int i = 0; i < items.Count; i++)
+            {
+                ColonyItem item = items[i];
+                if (item.Despawned || item.Cell < 0) continue;
+                if (!ctx.Cells.HasFloor(item.Cell))
+                {
+                    ItemsOutOf(ctx, item.Cell);
+                    dropped++;
+                }
+            }
+            return dropped;
         }
     }
 }
