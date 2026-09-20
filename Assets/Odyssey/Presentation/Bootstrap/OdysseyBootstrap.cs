@@ -927,6 +927,16 @@ namespace Odyssey.Presentation.Bootstrap
             foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
             {
                 if (light.type != LightType.Directional) continue;
+                // **The scene's own sun, and only that.** A light on a hidden, unsaved object
+                // belongs to something that built a rig of its own — today that is
+                // PortraitStudio's key light, which exists from the moment the setup page
+                // photographs its first candidate, sits at 1.6 and is switched off except for the
+                // instant a portrait is taken. Hand *that* to the daylight cycle and two things go
+                // wrong at once: the world loses its sun, and every portrait is lit by a light the
+                // clock has been recolouring and dimming behind the studio's back. Measured on
+                // 2026-09-20: the portrait's brightness still tracked the time of day after the
+                // studio had been made to own the ambient, and this was why.
+                if (light.gameObject.hideFlags != HideFlags.None) continue;
                 if (best == null || light.intensity > best.intensity) best = light;
             }
             return best;
@@ -995,7 +1005,13 @@ namespace Odyssey.Presentation.Bootstrap
 
             _frameTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
-            if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
+            if (cameraRig != null)
+            {
+                _renderer.ViewerPosition = cameraRig.transform.position;
+                // And the figure director wants it for one decision of its own: which colonists
+                // keep a live figure when there are more of them than the cap allows.
+                if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
+            }
 
             // Before anything reads the mirror, because the picker reads it and a waiting order is
             // one of the things a click can land on (WorldRenderModel.SetSites). Until this line
