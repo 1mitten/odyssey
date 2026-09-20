@@ -41,6 +41,19 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   §7b, because fixing it changes how every sleeper is drawn and it should be judged against a
   picture of the one that is now right.
 
+- **The profile pictures, after dark** (`claude/colonist-figures-and-portraits`,
+  `docs/design/20-avatars.md` §10.7–10.8, §11). A portrait used to be lit by whatever hour it was
+  taken at and then kept for the session, so a colonist generated after dusk had a black card for
+  ever; the studio now owns the ambient, the fog, the sky reflection and every other directional
+  light for the instant of the shot. Two things a measurement cannot settle. **Is the fixed studio
+  light the right light** — the cast is a little flatter than a noon portrait was, because there is
+  no sun raking across it, and the question is whether that reads as a passport photograph or as a
+  portrait. And **is one light enough**: every colonist is now lit identically from the front left,
+  which is consistent and may be dull. Play into the evening, spawn a colonist from the debug menu
+  after dark, and say whether the new card is *worse than the daylight ones used to look* or merely
+  different. A wrong answer looks like: the cards all read the same and you stop using the face to
+  tell people apart.
+
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
   its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm
