@@ -270,6 +270,7 @@ namespace Odyssey.Hud
             { "ui.keys.speed3", "Speed three" },
             { "ui.keys.turnleft", "Turn camera left" },
             { "ui.keys.turnright", "Turn camera right" },
+            { "ui.keys.worktab", "Work tab" },
             { "ui.layer.down", "Layer down" },
             { "ui.layer.ground", "Ground level" },
             { "ui.layer.policy.full", "No cut-away" },

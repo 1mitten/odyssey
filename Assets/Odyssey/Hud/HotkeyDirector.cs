@@ -30,6 +30,16 @@ namespace Odyssey.Hud
         Up, Down, Left, Right,
         Space, Home, End, PageUp, PageDown,
         Backquote,
+
+        /// <summary>
+        /// The function keys the command bar has promised to panels since it was written
+        /// (<c>14-hud-layout.md</c>: "every item shows a hotkey, and the panels are on F1 to F9").
+        /// They were deliberately outside this closed set while every one of those caps was a
+        /// legend on a control that did nothing; <b>F1 became real with the Work tab</b>, and the
+        /// rest join it as their panels arrive rather than all at once, so an unbindable key is
+        /// always one with nothing behind it.
+        /// </summary>
+        F1,
     }
 
     /// <summary>
@@ -67,6 +77,13 @@ namespace Odyssey.Hud
         /// overlay moved into that menu as its first row).
         /// </summary>
         DebugMenu,
+
+        /// <summary>
+        /// Open or close the Work tab (design 27). <b>F1, which the command bar has advertised
+        /// since it was built</b> — this binding is the cap becoming true rather than a new
+        /// promise.
+        /// </summary>
+        WorkTab,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -150,6 +167,7 @@ namespace Odyssey.Hud
 
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
+            (HotkeyAction.WorkTab,          HudKey.F1,        HudKey.None),
         };
 
         /// <summary>
@@ -328,6 +346,7 @@ namespace Odyssey.Hud
             HotkeyAction.ToolCancel => "ui.keys.cancel",
             HotkeyAction.BuildPalette => "ui.keys.build",
             HotkeyAction.DebugMenu => "ui.keys.debugmenu",
+            HotkeyAction.WorkTab => "ui.keys.worktab",
             _ => KeysKey,
         };
 

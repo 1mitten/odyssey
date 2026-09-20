@@ -7872,3 +7872,56 @@ split — and the second names `AssignTrade` so the connection is findable from 
 because nothing could set a priority; this panel is the thing it was waiting for. Removing it is not
 this unit's business — it moves the state hash and changes how every existing colony starts — but
 whoever does should know the panel replaced its reason.
+
+## 2026-09-20 — The Work tab becomes a tab you can open
+
+The owner asked the plainest possible question of the previous entry's work — *"is the tab itself
+functional?"* — and the answer was no. `HudCommands.Order` still carried
+`("ui.tab.work", "F1", "the work grid arrives with M7")`, and a non-empty reason draws the bar item
+`cmd--off` and makes `OnCommand` ignore it. The model, the geometry and the intent were all there
+and nothing could reach any of it.
+
+**The draw is `HudShell.Work.cs`, built the way `HudShell.Debug.cs` builds the debug menu** — a
+`Window`, the settings tab chips for the mode switch, the same close X — so a fourth panel does not
+invent a fourth visual language. The frozen colonist column sits outside the `ScrollView` and the
+twenty-two columns inside it, which is the whole of "the left column stays fixed".
+
+**Two things had to change outside the panel, and both are worth recording.**
+
+**`HudKey` gained its first function key.** It was a closed set that excluded F1–F12 on purpose,
+with the comment *"the function keys the command bar has promised to panels"* — a promise nothing
+had ever kept, because until now every one of those caps was a legend on a control that did nothing.
+F1 is bindable now because F1 has a panel behind it, and the other eight stay out until theirs
+arrive, so an unbindable key is always one with nothing behind it.
+
+**And `HotkeyClashTests` failed correctly, which is the good half of the story.** It asserted that a
+cap naming a key the binding map owns must be Build's, with the comment *"F1 to F9, Esc: keys the
+map will not bind"* — an assumption that was true when written and that this change made stale for
+exactly one key. It is now a table of the commands whose cap is a real binding, checked both ways:
+the map must ship that key to the action the command opens, **and** a command with a working key may
+not be drawn as a dead item. That second half is the fault this session would otherwise have
+shipped — a key that opens something the bar says does not exist yet.
+
+**One bug was caught by re-reading rather than by a compiler**, which is the only reviewer this
+container has: `BuildWorkHeaderExtras` called `OnWorkModeChanged` to light the right chip, and that
+redraws the legend — which `BuildWork` had not created yet. A null on the first frame the HUD is
+built. The chip-setting is its own method now and the build path calls only that.
+
+**The glyph set gained a flame**, its first filled organic shape; everything else in it is a
+chevron, a triangle or a rule. Drawn as a closed polygon on the same 24 grid, with the proportions
+taken off the mockup's clip-path.
+
+**What is deliberately not built: drag-paint** (OQ-W5). Click, right-click and shift-click-column
+are in. A drag needs pointer capture across cells, and it is the one gesture whose absence is felt
+only when setting a whole colony at once — so it waits on a verdict about whether the other three
+are enough, rather than being guessed at.
+
+**Almost every style in the panel is inline rather than in `Hud.uss`**, and that is a deviation
+recorded rather than hidden (§10a). Half of a cell's appearance *is* data — border is skill, ink is
+priority, fill is assignment — so it could never live in a stylesheet, and putting the other half
+there would both split one cell across two files and put the untestable half of this unit in the
+file a parse error takes down wholesale. The colours are still never literals.
+
+Fast tier was green on the model half before any of this (CI, 14:01:43). **The draw is again
+unproven here** — no dotnet SDK, no Unity — so `HudSmokeTests` naming a fourteenth framed region is
+the first thing that will actually exercise it.

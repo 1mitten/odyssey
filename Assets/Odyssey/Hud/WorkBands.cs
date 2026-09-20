@@ -125,7 +125,11 @@ namespace Odyssey.Hud
         /// <summary>The passion flame. The HUD has one amber and this is it.</summary>
         public static readonly HudColour Flame = HudTheme.Warn;
 
-        public const int FlameWidth = 9;
-        public const int FlameHeight = 11;
+        /// <summary>
+        /// A flame's box. Square, because the glyph it is drawn with is: the mockup's 9 × 11 is a
+        /// CSS clip-path and this one carries its own proportions inside a square, which keeps two
+        /// flames to 19px and clear of a 28px cell's corner.
+        /// </summary>
+        public const int FlameSize = 9;
     }
 }

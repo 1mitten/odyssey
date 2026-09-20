@@ -28,6 +28,14 @@ namespace Odyssey.Presentation.Ui
         AlertTriangle,
         Info,
 
+        /// <summary>
+        /// A passion flame, filled: one means a colonist likes the work, two that they love it
+        /// (design 27 §6.4). The only filled organic shape in this set — everything else here is
+        /// a chevron, a triangle or a rule — so it is drawn as a closed polygon rather than built
+        /// out of the stroke helpers.
+        /// </summary>
+        Flame,
+
         // ---------------------------------------------------------------- Build palette
         //
         // Thirty-seven more, drawn for the same reason the eleven above are and under the same
@@ -267,6 +275,15 @@ namespace Odyssey.Presentation.Ui
                     Dot(painter, P(12, 17.6f), Mathf.Max(0.9f, 1.15f * scale));
                     return;
 
+                case HudGlyphKind.Flame:
+                    // Proportions lifted from the mockup's clip-path and put on the 24 grid this
+                    // file draws everything on: a narrow teardrop with the kick to the right that
+                    // makes it read as a flame rather than as a leaf, at the 9 px it is drawn at.
+                    FillPolygon(painter,
+                        P(12f, 1f), P(17.8f, 8.2f), P(16.6f, 11.5f), P(20.2f, 15.8f),
+                        P(16.6f, 23f), P(6.2f, 23f), P(3.4f, 15.8f), P(7.8f, 9.6f));
+                    return;
+
                 case HudGlyphKind.Info:
                     Circle(painter, P(12, 12), 9.2f * scale);
                     Polyline(painter, true, P(12, 11.5f), P(12, 16.5f));
@@ -295,6 +312,17 @@ namespace Odyssey.Presentation.Ui
             painter.MoveTo(a);
             painter.LineTo(b);
             painter.LineTo(c);
+            painter.ClosePath();
+            painter.Fill();
+        }
+
+        /// <summary>Any closed filled figure. <see cref="FillTriangle"/> with no fixed arity.</summary>
+        static void FillPolygon(Painter2D painter, params Vector2[] points)
+        {
+            if (points.Length < 3) return;
+            painter.BeginPath();
+            painter.MoveTo(points[0]);
+            for (int i = 1; i < points.Length; i++) painter.LineTo(points[i]);
             painter.ClosePath();
             painter.Fill();
         }

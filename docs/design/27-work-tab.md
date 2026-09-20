@@ -344,9 +344,33 @@ would make this the one panel in the game that is shaped differently from the ot
 | Seam | `IntentKind.SetWorkPriority` and its handler | the write half |
 | Tests | `Assets/Odyssey/Tests/Hud/WorkGridTests.cs` | the constraint, the bands, the cycle, the inert cell |
 
-**Not built: the Presentation draw.** `HudShell.Work.cs` is the next unit and the mockup is its
-specification. It is deliberately last because the fast tier does not compile Presentation, so it is
-the half that cannot be proven without a Unity run on the owner's machine.
+| Draw | `Assets/Odyssey/Presentation/Ui/HudShell.Work.cs` | the panel, built the way the debug menu is |
+| Draw | `HudGlyphKind.Flame` | the one filled organic shape in the glyph set |
+| Seam | `WorkDirector`, `HudDirectors.Work` | open, and which reading |
+| Seam | `HotkeyAction.WorkTab`, `HudKey.F1`, `ui.keys.worktab` | the cap the bar has advertised since it was built, made real |
+| Seam | `HudCommands` | Work loses its reason and goes live |
+
+**The tab is reachable and functional as of 2026-09-20**: F1 or the bar item opens it, a click
+cycles a priority, a right-click cycles back, shift sets the column, and every change is a
+`SetWorkPriority` intent that lands while paused.
+
+### 10a. Two things about how it is drawn
+
+**Almost every style is inline rather than in `Hud.uss`, and that is a deviation with a reason.**
+Half of this panel's appearance *is* data — the border is the skill band, the ink is the priority,
+the fill is whether the cell is assigned — so it could never live in a stylesheet. Putting the other
+half there would split one cell's appearance across two files, and it would put the untestable half
+of this unit in the file that a parse error takes down wholesale. The colours are still never
+literals: they come from `WorkBands` and `HudTokens`. If the panel settles, the static furniture is
+worth lifting into `.work__*` rules.
+
+**`HudKey` gained its first function key.** It was a closed set that deliberately excluded F1–F12,
+with the comment *"the function keys the command bar has promised to panels"* — a promise nothing
+had ever kept. F1 is bindable now because F1 has a panel; F2–F9 stay out until theirs arrive, so an
+unbindable key is always one with nothing behind it. `HotkeyClashTests` carried the matching
+assumption (*"F1 to F9, Esc: keys the map will not bind"*) and **failed correctly** when the
+assumption went stale; its rule is now a table of commands whose cap is a real binding, which is
+what the remaining eight rows join.
 
 ## 11. Open questions
 
@@ -358,6 +382,10 @@ the half that cannot be proven without a Unity run on the owner's machine.
   live, not twenty-two columns with four. Worth a look at the screen before it is settled.
 - **OQ-W3 — hauling's borderless cell.** It is honest, but a column that is visibly different from
   its twenty-one neighbours may read as broken rather than as skill-less.
+- **OQ-W5 — drag-paint is not built.** §8 lists it and the catalogue's §B2 asks for it; click,
+  right-click and shift-click-column are in. A drag needs pointer capture across cells and it is the
+  one gesture whose absence a player notices only when setting a whole colony at once, so it waits
+  for a verdict on whether the other three are enough.
 - **OQ-W4 — where does the panel go when the work list grows?** Twenty-two fits 940px. The
   catalogue budgets twenty-five, which is 1042px, still fine. Thirty is 1214px and wants the
   horizontal scroll the left column is already frozen against.

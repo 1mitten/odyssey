@@ -76,8 +76,14 @@ namespace Odyssey.Hud
     /// </summary>
     public static class HudCommands
     {
-        /// <summary>Opens the Build palette. The one command on the bar that does something.</summary>
+        /// <summary>Opens the Build palette. The first command on the bar that did something.</summary>
         public const string BuildKey = "ui.tab.build";
+
+        /// <summary>
+        /// Opens the Work tab. The second command on this bar to do something, and the first of
+        /// the function keys to stop being a legend (design 27).
+        /// </summary>
+        public const string WorkKey = "ui.tab.work";
 
         /// <summary>Always last, always present, and the home of anything that did not fit.</summary>
         public const string MenuKey = "ui.tab.menu";
@@ -85,7 +91,7 @@ namespace Odyssey.Hud
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
             (BuildKey, "B", ""),
-            ("ui.tab.work", "F1", "the work grid arrives with M7"),
+            (WorkKey, "F1", ""),
             ("ui.tab.schedule", "F2", "schedules arrive with M7"),
             ("ui.tab.research", "F3", "research arrives with M7"),
             ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),

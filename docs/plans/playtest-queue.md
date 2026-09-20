@@ -21,16 +21,21 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
-- **The Work tab has a mockup and a model, and nobody has seen it on a screen**
-  (`claude/happy-tesla-2onz0q`, `docs/design/27-work-tab.md`, mockup
-  `docs/reference/mockups/work-v1.html`). **Open the mockup in a browser first** — the C# draw is
-  not built, so this row is a review of the mockup, not of the game. What only a person can answer:
-  whether twenty-two columns with eighteen drawn as *not built yet* teach the shape of the game or
-  just cost eighteen columns of width (OQ-W2); whether the rotated labels at −66° read at a glance
-  or have to be tilted the head for; whether hauling's borderless cell reads as *no skill* or as
-  broken (OQ-W3); and whether Simple mode loses so little that it is the mode you would leave it
-  in. A wrong answer on the first looks like you scrolling past the dead columns to find the four
-  that work — if so, the live-four switch in the review rail is the panel's real default.
+- **The Work tab opens now — F1, or the Work item on the command bar** (`claude/happy-tesla-2onz0q`,
+  PR #145, `docs/design/27-work-tab.md`). A click cycles a priority 1 → 2 → 3 → 4 → blank,
+  right-click cycles back, shift-click sets the whole column, and the Simple / Detailed switch is in
+  the header. **Note the colony does not start on a grid of threes**: the scenario deals two miners
+  at Mining 1 and everybody else at Chopping 1, so the first screen is a division of labour somebody
+  already chose. What only a person can answer: whether twenty-two columns with eighteen drawn as
+  *not built yet* teach the shape of the game or just cost width (OQ-W2); whether the rotated labels
+  at −66° read at a glance or need the head tilted; whether hauling's borderless, flameless column
+  reads as *no skill* or as broken (OQ-W3); and whether click, right-click and shift-column are
+  enough without drag-paint (OQ-W5). A wrong answer on the first looks like you scrolling past the
+  dead columns to find the four that work.
+
+  **Compare against `docs/reference/mockups/work-v1.html`**, which is the same panel in a browser
+  with a *Live 4* switch the real one does not have — if the four-column view is the one you want to
+  stay in, that switch is the panel's real default.
 
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
