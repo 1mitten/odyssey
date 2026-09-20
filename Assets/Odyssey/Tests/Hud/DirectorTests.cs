@@ -478,7 +478,7 @@ namespace Odyssey.Tests.Hud
             Writes++;
         }
 
-        public string? ReadString(string key) => _words.TryGetValue(key, out string value) ? value : null;
+        public string? ReadString(string key) => _words.TryGetValue(key, out string? value) ? value : null;
 
         public void WriteString(string key, string value)
         {
@@ -538,7 +538,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(settings.Value(GraphicsLadder.RenderScale), Is.EqualTo(100));
 
             settings.SetValue(GraphicsLadder.AntiAliasing, 3);
-            Assert.That(settings.Value(GraphicsLadder.AntiAliasing), Is.AnyOf(2, 4));
+            Assert.That(settings.Value(GraphicsLadder.AntiAliasing), Is.EqualTo(2).Or.EqualTo(4));
         }
 
         /// <summary>A ladder writes through when it moves, says nothing when it does not, and a
