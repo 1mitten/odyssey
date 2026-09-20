@@ -1,8 +1,13 @@
 # Storage: zones, units and the haul order
 
-*Planned 2026-09-19 with the owner, on `claude/storage-stockpile-system-k1yg51`.
+*Planned 2026-09-19 with the owner, on `claude/storage-stockpile-system-k1yg51`, **PR #137**.
 Phase: plan. Nothing here is built. Interview answers are in §Decisions; the reasoning that
 did not fit belongs in `docs/design/26-storage.md`, written as S1 starts.*
+
+*__Revised 2026-09-20 after merging `main`__, which had moved on to carry the baseline audit
+(PR #136). Two corrections, both material and both found by the merge rather than by the plan:
+the unit numbers this asked for are taken, and **most of the zone machinery S1 proposed to build
+already exists** on the unmerged growing-zones branch. See §What `main` changed under this plan.*
 
 ## Context
 
@@ -56,6 +61,48 @@ tri-state tree needs them to exist, so they move forward.
 
 ---
 
+## What `main` changed under this plan (2026-09-20)
+
+Merging `main` into this branch was clean, but it surfaced two things the plan had wrong. Both are
+the failure `CLAUDE.md` warns about — *check the code before you trust any status line* — caught
+because the check was run, on a `CLAUDE.md` that was four days stale on this branch.
+
+**1. The unit numbers are taken.** `U46`–`U50` belong to the **GR growing-zones** line (PR #119,
+branch `claude/growing-zones`). Storage is therefore **`U30` → `U51` → `U52`**, not `U30`/`U46`/`U47`.
+
+**2. The zone substrate exists, is played, and is not in `main` yet.** `GrowingZones`
+(`Assets/Odyssey/Sim/Growing/GrowingZones.cs`, 536 lines, on PR #119) is already the thing S1
+proposed to write:
+
+| S1 proposed | Already built on PR #119 |
+|---|---|
+| a per-layer cell set with a stable zone id | `Zone { Id, byte Plant, List<int> Cells }` over a dense `_zoneAt[]` and a sorted sparse `_cells` |
+| "a drag touching a zone extends it" | *Join a cell into whatever same-plant ground touches it, or found a zone of its own*, plus *fold the other zone into the survivor* |
+| `EditStorageZone` / `RemoveStorageZone` intents | `DesignateZone` / `CancelZone`, already in `Sim.Contracts/Intents.cs` |
+| zone state saved, hashed and published | `GrowingZones : ITickable, IStateHashable, ISaveable, ISnapshotContributor` |
+| a paint-a-zone tool with a rider | `DesignateTool.GrowZone = 6` with a `Plant` rider, exactly parallel to `Build`'s `Building`/`Stuff` |
+| a zone overlay | `DrawZoneCover` in the render model |
+
+So **S1 depends on PR #119 landing**, and its job changes from *build a zone system* to *put a
+second kind of zone on the one that exists*. `StorageSettings` sits where `Zone.Plant` sits.
+`DesignateTool.StorageZone = 7`. The sim-side storage work — the filter, the priority ladder, the
+categories, the destination rule, the three latent faults — is untouched by this and is still the
+bulk of S1.
+
+**The zone-look decision is superseded and needs re-deciding.** Decision 6 said *border always,
+fill when relevant*. But a growing zone is drawn by `DrawZoneCover` as **the ground's own mesh
+redrawn over itself, draped to the relief field and lifted a mark's height**, and that mechanism
+cost two rounds of owner screenshots to arrive at — a flat plate at cell-centre height *"isn't
+flush… thicker borders, gaps, part missing… not uniform from different angles"*. A storage zone
+that draws itself a different way would be two answers to one question, which is the fault
+`docs/bug-patterns.md` catalogues first. **Recommendation: storage reuses `DrawZoneCover` with its
+own tint, and decision 6 is withdrawn.**
+
+**One rule, two owners — the open question.** Zone membership, merge-on-touch and split-on-remove
+would exist twice: once in `GrowingZones`, once in `StorageZones`. That is the exact shape of the
+catalogue's commonest fault. Extracting a shared substrate is the right answer and it edits a
+feature that has just merged and just been played. Owner's call; see §Still to decide.
+
 ## The load-bearing architectural choice
 
 **A storage unit holds an inventory; it does not put extra stacks in a cell.**
@@ -77,6 +124,8 @@ the `HopPriceHasOneOwnerTests` lesson applied here: two owners of one rule disag
 ---
 
 ## S1 — `U30` Zones and the storage control
+
+**Blocked on PR #119 merging.** See above.
 
 ### Simulation
 
@@ -179,7 +228,7 @@ priority ladder, the preset masks, and the rejected alternatives.
 
 ---
 
-## S2 — `U46` Storage units
+## S2 — `U51` Storage units
 
 - `BuildingHandle.Crate = 6` (`Sim.Contracts/Catalogue.cs:122`) — append-only, handle order is a
   save contract, per the note at `Catalogue.cs:152`.
@@ -214,7 +263,7 @@ priority ladder, the preset masks, and the rejected alternatives.
 
 ---
 
-## S3 — `U47` Haul urgently
+## S3 — `U52` Haul urgently
 
 - `DesignationKind.HaulUrgent = 4` in `Designations/DesignationGrid.cs:14`. **Reuse the
   designation layer** — it already has the dense-byte + sorted-sparse-list shape, saves, hashes,
@@ -286,3 +335,12 @@ Each branch ends with the handover `CLAUDE.md` requires: the full path, the bran
 Synty is junctioned, then the **what changed** table and the **what to test** table — the latter
 holding only questions a person at the keyboard can answer, each with what a wrong answer looks
 like.
+
+## Still to decide (2026-09-20)
+
+| # | Question | Recommendation |
+|---|---|---|
+| A | **Merge order.** S1 needs PR #119's zone substrate. Wait for it, or build storage's own and let #119 rebase? | **Wait.** #119 is in review, played and fixed six times; storage duplicating its zone code would guarantee the two drift. |
+| B | **One substrate or two?** Extract a shared `CellZones` from `GrowingZones`, or give storage its own copy of the proven shape? | **Extract**, in S1, immediately after #119 merges — `docs/bug-patterns.md` names "one rule with two owners" as the project's commonest fault, and merge-on-touch in two copies is precisely that. The cost is editing a feature that has just landed. |
+| C | **Decision 6, withdrawn.** Does a storage zone draw as `DrawZoneCover` with its own tint? | **Yes.** The border-and-fill overlay was proposed before this plan knew `DrawZoneCover` existed, and a second way of drawing a zone re-opens a question the owner already closed with screenshots. |
+| D | The five priority names, and the six item categories. | Unchanged from the interview; still awaiting veto. |
