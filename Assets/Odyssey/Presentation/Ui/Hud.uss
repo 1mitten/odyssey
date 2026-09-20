@@ -530,6 +530,74 @@
     --glyph-color: #e64a38;
 }
 
+/* ---------------------------------------------------------------- A6 events
+
+   Under the alerts in the same column, built to the same row: an event is a fact that stays
+   until dismissed where an alert is a condition that clears itself (design 23 §5), so it is a
+   second panel with its own model rather than a fourth kind of alert. Its own class names,
+   not .alert reused, because the PlayMode gate counts .alert rows to model the alerts panel
+   and an event row wearing that class would be counted twice. */
+.bulletins__rows { margin-top: 9px; margin-bottom: -4px; }
+
+.bulletin {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-left: 4px;
+    padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
+}
+
+.bulletin:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.bulletin__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.bulletin__text {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-grow: 1;
+    align-items: center;
+    overflow: hidden;
+}
+
+.bulletin__title {
+    color: #eef3f6;
+    white-space: nowrap;
+}
+
+.bulletin__stamp {
+    color: rgba(255, 255, 255, 0.60);
+    white-space: nowrap;
+    margin-left: 6px;
+}
+
+.bulletin__dismiss {
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: link;
+    border-radius: 2px;
+}
+
+.bulletin__dismiss:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.bulletin__dismiss:hover > .hud-glyph {
+    --glyph-color: #e64a38;
+}
+
 /* ---------------------------------------------------------------- the right-hand gutter
 
    One column against the right edge holding the depth rail and, under it, the orders strip

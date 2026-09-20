@@ -1,0 +1,211 @@
+# 23 — Events and the storyteller
+
+Owner, 2026-09-20: *"A world event will happen and we should start with something that we can
+invoke [from] the debug menu but there are factors to when a world event might occur — align it
+with RimWorld … Regular / weekly / adhoc / condition based … periodic, one off or something else …
+positive or negative (depending on the story teller — we may need to plan this out and seam this
+off) … could offer a reward on completion but the event itself might be an award … displayed as
+an alert (and in relevant activity logs etc). Let's start with a simple event system. A random
+drop from the sky … a meal item drop … simply a case of hauling that item."*
+
+The research behind this is `docs/research/a-11-storyteller-incidents.md`. The reasoning for each
+decision below is in `docs/journal.md` under the same date.
+
+## 1. Two layers, one built
+
+The reference separates **what can happen** from **when it happens**, and so does this.
+
+| Layer | What it holds | State on 2026-09-20 |
+|---|---|---|
+| **Incident** | a Def (what it is, its gates, its worker's parameters), a worker (`CanFireNow` / `TryExecute`), the ledger (what has happened), the skyfallers (what is in the air), the Events panel | **Built.** `Assets/Odyssey/Sim/Events/`, `Assets/Odyssey/Hud/BulletinModel.cs` |
+| **Storyteller** | which incident fires when: generators with their own clocks, a favourability weighting, a points budget | **Not built.** Owner's decision: debug row only for now. The gates are on the Def and the ledger keeps the refire memory, so a scheduler reads and does not restructure |
+
+The one door between them is `Incidents.TryFire(IncidentParms)`. The debug menu goes through it
+today; a storyteller and a quest go through it tomorrow. An earned event and a forced one cannot
+behave differently, because they are the same call.
+
+## 2. The vocabulary, mapped
+
+The owner's cadence words against what the reference actually does. Nothing in the reference fires
+on a calendar date; that is the one mismatch, and it is deliberate on their side — an event the
+player can schedule around is an event with no tension.
+
+| Owner's term | What it becomes | Built? |
+|---|---|---|
+| Regular | a **mean-time-between** generator: "about every N days", sampled stochastically each storyteller tick | no |
+| Periodic | an **on/off cycle** generator: on-days, off-days, one or two fires per on-phase, a minimum spacing. The threat pacer | no (M6) |
+| Ad hoc | a **random-bag** generator with an anti-drought rule (N quiet days force the next) | no |
+| Condition-based | two things: **gates** on every Def (earliest day, minimum refire, colonists) and **triggered** generators that fire on a player action | gates yes, unread; triggers no |
+| One-off | a Def with `maxFires = 1` | the field, yes |
+| Weekly | **not recommended.** A `scheduled` generator kind is the seam if the owner wants a festival; it is reserved, not built | no |
+| Positive / negative | `favourability` on the Def: Good, Neutral, Bad. A storyteller weights by it; the panel colours by it; the chime picks by it | yes |
+| Reward on completion | a **quest**: offer → accept → timer → completion → reward pool, wrapping incident workers. A different thing from an incident and deferred until incidents feel right | no |
+| The event is the reward | an incident with `favourability = Good`. The supply drop | yes |
+
+## 3. What fires today, and what does not
+
+The debug menu's *Invoke event* row submits `IntentKind.InvokeIncident` with the supply drop's
+index. The handler ignores every gate on the Def — earliest day, refire, weight, colonist count —
+because a debug row exists to make the thing happen. It honours only the worker's own
+`CanFireNow`, which for the drop asks whether any column on the board can take a landing; a board
+that cannot answers `NotPermitted`, which the composition root reports.
+
+Nothing else fires anything. The soak runs, the goldens and the headless days all run with the
+events attached and none firing, which is why they still agree with themselves.
+
+## 4. The Def
+
+`Assets/Odyssey/Defs/Core/Events/Incidents.xml`, one Def. Read by `IncidentContent.FromDefs`,
+which binds the item name to its `ItemIndex` and the worker name to its class at load, so a typo
+in either is a load error with a file and a line.
+
+| Field | Supply drop | Read by |
+|---|---|---|
+| `bulletinKey` | `ui.bulletin.supplydrop` | the Events panel, through `IncidentLabels`; the wiki, one day, through the generator |
+| `favourability` | Good | the panel's ink and chime; a storyteller later |
+| `category` | Misc | a storyteller later |
+| `worker` | `SupplyDrop` | `IncidentWorkerRegistry`, at load |
+| `earliestDay`, `minRefireDays`, `weight`, `minColonists`, `maxFires` | 1, 2, 100, 1, 0 | **nothing yet.** Pinned by the fingerprint so a scheduler reads what was written |
+| `item`, `stackMin`, `stackMax` | `Item_Meal`, 10, 20 | the worker |
+| `fallTicks` | 120 | the worker: two seconds at 60 ticks a second |
+
+`IncidentContent.Order` is the handle order, as `WorldContent.TerrainOrder` is for terrain:
+`IncidentHandle` in the contracts assembly and `IncidentLabels.Keys` in the interface repeat it,
+and `IncidentContentTests` and `RegistryTests` hold the three to one length. The interface's key
+table is held to the Defs' `bulletinKey` values by a test that reads the XML, on the bargain
+`JobLabels.CarryingAspect` already makes: the interface cannot import the Def, so two spellings
+of one list are tied together by a test rather than a shared file.
+
+## 5. The ledger and the Events panel
+
+**Alerts and bulletins stay separate** (`10-ui-panel-catalogue.md` A6). An alert is a condition
+the panel re-derives from the frame four times a second and that clears itself; a bulletin is an
+event, a fact once it has happened, that stays until the player dismisses it. The alert model
+rebuilds its rows from scratch on every refresh, which is right for conditions and would wipe an
+event on the next refresh — so the Events panel is a second model, `BulletinModel`, and not a
+fourth key in the first.
+
+**The ledger is the sim's memory.** `IncidentLedger` is append-only: `(id, tick, incident,
+cell)`, hashed and saved. Ids count from one and are never reused. From the entries it derives,
+and rebuilds on load, the last tick and the count each incident has fired — the storyteller's
+refire gate, one lookup. The ledger publishes its newest sixteen entries each frame
+(`BulletinView.PublishedTail`); the whole ledger is the History screen's business and arrives by
+another channel when that panel exists.
+
+**The edge is the id.** A one-tick flag would be missed by a panel refreshing at four hertz while
+the world ticks at sixty. The model keeps the highest id it has seen and treats anything above it
+as new, so a row can never be missed and never raised twice. The first refresh after a world
+arrives *primes*: whatever the tail holds becomes history on the panel without announcing itself,
+so loading a save does not chime a dozen old events. Dismissals are view state and are not saved;
+a load shows the tail as history again.
+
+**The row.** Icon by key, the incident's name in bold in the favourability's ink (Good green, Bad
+red, Neutral accent), the stamp in dim ink — "Day 3 · 14h", the day as the clock counts it — and a
+dismiss cross. Clicking the row moves the slice to the event's layer, picks the cell and jumps
+the camera: a drop on a rooftop is not looked for underground. Six rows at most; older ones fall
+off the panel and stay in the ledger. The panel is hidden when empty, exactly as the alerts panel
+is, so a colony nothing has happened to pays nothing against the coverage ceiling.
+
+**The chime rides the row**, as an alert's does: `AlertHappy` for a gift, `AlertNegative` for a
+blow, `AlertNormal` otherwise, once per refresh however many arrived together. A clone with no
+audio catalogue gets silence.
+
+**The History screen is the next unit.** `ui.tab.archive` ("History", F9) is reserved in the
+registry and `HudCommands`, B16 in the panel catalogue names it, and the ledger is its store. It
+needs a paged or whole-ledger channel and a virtualised list; nothing in this unit anticipates its
+shape beyond keeping every entry.
+
+## 6. The skyfaller
+
+**The flight is simulated; only the drawing is not.** `Skyfallers` holds what is in the air —
+incident, item, stack, landing cell, launch tick, land tick — ticks every tick, and on the land
+tick spawns the item through `NearestCellWithSpace` like every other arrival. The thing does not
+exist until then: nothing can haul, eat, count or reserve it in flight, and a save taken mid-air
+lands it on the tick an unsaved run would have (`SkyfallerRoundTripTests`). A load that finds no
+room within three cells when it comes down is lost and counted; the cell had room at launch, so
+this is the corner where a hauler set something down there during the two seconds.
+
+**The landing rule** is `CellGrid.SkyLanding(x, z)`: walk down from the top of the world to the
+first cell that is not open air — has a floor, is solid, holds an edifice, or is deep water —
+and land there if it can be stood in, else refuse the column. A rooftop slab is met first and is
+walkable, so a drop lands on the roof and never in the room under it. A wall's own cell, deep
+water and bare rock are met first and are not walkable, so the column is refused rather than the
+search slipping past them to the floor beside a wall's foot or the bed under a lake — the two
+answers `NearestWalkableInColumn` would give from the top and this exists to refuse. A tree's cell
+is met first and *is* walkable (a tree blocks nothing), so a drop lands under the tree where
+felled wood already does.
+
+**Anywhere on the board** (owner, 2026-09-20), uniform, which is the reference's own behaviour.
+Up to sixty-four columns are drawn before the worker gives up. The consequence is stated rather
+than softened: most drops land out of sight, the Events row's jump is how a player finds one, and
+a drop the colony cannot reach lies where it fell — no haul job is ever generated for a cell no
+stockpile can be reached from. If that proves maddening the knob is one line in
+`SupplyDropWorker`: re-draw until the landing is hauler-reachable from the colony.
+
+**A fact about the moment.** Both draws — the column and the stack — mix the tick in
+(`IncidentPurpose.Landing`, `IncidentPurpose.Payload`), for the reason `DeconstructRefund` gives:
+keyed on the seed alone every drop in a world would land on the same cell with the same stack.
+Both salts are SHA-256 round constants, the sixth and seventh outside the spent xxHash family.
+
+**The drawn half** is `FallArc`: the thing starts `(layers − landing) × 3 m + 6 m` above its
+landing floor — above the top of the world whatever it lands on, so a rooftop drop and a meadow
+drop both come out of the sky — and its height falls as the square of the progress, because a
+fall gathers speed and a thing sliding down at one rate reads as a lift. `ChunkRenderer` draws it
+into the same instanced batch as the pile it will join, at the frame's own alpha, so a paused
+world holds it still. A flat pad is drawn on the landing cell for the whole flight so a player
+who jumped to the event has something to look at; it is a cursor, not a thing, and the first
+thing to drop if it reads as clutter. `AudioDirector` plays `odyssey.sound.drop.land` at the cell
+on the first frame a thing that was in the air is not — a sound named and in no catalogue yet,
+which the director declines silently until the owner adds the row.
+
+## 7. Save, hash and the goldens
+
+The ledger and the skyfallers are two new `ISaveable` sections, **appended** to
+`ColonyWorld.SaveComponents` after the pawn seeds. Sections are length-prefixed, so a save from
+before events has neither and loads with an empty ledger and nothing in the air; no format bump.
+Both are hashed: history is state, and a flight that was not would be a load with the meals gone.
+
+All six golden numbers moved, for the dullest reason there is: the hash sees four more integers
+before the first tick, all zero. The control is the shape of the failure — all three `Generated`
+values moved together, including the barren meadow's, which no gameplay change has ever touched
+— and the paragraph is in `Golden.cs`.
+
+## 8. Deferred, and where each attaches
+
+| Deferred | Attaches at |
+|---|---|
+| A storyteller: generators (mean-time-between, cycle, random-bag, triggered; `scheduled` reserved) and a Def naming them | an `IWorldSystem` in the world phase that reads the Defs' gates and `IncidentLedger.LastFiredTick`, and calls `Incidents.TryFire` |
+| A points budget, adaptation, population intent | `IncidentParms.Points`, unread today |
+| Conditions (timed, map-wide, no entities) | a second worker family; the ledger already records them |
+| Quests (reward on completion) | a wrapper that calls incident workers; not an incident |
+| The History screen (F9, B16) | reads the ledger; needs a paged channel and a virtualised list |
+| A second event | a Def, a worker, a row in `IncidentContent.Order`, `IncidentHandle` and `IncidentLabels.Keys`, and a registry key. The debug row becomes a picker |
+| A pod that opens, debris to haul | a second skyfaller kind; the meals fall bare by owner choice |
+| Landing reachability | one line in the worker, if "anywhere" proves maddening |
+
+## 9. Invited tuning and open questions
+
+Nobody has pressed Play on any of this. The numbers below were chosen, not measured.
+
+- **Two seconds** in the air. Long enough to be seen, short enough not to be waited for; both are
+  guesses.
+- **Ten to twenty meals**: a little under to a full stack, so a drop is one haul.
+- **The pad** on the landing cell: a cursor drawn in the stand-in material. Helps or clutters.
+- **"Anywhere"**: whether finding a drop through the Events row is a pleasure or a chore.
+- **The chime**: `AlertHappy` for a gift; whether it reads as good news or as an alarm.
+- **Six rows** on the panel; whether the panel wants to be shorter, or to collapse to a count.
+
+## 10. By-hand test procedure
+
+1. Press backtick, click *Invoke event*, unpause. An Events panel appears under the alerts
+   (or under the clock) with one row, "Supply drop · Day 1 · 12h" in green, and the happy chime
+   sounds once.
+2. Click the row. The slice moves to the landing layer and the camera jumps to a cell with a flat
+   pad on it. Within two seconds a ration pack comes down on to the pad and the pad goes.
+3. Wait. A colonist walks out, picks the pack up and carries it to the stockpile. If nobody
+   comes, the landing is somewhere no stockpile can be reached from — the "anywhere" case.
+4. Click *Invoke event* while paused. Nothing happens until you unpause, and then everything
+   above does; the tooltip says so.
+5. Invoke, then save within the two seconds. Load. The pack still comes down, on the same cell.
+6. Dismiss the row with its cross; invoke again; the new row arrives and the old does not return.
+   Load a save with events in it: the rows are there, and nothing chimes.

@@ -26,7 +26,7 @@ because the two cannot be open together.
 | Developer overlay | Toggles the frame-time/draw-call readout, drawn at `fontSize` 56 (roughly six times the original default) and anchored to the bottom of the screen rather than the top-left, so it clears the HUD's top-left ledger regardless of size | `SettingsDirector.DeveloperOverlay` (unchanged; only the row moved) |
 | Spawn colonist | Adds one colonist near the camera, with no scenario and no starting kit | `IntentKind.SpawnPawn` → `PawnRegistry.HandleSpawnPawn` |
 | Give wood / Give stone / Give food | Adds 50 units of the resource near the camera | `IntentKind.GiveResource` → `ColonyItems.HandleGiveResource` |
-| Invoke event | Disabled, with a tooltip explaining why | nothing — see below |
+| Invoke event | Fires the supply drop (`docs/design/23-events-and-storyteller.md`): a stack of meals falls from the sky somewhere on the board, an Events row appears, and the colony hauls it. Lands on the next tick, so unpause to see it | `IntentKind.InvokeIncident` → `Incidents.HandleInvoke` → `SupplyDropWorker` |
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)
 
@@ -58,13 +58,13 @@ registered in `ColonyComposition.AddColony`, the fourth and fifth intent handler
 
 ## What is deliberately not on it
 
-**A real "invoke event".** There is no repeatable, triggerable event system anywhere in the sim —
-only `ScenarioDef`, which acts once at tick zero and never again. The strings this project already
-has for a raid (`ui.alert.raid`, `ui.bulletin.raidincoming`) are unused HUD labels sitting in the
-registry with nothing behind them. Building an event system is a feature with its own design
-questions (what events exist, how they are weighted, whether they escalate) — not something a debug
-menu should invent as a side effect of wanting a test button. The row stays visible and disabled so
-the gap is legible rather than silently missing.
+**An event picker.** "Invoke event" fires the one incident there is. It stood disabled from
+2026-09-17 to 2026-09-20 because there was no event system for it to fire, and building one as a
+side effect of wanting a test button was the wrong order; the event system is design 23 and the
+row now goes through the same door a storyteller will. When there is a second incident the row
+becomes a picker. It ignores the Def's gates on purpose — a debug row exists to make the thing
+happen — and honours only the worker's own "can this fire at all" answer, so a board with nowhere
+to land a drop refuses with `NotPermitted` rather than pretending.
 
 **Kill, damage or heal a colonist.** `Pawn` has no health, injury or downed model at all — Need_Food
 hitting zero is a mood penalty, never a death. A debug "kill" today could only mean "delete the pawn
@@ -91,7 +91,9 @@ usable at the keyboard. On next Play:
 4. Hold the spawn row down for twenty colonists and watch the console. One refusal should print
    one line saying `1 x`; a four-figure count means the rejection list has stopped being cleared
    again.
-5. Click "Invoke event". Confirm nothing happens and the tooltip explains why.
+5. Click "Invoke event", unpause. Confirm an Events panel appears under the alerts with a "Supply
+   drop" row, that clicking the row jumps the camera to a cell with a pad on it, and that a
+   ration pack comes down on to it within two seconds (`23-events-and-storyteller.md` §10).
 6. Open Settings while the debug menu is open, and vice versa. Confirm each closes the other rather
    than stacking.
 7. Judge whether the debug menu wants to look different from Settings at all — right now it is

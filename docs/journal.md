@@ -7353,3 +7353,62 @@ the verdict.
 `23-head-turning-and-gaze.md` also gained the `CLAUDE.md` pointer it never had — a design document
 with no row in the read-this table is one the next session does not find. `13-gestures.md` and
 `15-skills.md` are still in that state and are not fixed here.
+
+## 2026-09-20 — Events: the incident layer, and the storyteller that is deliberately not there
+
+The owner asked for a world-event system aligned with RimWorld's — cadence types (regular, weekly,
+ad hoc, condition-based; periodic or one-off), positive or negative by storyteller, rewards on
+completion or the event as the reward, shown as an alert and in an activity log — and to start
+with a meal dropping from the sky to be hauled. The result is `docs/design/23-events-and-storyteller.md`
+and the `EV` track. The research is `docs/research/a-11-storyteller-incidents.md`.
+
+**What the research settled.** The reference picks a category, then an incident by weight; its
+storytellers are a difficulty curve plus independent generators on their own clocks; every
+incident is a Def of gates plus a worker split into `CanFireNow` (cheap, side-effect-free) and
+`TryExecute` (does it), so one worker serves the storyteller, a quest and the debug menu. Nothing
+fires on a calendar date, which makes "weekly" the one owner term with no counterpart, and the
+reason is design intent rather than omission: a schedulable event is one the player prepares for
+perfectly. Reward-on-completion is a quest, a wrapper round incident verbs, not an incident.
+
+**Four decisions, the owner's.** The display is a new Events panel under the alerts, not a row in
+the alerts panel (the alert model rebuilds its rows from the frame every quarter second, which is
+right for a condition and would wipe an event on the next refresh — the design catalogue had ruled
+this in advance and was right). Firing is debug-only for now: no storyteller, but the gates are on
+the Def and the ledger keeps the refire memory, so the scheduler reads rather than restructures.
+The landing is anywhere on the board, uniform, which is the reference's own behaviour; I said what
+it costs — most drops land out of sight and an unreachable one lies there — and named the one-line
+knob if it maddens. The ledger lives in the sim now, saved and hashed; the History screen (F9,
+reserved since M1) is the next unit.
+
+**What was built.** `IncidentDef` and `IncidentContent` (a fourth content family, in
+`ContentPack.Register`), `IncidentWorker` discovered by name the way work givers are,
+`SupplyDropWorker`, `Skyfallers` (the flight is simulated: nothing exists until it lands, and a
+mid-air save lands on the promised tick), `IncidentLedger` (append-only, monotonic ids, the tail
+published), `Incidents` with `Attach` and the one door `TryFire`; `IntentKind.InvokeIncident`;
+`CellGrid.SkyLanding`; `BulletinView` and `FallingView` channels; `BulletinModel` and the Events
+panel; `FallArc` and `ChunkRenderer.RenderFalling`; `AudioDirector.StepLandings` for a sound the
+catalogue does not yet hold. The debug row that stood disabled since 2026-09-17 fires it.
+
+**The landing rule is the one that took thought.** `NearestWalkableInColumn` from the top would
+search past a wall to the floor beside its foot and past deep water to the bed beneath it — the
+two answers a drop "through open sky" must refuse — and `FirstFloorAtOrBelow` is happy to stop
+under a ceiling. `SkyLanding` walks down to the first cell that is not open air and lands only if
+that cell can be stood in; a rooftop slab qualifies, a wall, a lake and bare rock do not, and a
+tree's cell does, because a tree blocks nothing and felled wood already lands there. Seven tests
+pin it.
+
+**What the hash saw.** All six golden numbers moved before a single tick ran: two new components
+hash four zero integers. The control is that all three `Generated` values moved together,
+including the barren meadow's, which no gameplay change has ever touched. Re-baked once, with
+the paragraph in `Golden.cs`.
+
+**Two things found on the way.** `AlertModel.IconKeys` said it existed "for the registry test"
+from the day it was written and no such test existed; it does now, beside the incident one. And
+the interface's key table for incidents cannot import the Def, so it is held to the Defs'
+`bulletinKey` values by a test that reads the XML — the `CarryingAspect` bargain, made a second
+time. `ui.bulletin.` joined the enforced namespaces without finding a duplicate literal.
+
+**Owed.** The Unity tiers on this branch, the play day (design 23 §9, §10), the History screen,
+a second incident to turn the debug row into a picker, and the storyteller when the owner wants
+events that arrive unasked. The catalogue row for `odyssey.sound.drop.land` is the owner's, in the
+editor; the director declines it silently until then.

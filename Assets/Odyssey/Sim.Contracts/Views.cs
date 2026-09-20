@@ -304,6 +304,90 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One entry of the incident ledger: an event that happened, published so the interface can
+    /// say so. The Events panel and, later, the History screen read these (design 23 §5).
+    ///
+    /// <para><b>The id is the edge.</b> A one-tick "something happened" flag would be missed by a
+    /// panel that refreshes four times a second while the world ticks sixty (see
+    /// <see cref="PawnView.GestureSerial"/> for the general rule). Ids are monotonic — the ledger
+    /// only ever appends — so a reader keeps the highest it has seen and treats anything above it
+    /// as new. The simulation publishes the ledger's tail, <see cref="PublishedTail"/> entries at
+    /// most, so a frame is bounded whatever the colony's history; the whole ledger is the
+    /// archive's business and arrives by another channel when that panel exists.</para>
+    ///
+    /// <para><b>Not state.</b> A row here is a report of state the ledger owns, saved and hashed
+    /// there; this struct is neither, exactly as <see cref="PawnAspect"/> is neither.</para>
+    /// </summary>
+    public readonly struct BulletinView
+    {
+        /// <summary>How many of the newest entries a frame carries.</summary>
+        public const int PublishedTail = 16;
+
+        /// <summary>The ledger's own number for this entry, from 1, never reused.</summary>
+        public readonly int Id;
+
+        /// <summary>Which incident, as an <see cref="IncidentHandle"/> value.</summary>
+        public readonly int IncidentDef;
+
+        /// <summary>Where it happened — the cell to jump the camera to.</summary>
+        public readonly CellRef Cell;
+
+        /// <summary>When it happened, in ticks, for the row's own timestamp.</summary>
+        public readonly int Tick;
+
+        /// <summary>
+        /// Whether it was a gift, a blow or neither: 0 neutral, 1 good, 2 bad, the values of the
+        /// simulation's own favourability enum. Carried as a number so this assembly does not
+        /// learn the enum — it drives the row's ink and its chime and nothing else.
+        /// </summary>
+        public readonly int Favourability;
+
+        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0)
+        {
+            Id = id;
+            IncidentDef = incidentDef;
+            Cell = cell;
+            Tick = tick;
+            Favourability = favourability;
+        }
+    }
+
+    /// <summary>
+    /// Something in the air on its way down: a skyfaller (design 23 §6). The simulation owns the
+    /// flight — when it was launched, when it lands, where — and presentation only draws where
+    /// along that line the current frame falls, exactly as it draws a pawn between two cells.
+    ///
+    /// <para>The thing does not exist as a <see cref="ThingView"/> until it lands, so nothing can
+    /// haul, eat or count it in flight, and a save taken mid-air lands it on the same tick it
+    /// would have landed anyway.</para>
+    /// </summary>
+    public readonly struct FallingView
+    {
+        /// <summary>What is falling, as an <see cref="ItemHandle"/> value.</summary>
+        public readonly int ThingDef;
+
+        public readonly int Stack;
+
+        /// <summary>The cell it will land in — the topmost walkable cell of its column.</summary>
+        public readonly CellRef Landing;
+
+        /// <summary>The tick it was launched on, from which the descent is measured.</summary>
+        public readonly int LaunchTick;
+
+        /// <summary>The tick it lands on and becomes a thing.</summary>
+        public readonly int LandTick;
+
+        public FallingView(int thingDef, int stack, CellRef landing, int launchTick, int landTick)
+        {
+            ThingDef = thingDef;
+            Stack = stack;
+            Landing = landing;
+            LaunchTick = launchTick;
+            LandTick = landTick;
+        }
+    }
+
+    /// <summary>
     /// One number a feature has published about one pawn, under a name it chose itself.
     ///
     /// <para><b>What this is for.</b> <see cref="PawnView"/> is a struct every consumer reads, in
@@ -582,6 +666,8 @@ namespace Odyssey.Sim.Contracts
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
+        BulletinView[] _bulletins = Array.Empty<BulletinView>();
+        FallingView[] _falling = Array.Empty<FallingView>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -639,6 +725,21 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>How many cells the interface asked about this frame. Zero or one today.</summary>
         public int CellDetailCount { get; private set; }
+
+        /// <summary>How many ledger entries this frame carries: the newest, up to <see cref="BulletinView.PublishedTail"/>.</summary>
+        public int BulletinCount { get; private set; }
+
+        /// <summary>How many things are in the air right now. Nearly always zero.</summary>
+        public int FallingCount { get; private set; }
+
+        /// <summary>
+        /// The newest incidents, oldest first, so a reader walking forward meets ids in ascending
+        /// order. See <see cref="BulletinView"/> for the edge rule.
+        /// </summary>
+        public ReadOnlySpan<BulletinView> Bulletins => new ReadOnlySpan<BulletinView>(_bulletins, 0, BulletinCount);
+
+        /// <summary>Everything in the air, in launch order. See <see cref="FallingView"/>.</summary>
+        public ReadOnlySpan<FallingView> Falling => new ReadOnlySpan<FallingView>(_falling, 0, FallingCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -746,6 +847,20 @@ namespace Odyssey.Sim.Contracts
 
             AspectCount = 0;
             CellDetailCount = 0;
+            BulletinCount = 0;
+            FallingCount = 0;
+        }
+
+        internal void AddBulletin(in BulletinView view)
+        {
+            Grow(ref _bulletins, BulletinCount + 1);
+            _bulletins[BulletinCount++] = view;
+        }
+
+        internal void AddFalling(in FallingView view)
+        {
+            Grow(ref _falling, FallingCount + 1);
+            _falling[FallingCount++] = view;
         }
 
         internal void AddPawn(in PawnView view)

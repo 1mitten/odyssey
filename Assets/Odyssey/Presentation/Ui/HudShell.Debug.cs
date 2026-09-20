@@ -22,9 +22,9 @@ namespace Odyssey.Presentation.Ui
     /// Settings' Interface tab rather than duplicated (<c>EveryLiveToolIsDrawnSomewhere</c> — a
     /// control drawn in two places has already cost this project twice). Two cheats that wrap sim
     /// APIs that already exist and touch no new mechanics: spawn a colonist, and give a fixed amount
-    /// of a common resource. A disabled "Invoke event" row stands in for the row a real event system
-    /// would earn — none exists in the sim yet, and building one is a feature, not a debug
-    /// shortcut.</para>
+    /// of a common resource. And "Invoke event", which fires the supply drop (design 23) through
+    /// the same door a storyteller will use: the row that stood disabled for three days while the
+    /// event system it needed was a feature and not a debug shortcut.</para>
     /// </summary>
     public sealed partial class HudShell
     {
@@ -50,11 +50,12 @@ namespace Odyssey.Presentation.Ui
             _debugPanel.Add(DebugActionRow(GiveFoodKey, "Adds 50 meals near the camera",
                 () => GiveResource(ItemIndex.Meal)));
 
-            VisualElement eventRow = DebugActionRow(InvokeEventKey,
-                "No repeatable event system exists yet — only a one-time scenario at tick zero",
-                onClick: null);
-            eventRow.AddToClassList("debug__row--off");
-            _debugPanel.Add(eventRow);
+            // The one incident there is, fired regardless of its gates (design 23 §3). It lands
+            // on the next tick, like the two grants above, so a click while paused shows nothing
+            // until the clock runs; the tooltip says so.
+            _debugPanel.Add(DebugActionRow(InvokeEventKey,
+                "Drops a stack of meals from the sky somewhere on the board. Lands on the next tick, so unpause to see it",
+                InvokeSupplyDrop));
 
             _hud.Add(_debugPanel);
         }
@@ -117,6 +118,13 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null || _directors == null) return;
             world.Intents.Submit(new Intent(IntentKind.SpawnPawn, DebugAnchorCell(world)));
+        }
+
+        void InvokeSupplyDrop()
+        {
+            var world = _boot!.World;
+            if (world == null || _directors == null) return;
+            world.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, IncidentHandle.SupplyDrop));
         }
 
         void GiveResource(int itemIndex)

@@ -160,6 +160,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 | **CL** the carried load | **Merged 2026-09-19, PR #129**, played once, three faults fixed (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
+| **EV** events | **Built on `claude/events-system`, 2026-09-20** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Invoke event* row drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug row only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. |
 | **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
@@ -187,6 +188,7 @@ this file.
 | Naming a colonist, the setup page | `docs/design/19-world-setup.md` §10 |
 | What a colony starts with | `docs/design/22-starting-kit.md` |
 | Growing zones, crops | `docs/design/22-growing.md` (arrives with PR #119) |
+| Events, incidents, the supply drop, the Events panel | `docs/design/23-events-and-storyteller.md` |
 | Text entry taking the keyboard | `docs/design/09-ui-and-input.md` §6a |
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
@@ -292,21 +294,14 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **753 Sim + 449 Hud** (2026-09-19, dotnet 8.0.131 in the remote container); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **780 Sim + 461 Hud** (2026-09-20, the events branch; 753 + 449 on 2026-09-19); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last recorded 2026-09-19 on
-  the pawn-avoidance work that is `main`'s tip: EditMode **1,872 total, 1,858 passed, 0 failed**;
-  PlayMode **82 total, 75 passed, 0 failed** — 75 rather than 77 because that run was in a scratch
-  worktree with no Synty junction, so `AvatarSheetTests`' two art cases skipped (`docs/journal.md`).
-  The 1857/1843 previously on this line was the alert-chimes run, two PRs earlier.
-  `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
-  `TheRosterBarFollowsTheColonyIntoANewSession`.
-  PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
-  **Its previously recorded 74 was wrong, not superseded**: nothing under
-  `Assets/Odyssey/Tests/PlayMode` had changed since the commit it was recorded against, no PlayMode
-  test is parameterised, and this branch added none at the point it was re-measured at 77. Three
-  cases were miscounted or mis-transcribed into this file. EditMode's 1638 was right.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
+  branch (`claude/events-system`): EditMode **1,945 total, 1,931 passed, 0 failed**; PlayMode **82 total,
+  77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
+  The remainder are `[Explicit]` or ignored. The previous run, 2026-09-19 on the pawn-avoidance work at
+  `main`'s tip, was EditMode 1,872 / 1,858 and PlayMode 82 / 75 (two art cases skipped for want of a Synty junction).
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
@@ -343,6 +338,10 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 
 ### Waiting on the owner
 
+- **Nobody has pressed Play on the supply drop** (EV, `claude/events-system`): whether two seconds
+  in the air reads as a fall or a slide, whether the pad on the landing cell helps or clutters,
+  whether the Events row reads as news or as an alarm, and whether "anywhere on the board" is a
+  pleasure or a chore to chase (`docs/design/23-events-and-storyteller.md` §9, §10).
 **The list lives in `docs/plans/playtest-queue.md` now** (2026-09-19): a finished piece of work
 adds a row there and a verdict closes one. It had grown to 27 open items and 134 lines here, in the
 file every session reads first. Twenty-seven unplayed changes against a handful of playtests a day
@@ -350,6 +349,10 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 
 ### Known gaps
 
+- **No storyteller: nothing fires an event but the debug menu** (owner's call, 2026-09-20). The
+  incident Defs carry their gates and the ledger keeps the refire memory, so a scheduler reads
+  rather than restructures; the History screen (F9) is the other half still owed
+  (`docs/design/23-events-and-storyteller.md` §8).
 - **No health model**, so fall damage is designed with a number and nothing to apply it to, a
   colonist rides a collapsing floor down unharmed, and the debug menu has no kill or heal.
 - **No fog of war**, so a sealed cavern is visible if the player scrolls the layer down.

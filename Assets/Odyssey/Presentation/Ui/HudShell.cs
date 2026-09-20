@@ -65,6 +65,7 @@ namespace Odyssey.Presentation.Ui
         readonly LayerRulerModel _ruler = new LayerRulerModel();
         readonly LedgerModel _ledger = new LedgerModel();
         readonly AlertModel _alerts = new AlertModel();
+        readonly BulletinModel _bulletins = new BulletinModel();
 
         /// <summary>Which alert rows have already chimed. Beside the model rather than in
         /// the audio director because the panel is what knows an alert has appeared.</summary>
@@ -155,6 +156,12 @@ namespace Odyssey.Presentation.Ui
         VisualElement _alertsPanel = null!;
         VisualElement _alertRows = null!;
         readonly List<AlertRowView> _alertViews = new List<AlertRowView>();
+
+        // ---- events (A6)
+        VisualElement _bulletinsPanel = null!;
+        VisualElement _bulletinRows = null!;
+        readonly List<BulletinRowView> _bulletinViews = new List<BulletinRowView>();
+        int _bulletinsDrawn = -1;
 
         // ---- depth rail (A11)
         VisualElement _railCells = null!;
@@ -365,6 +372,17 @@ namespace Odyssey.Presentation.Ui
             public PawnId TargetPawn;
             public CellRef? TargetCell;
             public string? LastLead;
+        }
+
+        class BulletinRowView
+        {
+            public VisualElement Root = null!;
+            public IconBadge Icon = null!;
+            public Label Title = null!;
+            public Label Stamp = null!;
+            public VisualElement Dismiss = null!;
+            public int Id;
+            public CellRef TargetCell;
         }
 
         class RailCellView
@@ -738,6 +756,7 @@ namespace Odyssey.Presentation.Ui
                 _mid = 0f;
                 RefreshStores();
                 RefreshAlerts();
+                RefreshBulletins();
                 RefreshSpeed();
                 RefreshBuildPalette();
             }
@@ -770,6 +789,7 @@ namespace Odyssey.Presentation.Ui
             RefreshInspect();
             RefreshStores();
             RefreshAlerts();
+            RefreshBulletins();
             RefreshSpeed();
             RefreshClock();
             RefreshRail();

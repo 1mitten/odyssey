@@ -131,6 +131,7 @@ namespace Odyssey.Hud
             { "ui.bulletin.refugee", "Refugee" },
             { "ui.bulletin.research", "Research complete" },
             { "ui.bulletin.salvage", "Salvage found" },
+            { "ui.bulletin.supplydrop", "Supply drop" },
             { "ui.bulletin.trader", "Trader" },
             { "ui.bulletin.wanderer", "Wanderer" },
             { "ui.bulletin.weather", "Weather" },

@@ -104,7 +104,7 @@ Enough for the vertical slice, in dependency order. Types marked ○ are defined
 | 19 | `DistrictDef` | Per-district material palette, damage intensity, salvage weighting |
 | 20 | `StrataDef` | What each underground layer band contains |
 | 21 ○ | `RecipeDef` | Bills: ingredient filter, work, products, counting mode — M5, shaped now because `StorageSettingsDef` shares its filter record |
-| 22 ○ | `IncidentDef` | Storyteller hooks — M6 |
+| 22 | `IncidentDef` | An event: registry key, favourability, category, worker name, the scheduler's gates (unread until a storyteller exists) and the worker's parameters. Built 2026-09-20, `23-events-and-storyteller.md` |
 
 `StorageSettingsDef` and `RecipeDef` deliberately share one **filter** record. The research found the reference does the same, and it is the right call: a stockpile filter and a bill ingredient filter ask identical questions, and one implementation means one set of bugs.
 

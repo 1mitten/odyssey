@@ -90,6 +90,13 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public ChunkGrid? Chunks { get; set; }
 
+        /// <summary>
+        /// The events (design 23), when the world has them. Null in a bare pawn fixture, exactly
+        /// as <see cref="Designations"/> is. Set by the composition root so that
+        /// <c>ColonyWorld</c> can list its save sections without a second wiring path.
+        /// </summary>
+        public Events.Incidents? Incidents { get; set; }
+
 
         /// <summary>The world being ticked, valid inside a pawn system's tick.</summary>
         public SimWorld? World { get; private set; }

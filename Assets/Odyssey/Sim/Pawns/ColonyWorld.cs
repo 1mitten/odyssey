@@ -63,6 +63,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>What the colony was given at the start, for a run's report to say so.</summary>
         public ScenarioDef Scenario { get; }
 
+        /// <summary>The events (design 23): the ledger, the air, and the door an incident fires through.</summary>
+        public Events.Incidents Incidents => Pawns.Incidents!;
+
         /// <summary>The job pipeline, for the per-def counters a soak run asserts on.</summary>
         public JobSystem Jobs { get; }
 
@@ -117,6 +120,12 @@ namespace Odyssey.Sim.Pawns
                 // here, and every restored colonist keeps the world seed — which is what that
                 // colony was.
                 new PawnSeedSection(pawns.Pawns),
+                // Appended, never spliced in: a section's place in this list is its place in the
+                // file, and an old save read against a new list would hand the wrong bytes to the
+                // wrong reader. Both are new sections, so a save from before events simply has
+                // neither and loads with an empty ledger and nothing in the air (design 23 §7).
+                pawns.Incidents!.Ledger,
+                pawns.Incidents!.Skyfallers,
             };
         }
 

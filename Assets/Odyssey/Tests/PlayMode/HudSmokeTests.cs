@@ -70,9 +70,11 @@ namespace Odyssey.Tests.PlayMode
                 // "debug" is the debug menu (2026-09-17), backtick's own panel now rather than a
                 // direct toggle of the developer overlay: built and hidden at startup exactly as
                 // "settings" is, so it too is a framed region whatever the colony is doing.
+                // "bulletins" is the Events panel (design 23, 2026-09-20): under the alerts in
+                // their column, hidden until something has happened, a framed region all the same.
                 string[] expected =
                 {
-                    "stores", "clock", "alerts", "rail", "orders", "inspect", "build", "menu",
+                    "stores", "clock", "alerts", "bulletins", "rail", "orders", "inspect", "build", "menu",
                     "settings", "debug", "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();

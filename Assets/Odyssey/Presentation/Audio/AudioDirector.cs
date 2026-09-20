@@ -278,7 +278,36 @@ namespace Odyssey.Presentation.Audio
             StepDuck(deltaTime);
             StepAmbience(deltaTime, focus, activeLayer);
             StepPhaseLoops(deltaTime, frame.Tick, activeLayer);
+            StepLandings(frame);
 
+        }
+
+        // ---- things landing (design 23 §6) ---------------------------------------------------
+
+        readonly List<(CellRef cell, int landTick)> _airborne = new();
+        readonly List<(CellRef cell, int landTick)> _airborneNow = new();
+
+        /// <summary>
+        /// A thing that was in the air last frame and is not this frame has landed, and lands
+        /// audibly where the simulation said it would. The frame's tick must have reached the
+        /// promised landing tick: a load that vanishes any other way — a fresh world, a save
+        /// loaded over this one — did not hit anything.
+        /// </summary>
+        void StepLandings(WorldSnapshot frame)
+        {
+            _airborneNow.Clear();
+            var falling = frame.Falling;
+            for (int i = 0; i < falling.Length; i++) _airborneNow.Add((falling[i].Landing, falling[i].LandTick));
+
+            for (int i = 0; i < _airborne.Count; i++)
+            {
+                (CellRef cell, int landTick) was = _airborne[i];
+                if (_airborneNow.Contains(was) || frame.Tick < was.landTick) continue;
+                PlayOneShot(SoundIds.DropLand, CellMetrics.FloorCentre(cell: was.cell));
+            }
+
+            _airborne.Clear();
+            _airborne.AddRange(_airborneNow);
         }
 
         /// <summary>
