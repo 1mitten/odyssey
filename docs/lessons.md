@@ -246,6 +246,21 @@ reading through that gives −1.500 m and 0.000 m as it should. When an A/B harn
 two conditions agree exactly, suspect the instrument before believing the result — a real
 no-difference is noisy, and an exact one usually means the two sides are the same code.
 
+**And its opposite number: an instrument should print the quantity it exists to vary** (2026-09-20,
+`SleepCheck`). A sheet built to show a sleeper lying along a *sloping* bed ran with
+`GroundRelief.Amplitude` at nought — it is a static that `OdysseyBootstrap.BuildSession` sets and a
+harness does not — so it photographed four beds on dead level ground and every picture looked
+correct, because on level ground the old code and the new one agree exactly. Nothing failed and
+nothing was proved. The only reason it was caught is that the tool printed the slope at each bed
+beside the file name, and the number was `0.000` four times.
+
+The same run then showed the second half of it: with the relief on, the beds the scenario places
+sat at 0.002 to 0.021 rise per metre — a centimetre to ten across a whole 4.6 m bed — which is *on*
+but nowhere near enough to see. A harness for a condition has to go looking for the condition;
+`SleepCheck` now searches for the steepest buildable footprint near the start and stands a bed on
+it. **Before believing a contact sheet, ask what it printed for the thing it was sweeping.** If it
+did not print one, it is a photograph of the control case.
+
 The other half of the same lesson: **measure everyone, not the subject.** The sheet framed one
 colonist, and a second in the corner of a wide shot still looked sunk. A figure inside a ramp and a
 figure standing behind one are identical from every bearing, because a bank is opaque and nearly as

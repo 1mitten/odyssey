@@ -7869,3 +7869,78 @@ steepest — amplitude 2.0 m over a 150 m period, 0.136 rise per metre — that 
 disagreement at the pillow and 0.09 m the other way at the feet, varying with where the bed stands
 and which way it faces. Second-order beside a body six times too short, and a change to how a
 sleeper is drawn, so it waits for the owner to judge it against the screenshot they now have.
+
+## 2026-09-20 — The sheet, and the two things the entry above left open
+
+**This supersedes the last paragraph of the entry above.** It ends "so it waits for the owner to
+judge it against the screenshot they now have"; they did, the answer was *do both*, and both are
+done. The paragraph stands as written because it is the record of where the work paused and why.
+
+**First the screenshot, which did not exist.** `SleepCheck` puts one colonist per posture into a
+real bed and shoots each side on, along the bed from the foot, and at the board's own 48° pitch. It
+exists because nothing else on the branch answers the question the owner actually has to answer:
+the arithmetic was *correct* throughout the two days the bug existed, so a sheet that photographed
+the body without the bed under it would have looked convincing the whole time. The postures are
+chosen rather than hoped for — a posture is a hash of the pawn id, so a colony of four is four
+draws from a hat of four, and a posture that is wrong would simply not appear.
+
+**It found two of its own faults before it found anything else, and both are the same fault.** The
+warm-up framed on `Vector3.zero`, a corner of the board with nobody in it, so not one figure was
+drawn during it and every picture came out flat yellow — a warm-up that does not include the
+subject warms nothing. And it never switched the relief on, because `GroundRelief.Amplitude` is a
+static that `OdysseyBootstrap.BuildSession` sets and a harness does not: the first run with the
+slope fix in reported a slope of **0.000** at all four beds and proved nothing whatever about the
+tilt. The second is the one worth keeping, because the tool only caught it by printing the number
+it was supposed to be exercising. **An instrument should print the quantity it exists to vary**, or
+it will cheerfully photograph the control case for ever. `docs/lessons.md` already carries the
+general form of this ("an instrument wired to the thing it measures reports a perfect result"); this
+is its opposite number and just as quiet.
+
+**And the beds the scenario places are nearly level** — 0.002 to 0.021 rise per metre on this seed,
+a centimetre to ten across a whole 4.6 m bed. So the tool now searches for the steepest buildable
+footprint near the start and stands a bed on it. The one it finds is 0.084, or 0.39 m end to end,
+which is a tilt a picture can actually show.
+
+**The slope fix itself** is three things, and each is wrong on its own. The feet stand
+`alongSlope × bodyLength` above the head, so the body is *on* the plane; the lying pitch becomes
+`90° + atan(alongSlope)`, so it is *parallel* to it — either alone would pass while the sleeper
+hovered over a bed she matched the angle of, which is why the test asserts both halves; and the
+roll is taken about the body's own long axis, which is now the tilted one and is free, because the
+pitch has just produced it. `SleepPose.Place` takes the plane rather than a point:
+`surfaceY` is the height under the *head*, `alongSlope` its gradient along the bed.
+
+**The arms were the interesting one, because the picture was right and my reading of it was not.**
+The sheet said "back, arms up" still read as arms *out*, near 45° from above — surrendering rather
+than sleeping. The obvious inference is that the arms are flung wide, and it is wrong: measured,
+they were never off the bed at all. The posture spans 1.06 m across a frame 2.00 m wide, which is
+exactly what `"back"` spans. They lay out to the sides instead of over the crown, and **no pitch
+about the lateral axis can bring them in** — every angle in `Posture` moves a limb in the plane
+that runs head to foot, so whatever spread the idle clip already holds is carried round with the
+arm rather than reduced. That is a missing degree of freedom, not a mistuned number, and no amount
+of sweeping the existing angles would have found it; the sweep is what proved it, by coming back
+with a narrowest-point that was still 1.06 m.
+
+So `Posture` gained an abduction, taken about the body's *forward* axis — which on a sleeper on her
+back is the vertical, so it swings the arm in the plane of the mattress. Swept on the real rig,
++15° mirrored is the one place on the arc that costs nothing: both the narrowest the arms get,
+1.06 m down to 0.71 m, and the furthest they reach past the head, 0.71 m to 0.73 m. Nought on every
+other posture, so the three that were measured right are untouched by its existence.
+
+**Where the four finally sit**, along the bed from the head cell's centre, against two cells at
+[−1.25, 3.75] and a frame at [−1.05, 3.55]:
+
+| posture | along | across | clears the mattress |
+|---|---|---|---|
+| back | [−0.29, 2.29] | 1.06 m | +0.01 |
+| back, arms up | [−0.73, 2.27] | 0.71 m | +0.01 |
+| side, curled | [−0.29, 2.01] | 1.99 m | 0.00 |
+| side, loose | [−0.29, 2.25] | 1.68 m | +0.02 |
+
+`side, curled` is 0.04 m wider than the frame on one side — a drawn-up knee just over the rail,
+which is what a knee does. Recorded rather than tuned, because tuning it is a look and the knee is
+not wrong.
+
+**What is left is entirely a look**, and it is the owner's: whether four sleepers read as four
+people asleep, and whether the third of the mattress lying empty past their boots bothers them. The
+bed is 4.6 m and a colonist is 2.5 m; the cell size fixes the first number (ADR 0002) and the rig
+fixes the second, so the only lever is a shorter bed.
