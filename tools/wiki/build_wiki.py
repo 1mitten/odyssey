@@ -43,10 +43,12 @@ SECTIONS = [
     ("commands", "Commands", ["ui.command"],
      "What the player can tell a selected thing to do. Many are conventional; the ones that are not "
      "come from the setting, such as stripping a shell rather than mining a vein."),
-    ("work", "Work and skills", ["ui.work", "ui.skill"],
-     "The work types a colonist can be assigned, in priority order of urgency, and the skills that "
-     "govern how well they do them. Salvaging is ours: it sits beside mining because taking a ruin "
-     "apart without wrecking what is inside it is a different craft from digging."),
+    ("work", "Work and skills", ["ui.work", "ui.skill", "ui.schedule"],
+     "The work types a colonist can be assigned, in priority order of urgency, the skills that "
+     "govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it "
+     "sits beside mining because taking a ruin apart without wrecking what is inside it is a "
+     "different craft from digging. Work and schedule share one tab and one table, so they share "
+     "a page here."),
     ("colonists", "Colonists", ["ui.pawn", "ui.need", "ui.mood", "ui.status"],
      "Who is on the map, what they need, how they feel and what they are doing right now. This is "
      "the section with the least art: no sheet contains a human figure."),
@@ -67,6 +69,7 @@ NS_TITLES = {
     "ui.res": "Commodities", "ui.item": "Items and equipment",
     "ui.arch.category": "Architect categories", "ui.arch.tool": "Architect tools",
     "ui.command": "Commands", "ui.work": "Work types", "ui.skill": "Skills",
+    "ui.schedule": "Schedule blocks",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
     "ui.status": "Current activity", "ui.health": "Body parts and conditions",
     "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.weather": "Weather",

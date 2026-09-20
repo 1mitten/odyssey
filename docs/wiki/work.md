@@ -1,8 +1,8 @@
 # Work and skills
 
-The work types a colonist can be assigned, in priority order of urgency, and the skills that govern how well they do them. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging.
+The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.
 
-36 entries, 1 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+42 entries, 7 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Work types
 
@@ -49,6 +49,17 @@ The work types a colonist can be assigned, in priority order of urgency, and the
 | **Shooting** | `ui.skill.shooting` | Ranged accuracy | sheet 06 (action tiles), high | M2 |
 | **Melee** | `ui.skill.melee` | Close combat, hit and parry | sheet 06 (action tiles), high | M2 |
 | **Intellect** | `ui.skill.intellect` | Research speed | sheet 06 (action tiles), high | M2 |
+
+## Schedule blocks
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Anything** | `ui.schedule.anything` | No instruction: work, rest or idle as needs dictate | no art | M7 |
+| **Work** | `ui.schedule.work` | Take jobs from the priority grid this hour | no art | M7 |
+| **Sleep** | `ui.schedule.sleep` | Go to bed whether tired or not | no art | M7 |
+| **Recreation** | `ui.schedule.recreation` | Rest and recover mood | no art | M7 |
+| **Eat** | `ui.schedule.eat` | Take a meal even if not yet hungry | no art | M7 |
+| **Meditate** | `ui.schedule.meditate` | Quiet hours, for whatever comes to need them | no art | M7 |
 
 ---
 

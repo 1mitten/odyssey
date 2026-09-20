@@ -2312,3 +2312,35 @@ there — so a smaller *passed* number is not a regression. And `TestResults/Pla
 `D:\actions-runner\_work\odyssey\odyssey` is overwritten by the next job, so copy it before
 diagnosing rather than after.
 
+## A timing test run beside another Unity batch run fails, and the baseline is the tell
+
+`HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on 2026-09-20 at
+**3.770 ms against a 1.167 ms budget** — a flip condition of ADR 0003, which is the sort of number
+that stops a review. It passed on the same commit twenty minutes later at **0.603 ms**. Nothing
+changed but the machine: the first run had two *other* `unity.sh` batch runs going on two other
+worktrees, and this box runs one CPU.
+
+**Read the baseline before reading the verdict.** The test logs
+`[R1] baseline, the shipped HUD alone` and everything else is quoted *over* it, so the baseline is a
+free measurement of how busy the machine was:
+
+```
+contended   baseline 2.096 ms   dense case 3.770 ms   FAIL
+quiet       baseline 0.824 ms   dense case 0.603 ms   pass
+```
+
+A baseline that has moved 2.5× is not a regression in the thing under test. **A real regression
+moves the difference and leaves the baseline alone**, which is the whole reason the test subtracts
+one from the other — and it is also why the subtraction does not save you here: contention scales
+both terms and it does not scale them equally.
+
+**So before running `unity.sh test playmode`, look.** `Get-CimInstance Win32_Process -Filter
+"Name='Unity.exe'"` and read the `-projectPath` of each: the owner's editor, another agent's
+worktree, an import worker. EditMode is safe to run alongside anything — it asserts logic, not
+milliseconds. PlayMode carries the timing tests and wants the machine to itself.
+
+**And check the file is the run you think it is.** `TestResults/PlayMode.xml` is left behind by the
+previous run and is only overwritten when the new one finishes, so a result read too early is the
+*old* result, with no warning. The tell there was a mean time identical to four decimal places
+across two runs; timing numbers do not repeat. Wait on the file being newer than the run you
+started, not on it existing.

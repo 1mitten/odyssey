@@ -123,14 +123,16 @@ namespace Odyssey.Presentation.Ui
         void OnCommand(string key)
         {
             if (key == HudCommands.BuildKey) SetBuildPalette(!BuildPaletteOpen);
+            else if (key == HudCommands.WorkKey) _directors?.Work.Toggle();
             else if (key == HudCommands.MenuKey) ToggleMenu();
         }
 
         /// <summary>
-        /// The one hotkey on the bar that is live, read through the binding map so the panel
-        /// that rebinds it and the key that opens the palette can never disagree. The rest of
-        /// the caps are legends on controls whose systems do not exist, and they deliberately
-        /// avoid every action the game already has — camera, slice, clock, tools.
+        /// The two hotkeys on the bar that are live — B for the palette and <b>F1 for the Work
+        /// tab</b> (design 27) — read through the binding map so the panel that rebinds one and
+        /// the key that opens it can never disagree. The rest of the caps are still legends on
+        /// controls whose systems do not exist, and they deliberately avoid every action the game
+        /// already has — camera, slice, clock, tools.
         /// </summary>
         void ReadBarKeys()
         {
@@ -148,6 +150,9 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.BuildPalette))
                 SetBuildPalette(!BuildPaletteOpen);
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WorkTab))
+                _directors?.Work.Toggle();
         }
 
         /// <summary>
@@ -642,7 +647,7 @@ namespace Odyssey.Presentation.Ui
             }),
             ("Interface", new[]
             {
-                HotkeyAction.BuildPalette, HotkeyAction.DebugMenu,
+                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.DebugMenu,
             }),
         };
 

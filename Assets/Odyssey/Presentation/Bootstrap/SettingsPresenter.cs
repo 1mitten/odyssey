@@ -115,7 +115,8 @@ namespace Odyssey.Presentation.Bootstrap
             switch (_director.Escape(
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
-                        _shell != null && _shell.MenuOpen))
+                        _shell != null && _shell.MenuOpen,
+                        _bootstrap?.Directors?.Work.Open == true))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
@@ -132,6 +133,12 @@ namespace Odyssey.Presentation.Bootstrap
                     // interface rebuild, because it used to be a column pinned to the left edge
                     // and permanently open.
                     _shell?.CloseBuildPalette();
+                    break;
+                case EscapeAction.CloseWork:
+                    // The Work tab docks in the palette's corner and is raised from the same bar,
+                    // so it unwinds at the same rung. Without this it was the one panel in the
+                    // game with no key that shut it — the X and F1 again, and nothing else.
+                    _bootstrap?.Directors?.Work.SetOpen(false);
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);
