@@ -141,6 +141,7 @@ namespace Odyssey.Sim.World
                 //    marked in the tick above; navigation is marked here because the rubble may
                 //    have moved as well.
                 _pawns.Nav.MarkDirty(cell);
+                _pawns.Enclosure?.MarkDirty(cell);
             }
 
             Pawns.Falling.DropFloatingItems(_pawns);

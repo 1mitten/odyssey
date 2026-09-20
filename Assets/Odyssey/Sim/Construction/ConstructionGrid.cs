@@ -994,9 +994,7 @@ namespace Odyssey.Sim.Construction
             if (def.slab) RaiseSlab(cell, stuff, def.covering);
             else RaiseEdifice(cell, def, stuff, second, facing, quality);
 
-            // A finished bed's head cell joins the list the sleep chooser already scans — the
-            // scenario's own start-of-world cells are already in it, and the chooser does not
-            // care which half of the game put a cell there.
+            if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
             if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
 
             // 2. The cells and everything touching them must be re-meshed: a thing changes how its
@@ -1020,6 +1018,7 @@ namespace Odyssey.Sim.Construction
             //    it full support; a slab raised is itself a medium that carries load sideways to
             //    the slabs beside it.
             ctx.MarkStructureChanged(cell);
+            ctx.Enclosure?.MarkDirty(cell);
 
             // 5. A ladder joins two layers, and a slab is what gives a ladder somewhere to arrive.
             //    Both are refreshed here because either can be the one that completes the pair.
@@ -1277,6 +1276,20 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
+        /// Re-register NavFlags.Door on the NavGraph for doors in a colony that has just been loaded.
+        /// Derived from the edifice list, matching RebuildLadderConnectors and RebuildItemBlocks.
+        /// </summary>
+        public void RebuildDoors(PawnContext ctx)
+        {
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice placed = _edifices[i];
+                if (placed.Removed || placed.Def != CoreContent.EdificeDoor) continue;
+                ctx.Nav.SetDoor(placed.CellIndex, isDoor: true, open: false);
+            }
+        }
+
+        /// <summary>
         /// Take a floor of ours back out, and say whether there was one.
         ///
         /// <para><see cref="Demolish"/>'s twin, beside it for the same reason <see cref="Raise"/>
@@ -1355,8 +1368,7 @@ namespace Odyssey.Sim.Construction
             gone.Removed = true;
             _edifices[handle] = gone;
 
-            // A bed leaves the sleep chooser's list with the world; its owner goes with it, in
-            // that the record nobody will read again still says who it was.
+            if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
             if (was.Def == CoreContent.EdificeBed) _items.RemoveBed(was.CellIndex);
 
             // 2. The cells and everything touching them must be re-meshed: a thing coming down

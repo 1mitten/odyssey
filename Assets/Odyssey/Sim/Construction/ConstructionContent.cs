@@ -347,7 +347,7 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed",
+            "Building_Bed", "Building_Door",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -443,6 +443,15 @@ namespace Odyssey.Sim.Construction
                     needsClearCell = true, refusedInTerraceFoot = true,
                     costCount = 5, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.bed",
+                },
+
+                // The door. Edifice 2 is CoreContent.EdificeDoor. Passable, takes no quality,
+                // matching wall costs (5 stuff, 135 ticks).
+                new BuildingDef
+                {
+                    defName = "Building_Door", label = "door", edifice = CoreContent.EdificeDoor,
+                    blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
+                    iconKey = "ui.arch.tool.door",
                 },
             };
         }

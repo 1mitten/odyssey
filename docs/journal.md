@@ -7777,6 +7777,72 @@ being a *real* bed still holds for the scenario that has some.
 
 Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 
+## 2026-09-20 — Functional doors and room enclosure: sliding leaves, doorway traversal and sealed interiors
+
+Functional, buildable auto-sliding doors and strict room enclosure are in. A doorway connects or seals
+spaces, animates smoothly on pawn passage, and establishes indoor room environments.
+
+**The simulation half: building, traversal, and lifecycle.**
+- **Building handle & content:** `BuildingHandle.Door = 6` (`Count = 7`), registered under
+  `Buildings.xml` and `ConstructionContent.cs` (edifice: `CoreContent.EdificeDoor` (2), cost 5 Wood/Stone,
+  work 135). Buildable through `ui.arch.tool.door` on any standable cell with a floor below.
+- **Traversal & door lifecycle:** `DoorSystem` ticks at order 35 in `TickPhase.Pawns`. When a pawn approaches
+  or occupies a door cell, `DoorSystem` holds the door open. Traversal charges `MoveCost.DoorOpening`
+  (already defined in `NavGrid`) when closed. Once the doorway and approach cells are clear, the door
+  auto-closes after a 30-tick timeout.
+- **Strict room enclosure solver:** `EnclosureGrid` implements a per-layer flood fill bounded horizontally
+  by `EdificeWall`, `EdificeDoor`, or solid rock. Enclosure strictly requires 100% overhead roofs
+  (either solid rock or a built floor slab on layer `y + 1`). Reaching the map edge or exceeding 2,500 cells
+  marks the area outdoors. Dirty tracking wires into wall/door construction, mining, and collapse.
+- **Inspect pane:** `InspectModel` displays `environment: indoors` on cell inspection when `IsIndoors` is true.
+
+**The presentation half: frame, sliding leaf, and audio.**
+- **Frame and leaf split:** The doorway frame (`SM_Bld_Base_Wall_Door_01`) is emitted into chunk batches via
+  `ChunkMesher.EmitDoor`. The sliding leaf (`SM_Prop_Door_01`) is rendered dynamically via `DoorDirector`
+  using `Graphics.RenderMeshInstanced` so chunk batches do not remesh during animation.
+- **Lateral sliding animation:** When pawns approach within 1.6 m or pass through, `DoorDirector` smoothly
+  slides the door leaf laterally into the wall frame pocket over 0.2 s.
+- **Audio:** Transitions trigger `SoundIds.DoorOpen` and `SoundIds.DoorClose` on the world audio bus.
+- **Orientation ownership:** `WorldRenderModel.DoorFacing(x, z, y)` owns doorway orientation across both
+  `ChunkMesher` and `DoorDirector`, ensuring the leaf and frame never diverge.
+
+**The golden master.**
+Ruined city maps stamp `EdificeDoor` edifices. Previously, these edifices never had `NavFlags.Door` registered.
+With `RebuildDoors` active on startup, ruined city doorways now charge opening cost and tick through `DoorSystem`.
+The meadow baseline maps have no doors.
+
+**Verification:**
+Fast tier 822 Sim + 473 Hud; EditMode 2,024 / 2,011 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+
+## 2026-09-20 — Door wall alignment and colonist clearance: flush face placement and tall Base doors
+
+The initial door implementation placed the frame and sliding leaf at `CellMetrics.FloorCentre(x, z, y)`.
+Because walls in Odyssey are placed along cell boundary faces (`CellMetrics.FaceCentre(x, z, y, dir)`),
+doors were recessed 1.25 m into the cell, creating a visible gap and misalignment with adjoining wall
+panels. Furthermore, colonist figures with hats measure between 2.05 m and 2.20 m tall, clipping the
+1.97 m opening of `SM_Bld_Base_Wall_Door_01`.
+
+**Flush wall alignment and orientation:**
+- **Face placement:** `ChunkMesher.EmitDoor` and `DoorDirector` now compute their transform anchors via
+  `CellMetrics.FaceCentre(x, z, y, dir)`. The door frame now sits coplanar with neighbouring wall panels,
+  forming a continuous wall line.
+- **Exterior facade facing:** `WorldRenderModel.DoorFacing(x, z, y)` now evaluates `IsRoofed` on adjacent
+  open sides. When dividing an interior room from an exterior space, the door frame automatically faces
+  the outdoor facade.
+- **Proximity and audio origin:** Pawns triggering door traversal and the positional open/close audio
+  now calculate distance against the face center rather than cell center.
+
+**Colonist clearance and asset consistency:**
+- **Large Base door frame:** Swapped from `SM_Bld_Base_Wall_Door_01` to `SM_Bld_Base_Wall_Door_Large_01`
+  (2.47 m clear opening height), providing ample clearance for all colonists and headgear without clipping.
+- **Matching Base sliding leaf:** Swapped the temporary sci-fi prop door leaf for `SM_Bld_Base_Door_Large_01`
+  (1.13 m wide, 2.47 m high), maintaining aesthetic consistency with the Base wall theme.
+- **Slide distance:** Increased `DoorDirector.SlideDistance` from 1.05 m to 1.15 m to fully clear the
+  wider opening into the wall pocket.
+
+**Verification:**
+Fast tier 822 Sim + 473 Hud; EditMode 2,025 / 2,012 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+
 ## 2026-09-20 — A portrait taken after dark, kept for the session
 
 Owner, from a play-through: *"when generating more colonists — some are not animated and their
@@ -7849,6 +7915,34 @@ the ceiling a suggestion. Nothing in the game sets it at all; what the clamp is 
 against is the inspector field somebody adds the next time a crowd looks wrong, when the answer is
 the ordering rather than the count. Moving the ceiling is a frame measurement under the real player
 loop, not an edit. EditMode **2,003 / 1,990**.
+
+## 2026-09-20 — Door blueprint alignment, rotation support, wall jambs, and plaster texture override
+
+Following playtesting with door placement alongside walls, several visual and functional defects were addressed:
+1. The placement blueprint ghost hovered at cell centre in a fixed orientation, failing to reflect the face-placed, rotated door that was ultimately constructed.
+2. Large gaps appeared between adjacent walls and the doorway because `OccludesFace` treated doors as occluding, causing neighbouring walls to omit their side panels facing the doorway and exposing the hollow wall interior.
+3. At corners and T-junctions, the doorway orientation heuristic placed door frames on boundaries shared with solid walls, producing severe z-fighting and texture flicker.
+4. Synty's door prefabs rendered with a contrasting red brick surround arch that clashed with neighbouring plain plaster walls.
+
+**Blueprint alignment and rotation support:**
+- **Rotation enabled:** Added `<rotates>true</rotates>` to `Building_Door` in `Buildings.xml`, `ConstructionContent.cs`, and `BuildShapes.cs`. Players can now rotate the door tool using `R` prior to placement.
+- **Ghost preview fidelity:** Updated `OdysseyBootstrap.DrawThingGhost` for `EdificeDoor` to resolve `DoorFacing(cell.X, cell.Z, cell.Y, facing)` and drape the ghost at `CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir)` with `Directions.Yaw[dir]`. The blueprint preview now snaps to the exact face, orientation, and height of the constructed door.
+
+**Wall jambs and gap elimination:**
+- **Doorway reveals:** Removed `EdificeDoor` from `WorldRenderModel.OccludesFace`. Adjacent wall cells now emit their boundary panels bordering the doorway. These panels serve as the door jambs/reveals, cleanly enclosing the wall core and completely closing the 2.25 m gap into the wall cavity.
+- **Raycast selection:** Updated `SlicePicker.cs` to explicitly select `EdificeDoor` cells during cursor raycasts despite doors no longer occluding faces.
+
+**Orientation and z-fighting resolution:**
+- **Refined orientation heuristic:** Rewrote `WorldRenderModel.DoorFacing(x, z, y, chosen)`:
+  - Along East-West wall runs, the doorway frame aligns along X, opening North-South (facing the unroofed outdoor facade or player's North/South preference).
+  - Along North-South wall runs, the doorway frame aligns along Z, opening East-West (facing the outdoor facade or player's East/West preference).
+  - At corners, T-junctions, and freestanding doors, player rotation is respected (`chosen & 3`), automatically flipping 180° away if facing directly into an immediately adjacent solid wall. This eliminates edge overlap and coplanar z-fighting with adjacent wall panels.
+
+**Plaster material override for doorway surround:**
+- **Consistent wall surfacing:** In `ModuleLibrary.FlattenPrefab`, added an automatic material override for door wall panels. Any submesh assigned a brick material (`Generic_Brick`) is dynamically remapped to the matching plain plaster material (`Generic_Plaster`) present on the same renderer. This guarantees plain wall continuity and persists reliably across git checkouts without relying on ignored Synty prefab modifications.
+
+**Verification:**
+Fast tier 843 Sim + 473 Hud; EditMode 2,028 total, 2,015 passed, 0 failed; PlayMode 85 total, 80 passed, 0 failed. Wiki and registry checks green.
 
 ## 2026-09-20 — Nobody lies down in a hillside any more, and no hash moved
 
