@@ -324,6 +324,7 @@ ui.tab.bills,04,,,rolled paper,high,shared
 ui.tab.trade,08,,,coin,high,shared
 ui.tab.factions,08,,,red flag,high,mapped
 ui.tab.archive,08,,,notebook,high,mapped
+ui.tab.almanac,08,,,notebook,high,shared
 ui.tab.menu,-,,,a settings or menu mark,-,gap
 ui.alert.starvation,02,,,empty bowl,low,mapped
 ui.alert.breach,-,,,a hole in a wall. Our own concept,-,gap

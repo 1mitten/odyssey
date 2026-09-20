@@ -25,6 +25,9 @@ namespace Odyssey.Hud
         /// for the reason <see cref="Debug"/> is.</summary>
         public WorkDirector Work { get; } = new WorkDirector();
 
+        /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
+        public AlmanacDirector Almanac { get; } = new AlmanacDirector();
+
         /// <summary>
         /// The settings panel's levers — and <b>handed in rather than made here since U38</b>,
         /// because they are not session state.
