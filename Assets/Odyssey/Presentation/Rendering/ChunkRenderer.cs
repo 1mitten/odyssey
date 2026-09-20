@@ -1400,10 +1400,45 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public void DrawZoneCover(CellRef cell, Color colour)
         {
+            // The cover must be THE MESH THE GROUND DRAWS, not a stand-in: the earth resolves
+            // a variant clump (and a face cut, where sides show) per cell, and the first cover
+            // drew the plain default block - a different shape, whose partings against the
+            // drawn clumps showed slivers of untinted earth as a grid over the whole field
+            // (owner, 2026-09-20, twice: the flat photo sheet that said "no seams" could not
+            // see it, because a board with no amplitude has no partings to show). The module,
+            // the variant, the bearing and the drape below are the earth contributor's own
+            // choices, read the same way it reads them, so the cover is the drawn ground
+            // itself, lifted - identical geometry, no sliver anywhere it can come from.
             int airIndex = _model.Index(cell.X, cell.Z, cell.Y);
             int groundIndex = airIndex - _model.Size.LayerStride;
+            if (groundIndex < 0) return;
             ushort terrain = _model.DrawnTerrain(groundIndex);
-            int module = _model.TerrainModuleFor(terrain);
+
+            int groundY = cell.Y - 1;
+            int variant = GroundLook.Variant(cell.X, cell.Z, groundY);
+            // The mesher's own exposure rule, read here from the mirror: which of the four
+            // sides of the ground cell stand open, as a bitmask over Directions.
+            int exposed = 0;
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = cell.X + Directions.DeltaX[dir], nz = cell.Z + Directions.DeltaZ[dir];
+                if (!_model.Size.Contains(nx, nz, groundY)) continue;
+                if (!_model.IsSolid(_model.Size.Index(nx, nz, groundY))) exposed |= 1 << dir;
+            }
+
+            float yaw;
+            int module;
+            if (exposed == 0)
+            {
+                yaw = GroundLook.Yaw(cell.X, cell.Z, groundY);
+                module = _model.EarthModule(terrain, variant, showsAFace: false);
+            }
+            else
+            {
+                int canonical = GroundMesh.CanonicalExposure(exposed, out int rotation);
+                yaw = 90f * rotation;
+                module = _model.EarthFaceModule(terrain, variant, canonical);
+            }
             if (module == 0) return;
 
             Material material = BracketMaterial(colour);
@@ -1414,11 +1449,16 @@ namespace Odyssey.Presentation.Rendering
                 receiveShadows = false,
             };
 
-            // The same drape the terrain below was placed with, at that cell's floor, and then
-            // lifted along the drape's own up: over a slope the lift stays perpendicular to
-            // the tilt rather than shearing the cover off its tile's uphill edge.
-            Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y - 1));
-            at *= Matrix4x4.Translate(Vector3.up * MarkLift);
+            // The earth's own placement - drape at the ground cell's floor, turned to the
+            // bearing the contributor chose - lifted along the WORLD up (a shared lift, so
+            // neighbouring covers part by exactly the terrain's own step and their tinted
+            // sides fill it), and scaled a hair in the plane so adjacent covers OVERLAP rather
+            // than meet: a meeting edge is the one place a sliver can still open, and an
+            // overlap of the same tint is invisible by construction.
+            Matrix4x4 at = Matrix4x4.Translate(Vector3.up * MarkLift) *
+                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y - 1)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)) *
+                Matrix4x4.Scale(new Vector3(CoverOverlap, 1f, CoverOverlap));
 
             var parts = _model.Library[module].Parts;
             for (int p = 0; p < parts.Length; p++)
@@ -1745,6 +1785,11 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
+
+        /// <summary>How much a zone cover scales past its own tile in the plane, so adjacent
+        /// covers overlap instead of meeting: 2.5 cm a side, invisible as an overlap of one
+        /// colour and the end of every seam a meeting edge could open.</summary>
+        const float CoverOverlap = 1.01f;
         /// <summary>
         /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to
         /// indicate it's sown"). Six tiny flecks at deterministic positions hashed from the cell,

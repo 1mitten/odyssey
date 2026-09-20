@@ -111,14 +111,17 @@ namespace Odyssey.Tests.Sim
         //
         // Moved a ninth time, 2026-09-18, by the merge of the growing and rates branches: both
         // had moved the fingerprint that day, so neither parent's value described the union.
-        // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
-        // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
+        // Growing's additions stand beside the rate integers unchanged — Work_Growing carried
+        // no curve at that point (design 22 §5) — and the value is taken from a freshly loaded
+        // pack. It gained one a day later; see below.
         //
-        // Moved a tenth time, 2026-09-20, by SK1: Work_Growing gained the curve the line above
-        // said it did not have. rateSkill 4, base 600, slope 100 — cutting's numbers exactly,
-        // because they are the two plant work types (docs/design/15-skills.md §8).
+        // Moved a tenth time, 2026-09-19, when Work_Growing gained that curve: rateSkill 4, base
+        // 600, slope 100 — cutting's numbers exactly, because they are the two plant work types
+        // and a difference would be a claim needing a measurement. The move arrived with the
+        // growing work ("the hoe pays by skill") and had no paragraph of its own, so this is it
+        // written down late rather than a second account of it.
         //
-        // NO GOLDEN MOVED, and that was worth checking rather than assuming: a rate change to a
+        // NO GOLDEN MOVED, and that was worth measuring rather than assuming: a rate change to a
         // work type usually moves every Simulated hash, and this one moved none. The reason is
         // that the golden worlds are bare seeds with no growing zone painted on them, so no sow
         // or harvest job is ever created and this curve is never consulted. The field soak does

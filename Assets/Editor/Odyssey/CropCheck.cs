@@ -82,6 +82,14 @@ namespace Odyssey.EditorTools
                 MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
                 var slice = new SliceSettings();
 
+                // The played board's relief, not the flat default: the cover's seams are a
+                // question about neighbouring drapes disagreeing, and a board with no amplitude
+                // cannot ask it. The first version of this sheet left the field flat and its
+                // "no seams" verdict was blind - the owner's screenshots showed the grid the
+                // flat photo could not (2026-09-20).
+                GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+                GroundRelief.Period = 150f;
+
                 library = new ModuleLibrary(catalogue);
                 var model = new WorldRenderModel(size, chunks, library);
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
@@ -251,6 +259,8 @@ namespace Odyssey.EditorTools
             }
             finally
             {
+                GroundRelief.Amplitude = 0f;
+                GroundRelief.Period = 0f;
                 if (hook != null) RenderPipelineManager.beginCameraRendering -= hook;
                 figures?.Dispose();
                 renderer?.Dispose();

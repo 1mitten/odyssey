@@ -14,10 +14,9 @@
   thousandths of the speed everything is tuned at. The integers are INVENTED: anchored on OUR
   own starting roll (mean level 1.16) rather than the reference's level 8, with the reference's
   relative character kept — mining steepest, construction shallowest, hauling flat, because a
-  skill drives either rate or quality and hauling has neither. Growing takes cutting's curve
-  exactly (SK1): they are the two plant work types, and the design once had felling training
-  Growing outright (15-skills §6.2), so a difference between them would need a justification and
-  a measurement, and there is neither yet.
+  skill drives either rate or quality and hauling has neither. Growing took cutting's numbers when
+  it got its curve (2026-09-19): they are the two plant work types, so a difference between them
+  would be a claim needing a measurement rather than the default.
 -->
 <Defs>
 
@@ -85,11 +84,13 @@
     already begun, and a zone's daylight window is the one clock in the colony that will not
     wait, where a tree keeps until Thursday.
 
-    The curve is cutting's, and it arrived one unit after the work type did (SK1). It scales the
-    LABOUR of sowing and reaping, not the time a carrot takes to ripen - that is the plant's own
-    growTicks and nothing here touches it. So a skilled grower works a field faster but does not
-    hurry the season, and the four-days-to-first-food pacing 22-growing §9 leaves open is
-    unaffected by this number.
+    And the skill finally buys speed at the hoe (owner, 2026-09-19: "make sure the speed of the
+    sowing and harvesting is determined by the relevant skill"). The seam is this def and nothing
+    else - WorkRatePerMille has carried the curve for every work type since WS2, and growing was
+    the one def without a rateSkill. Cutting's own numbers, read as a judgement: a novice runs
+    at six tenths of the tuned speed and each level buys a tenth more, so the tuned speed sits
+    around level four where the starting rolls put a colonist who has hoed a season. The skill
+    curve itself (17-rates-and-stats 3a) belongs to the skills work when it lands.
   -->
   <WorkTypeDef>
     <defName>Work_Growing</defName>

@@ -2140,6 +2140,20 @@ the same code that sticks it.** The drivers now clear the gesture on the boundar
 completes (and on displacement), so the value's lifetime is the toil's lifetime. If you are
 about to gate a drawing on a sticky field, first ask who ends it - and if the answer is
 "nobody", that is the bug, found in advance.
+## An instrument that cannot reproduce the fault cannot certify its fix
+
+**2026-09-20, the zone-cover grid, twice.** The photo sheet said "no seams" while the owner's
+screenshots showed a grid, and the sheet was right about what it photographed: `CropCheck`
+never set `GroundRelief.Amplitude`, so its board was dead flat, and the seams were a question
+about neighbouring drapes disagreeing - a flat board has no disagreement to show. The fix
+looked verified for a day while the fault stood.
+
+The rule: **before a photo answers a question, check it can ask it.** A harness that
+reproduces the played board's relief, lighting and packs is the only one whose "looks right"
+means anything; the cheapest check is to reproduce a KNOWN fault in it first - the grid was
+reproduced the moment the amplitude was set, and the fix was then verified against the real
+thing rather than against nothing. CropCheck now sets the played amplitude and restores it in
+its finally, and the blindness is recorded beside the shot that suffered from it.
 ## A Unity build rewrites settings assets it was never asked to touch
 
 **2026-09-19, the first player build this project had ever run.** `scripts/unity.sh build`
