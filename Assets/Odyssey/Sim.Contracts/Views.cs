@@ -775,13 +775,30 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The storage zone's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StorageZone"/> is -1.</summary>
         public readonly byte StoragePriority;
 
+        /// <summary>How many cells the store covers — the extent the pane's title line carries.</summary>
+        public readonly int StorageCells;
+
+        /// <summary>
+        /// The store's place among the colony's stores, from 1 — what an unnamed zone is called.
+        ///
+        /// <para>Counted in <b>cell order</b>: how many stores begin at a lower cell than this one.
+        /// Deterministic, the same on both sides of a save, and nothing is written down for it. The
+        /// price is that deleting an earlier store renumbers the later ones, which a typed name
+        /// will fix; until then the number the pane says and the number the board says are the same
+        /// number, which is the property that matters.</para>
+        /// </summary>
+        public readonly int StorageOrdinal;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
-            bool isIndoors = false, int storageZone = -1, byte storagePriority = 0)
+            bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
+            int storageCells = 0, int storageOrdinal = 0)
         {
             StorageZone = storageZone;
             StoragePriority = storagePriority;
+            StorageCells = storageCells;
+            StorageOrdinal = storageOrdinal;
             CellIndex = cellIndex;
             Terrain = terrain;
             Edifice = edifice;

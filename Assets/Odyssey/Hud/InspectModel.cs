@@ -275,6 +275,7 @@ namespace Odyssey.Hud
             Commands.Clear();
             _bedUnderPane = false;
             _storeUnderPane = false;
+            IsStore = false;
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -512,30 +513,67 @@ namespace Odyssey.Hud
 
             Subtitle = "cell";
 
+            // **A click inside a store is about the store.** The pane titles the zone, says how big
+            // it is, and offers the tile's own facts on a second tab — which is the whole of the
+            // owner's report that a stockpile "reads as though it belongs to a single tile"
+            // (design brief, 2026-09-21; docs/design/26-storage.md §9).
+            //
+            // The subject stays `Cell`, deliberately: everything below still describes the tile, a
+            // zone has no identity a selection could hold on to across an edit, and the pick
+            // resolver goes on answering in cells. What changes is what the pane leads with.
+            IsStore = detail.StorageZone >= 0;
+            if (IsStore)
+            {
+                StorePriority = detail.StoragePriority;
+                StoreCells = detail.StorageCells;
+                Title = $"{Registry.Label(PaletteTools.Stockpile)} {detail.StorageOrdinal}";
+                Subtitle = StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
+                CellIconKey = PaletteTools.Stockpile;
+                // Named from the registry, not written here. "Tile" is already the name of a floor
+                // covering in `ui.arch.tool.tile`, so a literal would have been a second copy of a
+                // name the wiki owns — which `RegistryTests` said, and the answer to that test is
+                // never to reword.
+                Tabs.Add(new InspectTab { Name = Registry.Label(TabStorage), Enabled = true, Reason = string.Empty });
+                Tabs.Add(new InspectTab { Name = Registry.Label(TabTile), Enabled = true, Reason = string.Empty });
+                if (ActiveTab < 0 || ActiveTab >= Tabs.Count) ActiveTab = 0;
+            }
+
             string edifice = EdificeLabels.Title(detail.Edifice);
             string terrain = TerrainLabels.Label(detail.Terrain);
+
+            // What the tile itself is called. Computed either way, because the Tile tab says it
+            // even when the store's name is what the header carries.
+            string tileTitle;
+            string tileIcon;
             if (edifice.Length > 0)
             {
-                Title = edifice;
-                CellIconKey = EdificeLabels.IconKey(detail.Edifice);
+                tileTitle = edifice;
+                tileIcon = EdificeLabels.IconKey(detail.Edifice);
             }
             else if (detail.FloorStuff != StuffHandle.None)
             {
                 string stuff = BuildLabels.Stuff(detail.FloorStuff);
-                Title = stuff.Length == 0
+                tileTitle = stuff.Length == 0
                     ? "Built floor"
                     : char.ToUpperInvariant(stuff[0]) + stuff.Substring(1) + " floor";
-                CellIconKey = BuildLabels.StuffKey(detail.FloorStuff);
+                tileIcon = BuildLabels.StuffKey(detail.FloorStuff);
             }
             else if (terrain.Length > 0)
             {
-                Title = terrain;
-                CellIconKey = TerrainLabels.IconKey(detail.Terrain);
+                tileTitle = terrain;
+                tileIcon = TerrainLabels.IconKey(detail.Terrain);
             }
             else
             {
-                Title = "Ground";
-                CellIconKey = "ui.overlay.zones";
+                tileTitle = "Ground";
+                tileIcon = "ui.overlay.zones";
+            }
+
+            StoreTileTitle = tileTitle;
+            if (!IsStore)
+            {
+                Title = tileTitle;
+                CellIconKey = tileIcon;
             }
 
             SetCellRows(snapshot, detail);
@@ -593,6 +631,27 @@ namespace Odyssey.Hud
         public bool StoreUnderPane => _storeUnderPane;
 
         bool _storeUnderPane;
+
+        /// <summary>
+        /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
+        /// title is the zone's, the subtitle is its extent, and there are two tabs with Storage
+        /// first and the tile's own facts second.
+        /// </summary>
+        public bool IsStore { get; private set; }
+
+        /// <summary>The store's rung, for the header chip that makes priority legible unopened.</summary>
+        public int StorePriority { get; private set; }
+
+        /// <summary>How many cells the store covers.</summary>
+        public int StoreCells { get; private set; }
+
+        /// <summary>What the tile itself is called, for the Tile tab when the store owns the header.</summary>
+        public string StoreTileTitle { get; private set; } = string.Empty;
+
+        /// <summary>The two tabs a store's pane carries, by registry key. The shell compares against these rather than against words.</summary>
+        public const string TabStorage = "ui.tab.storage";
+
+        public const string TabTile = "ui.tab.tile";
 
         /// <summary>
         /// The cell the pane is describing, for whoever must name it back to the world — the
@@ -715,11 +774,11 @@ namespace Odyssey.Hud
             // follows it, because a zone has no name until storage groups arrive (S2) and "how
             // big" is the only other thing that tells two of them apart.
             if (detail.StorageZone >= 0)
-                // "…" for the same reason the bed's owner row carries "Assign…": a row that can be
-                // pressed has to say it is one. That row looked exactly like the facts above and
-                // below it for two days and the owner could not find the feature at all.
+                // A fact, not a control: the settings are a tab of their own since 2026-09-21, so
+                // this row says which rung the store is on and nothing opens from it. Two ways in
+                // to one panel is the one a player finds by accident.
                 Row(n++, "storage",
-                    Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]) + " …");
+                    Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]));
 
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");
