@@ -122,6 +122,7 @@ namespace Odyssey.SaveProbe
 
             ReportMixedMaterials(grid, size);
             ReportItems(colony, size);
+            ReportStorage(colony, size);
             ReportTerrain(grid);
         }
 
@@ -157,6 +158,65 @@ namespace Odyssey.SaveProbe
                 Console.WriteLine(
                     $"    item {pair.Key.kind,-14} L{pair.Key.layer,-3} " +
                     $"{pair.Value.stacks,4} stacks {pair.Value.units,5} units");
+        }
+
+        /// <summary>
+        /// The colony's storage: every zone, where it is, what it takes, and — the line that matters
+        /// when haulers are behaving oddly — <b>whether the things lying in it agree with it</b>.
+        ///
+        /// <para>Written for a report this could not otherwise answer (owner, 2026-09-20:
+        /// <i>"sometimes they keep picking up and dropping the items with a stockpile on a
+        /// floor — this doesn't happen without a floor"</i>). A shuffle like that is what a
+        /// disagreement between the zone and the lister looks like from a chair: an item sitting
+        /// in a store that the haul scan still calls loose is hauled, put down, and hauled again
+        /// for ever. Neither half is visible on screen, and both are in the save.</para>
+        ///
+        /// <para>The layer is printed because that is the way the two halves come apart. A store
+        /// lives in the cell a colonist stands in, and a click names a surface — so a zone one
+        /// layer off its items looks perfectly normal until you read the numbers.</para>
+        /// </summary>
+        static void ReportStorage(ColonyWorld colony, GridSize size)
+        {
+            var storage = colony.Pawns.Storage;
+            if (storage == null || storage.ZoneCount == 0)
+            {
+                Console.WriteLine("    no storage zones");
+                return;
+            }
+
+            for (int slot = 0; slot < storage.ZoneCount; slot++)
+            {
+                var cells = storage.CellsOf(slot);
+                var settings = storage.SettingsOf(slot);
+
+                int accepted = 0;
+                for (int d = 0; d < colony.Pawns.Items.Content.Items.Length; d++)
+                    if (settings.Accepts(d)) accepted++;
+
+                int layer = cells.Count > 0 ? size.FromIndex(cells[0]).Y : -1;
+                bool oneLayer = true;
+                for (int i = 1; i < cells.Count; i++)
+                    if (size.FromIndex(cells[i]).Y != layer) oneLayer = false;
+
+                Console.WriteLine(
+                    $"    zone {slot,-3} L{layer,-3} {cells.Count,4} cells  priority {settings.Priority}  " +
+                    $"accepts {accepted}/{colony.Pawns.Items.Content.Items.Length}" +
+                    (oneLayer ? string.Empty : "  SPANS SEVERAL LAYERS"));
+            }
+
+            // The disagreement itself. Both halves are derived from the same two lists, so this
+            // can only ever print nothing — which is exactly why it is worth printing when it
+            // does not.
+            int strayLoose = 0, strayStored = 0;
+            foreach (int i in colony.Pawns.Items.LooseItems)
+                if (storage.IsStorage(colony.Pawns.Items.Items[i].Cell)) strayLoose++;
+            foreach (int i in colony.Pawns.Items.StoredItems)
+                if (!storage.IsStorage(colony.Pawns.Items.Items[i].Cell)) strayStored++;
+
+            if (strayLoose > 0 || strayStored > 0)
+                Console.WriteLine(
+                    $"    ** {strayLoose} things lie in a zone and are listed loose, " +
+                    $"{strayStored} lie outside one and are listed stored — a haul shuffle looks like this");
         }
 
         /// <summary>

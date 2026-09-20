@@ -632,7 +632,13 @@ namespace Odyssey.Presentation.Ui
                 CellRowView captured = view;
                 view.Root.RegisterCallback<ClickEvent>(_ =>
                 {
-                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                    if (!captured.IsPick) return;
+                    // Two interactive rows now, and which one this is comes off the row's own
+                    // name rather than off a second flag: the name is what decided it was
+                    // pickable in the first place, so a row cannot be pickable for one reason and
+                    // dispatched for another.
+                    if (captured.LastName == "storage") ToggleStoragePanel(captured.Root);
+                    else ToggleBedPicker(captured.Root);
                 });
 
                 _cellRowsGrid.Add(view.Root);
@@ -656,7 +662,8 @@ namespace Odyssey.Presentation.Ui
 
                 // The owner row is pickable exactly while the tile says it is a bed's (the model
                 // clears the flag every refresh, so the affordance cannot outlive the bed).
-                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane)
+                    || (row.Name == "storage" && _inspect.StoreUnderPane);
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -688,7 +695,9 @@ namespace Odyssey.Presentation.Ui
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
+                    view.Root.tooltip = pick
+                        ? row.Name == "storage" ? "Choose what goes in this store" : "Choose whose bed this is"
+                        : null;
                 }
             }
         }
@@ -784,6 +793,149 @@ namespace Odyssey.Presentation.Ui
         void CloseBedPicker()
         {
             if (_bedPicker != null) _bedPicker.style.display = DisplayStyle.None;
+        }
+
+        // ---- the store's settings: what goes in, and how much it matters ----------------------
+
+        VisualElement? _storePanel;
+        VisualElement? _storeRows;
+        VisualElement? _storeAnchor;
+        readonly StorageSettingsModel _store = new StorageSettingsModel();
+
+        /// <summary>
+        /// Raise the store's settings over the storage row, or put it down if it is already up.
+        ///
+        /// <para><b>Rebuilt on every open, unlike the bed picker</b>, and for the opposite reason:
+        /// the picker's rows are colonists, which change slowly, while these rows are the state of
+        /// one filter, which changes every time the player presses one of them. Cheap — five rungs,
+        /// two presets and a row per commodity is under twenty elements — and it means a press and
+        /// the picture of it cannot come apart.</para>
+        ///
+        /// <para><b>Every press is an intent about a cell.</b> The pane never writes to the world:
+        /// it names the cell the pane is describing and the simulation resolves it to whatever
+        /// store covers it — which is what lets the same control drive a crate the day crates
+        /// exist, and what makes a filter changed while the clock is paused land at once
+        /// (<c>PausedIntents</c>) rather than on unpause.</para>
+        /// </summary>
+        void ToggleStoragePanel(VisualElement anchor)
+        {
+            var world = _boot?.World;
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (world == null || storage == null) return;
+
+            if (_storePanel == null)
+            {
+                _storePanel = Popover("storage", "What goes in here", CloseStoragePanel, "bedowner");
+                _storeRows = new VisualElement();
+                _storeRows.AddToClassList("bedowner__rows");
+                _storePanel.Add(_storeRows);
+                _hud.Add(_storePanel);
+                _storePanel.RegisterCallback<GeometryChangedEvent>(_ => PlaceStoragePanel());
+            }
+
+            if (_storePanel.style.display == DisplayStyle.Flex)
+            {
+                CloseStoragePanel();
+                return;
+            }
+
+            _storeAnchor = anchor;
+            _storePanel.style.display = DisplayStyle.Flex;
+            FillStoragePanel();
+            PlaceStoragePanel();
+        }
+
+        /// <summary>Build the rows from the store under the pane. Called on open and after every press.</summary>
+        void FillStoragePanel()
+        {
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (_storeRows == null || storage == null) return;
+
+            int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
+            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
+            if (slot < 0) { CloseStoragePanel(); return; }
+
+            var settings = storage.SettingsOf(slot);
+            var content = _boot.Colony.Pawns.Content;
+            var keys = new List<string>(content.Items.Length);
+            for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
+
+            _store.Show(cell, hasStore: true, settings.Priority, storage.CellsOf(slot).Count, keys,
+                accepts: settings.Accepts, categoryOf: i => (int)content.Items[i].category);
+
+            _storeRows.Clear();
+
+            // The ladder first: it is the thing that decides where the next armful goes, and the
+            // thing a player changes most.
+            var rungs = new VisualElement();
+            rungs.AddToClassList("bedowner__rows");
+            for (int i = 0; i < StorageSettingsModel.PriorityKeys.Length; i++)
+            {
+                int rung = i;
+                _storeRows.Add(StoreRow(Registry.Label(StorageSettingsModel.PriorityKeys[i]),
+                    rung == _store.Priority ? BedPickerMark.ThisBed : BedPickerMark.None,
+                    () => { if (_store.PressPriority(rung, out var c)) Send(IntentKind.SetStoragePriority, c); }));
+            }
+
+            for (int i = 0; i < StorageSettingsModel.PresetKeys.Length; i++)
+            {
+                int preset = i;
+                _storeRows.Add(StoreRow(Registry.Label(StorageSettingsModel.PresetKeys[i]),
+                    BedPickerMark.None,
+                    () => { if (_store.PressPreset(preset, out var c)) Send(IntentKind.SetStorageFilter, c); }));
+            }
+
+            // Then one row per commodity. The category rows the model already builds are not drawn
+            // yet: four of the six have no commodity in them, so a parent over a branch of nought
+            // compresses nothing (docs/plans/storage.md decisions 21 and 31). The model carries
+            // their three-way state, so the tree is a layout change when the table is long enough
+            // to need it.
+            foreach (StorageSettingsModel.DefRow row in _store.Defs)
+            {
+                int def = row.DefIndex;
+                _storeRows.Add(StoreRow(Registry.Label(row.Key),
+                    row.Accepted ? BedPickerMark.ThisBed : BedPickerMark.None,
+                    () => { if (_store.PressDef(def, out var c)) Send(IntentKind.SetStorageFilter, c); }));
+            }
+        }
+
+        /// <summary>
+        /// Submit one of the store's commands about the cell the pane is describing, then rebuild
+        /// the rows — the simulation applies a storage intent while paused, so the answer is
+        /// already true by the time the next frame draws.
+        /// </summary>
+        void Send(IntentKind kind, StorageSettingsModel.Command command)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            world.Intents.Submit(new Intent(kind, _inspect.Cell, command.A, command.B, command.C));
+            FillStoragePanel();
+        }
+
+        VisualElement StoreRow(string label, BedPickerMark mark, Action press)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("bedowner__row");
+
+            VisualElement flag = HudText.Make(mark == BedPickerMark.ThisBed ? "✓" : " ",
+                HudTextRole.Body, ussClass: "bedowner__mark");
+            if (mark == BedPickerMark.ThisBed) flag.AddToClassList("bedowner__mark--this");
+            row.Add(flag);
+            row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
+            row.RegisterCallback<ClickEvent>(_ => press());
+            return row;
+        }
+
+        void PlaceStoragePanel()
+        {
+            if (_storePanel == null || _storeAnchor == null) return;
+            if (_storePanel.style.display.value != DisplayStyle.Flex) return;
+            PlacePopover(_storePanel, _storeAnchor, onTheBar: false);
+        }
+
+        void CloseStoragePanel()
+        {
+            if (_storePanel != null) _storePanel.style.display = DisplayStyle.None;
         }
 
         /// <summary>
