@@ -29,21 +29,44 @@ namespace Odyssey.Tests.Hud
             return (new BuildPaletteModel(designate, settings), designate, settings);
         }
 
-        // ---------------------------------------------------------------- the seven categories
+        /// <summary>Where the Zones category sits today. Looked up by key rather than written
+        /// as a number, so reordering the palette cannot silently re-point these tests.</summary>
+        static int ZonesCategory
+        {
+            get
+            {
+                for (int i = 0; i < PaletteTools.Categories.Length; i++)
+                    if (PaletteTools.Categories[i].key == "ui.arch.category.zones") return i;
+                Assert.Fail("the Zones category is gone from the palette");
+                return -1;
+            }
+        }
+
+        // ---------------------------------------------------------------- the categories
 
         /// <summary>
-        /// Seven categories, and the three that came out are gone rather than hidden.
+        /// Eight categories, and the two that were dropped stay dropped rather than hidden.
+        ///
+        /// <para><b>Zones came back (U49) and that is the exception recorded, not the rule
+        /// relaxed.</b> The 2026-09-17 sweep took Orders, Zones and Salvage off because they did
+        /// not answer "what would you like to put down". A growing zone does: it is painted on the
+        /// board like a floor and worked like one, so it returns as one placeable thing — while
+        /// Orders stays gone (its live tools are pinned in the gutter strip) and Salvage stays
+        /// gone outright. This test holds both halves: the row that returned is here, and the two
+        /// that left for good have not crept back.</para>
         /// </summary>
         [Test]
-        public void SevenCategoriesAndNoMore()
+        public void EightCategoriesAndTheDroppedOnesStayDropped()
         {
-            Assert.That(PaletteTools.Categories.Length, Is.EqualTo(7));
+            Assert.That(PaletteTools.Categories.Length, Is.EqualTo(8));
 
             var keys = new List<string>();
             foreach (var (key, _) in PaletteTools.Categories) keys.Add(key);
 
+            Assert.That(keys, Does.Contain("ui.arch.category.zones"),
+                "the growing zone is a thing to put down, and the palette is where things to " +
+                "put down live");
             Assert.That(keys, Does.Not.Contain("ui.arch.category.orders"));
-            Assert.That(keys, Does.Not.Contain("ui.arch.category.zones"));
             Assert.That(keys, Does.Not.Contain("ui.arch.category.salvage"));
         }
 
@@ -422,6 +445,110 @@ namespace Odyssey.Tests.Hud
             palette.TogglePinned(PaletteTools.Cancel);
             Assert.That(palette.WantsMaterial, Is.False);
             Assert.That(palette.CostLine, Is.Empty);
+        }
+
+        // ---------------------------------------------------------------- the plant tier
+
+        /// <summary>
+        /// The growing zone is the one order that takes a payload, and the payload is a crop:
+        /// arming it opens the plant tier and closes the material one.
+        /// </summary>
+        [Test]
+        public void TheZoneToolOffersACropAndNotAMaterial()
+        {
+            var (palette, designate, _) = Open();
+            palette.SelectCategory(ZonesCategory);
+            palette.SelectSubType(PaletteTools.GrowZone);
+
+            Assert.That(designate.Tool, Is.EqualTo(DesignateTool.GrowZone));
+            Assert.That(palette.WantsPlant, Is.True);
+            Assert.That(palette.WantsMaterial, Is.False,
+                "soil is not built out of anything, and two payload rows open at once would be " +
+                "two questions asked of one tool");
+            Assert.That(palette.Breadcrumb, Is.EqualTo("Zones › Growing zone › Carrot"));
+        }
+
+        /// <summary>
+        /// Choosing a crop configures the next box; it does not arm the tool. The same bargain
+        /// <see cref="AnOrderIsNotMadeOfAnything"/>'s material tier makes one tier over.
+        /// </summary>
+        [Test]
+        public void ChoosingACropDoesNotArmAnything()
+        {
+            var (palette, designate, _) = Open();
+            palette.SelectCategory(ZonesCategory);
+            palette.SelectSubType(PaletteTools.GrowZone);
+            designate.Tool = DesignateTool.None;
+
+            palette.SelectPlant(PlantHandle.Carrot);
+            Assert.That(designate.Tool, Is.EqualTo(DesignateTool.None),
+                "a pick in the plant tier left a tool in the player's hand");
+            Assert.That(designate.Plant, Is.EqualTo(PlantHandle.Carrot));
+        }
+
+        /// <summary>
+        /// A crop nothing offers cannot be chosen, even directly — the picker walks
+        /// <see cref="PaletteTools.Plants"/>, and so does the guard.
+        /// </summary>
+        [Test]
+        public void APlantOutsideTheTableCannotBeChosen()
+        {
+            var (palette, designate, _) = Open();
+            palette.SelectCategory(ZonesCategory);
+            palette.SelectSubType(PaletteTools.GrowZone);
+
+            int unknown = PlantHandle.Count; // one past the last real crop
+            Assert.That(Array.IndexOf(PaletteTools.Plants, unknown), Is.LessThan(0));
+
+            palette.SelectPlant(unknown);
+            Assert.That(designate.Plant, Is.Not.EqualTo(unknown));
+        }
+
+        /// <summary>
+        /// Another pinned action held hides the picker, exactly as it hides the material band:
+        /// while the next drag cancels or mines, a panel offering crops would be offering a
+        /// choice the drag cannot use.
+        /// </summary>
+        [Test]
+        public void AnotherOrderHeldHidesThePlantTier()
+        {
+            var (palette, _, _) = Open();
+            palette.SelectCategory(ZonesCategory);
+            palette.SelectSubType(PaletteTools.GrowZone);
+            Assert.That(palette.WantsPlant, Is.True);
+
+            palette.TogglePinned(PaletteTools.Cancel);
+            Assert.That(palette.WantsPlant, Is.False);
+
+            palette.TogglePinned(PaletteTools.Cancel);
+            Assert.That(palette.WantsPlant, Is.True, "putting the order down lost the picker");
+        }
+
+        /// <summary>
+        /// Holding the zone tool keeps the picker up — the exemption in
+        /// <c>BuildPaletteModel.WantsPlant</c>, and the reason it is not a copy of
+        /// <c>WantsMaterial</c>'s pinned rule: the zone tool <i>is</i> a pinned action, and the
+        /// crop is what its next drag carries.
+        /// </summary>
+        [Test]
+        public void HoldingTheZoneToolKeepsItsOwnPicker()
+        {
+            var (palette, _, _) = Open();
+            palette.SelectCategory(ZonesCategory);
+            palette.SelectSubType(PaletteTools.GrowZone);
+            Assert.That(palette.ArmedPinned, Is.EqualTo(PaletteTools.GrowZone),
+                "the fixture did not actually pick the tool up");
+            Assert.That(palette.WantsPlant, Is.True);
+
+            // Down and up again, the way the strip's toggle moves it: the picker stays open in
+            // both states, because the crop is wanted exactly when the tool is held.
+            palette.TogglePinned(PaletteTools.GrowZone);
+            Assert.That(palette.ArmedPinned, Is.Empty);
+            Assert.That(palette.WantsPlant, Is.True,
+                "pointing at the zone tool without holding it is when the picker is wanted most");
+
+            palette.TogglePinned(PaletteTools.GrowZone);
+            Assert.That(palette.WantsPlant, Is.True, "holding the tool shut its own picker");
         }
 
         // ---------------------------------------------------------------- stock

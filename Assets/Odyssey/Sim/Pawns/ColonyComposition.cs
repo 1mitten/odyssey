@@ -4,6 +4,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
@@ -72,6 +73,12 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // Built here rather than passed in, for the same argument the construction grid's
+            // `out` was: an optional growing-zone parameter is how a caller forgets one, and a
+            // forgetful build is a paint tool that silently does nothing. Reached through
+            // `pawns.Growing` by the sowing giver and the save.
+            var growing = new GrowingZones(pawns.Cells, ContentPack.Plants(), pawns.Chunks);
+            pawns.Growing = growing;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -79,6 +86,10 @@ namespace Odyssey.Sim.Pawns
             // And the other way: the system that finds a collapse needs the colony to drop things
             // into. Bound here because this is the one place that holds both (U29).
             support.Bind(pawns);
+            var doors = new DoorSystem(pawns);
+            pawns.Doors = doors;
+            var enclosure = new World.EnclosureGrid(pawns.Cells, edifices);
+            pawns.Enclosure = enclosure;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -91,6 +102,7 @@ namespace Odyssey.Sim.Pawns
                 .AddHashable(edificeSave)
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
+                .AddSystem(_ => enclosure)
                 // Starting skills (U37), before Needs and the job pipeline for the same reason
                 // they run: a colonist should not be scanned for work on the first tick it is
                 // ever ticked with the zero skills its constructor gave it, when its rolled ones
@@ -107,14 +119,17 @@ namespace Odyssey.Sim.Pawns
                     return pipeline;
                 })
                 .AddSystem(_ => new MovementSystem(pawns))
+                // The crops grow after the world has moved; Order 40 puts the pass there whatever
+                // line of this chain it sits on, which is the whole point of the schedule.
+                .AddSystem(_ => new PlantGrowthSystem(pawns, growing))
+                .AddSystem(_ => doors)
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
-                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices))
-                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
+                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure))                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
                 // second path into `StartJob` would be a second path out of it — which is where a
@@ -135,6 +150,7 @@ namespace Odyssey.Sim.Pawns
             var incidents = new Events.Incidents(pawns, ContentPack.Incidents());
             pawns.Incidents = incidents;
             incidents.Attach(builder);
+            growing.Attach(builder);
             return builder;
         }
     }

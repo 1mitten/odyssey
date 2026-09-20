@@ -284,5 +284,50 @@ namespace Odyssey.Tests.Sim
                 "the command waits for a real tick boundary, as it must");
             Assert.That(colony.World.GameSpeed, Is.EqualTo(1), "and has not been applied early");
         }
+
+        [Test]
+        public void AnIndoorsCellReportsIndoorsOnCellDetail()
+        {
+            ColonyWorld colony = Board();
+            int index = GrassNeighbourOfTheStart(colony);
+            CellRef at = Size.FromIndex(index);
+
+            // Outdoors initially
+            var frame = Ask(colony, at);
+            Assert.That(frame.TryGetCellDetail(index, out CellDetail outdoorDetail), Is.True);
+            Assert.That(outdoorDetail.IsIndoors, Is.False, "bare grass is outdoors");
+
+            // Build a small enclosed room on the layer above the grass (at.Y + 1)
+            int minX = at.X - 1, maxX = at.X + 1;
+            int minZ = at.Z - 1, maxZ = at.Z + 1;
+            int roomY = at.Y + 1;
+            int indoorIndex = Size.Index(at.X, at.Z, roomY);
+            CellRef indoorCell = new CellRef(at.X, at.Z, roomY);
+
+            for (int x = minX; x <= maxX; x++)
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                int c = Size.Index(x, z, roomY);
+                if (x == at.X && z == at.Z) continue;
+
+                ushort def = (ushort)((x == minX && z == at.Z) ? CoreContent.EdificeDoor : CoreContent.EdificeWall);
+                colony.Construction.Edifices.Records.Add(new PlacedEdifice
+                {
+                    CellIndex = c,
+                    Def = def,
+                    Removed = false
+                });
+                colony.Pawns.Cells.Edifice[c] = colony.Construction.Edifices.Records.Count - 1;
+
+                // Roof on layer roomY + 1
+                colony.Pawns.Cells.Floor[Size.Index(x, z, roomY + 1)] = CoreContent.SlabBuilt;
+            }
+            colony.Pawns.Cells.Floor[Size.Index(at.X, at.Z, roomY + 1)] = CoreContent.SlabBuilt;
+            colony.Pawns.Enclosure?.MarkAllDirty();
+
+            frame = Ask(colony, indoorCell);
+            Assert.That(frame.TryGetCellDetail(indoorIndex, out CellDetail indoorDetail), Is.True);
+            Assert.That(indoorDetail.IsIndoors, Is.True, "enclosed roofed room reports IsIndoors = true");
+        }
     }
 }

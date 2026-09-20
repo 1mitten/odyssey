@@ -28,7 +28,24 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Take one of our own buildings apart, for half of what it cost.</summary>
         public const int Deconstruct = 9;
 
-        public const int Count = 10;
+        /// <summary>Break the ground of an unplanted zone cell and put a seed in it.</summary>
+        public const int Sow = 10;
+
+        /// <summary>Cut a ripe crop and gather what it yields.</summary>
+        public const int Harvest = 11;
+
+        public const int Count = 12;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: plant species, as the zone and plant channels carry them.
+    /// <para>Like every table here it is append-only: a zone record stores its plant as one of
+    /// these numbers, so the order a save depends on never shifts.</para>
+    /// </summary>
+    public static class PlantHandle
+    {
+        public const int Carrot = 0;
+        public const int Count = 1;
     }
 
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
@@ -43,7 +60,15 @@ namespace Odyssey.Sim.Contracts
 
         public const int IronOre = 4;
         public const int Coal = 5;
-        public const int Count = 6;
+
+        /// <summary>
+        /// The first raw food. Eaten straight from the field or the pile — the eater scans for
+        /// nutrition and does not care that it is not a meal (docs/design/22-growing.md §5).
+        /// Six, not two: the item table grew five commodities before the carrot existed, and
+        /// handle order is the save contract.
+        /// </summary>
+        public const int Carrots = 6;
+        public const int Count = 7;
     }
 
     /// <summary>
@@ -172,7 +197,8 @@ namespace Odyssey.Sim.Contracts
         /// with a bed in it has ever left this branch.</para>
         /// </summary>
         public const int Bed = 5;
-        public const int Count = 6;
+        public const int Door = 6;
+        public const int Count = 7;
     }
 
     /// <summary>

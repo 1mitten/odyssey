@@ -317,12 +317,15 @@ namespace Odyssey.Sim.Pawns
         /// layer that can, ring by ring out to <paramref name="maxRadius"/>; -1 when there is
         /// none. Where felled wood lands and where a failed haul puts its load down.
         /// </summary>
-        public int NearestCellWithSpace(CellGrid cells, int origin, int defIndex, int count, int maxRadius)
+        public int NearestCellWithSpace(CellGrid cells, int origin, int defIndex, int count, int maxRadius,
+            System.Func<int, bool>? accept = null)
         {
             if (!cells.HasFloor(origin))
                 origin = cells.FirstFloorAtOrBelow(origin);
 
-            if (cells.HasFloor(origin) && cells.IsWalkable(origin) && CellHasSpace(origin, defIndex, count))
+            if (cells.HasFloor(origin) && cells.IsWalkable(origin)
+                && CellHasSpace(origin, defIndex, count)
+                && (accept == null || accept(origin)))
                 return origin;
 
             GridSize size = cells.Size;
@@ -336,6 +339,7 @@ namespace Odyssey.Sim.Pawns
                 if (!size.Contains(x, z, at.Y)) continue;
                 int candidate = size.Index(x, z, at.Y);
                 if (!cells.IsWalkable(candidate) || !CellHasSpace(candidate, defIndex, count)) continue;
+                if (accept != null && !accept(candidate)) continue;
                 return candidate;
             }
             return -1;

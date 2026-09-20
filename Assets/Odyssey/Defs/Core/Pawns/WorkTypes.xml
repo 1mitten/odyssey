@@ -1,15 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Containers for work givers, carrying the natural order they scan in. Cutting and mining scan
-  before hauling at equal priority: the orders that make work exist come before the order that
-  tidies it up. Cutting is first of the two because felling is the shorter job and the wood is
-  usually nearer.
+  Containers for work givers, carrying the natural order they scan in. Work that makes something
+  scans before work that tidies: construction, then growing, then cutting and mining, then
+  hauling. Cutting is ahead of mining because felling is the shorter job and the wood is usually
+  nearer.
+
+  Growing took cutting's old 1 when it arrived (U47), and the other three shifted down a rank to
+  keep every pair distinct - the scan order among the original four is unchanged, but a field
+  waiting for its seed now beats a tree waiting for its axe, which is the point: a zone is sown
+  inside the daylight window or it is not sown today.
 
   The rate numbers are the work-speed curve (design 17 §3b): rate = base + slope × level, in
   thousandths of the speed everything is tuned at. The integers are INVENTED: anchored on OUR
   own starting roll (mean level 1.16) rather than the reference's level 8, with the reference's
   relative character kept — mining steepest, construction shallowest, hauling flat, because a
-  skill drives either rate or quality and hauling has neither.
+  skill drives either rate or quality and hauling has neither. Growing carries cutting's curve:
+  a novice sows at six tenths of the tuned speed and each level buys a tenth more (design 22
+  §5). This comment claimed it had no curve for two days while the def below carried one.
 -->
 <Defs>
 
@@ -17,13 +24,13 @@
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
-    <order>3</order>
+    <order>4</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Cutting</defName>
     <label>cutting</label>
-    <order>1</order>
+    <order>2</order>
     <rateSkill>1</rateSkill>
     <workRateBasePerMille>600</workRateBasePerMille>
     <workRateSlopePerLevel>100</workRateSlopePerLevel>
@@ -32,7 +39,7 @@
   <WorkTypeDef>
     <defName>Work_Mining</defName>
     <label>mining</label>
-    <order>2</order>
+    <order>3</order>
     <rateSkill>2</rateSkill>
     <workRateBasePerMille>550</workRateBasePerMille>
     <workRateSlopePerLevel>105</workRateSlopePerLevel>
@@ -68,6 +75,30 @@
     <rateSkill>3</rateSkill>
     <workRateBasePerMille>700</workRateBasePerMille>
     <workRateSlopePerLevel>75</workRateSlopePerLevel>
+  </WorkTypeDef>
+
+  <!--
+    Sowing and harvest are one work type (docs/design/22-growing.md section 6): one craft at one
+    patch of soil, and a colonist who would sow but not reap strands the field at its only
+    interesting moment. It scans behind construction and ahead of cutting - a site is work
+    already begun, and a zone's daylight window is the one clock in the colony that will not
+    wait, where a tree keeps until Thursday.
+
+    And the skill finally buys speed at the hoe (owner, 2026-09-19: "make sure the speed of the
+    sowing and harvesting is determined by the relevant skill"). The seam is this def and nothing
+    else - WorkRatePerMille has carried the curve for every work type since WS2, and growing was
+    the one def without a rateSkill. Cutting's own numbers, read as a judgement: a novice runs
+    at six tenths of the tuned speed and each level buys a tenth more, so the tuned speed sits
+    around level four where the starting rolls put a colonist who has hoed a season. The skill
+    curve itself (17-rates-and-stats 3a) belongs to the skills work when it lands.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Growing</defName>
+    <label>growing</label>
+    <order>1</order>
+    <rateSkill>4</rateSkill>
+    <workRateBasePerMille>600</workRateBasePerMille>
+    <workRateSlopePerLevel>100</workRateSlopePerLevel>
   </WorkTypeDef>
 
 </Defs>

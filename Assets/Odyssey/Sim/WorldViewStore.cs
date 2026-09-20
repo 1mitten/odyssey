@@ -33,6 +33,12 @@ namespace Odyssey.Sim
         /// <summary>Publish one building site, wherever in the world it is.</summary>
         public void AddSite(in SiteView view) => _target.AddSite(view);
 
+        /// <summary>Publish one growing-zone cell, wherever in the world it is.</summary>
+        public void AddZone(in ZoneView view) => _target.AddZone(view);
+
+        /// <summary>Publish one planted cell, wherever in the world it is.</summary>
+        public void AddPlant(in PlantView view) => _target.AddPlant(view);
+
         /// <summary>
         /// Publish one number about one pawn, under a name the feature owns. See
         /// <see cref="PawnAspect"/> for why this exists rather than another field on

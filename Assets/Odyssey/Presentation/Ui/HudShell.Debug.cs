@@ -70,6 +70,18 @@ namespace Odyssey.Presentation.Ui
                 () => GiveResource(ItemIndex.Stone)));
             _debugCheats.Add(DebugActionRow(DebugDirector.GiveFoodKey, "Adds 50 meals near the camera",
                 () => GiveResource(ItemIndex.Meal)));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipDayKey,
+                "Spends one whole game day of ticks at once (about a fifth of a second). "
+                    + "The crop's stage changes arrive at the same hour each press; works while paused",
+                SkipDay));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipMorningKey,
+                "Skips the night and hands back the clock at dawn, with a whole watchable day "
+                    + "ahead: the harvest happens on screen, not inside the skip",
+                () => _boot!.DebugSkipToMorning()));
+            _debugCheats.Add(DebugActionRow(DebugDirector.RipenCropsKey,
+                "Brings every standing crop to ripeness at once, daylight window and all - "
+                    + "the harvest half without the four-day wait",
+                RipenCrops));
             _debugPanel.Add(_debugCheats);
 
             // Filled when the panel opens, from the colony that is open: the content is the
@@ -198,6 +210,25 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
+
+        /// A day a press. The day's length is read from the content rather than written here, so
+        /// a retuned calendar does not leave this row skipping some other amount.
+        /// </summary>
+        void SkipDay()
+        {
+            var colony = _boot!.Colony;
+            if (colony == null) return;
+            _boot.DebugSkipTicks(colony.Pawns.Content.DayTicks);
+        }
+
+        void RipenCrops()
+        {
+            var world = _boot!.World;
+            if (world == null || _directors == null) return;
+            world.Intents.Submit(new Intent(IntentKind.DebugRipen, DebugAnchorCell(world)));
+        }
+
+
         /// Which <em>column</em> a debug spawn or grant is aimed at. Not which cell: the shell
         /// reads snapshots and never the cell grid, so it cannot know what is standable, and
         /// <see cref="Odyssey.Sim.World.CellGrid.NearestWalkableInColumn"/> resolves the layer on

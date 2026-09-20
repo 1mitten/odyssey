@@ -27,12 +27,17 @@ namespace Odyssey.Sim.World
     {
         readonly CellGrid _grid;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
+        readonly Growing.GrowingZones? _zones;
+        readonly EnclosureGrid? _enclosure;
         readonly int[] _costByClass = new int[256];
 
-        public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
+        public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
+            Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null)
         {
             _grid = grid;
             _edifices = edifices;
+            _zones = zones;
+            _enclosure = enclosure;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -76,9 +81,40 @@ namespace Odyssey.Sim.World
 
             ushort workToClear = (ushort)WorldContent.Table[terrain].workToClear;
 
+            // The field's own two answers, beside the ground's: what the zone here grows and how
+            // far the standing crop has come (owner, 2026-09-18 — clicking a zone should say what
+            // is growing in it). 255 and MaxValue are the pane's "nothing to say", and the pane
+            // stays silent for them exactly as it does for a wall's quality.
+            byte zonePlant = byte.MaxValue;
+            ushort cropGrowth = ushort.MaxValue;
+            byte zoneYield = 0;
+            if (_zones != null)
+            {
+                // A click on a field lands on the ground it is drawn on - the SOLID cell - while
+                // the zone lives in the air cell a colonist stands in, exactly as a tree does.
+                // So the ground answers for the zone above it, the same one-step-up lift the
+                // picker's "block below" rule plays from the other side; asking only the clicked
+                // cell made the pane silent over every field.
+                int zoneCell = cell;
+                if (_zones.ZonePlantAt(zoneCell) < 0
+                    && _grid.IsSolidTerrain(cell)
+                    && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
+                    zoneCell += _grid.Size.LayerStride;
+
+                int plant = _zones.ZonePlantAt(zoneCell);
+                if (plant >= 0)
+                {
+                    zonePlant = (byte)plant;
+                    zoneYield = (byte)_zones.Plant(plant).yieldCount;
+                    if (_zones.IsPlanted(zoneCell))
+                        cropGrowth = (ushort)_zones.Plant(plant).Milligrowth(_zones.GrowthTicks(zoneCell));
+                }
+            }
+
+            bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner));
+                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors));
         }
     }
 }

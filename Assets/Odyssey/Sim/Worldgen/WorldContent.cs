@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Worldgen
@@ -92,11 +93,21 @@ namespace Odyssey.Sim.Worldgen
         };
 
         /// <summary>
+        /// The crops in the order the zones and crops channels carry them, for the same reason
+        /// every list here exists: a zone record stores its plant as a handle, so the handle is
+        /// save- and hash-visible and its order is a contract, not an accident of the loader.
+        /// </summary>
+        public static readonly string[] PlantOrder =
+        {
+            "Plant_Carrot",
+        };
+
+        /// <summary>
         /// The Def types the world content is made of, registered in one place so a caller cannot
         /// load half of it.
         /// </summary>
         public static DefLoader Register(DefLoader loader) =>
-            loader.Register<TerrainDef>().Register<OreKindDef>();
+            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -144,6 +155,14 @@ namespace Odyssey.Sim.Worldgen
                 ores[i] = new NaturalContent.OreKind(terrain, def.weight, def.minDepth, def.maxDepth, def.moduleId);
             }
             return ores;
+        }
+
+        /// <summary>The crops, in <see cref="PlantOrder"/> — the order every zone record and both snapshot channels carry.</summary>
+        public static PlantDef[] PlantsFromDefs(DefDatabase defs)
+        {
+            var plants = new PlantDef[PlantOrder.Length];
+            for (int i = 0; i < PlantOrder.Length; i++) plants[i] = One<PlantDef>(defs, PlantOrder[i]);
+            return plants;
         }
 
         /// <summary>The terrain index of each name. Load-time only, as every name lookup is.</summary>

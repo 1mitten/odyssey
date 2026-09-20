@@ -138,15 +138,15 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div></div></header>
 <div class="wrap">
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
-<li><a href="#commodities">Commodities<b>49</b></a></li>
+<li><a href="#commodities">Commodities<b>50</b></a></li>
 <li><a href="#items">Items and equipment<b>30</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>81</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
 <li><a href="#work">Work and skills<b>36</b></a></li>
-<li><a href="#colonists">Colonists<b>34</b></a></li>
+<li><a href="#colonists">Colonists<b>36</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>38</b></a></li>
-<li><a href="#world">World and interface<b>90</b></a></li>
+<li><a href="#world">World and interface<b>91</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -155,15 +155,15 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>667</b><i>named entries</i></div>
+<div class="stat"><b>674</b><i>named entries</i></div>
 <div class="stat"><b>269</b><i>with icon art</i></div>
-<div class="stat m"><b>398</b><i>no art yet</i></div>
+<div class="stat m"><b>405</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
 <p id="nohits" class="empty" hidden>Nothing matches that search.</p>
 <section id="commodities" data-sec="1">
-<h2>Commodities <em class="count">49 entries</em></h2>
+<h2>Commodities <em class="count">50 entries</em></h2>
 <p class="blurb">What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.</p>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -356,6 +356,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.res.coal" data-hay="coal ui.res.coal burns hot. found deeper than iron, and for that reason glossy black lumps" data-gap="1">
 <div class="nm">Coal<span class="k">ui.res.coal</span></div>
 <div class="dsc">Burns hot. Found deeper than iron, and for that reason<span class="need">Needs drawing: glossy black lumps</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.res.carrots" data-hay="carrots ui.res.carrots the first field crop. eaten straight, no cooking and no spoilage " data-gap="1">
+<div class="nm">Carrots<span class="k">ui.res.carrots</span></div>
+<div class="dsc">The first field crop. Eaten straight, no cooking and no spoilage</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -1677,7 +1683,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">34 entries</em></h2>
+<h2>Colonists <em class="count">36 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1841,6 +1847,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.status.felling" data-hay="chopping ui.status.felling cutting a tree down for wood an axe swung at a trunk" data-gap="1">
 <div class="nm">Chopping<span class="k">ui.status.felling</span></div>
 <div class="dsc">Cutting a tree down for wood<span class="need">Needs drawing: an axe swung at a trunk</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.sowing" data-hay="sowing ui.status.sowing breaking ground and planting a zone cell " data-gap="1">
+<div class="nm">Sowing<span class="k">ui.status.sowing</span></div>
+<div class="dsc">Breaking ground and planting a zone cell</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.status.harvesting" data-hay="harvesting ui.status.harvesting cutting a ripe crop and gathering it " data-gap="1">
+<div class="nm">Harvesting<span class="k">ui.status.harvesting</span></div>
+<div class="dsc">Cutting a ripe crop and gathering it</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2319,7 +2337,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">90 entries</em></h2>
+<h2>World and interface <em class="count">91 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2399,6 +2417,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.terrain.tree.broadleaf" data-hay="broadleaf ui.terrain.tree.broadleaf a broad-crowned tree of the meadow. chopped for wood " data-gap="1">
 <div class="nm">Broadleaf<span class="k">ui.terrain.tree.broadleaf</span></div>
 <div class="dsc">A broad-crowned tree of the meadow. Chopped for wood</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.carrot" data-hay="carrot ui.terrain.carrot a root vegetable of the meadow. grown in zones, cut at full growth " data-gap="1">
+<div class="nm">Carrot<span class="k">ui.terrain.carrot</span></div>
+<div class="dsc">A root vegetable of the meadow. Grown in zones, cut at full growth</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3077,7 +3101,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 667, "gaps": 398};</script>
+<script>window.WIKI={"total": 674, "gaps": 405};</script>
 <script>
 (function(){
   var D = window.WIKI;

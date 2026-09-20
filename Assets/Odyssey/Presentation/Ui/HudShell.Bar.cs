@@ -252,7 +252,7 @@ namespace Odyssey.Presentation.Ui
             settings.AddToClassList("menu__row");
             settings.Add(HudText.Make("Settings", HudTextRole.Row, ussClass: "menu__label"));
             settings.Add(HudText.Make("Esc", HudTextRole.Hotkey, ussClass: "menu__key"));
-            settings.tooltip = "Settings, and the way out. None of it is in the save.";
+            settings.tooltip = "Settings — Esc";
             settings.RegisterCallback<ClickEvent>(_ =>
             {
                 ToggleMenu(false);
@@ -368,9 +368,6 @@ namespace Odyssey.Presentation.Ui
             // in a harness that builds no world. Showing every section at once is not a state
             // anything asks for, so it is not a state the panel is ever in.
             OnSettingsTabChanged(SettingsTab.Interface);
-
-            _settingsPanel.Add(HudText.Make("Escape closes. None of it is in the save.",
-                HudTextRole.Meta, ussClass: "settings__note"));
             _hud.Add(_settingsPanel);
         }
 
