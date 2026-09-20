@@ -14,13 +14,14 @@ namespace Odyssey.Tests.Hud
     public class WorkDirectorTests
     {
         [Test]
-        public void ItOpensClosedAndOnTheDetailedReading()
+        public void ItOpensClosedAndOnTheSimpleReading()
         {
             var work = new WorkDirector();
 
             Assert.That(work.Open, Is.False);
-            Assert.That(work.Mode, Is.EqualTo(WorkGridMode.Detailed),
-                "The panel's whole claim is that four priorities are worth having.");
+            Assert.That(work.Mode, Is.EqualTo(WorkGridMode.Simple),
+                "A tick and a cross are what anyone can read at a glance; four ranks of urgency " +
+                "are what you go looking for once you want them (owner, 2026-09-20).");
         }
 
         [Test]
@@ -51,12 +52,12 @@ namespace Odyssey.Tests.Hud
             work.Toggle();
             Assert.That(modes, Is.Zero, "Opening is not a mode change.");
 
-            work.SetMode(WorkGridMode.Simple);
-            Assert.That(work.Mode, Is.EqualTo(WorkGridMode.Simple));
+            work.SetMode(WorkGridMode.Detailed);
+            Assert.That(work.Mode, Is.EqualTo(WorkGridMode.Detailed));
             Assert.That(modes, Is.EqualTo(1));
 
-            work.SetMode(WorkGridMode.Simple);
-            Assert.That(modes, Is.EqualTo(1));
+            work.SetMode(WorkGridMode.Detailed);
+            Assert.That(modes, Is.EqualTo(1), "setting what is already set says nothing");
         }
 
         // ------------------------------------------------------------------ the bar and the key

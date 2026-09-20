@@ -70,11 +70,8 @@ namespace Odyssey.Hud
         /// </summary>
         public const int LabelBand = 72;
 
-        /// <summary>Label box to icon tile.</summary>
+        /// <summary>The rotated label's own breathing room above the first row.</summary>
         public const int LabelGap = 4;
-
-        /// <summary>The icon tile at the foot of the band, the same square as a cell.</summary>
-        public const int IconTile = Cell;
 
         /// <summary>
         /// Simple mode's tick and cross, drawn rather than typed. Half the cell, so the mark sits
@@ -83,8 +80,26 @@ namespace Odyssey.Hud
         /// </summary>
         public const int MarkSize = 14;
 
-        /// <summary>The whole header band: <see cref="LabelBand"/> + <see cref="LabelGap"/> + tile.</summary>
-        public const int HeaderBand = LabelBand + LabelGap + IconTile;
+        /// <summary>
+        /// The strip across the top of the band, above the labels: <b>one title or one pager per
+        /// half</b>. The names column carries <i>Colonist</i>, its reset and its row pager; the
+        /// work half carries its column pager; the schedule half carries the word <i>Schedule</i>.
+        ///
+        /// <para>Each control's own name and its own pager sit over that control rather than over
+        /// the panel (owner, 2026-09-20), so nothing in this band belongs to a neighbour.</para>
+        /// </summary>
+        public const int TitleStrip = 24;
+
+        /// <summary>
+        /// The whole header band: the title strip and the rotated labels beneath it.
+        ///
+        /// <para><b>The icon tiles are gone</b> (owner, 2026-09-20: <i>"remove the squares below
+        /// the skills and move the skill text down where the squares were"</i>). They were a 28px
+        /// square under every label carrying the work type's icon; the label now runs down to the
+        /// foot of the band in their place. The band is 96 rather than 104, and what it bought is
+        /// the room the pagers and the <i>Schedule</i> title needed.</para>
+        /// </summary>
+        public const int HeaderBand = TitleStrip + LabelBand;
 
         /// <summary>
         /// The clearance a label must keep from its neighbour. Two pixels of slack, because the
@@ -254,5 +269,37 @@ namespace Odyssey.Hud
 
         /// <summary>The grid's height at a full page — header band and twelve rows.</summary>
         public const int PanelGridHeight = HeaderBand + RowsPerPage * RowHeight;
+
+        /// <summary>
+        /// What the panel element's <c>width</c> has to be set to, which is <b>not</b>
+        /// <see cref="PanelWidth"/>.
+        ///
+        /// <para><b>UI Toolkit's <c>width</c> is a border box.</b> <c>.panel</c> in <c>Hud.uss</c>
+        /// carries <c>padding: 12px</c> and a 1px border, so a panel set to 1,383 has a content box
+        /// of 1,383 — 24 — 2 = <b>1,357</b>, and a grid that wants 1,383 overflows it — to
+        /// the right, past the panel's own frame, over the world. That is exactly what the owner
+        /// reported on 2026-09-20: <i>"the scheduler is spilling over into the game play area"</i>.
+        /// It was invisible to both tiers, which assert no geometry against a stylesheet.</para>
+        ///
+        /// <para>Stated as the two constants that already own those numbers rather than as 26, so
+        /// that a change to the panel's padding moves this with it.</para>
+        /// </summary>
+        public const int PanelOuterWidth =
+            PanelWidth + 2 * (HudLayout.Pad + HudTheme.BorderWidth);
+
+        // ------------------------------------------------------------------ the key, in two halves
+
+        /// <summary>
+        /// The key's work half: the frozen names and the work columns together.
+        ///
+        /// <para><b>It spans the name column as well as the columns</b>, which is what puts its
+        /// right edge exactly on the grid's own seam at 566 — so the rule between the two halves
+        /// of the key is the same line as the rule between the two halves of the table, and each
+        /// set of keys sits under the control it explains (owner, 2026-09-20).</para>
+        /// </summary>
+        public const int KeyWorkWidth = LeftColumn + ColumnsPerPage * Pitch;
+
+        /// <summary>The key's schedule half, which is the schedule half.</summary>
+        public const int KeyScheduleWidth = ScheduleWidth;
     }
 }

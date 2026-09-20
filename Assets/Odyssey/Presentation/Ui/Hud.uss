@@ -1115,6 +1115,59 @@
     background-color: rgba(12, 16, 20, 0.96);
 }
 
+/* ---------------------------------------------------------------- The Work tab
+
+   Denser than every other panel, and the one place a panel fill is not the shared token.
+   Owner, 2026-09-20: "make this menu less transculent/transparent as it needs to see over menus
+   behind a little better." It is the largest panel in the game by a long way and the only one
+   with a grid of small coloured cells in it; at .96 the world's greens and the terrain's contrast
+   came through the schedule bands and moved them, which is exactly the signal those bands carry.
+   The other panels keep .96 because they are small and mostly text. */
+.panel.work {
+    background-color: rgba(10, 13, 17, 0.995);
+}
+
+/* A key entry that is also a button: the schedule half's six blocks. It has to read as pressable
+   before it is pressed, which is why the resting state already has a border rather than growing
+   one on hover — a control that only looks like a control once you have found it is not one. */
+.workkey__btn {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 8px;
+    padding: 2px 7px 2px 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.10);
+    border-radius: 4px;
+    cursor: link;
+}
+
+.workkey__btn:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Armed: this block is the one in your hand, and an hour you click takes it. */
+.workkey__btn--on {
+    background-color: rgba(111, 211, 227, 0.16);
+    border-color: rgb(111, 211, 227);
+}
+
+.workkey__swatch {
+    width: 13px;
+    height: 13px;
+    margin-right: 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.workkey__name {
+    color: #a9b7c0;
+}
+
+.workkey__btn--on .workkey__name {
+    color: #eef3f6;
+}
+
 /* A window raised from the command bar, which is additionally anchored to the left edge of the
    button that raised it and sits flush on the bar with no gap. The left and bottom are written
    from code, because where a popover sits is a fact about the button that raised it and only the

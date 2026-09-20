@@ -52,6 +52,12 @@ namespace Odyssey.Presentation.Ui
         Check,
         Cross,
 
+        /// <summary>
+        /// A circular arrow: put this back the way it was. The Work tab's reset, which drops a
+        /// column sort and returns the rows to the roster's own order.
+        /// </summary>
+        Refresh,
+
         // ---------------------------------------------------------------- Build palette
         //
         // Forty-two more, drawn for the same reason the eleven above are and under the same
@@ -314,6 +320,17 @@ namespace Odyssey.Presentation.Ui
                     // the strokes do not touch the rounded corner of the box behind them.
                     Polyline(painter, true, P(6.5f, 6.5f), P(17.5f, 17.5f));
                     Polyline(painter, true, P(17.5f, 6.5f), P(6.5f, 17.5f));
+                    return;
+
+                case HudGlyphKind.Refresh:
+                    // Three quarters of a circle with an arrowhead on the open end. Drawn as a
+                    // polyline of eight points rather than with an arc, because every other shape
+                    // in this file is a polyline and one arc would be one more thing to tune.
+                    Polyline(painter, true,
+                        P(19.4f, 8.6f), P(16.6f, 5.1f), P(12.0f, 3.6f), P(7.4f, 5.1f),
+                        P(4.3f, 8.9f), P(4.0f, 13.6f), P(6.4f, 17.7f), P(10.6f, 19.9f),
+                        P(15.3f, 19.5f), P(18.7f, 16.6f));
+                    FillTriangle(painter, P(20.6f, 3.4f), P(21.0f, 10.0f), P(14.8f, 8.0f));
                     return;
 
                 case HudGlyphKind.Info:

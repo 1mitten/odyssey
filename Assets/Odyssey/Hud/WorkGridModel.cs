@@ -181,6 +181,36 @@ namespace Odyssey.Hud
         /// </summary>
         readonly List<WorkRow> _pool = new List<WorkRow>();
 
+        /// <summary>
+        /// The column the colony is sorted by, or -1 for the roster's own order.
+        ///
+        /// <para><b>Clicking a header sorts by it, highest first</b> (owner, 2026-09-20). The sort
+        /// is this panel's view of the roster and never the roster itself: the strip's order is
+        /// something the player arranged by dragging cards, and a panel that reordered it from
+        /// here would be answering a question nobody asked in a place they cannot see.</para>
+        ///
+        /// <para>It lasts as long as the panel is open and is dropped when it closes, which is the
+        /// owner's reading of <i>"when you leave the control it resets"</i>. The reset button in
+        /// the Colonist header is for changing your mind without closing.</para>
+        /// </summary>
+        public int SortColumn { get; private set; } = NoSort;
+
+        /// <summary>No column: the rows come in the roster's order.</summary>
+        public const int NoSort = -1;
+
+        /// <summary>
+        /// The schedule block the key has armed, or -1 for none.
+        ///
+        /// <para>Armed from the key, which is a row of buttons (owner, 2026-09-20). While one is
+        /// armed an hour takes it; with none armed an hour cycles, exactly as it did before there
+        /// was a key to press. So the gesture that already worked keeps working and the palette is
+        /// an addition rather than a replacement.</para>
+        /// </summary>
+        public int ArmedBlock { get; private set; } = NoBlock;
+
+        /// <summary>No block armed: an hour cycles.</summary>
+        public const int NoBlock = -1;
+
         /// <summary>Which page of work columns is showing. Zero-based, as the roster's is.</summary>
         public int ColumnPage { get; private set; }
 
@@ -225,6 +255,50 @@ namespace Odyssey.Hud
             if (slot < 0 || slot >= WorkGridLayout.ColumnsPerPage) return -1;
             int column = ColumnPage * WorkGridLayout.ColumnsPerPage + slot;
             return column < Columns.Count ? column : -1;
+        }
+
+        /// <summary>
+        /// Sort the colony by a column, highest first, or do nothing for a column there is
+        /// nothing to sort by.
+        ///
+        /// <para><b>A skill level where there is one and a priority where there is not.</b>
+        /// Hauling is the single live column with no skill behind it, so "who is best at it" has
+        /// no answer and the priority is the only ordering that means anything there. A column the
+        /// simulation does not run yet has neither and is refused.</para>
+        /// </summary>
+        public bool SortBy(int column)
+        {
+            if (column < 0 || column >= Columns.Count) return false;
+            if (!Columns[column].Live) return false;
+            SortColumn = column;
+            return true;
+        }
+
+        /// <summary>Back to the roster's order. The reset button, and closing the panel.</summary>
+        public void ClearSort() => SortColumn = NoSort;
+
+        /// <summary>
+        /// Arm a block from the key, or disarm it by pressing the one already armed.
+        /// </summary>
+        public void ArmBlock(int handle)
+        {
+            ArmedBlock = ArmedBlock == handle ? NoBlock : handle;
+        }
+
+        /// <summary>Disarm whatever the key had armed. Closing the panel does this.</summary>
+        public void DisarmBlock() => ArmedBlock = NoBlock;
+
+        /// <summary>
+        /// What a row sorts by in the given column, higher being earlier.
+        ///
+        /// <para>A skill level is already "higher is better". A priority is not: 1 is the most
+        /// urgent and 0 means never, so it is turned round here into an <i>importance</i> that
+        /// orders 1, 2, 3, 4, never. Both live on one scale so the comparer has one rule.</para>
+        /// </summary>
+        public static int SortKeyOf(in WorkCell cell, bool hasSkill)
+        {
+            if (hasSkill) return cell.Level;
+            return cell.Priority <= Never ? 0 : Lowest + 1 - cell.Priority;
         }
 
         /// <summary>Show a page of columns, clamped to the ones that exist.</summary>
@@ -282,6 +356,10 @@ namespace Odyssey.Hud
                 for (int i = 0; i < order.Count; i++)
                     if (snapshot.TryGetPawn(order[i], out _)) _all.Add(order[i]);
 
+            // Sorted before it is paged, so page one holds the best of the colony rather than the
+            // best of whoever happened to be on page one.
+            if (SortColumn != NoSort) SortAll(snapshot);
+
             TotalRows = _all.Count;
 
             // Somebody died or the colony shrank: the page the player was on may not exist now.
@@ -318,6 +396,48 @@ namespace Odyssey.Hud
                 Rows.Add(row);
             }
         }
+
+        /// <summary>
+        /// Order the whole colony by the sorted column, highest first.
+        ///
+        /// <para><b>Stable, and deliberately so.</b> <c>List.Sort</c> is not, and a colony where
+        /// three people share a level would shuffle those three every refresh — five times a
+        /// second, under the cursor, for as long as the panel was open. The roster position is the
+        /// tie-break, so equal skill keeps the order the player already arranged.</para>
+        ///
+        /// <para>The keys are read once into a buffer rather than inside the comparer, because a
+        /// comparer that reads the snapshot does so O(n log n) times for values that cannot change
+        /// during a sort.</para>
+        /// </summary>
+        void SortAll(WorldSnapshot snapshot)
+        {
+            WorkCatalogue.Entry entry = Columns[SortColumn];
+
+            _sortKeys.Clear();
+            for (int i = 0; i < _all.Count; i++)
+            {
+                WorkCell cell = ReadCell(snapshot, _all[i], SortColumn);
+                _sortKeys.Add(SortKeyOf(cell, entry.HasSkill));
+            }
+
+            _order.Clear();
+            for (int i = 0; i < _all.Count; i++) _order.Add(i);
+            _order.Sort((a, b) =>
+            {
+                int by = _sortKeys[b].CompareTo(_sortKeys[a]);   // descending
+                return by != 0 ? by : a.CompareTo(b);            // then the roster's order
+            });
+
+            _sorted.Clear();
+            for (int i = 0; i < _order.Count; i++) _sorted.Add(_all[_order[i]]);
+
+            _all.Clear();
+            for (int i = 0; i < _sorted.Count; i++) _all.Add(_sorted[i]);
+        }
+
+        readonly List<int> _sortKeys = new List<int>();
+        readonly List<int> _order = new List<int>();
+        readonly List<PawnId> _sorted = new List<PawnId>();
 
         /// <summary>Put this page's rows back in the pool, emptied and ready to be filled again.</summary>
         void Recycle()
@@ -481,7 +601,12 @@ namespace Odyssey.Hud
             if (hour < 0 || hour >= Rows[row].Hours.Count) return false;
 
             int current = Rows[row].Hours[hour];
-            int next = back ? ScheduleCatalogue.CycleBack(current) : ScheduleCatalogue.Cycle(current);
+
+            // An armed block paints; with none armed the hour cycles, as it always did.
+            int next = ArmedBlock != NoBlock
+                ? ArmedBlock
+                : back ? ScheduleCatalogue.CycleBack(current) : ScheduleCatalogue.Cycle(current);
+
             intent = SetSchedule(Rows[row].Id, hour, next);
             return true;
         }

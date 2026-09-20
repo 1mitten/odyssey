@@ -716,3 +716,97 @@ you were reading another one.
 **Shift-click still sets "the whole column", and that now means this page of colonists.** Reaching
 people the player cannot see would be a gesture whose result is off-screen; the page is both what
 they are looking at and what they can check afterwards.
+
+## 17. The second look, 2026-09-20
+
+Eleven changes off one reading of the paged panel. Three are faults; the rest are the panel being
+told what it is for.
+
+### 17a. The schedule was drawn over the world, and the cause was a border box
+
+**Owner:** *"the scheduler is spilling over into the game play area past everything"*.
+
+`.panel` in `Hud.uss` carries `padding: 12px` and a 1px border, and **UI Toolkit's `width` is a
+border box** — padding and border are *inside* it. So a panel set to the grid's own 1,383 had a
+content box of `1383 − 24 − 2 = 1,357`, and the 1,383-wide grid inside overflowed it by 26px to the
+right: past the panel's frame, over the map.
+
+`PanelOuterWidth` is the number the element is set to now, written as
+`PanelWidth + 2 * (HudLayout.Pad + HudTheme.BorderWidth)` rather than as 1,409, so a change to the
+panel's padding moves it with it. `ThePanelIsWideEnoughForItsOwnPaddingAndBorder` asserts the
+content box comes to exactly the grid's width.
+
+**Neither tier could have caught it**, and that is the lesson worth keeping: nothing in this project
+asserts a layout number against the stylesheet, so a C# constant and a USS rule can disagree in
+silence for as long as nobody looks. That test is the first to check one against the other and is
+worth copying the next time a panel sets its own width.
+
+### 17b. Clicking a skill sorts the colony by it
+
+**Owner:** *"when I click on the skill, I expect it to sort the list by highest skill in the colony
+and update the interface, sort by desc for highest first"*.
+
+| | |
+|---|---|
+| **Sort key** | the **skill level**, descending. Hauling is the one live column with no skill, so there is no *best* — it falls back to **priority**, ordered 1, 2, 3, 4, never. A column that is not built yet refuses |
+| **Tie-break** | the roster position, so the sort is **stable** |
+| **Scope** | the whole colony, sorted *before* it is paged, or page one would hold the best of page one |
+| **Reset** | closing the panel, or the refresh button in the Colonist header |
+
+**Stability is not a nicety here.** `List.Sort` is not stable and this panel refreshes five times a
+second for as long as it is open, so three colonists on one level would shuffle continuously under
+the cursor. `EqualSkillKeepsTheRostersOrderAndDoesNotShuffle` runs eleven refreshes and asserts
+nothing moves.
+
+**The sort is this panel's view and never the roster's order.** The strip's order is something the
+player arranged by dragging cards; reordering it from here would answer a question nobody asked, in
+a place they cannot see.
+
+**It is dropped when the panel closes**, which is the owner's reading of *"when you leave the
+control it resets"*. The alternative — dropping it when the pointer leaves — would reset the sort on
+the way to almost anything you would do with it. The armed block goes the same way.
+
+The sorted header carries an accent rule under it, because the row order alone does not say which of
+eleven columns produced it.
+
+### 17c. The key is two keys, and half of it is a palette
+
+**Owner:** *"the key at the bottom is jarring ... make a more distinct border between work and
+scheduler including the keys that need to align with the respective control as they are just sat all
+on one line"*, and *"highlight the word in the key if you wish to select it for scheduler so you know
+where to click — as if the key name and icon was a button to click"*.
+
+The key is two halves at fixed widths: **566** for the work half, **816** for the schedule half,
+divided by the same rule at the same x as the grid's own seam. 566 is the name column plus a page of
+work columns, so the two rules are one line down the panel rather than two edges that nearly agree.
+`TheKeySeamSitsOnTheGridSeam` holds it.
+
+**The schedule half's six entries are buttons.** Pressing one arms that block and lights it; hours
+then take it instead of cycling. Pressing it again disarms it and the cycle returns, so the gesture
+that already worked keeps working and the palette is an addition rather than a replacement. They
+carry a border at rest rather than growing one on hover, because a control that only looks like a
+control once you have found it is not one.
+
+### 17d. Everything the panel said about itself, removed
+
+Three pieces of prose went, and they were the same mistake three times — the panel explaining a
+picture that has to explain itself:
+
+- the **subtitle** beside the title (*"3 colonists · what they do, and when · 13h"*): the rows are
+  the colonists, the halves are the two questions, the now-line is the hour;
+- *"border colour still shows skill · flames still show passion"*;
+- *"one row is one colonist's whole day · colonists do not follow the schedule yet"*.
+
+The last carried a real fact — nothing obeys the schedule — and it is still recorded in §12d and on
+the playtest queue. A footnote nobody reads twice was not where it was earning its keep.
+
+### 17e. The rest
+
+| Change | Was | Is |
+|---|---|---|
+| The squares under the labels | a 28px icon tile under every column head | gone; the rotated label runs down into their place, and the band is 96 rather than 104 |
+| The title strip | nothing | 24px across the top of the band, holding each control's own name or pager |
+| The column pager | in the panel header, over the whole panel | **inside the work half**, over the columns it moves |
+| The schedule's name | nothing | **Schedule**, top-left of the schedule half, as *Work* is of the panel |
+| The default reading | Detailed | **Simple**. A tick and a cross are what anyone can read at a glance; four ranks of urgency are what you go looking for once you want them |
+| The panel fill | the shared `.window` token at `.96` | `.panel.work` at `.995` — the one place a panel does not take the shared fill, because it is the largest panel in the game and the only one whose signal is small coloured cells, and the world came through the schedule bands and moved them |

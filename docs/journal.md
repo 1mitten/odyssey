@@ -8920,3 +8920,64 @@ changes — `RosterModel.EnsurePageFor`'s job and its reason.
 One thing I had to correct in my own test: I asserted the panel clears a 1366 window and it does
 not, it clears 1440. That is the trade the owner accepted when they took eleven over eight, and the
 test says so now instead of asserting a number I had carried over from the option I recommended.
+
+## 2026-09-20 — Eleven notes on the Work tab, and a border box that put the schedule over the map
+
+The owner read the paged panel and sent eleven things back. Three were faults and the rest were the
+panel being told what it is for, which is the more useful kind of note and the kind only a person at
+the keyboard produces.
+
+**The fault worth writing down is the spill.** *"The scheduler is spilling over into the game play
+area past everything."* I had set the panel's width to the grid's own 1,383 — and `.panel` carries
+`padding: 12px` and a 1px border, and **UI Toolkit's `width` is a border box**, so the content area
+was `1383 − 24 − 2 = 1,357` and the 1,383-wide grid inside it hung 26px out to the right, past the
+panel's frame, over the world. My own arithmetic, three commits old, introduced by the same change
+that was meant to stop the panel hanging off the screen.
+
+**What makes it worth a paragraph is that neither tier could see it.** The fast tier has no layout
+engine; the Unity tier has one and asserts nothing about it. A C# constant and a USS rule can
+disagree indefinitely and nothing in this project notices — which is the same shape as the missing
+font glyphs two days ago, and the same answer: read the other side of the disagreement.
+`ThePanelIsWideEnoughForItsOwnPaddingAndBorder` asserts the content box comes to exactly the grid's
+width, and `PanelOuterWidth` is written as `PanelWidth + 2 * (HudLayout.Pad + HudTheme.BorderWidth)`
+so a change to the padding carries it.
+
+**The sort was the one I asked about**, and the questions were worth asking. "Sort by highest skill"
+has an edge the sentence does not cover: hauling is the one live column with *no skill*, so there is
+no best to sort by. The owner took the fallback to priority. The other thing I asked was what
+*"when you leave the control it resets"* means — the literal reading is the pointer leaving, which
+would drop the sort on the way to almost anything you would do with it; closing the panel was the
+intent. Neither of those is something I would have got right by guessing, and both would have been
+reported back as bugs.
+
+**The implementation detail that matters is stability.** `List.Sort` is not stable, and this panel
+refreshes five times a second for as long as it is open, so a colony where three people share a
+level would have shuffled those three continuously, under the cursor. The roster position is the
+tie-break and eleven consecutive refreshes are asserted not to move anything. The sort also runs
+over the whole colony *before* paging, or page one would hold the best of page one rather than the
+best of the colony — which is the sort of thing that looks right on a colony of three and is wrong
+the moment there are thirteen.
+
+**And one test caught my own bad data**, which is the pleasant kind of failure: I wrote a
+thirty-colonist fixture with levels 0–29, and `ReadCell` clamps a level to 0–20, so everyone above
+twenty tied at twenty and the stable sort ordered them by roster position. The assertion failed on
+the number I had predicted. The fixture was wrong, not the code, and the comment now says why
+twenty-one and not thirty.
+
+The rest, briefly. The key is two keys at fixed widths that line up with the two halves above them,
+divided by the same rule at the same x — 566 is the name column plus a page of columns, which *is*
+the seam. The schedule half's six entries are buttons now: press one to arm it, hours take it
+instead of cycling, press it again to put it down; the cycling gesture is untouched with nothing
+armed, so the palette is an addition rather than a replacement. The icon tiles under the column
+labels are gone and the labels run down into their place, which shortened the band from 104 to 96
+and paid for a 24px title strip — and that strip is what let each control carry its own name or its
+own pager over itself: the column pager moved out of the panel header into the work half, and the
+schedule half got the word *Schedule* in its top left. Simple is the default reading now. The panel
+is nearly opaque, which is the one place a panel does not take the shared fill, because it is the
+largest in the game and the only one whose signal is small coloured cells — the world was coming
+through the schedule bands and moving them.
+
+**Three subtexts were deleted and they were the same mistake three times**: the panel explaining a
+picture that has to explain itself. The one that carried a real fact — nothing obeys the schedule
+yet — still says so in the design document and on the playtest queue, which is where somebody will
+read it once rather than ignore it daily.

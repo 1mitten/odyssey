@@ -38,10 +38,16 @@ namespace Odyssey.Hud
         public bool Open { get; private set; }
 
         /// <summary>
-        /// Opens on <see cref="WorkGridMode.Detailed"/>, because the panel's whole claim is that
-        /// four priorities are worth having. A player who wants the simpler reading says so once.
+        /// <b>Opens on <see cref="WorkGridMode.Simple"/></b> (owner, 2026-09-20: "start with
+        /// simple by default").
+        ///
+        /// <para>It opened on Detailed because the panel's claim is that four priorities are worth
+        /// having. That is an argument about what the panel is <i>for</i>, not about what it should
+        /// say to somebody opening it for the first time: a tick and a cross are a thing anyone can
+        /// read at a glance, and four ranks of urgency are a thing you go looking for once you
+        /// want them. The switch is in the header either way.</para>
         /// </summary>
-        public WorkGridMode Mode { get; private set; } = WorkGridMode.Detailed;
+        public WorkGridMode Mode { get; private set; } = WorkGridMode.Simple;
 
         /// <summary>Raised after every open or close, so a presenter can answer without polling.</summary>
         public event Action? Changed;

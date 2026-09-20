@@ -91,10 +91,24 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   constant 1,385 px and nothing about it resizes any more. What only a person can answer: **whether
   splitting the live columns across two pages is a daily annoyance** — Construction, Growing and
   Mining are on page 1, Cutting and Hauling on page 2, and if that turns out to be a constant
-  page-turn the fix is reordering `icon-keys.csv` rather than changing the page size. Also whether the column
-  pager is findable in the panel header at all, and whether shift-wheel is a gesture anybody
-  discovers. A wrong answer on the first looks like you turning the page every time you set a
-  priority.
+  page-turn the fix is reordering `icon-keys.csv` rather than changing the page size. Also whether
+  shift-wheel is a gesture anybody discovers. A wrong answer on the first looks like you turning the
+  page every time you set a priority.
+
+  **And eleven more things off your second look** (§17). The panel no longer hangs over the map —
+  that was a border box: `.panel`'s 12px padding was not in the width I set. **Click a column header
+  to sort the colony by that skill**, highest first; hauling sorts by priority because it has no
+  skill; an accent rule under the header says which one you sorted by; the refresh button beside the
+  Colonist name clears it, and so does closing the panel. **The schedule key is a palette**: click a
+  block to arm it, click hours to paint it, click it again to put it down — with nothing armed the
+  hours cycle as before. The column icon tiles are gone and the labels sit where they were. Each
+  half carries its own title or pager. Simple is the default reading.
+
+  What only a person can answer: **whether sorting by skill is the thing you actually reach for**,
+  or whether you wanted priority; whether the armed block stays obvious enough that you do not lose
+  track of what is in your hand; and whether the panel at .995 opacity now sits too heavily over the
+  world. A wrong answer on the sort looks like you clicking a header and then hunting for the
+  colonist you were already looking at.
 
 - **The bed-owner picker's tick has never been drawn** (already on `main`, PR #141,
   `docs/design/20-beds.md`). Found by the font test written for the Work tab: the mark that says

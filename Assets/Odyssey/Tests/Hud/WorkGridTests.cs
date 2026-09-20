@@ -69,6 +69,37 @@ namespace Odyssey.Tests.Hud
             return snapshot;
         }
 
+        /// <summary>
+        /// A colony with a chosen mining level and hauling priority per colonist, for the sort
+        /// tests. The arrays are read in the roster's order, so index 0 is the first row.
+        /// </summary>
+        static WorldSnapshot ColonyWith(int[] miningLevels, int[] haulPriorities)
+        {
+            var snapshot = new WorldSnapshot();
+            snapshot.BeginWrite(0, new GridSize(64, 64, 4), sliceLayer: 1);
+            WorkCatalogue.Entry mining = WorkCatalogue.All[Mining];
+            WorkCatalogue.Entry haul = WorkCatalogue.All[Hauling];
+
+            for (int i = 0; i < miningLevels.Length; i++)
+            {
+                var id = new PawnId(i + 1);
+                snapshot.AddPawn(new PawnView(id, new CellRef(i + 1, 1, 1),
+                    food: 900, rest: 800, mood: 50));
+                snapshot.AddPawnAspect(new PawnAspect(id, mining.Capable, 1));
+                snapshot.AddPawnAspect(new PawnAspect(id, mining.Level, miningLevels[i]));
+                snapshot.AddPawnAspect(new PawnAspect(id, haul.Capable, 1));
+                snapshot.AddPawnAspect(new PawnAspect(id, haul.Priority, haulPriorities[i]));
+            }
+            return snapshot;
+        }
+
+        static List<int> RowIds(WorkGridModel model)
+        {
+            var ids = new List<int>();
+            for (int r = 0; r < model.Rows.Count; r++) ids.Add(model.Rows[r].Id.Value);
+            return ids;
+        }
+
         /// <summary>The roster order the shell would hand the model: everybody, as published.</summary>
         static IReadOnlyList<PawnId> OrderOf(WorldSnapshot frame)
         {
@@ -180,10 +211,17 @@ namespace Odyssey.Tests.Hud
             float rise = WorkGridLayout.LabelRise(WorkGridLayout.LongestLabel());
 
             Assert.That(rise, Is.LessThanOrEqualTo(WorkGridLayout.LabelBand),
-                "The label stands taller than the band reserved for it, so it would cross its " +
-                "own icon tile — which is an acceptance criterion in its own right.");
+                "The label stands taller than the band reserved for it, so it would climb into " +
+                "the title strip above it — an acceptance criterion in its own right.");
+
+            // The band is the title strip and the labels, and nothing else. The icon tiles that
+            // used to sit under every label are gone (owner, 2026-09-20) and the label runs down
+            // into the space they left, which is what freed the strip for the pagers and the
+            // Schedule title.
             Assert.That(WorkGridLayout.HeaderBand,
-                Is.EqualTo(WorkGridLayout.LabelBand + WorkGridLayout.LabelGap + WorkGridLayout.IconTile));
+                Is.EqualTo(WorkGridLayout.TitleStrip + WorkGridLayout.LabelBand));
+            Assert.That(WorkGridLayout.TitleStrip, Is.GreaterThanOrEqualTo(20),
+                "the strip has to hold a 20px pager button");
         }
 
         [Test]
@@ -646,6 +684,219 @@ namespace Odyssey.Tests.Hud
                     "a recycled row is emptied and refilled, not appended to");
                 Assert.That(model.Rows[r].Hours.Count, Is.EqualTo(ScheduleHandle.Hours));
             }
+        }
+
+        // ============================================================ sorting
+
+        /// <summary>
+        /// Clicking a skill column orders the colony by that skill, highest first.
+        ///
+        /// <para>Owner, 2026-09-20: <i>"when I click on the skill, I expect it to sort the list by
+        /// highest skill in the colony ... sort by desc for highest first"</i>.</para>
+        /// </summary>
+        [Test]
+        public void SortingByASkillPutsTheBestOfTheColonyFirst()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = ColonyWith(
+                miningLevels:    new[] { 3, 14, 8, 0, 11 },
+                haulPriorities:  new[] { 3, 3, 3, 3, 3 });
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+
+            model.Refresh(frame, order, null);
+            Assert.That(RowIds(model), Is.EqualTo(new[] { 1, 2, 3, 4, 5 }).AsCollection,
+                "unsorted, it is the roster's order");
+
+            Assert.That(model.SortBy(Mining), Is.True);
+            model.Refresh(frame, order, null);
+
+            // levels 14, 11, 8, 3, 0 -> pawns 2, 5, 3, 1, 4
+            Assert.That(RowIds(model), Is.EqualTo(new[] { 2, 5, 3, 1, 4 }).AsCollection);
+
+            model.ClearSort();
+            model.Refresh(frame, order, null);
+            Assert.That(RowIds(model), Is.EqualTo(new[] { 1, 2, 3, 4, 5 }).AsCollection,
+                "the reset puts the roster's order back");
+        }
+
+        /// <summary>
+        /// Hauling is the one live column with no skill, so it sorts by priority instead — most
+        /// urgent first, and never last.
+        /// </summary>
+        [Test]
+        public void SortingByHaulingUsesThePriorityBecauseThereIsNoSkill()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = ColonyWith(
+                miningLevels:   new[] { 0, 0, 0, 0, 0 },
+                haulPriorities: new[] { 4, 0, 1, 3, 2 });
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+
+            Assert.That(model.SortBy(Hauling), Is.True);
+            model.Refresh(frame, order, null);
+
+            // priority 1, 2, 3, 4, then never -> pawns 3, 5, 4, 1, 2
+            Assert.That(RowIds(model), Is.EqualTo(new[] { 3, 5, 4, 1, 2 }).AsCollection,
+                "1 is the most urgent and 0 means never, so never sorts last rather than first");
+        }
+
+        /// <summary>A column the simulation does not run has nothing to sort by and says so.</summary>
+        [Test]
+        public void AColumnThatIsNotBuiltYetCannotBeSortedBy()
+        {
+            var model = Model(Frame());
+
+            Assert.That(model.SortBy(Research), Is.False);
+            Assert.That(model.SortColumn, Is.EqualTo(WorkGridModel.NoSort));
+            Assert.That(model.SortBy(-1), Is.False);
+            Assert.That(model.SortBy(999), Is.False);
+        }
+
+        /// <summary>
+        /// <b>Equal skill keeps the roster's order, and keeps it every refresh.</b>
+        ///
+        /// <para><c>List.Sort</c> is not stable, and this panel refreshes five times a second for
+        /// as long as it is open — so an unstable sort would shuffle everyone on the same level
+        /// under the cursor, continuously. The roster position is the tie-break.</para>
+        /// </summary>
+        [Test]
+        public void EqualSkillKeepsTheRostersOrderAndDoesNotShuffle()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = ColonyWith(
+                miningLevels:   new[] { 5, 5, 5, 5, 5, 5, 5, 5 },
+                haulPriorities: new[] { 3, 3, 3, 3, 3, 3, 3, 3 });
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+
+            model.SortBy(Mining);
+            model.Refresh(frame, order, null);
+            var first = RowIds(model);
+            Assert.That(first, Is.EqualTo(new[] { 1, 2, 3, 4, 5, 6, 7, 8 }).AsCollection);
+
+            for (int i = 0; i < 10; i++)
+            {
+                model.Refresh(frame, order, null);
+                Assert.That(RowIds(model), Is.EqualTo(first).AsCollection,
+                    "refresh " + i + " reordered people who are equally skilled");
+            }
+        }
+
+        /// <summary>The sort runs over the colony and not over the page, or page one would hold
+        /// the best of page one.</summary>
+        [Test]
+        public void TheSortOrdersTheColonyBeforeItIsPaged()
+        {
+            // Twenty-one colonists at levels 0 to 20, worst first in the roster. Twenty-one and
+            // not thirty because a level is 0..20 and ReadCell clamps to it: levels above 20 all
+            // land on 20, and a stable sort then orders them by roster position rather than by
+            // the number the fixture meant. The clamp found the first draft of this test.
+            var levels = new int[21];
+            var priorities = new int[21];
+            for (int i = 0; i < 21; i++) { levels[i] = i; priorities[i] = 3; }
+
+            var model = new WorkGridModel();
+            WorldSnapshot frame = ColonyWith(levels, priorities);
+            model.SortBy(Mining);
+            model.Refresh(frame, OrderOf(frame), null);
+
+            Assert.That(model.Rows.Count, Is.EqualTo(WorkGridLayout.RowsPerPage));
+            Assert.That(model.Rows[0].Id.Value, Is.EqualTo(21),
+                "the best miner in the colony is on page one, not the best on page one");
+            Assert.That(model.Rows[11].Id.Value, Is.EqualTo(10),
+                "and page one runs down from the best, twelve deep");
+        }
+
+        // ============================================================ the armed block
+
+        /// <summary>
+        /// A key entry arms a block; an hour then takes it instead of cycling. Pressing the armed
+        /// entry again disarms it and the cycle comes back.
+        /// </summary>
+        [Test]
+        public void AnArmedBlockPaintsAndDisarmingBringsTheCycleBack()
+        {
+            var model = Model(Frame());
+            Assert.That(model.ArmedBlock, Is.EqualTo(WorkGridModel.NoBlock), "nothing in hand to start");
+
+            // Nothing armed: the hour cycles, as it always did.
+            Assert.That(model.TryClickHour(0, 12, back: false, out Intent cycled), Is.True);
+            Assert.That(cycled.C, Is.EqualTo(ScheduleCatalogue.Cycle(model.Rows[0].Hours[12])));
+
+            model.ArmBlock(ScheduleHandle.Meditate);
+            Assert.That(model.ArmedBlock, Is.EqualTo(ScheduleHandle.Meditate));
+
+            Assert.That(model.TryClickHour(0, 12, back: false, out Intent painted), Is.True);
+            Assert.That(painted.C, Is.EqualTo(ScheduleHandle.Meditate));
+
+            // And it keeps painting rather than walking on to the next block.
+            Assert.That(model.TryClickHour(0, 13, back: true, out Intent again), Is.True);
+            Assert.That(again.C, Is.EqualTo(ScheduleHandle.Meditate),
+                "an armed block paints on either button; the ring is not being walked");
+
+            model.ArmBlock(ScheduleHandle.Meditate);
+            Assert.That(model.ArmedBlock, Is.EqualTo(WorkGridModel.NoBlock),
+                "pressing the armed entry again puts it down");
+
+            Assert.That(model.TryClickHour(0, 12, back: false, out Intent back), Is.True);
+            Assert.That(back.C, Is.EqualTo(ScheduleCatalogue.Cycle(model.Rows[0].Hours[12])));
+        }
+
+        /// <summary>Arming a second block replaces the first rather than holding both.</summary>
+        [Test]
+        public void ArmingASecondBlockReplacesTheFirst()
+        {
+            var model = Model(Frame());
+
+            model.ArmBlock(ScheduleHandle.Sleep);
+            model.ArmBlock(ScheduleHandle.Work);
+            Assert.That(model.ArmedBlock, Is.EqualTo(ScheduleHandle.Work));
+
+            model.DisarmBlock();
+            Assert.That(model.ArmedBlock, Is.EqualTo(WorkGridModel.NoBlock));
+        }
+
+        // ============================================================ the panel's own box
+
+        /// <summary>
+        /// <b>The panel's width has to carry the chrome the stylesheet puts inside it.</b>
+        ///
+        /// <para>UI Toolkit's <c>width</c> is a border box and <c>.panel</c> has 12px of padding and
+        /// a 1px border, so a panel set to the grid's own width has a content box 26px too small
+        /// and the schedule half hangs out of the right of it, over the world. That is what the
+        /// owner reported on 2026-09-20 and neither tier could see it: nothing in either asserts a
+        /// layout number against the stylesheet. This is that assertion.</para>
+        /// </summary>
+        [Test]
+        public void ThePanelIsWideEnoughForItsOwnPaddingAndBorder()
+        {
+            int chrome = 2 * (HudLayout.Pad + HudTheme.BorderWidth);
+
+            Assert.That(WorkGridLayout.PanelOuterWidth - chrome,
+                Is.EqualTo(WorkGridLayout.PanelWidth),
+                "the content box has to come to exactly the grid's width");
+            Assert.That(WorkGridLayout.PanelOuterWidth, Is.EqualTo(1409));
+            Assert.That(WorkGridLayout.PanelOuterWidth,
+                Is.LessThanOrEqualTo(HudLayout.ReferenceWidth),
+                "and the whole panel still fits the reference screen");
+        }
+
+        /// <summary>
+        /// The key's two halves add up to the grid's two halves, so the rule between them lands
+        /// on the same x as the seam above it (owner, 2026-09-20).
+        /// </summary>
+        [Test]
+        public void TheKeySeamSitsOnTheGridSeam()
+        {
+            Assert.That(WorkGridLayout.KeyWorkWidth,
+                Is.EqualTo(WorkGridLayout.LeftColumn +
+                           WorkGridLayout.ColumnsPerPage * WorkGridLayout.Pitch),
+                "the work key spans the names and the columns, which is where the seam is");
+
+            Assert.That(
+                WorkGridLayout.KeyWorkWidth + WorkGridLayout.SectionDivider +
+                WorkGridLayout.KeyScheduleWidth,
+                Is.EqualTo(WorkGridLayout.PanelWidth),
+                "and the two halves and their rule come to the whole panel");
         }
     }
 }

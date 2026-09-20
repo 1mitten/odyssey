@@ -33,7 +33,6 @@ namespace Odyssey.Presentation.Ui
         readonly WorkGridModel _work = new WorkGridModel();
 
         VisualElement _workPanel = null!;
-        Label _workSubtitle = null!;
         VisualElement _workLeftRows = null!;
         VisualElement _workGridRows = null!;
         VisualElement _workLegend = null!;
@@ -47,6 +46,17 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>The header band, rebuilt when the column page turns. Eleven heads, never more.</summary>
         VisualElement _workHeaderBand = null!;
+
+        /// <summary>This page's eleven column heads, so a sorted one can be marked.</summary>
+        readonly List<VisualElement> _workHeads = new List<VisualElement>();
+
+        /// <summary>Back to the roster's order; shown only while a sort is on.</summary>
+        VisualElement _workSortReset = null!;
+
+        /// <summary>The key's two halves, and the schedule half's armable buttons.</summary>
+        VisualElement _workKeyWork = null!;
+        VisualElement _workKeySchedule = null!;
+        readonly Dictionary<int, VisualElement> _workBlockButtons = new();
 
         /// <summary>The two pagers, built in the roster's idiom and wearing its classes.</summary>
         VisualElement _workColumnPager = null!;
@@ -139,7 +149,10 @@ namespace Odyssey.Presentation.Ui
             // two for the frame. There is no scroller and no cap — the owner's call on
             // 2026-09-20, and the right one, because a scrollbar made the panel's shape depend on
             // the window and built all twenty-two columns for every colonist to do it.
-            _workPanel.style.width = WorkGridLayout.PanelWidth + 2;
+            // PanelOuterWidth, not PanelWidth: .panel's 12px padding and 1px border are inside a
+            // UI Toolkit width, and setting the inner number here is what sent the schedule half
+            // 26px out over the world.
+            _workPanel.style.width = WorkGridLayout.PanelOuterWidth;
 
             BuildWorkHeaderExtras();
 
@@ -184,16 +197,28 @@ namespace Odyssey.Presentation.Ui
             // for the columns, which is the platform's own horizontal modifier.
             _workPanel.RegisterCallback<WheelEvent>(OnWorkWheel);
 
+            // The key, in two halves that line up with the two halves of the table above it, and
+            // divided by the same rule (owner, 2026-09-20: the keys "need to align with the
+            // respective control as they are just sat all on one line").
             _workLegend = new VisualElement();
             _workLegend.style.flexDirection = FlexDirection.Row;
-            _workLegend.style.flexWrap = Wrap.Wrap;
-            _workLegend.style.alignItems = Align.Center;
-            _workLegend.style.paddingLeft = WorkGridLayout.LeftPad;
-            _workLegend.style.paddingRight = WorkGridLayout.LeftPad;
-            _workLegend.style.paddingTop = 6;
-            _workLegend.style.paddingBottom = 6;
             _workLegend.style.borderTopWidth = HudTheme.BorderWidth;
             _workLegend.style.borderTopColor = HudTokens.PanelBorder;
+
+            _workKeyWork = KeyHalf(WorkGridLayout.KeyWorkWidth);
+            _workLegend.Add(_workKeyWork);
+
+            // The same seam as the grid's, on the same x, so the two rules read as one line down
+            // the panel rather than as two edges that nearly agree.
+            var keySeam = new VisualElement();
+            keySeam.style.width = WorkGridLayout.SectionDivider;
+            keySeam.style.flexShrink = 0;
+            keySeam.style.backgroundColor = HudTokens.PanelBorder;
+            _workLegend.Add(keySeam);
+
+            _workKeySchedule = KeyHalf(WorkGridLayout.KeyScheduleWidth);
+            _workLegend.Add(_workKeySchedule);
+
             _workPanel.Add(_workLegend);
 
             RefreshWorkLegend();
@@ -207,19 +232,10 @@ namespace Odyssey.Presentation.Ui
             VisualElement header = _workPanel.Q(className: "panel__hdr");
             if (header == null) return;
 
-            _workSubtitle = HudText.Make(string.Empty, HudTextRole.Meta);
-            _workSubtitle.style.marginLeft = 10;
-            // Before the spacer the close button already inserted, so it sits beside the title.
-            header.Insert(1, _workSubtitle);
-
-            // The column pager, over the columns it moves. Left of the mode switch, because it
-            // changes what the table is showing and the switch changes how it reads.
-            _workColumnPager = Pager(
-                () => { _work.SetColumnPage(_work.ColumnPage - 1); OnWorkColumnPageChanged(); },
-                () => { _work.SetColumnPage(_work.ColumnPage + 1); OnWorkColumnPageChanged(); },
-                out _workColumnPrev, out _workColumnNext, out _workColumnPageLabel);
-            _workColumnPager.style.marginRight = 10;
-            header.Insert(header.childCount - 1, _workColumnPager);
+            // No subtitle beside the title (owner, 2026-09-20). It said "3 colonists · what they do,
+            // and when · 13h" and every part of that is answered better by the panel itself: the
+            // rows are the colonists, the two halves are the two questions, and the now-line is
+            // the hour.
 
             Label priorities = HudText.Make("Priorities", HudTextRole.Meta);
             priorities.style.marginRight = 8;
@@ -241,7 +257,7 @@ namespace Odyssey.Presentation.Ui
 
             // The chips only. Not OnWorkModeChanged: that redraws the legend, which does not
             // exist until BuildWork has finished with this.
-            SetWorkModeChips(WorkGridMode.Detailed);
+            SetWorkModeChips(WorkGridMode.Simple);
         }
 
         void SetWorkModeChips(WorkGridMode mode)
@@ -277,11 +293,33 @@ namespace Odyssey.Presentation.Ui
             colonist.style.paddingBottom = 2;
             head.Add(colonist);
 
+            var right = new VisualElement();
+            right.style.flexDirection = FlexDirection.Row;
+            right.style.alignItems = Align.Center;
+
+            // Back to the roster's order. It sits with the row pager because both are about the
+            // order of the rows, and it is the control that undoes what a header click did.
+            _workSortReset = new VisualElement();
+            _workSortReset.AddToClassList("roster-pager__btn");
+            _workSortReset.style.display = DisplayStyle.None;
+            _workSortReset.style.marginRight = 4;
+            _workSortReset.tooltip = "Back to the roster's order";
+            _workSortReset.Add(new HudGlyph(HudGlyphKind.Refresh, 12f, HudTokens.Accent));
+            _workSortReset.RegisterCallback<ClickEvent>(evt =>
+            {
+                _work.ClearSort();
+                RefreshWork();
+                evt.StopPropagation();
+            });
+            right.Add(_workSortReset);
+
             _workRowPager = Pager(
                 () => { _work.SetRowPage(_work.RowPage - 1); RefreshWork(); },
                 () => { _work.SetRowPage(_work.RowPage + 1); RefreshWork(); },
                 out _workRowPrev, out _workRowNext, out _workRowPageLabel);
-            head.Add(_workRowPager);
+            right.Add(_workRowPager);
+
+            head.Add(right);
             return head;
         }
 
@@ -326,8 +364,27 @@ namespace Odyssey.Presentation.Ui
         void RebuildWorkHeaderBand()
         {
             _workHeaderBand.Clear();
-            _workHeaderBand.style.flexDirection = FlexDirection.Row;
+            _workHeads.Clear();
             _workHeaderBand.style.height = WorkGridLayout.HeaderBand;
+
+            // The work half's own title strip, holding its own pager. Every control in this band
+            // carries its name or its pager over itself and nothing over a neighbour.
+            var strip = new VisualElement();
+            strip.style.height = WorkGridLayout.TitleStrip;
+            strip.style.flexDirection = FlexDirection.Row;
+            strip.style.alignItems = Align.Center;
+
+            _workColumnPager = Pager(
+                () => { _work.SetColumnPage(_work.ColumnPage - 1); OnWorkColumnPageChanged(); },
+                () => { _work.SetColumnPage(_work.ColumnPage + 1); OnWorkColumnPageChanged(); },
+                out _workColumnPrev, out _workColumnNext, out _workColumnPageLabel);
+            _workColumnPager.style.marginLeft = 2;
+            strip.Add(_workColumnPager);
+            _workHeaderBand.Add(strip);
+
+            var labels = new VisualElement();
+            labels.style.flexDirection = FlexDirection.Row;
+            labels.style.height = WorkGridLayout.LabelBand;
 
             for (int slot = 0; slot < WorkGridLayout.ColumnsPerPage; slot++)
             {
@@ -341,7 +398,7 @@ namespace Odyssey.Presentation.Ui
                     var blank = new VisualElement();
                     blank.style.width = WorkGridLayout.Pitch;
                     blank.style.flexShrink = 0;
-                    _workHeaderBand.Add(blank);
+                    labels.Add(blank);
                     continue;
                 }
 
@@ -350,8 +407,23 @@ namespace Odyssey.Presentation.Ui
                 var head = new VisualElement();
                 head.style.width = WorkGridLayout.Pitch;
                 head.style.flexShrink = 0;
-                head.style.height = WorkGridLayout.HeaderBand;
-                head.tooltip = entry.Live ? entry.Label : entry.Label + " — " + entry.Reason;
+                head.style.height = WorkGridLayout.LabelBand;
+                head.tooltip = entry.Live
+                    ? entry.Label + " — click to sort by it, highest first"
+                    : entry.Label + " — " + entry.Reason;
+
+                // A live header sorts the colony by its column. Registered on the head rather than
+                // on the label, because the label is rotated and its picking box is rotated with
+                // it, which makes a 78px diagonal sliver of a 34px column to aim at.
+                if (entry.Live)
+                {
+                    int sortColumn = c;
+                    head.RegisterCallback<ClickEvent>(evt =>
+                    {
+                        if (_work.SortBy(sortColumn)) RefreshWork();
+                        evt.StopPropagation();
+                    });
+                }
 
                 // An unbuilt column is washed top to bottom so it reads as one absent thing
                 // rather than as ten separately broken cells (design 27 §4a).
@@ -360,7 +432,11 @@ namespace Odyssey.Presentation.Ui
                 Label label = HudText.Make(entry.Label, HudTextRole.Body);
                 label.style.position = Position.Absolute;
                 label.style.left = Length.Percent(50);
-                label.style.bottom = WorkGridLayout.IconTile + WorkGridLayout.LabelGap;
+
+                // Down where the icon tile used to be (owner, 2026-09-20). The square is gone and
+                // the word takes its place, so the band is shorter and the label meets the first
+                // row of cells with one gap rather than a gap, an icon and another gap.
+                label.style.bottom = WorkGridLayout.LabelGap;
                 label.style.whiteSpace = WhiteSpace.NoWrap;
                 label.style.color = entry.Live ? HudTokens.TextMeta : HudTokens.TextFaint;
                 // Anchored bottom-left and turned, so the labels fan up to the left and each one
@@ -372,22 +448,11 @@ namespace Odyssey.Presentation.Ui
                 label.style.rotate = new Rotate(
                     new Angle(WorkGridLayout.LabelAngleDegrees, AngleUnit.Degree));
                 head.Add(label);
-
-                var tile = new VisualElement();
-                tile.style.position = Position.Absolute;
-                tile.style.bottom = 2;
-                tile.style.left = (WorkGridLayout.Pitch - WorkGridLayout.IconTile) / 2f;
-                tile.style.width = WorkGridLayout.IconTile;
-                tile.style.height = WorkGridLayout.IconTile;
-                tile.style.alignItems = Align.Center;
-                tile.style.justifyContent = Justify.Center;
-                var icon = new IconBadge(entry.Key, IconBadge.RowSize, categorised: true);
-                if (!entry.Live) icon.Inherit(HudTokens.TextFaint);
-                tile.Add(icon);
-                head.Add(tile);
-
-                _workHeaderBand.Add(head);
+                _workHeads.Add(head);
+                labels.Add(head);
             }
+
+            _workHeaderBand.Add(labels);
         }
 
         /// <summary>
@@ -408,8 +473,24 @@ namespace Odyssey.Presentation.Ui
             half.style.position = Position.Relative;
 
             var band = new VisualElement();
-            band.style.flexDirection = FlexDirection.Row;
             band.style.height = WorkGridLayout.HeaderBand;
+
+            // The schedule's own name, over the schedule (owner, 2026-09-20: "make a text title
+            // like Work but on the schedule control Schedule, positioned in the top left"). The
+            // panel's header names the panel; this names the half, in the same strip the work
+            // half puts its pager in.
+            var strip = new VisualElement();
+            strip.style.height = WorkGridLayout.TitleStrip;
+            strip.style.flexDirection = FlexDirection.Row;
+            strip.style.alignItems = Align.Center;
+            Label title = HudText.Make(Registry.Label("ui.tab.schedule"), HudTextRole.PanelLabel);
+            title.style.marginLeft = 4;
+            strip.Add(title);
+            band.Add(strip);
+
+            var hours = new VisualElement();
+            hours.style.flexDirection = FlexDirection.Row;
+            hours.style.height = WorkGridLayout.LabelBand;
             for (int h = 0; h < WorkGridLayout.Hours; h++)
             {
                 var slot = new VisualElement();
@@ -424,8 +505,9 @@ namespace Odyssey.Presentation.Ui
                 Label number = HudText.Make(h.ToString("00"), HudTextRole.Meta, numeric: true);
                 number.style.color = HudTokens.TextFaint;
                 slot.Add(number);
-                band.Add(slot);
+                hours.Add(slot);
             }
+            band.Add(hours);
             half.Add(band);
 
             _workHourRows = new VisualElement();
@@ -531,10 +613,9 @@ namespace Odyssey.Presentation.Ui
             // frame would drag the page back while the player is reading another one.
             FollowWorkSelection(frame);
 
-            HudText.Set(_workSubtitle, _work.Subtitle(WorkGridModel.NowHour(frame)), HudTextRole.Meta);
-
             if (RosterChanged()) RebuildWorkRows();
             RefreshWorkPagers();
+            MarkSortedColumn();
 
             for (int r = 0; r < _workRows.Count && r < _work.Rows.Count; r++)
             {
@@ -866,6 +947,9 @@ namespace Odyssey.Presentation.Ui
                 for (int slot = 0; slot < view.Boxes.Count; slot++)
                     view.Boxes[slot].Column = _work.ColumnAt(slot);
             }
+
+            // The band was rebuilt, so the accent under the sorted header went with it. The sort
+            // itself did not change; only the heads that could show it did.
             RefreshWork();
         }
 
@@ -970,65 +1054,115 @@ namespace Odyssey.Presentation.Ui
         /// Simple the first group becomes the tick and the cross, plus the sentence saying the
         /// other two signals have not gone anywhere, which is the whole risk of a simple mode.
         /// </summary>
+        /// <summary>
+        /// The key, in two halves under the two halves of the table.
+        ///
+        /// <para><b>Both subtexts are gone</b> (owner, 2026-09-20). The Simple-mode note said the
+        /// border still showed skill and the flames still showed passion, and the footnote said a
+        /// row was one colonist's whole day — two sentences explaining a picture that had to
+        /// explain itself. What is left is swatches and words.</para>
+        ///
+        /// <para><b>The schedule half's entries are buttons.</b> Pressing one arms that block and
+        /// lights it; hours then take it instead of cycling. Pressing it again disarms it. So the
+        /// key is a palette and you can see which colour is in your hand.</para>
+        /// </summary>
         void RefreshWorkLegend()
         {
-            _workLegend.Clear();
+            _workKeyWork.Clear();
+            _workKeySchedule.Clear();
+            _workBlockButtons.Clear();
 
             if (_work.Mode == WorkGridMode.Detailed)
             {
-                AddLegendSwatch(WorkBands.Novice, "0–3", WorkBands.BorderWidth);
-                AddLegendSwatch(WorkBands.Apprentice, "4–6", WorkBands.BorderWidth);
-                AddLegendSwatch(WorkBands.Competent, "7–10", WorkBands.BorderWidth);
-                AddLegendSwatch(WorkBands.Skilled, "11–14", WorkBands.BorderWidth);
-                AddLegendSwatch(WorkBands.Master, "15–20", WorkBands.BorderWidth);
+                AddLegendSwatch(_workKeyWork, WorkBands.Novice, "0–3", WorkBands.BorderWidth);
+                AddLegendSwatch(_workKeyWork, WorkBands.Apprentice, "4–6", WorkBands.BorderWidth);
+                AddLegendSwatch(_workKeyWork, WorkBands.Competent, "7–10", WorkBands.BorderWidth);
+                AddLegendSwatch(_workKeyWork, WorkBands.Skilled, "11–14", WorkBands.BorderWidth);
+                AddLegendSwatch(_workKeyWork, WorkBands.Master, "15–20", WorkBands.BorderWidth);
             }
             else
             {
-                AddLegendGlyph(HudGlyphKind.Check, WorkBands.WillDo, "will do");
-                AddLegendGlyph(HudGlyphKind.Cross, WorkBands.WontDo, "won't do");
+                AddLegendGlyph(_workKeyWork, HudGlyphKind.Check, WorkBands.WillDo, "will do");
+                AddLegendGlyph(_workKeyWork, HudGlyphKind.Cross, WorkBands.WontDo, "won't do");
             }
 
-            AddLegendFlames(1, "interested");
-            AddLegendFlames(2, "passion");
+            AddLegendFlames(_workKeyWork, 1, "interested");
+            AddLegendFlames(_workKeyWork, 2, "passion");
+            AddLegendSwatch(_workKeyWork, WorkBands.IncapableBorder, "incapable", HudTheme.BorderWidth);
 
-            // The day's six colours, in the order the click cycles them, so the legend doubles as
-            // the map of what the next click does.
+            // The day's six, in the order the click cycles them, each one a button that arms it.
             foreach (ScheduleCatalogue.Entry block in ScheduleCatalogue.All)
-                AddLegendBand(block);
-            AddLegendSwatch(WorkBands.IncapableBorder, "incapable", HudTheme.BorderWidth);
+                AddBlockButton(block);
 
-            Label note = HudText.Make(_work.Mode == WorkGridMode.Simple
-                    ? "border colour still shows skill · flames still show passion"
-                    : "hauling has no skill, so no border and no flame",
-                HudTextRole.Meta);
-            note.style.color = HudTokens.TextDim;
-            note.style.marginLeft = 6;
-            _workLegend.Add(note);
-
-            var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
-            spacer.style.flexGrow = 1;
-            _workLegend.Add(spacer);
-
-            Label foot = HudText.Make(
-                "one row is one colonist's whole day · colonists do not follow the schedule yet",
-                HudTextRole.Meta);
-            foot.style.color = HudTokens.TextDim;
-            _workLegend.Add(foot);
+            MarkArmedBlock();
         }
 
-        VisualElement LegendGroup()
+        /// <summary>One half of the key: a fixed width, so it sits under its own control.</summary>
+        VisualElement KeyHalf(int width)
+        {
+            var half = new VisualElement();
+            half.style.width = width;
+            half.style.flexShrink = 0;
+            half.style.flexDirection = FlexDirection.Row;
+            half.style.flexWrap = Wrap.Wrap;
+            half.style.alignItems = Align.Center;
+            half.style.paddingLeft = WorkGridLayout.LeftPad;
+            half.style.paddingRight = WorkGridLayout.LeftPad;
+            half.style.paddingTop = 6;
+            half.style.paddingBottom = 6;
+            return half;
+        }
+
+        /// <summary>
+        /// One schedule block, as a button: the band's colour and its name, pressable together.
+        /// </summary>
+        void AddBlockButton(ScheduleCatalogue.Entry block)
+        {
+            var button = new VisualElement();
+            button.AddToClassList("workkey__btn");
+            button.tooltip = block.Label + " — click to paint it, click again to stop";
+
+            var box = new VisualElement();
+            box.AddToClassList("workkey__swatch");
+            box.style.backgroundColor = HudTokens.Convert(block.Colour);
+            button.Add(box);
+
+            Label name = HudText.Make(block.Label, HudTextRole.Meta, ussClass: "workkey__name");
+            button.Add(name);
+
+            int handle = block.Handle;
+            button.RegisterCallback<ClickEvent>(evt =>
+            {
+                _work.ArmBlock(handle);
+                MarkArmedBlock();
+                evt.StopPropagation();
+            });
+
+            _workBlockButtons[handle] = button;
+            _workKeySchedule.Add(button);
+        }
+
+        /// <summary>Light the armed block and dim the rest, so the colour in your hand is visible.</summary>
+        void MarkArmedBlock()
+        {
+            foreach (var entry in _workBlockButtons)
+                entry.Value.EnableInClassList("workkey__btn--on", entry.Key == _work.ArmedBlock);
+        }
+
+        /// <summary>A group in one half of the key. The half is passed, not assumed.</summary>
+        static VisualElement LegendGroup(VisualElement half)
         {
             var group = new VisualElement();
             group.style.flexDirection = FlexDirection.Row;
             group.style.alignItems = Align.Center;
             group.style.marginRight = 12;
-            _workLegend.Add(group);
+            half.Add(group);
             return group;
         }
 
-        void AddLegendSwatch(HudColour border, string text, float width)
+        static void AddLegendSwatch(VisualElement half, HudColour border, string text, float width)
         {
-            VisualElement group = LegendGroup();
+            VisualElement group = LegendGroup(half);
             var box = new VisualElement();
             box.style.width = 15;
             box.style.height = 15;
@@ -1039,31 +1173,18 @@ namespace Odyssey.Presentation.Ui
             group.Add(HudText.Make(text, HudTextRole.Meta));
         }
 
-        void AddLegendGlyph(HudGlyphKind kind, HudColour ink, string text)
+        static void AddLegendGlyph(VisualElement half, HudGlyphKind kind, HudColour ink, string text)
         {
-            VisualElement group = LegendGroup();
+            VisualElement group = LegendGroup(half);
             var mark = new HudGlyph(kind, WorkGridLayout.MarkSize, HudTokens.Convert(ink));
             mark.style.marginRight = 6;
             group.Add(mark);
             group.Add(HudText.Make(text, HudTextRole.Meta));
         }
 
-        /// <summary>A schedule swatch: the band's own colour, unbordered, as it is drawn.</summary>
-        void AddLegendBand(ScheduleCatalogue.Entry block)
+        static void AddLegendFlames(VisualElement half, int count, string text)
         {
-            VisualElement group = LegendGroup();
-            var box = new VisualElement();
-            box.style.width = 15;
-            box.style.height = 15;
-            box.style.marginRight = 6;
-            box.style.backgroundColor = HudTokens.Convert(block.Colour);
-            group.Add(box);
-            group.Add(HudText.Make(block.Label, HudTextRole.Meta));
-        }
-
-        void AddLegendFlames(int count, string text)
-        {
-            VisualElement group = LegendGroup();
+            VisualElement group = LegendGroup(half);
             var holder = new VisualElement();
             holder.style.flexDirection = FlexDirection.Row;
             holder.style.marginRight = 6;
@@ -1078,13 +1199,45 @@ namespace Odyssey.Presentation.Ui
         {
             bool open = _directors != null && _directors.Work.Open;
             _workPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!open) return;
+
+            if (!open)
+            {
+                // Closing is what "leaving the control" means (owner, 2026-09-20), so the sort and
+                // the armed block are dropped here and the panel opens on the roster's order with
+                // nothing in hand. Both are view state and neither is saved.
+                _work.ClearSort();
+                _work.DisarmBlock();
+                MarkArmedBlock();
+                return;
+            }
 
             // One panel at a time down here: the Build palette occupies the same corner, and two
             // things docked bottom-left would draw over each other.
             SetBuildPalette(false);
             ToggleMenu(false);
             RefreshWork();
+        }
+
+        /// <summary>
+        /// Mark the header the colony is sorted by, and show the reset beside the names.
+        ///
+        /// <para>The sorted column is the only header with an accent under it, because a sort is a
+        /// thing you did rather than a thing about the work, and the row order alone does not say
+        /// which of eleven columns produced it.</para>
+        /// </summary>
+        void MarkSortedColumn()
+        {
+            for (int slot = 0; slot < _workHeads.Count; slot++)
+            {
+                bool sorted = _work.SortColumn != WorkGridModel.NoSort &&
+                              _work.ColumnAt(slot) == _work.SortColumn;
+                _workHeads[slot].style.borderBottomWidth = sorted ? 2 : 0;
+                _workHeads[slot].style.borderBottomColor = HudTokens.Accent;
+            }
+
+            _workSortReset.style.display = _work.SortColumn != WorkGridModel.NoSort
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
         }
 
         void OnWorkModeChanged(WorkGridMode mode)
