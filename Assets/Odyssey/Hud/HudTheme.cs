@@ -571,6 +571,7 @@ namespace Odyssey.Hud
             PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
             PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),
             PaletteTools.GrowZone => OrderColours.Hue(DesignateTool.GrowZone),
+            PaletteTools.Stockpile => OrderColours.Hue(DesignateTool.Stockpile),
             _ => null,
         };
 

@@ -274,6 +274,7 @@ namespace Odyssey.Hud
             Tabs.Clear();
             Commands.Clear();
             _bedUnderPane = false;
+            _storeUnderPane = false;
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -556,6 +557,18 @@ namespace Odyssey.Hud
         int _cellRowsOrderPercent;
         int _cellRowsQuality;
         int _cellRowsOwner;
+
+        /// <summary>
+        /// The store's rung, plus one, or 0 for no store — the two facts the storage row draws
+        /// folded into the one integer this guard needs. Plus one because rung 0 is Last, a real
+        /// answer, and a guard that could not tell it from "no store at all" would leave the row
+        /// standing over a cell the player had just un-zoned.
+        /// </summary>
+        int _cellRowsStoragePriority;
+
+        static int StoragePriorityOf(CellDetail detail) =>
+            detail.StorageZone >= 0 ? detail.StoragePriority + 1 : 0;
+
         int _cellRowsZonePlant;
         int _cellRowsZoneYield;
         int _cellRowsCropGrowth;
@@ -570,6 +583,16 @@ namespace Odyssey.Hud
         public bool BedUnderPane => _bedUnderPane;
 
         bool _bedUnderPane;
+
+        /// <summary>
+        /// Whether the tile under the pane is inside a storage zone, so its storage row can be
+        /// pressed — the pane's second interactive fact, and the way a player says what a store
+        /// takes. Cleared and set on the same cadence as <see cref="BedUnderPane"/>, so a stale
+        /// true cannot outlive the zone it described.
+        /// </summary>
+        public bool StoreUnderPane => _storeUnderPane;
+
+        bool _storeUnderPane;
 
         /// <summary>
         /// The cell the pane is describing, for whoever must name it back to the world — the
@@ -607,6 +630,10 @@ namespace Odyssey.Hud
             // over a control that was dead, and the owner reported being unable to assign a bed
             // three times across two sessions before a test could say why (BedOwnerPickerTests).
             _bedUnderPane = detail.EdificeQuality > 0;
+            // Set beside the bed's flag and **above** the early return below, for the reason that
+            // whole paragraph exists: a flag cleared every refresh and set only after the return
+            // is a control that dies on the second refresh and goes on looking alive.
+            _storeUnderPane = detail.StorageZone >= 0;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -621,6 +648,7 @@ namespace Odyssey.Hud
                 && _cellRowsZonePlant == detail.ZonePlant
                 && _cellRowsCropGrowth == detail.CropGrowth
                 && _cellRowsZoneYield == detail.ZoneYield
+                && _cellRowsStoragePriority == StoragePriorityOf(detail)
                 && _cellRowsIndoors == detail.IsIndoors) return;
 
             _cellRowsFor = detail.CellIndex;
@@ -636,6 +664,7 @@ namespace Odyssey.Hud
             _cellRowsZonePlant = detail.ZonePlant;
             _cellRowsCropGrowth = detail.CropGrowth;
             _cellRowsZoneYield = detail.ZoneYield;
+            _cellRowsStoragePriority = StoragePriorityOf(detail);
             _cellRowsIndoors = detail.IsIndoors;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
@@ -680,6 +709,18 @@ namespace Odyssey.Hud
                     ? howMany + " — awaiting its seed"
                     : howMany + " — " + detail.CropGrowth / 10 + "% grown");
             }
+            // The store's own answer, beside the field's: what the colony has set this ground
+            // aside for, and how much it cares. Its rung leads, because the rung is the thing a
+            // player changes and the thing that decides where the next armful goes; the size
+            // follows it, because a zone has no name until storage groups arrive (S2) and "how
+            // big" is the only other thing that tells two of them apart.
+            if (detail.StorageZone >= 0)
+                // "…" for the same reason the bed's owner row carries "Assign…": a row that can be
+                // pressed has to say it is one. That row looked exactly like the facts above and
+                // below it for two days and the owner could not find the feature at all.
+                Row(n++, "storage",
+                    Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]) + " …");
+
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");
 

@@ -205,6 +205,17 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
         public int InstancesFaded { get; private set; }
 
+        /// <summary>
+        /// Cell plates drawn last frame: an order's mark, a cut, a build's fill, a drag preview.
+        ///
+        /// <para>Its own counter and not merely a share of <see cref="DrawCalls"/>, because the
+        /// question this pass keeps raising is "did it run at all" — it is filtered to the drawn
+        /// slice band, so a board covered in orders on a plateau the camera is not slicing draws
+        /// none of them, and a frame number taken that way says the pass is free when it simply
+        /// did not happen (2026-09-20, and it cost a measurement).</para>
+        /// </summary>
+        public int CellPlatesDrawn { get; private set; }
+
         /// <summary>Chunks the coarse sight test admitted last frame, and so tested per instance.</summary>
         public int ChunksSightTested { get; private set; }
 
@@ -219,6 +230,7 @@ namespace Odyssey.Presentation.Rendering
             ChunksMeshedThisFrame = 0;
             InstancesFaded = 0;
             ChunksSightTested = 0;
+            CellPlatesDrawn = 0;
 
             // Before the board, not after it: the surround is the furthest thing in the scene, and
             // submitting it first lets the depth buffer reject it behind the board rather than
@@ -708,6 +720,23 @@ namespace Odyssey.Presentation.Rendering
             if (TintCode.IsTilled(tintCode))
                 tint = new Color(tint.r * TilledGrade.r, tint.g * TilledGrade.g,
                     tint.b * TilledGrade.b, tint.a);
+
+            // A store's ground: the surface it already is, washed towards the store's own hue.
+            // A lerp rather than the multiply above, and the difference is the difference between
+            // the two features. Tilled earth IS a different material — a field is soil somebody
+            // turned over, and a multiply says "this ground, darker". A store changes nothing
+            // about the ground: the stone is still stone and the planks are still planks under
+            // however many crates, so the wash has to sit *over* the surface and leave it
+            // recognisable. Kept light for the same reason the hue is desaturated: a mine order is
+            // worked off and a field becomes a crop, but a warehouse floor is a warehouse floor
+            // for the rest of the colony's life, and a heavy wash over fifty cells for a hundred
+            // hours is a screen the player stops seeing past.
+            if (TintCode.IsStored(tintCode))
+                tint = new Color(
+                    tint.r + (StoredGrade.r - tint.r) * StoredWash,
+                    tint.g + (StoredGrade.g - tint.g) * StoredWash,
+                    tint.b + (StoredGrade.b - tint.b) * StoredWash,
+                    tint.a);
 
             // Open to the sky means the depth shade has nothing to say. The shade measures how far
             // you are peering *through* the world, and there is nothing over an outdoor surface —
@@ -1489,14 +1518,6 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public void DrawCellMark(CellRef cell, Color colour, float inset)
         {
-            Material material = BracketMaterial(colour);
-            var rp = new RenderParams(material)
-            {
-                layer = GameObjectLayer,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
-            };
-
             int index = _model.Index(cell.X, cell.Z, cell.Y);
 
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
@@ -1505,8 +1526,9 @@ namespace Odyssey.Presentation.Rendering
             var size = new Vector3(
                 CellMetrics.SizeXZ - inset * 2f, MarkThickness, CellMetrics.SizeXZ - inset * 2f);
 
-            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
-                Matrix4x4.TRS(centre, Quaternion.identity, size));
+            // Gathered, not submitted - see FlushCellPlates. This was one Graphics.RenderMesh per
+            // designated cell, and a player who marks a wood designates hundreds of them.
+            GatherCellPlate(colour, Matrix4x4.TRS(centre, Quaternion.identity, size));
         }
 
         /// <summary>
@@ -1825,6 +1847,31 @@ namespace Odyssey.Presentation.Rendering
         public static readonly Color TilledGrade = new Color(0.305f, 0.276f, 0.245f);
 
         /// <summary>
+        /// The colour a store's ground is washed towards — <c>OrderColours.StoreHue</c>, the same
+        /// blue-grey the chip, the drag cursor and the armed banner wear.
+        ///
+        /// <para><b>The order's colour and the result's are the same one here, and that is not an
+        /// oversight.</b> A growing zone is deliberately the other way round: its chip is the
+        /// Zones brown and its committed ground is <see cref="TilledGrade"/>, because a painted
+        /// field turns into worked soil and the soil is the result rather than the order — exactly
+        /// as a built wall is not the blue of its blueprint. A store has no result: the ground
+        /// under a warehouse is the ground it always was, and the wash <i>is</i> the standing
+        /// order, still in force, for as long as the zone exists.</para>
+        ///
+        /// <para>Written as the same three bytes <c>OrderColours.StoreHue</c> carries rather than
+        /// reached for across the assembly boundary: <c>Odyssey.Hud</c> has no Unity types and
+        /// this file has nothing else. <c>OrderColoursTests</c> holds the pair together.</para>
+        /// </summary>
+        public static readonly Color StoredGrade = new Color(0x7f / 255f, 0x96 / 255f, 0xa8 / 255f);
+
+        /// <summary>
+        /// How far a store's ground is pulled towards <see cref="StoredGrade"/>. A third: enough
+        /// that the edge of a zone is unmistakable at the play camera, little enough that a stone
+        /// floor still reads as stone and a wooden one as wood.
+        /// </summary>
+        public const float StoredWash = 0.33f;
+
+        /// <summary>
         /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to
         /// indicate it's sown"). Six tiny flecks at deterministic positions hashed from the cell,
         /// so they sit still frame to frame and every cell scatters differently; lifted just
@@ -1926,6 +1973,134 @@ namespace Odyssey.Presentation.Rendering
         int _speckCount;
 
 
+        /// <summary>
+        /// One colour's worth of cell plates gathered this frame, and the matrices to draw them
+        /// with. Reused frame to frame: the count is reset by the flush, the array is not.
+        /// </summary>
+        sealed class PlateBucket
+        {
+            public Color Colour;
+            public Matrix4x4[] Matrices = new Matrix4x4[256];
+            public int Count;
+        }
+
+        PlateBucket?[] _plateBuckets = System.Array.Empty<PlateBucket?>();
+        int _plateBucketCount;
+
+        /// <summary>Cell plates gathered this frame and not yet flushed. Read by the tests, so a
+        /// pass that grows with the board can be asserted about rather than looked at.</summary>
+        public int PlatesGathered { get; private set; }
+
+        /// <summary>
+        /// Off, <see cref="FlushCellPlates"/> submits each gathered plate on its own instead of
+        /// instancing the bucket. <b>This exists to be measured and for nothing else.</b>
+        ///
+        /// <para>It is the control that prices the batching, and it is a control rather than a
+        /// second code path: the geometry still has exactly one owner in
+        /// <see cref="GatherCellPlate"/> and only the submission changes, so the two readings
+        /// differ in the thing being priced and in nothing else — which is what a control has to
+        /// do (<c>docs/lessons.md</c>, "a probe that disables the thing you are pricing will lie
+        /// to you"). Without it the before and after have to come from two Unity runs minutes
+        /// apart, and on a machine that runs several editors at once that is not a measurement:
+        /// the same batched pass read 0.81 ms and 0.19 ms on two runs of the same code on
+        /// 2026-09-20, purely on how busy the machine was.</para>
+        /// </summary>
+        public bool InstanceCellPlates { get; set; } = true;
+
+        /// <summary>
+        /// Hold one cell plate until the end of the frame, bucketed by its colour.
+        ///
+        /// <para>Colour is the bucket key because it is the whole of what varies: every plate is
+        /// the same unit cube in the same fallback material, and <see cref="BracketMaterial"/>
+        /// already caches one material per colour. Four order colours, a cut and a fill is the
+        /// entire range a frame ever sees, so the linear scan below is over a handful of entries
+        /// and allocates nothing after the first frame.</para>
+        /// </summary>
+        void GatherCellPlate(Color colour, in Matrix4x4 place)
+        {
+            PlateBucket? bucket = null;
+            for (int i = 0; i < _plateBucketCount; i++)
+                if (_plateBuckets[i]!.Colour == colour) { bucket = _plateBuckets[i]; break; }
+
+            if (bucket == null)
+            {
+                if (_plateBucketCount == _plateBuckets.Length)
+                    System.Array.Resize(ref _plateBuckets,
+                        _plateBuckets.Length == 0 ? 8 : _plateBuckets.Length * 2);
+                bucket = _plateBuckets[_plateBucketCount] ??= new PlateBucket();
+                bucket.Colour = colour;
+                bucket.Count = 0;
+                _plateBucketCount++;
+            }
+
+            if (bucket.Count == bucket.Matrices.Length)
+                System.Array.Resize(ref bucket.Matrices, bucket.Matrices.Length * 2);
+            bucket.Matrices[bucket.Count++] = place;
+            PlatesGathered++;
+        }
+
+        /// <summary>
+        /// Draw every cell plate gathered this frame: one instanced call per colour, or a handful
+        /// once a colour passes <see cref="MaxInstancesPerCall"/>.
+        ///
+        /// <para><b>Why they are gathered at all.</b> These were one submission per designated
+        /// cell - priced by how much of the board the player had marked rather than by how much
+        /// there is to see, and invisible to the budget because neither the mark nor the slab
+        /// incremented <see cref="DrawCalls"/>. That is P10 in <c>docs/bug-patterns.md</c>, the
+        /// same fault the zone cover and the seed specks each wore.</para>
+        ///
+        /// <para><b>The composition root must call this after the last thing that marks a cell.</b>
+        /// Gathered plates that are never flushed are not drawn, and <c>CellPlateTests</c> is the
+        /// guard that a marked board costs draws in colours rather than in cells.</para>
+        /// </summary>
+        public void FlushCellPlates()
+        {
+            for (int i = 0; i < _plateBucketCount; i++)
+            {
+                PlateBucket bucket = _plateBuckets[i]!;
+                if (bucket.Count == 0) continue;
+
+                var rp = new RenderParams(BracketMaterial(bucket.Colour))
+                {
+                    layer = GameObjectLayer,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                    receiveShadows = false,
+                };
+
+                if (InstanceCellPlates)
+                {
+                    int drawn = 0;
+                    while (drawn < bucket.Count)
+                    {
+                        int n = Mathf.Min(MaxInstancesPerCall, bucket.Count - drawn);
+                        if (SubmitToGpu)
+                            Graphics.RenderMeshInstanced(
+                                rp, PrimitiveMeshes.UnitCube, 0, bucket.Matrices, n, drawn);
+                        drawn += n;
+                        DrawCalls++;
+                        InstancesDrawn += n;
+                    }
+                }
+                else
+                {
+                    for (int at = 0; at < bucket.Count; at++)
+                    {
+                        if (SubmitToGpu)
+                            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                                bucket.Matrices[at]);
+                        DrawCalls++;
+                        InstancesDrawn++;
+                    }
+                }
+
+                CellPlatesDrawn += bucket.Count;
+                bucket.Count = 0;
+            }
+
+            _plateBucketCount = 0;
+            PlatesGathered = 0;
+        }
+
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
         const float MarkThickness = 0.04f;
 
@@ -1949,14 +2124,6 @@ namespace Odyssey.Presentation.Rendering
             if (fraction <= 0.02f) return;
             if (fraction > 1f) fraction = 1f;
 
-            Material material = BracketMaterial(colour);
-            var rp = new RenderParams(material)
-            {
-                layer = GameObjectLayer,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
-            };
-
             // Inset a little so the slab sits inside the cell rather than z-fighting the faces of
             // the rock it is drawn over, and of whatever stands beside it.
             const float Inset = 0.06f;
@@ -1968,8 +2135,9 @@ namespace Odyssey.Presentation.Rendering
             float offset = (CellMetrics.SizeY - height) * 0.5f;
             centre.y += fromTheFloor ? -offset : offset;
 
-            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
-                Matrix4x4.TRS(centre, Quaternion.identity, size));
+            // Gathered with the marks: the same unit cube in the same material, and a colony
+            // part-way through a large build or a large quarry has one of these per cell too.
+            GatherCellPlate(colour, Matrix4x4.TRS(centre, Quaternion.identity, size));
         }
 
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour) =>

@@ -551,7 +551,7 @@ reads both `.ttf` cmap tables in the **fast tier** and fails on any non-ASCII ch
 string literal that either face cannot draw. On its first run it found the same character already
 shipped on `main`, in the bed-owner picker (`HudShell.Inspect.cs`, PR #141): the mark that says
 *this is her bed* has been an empty column since it was written and had never been played. That one
-is drawn now too. `docs/bug-patterns.md` P10.
+is drawn now too. `docs/bug-patterns.md` P13.
 
 ### 15b. The panel hung off the right of any screen narrower than about 1,780
 

@@ -228,9 +228,9 @@ namespace Odyssey.Tests.Sim.Events
 
             public void Stockpile(params int[] cells)
             {
-                var allow = new bool[ItemIndex.Count];
-                for (int i = 0; i < allow.Length; i++) allow[i] = true;
-                Pawns.Items.AddStockpile(new Stockpile(2, cells, allow));
+                for (int i = 0; i < cells.Length; i++)
+                    Pawns.Storage!.Designate(
+                        Pawns.Size.FromIndex(cells[i]), cells[0], Odyssey.Sim.Storage.StoragePreset.Everything);
             }
 
             public int MealsOnBoard()

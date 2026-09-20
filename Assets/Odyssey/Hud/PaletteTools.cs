@@ -120,6 +120,13 @@ namespace Odyssey.Hud
         public const string GrowZone = "ui.arch.tool.growzone";
 
         /// <summary>
+        /// Ground set aside for things to be put down on. A new one accepts everything and the
+        /// player narrows it, which is why there is no second "dumping zone" tool beside it any
+        /// more (owner, 2026-09-20; see <see cref="DesignateTool.Stockpile"/>).
+        /// </summary>
+        public const string Stockpile = "ui.arch.tool.stockpile";
+
+        /// <summary>
         /// The categories the palette offers, in the order they are drawn, each with a few
         /// of its tools. Every icon key exists in the registry; a tool not in <see cref="Live"/>
         /// is drawn and disabled, so the shape of the game is visible before the thing behind a
@@ -154,7 +161,11 @@ namespace Odyssey.Hud
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
-            ("ui.arch.category.zones", new[] { GrowZone, "ui.arch.tool.stockpile", "ui.arch.tool.dumping" }),
+            // The dumping-zone chip left on 2026-09-20: a new stockpile accepts everything, so a
+            // second tool here would make exactly what the first one makes. Its registry key
+            // stays — a real dumping zone later, one that also takes rubble and never re-stows
+            // out, is worth having a name ready for.
+            ("ui.arch.category.zones", new[] { GrowZone, Stockpile }),
             ("ui.arch.category.recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
@@ -227,7 +238,7 @@ namespace Odyssey.Hud
         /// builds one button per entry. Cancel stays last: it is the one a player reaches for
         /// blind, and a fixed last position is how a hand learns where it is.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, GrowZone, Cancel };
+        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, GrowZone, Stockpile, Cancel };
 
         /// <summary>
         /// The word the armed banner uses for an order: the order's own name, the one the wiki
@@ -292,6 +303,7 @@ namespace Odyssey.Hud
             new PaletteTool(Deconstruct, Toggle(DesignateTool.Deconstruct), Holding(DesignateTool.Deconstruct)),
             new PaletteTool(GrowZone, Toggle(DesignateTool.GrowZone), Holding(DesignateTool.GrowZone),
                 wantsPlant: true),
+            new PaletteTool(Stockpile, Toggle(DesignateTool.Stockpile), Holding(DesignateTool.Stockpile)),
         };
 
         /// <summary>

@@ -29,15 +29,18 @@ namespace Odyssey.Sim.World
         readonly IReadOnlyList<PlacedEdifice> _edifices;
         readonly Growing.GrowingZones? _zones;
         readonly EnclosureGrid? _enclosure;
+        readonly Storage.StorageZones? _storage;
         readonly int[] _costByClass = new int[256];
 
         public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
-            Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null)
+            Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null,
+            Storage.StorageZones? storage = null)
         {
             _grid = grid;
             _edifices = edifices;
             _zones = zones;
             _enclosure = enclosure;
+            _storage = storage;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -111,10 +114,27 @@ namespace Odyssey.Sim.World
                 }
             }
 
+            // And the store, if one covers this cell. Through `StorageZones.StoreCellOf`, which is
+            // the one owner of "which cell does a store live in, given a cell somebody clicked" —
+            // the same answer the designate and cancel intents get, so the pane cannot say a cell
+            // is a store that the tool would refuse, or the other way round.
+            int storageZone = -1;
+            byte storagePriority = 0;
+            if (_storage != null)
+            {
+                int slot = _storage.ZoneAt(_storage.StoreCellOf(cell));
+                if (slot >= 0)
+                {
+                    storageZone = slot;
+                    storagePriority = (byte)_storage.SettingsOf(slot).Priority;
+                }
+            }
+
             bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors));
+                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
+                storageZone, storagePriority));
         }
     }
 }

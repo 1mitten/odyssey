@@ -164,3 +164,17 @@ Measured on the wooded meadow, twelve colonists, 2,500 ticks, two frames to the 
 - Whether half a second is the right time to lean out of the way, or whether it reads as sluggish
   now that nothing snaps.
 - Whether crossing traffic getting a sixth of the envelope reads as courtesy or as a twitch.
+
+## What the crowd scan costs
+
+**Measured 2026-09-20** (`docs/design/06-rendering-and-camera.md` §6c.2). `PawnPose.Of` walks the
+whole pawn span for every pawn it poses, so the crowd term is **O(N squared)** across a colony:
+13.3 ms of a 22.5 ms frame at 384 colonists, against 0.02 ms at 64. It is the largest single cost
+the renderer has, and it appears only above `PawnFigureDirector.FigureCeiling`, because below the
+ceiling every pawn has a figure and the scan is the capped 64 x N one.
+
+**Nothing about the look is in question.** `CrowdFarRadius` is 3.0 m against a 2.5 m cell, so
+`Proximity` is exactly zero beyond roughly one cell: a cell-bucketed index over the pawn span
+would skip only pairs that contribute nothing, and the offsets it computes would be identical to
+the last bit. The sidestep as judged stays as judged; what changes is how many pairs are asked
+about. Held as the next unit rather than done, so that the sweep above stands as its before.

@@ -182,6 +182,11 @@ namespace Odyssey.Presentation.Rendering
             // the whole of drawing a growing zone: no second mesh, no per-cell draw, no per-frame
             // work at all. TintCode.TilledBase carries the measurement that justifies it.
             if (_model.IsZoned(index)) tint = TintCode.Tilled(tint);
+            // And a store's ground, which is the same idea said on the other kind of surface: the
+            // terrain quad here, the slab in EmitFloor. A cell can be zoned for growing or for
+            // storage and never both — the two siting gates disagree about almost everything —
+            // so the two bits never meet on one bucket in practice.
+            if (_model.IsStoredAbove(index)) tint = TintCode.Stored(tint);
             if (DrawnWhole(terrain)) tint = TintCode.Whole(tint);
 
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
@@ -566,7 +571,15 @@ namespace Odyssey.Presentation.Rendering
             // line of dark wood along every seam in the colony. CellMetrics.FloorTile is the one
             // owner of both halves of the answer, and CellMetrics.FloorSheet carries the argument,
             // the measurements and the owner's two screenshots of it.
-            AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
+            // A store's wash goes on the slab as well as on bare ground, and asks about *this*
+            // cell rather than the one above: a slab is drawn at the lower boundary of the cell a
+            // pawn walks in, where the terrain quad belongs to the cell below. That is the half a
+            // store needs and a growing zone never did — nothing grows through a slab, so
+            // EmitTerrain was the only site the tilled bit ever had to exist on.
+            int tint = TintCode.Stuff(_model.FloorStuff(index));
+            if (_model.IsStoredHere(index)) tint = TintCode.Stored(tint);
+
+            AddRoof(batch, module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) * CellMetrics.FloorTile);
         }
 

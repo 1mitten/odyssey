@@ -683,3 +683,16 @@ ui.occupation.doomsday-prepper,Doomsday prepper,ui.occupation,MS,
 ui.occupation.lottery-winner,Lottery winner,ui.occupation,MS,
 ui.occupation.smuggler,Smuggler,ui.occupation,MS,
 ui.occupation.petty-thief,Petty thief,ui.occupation,MS,
+ui.storage.priority.last,Last,ui.storage.priority,M3,Filled only when every other store is full
+ui.storage.priority.low,Low,ui.storage.priority,M3,Overflow. Take from here before anywhere else
+ui.storage.priority.normal,Normal,ui.storage.priority,M3,What a store is unless you say otherwise
+ui.storage.priority.preferred,Preferred,ui.storage.priority,M3,Filled before an ordinary store
+ui.storage.priority.urgent,Urgent,ui.storage.priority,M3,Filled first. Things already stored elsewhere are moved here
+ui.storage.preset.everything,Everything,ui.storage.preset,M3,"Accept every kind of thing, including ones added later"
+ui.storage.preset.nothing,Nothing,ui.storage.preset,M3,"Accept nothing, then tick what belongs"
+ui.res.category.food,Food,ui.res.category,M3,"Anything a colonist can eat, cooked or raw"
+ui.res.category.medicine,Medicine,ui.res.category,M3,What tending draws on
+ui.res.category.materials,Materials,ui.res.category,M3,"What things are made of, and what mining and felling leave behind"
+ui.res.category.books,Books,ui.res.category,M3,Research obtained elsewhere rather than worked out here
+ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, worn or used"
+ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with

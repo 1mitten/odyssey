@@ -228,9 +228,17 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid()
         {
-            Assert.That(PlacementSignature(City(ScenarioDef.Bare())), Is.EqualTo("34/CF54D9D013E9AF93"),
+            // Both signatures moved on 2026-09-20, when the default scenario stopped shipping a
+            // store (owner: "there shouldn't be a default stockpile zone"). Nine 's' parts left
+            // each signature, and the placement was **measured** rather than assumed either side
+            // of the change: 5 colonists, 12 meals, 5 beds and 8 salvage on the wooded board,
+            // before and after, identical. The city loses one salvage piece — 7 rather than 8 —
+            // because the scatter retries once per spot in the pool and the pool is nine shorter,
+            // so on the tighter board one draw gives up. A retry artefact, not a space problem,
+            // and recorded here rather than engineered around for one piece of scrap.
+            Assert.That(PlacementSignature(City(ScenarioDef.Bare())), Is.EqualTo("24/D40CDEA5145BB3D2"),
                 "the default placement moved on the ruined city");
-            Assert.That(PlacementSignature(Wooded(ScenarioDef.Bare())), Is.EqualTo("34/D92AD45F0C0D53B7"),
+            Assert.That(PlacementSignature(Wooded(ScenarioDef.Bare())), Is.EqualTo("25/B4A09DCDA064F4B4"),
                 "the default placement moved on the wooded map");
         }
 
@@ -245,8 +253,7 @@ namespace Odyssey.Tests.Sim
             foreach (int cell in colony.Pawns.Items.Beds) parts.Add("b" + cell);
             foreach (var item in colony.Pawns.Items.Items)
                 parts.Add("i" + item.DefIndex + ":" + item.Cell + ":" + item.Stack);
-            foreach (var pile in colony.Pawns.Items.Stockpiles)
-                foreach (int cell in pile.Cells) parts.Add("s" + cell);
+            foreach (int cell in colony.Pawns.Storage!.Cells) parts.Add("s" + cell);
 
             ulong hash = 14695981039346656037UL;
             foreach (string part in parts)

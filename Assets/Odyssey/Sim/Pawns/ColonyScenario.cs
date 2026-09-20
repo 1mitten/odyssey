@@ -45,7 +45,22 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int beds = 5;
 
-        public int stockpileCells = 9;
+        /// <summary>
+        /// Cells of storage the colony starts with. <b>Zero</b> (owner, 2026-09-20: <i>"there
+        /// shouldn't be a default stockpile zone"</i>).
+        ///
+        /// <para>It was nine, and for most of the project's life that was invisible — nothing drew
+        /// a stockpile, so nobody ever saw the zone every colony was given. S1 made it visible and
+        /// the answer was immediate: a colony arrives with nothing marked and nothing zoned, and
+        /// the player draws their first store where they want it. The same call as
+        /// <c>ScenarioDef.Playtest</c> giving no starting orders (2026-09-17).</para>
+        ///
+        /// <para>The machinery stays rather than going with it, exactly as the felling and mining
+        /// radii did: a scenario may ask for a starting store, and a later one almost certainly
+        /// will — a "prepared site" start is the obvious use — so it stays under test with a
+        /// scenario that asks.</para>
+        /// </summary>
+        public int stockpileCells;
 
         /// <summary>Loose salvage scattered about, so hauling has work from the first tick.</summary>
         public int salvage = 8;
@@ -765,11 +780,26 @@ namespace Odyssey.Sim.Pawns
                 if (spot < 0) break;
                 stockpile.Add(spot);
             }
-            if (stockpile.Count > 0)
+            if (stockpile.Count > 0 && pawns.Storage != null)
             {
-                var allow = new bool[ItemIndex.Count];
-                for (int i = 0; i < allow.Length; i++) allow[i] = true;
-                pawns.Items.AddStockpile(new Stockpile(priority: 2, stockpile.ToArray(), allow));
+                // Through the zones rather than around them, and at the anchor the colony's first
+                // cell names: the scenario's zone is an ordinary zone from the first tick, with an
+                // ordinary settings record at Normal accepting everything — which is what a zone a
+                // player draws is too (decision 22). It used to be built by hand with its own
+                // priority integer and its own filter array, and it was the only zone in the game
+                // that nothing could edit.
+                //
+                // **And it is now drawn**, which nothing about the starting zone ever was. Every
+                // colony ever made has had one and nobody has seen it.
+                // A spot the gate refuses is simply left out, and on the wooded board exactly one
+                // is: cell 180436 of the played golden has a tree standing in it. That cell was
+                // in the zone before this unit — `AddStockpile` asked nothing of a cell — so a
+                // starting item that landed on it counted as "stored" in a place nothing could
+                // ever be stored. It is loose now, which is what it is, and a hauler collects it.
+                int anchor = stockpile[0];
+                for (int i = 0; i < stockpile.Count; i++)
+                    pawns.Storage.Designate(
+                        grid.Size.FromIndex(stockpile[i]), anchor, Storage.StoragePreset.Everything);
             }
 
             // Loose salvage so hauling has work from the first tick. A draw that lands on a

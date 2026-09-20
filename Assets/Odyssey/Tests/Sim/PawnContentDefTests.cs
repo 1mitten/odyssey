@@ -113,7 +113,17 @@ namespace Odyssey.Tests.Sim
         // had moved the fingerprint that day, so neither parent's value described the union.
         // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
         // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 4333104343083629863UL;
+        //
+        // Moved a tenth time, 2026-09-20, by storage S1: `ItemDef` gained `category`, and all
+        // seven commodities declare one — ration pack and carrots are Food, the other five are
+        // Materials, including salvage, which is reclaimer feedstock rather than a made thing
+        // (docs/plans/storage.md decision 25). The field defaults to Materials rather than to
+        // nought on purpose: nought is Food, so a commodity that forgot to declare itself would
+        // quietly join the pantry. No golden moves from this alone — a category is read only by a
+        // storage filter, and every filter in a golden colony accepts everything — but the
+        // starting zone moving to a real `StorageZones` does move them, and that is measured
+        // separately. Taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 9529039565603056167UL;
 
 
         [Test]

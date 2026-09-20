@@ -23,6 +23,9 @@ namespace Odyssey.Hud
         public static string Structure => Registry.Label("ui.arch.category.structure");
         public static string Furniture => Registry.Label("ui.arch.category.furniture");
         public static string Salvage => Registry.Label("ui.arch.category.salvage");
+        public static string Materials => Registry.Label("ui.res.category.materials");
+        public static string Items => Registry.Label("ui.res.category.items");
+        public static string Food => Registry.Label("ui.res.category.food");
     }
 
     public sealed class AlmanacIcon
@@ -257,7 +260,7 @@ namespace Odyssey.Hud
                     new[] {
                         ("Move cost", "85% (High speed)"), ("Fertility", "0%"), ("Work to place", "80 ticks"),
                         ("Cleanliness", "+0.4 (Sterile baseline)"), ("Supports building", "All categories"),
-                        ("Materials", "Concrete × 2"), ("Wear resistance", "Indefinite"), ("Flammability", "None (0%)")
+                        (AlmanacKeys.Materials, "Concrete × 2"), ("Wear resistance", "Indefinite"), ("Flammability", "None (0%)")
                     },
                     new AlmanacBody("terrain", "BEHAVIOUR",
                         "Installed corridor floors grant colonist haulers a 15% speed increase over natural terrain, noticeably compounding colony freight throughput.",
@@ -288,10 +291,10 @@ namespace Odyssey.Hud
             }));
 
             // 2. Materials
-            list.Add(new AlmanacCategory("Materials", "M19 7l-7-4-7 4v10l7 4 7-4V7z", new List<AlmanacEntry>
+            list.Add(new AlmanacCategory(AlmanacKeys.Materials, "M19 7l-7-4-7 4v10l7 4 7-4V7z", new List<AlmanacEntry>
             {
                 new AlmanacEntry(
-                    AlmanacKeys.Wood, "Materials", "Versatile organic timber harvested from pines", "Material", "Organic", true, "#a26e3c",
+                    AlmanacKeys.Wood, AlmanacKeys.Materials, "Versatile organic timber harvested from pines", "Material", "Organic", true, "#a26e3c",
                     new AlmanacIcon("wood", "#a26e3c", "M4 6h16M4 12h16M4 18h16M7 3v18M17 3v18"),
                     "Hewn coniferous logs suitable for framing, early furniture, fuel stockpiles, and perimeter stakes.",
                     "Stocked in colony · 420 units · Main store", "View stockpile",
@@ -310,7 +313,7 @@ namespace Odyssey.Hud
                     new[] { ("Pine", "living timber provider"), ("Construct", "crafting skill used in timber assemblies"), (AlmanacKeys.Wall, "basic protective enclosure") }
                 ),
                 new AlmanacEntry(
-                    AlmanacKeys.Stone, "Materials", "Quarried rock chunks dressed into blocks", "Material", "Mineral", true, "#7d8590",
+                    AlmanacKeys.Stone, AlmanacKeys.Materials, "Quarried rock chunks dressed into blocks", "Material", "Mineral", true, "#7d8590",
                     new AlmanacIcon("stone", "#7d8590", "M3 8l9-5 9 5v8l-9 5-9-5V8z"),
                     "Heavy mineral blocks split from excavated mountain boulders. Fireproof and resistant to sustained blunt force.",
                     "Stocked in colony · 260 units · Masonry yard", "View stockpile",
@@ -329,7 +332,7 @@ namespace Odyssey.Hud
                     new[] { ("Rock", "unworked raw mineral deposit"), (AlmanacKeys.Mining, "quarrying labor skill"), (AlmanacKeys.Wall, "masonry fortified barricade") }
                 ),
                 new AlmanacEntry(
-                    "Concrete", "Materials", "Poured artificial aggregate binder", "Material", "Manufactured", true, "#939ba6",
+                    "Concrete", AlmanacKeys.Materials, "Poured artificial aggregate binder", "Material", "Manufactured", true, "#939ba6",
                     new AlmanacIcon("concrete", "#939ba6", "M4 4h16v16H4z M9 4v16 M15 4v16 M4 10h16 M4 15h16"),
                     "Composite mixture of sand, crushed aggregate, and calcined lime slurry. Cures into rigid non-porous floor flagstones.",
                     "Stocked in colony · 85 units · Chemical store", "View stockpile",
@@ -348,7 +351,7 @@ namespace Odyssey.Hud
                     new[] { ("Pavement", "primary finished surface application"), ("Gravel", "raw aggregate component"), (AlmanacKeys.Salvage, "alternative scrap re-binder") }
                 ),
                 new AlmanacEntry(
-                    "Steel", "Materials", "Industrial alloy sheets salvaged from hull plating", "Material", "Metal", true, "#5c7080",
+                    "Steel", AlmanacKeys.Materials, "Industrial alloy sheets salvaged from hull plating", "Material", "Metal", true, "#5c7080",
                     new AlmanacIcon("steel", "#5c7080", "M3 7l4-4h10l4 4v10l-4 4H7l-4-4V7z"),
                     "High-tensile refined metallic alloy. Critical for power conduits, automated security turrets, and reinforced blast doors.",
                     "Stocked in colony · 190 units · Secure vault", "View stockpile",
@@ -450,10 +453,10 @@ namespace Odyssey.Hud
             }));
 
             // 4. Items
-            list.Add(new AlmanacCategory("Items", "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4", new List<AlmanacEntry>
+            list.Add(new AlmanacCategory(AlmanacKeys.Items, "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4", new List<AlmanacEntry>
             {
                 new AlmanacEntry(
-                    "Ration Pack", "Items", "Preserved long-life emergency calorie packet", "Item", "Manufactured", false, "#d4af37",
+                    "Ration Pack", AlmanacKeys.Items, "Preserved long-life emergency calorie packet", "Item", "Manufactured", false, "#d4af37",
                     new AlmanacIcon("ration_pack", "#d4af37", "M5 4h14v16H5z M5 9h14 M9 4v5"),
                     "Vacuum-sealed industrial food concentrate. Will not rot even in tropical humidity, making it the ideal emergency pantry buffer.",
                     "Stocked · 84 packs in pantry", "View stockpile",
@@ -469,10 +472,10 @@ namespace Odyssey.Hud
                             ("Colony consumption", "2 packs/colonist per solar day", "Maintain 10-day buffer of 60+ packs"),
                             ("Caravan utility", "Ideal travel provisions", "Lightweight calorie density")
                         }),
-                    new[] { ("Food", "governing colonist need satisfied"), (AlmanacKeys.Carrots, "perishable agricultural fresh alternate"), ("Iron Stomach", "trait boosting digestion efficiency") }
+                    new[] { (AlmanacKeys.Food, "governing colonist need satisfied"), (AlmanacKeys.Carrots, "perishable agricultural fresh alternate"), ("Iron Stomach", "trait boosting digestion efficiency") }
                 ),
                 new AlmanacEntry(
-                    AlmanacKeys.Carrots, "Items", "Nutritious crunchy root crops harvested from farm plots", "Item", "Perishable", false, "#ff8c3b",
+                    AlmanacKeys.Carrots, AlmanacKeys.Items, "Nutritious crunchy root crops harvested from farm plots", "Item", "Perishable", false, "#ff8c3b",
                     new AlmanacIcon("carrots", "#ff8c3b", "M12 21l-4-9c-1-2 0-5 3-5s4 3 3 5l-2 9z M12 7V2 M9 4l3 3 3-3"),
                     "Freshly pulled garden root vegetables. High in vitamins, crisp in texture, but subject to bacterial rot if kept warm.",
                     "Stocked · 140 units · Cellar pantry", "View stockpile",
@@ -488,10 +491,10 @@ namespace Odyssey.Hud
                             ("Harvest cycle", "Fast turn-around spring crop", "Grows in soil or fertile river silt"),
                             ("Meal synergy", "Campfire stew ingredient", "Increases colonist meal satisfaction")
                         }),
-                    new[] { ("Carrot Plant", "botanical crop source"), ("Food", "colonist hunger replenishment"), ("Grow", "farming cultivation skill") }
+                    new[] { ("Carrot Plant", "botanical crop source"), (AlmanacKeys.Food, "colonist hunger replenishment"), ("Grow", "farming cultivation skill") }
                 ),
                 new AlmanacEntry(
-                    AlmanacKeys.Salvage, "Items", "Unsorted scrap components recovered from wreckage", "Item", "Industrial", false, "#8ca0b3",
+                    AlmanacKeys.Salvage, AlmanacKeys.Items, "Unsorted scrap components recovered from wreckage", "Item", "Industrial", false, "#8ca0b3",
                     new AlmanacIcon("salvage", "#8ca0b3", "M4 7l8-4 8 4v10l-8 4-8-4V7z M9 12l3 3 5-5"),
                     "Twisted titanium struts, damaged relays, and copper cabling salvaged from shuttle landing pods.",
                     "Stocked · 310 units · Scrap heap", "View stockpile",
@@ -510,7 +513,7 @@ namespace Odyssey.Hud
                     new[] { ("Steel", "smelted refined alloy product"), ("Haul", "logistics work hauling scrap"), ("Construct", "re-use in crude barricades") }
                 ),
                 new AlmanacEntry(
-                    "Iron Ore", "Items", "Crude hematite chunks dug from subterranean veins", "Item", "Mineral", false, "#9c5a4c",
+                    "Iron Ore", AlmanacKeys.Items, "Crude hematite chunks dug from subterranean veins", "Item", "Mineral", false, "#9c5a4c",
                     new AlmanacIcon("iron_ore", "#9c5a4c", "M12 2l8 5v10l-8 5-8-5V7l8-5z M8 10l4 3 4-3"),
                     "Dense red-tinted mineral stone extracted by deep mining. Must be smelted with coal to produce structural steel.",
                     "Stocked · 75 units · Mine mouth", "View stockpile",
@@ -529,7 +532,7 @@ namespace Odyssey.Hud
                     new[] { (AlmanacKeys.Mining, "extraction skill"), (AlmanacKeys.Coal, "reduction smelting partner"), ("Steel", "refined output product") }
                 ),
                 new AlmanacEntry(
-                    AlmanacKeys.Coal, "Items", "Carbonaceous fossil fuel rock with high thermal energy", "Item", "Combustible", false, "#3a3a3c",
+                    AlmanacKeys.Coal, AlmanacKeys.Items, "Carbonaceous fossil fuel rock with high thermal energy", "Item", "Combustible", false, "#3a3a3c",
                     new AlmanacIcon("coal", "#3a3a3c", "M5 9l5-5 9 3 2 7-6 6-8-2z"),
                     "Bituminous combustible black rock. Burns hotter and lasts significantly longer than timber logs in heaters and smelters.",
                     "Stocked · 120 units · Bunker fuel bay", "View stockpile",
@@ -702,7 +705,7 @@ namespace Odyssey.Hud
             list.Add(new AlmanacCategory("Needs", "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z", new List<AlmanacEntry>
             {
                 new AlmanacEntry(
-                    "Food", "Needs", "Caloric nourishment preventing starvation debuffs", "Need", "Physiological", false, "#7fd0e0",
+                    AlmanacKeys.Food, "Needs", "Caloric nourishment preventing starvation debuffs", "Need", "Physiological", false, "#7fd0e0",
                     new AlmanacIcon("need_food", "#7fd0e0", "M18 8h1a4 4 0 0 1 0 8h-1 M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z M6 1v3 M10 1v3 M14 1v3"),
                     "Meter tracking colonist digestive reserves. Empties continuously as colonists perform physical labour.",
                     "Vital sign · Depletes over 16 game hours", "Inspect roster",
@@ -756,7 +759,7 @@ namespace Odyssey.Hud
                             ("Minor Break (<35%)", "Pawn wanders aimlessly for 6 hours, refusing player direct orders."),
                             ("Extreme Break (<5%)", "Pawn attacks nearest colonist or sets fire to stockpiles in uncontrollable rage.")
                         }),
-                    new[] { ("Hard Worker", "trait providing natural work drive"), (AlmanacKeys.Bed, "comfort source maintaining mood"), ("Food", "preventing hunger mood debuffs") }
+                    new[] { ("Hard Worker", "trait providing natural work drive"), (AlmanacKeys.Bed, "comfort source maintaining mood"), (AlmanacKeys.Food, "preventing hunger mood debuffs") }
                 )
             }));
 
@@ -815,7 +818,7 @@ namespace Odyssey.Hud
                             ("Total immunity", "Never contracts food poisoning, eliminating debilitating vomiting spells."),
                             ("Raw foraging", "Can sustain themselves indefinitely on raw harvested garden crops.")
                         }),
-                    new[] { (AlmanacKeys.Carrots, "safe raw consumption"), ("Ration Pack", "unflinching digestion"), ("Food", "governing physiological need") }
+                    new[] { (AlmanacKeys.Carrots, "safe raw consumption"), ("Ration Pack", "unflinching digestion"), (AlmanacKeys.Food, "governing physiological need") }
                 )
             }));
 

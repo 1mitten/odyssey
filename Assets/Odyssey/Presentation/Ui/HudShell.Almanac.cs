@@ -714,7 +714,7 @@ namespace Odyssey.Presentation.Ui
             {
                 int activeLayer = _directors.Slice.ActiveLayer;
 
-                if (entry.CategoryName == "Structures" || entry.CategoryName == "Flora" || entry.CategoryName == "Materials")
+                if (entry.CategoryName == "Structures" || entry.CategoryName == "Flora" || entry.CategoryName == AlmanacKeys.Materials)
                 {
                     CellRef? foundEdifice = FindEdificeInModel(model, entry.Name, entry.CategoryName, activeLayer);
                     if (foundEdifice.HasValue)

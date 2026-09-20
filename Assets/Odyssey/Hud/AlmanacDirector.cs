@@ -127,25 +127,25 @@ namespace Odyssey.Hud
                 string title = inspect.Title;
                 string iconKey = inspect.ItemIconKey;
 
-                if (title.StartsWith(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase)) return ("Materials", AlmanacKeys.Wood);
-                if (title.StartsWith(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase)) return ("Materials", AlmanacKeys.Stone);
-                if (title.StartsWith("Concrete", StringComparison.OrdinalIgnoreCase)) return ("Materials", "Concrete");
-                if (title.StartsWith("Steel", StringComparison.OrdinalIgnoreCase)) return ("Materials", "Steel");
+                if (title.StartsWith(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
+                if (title.StartsWith(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
+                if (title.StartsWith("Concrete", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Concrete");
+                if (title.StartsWith("Steel", StringComparison.OrdinalIgnoreCase)) return (AlmanacKeys.Materials, "Steel");
 
                 if (title.StartsWith("Ration", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.meal")
-                    return ("Items", "Ration Pack");
+                    return (AlmanacKeys.Items, "Ration Pack");
                 if (title.StartsWith(AlmanacKeys.Carrots, StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.carrots")
-                    return ("Items", AlmanacKeys.Carrots);
+                    return (AlmanacKeys.Items, AlmanacKeys.Carrots);
                 if (title.StartsWith(AlmanacKeys.Scrap, StringComparison.OrdinalIgnoreCase) ||
                     title.StartsWith(AlmanacKeys.Salvage, StringComparison.OrdinalIgnoreCase) ||
                     iconKey == "ui.res.scrap")
-                    return ("Items", AlmanacKeys.Salvage);
+                    return (AlmanacKeys.Items, AlmanacKeys.Salvage);
                 if (title.StartsWith("Iron", StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.ironore")
-                    return ("Items", "Iron Ore");
+                    return (AlmanacKeys.Items, "Iron Ore");
                 if (title.StartsWith(AlmanacKeys.Coal, StringComparison.OrdinalIgnoreCase) || iconKey == "ui.res.coal")
-                    return ("Items", AlmanacKeys.Coal);
+                    return (AlmanacKeys.Items, AlmanacKeys.Coal);
 
-                return ("Items", "Ration Pack");
+                return (AlmanacKeys.Items, "Ration Pack");
             }
 
             if (inspect.Subject == InspectSubject.Cell)
@@ -168,10 +168,10 @@ namespace Odyssey.Hud
                     title.IndexOf("Plant", StringComparison.OrdinalIgnoreCase) >= 0)
                     return ("Flora", "Carrot Plant");
 
-                if (title.IndexOf(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase) >= 0) return ("Materials", AlmanacKeys.Wood);
-                if (title.IndexOf(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase) >= 0) return ("Materials", AlmanacKeys.Stone);
-                if (title.IndexOf("Concrete", StringComparison.OrdinalIgnoreCase) >= 0) return ("Materials", "Concrete");
-                if (title.IndexOf("Steel", StringComparison.OrdinalIgnoreCase) >= 0) return ("Materials", "Steel");
+                if (title.IndexOf(AlmanacKeys.Wood, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Wood);
+                if (title.IndexOf(AlmanacKeys.Stone, StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, AlmanacKeys.Stone);
+                if (title.IndexOf("Concrete", StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, "Concrete");
+                if (title.IndexOf("Steel", StringComparison.OrdinalIgnoreCase) >= 0) return (AlmanacKeys.Materials, "Steel");
 
                 if (title.IndexOf("Grass", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Grass");
                 if (title.IndexOf("Soil", StringComparison.OrdinalIgnoreCase) >= 0) return ("Terrain", "Soil");
@@ -192,7 +192,7 @@ namespace Odyssey.Hud
                 if (string.Equals(inspect.ActiveTabName, "Skills", StringComparison.OrdinalIgnoreCase))
                     return ("Skills", "Construction");
                 if (string.Equals(inspect.ActiveTabName, "Needs", StringComparison.OrdinalIgnoreCase))
-                    return ("Needs", "Food");
+                    return ("Needs", AlmanacKeys.Food);
 
                 return ("Skills", "Construction");
             }
