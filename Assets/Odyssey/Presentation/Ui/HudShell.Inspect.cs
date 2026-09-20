@@ -210,6 +210,7 @@ namespace Odyssey.Presentation.Ui
                 _metaLayer = layer;
                 _metaPosition = _inspect.Position;
                 HudText.Set(_inspectMeta, MetaLine(), HudTextRole.Meta);
+                if (_locationValue != null) HudText.Set(_locationValue, Coordinates(), HudTextRole.Meta);
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
                 _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site) ||
@@ -379,9 +380,9 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(view.Value, whole.ToString("0") + "%", HudTextRole.Meta);
         }
 
-        /// <summary>The line beside the name: what it is, which layer, where.</summary>
+        /// <summary>The line beside the name: what it is, which layer.</summary>
         string MetaLine() => _inspect.Layer >= 0
-            ? $"{_inspect.Subtitle} · L{_inspect.Layer} · {Coordinates()}"
+            ? $"{_inspect.Subtitle} · L{_inspect.Layer}"
             : _inspect.Subtitle;
 
         string Coordinates()
@@ -434,6 +435,8 @@ namespace Odyssey.Presentation.Ui
             _needsGrid = null;
             _skillsGrid = null;
             _cellRowsGrid = null;
+            _locationRow = null;
+            _locationValue = null;
             _needRows = 0;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
@@ -500,6 +503,13 @@ namespace Odyssey.Presentation.Ui
                     if (command.Label == "Inspect") continue;
                     actions.Add(ActionButton(command));
                 }
+
+            var info = new VisualElement();
+            info.AddToClassList("inspect__info");
+            info.Add(new HudGlyph(HudGlyphKind.Info, 14f, HudTokens.TextDim));
+            info.tooltip = "Almanac entry";
+            info.RegisterCallback<ClickEvent>(_ => OpenAlmanacForSelection());
+            actions.Add(info);
 
             var close = new VisualElement();
             close.AddToClassList("inspect__close");
@@ -569,6 +579,14 @@ namespace Odyssey.Presentation.Ui
                 // growing row, so the tile answers wherever on it the click lands.
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
+
+                _locationRow = new VisualElement();
+                _locationRow.AddToClassList("inspect__row");
+                _locationRow.Add(HudText.Make("location", HudTextRole.Meta, ussClass: "inspect__rowname"));
+                _locationValue = HudText.Make(Coordinates(), HudTextRole.Meta, ussClass: "inspect__rowvalue");
+                _locationRow.Add(_locationValue);
+                _cellRowsGrid.Add(_locationRow);
+
                 _inspectBody.Add(_cellRowsGrid);
             }
 
@@ -589,6 +607,9 @@ namespace Odyssey.Presentation.Ui
         void SyncCellRows()
         {
             if (_cellRowsGrid == null) return;
+
+            if (_locationValue != null)
+                HudText.Set(_locationValue, Coordinates(), HudTextRole.Meta);
 
             while (_cellRows.Count < _inspect.CellRows.Count)
             {
@@ -1180,6 +1201,15 @@ namespace Odyssey.Presentation.Ui
 
             grid.Add(view.Root);
             return view;
+        }
+
+        void OpenAlmanacForSelection()
+        {
+            if (_directors?.Almanac == null) return;
+            if (!_directors.Almanac.OpenForSelection(_inspect))
+            {
+                ToggleAlmanac(true);
+            }
         }
     }
 }

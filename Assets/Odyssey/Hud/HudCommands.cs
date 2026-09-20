@@ -94,6 +94,9 @@ namespace Odyssey.Hud
         /// <summary>Always last, always present, and the home of anything that did not fit.</summary>
         public const string MenuKey = "ui.tab.menu";
 
+        /// <summary>Opens the Almanac in-game reference wiki (F9).</summary>
+        public const string AlmanacKey = "ui.tab.almanac";
+
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
             (BuildKey, "B", ""),
@@ -104,7 +107,7 @@ namespace Odyssey.Hud
             ("ui.tab.wildlife", "F6", "wildlife arrives with M5"),
             ("ui.tab.bills", "F7", "bills arrive with M5"),
             ("ui.tab.factions", "F8", "factions arrive with M7"),
-            ("ui.tab.archive", "F9", "the archive arrives with M2"),
+            (AlmanacKey, "F9", ""),
             (MenuKey, "Esc", ""),
         };
 

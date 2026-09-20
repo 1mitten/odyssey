@@ -762,6 +762,30 @@ namespace Odyssey.Tests.Hud
             Assert.That(settings.Escape(false, false, false), Is.EqualTo(EscapeAction.ClosePanel));
         }
 
+        [Test]
+        public void EscapeClosesTheAlmanacToo()
+        {
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, paletteOpen: false, menuOpen: false, workOpen: false, almanacOpen: true),
+                Is.EqualTo(EscapeAction.CloseAlmanac));
+
+            // It sits below tool, menu, palette and work, and above the settings panel behind it.
+            Assert.That(settings.Escape(true, false, false, false, almanacOpen: true),
+                Is.EqualTo(EscapeAction.DisarmTool));
+            Assert.That(settings.Escape(false, false, menuOpen: true, false, almanacOpen: true),
+                Is.EqualTo(EscapeAction.CloseMenu));
+            Assert.That(settings.Escape(false, paletteOpen: true, false, false, almanacOpen: true),
+                Is.EqualTo(EscapeAction.ClosePalette));
+            Assert.That(settings.Escape(false, false, false, workOpen: true, almanacOpen: true),
+                Is.EqualTo(EscapeAction.CloseWork));
+
+            settings.SetOpen(true);
+            Assert.That(settings.Escape(false, false, false, false, almanacOpen: true),
+                Is.EqualTo(EscapeAction.CloseAlmanac),
+                "the reference browser unwinds before the options panel behind it");
+        }
+
         /// <summary>
         /// Every option starts as <see cref="SettingsDirector.DefaultOn"/> says, and the panel
         /// knows which ones cost a remesh to change.

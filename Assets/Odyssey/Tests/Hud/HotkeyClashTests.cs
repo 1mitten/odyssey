@@ -109,6 +109,7 @@ namespace Odyssey.Tests.Hud
         {
             (HudCommands.BuildKey, HotkeyAction.BuildPalette),
             (HudCommands.WorkKey, HotkeyAction.WorkTab),
+            (HudCommands.AlmanacKey, HotkeyAction.Almanac),
         };
 
         static HotkeyAction? BoundActionFor(string commandKey)
