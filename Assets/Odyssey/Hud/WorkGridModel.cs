@@ -159,7 +159,97 @@ namespace Odyssey.Hud
         /// <summary>Never. The scan runs 1 to 4, so zero is the value it never matches.</summary>
         public const int Never = 0;
 
+        /// <summary>
+        /// The rows on the current page, and <b>only those</b> — at most
+        /// <see cref="WorkGridLayout.RowsPerPage"/> of them, whatever the colony's size.
+        /// <see cref="TotalRows"/> is the colony.
+        /// </summary>
         public readonly List<WorkRow> Rows = new List<WorkRow>();
+
+        /// <summary>
+        /// Every colonist, in the roster's order, which is what the pages are cut from. Held
+        /// between refreshes so <see cref="EnsureRowPageFor"/> can answer without one.
+        /// </summary>
+        readonly List<PawnId> _all = new List<PawnId>();
+
+        /// <summary>
+        /// Rows lifted off the last page and kept. <b>A page is twelve rows at most, so the pool
+        /// reaches its size within one page turn and a refresh allocates nothing after that</b> —
+        /// which is ADR 0003's flip condition F1, and the reason the rows are recycled rather than
+        /// rebuilt now that there is a bound on how many there can be. Unbounded, pooling would
+        /// only have moved the allocation into a list that never shrank.
+        /// </summary>
+        readonly List<WorkRow> _pool = new List<WorkRow>();
+
+        /// <summary>Which page of work columns is showing. Zero-based, as the roster's is.</summary>
+        public int ColumnPage { get; private set; }
+
+        /// <summary>Which page of colonists is showing.</summary>
+        public int RowPage { get; private set; }
+
+        /// <summary>Colonists in the colony, which is not the same as rows on this page.</summary>
+        public int TotalRows { get; private set; }
+
+        /// <summary>How many pages of columns there are. Two, while the catalogue is twenty-two.</summary>
+        public int ColumnPageCount => WorkGridLayout.ColumnPagesFor(Columns.Count);
+
+        /// <summary>How many pages of colonists there are.</summary>
+        public int RowPageCount => WorkGridLayout.RowPagesFor(TotalRows);
+
+        /// <summary>
+        /// Columns actually on this page — eleven, and fewer only on a last page that does not
+        /// divide. It does divide today; this is what stops a twenty-third work type drawing a
+        /// column that is not there.
+        /// </summary>
+        public int VisibleColumns
+        {
+            get
+            {
+                int left = Columns.Count - ColumnPage * WorkGridLayout.ColumnsPerPage;
+                return left <= 0 ? 0 : (left < WorkGridLayout.ColumnsPerPage
+                    ? left
+                    : WorkGridLayout.ColumnsPerPage);
+            }
+        }
+
+        /// <summary>
+        /// The catalogue index a page slot stands for, or -1 for a slot past the end.
+        ///
+        /// <para><b>A slot is not a column.</b> The shell builds eleven cells and this is what says
+        /// which work type each one is showing; the cells themselves are still addressed by their
+        /// catalogue index everywhere else, so nothing else in the model or its tests has to learn
+        /// that pages exist.</para>
+        /// </summary>
+        public int ColumnAt(int slot)
+        {
+            if (slot < 0 || slot >= WorkGridLayout.ColumnsPerPage) return -1;
+            int column = ColumnPage * WorkGridLayout.ColumnsPerPage + slot;
+            return column < Columns.Count ? column : -1;
+        }
+
+        /// <summary>Show a page of columns, clamped to the ones that exist.</summary>
+        public void SetColumnPage(int page) => ColumnPage = Clamp(page, 0, ColumnPageCount - 1);
+
+        /// <summary>Show a page of colonists, clamped to the ones that exist.</summary>
+        public void SetRowPage(int page) => RowPage = Clamp(page, 0, RowPageCount - 1);
+
+        /// <summary>
+        /// Bring the page holding this colonist up, and say whether that moved anything.
+        ///
+        /// <para><c>RosterModel.EnsurePageFor</c>'s job, for the same reason: selecting somebody on
+        /// the board or in the strip has to be able to show them here, and a panel that answers a
+        /// selection with a page it is not on is a panel that looks broken.</para>
+        /// </summary>
+        public bool EnsureRowPageFor(PawnId id)
+        {
+            int index = _all.IndexOf(id);
+            if (index < 0) return false;
+
+            int page = index / WorkGridLayout.RowsPerPage;
+            if (page == RowPage) return false;
+            SetRowPage(page);
+            return true;
+        }
 
         /// <summary>
         /// Presentation state, and pointedly not colony state: not saved into the world, not
@@ -170,8 +260,12 @@ namespace Odyssey.Hud
         /// <summary>The columns, whether or not the simulation runs them. Always twenty-two.</summary>
         public static IReadOnlyList<WorkCatalogue.Entry> Columns => WorkCatalogue.All;
 
-        /// <summary>How wide the panel wants to be, for the shell to ask once.</summary>
-        public int Width => WorkGridLayout.WidthFor(Columns.Count);
+        /// <summary>
+        /// How wide the panel is. <b>A constant, not a function of the colony or the catalogue</b>
+        /// — one page of columns and the whole day — which is what "the control never needs to
+        /// resize" comes to in a number.
+        /// </summary>
+        public int Width => WorkGridLayout.PanelWidth;
 
         /// <summary>
         /// Rebuild from a snapshot. The order is the roster's, so the grid and the roster strip
@@ -181,23 +275,40 @@ namespace Odyssey.Hud
         public void Refresh(WorldSnapshot snapshot, IReadOnlyList<PawnId>? order,
             IReadOnlyList<PawnId>? selected)
         {
-            Rows.Clear();
-            if (order == null) return;
+            // The whole colony first, because the page count comes out of it and so does
+            // EnsureRowPageFor. Only the slice is turned into rows.
+            _all.Clear();
+            if (order != null)
+                for (int i = 0; i < order.Count; i++)
+                    if (snapshot.TryGetPawn(order[i], out _)) _all.Add(order[i]);
 
-            for (int i = 0; i < order.Count; i++)
+            TotalRows = _all.Count;
+
+            // Somebody died or the colony shrank: the page the player was on may not exist now.
+            SetRowPage(RowPage);
+
+            Recycle();
+
+            int start = RowPage * WorkGridLayout.RowsPerPage;
+            int end = start + WorkGridLayout.RowsPerPage;
+            if (end > TotalRows) end = TotalRows;
+
+            for (int i = start; i < end; i++)
             {
-                PawnId id = order[i];
+                PawnId id = _all[i];
                 if (!snapshot.TryGetPawn(id, out PawnView pawn)) continue;
 
                 uint seed = ColonistNames.RollSeedOf(snapshot, pawn.Id);
-                var row = new WorkRow
-                {
-                    Id = pawn.Id,
-                    Seed = seed,
-                    Name = ColonistNames.Of(seed, pawn.Id),
-                    Selected = Contains(selected, id),
-                };
+                WorkRow row = Take();
+                row.Id = pawn.Id;
+                row.Seed = seed;
+                row.Name = ColonistNames.Of(seed, pawn.Id);
+                row.Selected = Contains(selected, id);
 
+                // Every column, not this page's eleven. A WorkCell is a struct in a list that is
+                // already the right length after the first refresh, so reading all twenty-two
+                // costs nothing measurable and keeps a cell addressable by its catalogue index
+                // everywhere — which is what stops paging leaking into the rest of the model.
                 for (int c = 0; c < Columns.Count; c++)
                     row.Cells.Add(ReadCell(snapshot, id, c));
 
@@ -206,6 +317,27 @@ namespace Odyssey.Hud
 
                 Rows.Add(row);
             }
+        }
+
+        /// <summary>Put this page's rows back in the pool, emptied and ready to be filled again.</summary>
+        void Recycle()
+        {
+            for (int i = 0; i < Rows.Count; i++)
+            {
+                Rows[i].Cells.Clear();
+                Rows[i].Hours.Clear();
+                _pool.Add(Rows[i]);
+            }
+            Rows.Clear();
+        }
+
+        /// <summary>A recycled row, or a new one the first time through.</summary>
+        WorkRow Take()
+        {
+            if (_pool.Count == 0) return new WorkRow();
+            WorkRow row = _pool[_pool.Count - 1];
+            _pool.RemoveAt(_pool.Count - 1);
+            return row;
         }
 
         static bool Contains(IReadOnlyList<PawnId>? selected, PawnId id)

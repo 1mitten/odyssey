@@ -8218,3 +8218,61 @@ that is `SkillAspects`' own shape; `Refresh` allocates a row and two lists a col
 panel is open, which is not worth pooling objects the tests hold; and there is no vertical scroll,
 which clips at about twenty-four colonists against a colony of three. All three are written into
 `27-work-tab.md` §15h rather than half-fixed.
+
+## 2026-09-20 — The Work tab pages, and the scrollbar it replaces was costing two things
+
+Owner, on the reviewed branch: *"Remove the scroll bars — this isn't a good interface — replace with
+pagination similar to the roster pagination instead and keep a number that makes sense. This way the
+control never needs to resize everything and pagination could be used. Please could you ensure
+performance."*
+
+The scroller was mine, added the same afternoon to stop the panel hanging off the right of a narrow
+window (§15b). It was the wrong shape of answer and the sentence *"the control never needs to
+resize"* is why: a percentage cap makes the panel's width a function of the window, so the same
+panel is a different width on a different screen and which columns you can see depends on how you
+sized the game rather than on anything you chose.
+
+**The second cost is the one no screenshot would have shown.** A scroller clips what it shows; it
+does not decline to build it. Twenty-two columns times every colonist alive were constructed as real
+elements whether or not any of them was on screen — and the rows grew with the colony until they
+clipped, unreachable, at about twenty-four. The panel's cost was a line with no ceiling on it.
+
+**The numbers were the owner's to pick and I asked.** I put the arithmetic up as a table — panel
+width against columns-per-page, and where the four live columns land in each — because that second
+column is the whole trade and it is not obvious: Construction, Mining, Cutting and Hauling sit at
+catalogue positions 9 to 14, so **eight per page gathers all four on page two and leaves page one
+entirely dead**, while **eleven gives two clean pages and splits the live four two and two**. I
+recommended eight. The owner took eleven, which is the better call on the axis I had under-weighted:
+eight makes three pages of a twenty-two-item list and the first one does nothing at all. Rows: 12.
+The day: never paged, all twenty-four hours on both pages, because a row being one colonist's whole
+day is the entire claim of §12a.
+
+So the panel is **1,383 px plus two, for ever**. Not a maximum, not a percentage — a constant.
+
+**Performance, which was asked for rather than assumed.** A page builds what it shows:
+
+```
+colony  3   477 elements -> 279     colony 25   3,491 -> 1,017
+colony 12 1,710 elements -> 1,017   colony 50   6,916 -> 1,017
+```
+
+The ratio is not the point; **the number stopping** is. Three things came with it and each is
+asserted rather than claimed. Rows are **recycled** now — a pool, so a panel left open allocates
+nothing after its first page, which is ADR 0003's F1. I had explicitly declined to pool at review
+time and wrote down why (§15h); the reason it is right now and was wrong then is that **a bound is
+what makes a pool worth having**. Unbounded it is a list that never shrinks. A **page turn builds
+eleven header boxes and no cells**, because the cells are slots re-aimed at another column rather
+than rebuilt. And the model still reads all twenty-two columns a row — a `WorkCell` is a struct in a
+list that is already the right length — so a cell stays addressable by its catalogue index
+everywhere and paging does not leak past the shell. That last one kept forty existing tests working
+without a line changed.
+
+The gestures are the roster's, down to its stylesheet classes: `‹ 1 / 2 ›` over the columns, `‹ 1 / 3 ›`
+over the names, wheel for the rows and shift-wheel for the columns. A wheel down a list of people
+means down the people. Selecting somebody brings their page up, once, on the frame the selection
+changes — `RosterModel.EnsurePageFor`'s job and its reason.
+
+One thing I had to correct in my own test: I asserted the panel clears a 1366 window and it does
+not, it clears 1440. That is the trade the owner accepted when they took eleven over eight, and the
+test says so now instead of asserting a number I had carried over from the option I recommended.
+

@@ -552,13 +552,12 @@ is drawn now too. `docs/bug-patterns.md` P10.
 `CombinedWidthFor(22)` is 1,756 and the panel is **absolutely positioned from the left edge**, so
 the width was not a request the layout could refuse — below roughly 1,780 the schedule half was
 simply past the right of the window, out of reach of the horizontal scroller sitting inside the
-panel for exactly this case. `MaxWidthPercent` (96) caps it and hands the overflow to that
-scroller, which needed `minWidth: 0` to be squeezable at all: yoga gives a flex item an automatic
-minimum of its content, which would have held it open at the full width and defeated the cap.
+panel for exactly this case. The first fix capped the panel at 96% of the screen and handed the
+overflow to that scroller.
 
-`WorkGridTests.TheTableFitsTheReferenceScreenAndNotASmallerOne` pins both halves of the fact — it
-fits 1920, it does not fit 1600 — so the day somebody widens the pitch, the failing test says which
-of the two it broke.
+**That fix is gone and §16 is what replaced it.** The cap was the wrong shape of answer, and the
+owner said so: a percentage cap makes the panel's width a function of the window, which is a
+control that changes size under the player. Pagination fixes the width instead.
 
 ### 15c. Escape did not close it
 
@@ -612,3 +611,95 @@ other two: this is the assembly where all three are in scope, so this is where t
   colonists fit before the last row is clipped with no way to reach it. Not fixed: the colony is
   three, and the fix is a scroller whose interaction with the frozen name column is a decision
   rather than a line.
+
+## 16. Pagination, and the end of the scrollbar (2026-09-20)
+
+**Owner:** *"Remove the scroll bars — this isn't a good interface — replace with pagination similar
+to the roster pagination instead and keep a number that makes sense. This way the control never
+needs to resize everything and pagination could be used. Please could you ensure performance."*
+
+### 16a. What the scrollbar was actually costing
+
+Two things, and the second is the one that was never going to show up in a screenshot.
+
+It made **the panel's shape a function of the window**. The 96% cap of §15b meant the same panel
+was a different width on a different screen, and the columns you could see depended on how you had
+sized the game rather than on anything you had chosen. A control the player has learned the shape
+of should not change shape.
+
+And it built **everything, always**. A scroller clips what it shows; it does not decline to build
+it. Twenty-two columns × every colonist alive were constructed as real elements whether or not one
+of them was on screen, and the rows grew with the colony until they clipped, unreachable, at about
+twenty-four. So the panel's cost grew with the colony and nothing capped it.
+
+### 16b. The two numbers
+
+| | Number | Why this one |
+|---|---|---|
+| Work columns a page | **11** | 22 divides by it exactly — two full pages, no ragged remainder. The owner's call over 8, which would have fitted a 1366 window and gathered all four live columns on page two, but left page one entirely dead and made three pages of it |
+| Colonist rows a page | **12** | The panel stands 464px of grid at its fullest, and the grid is capped at twelve rows however large the colony grows |
+
+The day is **not** paged. All twenty-four hours stay on the right of every page, because a row being
+one colonist's whole day is the entire claim of folding Schedule into Work (§12a); a day split
+across pages would be two answers to *and when* again. `ScheduleGridTests.OnePageOfWorkAndTheWholeDayFitTheReferenceScreen`
+is what stops somebody reclaiming that 816px later.
+
+**The panel is therefore one width, for ever:** `192 + 11×34 + 1 + 24×34 = 1,383`, plus two for the
+frame. It clears a 1440-wide window and leaves a quarter of the reference screen showing the world.
+
+**The cost of eleven**, stated plainly because it is a real one: the four live columns split two and
+two across the pages, so you cannot see all the work the colony can actually do at once. That is a
+fact about the *order* in `icon-keys.csv`, not about the number — Construction, Mining, Cutting and
+Hauling sit at positions 9 to 14 because the list is ordered by urgency. Reordering the catalogue is
+where that gets fixed, and the catalogue is the place a reordering belongs.
+
+### 16c. Performance, which is the half that was asked for
+
+A page builds what it shows. Element counts behind the grid, counting the slot, box, glyph, mark and
+flames of a cell, the twenty-four hour blocks and the three of a name row:
+
+| Colony | Before | After | |
+|---|---|---|---|
+| 3 | 477 | 279 | 1.7× fewer |
+| 12 | 1,710 | 1,017 | 1.7× fewer |
+| 25 | 3,491 | **1,017** | 3.4× fewer |
+| 50 | 6,916 | **1,017** | 6.8× fewer |
+
+**The number stops moving.** That is the point rather than the ratio: the panel's cost is now a
+constant the colony cannot change, where before it was a line with no ceiling on it.
+
+Three more things were done for the same reason and each is asserted:
+
+- **Rows are recycled.** `WorkGridModel` keeps a pool and a refresh reuses it, so a panel left open
+  allocates nothing after its first page — ADR 0003's flip condition F1. **A bound is what makes a
+  pool worth having**: unbounded it would only have been a list that never shrank, which is why
+  this was left alone at review time and taken now.
+  `RefreshingReusesItsRowsRatherThanBuildingNewOnes`.
+- **A page turn builds eleven header boxes and no cells.** The cells are slots, re-aimed at another
+  column rather than rebuilt — `WorkCellView.Column` moves and `PaintWorkCell` does the rest.
+- **The model still reads all twenty-two columns a row.** A `WorkCell` is a struct in a list that is
+  the right length after the first refresh, so this costs nothing measurable and keeps a cell
+  addressable by its catalogue index everywhere. Paging does not leak past the shell.
+
+### 16d. The gestures
+
+The roster's, because there is one way this game turns a page and this was not the place to invent a
+second. Both pagers wear `roster-pager`'s own classes.
+
+| | Where | Gesture |
+|---|---|---|
+| Columns | panel header, over the columns it moves | `‹ 1 / 2 ›`, **shift + wheel** |
+| Colonists | the frozen name column's header, over the names | `‹ 1 / 3 ›`, **wheel** |
+
+A wheel down a list of people means *down the people*, so the plain wheel is the rows; shift is the
+platform's own horizontal modifier. Both pagers hide on a single page, exactly as the roster's does,
+so a colony of three sees neither.
+
+**Selecting a colonist brings their page up** (`EnsureRowPageFor`, `RosterModel`'s method and its
+reason): a panel that answers a selection with a page the colonist is not on looks broken. It
+happens on the frame the selection changes and not afterwards, or it would drag the page back while
+you were reading another one.
+
+**Shift-click still sets "the whole column", and that now means this page of colonists.** Reaching
+people the player cannot see would be a gesture whose result is off-screen; the page is both what
+they are looking at and what they can check afterwards.

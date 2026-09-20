@@ -54,6 +54,30 @@ namespace Odyssey.Tests.Hud
 
         static IReadOnlyList<PawnId> Order => new[] { Ada, Bram };
 
+        /// <summary>
+        /// A colony of any size, for the paging tests. Deliberately not <see cref="Frame"/> with a
+        /// count: that one's first argument is a mining priority and has been since the grid was
+        /// written.
+        /// </summary>
+        static WorldSnapshot Colony(int colonists)
+        {
+            var snapshot = new WorldSnapshot();
+            snapshot.BeginWrite(0, new GridSize(64, 64, 4), sliceLayer: 1);
+            for (int i = 0; i < colonists; i++)
+                snapshot.AddPawn(new PawnView(new PawnId(i + 1), new CellRef(i % 60 + 1, 1, 1),
+                    food: 900, rest: 800, mood: 50));
+            return snapshot;
+        }
+
+        /// <summary>The roster order the shell would hand the model: everybody, as published.</summary>
+        static IReadOnlyList<PawnId> OrderOf(WorldSnapshot frame)
+        {
+            var order = new List<PawnId>();
+            var pawns = frame.Pawns;
+            for (int i = 0; i < pawns.Length; i++) order.Add(pawns[i].Id);
+            return order;
+        }
+
         static WorkGridModel Model(WorldSnapshot frame)
         {
             var model = new WorkGridModel();
@@ -401,26 +425,210 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The combined table wants more width than a small screen has, and the panel has to
-        /// answer that by scrolling rather than by hanging off the edge.
+        /// <b>The panel is one width, always, and it fits.</b>
         ///
-        /// <para>The panel is pinned to the left edge and absolutely positioned, so a fixed width
-        /// wider than the window does not shrink it — it puts the schedule half past the right of
-        /// the screen where no scroller can reach it. This pins the two facts the cap rests on:
-        /// the table fits the 1,920 reference, and it does not fit a 1,600 one, which is why
-        /// <see cref="WorkGridLayout.MaxWidthPercent"/> is not decoration.</para>
+        /// <para>It was a scroller and a percentage cap until the owner's call on 2026-09-20:
+        /// <i>"remove the scroll bars — this isn't a good interface — replace with pagination
+        /// similar to the roster pagination"</i>. A scroller made the panel's shape a function of
+        /// the window, so the control resized under the player; a page does not. The number that
+        /// matters is that one page of columns plus the whole day clears a 1366-wide window, which
+        /// is the smallest thing anybody would play this on.</para>
         /// </summary>
         [Test]
-        public void TheTableFitsTheReferenceScreenAndNotASmallerOne()
+        public void ThePanelIsOneFixedWidthAndItFitsASmallScreen()
         {
-            int columns = WorkCatalogue.All.Count;
+            Assert.That(WorkGridLayout.PanelWidth, Is.EqualTo(1383));
+            Assert.That(WorkGridLayout.PanelWidth,
+                Is.EqualTo(WorkGridLayout.CombinedWidthFor(WorkGridLayout.ColumnsPerPage)),
+                "the panel is exactly one page of columns and the whole day, and nothing else");
 
-            Assert.That(WorkGridLayout.CombinedWidthFor(columns), Is.LessThanOrEqualTo(1920),
-                "the whole point of the 34px pitch is that 22 work types and a day fit at 1920");
-            Assert.That(WorkGridLayout.FitsScreen(columns, 1920), Is.True);
-            Assert.That(WorkGridLayout.FitsScreen(columns, 1600), Is.False,
-                "if this ever passes the cap has stopped earning its keep and the scroller with it");
-            Assert.That(WorkGridLayout.MaxWidthPercent, Is.InRange(50, 100));
+            // 1,383 and two for the frame, from HudLayout.Edge, which is zero. So the floor is a
+            // 1440-wide window — the owner chose eleven columns over eight knowing that, because
+            // eight would have fitted 1366 and split the catalogue into three ragged pages.
+            Assert.That(WorkGridLayout.PanelWidth + 2, Is.LessThanOrEqualTo(1440));
+            Assert.That(WorkGridLayout.PanelWidth + 2,
+                Is.LessThanOrEqualTo(HudLayout.ReferenceWidth * 3 / 4),
+                "and it leaves a quarter of the reference screen showing the world beside it");
+
+            // And the whole catalogue does not fit, which is why there is more than one page.
+            Assert.That(WorkGridLayout.CombinedWidthFor(WorkCatalogue.All.Count),
+                Is.GreaterThan(1440),
+                "if all twenty-two columns ever fit a small screen, the column pager is dead weight");
+        }
+
+        /// <summary>
+        /// Twenty-two columns over eleven is two full pages, and the slot-to-column map that the
+        /// shell aims its eleven cells with agrees at both ends of both of them.
+        /// </summary>
+        [Test]
+        public void TheColumnsPageInTwoAndEverySlotKnowsItsColumn()
+        {
+            var model = Model(Frame());
+
+            Assert.That(WorkGridLayout.ColumnsPerPage, Is.EqualTo(11));
+            Assert.That(WorkCatalogue.All.Count % WorkGridLayout.ColumnsPerPage, Is.Zero,
+                "eleven was chosen because twenty-two divides by it; a catalogue that no longer " +
+                "does leaves a ragged last page, which is legal but was not the deal");
+            Assert.That(model.ColumnPageCount, Is.EqualTo(2));
+
+            Assert.That(model.ColumnPage, Is.Zero, "it opens on the first page");
+            Assert.That(model.ColumnAt(0), Is.Zero);
+            Assert.That(model.ColumnAt(10), Is.EqualTo(10));
+            Assert.That(model.VisibleColumns, Is.EqualTo(11));
+
+            model.SetColumnPage(1);
+            Assert.That(model.ColumnAt(0), Is.EqualTo(11));
+            Assert.That(model.ColumnAt(10), Is.EqualTo(21));
+            Assert.That(model.VisibleColumns, Is.EqualTo(11));
+
+            // Clamped at both ends rather than wrapping: a pager arrow that does nothing is
+            // better than one that jumps to the other end of the table.
+            model.SetColumnPage(9);
+            Assert.That(model.ColumnPage, Is.EqualTo(1));
+            model.SetColumnPage(-3);
+            Assert.That(model.ColumnPage, Is.Zero);
+
+            // A slot past the catalogue is -1 and never an index into it.
+            Assert.That(model.ColumnAt(WorkGridLayout.ColumnsPerPage), Is.EqualTo(-1));
+            Assert.That(model.ColumnAt(-1), Is.EqualTo(-1));
+        }
+
+        // ============================================================ paging
+
+        /// <summary>
+        /// <b>A page of rows is twelve, whatever the colony is.</b>
+        ///
+        /// <para>This is the performance half of the owner's pagination call and the reason it is
+        /// asserted rather than assumed: before it, <c>Refresh</c> built a row and two lists for
+        /// every colonist alive and the shell built twenty-two cells for each of them, so the
+        /// panel's cost grew with the colony and clipped, unreachable, at about twenty-four rows.
+        /// Now the model's work is bounded and so is the element count behind it.</para>
+        /// </summary>
+        [Test]
+        public void APageOfRowsIsTwelveHoweverLargeTheColonyIs()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = Colony(40);
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+
+            model.Refresh(frame, order, null);
+
+            Assert.That(model.TotalRows, Is.EqualTo(40), "the colony is all of them");
+            Assert.That(model.Rows.Count, Is.EqualTo(WorkGridLayout.RowsPerPage),
+                "and the page is twelve of them");
+            Assert.That(model.RowPageCount, Is.EqualTo(4), "40 over 12 is four pages");
+
+            // The last page is the remainder and not a padded twelve.
+            model.SetRowPage(3);
+            model.Refresh(frame, order, null);
+            Assert.That(model.Rows.Count, Is.EqualTo(4));
+            Assert.That(model.RowPage, Is.EqualTo(3));
+
+            // Clamped at both ends, like the columns.
+            model.SetRowPage(99);
+            Assert.That(model.RowPage, Is.EqualTo(3));
+            model.SetRowPage(-1);
+            Assert.That(model.RowPage, Is.Zero);
+        }
+
+        /// <summary>
+        /// Each page holds the colonists it should, in the roster's order, with nobody repeated
+        /// and nobody missed.
+        /// </summary>
+        [Test]
+        public void EveryColonistIsOnExactlyOnePage()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = Colony(40);
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+
+            var seen = new List<PawnId>();
+            for (int page = 0; page < 4; page++)
+            {
+                model.SetRowPage(page);
+                model.Refresh(frame, order, null);
+                for (int r = 0; r < model.Rows.Count; r++) seen.Add(model.Rows[r].Id);
+            }
+
+            Assert.That(seen.Count, Is.EqualTo(40));
+            Assert.That(seen, Is.EqualTo(order).AsCollection,
+                "the pages laid end to end are the roster, in the roster's order");
+        }
+
+        /// <summary>
+        /// Selecting somebody brings their page up. <c>RosterModel.EnsurePageFor</c>'s job, and
+        /// the panel would look broken without it: a selection it answered with a page the
+        /// colonist is not on is a selection that appears to have done nothing.
+        /// </summary>
+        [Test]
+        public void SelectingAColonistBringsTheirPageUp()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = Colony(40);
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+            model.Refresh(frame, order, null);
+
+            Assert.That(model.EnsureRowPageFor(order[25]), Is.True, "page 2 is not page 0");
+            Assert.That(model.RowPage, Is.EqualTo(2), "25 / 12 is page two");
+
+            Assert.That(model.EnsureRowPageFor(order[26]), Is.False,
+                "already on their page, so nothing moves and nothing is redrawn");
+
+            Assert.That(model.EnsureRowPageFor(default), Is.False, "nobody is on no page");
+        }
+
+        /// <summary>
+        /// A colony that shrinks under a player reading its last page does not leave them on a
+        /// page that no longer exists.
+        /// </summary>
+        [Test]
+        public void APageThatStopsExistingClampsRatherThanEmptying()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot big = Colony(40);
+            model.Refresh(big, OrderOf(big), null);
+            model.SetRowPage(3);
+            model.Refresh(big, OrderOf(big), null);
+            Assert.That(model.Rows.Count, Is.EqualTo(4));
+
+            WorldSnapshot small = Colony(2);
+            model.Refresh(small, OrderOf(small), null);
+
+            Assert.That(model.RowPage, Is.Zero, "there is only one page now");
+            Assert.That(model.Rows.Count, Is.EqualTo(2), "and it is not empty");
+        }
+
+        /// <summary>
+        /// <b>A steady refresh allocates no rows.</b> ADR 0003's flip condition F1 is about
+        /// per-frame allocation, and this panel refreshes on the mid bucket for as long as it is
+        /// open — so the rows are recycled. A page is twelve at most, which is what makes a pool
+        /// worth having: unbounded, it would only have been a list that never shrank.
+        /// </summary>
+        [Test]
+        public void RefreshingReusesItsRowsRatherThanBuildingNewOnes()
+        {
+            var model = new WorkGridModel();
+            WorldSnapshot frame = Colony(8);
+            IReadOnlyList<PawnId> order = OrderOf(frame);
+
+            model.Refresh(frame, order, null);
+            var first = new List<WorkRow>(model.Rows);
+
+            for (int i = 0; i < 5; i++) model.Refresh(frame, order, null);
+
+            Assert.That(model.Rows.Count, Is.EqualTo(first.Count));
+            for (int r = 0; r < model.Rows.Count; r++)
+                Assert.That(first, Has.Member(model.Rows[r]),
+                    "row " + r + " is a new object, so every refresh is allocating again");
+
+            // And the rows are still right after five trips through the pool.
+            for (int r = 0; r < model.Rows.Count; r++)
+            {
+                Assert.That(model.Rows[r].Id, Is.EqualTo(order[r]));
+                Assert.That(model.Rows[r].Cells.Count, Is.EqualTo(WorkCatalogue.All.Count),
+                    "a recycled row is emptied and refilled, not appended to");
+                Assert.That(model.Rows[r].Hours.Count, Is.EqualTo(ScheduleHandle.Hours));
+            }
         }
     }
 }

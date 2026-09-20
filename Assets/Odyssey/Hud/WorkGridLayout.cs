@@ -205,22 +205,53 @@ namespace Odyssey.Hud
         /// <summary>How tall it is for a given number of rows, grid only — no header, no legend.</summary>
         public static int GridHeightFor(int rows) => HeaderBand + rows * RowHeight;
 
-        /// <summary>
-        /// The most of the screen's width the panel may take, as a percentage.
-        ///
-        /// <para><b>The combined width is what the table wants, not what it gets.</b> 1,756px fits
-        /// a 1,920 reference and nothing narrower, and the panel is pinned to the left edge — so
-        /// without a cap the schedule half simply hangs off the right of a smaller window, out of
-        /// reach of the scroller that is sitting inside the panel for exactly this case. Ninety-six
-        /// leaves the panel's own frame clear of the right edge at every size.</para>
-        /// </summary>
-        public const int MaxWidthPercent = 96;
+        // ------------------------------------------------------------------ the two pagers
 
         /// <summary>
-        /// Whether the whole table fits a screen of this width without scrolling, which is the
-        /// question <see cref="MaxWidthPercent"/> exists to answer no to sometimes.
+        /// Work columns on one page. <b>Eleven, because twenty-two divides by it exactly</b> — two
+        /// pages, both full, no ragged remainder to explain.
+        ///
+        /// <para><b>This replaced a horizontal scrollbar</b> (owner, 2026-09-20: <i>"remove the
+        /// scroll bars — this isn't a good interface — replace with pagination similar to the
+        /// roster pagination"</i>). The scroller was the wrong answer twice over: it made the
+        /// panel's width depend on the window, so the control resized under the player, and it
+        /// built every one of the twenty-two columns for every colonist whether or not any of them
+        /// was on screen. A page builds what it shows and nothing else.</para>
+        ///
+        /// <para>The cost is that the four live columns split two and two across the pages, which
+        /// is a fact about the order in <c>icon-keys.csv</c> rather than about this number — the
+        /// alternative, eight per page, gathers all four on page two and leaves page one entirely
+        /// dead. Eleven was the owner's call on that trade.</para>
         /// </summary>
-        public static bool FitsScreen(int columns, int screenWidth) =>
-            CombinedWidthFor(columns) <= screenWidth * MaxWidthPercent / 100;
+        public const int ColumnsPerPage = 11;
+
+        /// <summary>
+        /// Colonist rows on one page. Twelve: the panel stands 544px tall at its fullest, which
+        /// clears every screen, and the grid is capped at twelve rows however large the colony
+        /// grows. Rows used to grow with the colony and clip, unreachable, at about twenty-four.
+        /// </summary>
+        public const int RowsPerPage = 12;
+
+        /// <summary>How many pages a given number of columns comes to. Two, today.</summary>
+        public static int ColumnPagesFor(int columns) =>
+            columns <= 0 ? 1 : (columns + ColumnsPerPage - 1) / ColumnsPerPage;
+
+        /// <summary>How many pages a given number of colonists comes to.</summary>
+        public static int RowPagesFor(int rows) =>
+            rows <= 0 ? 1 : (rows + RowsPerPage - 1) / RowsPerPage;
+
+        /// <summary>
+        /// The panel's width, and it is a constant now rather than a function of the colony or the
+        /// window: names, one page of work columns, the seam, and the whole day. <b>192 + 374 + 1
+        /// + 816 = 1,383.</b>
+        ///
+        /// <para>Nothing about the panel resizes any more. A wider colony pages, a longer catalogue
+        /// pages, and the frame the player learned the position of stays where it was.</para>
+        /// </summary>
+        public const int PanelWidth =
+            LeftColumn + ColumnsPerPage * Pitch + SectionDivider + ScheduleWidth;
+
+        /// <summary>The grid's height at a full page — header band and twelve rows.</summary>
+        public const int PanelGridHeight = HeaderBand + RowsPerPage * RowHeight;
     }
 }

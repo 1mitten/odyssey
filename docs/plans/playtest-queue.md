@@ -58,6 +58,17 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   cell has a tooltip naming its four signals in words. **So Simple mode is worth a look on its own
   terms**: it has never been seen by anybody.
 
+  **And then the scrollbar went** (§16). The grid pages like the roster instead: **11 work columns
+  a page**, two pages, `‹ 1 / 2 ›` in the panel header; **12 colonists a page**, `‹ 1 / 3 ›` over the
+  names; wheel turns the rows, shift-wheel the columns. The day is never paged. The panel is a
+  constant 1,385 px and nothing about it resizes any more. What only a person can answer: **whether
+  splitting the four live columns across two pages is a daily annoyance** — Construction and Mining
+  are on page 1, Cutting and Hauling on page 2, and if that turns out to be a constant page-turn the
+  fix is reordering `icon-keys.csv` rather than changing the page size. Also whether the column
+  pager is findable in the panel header at all, and whether shift-wheel is a gesture anybody
+  discovers. A wrong answer on the first looks like you turning the page every time you set a
+  priority.
+
 - **The bed-owner picker's tick has never been drawn** (already on `main`, PR #141,
   `docs/design/20-beds.md`). Found by the font test written for the Work tab: the mark that says
   *this is the bed this colonist owns* is a U+2713 in Archivo Narrow, which has no such glyph, so

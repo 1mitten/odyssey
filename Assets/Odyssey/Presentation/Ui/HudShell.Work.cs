@@ -45,6 +45,31 @@ namespace Odyssey.Presentation.Ui
         VisualElement _workNowLine = null!;
         int _workNowHour = -1;
 
+        /// <summary>The header band, rebuilt when the column page turns. Eleven heads, never more.</summary>
+        VisualElement _workHeaderBand = null!;
+
+        /// <summary>The two pagers, built in the roster's idiom and wearing its classes.</summary>
+        VisualElement _workColumnPager = null!;
+        Label _workColumnPageLabel = null!;
+        VisualElement _workColumnPrev = null!;
+        VisualElement _workColumnNext = null!;
+
+        VisualElement _workRowPager = null!;
+        Label _workRowPageLabel = null!;
+        VisualElement _workRowPrev = null!;
+        VisualElement _workRowNext = null!;
+
+        /// <summary>What the pagers last drew, so they are only retexted when they change.</summary>
+        int _workDrawnColumnPage = -1;
+        int _workDrawnRowPage = -1;
+        int _workDrawnRowPageCount = -1;
+
+        /// <summary>
+        /// Who was selected when the page was last brought to them. A selection that has not
+        /// changed must not drag the page back every refresh while the player is reading another.
+        /// </summary>
+        PawnId _workFollowed;
+
         /// <summary>
         /// The roster the rows were last built from. Rebuilding twenty-two cells per colonist on
         /// every refresh would allocate for as long as the panel is open, which is ADR 0003's flip
@@ -67,9 +92,19 @@ namespace Odyssey.Presentation.Ui
             public readonly List<VisualElement> Blocks = new List<VisualElement>();
         }
 
-        /// <summary>One cell: the box that carries the border and fill, the glyph, and the flames.</summary>
+        /// <summary>
+        /// One cell: the box that carries the border and fill, the glyph, and the flames.
+        ///
+        /// <para><see cref="Column"/> is the <i>catalogue</i> index this slot is currently showing,
+        /// and it moves when the column page turns — the eleven cells are built once and re-aimed,
+        /// rather than twenty-two being built and eleven hidden.</para>
+        /// </summary>
         sealed class WorkCellView
         {
+            /// <summary>The pitch-wide holder. It carries the unbuilt column's wash, which moves
+            /// with the page, so it is kept rather than found again.</summary>
+            public VisualElement Slot = null!;
+
             public VisualElement Box = null!;
             public Label Glyph = null!;
 
@@ -99,74 +134,55 @@ namespace Odyssey.Presentation.Ui
             _workPanel.style.position = Position.Absolute;
             _workPanel.style.left = HudLayout.Edge;
             _workPanel.style.bottom = HudCommands.ItemHeight + HudCommands.BarPad * 2;
-            _workPanel.style.width = WorkGridLayout.CombinedWidthFor(WorkGridModel.Columns.Count) + 2;
-            _workPanel.style.maxHeight = Length.Percent(80);
-
-            // **The width above is a want, and this is what makes it one.** The combined table is
-            // 1,756px and the reference screen is 1,920 — but the panel is absolutely positioned
-            // from the left edge, so on any window narrower than about 1,780 a fixed width does
-            // not shrink it, it hangs the schedule half off the right of the screen where nothing
-            // can reach it. The cap hands the overflow to the horizontal scroller that is already
-            // inside, which is the whole reason that scroller exists.
-            _workPanel.style.maxWidth = Length.Percent(WorkGridLayout.MaxWidthPercent);
+            // **A constant width, and nothing in the panel may make it otherwise.** It is the
+            // frozen names, one page of eleven work columns, the seam and the whole day: 1,383 and
+            // two for the frame. There is no scroller and no cap — the owner's call on
+            // 2026-09-20, and the right one, because a scrollbar made the panel's shape depend on
+            // the window and built all twenty-two columns for every colonist to do it.
+            _workPanel.style.width = WorkGridLayout.PanelWidth + 2;
 
             BuildWorkHeaderExtras();
 
             var grid = new VisualElement();
             grid.style.flexDirection = FlexDirection.Row;
-            grid.style.overflow = Overflow.Hidden;
-            grid.style.flexShrink = 1;
 
-            // The frozen column: outside the scroller, so it stays put when the grid scrolls.
+            // The frozen column: the names, and the pager that moves the colony through them.
             var left = new VisualElement();
             left.style.width = WorkGridLayout.LeftColumn;
             left.style.flexShrink = 0;
             left.style.borderRightWidth = HudTheme.BorderWidth;
             left.style.borderRightColor = HudTokens.PanelBorder;
-
-            Label colonist = HudText.Make("Colonist", HudTextRole.PanelLabel);
-            colonist.style.height = WorkGridLayout.HeaderBand;
-            colonist.style.unityTextAlign = TextAnchor.LowerLeft;
-            colonist.style.paddingLeft = WorkGridLayout.LeftPad;
-            colonist.style.paddingBottom = 7;
-            left.Add(colonist);
+            left.Add(BuildWorkNameHeader());
 
             _workLeftRows = new VisualElement();
             left.Add(_workLeftRows);
             grid.Add(left);
 
-            var scroller = new ScrollView(ScrollViewMode.Horizontal);
-            scroller.style.flexGrow = 1;
-
-            // Yoga gives a flex item an automatic minimum of its content, which would hold the
-            // scroller open at the full 1,756px and defeat the cap above. Zero lets it be squeezed
-            // and scroll, which is the behaviour the cap is asking for.
-            scroller.style.minWidth = 0;
-            scroller.style.flexShrink = 1;
-
-            // Both halves ride one scroller, so the day never slides out from under the work
-            // columns. The frozen name column is outside it and stays put for both.
-            var halves = new VisualElement();
-            halves.style.flexDirection = FlexDirection.Row;
-
+            // Both halves, side by side, at their own fixed widths. This used to be a ScrollView.
             var cols = new VisualElement();
-            cols.Add(BuildWorkHeaderBand());
+            cols.style.flexShrink = 0;
+            _workHeaderBand = new VisualElement();
+            cols.Add(_workHeaderBand);
+            RebuildWorkHeaderBand();
             _workGridRows = new VisualElement();
             cols.Add(_workGridRows);
-            halves.Add(cols);
+            grid.Add(cols);
 
             // The seam. Two halves of one row still want a rule, or the last work column and
             // midnight read as neighbours.
             var seam = new VisualElement();
             seam.style.width = WorkGridLayout.SectionDivider;
+            seam.style.flexShrink = 0;
             seam.style.backgroundColor = HudTokens.PanelBorder;
-            halves.Add(seam);
+            grid.Add(seam);
 
-            halves.Add(BuildScheduleHalf());
-            scroller.Add(halves);
-            grid.Add(scroller);
-
+            grid.Add(BuildScheduleHalf());
             _workPanel.Add(grid);
+
+            // A wheel turns the pages, which is the gesture the scrollbar took with it. Down the
+            // colony by default because that is what a wheel over a list of people means; shift
+            // for the columns, which is the platform's own horizontal modifier.
+            _workPanel.RegisterCallback<WheelEvent>(OnWorkWheel);
 
             _workLegend = new VisualElement();
             _workLegend.style.flexDirection = FlexDirection.Row;
@@ -195,6 +211,15 @@ namespace Odyssey.Presentation.Ui
             _workSubtitle.style.marginLeft = 10;
             // Before the spacer the close button already inserted, so it sits beside the title.
             header.Insert(1, _workSubtitle);
+
+            // The column pager, over the columns it moves. Left of the mode switch, because it
+            // changes what the table is showing and the switch changes how it reads.
+            _workColumnPager = Pager(
+                () => { _work.SetColumnPage(_work.ColumnPage - 1); OnWorkColumnPageChanged(); },
+                () => { _work.SetColumnPage(_work.ColumnPage + 1); OnWorkColumnPageChanged(); },
+                out _workColumnPrev, out _workColumnNext, out _workColumnPageLabel);
+            _workColumnPager.style.marginRight = 10;
+            header.Insert(header.childCount - 1, _workColumnPager);
 
             Label priorities = HudText.Make("Priorities", HudTextRole.Meta);
             priorities.style.marginRight = 8;
@@ -230,19 +255,96 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The header band: twenty-two boxes, each a rotated label above an icon tile.
+        /// The frozen column's own header: the word, and the pager that moves the colony through
+        /// the rows beneath it.
         ///
-        /// <para>Built once — the columns are content, not colony state, so nothing about them
-        /// changes while the game runs.</para>
+        /// <para>The pager for the names sits over the names. It is the roster's pager, wearing the
+        /// roster's classes — there is one way this game turns a page and this is not the place to
+        /// invent a second.</para>
         /// </summary>
-        VisualElement BuildWorkHeaderBand()
+        VisualElement BuildWorkNameHeader()
         {
-            var band = new VisualElement();
-            band.style.flexDirection = FlexDirection.Row;
-            band.style.height = WorkGridLayout.HeaderBand;
+            var head = new VisualElement();
+            head.style.height = WorkGridLayout.HeaderBand;
+            head.style.flexDirection = FlexDirection.Row;
+            head.style.alignItems = Align.FlexEnd;
+            head.style.justifyContent = Justify.SpaceBetween;
+            head.style.paddingLeft = WorkGridLayout.LeftPad;
+            head.style.paddingRight = WorkGridLayout.LeftPad;
+            head.style.paddingBottom = 5;
 
-            for (int c = 0; c < WorkGridModel.Columns.Count; c++)
+            Label colonist = HudText.Make("Colonist", HudTextRole.PanelLabel);
+            colonist.style.paddingBottom = 2;
+            head.Add(colonist);
+
+            _workRowPager = Pager(
+                () => { _work.SetRowPage(_work.RowPage - 1); RefreshWork(); },
+                () => { _work.SetRowPage(_work.RowPage + 1); RefreshWork(); },
+                out _workRowPrev, out _workRowNext, out _workRowPageLabel);
+            head.Add(_workRowPager);
+            return head;
+        }
+
+        /// <summary>
+        /// A pager in the roster's idiom: a chevron, a count, a chevron, hidden on one page.
+        /// <c>HudShell.Panels.cs</c> builds the roster's by hand; this is the same thing said once
+        /// for the two the Work tab needs.
+        /// </summary>
+        static VisualElement Pager(System.Action back, System.Action forward,
+            out VisualElement prev, out VisualElement next, out Label label)
+        {
+            var pager = new VisualElement();
+            pager.AddToClassList("roster-pager");
+            pager.style.display = DisplayStyle.None;
+
+            prev = new VisualElement();
+            prev.AddToClassList("roster-pager__btn");
+            prev.Add(new HudGlyph(HudGlyphKind.ChevronLeft, 10f, HudTokens.TextDim));
+            prev.RegisterCallback<ClickEvent>(evt => { back(); evt.StopPropagation(); });
+            pager.Add(prev);
+
+            label = HudText.Make("1 / 1", HudTextRole.Row, ussClass: "roster-pager__label");
+            pager.Add(label);
+
+            next = new VisualElement();
+            next.AddToClassList("roster-pager__btn");
+            next.Add(new HudGlyph(HudGlyphKind.ChevronRight, 10f, HudTokens.TextDim));
+            next.RegisterCallback<ClickEvent>(evt => { forward(); evt.StopPropagation(); });
+            pager.Add(next);
+            return pager;
+        }
+
+        /// <summary>
+        /// The header band: <b>eleven</b> boxes, each a rotated label above an icon tile, for the
+        /// columns on this page.
+        ///
+        /// <para><b>Rebuilt when the page turns and at no other time.</b> The columns are content
+        /// rather than colony state, so nothing about them changes while the game runs — but which
+        /// eleven of them are showing does, and an icon tile cannot be re-aimed at another key
+        /// without being remade. Eleven elements a page turn is not a cost worth pooling.</para>
+        /// </summary>
+        void RebuildWorkHeaderBand()
+        {
+            _workHeaderBand.Clear();
+            _workHeaderBand.style.flexDirection = FlexDirection.Row;
+            _workHeaderBand.style.height = WorkGridLayout.HeaderBand;
+
+            for (int slot = 0; slot < WorkGridLayout.ColumnsPerPage; slot++)
             {
+                int c = _work.ColumnAt(slot);
+
+                // A page that does not divide leaves empty slots rather than a short band, so the
+                // seam and the day stay where the player left them. Twenty-two divides by eleven,
+                // so this is insurance against the twenty-third work type and nothing else.
+                if (c < 0)
+                {
+                    var blank = new VisualElement();
+                    blank.style.width = WorkGridLayout.Pitch;
+                    blank.style.flexShrink = 0;
+                    _workHeaderBand.Add(blank);
+                    continue;
+                }
+
                 WorkCatalogue.Entry entry = WorkGridModel.Columns[c];
 
                 var head = new VisualElement();
@@ -284,9 +386,8 @@ namespace Odyssey.Presentation.Ui
                 tile.Add(icon);
                 head.Add(tile);
 
-                band.Add(head);
+                _workHeaderBand.Add(head);
             }
-            return band;
         }
 
         /// <summary>
@@ -426,9 +527,14 @@ namespace Odyssey.Presentation.Ui
             _work.Mode = _directors.Work.Mode;
             _work.Refresh(frame, _roster.CustomOrder, _directors.Selection.Pawns);
 
+            // A selection made elsewhere brings its page up, once, on the frame it changes. Every
+            // frame would drag the page back while the player is reading another one.
+            FollowWorkSelection(frame);
+
             HudText.Set(_workSubtitle, _work.Subtitle(WorkGridModel.NowHour(frame)), HudTextRole.Meta);
 
             if (RosterChanged()) RebuildWorkRows();
+            RefreshWorkPagers();
 
             for (int r = 0; r < _workRows.Count && r < _work.Rows.Count; r++)
             {
@@ -442,10 +548,22 @@ namespace Odyssey.Presentation.Ui
                 view.Avatar.SetFace(ColonistFace.Of(frame, row.Id));
                 if (_boot != null) view.Avatar.SetPortrait(_boot.Portraits.For(frame, row.Id));
 
-                for (int c = 0; c < view.Boxes.Count && c < row.Cells.Count; c++)
+                for (int slot = 0; slot < view.Boxes.Count; slot++)
                 {
-                    PaintWorkCell(view.Boxes[c], row.Cells[c], _work.Describe(r, c));
-                    PaintWorkMark(view.Boxes[c], row.Cells[c]);
+                    WorkCellView box = view.Boxes[slot];
+                    int column = box.Column;
+
+                    // A slot past the end of the catalogue draws nothing at all. It cannot happen
+                    // at twenty-two columns over eleven; it is what the twenty-third would meet.
+                    if (column < 0 || column >= row.Cells.Count)
+                    {
+                        box.Slot.style.display = DisplayStyle.None;
+                        continue;
+                    }
+
+                    box.Slot.style.display = DisplayStyle.Flex;
+                    PaintWorkCell(box, row.Cells[column], _work.Describe(r, column));
+                    PaintWorkMark(box, row.Cells[column]);
                 }
 
                 for (int h = 0; h < view.Blocks.Count && h < row.Hours.Count; h++)
@@ -510,8 +628,10 @@ namespace Odyssey.Presentation.Ui
                 view.Cells.style.borderTopWidth = HudTheme.BorderWidth;
                 view.Cells.style.borderTopColor = HudTokens.Divider;
 
-                for (int c = 0; c < row.Cells.Count; c++)
-                    view.Cells.Add(BuildWorkCell(view, r, c));
+                // A page of slots, not a catalogue of columns: eleven cells whatever the catalogue
+                // grows to, re-aimed when the page turns rather than built twice.
+                for (int slot = 0; slot < WorkGridLayout.ColumnsPerPage; slot++)
+                    view.Cells.Add(BuildWorkCell(view, r, slot));
 
                 _workGridRows.Add(view.Cells);
 
@@ -522,7 +642,7 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
-        VisualElement BuildWorkCell(WorkRowView view, int rowIndex, int column)
+        VisualElement BuildWorkCell(WorkRowView view, int rowIndex, int slotIndex)
         {
             var slot = new VisualElement();
             slot.style.width = WorkGridLayout.Pitch;
@@ -530,9 +650,6 @@ namespace Odyssey.Presentation.Ui
             slot.style.flexShrink = 0;
             slot.style.alignItems = Align.Center;
             slot.style.justifyContent = Justify.Center;
-
-            if (!WorkGridModel.Columns[column].Live)
-                slot.style.backgroundColor = HudTokens.Convert(WorkBands.UnbuiltWash);
 
             var box = new VisualElement();
             box.style.width = WorkGridLayout.Cell;
@@ -573,13 +690,17 @@ namespace Odyssey.Presentation.Ui
 
             var cellView = new WorkCellView
             {
-                Box = box, Glyph = glyph, Mark = mark, Flames = flames, Column = column,
+                Slot = slot, Box = box, Glyph = glyph, Mark = mark, Flames = flames,
+                Column = _work.ColumnAt(slotIndex),
             };
             view.Boxes.Add(cellView);
 
+            // The press carries the *slot*; which column that is now is asked of the view when it
+            // fires. A captured column index would be the page the cell was built on for ever.
             int capturedRow = rowIndex;
-            int capturedCol = column;
-            box.RegisterCallback<PointerDownEvent>(evt => OnWorkCellPressed(evt, capturedRow, capturedCol));
+            int capturedSlot = slotIndex;
+            box.RegisterCallback<PointerDownEvent>(evt =>
+                OnWorkCellPressed(evt, capturedRow, capturedSlot));
 
             slot.Add(box);
             return slot;
@@ -594,6 +715,13 @@ namespace Odyssey.Presentation.Ui
         {
             HudText.Set(view.Glyph, cell.Glyph(_work.Mode), HudTextRole.Name);
             view.Flames.Clear();
+
+            // The wash down an unbuilt column is the slot's, not the box's, and a slot shows a
+            // different work type after a page turn — so it is painted every time rather than set
+            // once when the cell was built.
+            view.Slot.style.backgroundColor = cell.Built
+                ? Color.clear
+                : HudTokens.Convert(WorkBands.UnbuiltWash);
 
             // The four signals in words. WorkGridModel.Describe has said this sentence since the
             // model was written and nothing asked it for it: the border is a skill band, the ink
@@ -685,9 +813,15 @@ namespace Odyssey.Presentation.Ui
         /// four clicks to undo one mistake. Shift is the catalogue's own "shift-click sets a
         /// column" (§B2).</para>
         /// </summary>
-        void OnWorkCellPressed(PointerDownEvent evt, int row, int column)
+        void OnWorkCellPressed(PointerDownEvent evt, int row, int slot)
         {
             if (_directors == null) return;
+            if (row < 0 || row >= _workRows.Count) return;
+            if (slot < 0 || slot >= _workRows[row].Boxes.Count) return;
+
+            // Which work type this slot is showing right now, rather than the one it was built on.
+            int column = _workRows[row].Boxes[slot].Column;
+            if (column < 0) return;
 
             // The model decides whether this cell answers a click and what the click makes it.
             // This method used to decide both for itself, which meant the rule the fast tier held
@@ -699,6 +833,9 @@ namespace Odyssey.Presentation.Ui
 
             if (evt.shiftKey)
             {
+                // The column as drawn, which is this page of colonists. Reaching colonists the
+                // player cannot see would be a gesture whose result is off-screen; the page is
+                // both what they are looking at and what they can check afterwards.
                 for (int r = 0; r < _work.Rows.Count; r++)
                     if (_work.CellIsInteractive(r, column))
                         Submit(WorkGridModel.SetPriority(_work.Rows[r].Id, handle, intent.C));
@@ -711,6 +848,110 @@ namespace Odyssey.Presentation.Ui
             // Repaint now rather than waiting out the refresh bucket: a grid that answers a click
             // a quarter of a second later reads as a grid that missed it.
             RefreshWork();
+        }
+
+        /// <summary>
+        /// The column page turned: re-aim every cell, remake the eleven header boxes, and repaint.
+        ///
+        /// <para><b>Nothing is built per colonist here.</b> The rows and their cells already exist;
+        /// only which work type each cell is pointed at changes, which is why turning a page costs
+        /// eleven header boxes and no cells at all.</para>
+        /// </summary>
+        void OnWorkColumnPageChanged()
+        {
+            RebuildWorkHeaderBand();
+            for (int r = 0; r < _workRows.Count; r++)
+            {
+                WorkRowView view = _workRows[r];
+                for (int slot = 0; slot < view.Boxes.Count; slot++)
+                    view.Boxes[slot].Column = _work.ColumnAt(slot);
+            }
+            RefreshWork();
+        }
+
+        /// <summary>
+        /// Bring the page holding the selected colonist up, on the frame the selection changes and
+        /// not afterwards.
+        /// </summary>
+        void FollowWorkSelection(WorldSnapshot frame)
+        {
+            if (_directors == null) return;
+            var selected = _directors.Selection.Pawns;
+            PawnId one = selected != null && selected.Count == 1 ? selected[0] : default;
+
+            if (one == _workFollowed) return;
+            _workFollowed = one;
+            if (!one.IsValid) return;
+
+            if (_work.EnsureRowPageFor(one))
+                _work.Refresh(frame, _roster.CustomOrder, selected);
+        }
+
+        /// <summary>
+        /// Both pagers: shown only when there is more than one page, retexted only when the
+        /// numbers move, and their arrows dimmed at the ends. The roster's rules.
+        /// </summary>
+        void RefreshWorkPagers()
+        {
+            // BuildWorkHeaderExtras gives up if the window has no header row to hang things on,
+            // and the column pager is one of those things. The row pager is in the grid itself and
+            // is always there.
+            if (_workColumnPager == null) return;
+
+            bool manyColumns = _work.ColumnPageCount > 1;
+            _workColumnPager.style.display = manyColumns ? DisplayStyle.Flex : DisplayStyle.None;
+            if (manyColumns)
+            {
+                if (_workDrawnColumnPage != _work.ColumnPage)
+                {
+                    _workDrawnColumnPage = _work.ColumnPage;
+                    HudText.Set(_workColumnPageLabel,
+                        $"{_work.ColumnPage + 1} / {_work.ColumnPageCount}", HudTextRole.Row);
+                }
+                _workColumnPrev.SetEnabled(_work.ColumnPage > 0);
+                _workColumnNext.SetEnabled(_work.ColumnPage < _work.ColumnPageCount - 1);
+            }
+
+            bool manyRows = _work.RowPageCount > 1;
+            _workRowPager.style.display = manyRows ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!manyRows) return;
+
+            if (_workDrawnRowPage != _work.RowPage || _workDrawnRowPageCount != _work.RowPageCount)
+            {
+                _workDrawnRowPage = _work.RowPage;
+                _workDrawnRowPageCount = _work.RowPageCount;
+                HudText.Set(_workRowPageLabel,
+                    $"{_work.RowPage + 1} / {_work.RowPageCount}", HudTextRole.Row);
+            }
+            _workRowPrev.SetEnabled(_work.RowPage > 0);
+            _workRowNext.SetEnabled(_work.RowPage < _work.RowPageCount - 1);
+        }
+
+        /// <summary>
+        /// The wheel turns pages: down the colony plain, across the columns with shift.
+        ///
+        /// <para>This is the gesture the scrollbar took with it, and it is put back on the axis a
+        /// player expects it on. Shift for the horizontal is the platform's own convention rather
+        /// than this panel's invention.</para>
+        /// </summary>
+        void OnWorkWheel(WheelEvent evt)
+        {
+            int delta = evt.delta.y > 0 ? 1 : (evt.delta.y < 0 ? -1 : 0);
+            if (delta == 0) return;
+
+            if (evt.shiftKey)
+            {
+                if (_work.ColumnPageCount <= 1) return;
+                _work.SetColumnPage(_work.ColumnPage + delta);
+                OnWorkColumnPageChanged();
+            }
+            else
+            {
+                if (_work.RowPageCount <= 1) return;
+                _work.SetRowPage(_work.RowPage + delta);
+                RefreshWork();
+            }
+            evt.StopPropagation();
         }
 
         void Submit(Intent intent) => _boot?.World?.Intents.Submit(intent);

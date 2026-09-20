@@ -159,16 +159,30 @@ namespace Odyssey.Tests.Hud
             Assert.That(WorkGridLayout.HourPitch, Is.EqualTo(WorkGridLayout.Pitch));
         }
 
+        /// <summary>
+        /// One page of work columns and the whole day, side by side, inside the reference screen.
+        ///
+        /// <para><b>The day is never paged and that is the decision this test guards</b> (owner,
+        /// 2026-09-20). Work pages in two; the twenty-four hours stay whole on both of them, so a
+        /// row is still one colonist's whole day — which is the entire claim of folding Schedule
+        /// into Work. A day split across pages would be two answers to "and when" again.</para>
+        /// </summary>
         [Test]
-        public void TheCombinedTableFitsTheReferenceScreen()
+        public void OnePageOfWorkAndTheWholeDayFitTheReferenceScreen()
         {
-            int width = WorkGridLayout.CombinedWidthFor(WorkGridModel.Columns.Count);
+            int width = WorkGridLayout.CombinedWidthFor(WorkGridLayout.ColumnsPerPage);
 
-            Assert.That(width, Is.EqualTo(192 + 22 * 34 + 1 + 24 * 34));
+            Assert.That(width, Is.EqualTo(192 + 11 * 34 + 1 + 24 * 34));
+            Assert.That(width, Is.EqualTo(WorkGridLayout.PanelWidth));
+
+            Assert.That(WorkGridLayout.ScheduleWidth,
+                Is.EqualTo(ScheduleHandle.Hours * WorkGridLayout.HourPitch),
+                "every hour, on every page: the day does not page");
+
             Assert.That(width, Is.LessThanOrEqualTo(HudLayout.ReferenceWidth),
-                $"the combined table is {width}px against a {HudLayout.ReferenceWidth}px " +
-                "reference. At the supplied spec's 40px pitch the same table is 2,026px and does " +
-                "not fit — our narrow type is what makes one row of both halves possible.");
+                $"one page plus the day is {width}px against a {HudLayout.ReferenceWidth}px " +
+                "reference. At the supplied spec's 40px pitch the same table is wider still — our " +
+                "narrow type is what makes one row of both halves possible.");
         }
 
         [Test]
