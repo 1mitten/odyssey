@@ -312,6 +312,18 @@ matter what"*):**
   five lie there — then holds at twelve so a store square is a proper heap without every
   extra carrot redrawing it; the stack limit rises to 75, the same as wood and stone, and
   `ItemHeap.Most` rises with it so rubble's full stacks grow the same way.
+- **The cover is translucent unlit, and the brown is back** (owner, 2026-09-20: *"the dirt
+  tile is black with no texture instead the brown that was before"*). The opaque switch
+  killed the borders by killing the light and the texture together; the cover now carries
+  the tint's own alpha through the unlit material (straight alpha, no premultiply), so the
+  tilled earth shows through and the field is brown with texture — while staying one flat
+  colour per tint, every tilt, every light, immune to shading, seams and bloom.
+- **And the yield reaches grass from inside a big field** (owner, 2026-09-20: *"they picked
+  up the items and put them on the next dirt tile — they should put it on the next free
+  terrain tile that isn't dirt/soil"*). Both off-zone searches — the harvest yield's drop
+  and the clearing fallback — ran out of ring at three and six cells, and a field six tiles
+  across has nothing but dirt within three of its middle: the fallback then put things back
+  on the plot. Both now reach twelve cells, which covers any field the player has painted.
 - **The cover is opaque, flat and UNLIT** (owner, 2026-09-20: *"still borders on the tiles"*
   — after two geometric fixes). The bracket material is the lit terrain shader made
   transparent, and on rolled ground it shaded every differently-tilted cover differently:

@@ -7549,3 +7549,16 @@ clear-to-grass fallback were both in place and both idle, because nobody ever re
 scan that had them. The sow scan hands out the clearing itself now: when every tile is sown
 or waiting on a thing, the job a sower takes is the haul of that thing. Clearing the dirt is
 the sowing work.
+
+
+### The brown comes back and the yield finds grass (2026-09-20)
+
+The opaque unlit cover killed the borders by killing the light and the texture in one stroke,
+and the owner wanted the brown. The cover is translucent unlit now - the tint's own alpha
+through the straight-alpha recipe - so the tilled earth shows through and the field is brown
+with texture, while staying one flat colour per tint on every tilt and under every light.
+
+And the items that landed on the next dirt tile: the off-zone searches ran out of ring at
+three cells for the harvest yield and six for the clearing, and a field six tiles across has
+nothing but dirt within three of its middle - the fallback then put the pile back on the plot.
+Both searches reach twelve cells now, which covers any field the player has painted.
