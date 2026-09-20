@@ -629,9 +629,12 @@ namespace Odyssey.Presentation.World
 
             if (figure.RightUpperLeg != null && figure.LeftUpperLeg != null)
             {
-                Pitch(figure.RightUpperLeg, axis, posture.Hip * weight);
+                // The shared bend first, then the right leg's own on top of it: that is what
+                // makes one knee drawn up and the other flat, and it is why Lead* is an extra
+                // rather than a replacement.
+                Pitch(figure.RightUpperLeg, axis, (posture.Hip + posture.LeadHip) * weight);
                 Pitch(figure.LeftUpperLeg, axis, posture.Hip * weight);
-                Pitch(figure.RightLowerLeg, axis, posture.Knee * weight);
+                Pitch(figure.RightLowerLeg, axis, (posture.Knee + posture.LeadKnee) * weight);
                 Pitch(figure.LeftLowerLeg, axis, posture.Knee * weight);
             }
 

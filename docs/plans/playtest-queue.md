@@ -29,8 +29,11 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   Two things want an eye rather than a test. **The two supine postures had their arm angles the
   wrong way round**, so a quarter of the colony slept with its arms a half-metre in the air and
   another quarter with both forearms through the mattress; both are measured flat now, and
-  `Posture` gained an abduction angle so "arms up" puts the hands over the crown rather than out
-  at 45° (§7c). A sleeper also lies *along* the bed now rather than level across it, which on the
+  and after the owner watched it, **the arms-above-head posture is gone entirely** — it was a
+  quarter of every colony, because a posture is a hash modulo four — replaced by another arms-down
+  shape with one knee drawn up (§7d). **The two side sleepers no longer float**: the lift had been
+  set by whatever hung lowest, which on a side sleeper is a knee propping the body up, so half the
+  colony rode 9 to 12 cm above its own bedding. It is set by the trunk now. A sleeper also lies *along* the bed now rather than level across it, which on the
   steepest ground the relief makes was 0.21 m of disagreement at the pillow. Pictures are in
   `Logs/sleep-*.png` (`scripts/unity.sh shot Odyssey.EditorTools.SleepCheck.Run` remakes them),
   including one bed found on a 0.39 m end-to-end slope. **What is left is entirely a look**:

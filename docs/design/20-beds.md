@@ -530,6 +530,61 @@ drawn vertex against the mattress top:
 `side, curled` is 0.04 m wider than the frame on one side — a drawn-up knee just over the rail,
 which is what a knee does. Recorded rather than tuned.
 
+### 7d. The owner watches it: no arms above the head, and the trunk on the bedding (2026-09-20)
+
+> *"There's a pose that shouldn't be a sleep pose — any arms above the head — and I see a pose often
+> with 2 arms/hands above the head when they can be down the side. Also the body isn't quite flush
+> on to the bed surface but the pillow head is placed nicely enough."*
+
+**"Often" is exact, and it is not bad luck.** A posture is `PostureFor(pawnId)`, a hash taken modulo
+four, so each of the four is *a quarter of every colony, by construction*. One shape the owner
+dislikes is one colonist in four, every night, for ever. That is worth knowing before tuning
+anything: there is no frequency to reduce, only a shape to replace.
+
+#### The fourth posture is another arms-down one, differing below the waist
+
+Chosen by the owner from four options. And it took a new field, because the struct could not say it:
+the arms have been per-side since the table was written and the legs never were, so `Hip` and `Knee`
+drove *both* legs by the same amount — which is a beach, not a bed. `Posture.LeadHip` / `LeadKnee`
+are an extra applied to the right leg on top of the shared pair, nought on the three postures that
+do not ask for them.
+
+The replacement is `"back, one knee up"`: arms at the sides exactly as `"back"` has them, right hip
+−35° and right knee +40° in total, left leg flat. Swept on the real rig first — the band of leg
+angles that raises a knee without driving a heel through the mattress runs from about −50° of hip
+down to −20°, and everything at or above −10° of hip with more than 20° of knee puts a foot in the
+bedding.
+
+Its along-the-bed extent is unchanged from `"back"` at [−0.29, 2.28], which is right rather than
+suspicious: the *left* leg still lies straight and it is the left foot that sets the far end.
+
+#### The trunk sets the lift, not whatever hangs lowest
+
+**The supine pair were already flush and the side pair were not.** `Lift` had been tuned until the
+lowest drawn vertex *anywhere* on the mesh just touched the mattress — and on a side sleeper that
+vertex is a drawn-up knee, which props the body up like a kickstand:
+
+| posture | lowest vertex | trunk, before | trunk, after |
+|---|---|---|---|
+| back | +0.01 | +0.01 | +0.01 |
+| back, one knee up | +0.01 | +0.01 | +0.01 |
+| side, curled | 0.00 | **+0.09** | −0.02 |
+| side, loose | +0.02 | **+0.12** | +0.01 |
+
+Half the colony floating 9 to 12 cm over its own bedding with one knee resting on it. `ShoulderPerBody`
+goes 0.152 → **0.109**, measured against the trunk — the band of the baked mesh between the spine and
+the neck bones, which `SleepProbe` now reports beside the whole-mesh figure. The supine pair are
+untouched because `Lift` weighs this term against the roll and they have none.
+
+**The price is deliberate:** a drawn-up knee now presses about 0.10 m into a 0.30 m mattress. A limb
+sunk a little into bedding is what bedding is for; a torso in mid-air is not.
+
+**And the measurement is the lesson.** The whole-mesh number said 0.00 and 0.02 — a centimetre out,
+apparently perfect — for the two postures that were 9 and 12 cm wrong. A summary statistic over a
+whole body answers a question about the body's *extremities*, and the thing being judged was its
+trunk. `docs/bug-patterns.md` P10 is the neighbouring failure: a number in range, measuring the
+wrong thing, with nothing to say so.
+
 ## 8. The pane and the popover
 
 `CellDetail` widens by two sparse fields, the same shape as its neighbours (ADR 0004 amendment

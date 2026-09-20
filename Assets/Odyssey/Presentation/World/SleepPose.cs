@@ -24,8 +24,8 @@ namespace Odyssey.Presentation.World
     /// <para><b>Four postures, not one and not ten.</b> The owner's reference sheet shows ten, and
     /// a colony asleep in one posture reads as a morgue rather than as people. Four is what can be
     /// reached honestly from a standing idle clip by rotating the root and pitching six bones —
-    /// back, back with the arms up, and two sides — and it is enough that no two neighbouring bunks
-    /// look stamped. Which one a colonist takes is <see cref="PostureFor"/>: derived from the pawn
+    /// back, back with one knee drawn up, and two sides — and it is enough that no two neighbouring
+    /// bunks look stamped. Which one a colonist takes is <see cref="PostureFor"/>: derived from the pawn
     /// id, so it is the same every night and after a load, and costs no state. The same bargain
     /// the colonist palette already makes.</para>
     ///
@@ -75,11 +75,21 @@ namespace Odyssey.Presentation.World
         /// the bed (owner, 2026-09-18: "sunk"). <see cref="Lift"/> takes whichever the roll
         /// actually presents.</para>
         ///
-        /// <para>Measured the same way and for the same reason as its neighbour: 0.152 of the
-        /// body's length is what puts the drawn shoulder, hip and drawn-up knee of both side
-        /// postures on the mattress rather than through it.</para>
+        /// <para><b>Set by the trunk, not by whatever hangs lowest</b> (owner, 2026-09-20: <i>"the
+        /// body isn't quite flush on to the bed surface"</i>). It was 0.152, tuned until the lowest
+        /// drawn vertex <i>anywhere</i> on the mesh just touched — and on a side sleeper that vertex
+        /// is a drawn-up knee, so seating it left the torso riding 0.09 m to 0.12 m above the
+        /// bedding on the two side postures, which is half the colony levitating with one knee
+        /// resting on the bed. Measured at the trunk instead — the band between the spine and the
+        /// neck — 0.109 seats both: the curled one 0.015 m under, the loose one 0.016 m over. The
+        /// supine pair were already flush at +0.01 and +0.02 and are unaffected, because
+        /// <see cref="Lift"/> weighs this against the roll and they have none.</para>
+        ///
+        /// <para>The price, and it is deliberate: a drawn-up knee now presses about 0.10 m into a
+        /// 0.30 m mattress. A limb sunk a little into bedding is what bedding is for; a torso in
+        /// mid-air is not.</para>
         /// </summary>
-        public static float ShoulderPerBody { get; set; } = 0.152f;
+        public static float ShoulderPerBody { get; set; } = 0.109f;
 
         /// <summary>
         /// How far the body's middle floats above what it lies on, for a posture at a given roll.
@@ -157,9 +167,28 @@ namespace Odyssey.Presentation.World
             public readonly float RightArmOut;
             public readonly float LeftArmOut;
 
+            /// <summary>
+            /// Extra hip and knee for the <b>right leg only</b>, on top of the shared
+            /// <see cref="Hip"/> and <see cref="Knee"/>: what draws one knee up and leaves the
+            /// other lying flat.
+            ///
+            /// <para><b>Added because both legs moved together and a person's do not.</b> The arms
+            /// have been per-side since the table was written and the legs never were, so every
+            /// posture could only bend both knees by the same amount — which is a beach, not a bed.
+            /// Owner, 2026-09-20, choosing what should replace the arms-above-head posture: another
+            /// arms-down shape that <i>"differs only in the legs (one knee slightly drawn
+            /// up)"</i>, which the struct could not express.</para>
+            ///
+            /// <para>Nought on the three postures that do not ask for it, so their legs are exactly
+            /// what they were.</para>
+            /// </summary>
+            public readonly float LeadHip;
+            public readonly float LeadKnee;
+
             public Posture(string name, float roll, float rightArm, float leftArm,
                 float rightElbow, float leftElbow, float hip, float knee,
-                float rightArmOut = 0f, float leftArmOut = 0f)
+                float rightArmOut = 0f, float leftArmOut = 0f,
+                float leadHip = 0f, float leadKnee = 0f)
             {
                 Name = name;
                 Roll = roll;
@@ -171,6 +200,8 @@ namespace Odyssey.Presentation.World
                 Knee = knee;
                 RightArmOut = rightArmOut;
                 LeftArmOut = leftArmOut;
+                LeadHip = leadHip;
+                LeadKnee = leadKnee;
             }
         }
 
@@ -199,26 +230,34 @@ namespace Odyssey.Presentation.World
         /// limbs sit 0.07 m to 0.10 m above the body's own top and nothing dips below the
         /// mattress — so they are untouched. <c>docs/design/20-beds.md</c> §7b.</para>
         ///
-        /// <para><b>And then the contact sheet said "arms up" still read as arms <i>out</i></b>, at
-        /// something near 45° from above, which is surrendering rather than sleeping. The pictures
-        /// were right and the reason was not what it looked like: measured, the arms were never off
-        /// the bed at all — the posture spans 1.06 m across a frame 2.00 m wide, the same as "back"
-        /// — they simply lay out to the sides instead of over the crown, and no pitch about the
-        /// lateral axis can pull them in. <see cref="Posture.RightArmOut"/> is the second angle that
-        /// can. Swept through its arc, +15° (mirrored) is both the narrowest the arms get, 1.06 m
-        /// down to 0.71 m, and the furthest they reach past the head, so it is the one place on the
-        /// sweep where tucking them in costs nothing.</para>
+        /// <para><b>And then the owner watched it and said no arms above the head at all</b>
+        /// (2026-09-20): <i>"there's a pose that shouldn't be a sleep pose — any arms above the
+        /// head — and I see a pose often with 2 arms/hands above the head when they can be down the
+        /// side."</i> Often, because a posture is a hash of the pawn id taken modulo four: it is
+        /// not bad luck, it is a quarter of every colony, by construction. So the fourth shape is
+        /// another arms-down one and the whole of its difference is below the waist — which took
+        /// <see cref="Posture.LeadHip"/>, because until then both legs moved together.</para>
+        ///
+        /// <para>The abduction that was added to rescue the arms-up posture is kept even though
+        /// nothing now uses it. It cost one measured sweep to find that no pitch about the lateral
+        /// axis can bring an arm in towards the midline, and the next posture that wants a hand
+        /// somewhere other than at a side will want it back; deleting it would only mean measuring
+        /// that again.</para>
         /// </summary>
         public static readonly Posture[] Postures =
         {
             // On the back, arms down. The plainest, and the one a player will read first.
             new Posture("back", 0f, -10f, -10f, 15f, 15f, -10f, 6f),
 
-            // On the back with the arms up behind the head — the sheet's first figure. The elbow
-            // opens the forearm back down on to the bedding, so the hands rest above the crown
-            // rather than standing off it; measured, that is where the reach past the head comes
-            // from and where the clearance stays at a centimetre rather than going negative.
-            new Posture("back, arms up", 0f, -150f, -150f, -15f, -15f, -8f, 10f, 15f, -15f),
+            // On the back with one knee drawn up and the other leg flat. Arms down the sides,
+            // exactly as the posture above them — the whole difference is below the waist, which is
+            // what the owner asked for after watching a quarter of the colony sleep with both
+            // hands over their heads (2026-09-20). Measured: the raised knee stands 0.87 m over the
+            // mattress against the trunk's own 0.55 m, and shortens the figure along the bed by
+            // 0.13 m, so it reads as a different person from the board camera without being a
+            // different idea.
+            new Posture("back, one knee up", 0f, -10f, -10f, 15f, 15f, -10f, 6f,
+                leadHip: -25f, leadKnee: 34f),
 
             // On one side, knees drawn up. The knee bend is what says foetal rather than felled.
             new Posture("side, curled", 74f, -40f, -74f, 46f, 22f, 26f, 46f),

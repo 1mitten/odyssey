@@ -143,6 +143,7 @@ namespace Odyssey.EditorTools
 
                         LayLimbs(instance, animator, posture);
                         FigureBuild.DrawnExtent(skins, out float lowLain, out float highLain);
+                        float torsoLow = TorsoLow(skins, animator);
                         Vector3 crown = position + rotation * Vector3.up * body;
 
                         DrawnAlong(skins, out float nearZ, out float farZ);
@@ -153,7 +154,7 @@ namespace Odyssey.EditorTools
                             $"  feet {position.z - cellCentre.z,6:F2}" +
                             $"  along [{nearZ - cellCentre.z,6:F2},{farZ - cellCentre.z,6:F2}]" +
                             $"  across [{leftX - cellCentre.x,6:F2},{rightX - cellCentre.x,6:F2}]" +
-                            $"  clears {lowLain - surfaceY,6:F2}");
+                            $"  clears {lowLain - surfaceY,6:F2} lowest / {torsoLow - surfaceY,6:F2} torso");
                     }
 
                     graph.Destroy();
@@ -200,6 +201,65 @@ namespace Odyssey.EditorTools
             }
 
             if (baked != null) Object.DestroyImmediate(baked);
+        }
+
+        /// <summary>
+        /// The lowest drawn point of the <b>trunk</b> — the band of the body between the hip and the
+        /// neck — rather than of the whole figure.
+        ///
+        /// <para><b>This is the number the lift should have been set by all along</b> (owner,
+        /// 2026-09-20: <i>"the body isn't quite flush on to the bed surface"</i>). <c>Lift</c> was
+        /// tuned until the lowest vertex <i>anywhere</i> on the mesh just touched the mattress, and
+        /// that vertex is whichever of a hand, a heel or the back of a skull hangs furthest below
+        /// the body. Seat that on the bedding and the trunk rides above it, which from the play
+        /// camera is a colonist levitating a hand's breadth over her own bed while one knuckle
+        /// rests on it.</para>
+        ///
+        /// <para>The band is taken along world Z because this probe always lays the body that way.
+        /// Bones for the ends rather than fractions of the length: where a rig puts its pelvis and
+        /// its neck is the rig's business, and the whole point of this sheet is not to assume
+        /// it.</para>
+        /// </summary>
+        static float TorsoLow(SkinnedMeshRenderer[] skins, Animator animator)
+        {
+            if (!animator.isHuman) return float.MaxValue;
+
+            Transform? hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            Transform? neck = animator.GetBoneTransform(HumanBodyBones.Neck)
+                              ?? animator.GetBoneTransform(HumanBodyBones.Head);
+            Transform? spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+
+            // The avatar's "Hips" is this cast's floor-level Root, so the pelvis end of the band
+            // comes off the spine when there is one. docs/design/20-beds.md 7b.
+            Transform? low = spine ?? hips;
+            if (low == null || neck == null) return float.MaxValue;
+
+            float a = low.position.z, b = neck.position.z;
+            float near = Mathf.Min(a, b), far = Mathf.Max(a, b);
+            if (far - near < 0.05f) return float.MaxValue;
+
+            float lowest = float.MaxValue;
+            Mesh? baked = null;
+            for (int i = 0; i < skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = skins[i];
+                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
+
+                baked ??= new Mesh { name = "Odyssey/SleepProbe" };
+                skin.BakeMesh(baked, useScale: true);
+
+                Vector3[] vertices = baked.vertices;
+                Transform at = skin.transform;
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    Vector3 world = at.TransformPoint(vertices[v]);
+                    if (world.z < near || world.z > far) continue;
+                    if (world.y < lowest) lowest = world.y;
+                }
+            }
+
+            if (baked != null) Object.DestroyImmediate(baked);
+            return lowest;
         }
 
         /// <summary>
@@ -262,9 +322,9 @@ namespace Odyssey.EditorTools
                 Pitch(animator, HumanBodyBones.LeftUpperArm, out_, posture.LeftArmOut);
             Pitch(animator, HumanBodyBones.RightLowerArm, axis, posture.RightElbow);
             Pitch(animator, HumanBodyBones.LeftLowerArm, axis, posture.LeftElbow);
-            Pitch(animator, HumanBodyBones.RightUpperLeg, axis, posture.Hip);
+            Pitch(animator, HumanBodyBones.RightUpperLeg, axis, posture.Hip + posture.LeadHip);
             Pitch(animator, HumanBodyBones.LeftUpperLeg, axis, posture.Hip);
-            Pitch(animator, HumanBodyBones.RightLowerLeg, axis, posture.Knee);
+            Pitch(animator, HumanBodyBones.RightLowerLeg, axis, posture.Knee + posture.LeadKnee);
             Pitch(animator, HumanBodyBones.LeftLowerLeg, axis, posture.Knee);
         }
 
