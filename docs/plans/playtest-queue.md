@@ -21,6 +21,20 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Nobody has pressed Play on the graphics settings** (`claude/confident-rubin-ydvdhc`,
+  `docs/design/27-graphics-settings.md`). The Graphics tab now opens in two groups: **Display** —
+  VSync, frame cap, render scale, anti-aliasing, shadow distance, display mode and resolution —
+  over **Detail**, the six older toggles. Two of these can only be judged in a player build
+  (`Build/Win64/Odyssey.exe`), because the Game view is not a window the game owns. What to look
+  for: whether **render scale at 85%** is a trade worth having — the world softens, the HUD does
+  not, and if it reads as *blurry* rather than *smaller* then FSR is not buying what §2 claims and
+  the rung should go; whether the **hitch** on changing render scale or anti-aliasing is a blink
+  or a stall, since the tooltip promises a blink; whether **greying the cap behind VSync** reads
+  as *explained* or as *broken* — a wrong answer is reaching for the cap, finding it dead and not
+  reading why; and whether seven rows in one group is a page or a wall. Also, plainly: after
+  pressing every row, `git status` must be clean — a dirty `Assets/Settings/PC_RPAsset.asset`
+  means the pipeline copy is wrong, and that is the one failure this design most expects.
+
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
   its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm
