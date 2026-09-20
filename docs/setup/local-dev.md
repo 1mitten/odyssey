@@ -47,6 +47,10 @@ Or from the editor menu: **Odyssey → Phase 0 → Run Synty inventory**. If `As
 > whichever test is executing (`docs/lessons.md`, "Running Unity from a script"). It is fine for an
 > interactive editor session; keep it out of the manifest that CI reads, or gate it behind a define
 > constraint. `scripts/unity.sh` is the command surface that works everywhere.
+>
+> **Current setup:** the committed `.mcp.json` registers the hosted **AI Game Developer** relay
+> (the Unity-MCP lineage, `ai-game.dev`) at project scope instead. The steps below are kept as the
+> record of the local-plugin route; they are not how this project is wired today.
 
 Why this one: explicit Linux binaries, Unity 6000.3 named in its own tooling, stdio and streamable-HTTP transports, EditMode/PlayMode test execution, console retrieval, and genuine editor C# execution via Roslyn, with no Python or Node needed on the editor side. Comparison and runner-up in `docs/research/unity-mcp-server.md`.
 
@@ -105,7 +109,7 @@ Collected rather than rediscovered. The first two land on the Burst grid job, th
 - **`using var` on a `NativeArray` makes the local read-only**, so writing into it fails with **CS1654**. Declare it normally and dispose in a `finally`, or wrap it in a method that returns it.
 - **`Allocator.Temp` cannot be handed to a job** — it is main-thread and single-frame. A job needs `TempJob` or `Persistent`. This is easy to miss because it compiles and then misbehaves.
 - **Assigning `renderer.material` in edit mode instantiates a copy**, so setting properties on the original afterwards silently does nothing. Use `sharedMaterial` in editor scripts. This one matters a great deal to us: the committed tint strategy is *one cached material per stuff* with instanced draw buckets, and an accidental `.material` would quietly break the batching while looking almost right.
-- **Unity MCP as installed (2026-09-15, plugin v0.90.0):** `npx --yes unity-mcp-cli install-plugin .` adds the package to `Packages/manifest.json`; the first *interactive* editor open downloads the server to `Library/mcp-server/win-x64/gamedev-mcp-server.exe` (a batch run does not). The committed project-scope `.mcp.json` starts it with `port=8080 client-transport=stdio` (relative path, resolved from the repo root; Linux uses `linux-x64`). First `claude` run in the repo asks to approve the project server — approve it, keep the editor open (and not compiling), then verify with `claude mcp list`.
+- **Unity MCP as installed (2026-09-15, plugin v0.90.0):** `npx --yes unity-mcp-cli install-plugin .` adds the package to `Packages/manifest.json`; the first *interactive* editor open downloads the server to `Library/mcp-server/win-x64/gamedev-mcp-server.exe` (a batch run does not). The committed project-scope `.mcp.json` started it with `port=8080 client-transport=stdio` (relative path, resolved from the repo root; Linux uses `linux-x64`). First `claude` run in the repo asks to approve the project server — approve it, keep the editor open (and not compiling), then verify with `claude mcp list`. **Superseded the same day:** `.mcp.json` now holds the hosted AI Game Developer relay instead, and the plugin is out of `Packages/manifest.json` — see the note in §5.
 
 ## 10. The two test tiers
 

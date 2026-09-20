@@ -242,6 +242,38 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        ///
+        /// <remarks>
+        /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
+        /// scenario's starting beds stopped being bare cells in the sleep chooser's list and
+        /// became real two-cell beds raised through the construction grid
+        /// (<c>ColonyScenario.RaiseAStartingBed</c> holds the measurement that forced it). A bed
+        /// record is in the edifice list, which is hashed, so a colony that has five of them
+        /// hashes differently from one that has none — and it does so <b>before a single tick
+        /// runs</b>, which is why <c>Generated</c> moved on all three and is the evidence that
+        /// this is the change and not a simulation system drifting underneath it. <c>Simulated</c>
+        /// followed for the ordinary reason a divergent start diverges further: the colonists now
+        /// sleep in beds they previously walked past, so their nights are spent in different
+        /// cells.
+        /// <para>No generator pass changed. The board is identical; what stands on it is not.</para>
+        /// <para><b>And a second reason in the same commit, which is why the numbers here are not
+        /// the ones the bed change alone produced.</b> <c>ColonyItems</c> hashed its things and
+        /// not its stockpile zones or its bed list, both of which it had been saving since they
+        /// existed — found by <c>OrdersSurviveASaveTests.EachOrderMovesTheStateHash</c>, which
+        /// flips one bit of a zone's filter and asks whether the world noticed. It did not. Both
+        /// are in the hash now, so every colony with a starting stockpile hashes differently
+        /// again; the colony is not doing anything new, the hash is seeing more of it. That
+        /// distinction is the whole of whether a re-bake is honest.</para>
+        /// <para><b>Re-baked a third time the same day, on the merge with the events layer</b>
+        /// (PR #140). Both branches had moved every number here for their own reasons — beds and
+        /// zones on this side, the incident layer's hashed state on <c>main</c>'s — so the merge
+        /// conflicted on all six and neither side's value was right for the merged code. Baked
+        /// afresh from the merge, as the 2026-09-18 entry below says a golden conflict must be.
+        /// <c>Generated</c> moved on all three because the events layer hashes before the first
+        /// tick, exactly as it did on <c>main</c>. The played scenario losing its starting beds
+        /// the same session moved <b>nothing</b> here: every case builds on <c>Bare</c>, which
+        /// keeps its five.</para>
+        /// </remarks>
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -250,8 +282,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 12644359494592048924UL,
-            Simulated = 1555725465344136436UL,
+            Generated = 17179664085597806501UL,
+            Simulated = 10298886025038645198UL,
         };
 
         /// <summary>
@@ -267,8 +299,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 11578114989140489809UL,
-            Simulated = 5049168198028942945UL,
+            Generated = 1431369592896753849UL,
+            Simulated = 1949707350924885619UL,
         };
 
         /// <summary>
@@ -304,8 +336,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 5935763083478690681UL,
-            Simulated = 2942773287113290832UL,
+            Generated = 1988660988096176970UL,
+            Simulated = 9535912813450509854UL,
         };
     }
 }

@@ -517,10 +517,25 @@ namespace Odyssey.Presentation.Bootstrap
             GroundRelief.Amplitude = groundRelief;
             GroundRelief.Period = groundReliefPeriod;
 
+            // **The board's size, decided once, before anything is built from it.**
+            //
             // A loaded session takes its shape from the file, not from the inspector. WorldSave
             // refuses a save whose seed or size differs from the world it is opened into, so this
-            // is not a convenience — it is the only way a load can succeed at all.
-            GridSize size = from != null ? from.Size : new GridSize(sizeX, sizeZ, layers);
+            // is not a convenience — it is the only way a load can succeed at all. Otherwise the
+            // setup page's choice when the player made one, and the inspector's when they did not.
+            //
+            // <b>The setup page's choice used to be applied at the request and nowhere else</b>,
+            // three lines further down, while the chunk grid and the render model below were built
+            // from the inspector's numbers. So a new game on any board but the scene's default had
+            // a mirror and a chunk grid of one size over a world of another, and every cell index
+            // near the far edge landed outside them. Nothing had ever written to the chunk grid
+            // during a world build, so it stayed silent until the scenario started raising beds
+            // (2026-09-20) and three PlayMode tests threw `IndexOutOfRangeException` from
+            // `ChunkGrid.MarkDirty` — with the bounds check one frame above it passing, because
+            // it asked the *cell* grid. One rule, two owners, and the usual silence.
+            GridSize size = from != null
+                ? from.Size
+                : sizeOverride ?? new GridSize(sizeX, sizeZ, layers);
             var chunks = new ChunkGrid(size);
 
             // The render model is built before the world, because the mirror the world publishes
@@ -557,10 +572,10 @@ namespace Odyssey.Presentation.Bootstrap
             var generation = Stopwatch.StartNew();
             ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
             {
-                // The setup page's choice when there is one, the inspector's otherwise, and never
-                // on a load: a save is refused outright if the world it opens into is a different
-                // size, so taking the page's here would turn a mismatch into a confusing refusal.
-                Size = from == null && sizeOverride.HasValue ? sizeOverride.Value : size,
+                // The one `size` decided above, which already folds in the setup page's choice,
+                // the file's shape and the inspector's default. It was decided here once and the
+                // chunk grid above was left on the inspector's — see the note up there.
+                Size = size,
                 Seed = sessionSeed,
                 Scenario = scenarioDef,
                 // From the file when loading, for the reason SaveRecipe.Barren sets out: three
@@ -1157,11 +1172,12 @@ namespace Odyssey.Presentation.Bootstrap
                 var kind = (DesignationKind)orders[i].Kind;
                 Color tint = OrderColour(kind);
 
-                // A wall fills its cell, so the floor plate every other order gets would be drawn
-                // inside the very thing it is marking. See ChunkRenderer.DrawCellShade — this is
-                // the fault the owner reported as "deconstruct has no visual marker".
-                if (kind == DesignationKind.Deconstruct) _renderer.DrawCellShade(cell, tint);
-                else _renderer.DrawCellMark(cell, tint);
+                // One shape for every order, at whatever height the thing in the cell puts it —
+                // WorldRenderModel.MarkHeight. Deconstruct had a whole-cell wash of its own until
+                // 2026-09-20, because a floor plate under a wall is inside the wall; the owner
+                // asked for it to "mark the tile for deconstruction instead like you would mark
+                // in mining", and marking the wall's top face is what mining already does to rock.
+                _renderer.DrawCellMark(cell, tint);
 
                 if (orders[i].Progress > 0)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
@@ -1177,7 +1193,6 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The colour of a sown cell's seed specks - pale enough to read as seed against the dark soil, and nothing else on the board's floor is white.</summary>
         public static readonly Color SeedSpeckColour = new Color(0.92f, 0.90f, 0.82f, 1f);
 
-        public static readonly Color ZoneTintColour = new Color(0.06f, 0.032f, 0.012f, 0.78f);
 
         /// <summary>
         /// Every growing-zone cell on a drawn layer, tinted.
@@ -1740,21 +1755,10 @@ namespace Odyssey.Presentation.Bootstrap
             // build no longer has one: a ghost is tinted by its material or by its refusal, so a
             // green arm here would be a colour nothing reads.
             //
-            // Deconstruct is named rather than left to fall through. It fell through to the cancel
-            // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
-            // while the player was demolishing, and tuning the cancel colour would have silently
-            // re-tinted it. The zone is named for the opposite reason: the preview is painted in
-            // the very tint the committed zone wears (ZoneTintColour), so what the player sees
-            // while dragging is the field they are about to have, not a promise in a different
-            // colour.
-            Color tint = director.Tool switch
-            {
-                DesignateTool.Mine => MineOrderColour,
-                DesignateTool.Fell => FellOrderColour,
-                DesignateTool.Deconstruct => DeconstructOrderColour,
-                DesignateTool.GrowZone => ZoneTintColour,
-                _ => PreviewCancelColour,
-            };
+            // One line, and the mapping is `OrderColours`' rather than this file's. It was a
+            // switch here with four constants below it, and it disagreed with the palette chip on
+            // two of the four — see that class for the whole of why.
+            Color tint = Ui.HudTokens.Convert(OrderColours.Cursor(director.Tool));
 
             for (int z = min.Z; z <= max.Z; z++)
             for (int x = min.X; x <= max.X; x++)
@@ -1958,72 +1962,39 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>
         /// The build cursor over a run that will build nothing.
         ///
-        /// <para>The cancel cursor's own red at the build cursor's own alpha. Both halves are
-        /// deliberate: the hue is one a player has already seen mean "this takes something away or
-        /// does nothing", and the alpha matches the green it replaces so the cursor changes colour
-        /// without changing weight. Its own constant rather than a reuse of
-        /// <see cref="PreviewCancelColour"/> for the reason <see cref="DeconstructOrderColour"/> is
-        /// its own — tuning the cancel cursor should not silently re-tint this.</para>
+        /// <para>The cancel tool's own hue at a heavier alpha. Both halves are deliberate: the
+        /// colour is one a player has already seen mean "this takes something away or does
+        /// nothing", and it is heavier than any order mark because it is a refusal and has to be
+        /// read before the button is let go. Its own line rather than a call to
+        /// <see cref="Odyssey.Hud.OrderColours"/>'s cursor alpha, because this is not the cancel
+        /// tool and tuning that one should not re-weight this.</para>
         /// </summary>
-        static readonly Color PreviewRefusedColour = new Color(0.95f, 0.38f, 0.34f, 0.70f);
+        static readonly Color PreviewRefusedColour =
+            Ui.HudTokens.Convert(OrderColours.Hue(DesignateTool.Cancel).WithAlpha(0.70f));
 
         int _previewLayer;
         Func<int, int, int>? _previewLayerAt;
         readonly List<PreviewBox> _previewBoxes = new List<PreviewBox>();
 
         /// <summary>
-        /// The box being dragged with a build tool. Green: the colour of a thing about to be added,
-        /// used nowhere else on the board, and brighter than a placed order because it is following
-        /// the pointer and has to be found instantly.
-        /// </summary>
-
-        /// <summary>The box being dragged with the cancel tool. Red, for the one tool that takes away.</summary>
-        static readonly Color PreviewCancelColour = new Color(0.95f, 0.38f, 0.34f, 0.60f);
-
-        /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
-        static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
-
-        /// <summary>Marks a tree ordered felled.</summary>
-        static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
-
-        /// <summary>
-        /// Marks a building ordered taken apart. Red, which the owner asked for by name and which
-        /// is right for the reason they asked: it is the only standing order that <b>destroys
-        /// something that already exists</b>. Mining and felling take from the world as it was
-        /// found; this takes from what the colony has made.
-        ///
-        /// <para>Deliberately its own constant rather than a reuse of
-        /// <see cref="PreviewCancelColour"/>, although both are red. That one is a cursor following
-        /// the pointer and this one is paint on the board, so they want different alpha — and
-        /// sharing a constant would mean tuning the cursor silently re-tinted every marked wall in
-        /// the colony.</para>
-        /// </summary>
-        static readonly Color DeconstructOrderColour = new Color(0.93f, 0.31f, 0.27f, 0.38f);
-
-        /// <summary>
         /// What colour a standing order is drawn in.
         ///
-        /// <para><b>Total over the enum, and that is the point.</b> This was a two-branch ternary —
-        /// <c>Kind == Mine ? mine : fell</c> — answering a three-kind question, so a deconstruct
-        /// order was drawn in the felling green. Exactly the shape of the fault that made a palette
-        /// chip arm a tool and never light, and it will be the shape of the next one unless the
-        /// mapping is total. <c>OrderColoursTests</c> walks every <c>DesignationKind</c>.</para>
+        /// <para><b>Four constants used to live here</b>, and the reason they do not any more is
+        /// that a colour is not a rendering detail: it is what tells a player which tool they are
+        /// holding, and the same four tools are coloured on the orders strip and in the palette
+        /// header by <see cref="Odyssey.Hud.HudTheme"/>. Two of the four disagreed —
+        /// <see cref="Odyssey.Hud.OrderColours"/> has the history. This method stays because
+        /// <c>DesignationKind</c> lives in the simulation and the Hud assembly cannot name it; it
+        /// converts a kind to a tool and asks, and decides nothing itself.</para>
+        ///
+        /// <para><b>Total over the enum, and that is still the point.</b> This was a two-branch
+        /// ternary — <c>Kind == Mine ? mine : fell</c> — answering a three-kind question, so a
+        /// deconstruct order was drawn in the felling green. Exactly the shape of the fault that
+        /// made a palette chip arm a tool and never light. <c>OrderColoursTests</c> walks every
+        /// kind and every tool, in the fast tier, which is where the mapping now lives.</para>
         /// </summary>
-        public static Color OrderColour(DesignationKind kind) => kind switch
-        {
-            DesignationKind.Mine => MineOrderColour,
-            DesignationKind.Fell => FellOrderColour,
-            DesignationKind.Deconstruct => DeconstructOrderColour,
-            _ => BuildOrderColour,
-        };
-
-        /// <summary>
-        /// Marks a cell ordered built. The interface accent rather than a third warm hue, because
-        /// a build order is the one standing order that is <em>additive</em> — mine and fell take
-        /// something away, and a colour the rest of the interface already uses for "the player
-        /// asked for this" separates the two at a glance.
-        /// </summary>
-        static readonly Color BuildOrderColour = new Color(0.44f, 0.83f, 0.89f, 0.42f);
+        public static Color OrderColour(DesignationKind kind) =>
+            Ui.HudTokens.Convert(OrderColours.Mark((byte)kind));
 
         /// <summary>
         /// The thing going up. Pale and translucent like <see cref="CutColour"/> and for the same

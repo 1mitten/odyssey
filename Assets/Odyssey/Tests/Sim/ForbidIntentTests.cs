@@ -15,6 +15,15 @@ namespace Odyssey.Tests.Sim
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = colonists;
             scenario.beds = colonists;
+
+            // **A zone with room to spare, because this test is about forbidding and not about
+            // capacity.** The default nine cells against eight salvage and twelve meal piles is a
+            // knife edge: whether a salvage crate can move depends on whether a meal got the last
+            // free cell first, which is a race this test has no opinion about. It went over the
+            // edge on 2026-09-20, when starting beds became real furniture and moved the
+            // placement by a cell — the colony hauled perfectly well and filled its last three
+            // cells with rations, and the assertion below read that as "forbidding is broken".
+            scenario.stockpileCells = 24;
             return scenario;
         }
 

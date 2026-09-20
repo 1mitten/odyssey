@@ -98,7 +98,7 @@ overwritten. Edit the source, then rebuild:
 | `docs/design/icon-keys.csv` | the name, namespace, milestone and description of every named thing |
 | `docs/design/icon-map.csv` | whether the owner's pixel-art sheets can draw it |
 | `docs/design/proper-nouns.csv` | people, places, factions, creatures, the calendar |
-| `docs/design/colonist-names.csv` | the 244 colonist given names, with register and gender |
+| `docs/design/colonist-names.csv` | the 240 colonist given names, with register and gender |
 
 ```
 python3 tools/wiki/build_wiki.py            # rebuild docs/wiki
@@ -159,10 +159,10 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 | **CL** the carried load | **Merged 2026-09-19, PR #129**, played once, three faults fixed (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
-| **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
-| **EV** events | **Built on `claude/events-system`, 2026-09-20** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
-| **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
-| **FI** falling items | **Done on `claude/falling-items`** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
+| **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`). **A skill now buys speed at the hoe** — `Work_Growing` carries `rateSkill 4` and cutting's curve, which three comments and this file denied for two days. The debug menu gained **Skip one day** and **Ripen crops**. **Reviewed against main twice on 2026-09-20** (`docs/journal.md`): both givers were missing the `ctx.Reachable` every other giver has, and one unreachable crop cost 159 failed jobs in 2,000 ticks; `PlantDef.yields` was declared and never read; and the zone's translucent cover was both the interior-edge borders the owner photographed and 2,065 draw calls a frame. The zone is a bit on the ground's terrain tint now (`TintCode.TilledBase`), which is no draws at all. |
+| **EV** events | **Merged 2026-09-20 (PR #140)** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
+| **HT** hardening | **Audited 2026-09-19; audit and plan merged as PR #136. Nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
+| **FI** falling items | **Merged 2026-09-20 (PR #138)** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -283,6 +283,18 @@ invisible where the game is played.
   gates must pass before a content commit.
 - **Do not answer `RegistryTests` by rewording a literal** — call `Registry.Label(key)`, or the wiki
   and the screen will disagree the first time somebody corrects one of the two copies.
+- **The board's size is decided once, in `OdysseyBootstrap.BuildSession`, before the chunk grid
+  and the render model are built from it.** It was two numbers until 2026-09-20 — the inspector's
+  for those two, the setup page's for the world — and nothing could tell, because nothing wrote to
+  the chunk grid during a build. The first thing that did threw out of bounds.
+- **An order's colour has one owner, and it is `Odyssey.Hud.OrderColours`.** The chip in the orders
+  strip, the palette header, the drag cursor and the mark left on the board are all the same hue.
+  There were two tables in two assemblies for months and they disagreed on two of the four tools —
+  deconstruct was orange on the panel and the *cancel* red on the ground. Never write a `Color` for
+  an order in Presentation; ask. `OrderColoursTests` runs in the fast tier and walks every tool.
+- **Where an order's mark sits is `WorldRenderModel.MarkHeight`** — the top of the cell for
+  anything that fills it, the top of itself for anything that stands up without filling it, the
+  floor for everything else. Trees are on the floor deliberately.
 - *Subsystems* are simulation-side; *directors* are presentation-side. Do not unify the two words.
 
 ### Fixed decisions
@@ -296,14 +308,14 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **788 Sim + 465 Hud** (2026-09-20, the events branch with falling items merged; 753 + 449 on 2026-09-19); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **806 Sim + 471 Hud** (2026-09-20, the bed and order-colour branch with events and falling items merged); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
   branch (`claude/events-system`, after the first-look fixes, the falling-items merge and the extensibility review): EditMode **1,968 total, 1,954 passed, 0 failed**; PlayMode **82 total,
   77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
-  The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, now
-  at `main`'s tip), was EditMode 1,916 / 1,902 and PlayMode 82 / 77.
+  The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, since merged),
+  was EditMode 1,916 / 1,902 and PlayMode 82 / 77.
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
@@ -330,8 +342,14 @@ invisible where the game is played.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
   tick**. Both traps are in `docs/lessons.md` and both have cost a Unity run.
 
-Frame time under the real player loop, against a 5 ms budget: meadow ~0.99 ms, city ~1.56 ms on an
-RTX 5070 Ti at 640 × 480. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
+Frame time under the real player loop, against a 5 ms budget — **and the budget is in the docs, not
+in the assert**: `FrameTimeTests` passes anything under a 30 Hz frame, so a green PlayMode run says
+nothing about it. Measured 2026-09-20 after the surround work: meadow **2.59 ms**, field (2,065
+zone cells) **4.09 ms**, city **2.01 ms**, on an RTX 5070 Ti at 640 × 480. **A per-draw submission
+costs about 4.6 us whatever is in it**, which is the single most useful number for this renderer:
+three passes were submitting per cell, and two of them are fixed (the zone cover, the seed specks).
+The third — `DrawCellMark`/`Shade`/`Cut` for standing orders — is not, and the benchmark cannot see
+it because the meadow case is barren and has nothing to designate. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
 
 **Pathfinding is where the tick goes under load, and it is no longer a threat to the frame budget**
 (OQ-19, measured on the real `SimWorld.Tick`): a colony of 50 on 250 × 250 × 40 costs 0.025 ms a
@@ -381,6 +399,12 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
   off sideways on to the landing beside it. Nothing migrates — a real floor still counts, so old
   saves and the city's own ladders are untouched — but a player who builds a full upper floor first
   must deconstruct one slab before the ladder will go in.
+- **Backing out of the in-game load screen still loses the colony.** Pressing Load with nothing
+  readable in the Saves folder is safe now (the colony is untouched and the row says so), but the
+  row still tears the world down *before* the list appears, so a player who changes their mind at
+  the list has nowhere to go back to. The real fix is showing the browser over a live session, and
+  the menu is tied to there being none (`OnSessionChanged` calls `SetShowing(live == null)`). A
+  restructure of the start screen's modality, not a guard — `docs/design/17-start-flow.md` §5b.
 - **The scenario table is written twice** — `OdysseyBootstrap.ScenarioFor` and
   `SessionRoundTripTests.ScenarioByName` each map two `defName`s by hand. Not urgent (a scenario
   acts only at tick zero) and both copies say so.
@@ -431,7 +455,11 @@ The two that come up daily:
 - **dotnet SDK 8.0.425** is installed on the Windows machine at `%USERPROFILE%/.dotnet` and powers `scripts/test-fast.sh`. A remote container without Unity can still run every Sim test through it, given an SDK.
 - **Python 3.13.15** is installed on the Windows machine as of 2026-09-16 (`%LOCALAPPDATA%\Programs\Python\Python313`, ahead of `WindowsApps` in PATH, with a `python3.exe` copy beside `python.exe` because CPython ships none). The wiki, icon and mockup tooling therefore runs on **both** machines now. `PYTHONUTF8=1` is set for the user and is required: without it Windows Python reads the docs as cp1252 and `build_wiki.py --check` calls every file stale. See `docs/lessons.md`.
 - **Blender (optional):** only for gaps no Synty asset fills (a stair or ladder variant at the cell size, UV or atlas fixes, rig or animation retargeting). Synty first. Blender-made pieces go under `Assets/Art/Custom/` and are committed; they must match the Synty style and snap to the cell grid.
-- **Unity MCP:** IvanMurzak/Unity-MCP, installed per `docs/setup/local-dev.md`. Once connected, Claude Code can open scenes, run EditMode/PlayMode tests, read the console and execute editor C#. Prefer `scripts/unity.sh` for anything that must also work in CI.
+- **Unity MCP:** the project's committed `.mcp.json` registers a hosted **AI Game Developer**
+  relay (the IvanMurzak/Unity-MCP lineage, `ai-game.dev`) at project scope; the in-manifest
+  plugin route in `docs/setup/local-dev.md` §5 is **not** wired up. Once connected, Claude Code
+  can open scenes, run EditMode/PlayMode tests, read the console and execute editor C#. Prefer
+  `scripts/unity.sh` for anything that must also work in CI.
 
 ## Conventions for code (apply from Phase 4 / M0 onwards)
 

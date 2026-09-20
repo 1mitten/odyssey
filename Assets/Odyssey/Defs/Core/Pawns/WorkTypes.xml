@@ -14,8 +14,9 @@
   thousandths of the speed everything is tuned at. The integers are INVENTED: anchored on OUR
   own starting roll (mean level 1.16) rather than the reference's level 8, with the reference's
   relative character kept — mining steepest, construction shallowest, hauling flat, because a
-  skill drives either rate or quality and hauling has neither. Growing carries no curve yet
-  (design 22 §5): its work runs at the tuned speed until the plant-work curve lands.
+  skill drives either rate or quality and hauling has neither. Growing carries cutting's curve:
+  a novice sows at six tenths of the tuned speed and each level buys a tenth more (design 22
+  §5). This comment claimed it had no curve for two days while the def below carried one.
 -->
 <Defs>
 

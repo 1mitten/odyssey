@@ -838,6 +838,37 @@ namespace Odyssey.Presentation.Ui
             new Dictionary<string, (VisualElement, Label)>();
 
         /// <summary>
+        /// A row that has something to say instead of its own name — today only Load, saying
+        /// there is nothing to open.
+        ///
+        /// <para><b>Here rather than written straight into the label</b>, because
+        /// <see cref="SettingsDirector.Request"/> raises <c>RowRequested</c> and <i>then</i>
+        /// <c>ExitChanged</c>, so anything a row handler writes on to a label is overwritten by
+        /// <see cref="OnExitChanged"/> one call later. A note is state the refresh knows about,
+        /// which is the only kind that survives it.</para>
+        ///
+        /// <para>Cleared the moment any row is armed, and when the panel closes: a note is an
+        /// answer to the press that produced it and it should not be sitting there next time the
+        /// panel is opened.</para>
+        /// </summary>
+        readonly Dictionary<string, string> _sessionNotes = new Dictionary<string, string>();
+
+        /// <summary>Say something on a session row in place of its name, until the next press.</summary>
+        internal void NoteOnSessionRow(string key, string note)
+        {
+            _sessionNotes[key] = note;
+            OnExitChanged();
+        }
+
+        /// <summary>Take every note down. Called when the settings panel opens or closes.</summary>
+        internal void ClearSessionNotes()
+        {
+            if (_sessionNotes.Count == 0) return;
+            _sessionNotes.Clear();
+            OnExitChanged();
+        }
+
+        /// <summary>
         /// What a session row says on hover. A literal, like every other tooltip in this shell —
         /// the registry emits labels and not tooltips, and a tooltip is a sentence about what
         /// happens rather than a name the owner maintains in the CSV.
@@ -870,12 +901,19 @@ namespace Odyssey.Presentation.Ui
             if (_directors == null) return;
             string? armed = _directors.Settings.ArmedRow;
 
+            // Arming anything is a new question, so whatever a row was saying about the last one
+            // goes. Before the loop, so the row being armed cannot keep its own note.
+            if (armed != null) _sessionNotes.Clear();
+
             foreach (KeyValuePair<string, (VisualElement Row, Label Label)> pair in _sessionRows)
             {
                 bool on = pair.Key == armed;
                 pair.Value.Row.EnableInClassList("row--armed", on);
-                HudText.Set(pair.Value.Label,
-                    on ? "Click again to confirm" : Registry.Label(pair.Key), HudTextRole.Row);
+
+                string text = on ? "Click again to confirm"
+                    : _sessionNotes.TryGetValue(pair.Key, out string? note) ? note
+                    : Registry.Label(pair.Key);
+                HudText.Set(pair.Value.Label, text, HudTextRole.Row);
             }
         }
 

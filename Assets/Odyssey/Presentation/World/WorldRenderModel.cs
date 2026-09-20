@@ -663,6 +663,37 @@ namespace Odyssey.Presentation.World
             return _edifice[index] == CoreContent.EdificeBed ? BedShape.Size.y : 0f;
         }
 
+        /// <summary>
+        /// How far above this cell's floor an <b>order mark</b> sits, in metres — the one rule for
+        /// where the paint on an ordered cell goes.
+        ///
+        /// <para><b>Written because deconstruct had no mark it could use.</b> Every other standing
+        /// order is drawn as a flat plate, and a plate at the floor of a cell with a wall standing
+        /// in it is inside the wall. Deconstruct was given a whole-cell outlined box instead, and
+        /// the owner reported that back (2026-09-20): <i>"puts down an entire square as the
+        /// blueprint to deconstruct … make it mark the tile for deconstruction instead like you
+        /// would mark in mining"</i>. Mining works because rock is solid and the mark goes on top
+        /// of it; the answer was never a different shape, it was the same shape at the right
+        /// height.</para>
+        ///
+        /// <para><b>Three cases and no list of defs.</b> Anything that fills its cell is marked on
+        /// its top face, which is the face you see it from — solid rock for a mine order, and a
+        /// wall, door, window, pillar or vault for a deconstruct one, all of them
+        /// <see cref="OccludesFace"/>'s own answer. Anything that stands up without filling the
+        /// cell is marked on top of itself, which is <see cref="StandHeight"/> and today means a
+        /// bed. Everything else is marked on the floor: a tree ordered felled, a ladder, a slab, a
+        /// cell waiting to be built in.</para>
+        ///
+        /// <para>Trees fall through to the floor deliberately, and that is why this asks
+        /// <see cref="OccludesFace"/> rather than "is anything here": a fell order is read on the
+        /// ground the tree stands in, and lifting it three metres would hang it in the canopy.</para>
+        /// </summary>
+        public float MarkHeight(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return 0f;
+            return OccludesFace(index) ? CellMetrics.SizeY : StandHeight(index);
+        }
+
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
 

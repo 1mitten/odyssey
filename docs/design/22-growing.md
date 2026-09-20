@@ -103,11 +103,19 @@ The intents, one per gesture:
 the one clock that will not wait), `Skill_Growing`, `Job_Sow` and `Job_Harvest`
 (driver ids 10 and 11). Neither JobDef carries `workTicks`: like mining, the work is priced per
 plant, the driver reading `sowWorkTicks` or `harvestWorkTicks` from the zone's `PlantDef` as it
-swings. Skill and experience ride the def defaults. **Growing carries no rate curve** (2026-09-18,
-recorded at the rates merge): every driver now pays work at the pawn's own rate —
-`Pawn.WorkRatePerMille(WorkType)`, banked as milliwork per WS1's one-unit rule — and with no
-`rateSkill` on `Work_Growing` that rate is the flat tuned speed, so a skill still buys nothing at
-the hoe. §3a of `17-rates-and-stats.md` is where the plant-work curve lands.
+swings. Every driver pays work at the pawn's own rate — `Pawn.WorkRatePerMille(WorkType)`,
+banked as milliwork per WS1's one-unit rule.
+
+**Growing carries a rate curve, and this paragraph said the opposite until 2026-09-20.**
+`Work_Growing` has `rateSkill 4` with cutting's own numbers — `600 + 100 x level`, so a novice
+runs at six tenths of the tuned speed and the tuned speed sits around level four (owner,
+2026-09-19: *"make sure the speed of the sowing and harvesting is determined by the relevant
+skill"*). The curve was added with the work type and three separate comments went on denying it:
+this one, the header of `WorkTypes.xml`, and `GrowingJob`'s own *"flat today"*. All three are
+corrected. It matters beyond tidiness — **this is the first place in the game where a skill level
+does something a player can feel**, which closes a gap CLAUDE.md had listed as open, and it is
+the one thing on the playtest list that a still cannot show. §3a of `17-rates-and-stats.md`
+still owns the shape of the curve itself.
 
 Both drivers are `FellJobDriver`'s shape with one simplification: **the colonist stands in the
 cell, not beside it.** A crop is ground, not an edifice — it blocks nothing, so the stand-beside
@@ -169,6 +177,43 @@ Cancel: the cancel tool gains `CancelZone` as a third intent per cell — zone f
 designation, then nothing. No new tool, no new mode; the rubber already in the player's hand.
 
 ## 6. Presentation
+
+### 6a. The zone itself is a bit on the ground's tint (2026-09-20)
+
+A painted zone is not drawn. Its ground is, and it is drawn once: `DrawnTerrain` already swaps a
+zoned cell's terrain to bare earth, and `TintCode.TilledBase` marks that terrain bucket as worked
+soil, which `ChunkRenderer.ResolveColour` grades by `TilledGrade`. No second mesh, no overlay, no
+per-cell work in the frame at all.
+
+It arrived as a translucent cover — the ground's own module drawn again over itself — and that
+design had both a look fault and a cost fault, which turned out to be the same fault.
+
+- **The look.** The cover carried a 1.01 scale so neighbours overlapped rather than met, on the
+  reasoning that an overlap of one tint is invisible. True of an opaque overlay and false of a
+  translucent one: alpha blending is not idempotent, so at alpha 0.78 a doubly-covered band
+  composited to 0.95 and the dirt showing through fell from 22% to 5%. That is a dark line on
+  every **interior** edge of a field and none on its outside edge, which is exactly the shape
+  the owner photographed. `MarkLift` then did the same thing again in miniature: lifting a cover
+  raises a *box*, and its sides stand proud of the neighbouring soil by the lift.
+- **The cost.** One `Graphics.RenderMesh` per zoned cell per frame — 2,065 draw calls and
+  **3.67 ms of a 5 ms budget** on the benchmark's field, against 0.17 ms for the same field with
+  the pass switched off. It was also the only thing in the feature standing outside the
+  instanced-chunk architecture, and it incremented no counter, so `FrameTimeTests` had never
+  counted one of them.
+
+The colour is derived from the cover rather than re-chosen, so the field keeps what was agreed:
+the cover composited as `0.78 x (0.06, 0.032, 0.012) + 0.22 x ground`, a scale plus a warm
+pedestal, and `TilledGrade` is the per-channel multiply that reaches the same place. A uniform
+0.25 was tried and read grey — the pedestal was carrying the warmth.
+
+`ABiggerFieldAddsInstancesRatherThanDraws` is the guard: it fails the moment a zone costs draws
+in proportion to its cells. That matters most for the storage zones coming next, which are
+painted across a whole base rather than in a plot.
+
+Seed specks went the same way on the same day: six submissions per sown cell of one cube in one
+material, gathered now and drawn in a single `RenderMeshInstanced`.
+
+### 6b. The crop
 
 The crop draws through the module id indirection like everything else: the `PlantDef` carries a
 module id per stage (`odyssey.module.carrot.s/m/l`), `ModuleCatalogue` resolves them to the Farm

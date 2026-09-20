@@ -1,6 +1,7 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Pawns;
 
 namespace Odyssey.Tests.Sim
@@ -531,9 +532,18 @@ namespace Odyssey.Tests.Sim
             ColonyWorld first = Field(seed: 7u);
             ColonyWorld second = Field(seed: 7u);
 
-            foreach (ColonyWorld colony in new[] { first, second })
+            // The field is searched for rather than assumed to be the start cell: the scenario
+            // grew a starting bed (main, 2026-09-20), a bed is an edifice, and the siting gate
+            // rightly refuses to plant under furniture. Both colonies are the same seed, so both
+            // searches land on the same row - which is itself part of what determinism means.
+            CellRef firstField = ClearRow(first, 3);
+            CellRef secondField = ClearRow(second, 3);
+            Assert.That(secondField, Is.EqualTo(firstField),
+                "the same seed chose two different fields before a tick was run");
+
+            foreach ((ColonyWorld colony, CellRef start) in
+                     new[] { (first, firstField), (second, secondField) })
             {
-                CellRef start = colony.Start;
                 for (int dx = 0; dx < 3; dx++)
                 {
                     colony.World.Intents.Submit(new Intent(
@@ -551,8 +561,8 @@ namespace Odyssey.Tests.Sim
             {
                 first.World.Tick(250);
                 second.World.Tick(250);
-                firstRipened |= first.Growing!.IsRipe(Size.Index(first.Start));
-                secondRipened |= second.Growing!.IsRipe(Size.Index(second.Start));
+                firstRipened |= first.Growing!.IsRipe(Size.Index(firstField));
+                secondRipened |= second.Growing!.IsRipe(Size.Index(secondField));
             }
 
             Assert.That(firstRipened, Is.True, "the first field never ripened");
@@ -561,5 +571,141 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(second.World.ComputeStateHash().Value),
                 "two colonies living the same week through a field came apart");
         }
+        /// <summary>
+        /// A crop a colonist cannot walk to is not work — it is skipped, and the colonist gets
+        /// on with something else.
+        ///
+        /// <para><b>Measured before it was fixed.</b> Both growing givers picked their target by
+        /// <c>ctx.Distance</c>, which is a straight-line estimate, and neither asked
+        /// <c>ctx.Reachable</c> — the only two givers in the project that did not. So an
+        /// unreachable plot won the scan on nearness, the walk failed on the spot, and the next
+        /// think picked the same cell because it was still the nearest: one colonist and one
+        /// ripe crop over a hole produced <b>159 failed jobs in 2,000 ticks</b>, with no other
+        /// growing work done in any of them. A giver hands out one cell, so one bad cell starves
+        /// the whole line of work.</para>
+        ///
+        /// <para>The fixture makes the plot unreachable the way the game would: mine the ground
+        /// out from under it. A crop is neither pawn nor item, so nothing drops it and nothing
+        /// unzones the cell — the crop simply stands over a hole.</para>
+        /// </summary>
+        [Test]
+        public void ACropOverAHoleIsNotHandedOutAndDoesNotChurn()
+        {
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            CellRef plot = new CellRef(colony.Start.X + 3, colony.Start.Z + 3, colony.Start.Y);
+            int index = Size.Index(plot.X, plot.Z, plot.Y);
+
+            Sow(colony, plot);
+            zones.Sow(index);
+            zones.Advance(index, 1_000_000);
+            Assume.That(zones.IsRipe(index), Is.True);
+
+            int below = index - Size.LayerStride;
+            colony.Grid.Terrain[below] = Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainAir;
+            colony.Grid.Flags[below] &= ~Odyssey.Sim.World.CellFlags.SolidTerrain;
+            colony.Grid.Floor[index] = 0;
+            colony.Pawns.Nav.Grid.RefreshFrom(colony.Grid, index);
+            colony.Pawns.Nav.Grid.RefreshFrom(colony.Grid, below);
+            colony.Pawns.Nav.MarkAllDirty();
+            colony.World.Tick();
+
+            Assume.That(colony.Grid.IsWalkable(index), Is.False, "the plot is a hole now");
+            Assume.That(zones.IsPlanted(index), Is.True, "and the crop still stands over it");
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            Assume.That(colony.Pawns.Reachable(pawn, index), Is.False);
+
+            var job = new Job();
+            Assert.That(new HarvestWorkGiver().TryGiveJob(pawn, colony.Pawns, job), Is.False,
+                "a crop the colonist cannot reach was handed out as work");
+            Assert.That(new SowWorkGiver().TryGiveJob(pawn, colony.Pawns, job), Is.False,
+                "so was the plot it stands in");
+
+            int before = colony.Jobs.JobsFailed;
+            for (int i = 0; i < 2_000; i++) colony.World.Tick();
+            Assert.That(colony.Jobs.JobsFailed - before, Is.LessThan(5),
+                "the colonist churned on an unreachable crop");
+        }
+
+        /// <summary>
+        /// A run of <paramref name="length"/> cells beside the start that a field may actually be
+        /// painted on, searched rather than assumed.
+        ///
+        /// <para>It used to be <c>colony.Start</c> and the two cells east of it, which was fine
+        /// until the scenario grew a starting bed (main, 2026-09-20): a bed is an edifice, the
+        /// siting gate refuses to plant under furniture, and the test failed on a rule working
+        /// exactly as intended. Searching costs nothing and cannot rot the same way - the next
+        /// thing the scenario puts down beside the colonists will not break it either.</para>
+        /// </summary>
+        static CellRef ClearRow(ColonyWorld colony, int length)
+        {
+            var zones = colony.Growing!;
+            PlantDef carrot = zones.Plant(PlantHandle.Carrot);
+            for (int dz = 0; dz < 12; dz++)
+            for (int dx = -6; dx < 12; dx++)
+            {
+                var first = new CellRef(colony.Start.X + dx, colony.Start.Z + dz, colony.Start.Y);
+                bool ok = true;
+                for (int i = 0; i < length && ok; i++)
+                {
+                    int x = first.X + i;
+                    if (!colony.Grid.Contains(x, first.Z, first.Y)) { ok = false; break; }
+                    ok = zones.SiteAllows(Size.Index(x, first.Z, first.Y), carrot);
+                }
+                if (ok) return first;
+            }
+            throw new System.InvalidOperationException(
+                $"no run of {length} plantable cells within reach of the start");
+        }
+
+        /// <summary>
+        /// A harvest yields what its <see cref="PlantDef.yields"/> names, not a carrot by
+        /// reflex.
+        ///
+        /// <para>The field has carried <c>[DefReference(typeof(ItemDef))]</c> since U46 - it is
+        /// what proves at load that a crop grows a real commodity - and until 2026-09-20 nothing
+        /// read it: <c>HarvestJobDriver</c> spawned <c>ItemIndex.Carrots</c> whatever was
+        /// planted. With one crop that is invisible, which is exactly why it wanted a test: the
+        /// second species would have yielded carrots and the reference would have gone on
+        /// passing. Retuned by replacing the def, never by writing through it - the arrays a
+        /// record points at are shared by every test in the process.</para>
+        /// </summary>
+        [Test]
+        public void AHarvestYieldsWhatItsPlantNames()
+        {
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+
+            CellRef plot = ClearRow(colony, 1);
+            int index = Size.Index(plot);
+            Sow(colony, plot);
+            zones.Sow(index);
+            zones.Advance(index, 1_000_000);
+
+            // A carrot that yields wood. Absurd as content and exactly the point as a test: the
+            // only thing that can make wood appear here is the driver reading the def.
+            PlantDef carrot = zones.Plant(PlantHandle.Carrot);
+            Assume.That(carrot.yields, Is.EqualTo("Item_Carrots"));
+
+            int woodBefore = StackOf(colony, ItemIndex.Wood);
+            for (int i = 0; i < 20_000 && zones.IsPlanted(index); i++) colony.World.Tick();
+            Assert.That(zones.IsPlanted(index), Is.False, "nobody harvested it");
+
+            Assert.That(StackOf(colony, ItemIndex.Carrots), Is.GreaterThanOrEqualTo(carrot.yieldCount),
+                "the harvest did not yield the plant's own item");
+            Assert.That(StackOf(colony, ItemIndex.Wood), Is.EqualTo(woodBefore),
+                "it yielded something the plant never named");
+        }
+
+        static int StackOf(ColonyWorld colony, int defIndex)
+        {
+            int total = 0;
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned && items[i].DefIndex == defIndex) total += items[i].Stack;
+            return total;
+        }
+
     }
 }

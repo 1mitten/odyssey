@@ -18,6 +18,19 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **A batch command cannot share a project with an open editor.** Same symptom, different cause. The wrapper now distinguishes the two: a live Unity process means "close the editor", no live process means the lock is stale and it is removed automatically.
 
+**Cancelling the wrapper does not cancel Unity, and the next run then reports the wrong thing** (2026-09-20, ten minutes). Stopping a backgrounded `scripts/unity.sh test playmode` kills the shell; the `Unity.exe` it launched goes on holding `Temp/UnityLockfile`, so the next two commands came back with *"this project is locked and a Unity process is running. Close the editor"* — which is true, accurate, and about a process that is not an editor and is nobody's but yours. Before concluding anything, list them with the project path and the batch flag:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
+  Select-Object ProcessId, CreationDate,
+    @{n='Proj';e={ if ($_.CommandLine -match '-projectpath\s+(\S+)') { $Matches[1] } }},
+    @{n='Batch';e={ $_.CommandLine -match '-batchmode' }}
+```
+
+A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
+
+**A first batch run in a fresh worktree is slow, and it is the Synty import.** About seven minutes before a single test executes, with `Library/` growing past 4 GB. `du -sh Library` rising means it is working; an empty `TestResults/` on its own means nothing yet.
+
 **Adding an assembly definition silently removes implicit package references.** Scripts under `Assets/Editor/` compile into `Assembly-CSharp-Editor`, which auto-references most packages. The moment an `.asmdef` covers them, every reference must be explicit. Adding `Odyssey.Editor.asmdef` broke `SyntyImport` because it uses URP types. Symptom: `CS0234: The type or namespace name X does not exist in the namespace Y`. Fix: add the package assemblies (`Unity.RenderPipelines.Core.Editor` and friends) to the asmdef `references`.
 
 **`AssetDatabase.ImportPackage(path, interactive: false)` only *queues* the import under `-executeMethod`.** The editor can exit having imported nothing, and the run reports success. `SyntyImport.cs` calls the editor's synchronous internal import instead. If that ever disappears, fall back to one `-importPackage` invocation per package.
