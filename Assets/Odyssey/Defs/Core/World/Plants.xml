@@ -1,0 +1,32 @@
+<Defs>
+
+  <!--
+    The crops the colony can grow, one Def per species.
+
+    ORDER IS NOT DECIDED HERE. A zone record stores its plant as a handle, and
+    WorldContent.PlantOrder is the list that decides which name is which handle, exactly as
+    TerrainOrder does for terrain. The order below is the same one only so the file reads as
+    the table does.
+
+    The numbers are docs/design/22-growing.md §2. growTicks counts growing-window ticks, not
+    clock ticks: 130,000 window ticks is four 60,000-tick days at the 32,500-tick daylight
+    window, with a quarter of the bar filling on day one so progress is visible. sowWorkTicks
+    includes breaking the cell's grass; the terrain itself is never changed by a sowing.
+    minFertility is per cent against ordinary soil — 70 admits grass (100) and bare earth
+    (85) and refuses gravel (55), because carrots in gravel read as a bug.
+  -->
+
+  <PlantDef>
+    <defName>Plant_Carrot</defName>
+    <label>carrot</label>
+    <description>A root vegetable that keeps without fuss and eats raw. Sows by hand into
+    open soil and stands three seasons of a day each before the cut.</description>
+    <growTicks>130000</growTicks>
+    <sowWorkTicks>170</sowWorkTicks>
+    <harvestWorkTicks>200</harvestWorkTicks>
+    <yieldCount>5</yieldCount>
+    <yields>Item_Carrots</yields>
+    <minFertility>70</minFertility>
+  </PlantDef>
+
+</Defs>

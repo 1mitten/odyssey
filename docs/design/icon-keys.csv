@@ -31,6 +31,7 @@ ui.res.wood,Wood,ui.res,M3,"Felled timber. The first thing the colony builds wit
 ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is always more"
 ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
+ui.res.carrots,Carrots,ui.res,M3,"The first field crop. Eaten straight, no cooking and no spoilage"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
@@ -92,6 +93,8 @@ ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
 ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
+ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
+ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
 ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem
@@ -407,6 +410,7 @@ ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately p
 ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
 ui.terrain.tree.conifer,Conifer,ui.terrain,M3,"An evergreen of the meadow. Chopped for wood"
 ui.terrain.tree.broadleaf,Broadleaf,ui.terrain,M3,"A broad-crowned tree of the meadow. Chopped for wood"
+ui.terrain.carrot,Carrot,ui.terrain,M3,"A root vegetable of the meadow. Grown in zones, cut at full growth"
 ui.settings.panel,Settings,ui.settings,M1,"What the game does, not what the colony does"
 ui.settings.graphics,Graphics,ui.settings,M1,"How the world is drawn. None of it reaches the simulation"
 ui.settings.interface,Interface,ui.settings,M1,"How the interface itself is drawn and how large it is"
@@ -436,6 +440,7 @@ ui.keys.speed3,Speed three,ui.keys,M3,"Run the clock at its third speed"
 ui.keys.mine,Mine tool,ui.keys,M3,"Arm the mine designation"
 ui.keys.fell,Chop tool,ui.keys,M3,"Arm the chop trees designation"
 ui.keys.cancel,Cancel tool,ui.keys,M3,"Arm the cancel designation"
+ui.keys.growzone,Growing zone tool,ui.keys,M3,"Arm the growing-zone designation"
 ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.debugmenu,Debug menu,ui.keys,M3,"Open the debug menu"
 ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Stored on the machine, in decibels"
@@ -449,6 +454,9 @@ ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
 ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
 ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
+ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
+ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
+ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
 ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
 ui.settings.volume.master,Master volume,ui.settings,M3,"Everything at once"
 ui.settings.volume.music,Music volume,ui.settings,M3,"What plays under the game"

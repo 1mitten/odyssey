@@ -899,6 +899,50 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The debug menu's day skip: spend this many real ticks right now, in one synchronous
+        /// batch, and let the next frame's normal loop redraw what moved. About a fifth of a
+        /// second for a whole day (the ten-day soak runs in under two), so it lands as one hitch
+        /// rather than a freeze.
+        ///
+        /// <para><b>Why a method on the root and not an intent.</b> Ticking is this class's one
+        /// job and the intent bus is drained <i>inside</i> a tick — a skip sent through it would
+        /// ask the world to re-enter its own tick, and a warp is not state for the simulation to
+        /// author anyway; it is the tester spending the same ticks the clock would have spent.
+        /// Every tick skipped is an ordinary tick: colonists walk, eat, sow and harvest through
+        /// it, the hash is taken at the same boundaries, and it works while paused, because the
+        /// paused branch only refuses the <em>clock</em>, not the world. The crop's four-day
+        /// wait is what this exists to skip (docs/design/22-growing.md §9): a day a press, and
+        /// the stage changes arrive at the same hour of the day each time.</para>
+        /// </summary>
+        public void DebugSkipTicks(int count)
+        {
+            if (_world == null || count <= 0) return;
+            _world.Tick(count);
+            _daylight?.Apply(_world.CurrentTick);
+        }
+
+        /// <summary>
+        /// The other half of the day skip (owner, 2026-09-19): skipping a WHOLE day lands where
+        /// you started, and everything that happened in between - the harvest above all -
+        /// happened inside the warp, unseen, so a field that ripes and ripes-again reads as
+        /// "seeds back down before a harvest I never watched". Skipping to MORNING hands the
+        /// clock back with a whole day ahead of it: the crops finish, the harvesters walk, the
+        /// sowers kneel, all at watchable speed, and the skip-a-day row stays for the long haul.
+        /// Morning is a sixth past midnight, ahead of the growth window's 15,000, so the day is
+        /// seen whole.
+        /// </summary>
+        public void DebugSkipToMorning()
+        {
+            if (_world == null || Colony == null) return;
+            int day = Colony.Pawns.Content.DayTicks;
+            int morning = day / 6;
+            int now = _world.CurrentTick % day;
+            int skip = (morning - now + day) % day;
+            if (skip == 0) skip = day;
+            DebugSkipTicks(skip);
+        }
+
+        /// <summary>
         /// The scene's own key light, when the inspector field is empty.
         ///
         /// <para>Found rather than created, because the scene builder already places a sun and a
@@ -995,6 +1039,17 @@ namespace Odyssey.Presentation.Bootstrap
             // this is worth: a tree fading a sixtieth of a second late is not observable, and
             // placing the figures first would mean drawing the world after the people in it.
             UpdateSightLines(_world.Views.Current, movePerTick);
+
+            // The crop mirror: the meshed world must already know a crop ripened this
+            // tick before the dirty chunk the simulation marked is rebuilt, or the field
+            // would redraw one stage behind what the orders and the figures show.
+            _model.UpdateCrops(_world.Views.Current.Plants);
+
+            // The zone mirror for the same reason: the field's tilled ground must be in
+            // place before the dirty chunk a designation marked is rebuilt, or a painted
+            // field would show its rows one refresh behind its tint.
+            _model.UpdateZones(_world.Views.Current.Zones);
+
             if (_renderer != null)
             {
                 _renderer.FallingItems.UpdateSnapshot(_world.Views.Current);
@@ -1022,6 +1077,7 @@ namespace Odyssey.Presentation.Bootstrap
                     _tickAlpha, movePerTick, _figures?.Drawn, _figures);
 
             DrawStandingOrders(_world.Views.Current);
+            DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
@@ -1110,6 +1166,139 @@ namespace Odyssey.Presentation.Bootstrap
                 if (orders[i].Progress > 0)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
+        }
+
+        /// <summary>The colour a growing zone's whole-tile cover is drawn in — a dark worked-soil
+        /// brown (owner, 2026-09-18: "make the entire tile brown so they can look like one patch
+        /// and make it a darker brown"). Drawn as a full-cell cover, no inset, at a higher alpha
+        /// than an order's mark, so the dirt texture underneath flattens into one patch; still no
+        /// order's hue, so a field and an order never ask to be told apart by reading a
+        /// tooltip.</summary>
+        /// <summary>The colour of a sown cell's seed specks - pale enough to read as seed against the dark soil, and nothing else on the board's floor is white.</summary>
+        public static readonly Color SeedSpeckColour = new Color(0.92f, 0.90f, 0.82f, 1f);
+
+        public static readonly Color ZoneTintColour = new Color(0.06f, 0.032f, 0.012f, 0.78f);
+
+        /// <summary>
+        /// Every growing-zone cell on a drawn layer, tinted.
+        ///
+        /// <para>The interim overlay until the crisp-bordered region shader of
+        /// <c>09-ui-and-input.md</c> §4.6 — the same debt the stockpiles carry, and the same
+        /// answer: paint the cells the player set aside so a field reads as one thing and not as
+        /// a mystery patch of short carrots.</para>
+        ///
+        /// <para><b>A cell mark, not a cell shade, and the geometry is why.</b>
+        /// <see cref="ChunkRenderer.DrawCellShade"/> fills its cell's whole volume, which is right
+        /// for a deconstruct order standing in the wall it is taking apart — and on a zone cell,
+        /// which is open air above the soil, it would draw a three-metre glass box standing over
+        /// every row of the field. <see cref="ChunkRenderer.DrawCellMark"/>'s plate sits at the
+        /// floor of that air cell, which is the ground surface: paint on the field, where the
+        /// player's eye already is.</para>
+        ///
+        /// <para>Filtered to the drawn band rather than the active layer, for the reason
+        /// <see cref="DrawStandingOrders"/> gives: the zone was painted where the player could
+        /// see, and that is where it must be drawn.</para>
+        /// </summary>
+        void DrawZones(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+
+            System.ReadOnlySpan<ZoneView> zones = snapshot.Zones;
+            if (zones.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+
+            for (int i = 0; i < zones.Length; i++)
+            {
+                CellRef cell = size.FromIndex(zones[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                _renderer.DrawZoneCover(cell, ZoneTintColour);
+            }
+
+            // The seed the sower left (owner, 2026-09-18: "some kind of seed on the surface like
+            // speckled white tiny dots to indicate it's sown"). A sown cell is a dark tile until
+            // the sprout's first stage is big enough to read, so the sowing itself is invisible
+            // for the first hours; the specks are the feedback, one handful per planted cell.
+            // The seed day and the sprout only: the specks are the seed, and they germinate away
+            // once there is a plant to see (owner, 2026-09-19: "the seeds should stay there at
+            // first - the sprouting should appear after a day rather than immediately" - which
+            // made the first day a stage of its own, nought, that draws specks and no plant).
+            System.ReadOnlySpan<PlantView> planted = snapshot.Plants;
+            for (int i = 0; i < planted.Length; i++)
+            {
+                if (planted[i].Stage > 1) continue;
+                CellRef cell = size.FromIndex(planted[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                _renderer.DrawSeedSpecks(cell, SeedSpeckColour);
+            }
+
+            // And while the seed is still going in (owner, 2026-09-18: "seeds should appear
+            // during when the colonist is on the ground for a little time, not after"). Gated on
+            // the KNEEL and not the job: a sower walks to her plot inside the same job, and the
+            // first version drew specks under her feet on every zoned tile she crossed - the
+            // owner watched seeds appear on a tile she merely walked over. The kneel plays only
+            // in the work toil, and a cell that already stands a plant draws its own specks (or
+            // its plants) and none of these.
+            //
+            // And not from the first frame of the kneel either (owner, 2026-09-19: "it should
+            // have a delay so the colonist is actually bent down for some time and seeds
+            // appear"): the specks wait out <see cref="Gesture.SeedSpecksAfter"/>
+            // of the kneel, measured on the serial's own clock below, so the ground stays bare
+            // while she is only arriving at the soil.
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JobDef != JobIndex.Sow) continue;
+                if (pawns[i].Gesture != PawnGesture.Sow) continue;
+                float kneelAge = KneelAge(pawns[i].Id, pawns[i].GestureSerial);
+                if (kneelAge < Gesture.SeedSpecksAfter) continue;
+                CellRef at = pawns[i].Cell;
+                if (at.Y < lowest || at.Y > highest) continue;
+                int atIndex = size.Index(at.X, at.Z, at.Y);
+                bool taken = false;
+                for (int z = 0; z < zones.Length; z++)
+                    if (zones[z].CellIndex == atIndex) { taken = true; break; }
+                if (!taken) continue;
+                for (int p = 0; p < planted.Length; p++)
+                    if (planted[p].CellIndex == atIndex) { taken = false; break; }
+                if (!taken) continue;
+                // How long since the handful opened: the bundle shows at the hand, the specks
+                // scatter and fall to their spots, and from then they are the seeds. The age
+                // past its threshold is the drop's own clock, so nothing else is timed.
+                _renderer.DrawSeedSpecks(at, SeedSpeckColour,
+                    kneelAge - Gesture.SeedSpecksAfter);
+            }
+        }
+
+        /// <summary>
+        /// When each pawn's current gesture began, on the frame clock: pawn id to the serial it
+        /// was last seen wearing and the time that serial was first seen in. The same
+        /// serial-differs test the figure director uses to fire a pose, answering a lazier
+        /// question — not "did it just begin" but "has it been running this long" — which is
+        /// what a drawn effect that should wait out part of a hold needs and no snapshot field
+        /// carries. Never cleared: a stale entry costs one dictionary slot per pawn the colony
+        /// has ever had, and a pawn that kneels again bumps its serial and re-times itself.
+        /// </summary>
+        readonly Dictionary<int, (byte Serial, float Started)> _gestureBegan = new();
+
+        /// <summary>
+        /// How long this pawn's current gesture has been running, in seconds — or -1 on
+        /// the first frame a serial is seen, the figure-director rule that keeps a colonist
+        /// walking into view from playing a gesture it never made. The seed specks read it
+        /// twice: once against <see cref="Gesture.SeedSpecksAfter"/> for the delay the kneel
+        /// is owed, and once past it, as the drop's own clock.
+        /// </summary>
+        float KneelAge(PawnId pawn, byte serial)
+        {
+            int id = pawn.Value;
+            if (!_gestureBegan.TryGetValue(id, out var began) || began.Serial != serial)
+            {
+                _gestureBegan[id] = (serial, Time.time);
+                return -1f;
+            }
+            return Time.time - began.Started;
         }
 
         /// <summary>
@@ -1524,12 +1713,16 @@ namespace Odyssey.Presentation.Bootstrap
             // Deconstruct is named rather than left to fall through. It fell through to the cancel
             // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
             // while the player was demolishing, and tuning the cancel colour would have silently
-            // re-tinted it.
+            // re-tinted it. The zone is named for the opposite reason: the preview is painted in
+            // the very tint the committed zone wears (ZoneTintColour), so what the player sees
+            // while dragging is the field they are about to have, not a promise in a different
+            // colour.
             Color tint = director.Tool switch
             {
                 DesignateTool.Mine => MineOrderColour,
                 DesignateTool.Fell => FellOrderColour,
                 DesignateTool.Deconstruct => DeconstructOrderColour,
+                DesignateTool.GrowZone => ZoneTintColour,
                 _ => PreviewCancelColour,
             };
 

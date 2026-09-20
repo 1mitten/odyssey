@@ -129,4 +129,35 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    The two ends of the crop, U47 (docs/design/22-growing.md section 6). Neither carries
+    workTicks: sowing and reaping are priced per plant, and the plant defs already carry the
+    numbers (170 to break ground, 200 to cut a ripe row) - the same argument Job_Mine makes,
+    that one constant here would make every crop cost the same.
+
+    Breaking ground includes clearing what the meadow grows there already; the terrain itself
+    is left alone, so there is no separate clearing job to price (a-08 section 4: the
+    reference folds clearing into sowing for the same reason).
+
+    Expiry is generous like mining's, because a zone can be a long walk from the pantry and a
+    job that expires on the way there is a field nobody ever sows.
+  -->
+  <JobDef>
+    <defName>Job_Sow</defName>
+    <driver>10</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>4</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Harvest</defName>
+    <driver>11</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>4</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

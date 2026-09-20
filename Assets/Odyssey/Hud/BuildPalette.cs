@@ -357,6 +357,46 @@ namespace Odyssey.Hud
             SelectionChanged?.Invoke();
         }
 
+        // ---------------------------------------------------------------- plant
+
+        /// <summary>What the armed sub-type is planted with, as a <see cref="PlantHandle"/>.</summary>
+        public int Plant => _designate.Plant;
+
+        /// <summary>
+        /// Whether the plant tier means anything right now. The growing zone's counterpart of
+        /// <see cref="WantsMaterial"/>, with one deliberate difference: Grow zone is itself a
+        /// pinned action, so the rule "hidden while a pinned action is held" exempts the tool
+        /// whose payload the tier <i>is</i>. Held, the zone tool's next drag plants — which is
+        /// exactly when the picker is wanted. Another pinned action held (cancel, mine) hides it,
+        /// on the same reasoning that hides the material band: the panel would be offering a
+        /// choice the next drag could not use.
+        /// </summary>
+        public bool WantsPlant
+        {
+            get
+            {
+                if (!PaletteTools.TryGet(_subType, out PaletteTool tool) || !tool.WantsPlant)
+                    return false;
+                string pinned = ArmedPinned;
+                return pinned.Length == 0 || pinned == PaletteTools.GrowZone;
+            }
+        }
+
+        /// <summary>
+        /// Choose the crop. Does not arm the tool, and does not remember per sub-type the way
+        /// <see cref="SelectMaterial"/> does — one crop exists, and a memory table for one row is
+        /// the second source of nothing.
+        /// </summary>
+        public void SelectPlant(int plant)
+        {
+            if (!WantsPlant) return;
+            if (!Array.Exists(PaletteTools.Plants, p => p == plant)) return;
+            if (_designate.Plant == plant) return;
+
+            _designate.ChoosePlant(plant);
+            SelectionChanged?.Invoke();
+        }
+
         /// <summary>
         /// Where the shell learns how much of a material the colony holds. Left null until a
         /// snapshot exists, and null means "in stock" rather than "out of stock" — an interface
@@ -390,7 +430,7 @@ namespace Odyssey.Hud
         // ---------------------------------------------------------------- readouts
 
         /// <summary>
-        /// Which of the four pinned actions the player is holding, or empty when they are holding
+        /// Which of the pinned actions the player is holding, or empty when they are holding
         /// a placement tool or nothing at all.
         ///
         /// <para>Asked of <see cref="DesignateDirector"/> rather than remembered here, for the
@@ -442,7 +482,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The live breadcrumb — "Floors › Floor › Wood" — present in all three layouts.
+        /// The live breadcrumb — "Zones › Growing zone › Carrot" — present in all three layouts.
         ///
         /// <para>It stops at whatever tier is meaningful: an order has no material, so its
         /// breadcrumb has two parts, and a category whose sub-type is disabled still names the
@@ -454,6 +494,11 @@ namespace Odyssey.Hud
             {
                 string crumb = CategoryLabel;
                 if (_subType.Length > 0) crumb += " › " + Registry.Label(_subType);
+                if (WantsPlant)
+                {
+                    string plant = BuildLabels.PlantKey(Plant);
+                    if (plant.Length > 0) crumb += " › " + Registry.Label(plant);
+                }
                 if (WantsMaterial)
                 {
                     string material = BuildLabels.StuffKey(Material);

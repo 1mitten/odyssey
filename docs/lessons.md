@@ -2084,6 +2084,76 @@ through a shell heredoc into a Python one-liner and the backslash was eaten some
 the "fix" wrote the NUL straight back and the file still had one. Concatenating `bytes([92])` and
 `b"0"` is ugly and cannot be misread by anything in between.
 
+
+## An empty guid in a committed .meta fails Unity one file away from the truth
+
+The first Unity editmode run on the growing branch failed with `CS0246: 'SowJobDriver' could not
+be found` in `PawnRegistry.cs` — pointing at the file that *references* the missing type, while
+the file that *declares* it sat in the same folder, correct namespace, correct classes, and was
+not mentioned anywhere in the log. The cause: five `.meta` files written by script across four
+earlier commits carried `guid: ` — empty. Unity cannot give an asset an identity without a guid,
+and its import failure surfaces as a compile error about the referencing file, never about the
+meta.
+
+Two things made it cheap to walk past. The fast tier is green without ever reading a `.meta`, so
+"tests pass" said nothing about asset identity; and the error text named the wrong file, so the
+first instinct was to check `using` directives. The audit that finds it is one line: every file
+added under `Assets/` must have a `.meta` whose `guid:` line is non-empty — and the audit must
+run on the branch, because nothing else ever reads those bytes. Generated metas need a real
+`uuid4().hex`, not the template with the value left blank.
+
+*(Also worth its sentence: `git diff main -- Assets/` from a worktree lists files main has and
+the worktree does not, so a naive "missing meta" audit reports phantom files. Test the `.cs`
+exists before blaming its `.meta`.)*
+## A bounds guard turned a contract mismatch into silence, and hand-built test data kept it invisible
+
+**2026-09-19, the growing branch's "one carrot" mystery.** `PlantView.Plant`'s contract promises a
+nought-based `PlantHandle`; the contributor published the one-based crop slot instead, and the
+render mirror added one of its own on arrival. The carrot therefore asked for slot two of a
+one-plant table - where `CropModule`'s bounds guard, written to keep a future def count mismatch
+from crashing the renderer, quietly answered nought, and a ripe field drew nothing at all. No
+error, no log, no missing art: a guard meant to fail safe failed silent, and the fault surfaced
+as the owner's word "one carrot" three sessions later.
+
+The reason every test was green is the part worth keeping: the render tests hand-built their
+`PlantView`s from the contract's convention, so the bytes the tests fed and the bytes the game
+fed were different numbers meaning the same plant. **Pin the contributor, not the consumer's
+interpretation of it** - a test that reads the real snapshot back
+(`APublishedPlantCarriesItsHandleAndNotTheCropSlot`) is the only kind that can see a convention
+gap, and it costs five lines.
+
+And when a view field has a "nought means none" encoding beside it, write the publish site and
+the read site in the same sentence and check them against each other; the off-by-one that cost
+three sessions lives exactly in the space between two people each being locally correct.
+## A sticky view field leaks its last value into the next toil - whoever gates on it must author its end
+
+**2026-09-19, the seed-speck flicker.** `PawnView.Gesture` is deliberately sticky: a flag set
+for one tick would be missed between frames at speed three, so it stands until the next
+gesture. That contract is right, and it has a cost nobody had paid yet: a sow kneel nobody
+cleared carried `Sow` through the whole walk to the next plot, and the seed specks - gated on
+the gesture, with an age tracker that already read "old" - flashed under the sower's feet on
+every fallow tile she crossed. The owner watched seeds "appear immediately ... then
+disappear - then it appears again" for two sessions before it was read as one fault.
+
+The rule: **a momentary state that is sticky for the frame rate's sake must be un-stuck by
+the same code that sticks it.** The drivers now clear the gesture on the boundary the work
+completes (and on displacement), so the value's lifetime is the toil's lifetime. If you are
+about to gate a drawing on a sticky field, first ask who ends it - and if the answer is
+"nobody", that is the bug, found in advance.
+## An instrument that cannot reproduce the fault cannot certify its fix
+
+**2026-09-20, the zone-cover grid, twice.** The photo sheet said "no seams" while the owner's
+screenshots showed a grid, and the sheet was right about what it photographed: `CropCheck`
+never set `GroundRelief.Amplitude`, so its board was dead flat, and the seams were a question
+about neighbouring drapes disagreeing - a flat board has no disagreement to show. The fix
+looked verified for a day while the fault stood.
+
+The rule: **before a photo answers a question, check it can ask it.** A harness that
+reproduces the played board's relief, lighting and packs is the only one whose "looks right"
+means anything; the cheapest check is to reproduce a KNOWN fault in it first - the grid was
+reproduced the moment the amplitude was set, and the fix was then verified against the real
+thing rather than against nothing. CropCheck now sets the played amplitude and restores it in
+its finally, and the blindness is recorded beside the shot that suffered from it.
 ## A Unity build rewrites settings assets it was never asked to touch
 
 **2026-09-19, the first player build this project had ever run.** `scripts/unity.sh build`

@@ -97,6 +97,15 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Events.Incidents? Incidents { get; set; }
 
+        /// <summary>
+        /// The growing zones, when the world has them. Null in a bare pawn fixture, exactly as
+        /// <see cref="Designations"/> is, so the sowing work giver answers no rather than throwing
+        /// in a test that never meant to farm anything. Built by <see cref="ColonyComposition.AddColony"/>,
+        /// which is the one place that holds both the cell grid the zones gate on and the plant
+        /// table they are read against.
+        /// </summary>
+        public Growing.GrowingZones? Growing { get; set; }
+
 
         /// <summary>The world being ticked, valid inside a pawn system's tick.</summary>
         public SimWorld? World { get; private set; }

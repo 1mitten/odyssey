@@ -161,6 +161,31 @@ namespace Odyssey.Tests.Sim
     /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
     /// else moving would have meant something had come along uninvited.</para>
     ///
+    /// <para><b>Moved an eleventh time the same day, when the growing branch met main a second
+    /// time, and the meadow is the control again.</b> Main had re-baked for the terrace guard and
+    /// the hop’s price; the growing side had re-baked for the zones and the growing work. Each
+    /// side’s numbers are true only of its own code, so neither side’s table survives and the
+    /// merged values below are the merged run’s. Read the shape: <b>the barren meadow did not
+    /// move at all from the growing side’s values</b> — both of main’s changes are step-priced,
+    /// <c>MakeBarren</c> has no step to guard or hop, so its board and its walks are byte-for-byte
+    /// what the growing side measured. The wooded board’s <see cref="Generated"/> is this
+    /// merge’s own — the terrace guard’s few dozen fewer trees plus growing’s counted fields,
+    /// each of which alone had already moved one parent — and its <see cref="Simulated"/> adds
+    /// the hop’s price to the growing side’s walks. The ruined city’s <see cref="Generated"/>
+    /// stayed on the growing side’s value because its generator has no <c>TreePass</c>, while its
+    /// <see cref="Simulated"/> moved for the hop alone, which is exactly what the tenth entry
+    /// predicts for it.</para>
+    /// <para><b>Moved a twelfth time the same day, by main's own carry sounds and the title
+    /// screen's bed (PR #133), and only the simulation moved.</b> All three
+    /// <see cref="Case.Simulated"/> values are this merge's own measurement — the growing
+    /// side's walks and #133's sounds in one run, neither parent's. And <b>every
+    /// <see cref="Case.Generated"/> value landed on the growing side's own numbers to the
+    /// digit</b>, which is the cleanest signature this file has ever shown: PR #133 touched no
+    /// board, so the union's generated worlds are byte-for-byte the ones the eleventh entry
+    /// below measured. The merge that sat between — main's #129 and #130 — moved nothing here
+    /// at all, carried items and player shaders being hash-silent, which is why it has no
+    /// entry of its own.</para>
+    ///
     /// <para><b>Moved an eleventh time, 2026-09-20, by the events (design 23), all six numbers,
     /// and for the dullest of reasons: the hash sees more.</b> Two new components joined every
     /// colony — the incident ledger and the things in the air — and both hash their state before
@@ -171,8 +196,7 @@ namespace Odyssey.Tests.Sim
     /// colonies did nothing different — the round trips, the headless runs and the soak all
     /// agree with themselves as before. The control this time is the shape of the failure:
     /// all three <c>Generated</c> values moved together, including the barren meadow's, which
-    /// no gameplay change has ever touched.</para>
-    /// </summary>
+    /// no gameplay change has ever touched.</para>    /// </summary>
     public static class Golden
     {
         /// <summary>One world, pinned: how to build it, how long to run it, and what it came to.</summary>
@@ -226,8 +250,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 11463753985818633532UL,
-            Simulated = 5594735824536693632UL,
+            Generated = 12644359494592048924UL,
+            Simulated = 1555725465344136436UL,
         };
 
         /// <summary>
@@ -243,8 +267,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 7003175445781465244UL,
-            Simulated = 7059602331435392134UL,
+            Generated = 11578114989140489809UL,
+            Simulated = 5049168198028942945UL,
         };
 
         /// <summary>
@@ -280,8 +304,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 15228913419309580379UL,
-            Simulated = 16449829814357915634UL,
+            Generated = 5935763083478690681UL,
+            Simulated = 2942773287113290832UL,
         };
     }
 }
