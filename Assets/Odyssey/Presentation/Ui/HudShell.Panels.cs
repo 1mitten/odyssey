@@ -911,6 +911,118 @@ namespace Odyssey.Presentation.Ui
 
             _bulletinsPanel.style.display = DisplayStyle.None;
             column.Add(_bulletinsPanel);
+
+            // ---- toasts, at the foot of that same column (SK4), under the Events panel so that
+            // a six-second row arriving and leaving never steps the standing panels up and down.
+            // No header: the alerts panel earns a heading because it is a standing list a player
+            // comes back to, and a toast is a line that is already leaving.
+            _toastsPanel = Panel("toasts", "toasts");
+            _toastRows = new VisualElement();
+            _toastRows.AddToClassList("toasts__rows");
+            _toastsPanel.Add(_toastRows);
+            _toastsPanel.style.display = DisplayStyle.None;
+            column.Add(_toastsPanel);
+        }
+
+        /// <summary>
+        /// The transient toast stack (SK4): what happened, said once, gone by itself.
+        ///
+        /// <para>Driven from <see cref="RefreshAlerts"/> rather than from the frame loop directly,
+        /// because that method has four call sites and a toast that is not expired on every one of
+        /// them is a toast that never leaves. One place to call it from is worth more here than the
+        /// tidier separation.</para>
+        /// </summary>
+        void RefreshToasts()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+
+            _toasts.Refresh(world.Views.Current, Time.unscaledTimeAsDouble);
+
+            // One chime for the refresh however many rows arrived in it, the way the alerts panel
+            // sounds once for several conditions crossing together. The count comes from the model:
+            // AlertChimeWatch's own remarks record what it cost when the audio kept its own copy of
+            // a rule a model already owned.
+            if (_toasts.Added > 0)
+                _boot.Audio?.PlayAlert(Audio.AlertChime.ForSeverity(_toasts.LoudestAdded));
+
+            _toastsPanel.style.display =
+                _toasts.Rows.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+
+            while (_toastViews.Count < _toasts.Rows.Count) _toastViews.Add(NewToastRow());
+            while (_toastViews.Count > _toasts.Rows.Count)
+            {
+                _toastViews[^1].Root.RemoveFromHierarchy();
+                _toastViews.RemoveAt(_toastViews.Count - 1);
+            }
+
+            for (int i = 0; i < _toasts.Rows.Count; i++)
+            {
+                ToastRow model = _toasts.Rows[i];
+                ToastRowView view = _toastViews[i];
+
+                if (view.Serial == model.Serial) continue;
+                view.Serial = model.Serial;
+                view.TargetPawn = model.Pawn;
+
+                view.Icon.Kind = HudGlyphKind.Info;
+                view.Icon.Tint = HudTokens.Accent;
+
+                // Three labels, in the model's own order. The middle one carries the level and is
+                // already tinted, so nothing here decides a colour per row.
+                HudText.Set(view.Lead, model.LeadBefore, HudTextRole.Body);
+                HudText.Set(view.Emphasis, model.Emphasis, HudTextRole.Body);
+                HudText.Set(view.Trail, model.LeadAfter, HudTextRole.Body);
+
+                // An empty piece is taken out of the row rather than left as a zero-width label,
+                // so no stray spacing can creep in around it. The trail is empty for the sentence
+                // the registry ships, which puts the level last.
+                view.Emphasis.style.display =
+                    model.Emphasis.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                view.Trail.style.display =
+                    model.LeadAfter.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            }
+        }
+
+        ToastRowView NewToastRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("toast");
+
+            var icon = new HudGlyph(HudGlyphKind.Info, IconBadge.BarSize, HudTokens.Accent);
+            icon.AddToClassList("toast__icon");
+
+            // The line in three pieces: the words before the level, the level, and anything the
+            // registry's sentence puts after it. Only the middle one is coloured, and it is
+            // coloured once here rather than per refresh because it never changes.
+            Label lead = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__lead");
+            Label emphasis = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__level");
+            Label trail = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__trail");
+            emphasis.style.color = HudTokens.Warn;
+
+            row.Add(icon);
+            row.Add(lead);
+            row.Add(emphasis);
+            row.Add(trail);
+            _toastRows.Add(row);
+
+            var view = new ToastRowView
+            {
+                Root = row, Icon = icon, Lead = lead, Emphasis = emphasis, Trail = trail,
+            };
+
+            // Clicking selects the colonist it is about, the way an alert row does. There is no
+            // dismiss control: the row is already leaving, and a control that raced a six-second
+            // timer would be a control that sometimes did nothing.
+            row.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                var world = _boot?.World;
+                if (world == null || !view.TargetPawn.IsValid) return;
+                _directors?.ChooseColonist(view.TargetPawn, world.Views.Current);
+            });
+
+            return view;
         }
 
         void RefreshClock()
@@ -992,6 +1104,10 @@ namespace Odyssey.Presentation.Ui
 
             _alertsPanel.style.display =
                 _alerts.Rows.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+
+            // The toasts ride this method's four call sites (SK4) — see RefreshToasts. Last, so the
+            // two stacks are written in the order they are drawn in.
+            RefreshToasts();
         }
 
         void RefreshBulletins()

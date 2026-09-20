@@ -71,6 +71,9 @@ namespace Odyssey.Presentation.Ui
         /// the audio director because the panel is what knows an alert has appeared.</summary>
         readonly Audio.AlertChimeWatch _chimes = new Audio.AlertChimeWatch();
 
+        /// <summary>The transient toast stack (SK4), which is not an alert and not a bulletin.</summary>
+        readonly ToastModel _toasts = new ToastModel();
+
         OdysseyBootstrap? _boot;
         SliceCameraRig? _rig;
         HudDirectors? _directors;
@@ -162,6 +165,11 @@ namespace Odyssey.Presentation.Ui
         VisualElement _bulletinRows = null!;
         readonly List<BulletinRowView> _bulletinViews = new List<BulletinRowView>();
         int _bulletinsDrawn = -1;
+
+        // ---- toasts (SK4), at the foot of that same column
+        VisualElement _toastsPanel = null!;
+        VisualElement _toastRows = null!;
+        readonly List<ToastRowView> _toastViews = new List<ToastRowView>();
 
         // ---- depth rail (A11)
         VisualElement _railCells = null!;
@@ -404,6 +412,36 @@ namespace Odyssey.Presentation.Ui
             public CellRef TargetCell;
         }
 
+        /// <summary>
+        /// One transient toast row (SK4). Far thinner than an alert row: no dismiss control — the
+        /// row is already leaving — no cell target, and one label rather than four, because a toast
+        /// is one sentence and not a lead with a trailing detail.
+        /// </summary>
+        sealed class ToastRowView
+        {
+            public VisualElement Root = null!;
+            public HudGlyph Icon = null!;
+
+            /// <summary>
+            /// The line in three labels rather than one, so the level reads in its own colour
+            /// (owner, 2026-09-21). The model decides which piece is which; these just draw what
+            /// they are given, which is why there is no parsing on this side.
+            /// </summary>
+            public Label Lead = null!;
+
+            public Label Emphasis = null!;
+            public Label Trail = null!;
+            public PawnId TargetPawn;
+
+            /// <summary>
+            /// The model row this view is currently showing. Rows are pooled and the stack shifts
+            /// when the oldest drops off, so a view's contents are rewritten only when the serial in
+            /// its slot changes — which is what stops a six-second row rebuilding its string four
+            /// times a second for its whole life.
+            /// </summary>
+            public int Serial = int.MinValue;
+        }
+
         class RailCellView
         {
             public VisualElement Root = null!;
@@ -437,6 +475,18 @@ namespace Odyssey.Presentation.Ui
             public VisualElement Passion = null!;
 
             /// <summary>
+            /// The experience bar's fill, or null on a grid that does not draw one (SK3).
+            ///
+            /// <para>Absolutely positioned, so it costs the row no height: <c>HudLayout.SkillRow</c>
+            /// is 19 px and the colonist pane is one fixed height across every tab, so a bar in the
+            /// flow would have grown seven rows and moved the pane's top edge — which is the thing
+            /// the fixed height exists to stop.</para>
+            /// </summary>
+            public VisualElement? Track;
+
+            public VisualElement? Fill;
+
+            /// <summary>
             /// The steps this line is set at, carried on the view because <c>SetSkillLine</c>
             /// rewrites both strings and would otherwise reset them to the inspect pane's. The
             /// setup page sits one step higher up the scale (owner, 2026-09-18).
@@ -449,6 +499,14 @@ namespace Odyssey.Presentation.Ui
             public int LastLevel = int.MinValue;
             public int LastPassion = int.MinValue;
             public bool LastLive;
+
+            /// <summary>
+            /// The width the fill is set to, in per mille. Unlike every other field on this view
+            /// this one really does change on most refreshes — that is the whole point of it — so
+            /// the guard is here to skip the style write on the refreshes where it has not, not to
+            /// pretend it is rare.
+            /// </summary>
+            public int LastProgress = int.MinValue;
         }
 
         /// <summary>

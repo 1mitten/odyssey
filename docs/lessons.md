@@ -2390,3 +2390,81 @@ in full. **The real fix for this class is to assert the shape of a cost rather t
 the defect it guards made publishing scale with the area of the layer, so the same measurement on
 two board sizes differs by four with the bug and by nothing without it, and a ratio does not care
 how fast the machine is. Recorded in the test rather than done on a red `main`.
+
+## Re-check the base branch before claiming a finding, not only before starting
+
+A session on 2026-09-20 read `main` and its own base branch once, at the start, then worked for
+several hours. It was wrong three times for that one reason:
+
+- It reported a stale `CLAUDE.md` known gap as its own finding. The baseline audit had caught it the
+  previous day and already struck it through on `main` — where the line is deliberately **kept**
+  struck through as the worked example of that exact failure.
+- It wrote a whole unit that already existed. A parallel agent added the identical growing rate
+  curve on the branch this one was based on — same def values, same re-baked content fingerprint,
+  because it was byte-for-byte the same change. A test on that branch even said *"another agent is
+  addressing skills"*. Neither session looked at the other's head again after starting.
+- It worked around a bug that was already fixed, running the wiki gate under `python3.13` because
+  `build_wiki.py` had a 3.12-only f-string. `main` had repaired that line the day before.
+
+**The cost is not the wasted work, it is the false record.** Two design documents and a journal
+entry claimed credit for somebody else's change and had to be corrected, and a commit message
+asserted three goldens had moved when none had.
+
+**The checks, and they are seconds each:**
+
+- `git fetch origin main <your-base>` and re-read the diff **before writing a finding down**, not
+  just before starting. A claim that something is stale, missing or broken is a claim about a branch
+  at a moment, and both move.
+- Before adding a Def value or a table row, grep the base branch for it. An identical change on
+  another branch is far likelier than it sounds when several agents run at once.
+- Before working around tooling that fails, check whether the base fixed it. A workaround that
+  outlives its bug is a second mechanism nobody knows to delete.
+
+**And the reverse holds when several agents run in parallel**, which this project does: assume
+somebody else may be in the same file, and prefer a unit that is defensibly yours — a bug nothing
+else is looking at — over one any concurrent session would reach for from the same stale note.
+
+## The licensed packs must not live inside a worktree
+
+**2026-09-20: they did, and the machine lost them.**
+
+`Assets/Synty` is gitignored, so every checkout needs its own copy or its own link. The arrangement
+that had grown up on the Windows machine was a chain: one worktree, `D:\code\odyssey-audio`, held
+the real folder, `D:\code\odyssey\Assets\Synty` was a junction to it, and the other fifteen
+checkouts were junctions to one or the other. Sixteen checkouts, one copy, no duplication — which is
+why it looked like the right answer.
+
+It has one property that is not obvious until it bites: **the real packs are inside something whose
+whole purpose is to be disposable.** A worktree is removed when its branch is done. `git worktree
+remove` and a recursive delete both take the directory, and the directory is where the packs were.
+That worktree was removed while a session was running — the session read the packs at the start and
+found the directory gone later — and every junction on the machine went dangling at once, including
+the one in the main checkout. Nothing is in the recycle bin: neither `rm -rf` nor `git worktree
+remove` puts anything there.
+
+**The symptom does not look like a missing folder.** The build is green, both test tiers pass, and
+`failed` is 0 in both. What changes is the *skipped* count: five PlayMode tests ignore themselves
+with reasons like *"the colonist rows resolved to no art"*, and the game draws untextured primitives
+in the editor. A lower `passed` number with `failed=0` is the tell — **read the skip reasons before
+reading it as a regression**, and read it as a question about the machine rather than the branch.
+
+**The rule:** the real packs live somewhere no git command will ever remove — a plain directory
+outside every checkout, such as `D:\assets\Synty` — and *every* checkout including the main one is a
+junction into it. Then a worktree removal can only ever take a link.
+
+**Recovery, when it has already happened.** A deleted worktree lands in `D:\$RECYCLE.BIN` under a
+`$R…` directory, and **the COM recycle-bin listing does not show these** — enumerate the `$R*`
+directories on disk instead. Most of the copies found that way are themselves junctions and restore
+nothing; the one that is a *real* directory is the one that matters, and on this project it has
+**18 entries, 15,868 files and 1.54 GB**. `robocopy <src> <dst> /E /COPY:DAT /DCOPY:DAT` it to the
+canonical path, copy `Assets\Synty.meta` beside it, then sweep `D:\code` for junctions whose target
+no longer resolves and repoint them. Copy rather than move, so the bin copy survives as a fallback.
+
+**And before removing a worktree, unlink first:**
+
+```
+cmd /c rmdir "D:\code\<worktree>\Assets\Synty"     # removes the junction, not its target
+git worktree remove D:\code\<worktree>
+```
+
+`rmdir` on a junction removes the link. A recursive delete follows it.

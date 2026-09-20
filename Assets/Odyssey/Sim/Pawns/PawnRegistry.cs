@@ -262,9 +262,14 @@ namespace Odyssey.Sim.Pawns
                 // simulation content and is not published.
                 for (int s = 0; s < SkillIndex.Count; s++)
                 {
-                    writer.AddPawnAspect(pawn.Id, SkillAspects.Level[s], pawn.SkillLevel(s));
+                    // The level and the progress come out of one walk of the ladder (SK2). Asking
+                    // SkillLevel for one and ProgressPerMille for the other would scan the same
+                    // twenty entries twice, every tick, for every skill of every colonist.
+                    int progress = _ctx.Content.Skills[s].ProgressPerMille(pawn.Skills[s], out int level);
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Level[s], level);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Passion[s], pawn.Passions[s]);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Experience[s], pawn.Skills[s]);
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Progress[s], progress);
                 }
 
                 // The work priorities, on the same terms and through the same channel (design 27).

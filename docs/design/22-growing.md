@@ -117,6 +117,22 @@ does something a player can feel**, which closes a gap CLAUDE.md had listed as o
 the one thing on the playtest list that a still cannot show. §3a of `17-rates-and-stats.md`
 still owns the shape of the curve itself.
 
+**It is cutting's curve, exactly, and that is the decision.** They are the two plant work types, and
+the design had felling training Growing outright until 2026-09-18 (`15-skills.md` §6.2) — so a
+difference between them is not the default, it is a claim, and it would need a justification and a
+measurement. There is neither. A novice breaks ground at ×0.60 and a master at ×2.60.
+
+**It does not touch the season.** The curve scales the *labour* of sowing and reaping; time-to-ripe
+is the plant's own `growTicks` and nothing here reads it. So a skilled grower works a field faster
+without hurrying the crop, and the four-days-to-first-food guess §9 leaves open is unaffected by
+this number — `growTicks` is still its only knob.
+
+**No golden moved**, which was measured rather than assumed. A rate change to a work type normally
+moves every Simulated hash; this moved none, because the golden worlds are bare seeds with no zone
+painted on them, so no sow or harvest job is ever created and the curve is never consulted. The
+field soak does exercise it and asserts the loop's behaviour rather than a hash. The day a golden
+window includes a zone, this will move a hash and that will be correct.
+
 Both drivers are `FellJobDriver`'s shape with one simplification: **the colonist stands in the
 cell, not beside it.** A crop is ground, not an edifice — it blocks nothing, so the stand-beside
 stance and its reach check have nothing to guard. Walk to the cell, work for the def's price,

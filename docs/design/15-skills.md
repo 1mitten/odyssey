@@ -227,3 +227,333 @@ says "trained by felling, which is plant work" — precisely so it can be object
   `IconArt` loads from `Assets/Art/Ui/Resources/odyssey/icons`. Anything it had ever exported
   would have drawn the placeholder square, silently, because a key with no art is not an error
   and is not logged.
+
+---
+
+## 8. The bar, the toast, and two rows that had been lying (SK2–SK5, 2026-09-20)
+
+**What the owner asked for.** *"Enable skills for chopping, mining and plants/gardening"*, plus a bar
+in the colonist card that fills as the work is done, a level-up that increments and raises a positive
+notification, and consideration of *"traits or 1/2 stars"*.
+
+**Almost none of that turned out to be missing**, and working out what actually was took longer than
+building it. Chopping and mining were fully simulated and had driven work speed since WS2; gardening
+was built and open as PR #119; passion was rolled, multiplied and drawn as pips already. What was
+missing was a way to *see* any of it, and one bug.
+
+**There is no `SK1`.** It was to be the growing rate curve, and #119 added the identical curve a day
+earlier — same `rateSkill`, same base, same slope, same re-baked fingerprint, because it is the same
+content change. Two agents wrote one unit because both read the same "no curve yet" note and neither
+re-checked the other's branch. The duplicate was dropped on merge and the curve is #119's.
+
+**Of three "stale claims" this work reported, only one was its own finding:**
+
+| Claim | Truth | Who found it |
+|---|---|---|
+| `CLAUDE.md`: *"a skill level buys nothing a player can feel"* | Stale since WS2/WS3 | **The baseline audit, 2026-09-19** — already struck through on `main` a day before this work read it as live. Not a finding here. |
+| §1 above: three simulated skills | **Five**: hauling, cutting, mining, construction, growing | Correct, but it followed from reading `Skills.xml`, which anybody would |
+| `SkillCatalogue`: construction *"nothing is built yet"*, growing *"nothing is planted yet"* | **Both false.** Construction since U26, growing since U47 | **This work.** Unrecorded on `main` or on #119. |
+
+**So the one real finding is the third**, and it is the interesting one anyway: a row's liveness is a
+*claim about the simulation*, nothing was checking it, and two features shipped past it — including
+growing, which added the skill and the jobs in one branch and left its own row dead.
+
+The rest of the work is making what was already earned visible while it is earned.
+
+### 8a. Two reversals, stated rather than slipped in
+
+**§6.3 is reversed.** It chose *"a row is an icon, a name, a level and a passion mark. No progress
+bar: thirteen bars is a lot of furniture."* The objection was sound and the answer is to narrow it,
+not to overrule it: **the bar is on live rows only, so there are four, not fourteen.** The greyed rows
+keep a name and a reason and draw no bar at all.
+
+**§6.2's leftover is gone.** It had `Skill_Cutting` feeding `ui.skill.growing` — already undone on
+2026-09-18 when Chopping got its own row, and now growing has its own simulation too, so nothing
+borrows anything.
+
+### 8b. Experience per tick, not per hit — and why that is what the owner asked for
+
+The owner asked for experience *"with every hit… depending on the success of that hit"*.
+`17-rates-and-stats.md` §3e refuses per-strike mechanics outright — *"mining as rock hit points… a
+second mechanism with its own state, save and hash"* — so this could not be taken literally without
+overturning a recorded decision.
+
+It did not need to be. **Experience already accrues every tick of work** (`Job.Work` →
+`Pawn.GainExperience`, 110 per tick per `Jobs.xml`), which is *finer* than per hit, not coarser. What
+was missing was any way to see it. So the bar is the answer to the request and the arithmetic keeps
+one owner.
+
+**The bar does move, and this was computed before it was built** rather than hoped for. At 60 ticks a
+second a working colonist earns 6,600 experience a second before passion:
+
+| Passion | Per second | Level 0 → 1 (1,000 points) | Bar |
+|---|---|---|---|
+| None ×0.35 | 2,310 | ~7 min of solid work | 0.23 %/s |
+| Minor ×1.0 | 6,600 | ~2.5 min | 0.66 %/s |
+| Major ×1.5 | 9,900 | ~1.7 min | 0.99 %/s |
+
+About **1.5 px a second** on a 231 px bar at level 0, three times that at speed 3. By level 9→10 the
+span is ten times larger and it is a pixel every seven seconds — correct, and the reason the toast
+matters more than the bar at high levels. It also confirms the soft cap's tuning: 4,000,000 a day is
+reached after ~10 minutes of work against a 16.7-minute day, the two-thirds relationship `Jobs.xml`
+claims.
+
+**The per-stroke pip is not built.** The plan had a flash on the bar timed to each drawn stroke. It
+wants the pane coupled to the world's stroke clock for a decoration over a bar that is already
+correct, and the bar's continuous movement is what the request was actually about. Left out; the
+playtest can say whether anything is missing.
+
+### 8c. Passion, and no traits
+
+**Passion is the "1/2 stars", and it was already built** — three tiers rolled deterministically from
+the colonist's own `RollSeed`, multiplying experience by ×0.35 / ×1.0 / ×1.5, and already drawn as one
+or two pips on the row. Nothing was needed but to use it: **the bar's fill takes its colour from the
+passion**, so a burning skill both fills faster and looks different doing it. A four-fold spread is
+otherwise invisible in something moving at 1.5 px a second.
+
+**Traits are out of scope and the seam stays empty.** `Pawn.LearningFactorPerMille()` returns 1,000
+and is the hook a trait would arrive through. Building one means new Defs, a save bump, a hash move
+and fresh rolls that shift every existing colonist — real work, and none of it needed to answer the
+question the owner asked.
+
+### 8d. A level-up needs nothing from the simulation, and that is the interesting part
+
+The level of every skill of **every** colonist is already published every frame — not just the
+selected one (`PawnRegistry`). So a level-up is detected on the presentation side by comparing against
+what was last seen. No event, no flag, no queue, no saved field, no hash movement.
+
+**Why polling cannot miss one.** `PawnGesture` needs a sticky flag *and* a serial because a gesture is
+an *instant*: a reader that blinks between two frames misses it for ever. A level is a *standing
+value* — whatever happened in between, the next read still says what the level is now. The worst a
+slow poll can do is see two levels as one rise, and `SkillLevelWatch` reports *the level reached*
+rather than the number of steps taken precisely so that case needs no handling. It runs on the Mid
+bucket at 4 Hz beside the alerts, so a toast can be up to 250 ms late, which nobody can perceive.
+
+Three rules, each a test: **first sight of a colonist is silent** (or everybody announces her starting
+roll on every load — the gesture serial's own rule); **a fall through decay is silent** and becomes the
+new mark; **a colonist off the frame is forgotten**, so a dead one cannot leave an entry for a later
+pawn to be measured against.
+
+### 8e. A toast, not an alert and not a bulletin
+
+The notification is a **transient toast** — design 09 §2.3's own word, used there for a rejected
+intent that *"surfaces as a transient toast rather than a bulletin"*. The channel was named in the
+design and never built; this builds it, and rejections (today only counted into a log) are its obvious
+second customer.
+
+Three channels, and 09 §3.1 already insists the first two stay apart because *"merging them produces
+a system that is wrong for both"*:
+
+| | What it is | Life |
+|---|---|---|
+| **Alert** | a *condition* — a job the player has not done | re-evaluated every refresh, clears itself |
+| **Bulletin** | an *event worth keeping* — an arrival, a death, a raid | until dismissed by hand, then archived |
+| **Toast** | an *event worth mentioning* | six seconds, cannot be dismissed |
+
+**Why a level-up is a toast.** Frequency decides it. A bulletin is a card that waits to be cleared,
+which is right for the fifteen things `ui.bulletin.*` names — all of them a handful of times in a
+colony's life. A level lands every couple of minutes per colonist at low levels, so as a bulletin it
+would be a stack cleared as a chore, and the chore would teach the player to clear the raid warning
+beside it without reading it.
+
+It is not an alert severity either: `AlertModel` exists to recompute standing conditions with a latch
+per condition, and a level-up has nothing to latch on and nothing in a later frame to recompute from.
+
+**`AlertSeverity` gains no fourth "good" value.** `AlertChime.ForSeverity` already maps `Notice` to
+`alert-normal`, so the chime needed no new audio code at all — and the channel is what makes a toast
+good news, not its severity. The sound reads the model's row count and fires once per refresh however
+many rows arrived, because **the audio must never detect a level-up itself**: `AlertChimeWatch`'s own
+remarks record what a second copy of a model's rule cost last time, when its private starvation
+threshold drifted and the chime fired at a hundredth of the intended level.
+
+Capped at four rows, oldest dropped, newest at the bottom. The one thing a passing toast must never do
+is bury a starving colonist in the panel above it.
+
+### 8f. Where it is drawn, and the trick that made it free
+
+**The bar is an absolutely positioned 3 px underline.** `.skill` is 19 px and `HudLayout.SkillRow`
+says so; the colonist pane is one fixed height across every tab *deliberately*, so that changing tab
+does not move its top edge under the pointer. A bar in the flow would have grown all seven rows and
+undone exactly that. Out of flow it costs the row nothing — no layout constant, no overlap case and no
+coverage figure moves. **This is also what makes "live rows only" safe**: uneven row heights were the
+one thing that would have forced a bar onto all fourteen.
+
+**It is the one field on the row not guarded against change.** Everything else is written only when it
+changes, because a level moves about once in a working day. The pane refreshes at 15 Hz and the bar
+wants every one of them. Only the width is written, so a selected colonist still builds no string and
+allocates nothing.
+
+**The setup page gets no bar.** It is the same builder, behind a flag: a candidate has not started
+working, so a part-filled bar there would report progress nobody has made.
+
+The toast stack takes the alerts' column and width, below them — panel A6 already puts the bulletin
+stack *"right edge, below the alerts"*. No header, because a heading earns its place over a standing
+list somebody returns to and here would be the tallest thing in the stack for most of its life.
+
+### 8f-bis. What the review found (2026-09-20)
+
+Reviewed on `claude/skills-review` after the base branch was merged up. Three things:
+
+**A colony going away left its level marks behind, and the next one inherited them.**
+`SkillLevelWatch` forgets a colonist who is missing from the frame it is given — and between two
+colonies it is given no frame at all, because the interface is on the main menu and nothing is
+stepped. The next colony then hands it a `PawnId` 1 who is a different person, and if she happens
+to be the better miner she announces a level she was rolled with. That is the exact failure the
+first-sight rule exists to stop, arriving by the one door the rule does not watch. `ToastModel.Clear`
+now clears the watch as well as the rows — the rows would have drained by themselves in six
+seconds; the marks would not — and `HudShell.OnSessionChanged` calls it, beside the line that
+already takes the in-game interface away with its colony. `Clear` existed and nothing had ever
+called it.
+
+**The guard §8 claims for row liveness did not exist.** `SkillCatalogue`'s own remarks said
+`SkillCatalogueTests` asserted the live set; there was no such file, and the assembly seam means
+there cannot be one that reads the simulation directly. It is a pair of pins facing each other
+across the aspect name instead: `SkillTests.EverySkillTheSimulationTrainsIsNamedHere` pins
+`SkillIndex.Names` and fails the moment a skill is added, with a message sending the author to
+`SkillCatalogueTests`, which pins what the catalogue then says about it. Without both halves, the
+bug this work is proudest of finding could recur on the next skill.
+
+**Three stale comments.** The catalogue still said "the thirteen" twice (there are fourteen) and
+still said `ui.skill.growing` was trained by cutting, undone on 2026-09-18 and again here;
+`WorkTypes.xml` still said the growing curve "belongs to the skills work when it lands", which it
+did not — #119 landed it.
+
+### 8g. Correct §1 and §6 when reading them
+
+§1's table says three simulated skills and §6's open item says `Skill_Hauling` should go. The first is
+out of date (five). The second still stands: hauling has no `ui.skill.*` row, trains from `Job_Haul`,
+and has no rate curve by design — so it accrues experience with nowhere to show it and nothing to
+spend it on. Deleting it is still a Defs change, a `SkillIndex` change, a save-format change and a
+hash change, and is still not done.
+
+### 8h. The toast stack is the last thing in the alerts column (merge with main, 2026-09-20)
+
+SK4 was written on a branch that did not know about EV, the incident layer, and EV was written on a
+branch that did not know about SK4. Both put a new panel in the right-hand gutter under the alerts,
+both said so in the same words — *"under the alerts in the same column"* — and both computed its top
+as `alertsTop + alertsHeight + Gap`. So on merging, the toast stack and the Events panel were solved
+to the same origin and the toast drew over the panel.
+
+**Neither branch's tests could see it**, and the reason is worth keeping. Each branch's layout cases
+set its own row count high and the other's to zero, because the other did not exist. The overlap
+sweep is exhaustive over the *cases it is given*, and no case had both.
+
+**The order is the decision, not the accident.** The column is clock, alerts, Events, toasts:
+
+- A toast arrives every couple of minutes per colonist and leaves six seconds later. Anything under
+  it in a stacked column would step down and back up each time, so the thing that moves goes last
+  and nothing is under it.
+- The Events panel is a standing list a player comes back to and scans. A panel that shuffles while
+  being read is a panel that gets misread.
+- The alerts panel is above both because it is the one a colony's survival depends on, and it should
+  never be the thing pushed down the screen.
+
+`HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and two new cases in
+`Cases()` put a full alerts panel, a full Events panel and a full toast stack in one column at all
+three resolutions — the case that would have caught it. Both were confirmed to fail on the pre-merge
+arithmetic before the fix went in. `HudGeometryTests` now counts `.bulletin` rows as well as
+`.toast` ones, so the PlayMode model is told about the panel actually on screen.
+
+**The general shape, for the next pair of parallel branches.** Two features that name the same anchor
+in prose will collide in arithmetic, and an exhaustive sweep over a case list is only as exhaustive
+as the list. When a branch adds a region to a shared column, the merge owes a case with *every*
+member of that column at once — the prose in each branch is the tell, and it is a grep for the anchor's
+name.
+
+### 8i. The bar's first look: into the row, green, and thicker (owner, 2026-09-21)
+
+> *"it works great but some visual change — the experience bar needs to sit between the skill label
+> and the skill value, it should also be using the same green as used for the rest, food bars, if
+> possible can we make the bars slightly thicker if space allows with good spacing."*
+
+Three changes, and the first is the one with consequences.
+
+**It is a column of the row now, not an underline drawn along it.** It shipped absolutely
+positioned at `bottom: 0`, spanning from the name to the row's right edge. It sits between
+`.skill__name` and `.skill__level` in the flow.
+
+**The reason for the old positioning still holds and is met a different way.** §8 argued the bar had
+to leave the flow because `.skill` is 19 px, `HudLayout.SkillRow` says so, the colonist pane is one
+fixed height across every tab, and a bar in the flow would grow all seven rows and move the pane's
+top edge on every change of tab. That argument is about a bar stacked *under* the text. A bar
+*beside* the text costs no height at all while it is shorter than the row, which at 6 px in a 19 px
+row it is. **No layout constant moved and no overlap case changed**; `.skill` is still 19, the pane
+is still one height, and the coverage figures are untouched.
+
+**The row has a width budget now, and that is new.** While the bar was out of the flow it could not
+squeeze anything. In the flow it can: widen it and the only flexible part, the name, silently loses
+the difference until *Construction* — the longest of the fourteen labels — clips. So the parts are
+named in `HudLayout` (`SkillIconWidth`, `SkillIconGap`, `SkillBarWidth`, `SkillBarGap`,
+`SkillLevelWidth`, `SkillPassionGap`, `SkillPassionWidth`) and `SkillNameWidth` is what is left,
+derived rather than written down. `HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the sum to the
+row's 256 px and holds the name column to a floor of **95 px**.
+
+That floor is a ratchet rather than a measurement, and the test says so. The fast tier has no text
+engine, so it cannot prove *Construction* fits in 95 px; what it can do is make the day somebody
+wants a wider bar a day they lower that number on purpose and look at the result, rather than find
+the clipping in a screenshot a week later.
+
+**The bar is a fixed width and the name is what flexes**, which is the arrangement rather than an
+implementation detail. Everything to the bar's right is a fixed width, so a fixed bar sits at a
+fixed offset from the row's right edge and every bar in the grid lines up on both edges without
+anything measuring text. Flex the bar instead and its left edge tracks the name beside it, so
+*Construction* and *Mining* would start their bars in different places and the column would read as
+ragged.
+
+**Green, and the passion tint goes.** The fill is `HudTokens.Good` — the needs' own green, the one a
+food bar is drawn in — taken from the token so the two cannot drift. It is **one colour, not a
+band**: `NeedBand` runs good to bad because a need has a bad end a player must be told about, and a
+skill has none, so a new colonist's skills would otherwise be painted red for being new.
+
+The tint it replaces was argued for in §8 as *the only place the ×0.35/×1.0/×1.5 learning rate is
+visible while it is happening*. That argument was wrong about which question the bar answers. A
+player reading this row wants **how far along is she**, which is what a food bar answers and
+deserves the same colour; the passion is a different fact and is still on the row, in the pips,
+where it was always the more legible of the two. The colour is also now set **once at build**
+rather than on every passion change, because unlike a need it never changes.
+
+**Six pixels, not three, with eight either side.** `SkillBarHeight` and `SkillBarGap`. Six leaves
+six and a half above and below inside the 19 px row, centred by `.skill`'s existing
+`align-items: center`. The row did not grow and must not: the test asserts the bar stays shorter
+than its row, which is the surviving half of the constraint §8 was protecting.
+
+### 8j. The level reads in amber in the toast (owner, 2026-09-21)
+
+> *"make a small change to the notification to make the value of level (IE the number) a yellow
+> tinted colour for effect so you can see the value clear in the notification."*
+
+The toast said *"James has reached Mining 5"* in one colour, and the number — the only part of the
+sentence a player is actually reading for — had no more weight than the word "has". The level is
+drawn in `HudTokens.Warn` (#e8b55c) now, the same amber as the passion pips.
+
+**The line is split, not marked up, and that is the decision worth keeping.** The obvious
+implementation is a rich-text `<color>` tag inside the one label: less code, one element instead of
+three. It was rejected on **how it fails**. If rich text is ever off on that label the player reads
+the tag itself, and *nothing in either tier could catch that* — the fast tier has no text engine and
+the Unity tier asserts no pixels. This project has already shipped two silent text faults for
+exactly that reason (`docs/bug-patterns.md` P10: the Work tab's tick and cross, and the bed picker's
+tick, the second of which reached `main` and was never drawn). A split is plain strings the fast
+tier can assert on, and its worst failure is a number in the wrong colour rather than markup on
+screen.
+
+**Which piece is emphasised is decided in the model**, because only the code doing the substitution
+knows where in the registry's sentence the number landed. `{level}` is deliberately left standing
+through the `{name}` and `{skill}` replacements and split on afterwards. Substituting it first and
+searching for the digits later would find the wrong "5" the day a colonist is called Level5 or a
+skill is renamed — and reword the CSV line to put the level first and this still works, because the
+view never parses anything.
+
+**The pieces are asserted to still be the line.** Three strings where there was one is three chances
+for the sentence to come apart — a dropped space, a piece written twice, a piece left over from the
+row before — and none of those would throw or fail any other test in the file, because every other
+test reads `ToastRow.Lead`, which is built from the pieces and would stay correct while what the
+player reads went wrong. `TheLineComesInThreePiecesThatStillMakeTheLine` asserts the identity
+directly, and was confirmed to fail on a model that stopped building `Lead` from the pieces.
+
+**The split is optional for future callers.** The stack's obvious second customer is the rejection
+notice design 09 §2.3 named, which has no number to colour; a row raised without pieces is all one
+piece and draws correctly without knowing the split exists.
+
+**Only the first piece shrinks.** The number is the thing the owner asked to be able to see, so it
+is the last thing dropped if a long name ever crowds the row: *"Constance has reach… 7"* is the
+right failure and *"Constance has reached Construc"* is the wrong one.
