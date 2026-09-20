@@ -8360,3 +8360,232 @@ Following playtesting with door placement alongside walls, several visual and fu
 **Verification:**
 Fast tier 843 Sim + 473 Hud; EditMode 2,028 total, 2,015 passed, 0 failed; PlayMode 85 total, 80 passed, 0 failed. Wiki and registry checks green.
 
+## 2026-09-20 — The sleeper was measured against the floor
+
+Third report of the same symptom, and the first two fixes were both right.
+
+> *"Fix the bug where the colonists seem to sleep off the bed — it should know to always put the
+> head onto the first tile and then the rest of the body goes on the 2nd tile — it looks like the
+> colonists are resting in the centre and hanging off the bed and sometimes even off the bed. It
+> needs to be aware of the position and where to lie — this happens sometimes but often enough so
+> there is a miscalculation here."*
+
+**The sim was measured before anything was read**, because §7a's round had ended in the simulation
+and reading the code has been wrong every time on this project. Three colonists, three
+player-built beds, three days, four seeds: **every sleeping tick on the head cell of a real bed,
+none off one, none even on a foot cell.** So the colonist the owner was looking at was in her bed,
+the pose was being placed from that bed, and the fault was in the arithmetic that placed it — which
+had already been read and pronounced correct twice, once by the session that wrote it and once by
+the session that fixed §7a.
+
+It was correct. It was being handed a body **0.38 m long for a colonist 2.49 m tall**.
+
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9` — a person's hip is a little over half their
+height, so the reciprocal turns the one length the director knows about a character into the length
+of body it has to lay down. And `StandingHipHeight` is
+`animator.GetBoneTransform(HumanBodyBones.Hips).position.y - transform.position.y`, where **the
+Synty humanoid avatar maps `Hips` to a bone literally named `Root` that sits at the model origin**,
+with the real pelvis as its child. Measured, with the graph played and evaluated exactly as
+`PawnFigureDirector.Create` does it:
+
+| | metres above the figure's root |
+|---|---|
+| `Root`, which the avatar calls Hips | −0.010 |
+| `Hips`, its child | 1.211 |
+| `UpperLeg_L` | 1.164 |
+| `Head` | 2.181 |
+| the crown of the drawn body | 2.488 |
+
+Nought, on every one of the sixty-one characters, and a `Mathf.Max(0.2f, …)` turned that into
+twenty centimetres. The root of a lying figure is its feet, so the feet went 0.38 m past the pillow
+and the remaining 2.1 m of colonist extended the other way: measured along the bed, body
+**[−2.57, 0.29]** against a frame of [−1.05, 3.55]. Half of her was past the head of the bed and
+over the floor, what was left on the bed sat around the middle of the first tile, and the second
+tile was empty — which is "resting in the centre and hanging off the bed", and the same words the
+owner had used a day earlier about "trying to rest them in the first tile".
+
+**The lift was wrong by the same factor.** Half a torso's thickness came out as 32 mm, so whatever
+was still over the bed was inside it.
+
+**The test written for exactly this question passed.** `ASleeperLiesWithinTheBedsOwnTwoCells` came
+out of §7a and walked a range of plausible *hip heights*, 0.70 m to 1.30 m, checking the body each
+one implies. Every one fitted. The value the game passed was 0.2 m, which no range starting at
+0.70 m can reach — and the fixture's `const float Hip = 0.95f` is a perfectly reasonable hip for a
+person and was never the number the game used. That is now `P11` in `docs/bug-patterns.md` (it was written as P10 and renumbered on the merge, the growing-zones branch having reached main first with a P10 of its own): **a
+measurement that never measured anything, clamped into plausibility.** Nothing threw, nothing
+logged, no test failed, and the symptom surfaced a long way downstream in the shape of a
+*placement* bug — which is where two rounds of investigation went.
+
+**The fix is to measure the body rather than derive it.** `FigureBuild` bakes the posed mesh and
+takes the sole and the crown — the idiom `MeasureSole` already uses, and for its reason: a bone's
+meaning is a decision somebody made in a modelling package and cannot be assumed, while where the
+drawn vertices are is what the player is looking at. There is no ratio left between the measurement
+and the thing measured, because every ratio here has been wrong once. `SleepPose.BodyLength` guards
+anything outside 0.5 m to 5 m, so the worst a strange rig can now do is draw one character the wrong
+size rather than hang the whole colony off the ends of their beds.
+
+Two details cost time and are written down in `FigureBuild`. `SkinnedMeshRenderer.bounds` is the
+loose precomputed volume — on this cast it runs −0.296 m to 2.618 m on a body that is 0.000 m to
+2.488 m — and a third of a metre of slack at each end is far too much for a body that has to fit a
+bed. And `BakeMesh(mesh, useScale: true)` applies the *renderer's own local* scale, which on these
+prefabs is one, because the figure's 1.4 lives on the root above it: the three plausible
+combinations of bake flag and transform give 2.488 m, 3.483 m and 1.777 m for one figure, and all
+three look like heights.
+
+**And the two lift fractions were retuned against the same measurement.** They were 0.16 and 0.24
+of a hip that was meant to be half a person, which is a human being's proportions; these characters
+are stylised and 0.59 m through the chest on a 2.58 m body. At the human figure the body still sank
+0.13 m into the mattress after the length was fixed, so they are 0.135 and 0.152 of the body's own
+length now — measured, as the clearance printed by `SleepProbe` for each of the four postures.
+
+**What was deliberately not changed.** `StandingHipHeight` still measures the floor. The only thing
+left reading it is the gesture crouch, `min(depth, DeepestCrouch) * StandingHipHeight`, and that is
+tuned against what it actually returns, by photograph, with the stoop and the lift signed off by the
+owner. Correcting it without retuning them deepens every crouch six-fold, which is a visual change
+nobody asked for, and the retune is a contact sheet rather than a test. The field keeps its name and
+gains a comment saying plainly what it is.
+
+**Left measured and unfixed**, in `20-beds.md` §7b: a sleeper lies flat and the bed it lies on is
+sheared. Everything fixed to the grid is draped, so `BedShape.Root` tilts the bed's 4.6 m along the
+ground's tangent plane, while `AimSleep` samples one height at the bed's origin. At the relief's
+steepest — amplitude 2.0 m over a 150 m period, 0.136 rise per metre — that is 0.21 m of
+disagreement at the pillow and 0.09 m the other way at the feet, varying with where the bed stands
+and which way it faces. Second-order beside a body six times too short, and a change to how a
+sleeper is drawn, so it waits for the owner to judge it against the screenshot they now have.
+
+## 2026-09-20 — The sheet, and the two things the entry above left open
+
+**This supersedes the last paragraph of the entry above.** It ends "so it waits for the owner to
+judge it against the screenshot they now have"; they did, the answer was *do both*, and both are
+done. The paragraph stands as written because it is the record of where the work paused and why.
+
+**First the screenshot, which did not exist.** `SleepCheck` puts one colonist per posture into a
+real bed and shoots each side on, along the bed from the foot, and at the board's own 48° pitch. It
+exists because nothing else on the branch answers the question the owner actually has to answer:
+the arithmetic was *correct* throughout the two days the bug existed, so a sheet that photographed
+the body without the bed under it would have looked convincing the whole time. The postures are
+chosen rather than hoped for — a posture is a hash of the pawn id, so a colony of four is four
+draws from a hat of four, and a posture that is wrong would simply not appear.
+
+**It found two of its own faults before it found anything else, and both are the same fault.** The
+warm-up framed on `Vector3.zero`, a corner of the board with nobody in it, so not one figure was
+drawn during it and every picture came out flat yellow — a warm-up that does not include the
+subject warms nothing. And it never switched the relief on, because `GroundRelief.Amplitude` is a
+static that `OdysseyBootstrap.BuildSession` sets and a harness does not: the first run with the
+slope fix in reported a slope of **0.000** at all four beds and proved nothing whatever about the
+tilt. The second is the one worth keeping, because the tool only caught it by printing the number
+it was supposed to be exercising. **An instrument should print the quantity it exists to vary**, or
+it will cheerfully photograph the control case for ever. `docs/lessons.md` already carries the
+general form of this ("an instrument wired to the thing it measures reports a perfect result"); this
+is its opposite number and just as quiet.
+
+**And the beds the scenario places are nearly level** — 0.002 to 0.021 rise per metre on this seed,
+a centimetre to ten across a whole 4.6 m bed. So the tool now searches for the steepest buildable
+footprint near the start and stands a bed on it. The one it finds is 0.084, or 0.39 m end to end,
+which is a tilt a picture can actually show.
+
+**The slope fix itself** is three things, and each is wrong on its own. The feet stand
+`alongSlope × bodyLength` above the head, so the body is *on* the plane; the lying pitch becomes
+`90° + atan(alongSlope)`, so it is *parallel* to it — either alone would pass while the sleeper
+hovered over a bed she matched the angle of, which is why the test asserts both halves; and the
+roll is taken about the body's own long axis, which is now the tilted one and is free, because the
+pitch has just produced it. `SleepPose.Place` takes the plane rather than a point:
+`surfaceY` is the height under the *head*, `alongSlope` its gradient along the bed.
+
+**The arms were the interesting one, because the picture was right and my reading of it was not.**
+The sheet said "back, arms up" still read as arms *out*, near 45° from above — surrendering rather
+than sleeping. The obvious inference is that the arms are flung wide, and it is wrong: measured,
+they were never off the bed at all. The posture spans 1.06 m across a frame 2.00 m wide, which is
+exactly what `"back"` spans. They lay out to the sides instead of over the crown, and **no pitch
+about the lateral axis can bring them in** — every angle in `Posture` moves a limb in the plane
+that runs head to foot, so whatever spread the idle clip already holds is carried round with the
+arm rather than reduced. That is a missing degree of freedom, not a mistuned number, and no amount
+of sweeping the existing angles would have found it; the sweep is what proved it, by coming back
+with a narrowest-point that was still 1.06 m.
+
+So `Posture` gained an abduction, taken about the body's *forward* axis — which on a sleeper on her
+back is the vertical, so it swings the arm in the plane of the mattress. Swept on the real rig,
++15° mirrored is the one place on the arc that costs nothing: both the narrowest the arms get,
+1.06 m down to 0.71 m, and the furthest they reach past the head, 0.71 m to 0.73 m. Nought on every
+other posture, so the three that were measured right are untouched by its existence.
+
+**Where the four finally sit**, along the bed from the head cell's centre, against two cells at
+[−1.25, 3.75] and a frame at [−1.05, 3.55]:
+
+| posture | along | across | clears the mattress |
+|---|---|---|---|
+| back | [−0.29, 2.29] | 1.06 m | +0.01 |
+| back, arms up | [−0.73, 2.27] | 0.71 m | +0.01 |
+| side, curled | [−0.29, 2.01] | 1.99 m | 0.00 |
+| side, loose | [−0.29, 2.25] | 1.68 m | +0.02 |
+
+`side, curled` is 0.04 m wider than the frame on one side — a drawn-up knee just over the rail,
+which is what a knee does. Recorded rather than tuned, because tuning it is a look and the knee is
+not wrong.
+
+**What is left is entirely a look**, and it is the owner's: whether four sleepers read as four
+people asleep, and whether the third of the mattress lying empty past their boots bothers them. The
+bed is 4.6 m and a colonist is 2.5 m; the cell size fixes the first number (ADR 0002) and the rig
+fixes the second, so the only lever is a shorter bed.
+
+## 2026-09-20 — The owner watches the sleepers: a quarter of the colony, and a kickstand
+
+Two reports in one message, and both were sharper than they looked.
+
+> *"There's a pose that shouldn't be a sleep pose — any arms above the head — and I see a pose often
+> with 2 arms/hands above the head when they can be down the side. Also the body isn't quite flush
+> on to the bed surface but the pillow head is placed nicely enough."*
+
+**"Often" was exact, and answering it needed no tuning at all.** A posture is `PostureFor(pawnId)`,
+a hash taken modulo four, so each of the four shapes is *a quarter of every colony, by
+construction*. There is no frequency to reduce and no seed to blame: one shape the owner dislikes
+is one colonist in four, every night, for ever. That is worth saying back before doing anything,
+because the instinct on "I keep seeing X" is to look for a bias, and here the answer was in the
+design and not in the data. The fix could only be to replace the shape.
+
+**Which then needed a field the struct did not have.** The owner chose "another arms-down
+variation, differing in the legs" — and `Hip` and `Knee` drove *both* legs by the same amount, so
+the only leg difference expressible was a symmetric one, which is a beach and not a bed. The arms
+had been per-side since the table was written; the legs never were, and nobody had noticed because
+until this week every sleeper was hanging off the end of the bed anyway. `LeadHip` / `LeadKnee` are
+an extra on the right leg, nought on the three postures that do not ask for them. Swept before
+choosing: the band that raises a knee without driving a heel into the mattress runs from about −50°
+of hip to −20°, and anything at −10° or above with more than 20° of knee puts a foot in the bedding.
+
+**The second report is the one worth keeping, because the measurement said it was already fine.**
+"Not quite flush" — with the head placed nicely, which is the detail that made it findable. So the
+question was which part of the body was off, and the sheet could not answer it: a centimetre of gap
+under a torso is invisible at the play camera among four colonists. What answered it was measuring
+the *trunk* separately from the whole mesh, which nothing had ever done:
+
+| posture | lowest vertex | trunk |
+|---|---|---|
+| back | +0.01 | +0.01 |
+| back, one knee up | +0.01 | +0.01 |
+| **side, curled** | 0.00 | **+0.09** |
+| **side, loose** | +0.02 | **+0.12** |
+
+`Lift` had been tuned until the lowest drawn vertex *anywhere* on the mesh just touched the
+mattress. On a supine sleeper that vertex is the back, and the tuning was right. On a **side**
+sleeper it is a drawn-up knee, which props the whole body up like a kickstand — so half the colony
+rode 9 to 12 cm above its own bedding with one knee resting on it, and the whole-mesh number
+reported 0.00 and 0.02 and looked perfect throughout.
+
+**That is P11's neighbour and it is worth naming as its own thing: an aggregate answers the
+question it aggregates, not the question you asked.** `min` over a whole body is a statement about
+the body's *extremities*. The thing being judged was its trunk. Both numbers are real, both are
+correctly computed, and one of them is not about the subject — which is exactly why nothing failed
+and why it took a person looking at it. `ShoulderPerBody` is 0.109 now, measured against the band
+of baked mesh between the spine and the neck bones, and `SleepProbe` prints both figures side by
+side so the next person can see them disagree.
+
+**The price was chosen rather than discovered:** a drawn-up knee now presses about 0.10 m into a
+0.30 m mattress. A limb sunk a little into bedding is what bedding is for; a torso in mid-air is
+not. If it reads as clipping rather than as compression, the answer is the knee angle and not the
+lift, and that is recorded in `20-beds.md` §7d rather than guessed at.
+
+**And one thing kept deliberately unused.** The abduction angle added an hour earlier to rescue the
+arms-above-head posture now has no caller, because that posture is gone. It stays: it cost a
+measured sweep to establish that no pitch about the lateral axis can bring an arm in towards the
+midline, and the next posture that wants a hand anywhere other than at a side will want it back.
+Deleting it would only mean measuring that again.

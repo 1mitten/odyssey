@@ -309,11 +309,27 @@ namespace Odyssey.Presentation.World
             figure.RightGrip = GripBones(animator, right: true);
             figure.LeftGrip = GripBones(animator, right: false);
 
-            // How tall this particular figure's hips stand, measured off its own rig rather than
-            // named as a number. Sixty-one characters have sixty-one sets of proportions and the
-            // director scales them besides, so a crouch expressed in metres is a deep squat on one
-            // colonist and a curtsey on the next. Expressed as a fraction of this, it is the same
-            // crouch on all of them.
+            // **This is not a hip height, and the name is kept only because the crouch is tuned
+            // against what it actually returns.**
+            //
+            // It was written to be one: sixty-one characters have sixty-one sets of proportions
+            // and the director scales them besides, so a crouch expressed in metres is a deep
+            // squat on one colonist and a curtsey on the next, and expressing it as a fraction of
+            // the figure's own hip makes it the same crouch on all of them. The measurement never
+            // worked. `animator.GetBoneTransform(HumanBodyBones.Hips)` on the Synty humanoid
+            // avatar returns a bone literally named `Root`, sitting at the model origin with the
+            // real pelvis as its child — measured, 2026-09-20: Root at y = -0.010, Hips at 1.211,
+            // UpperLeg_L at 1.164, crown at 2.488. So the difference is nought on every one of the
+            // sixty-one and the clamp below is the whole of the answer: 0.2 m, always.
+            //
+            // It is left alone because `ApplyGesturePose` draws
+            // `min(depth, DeepestCrouch) * StandingHipHeight` and the owner has signed off the
+            // stoop and the lift that come out of that. Correcting it without retuning them makes
+            // every crouch six times deeper, which is a visual change nobody asked for, and the
+            // retune is a contact sheet rather than a test.
+            //
+            // The sleep pose used to read it as a length and no longer does: `StandingHeight`
+            // below is measured off the posed mesh and is a real one. docs/design/20-beds.md §7b.
             figure.StandingHipHeight = figure.Hips != null
                 ? Mathf.Max(0.2f, figure.Hips.position.y - figure.Transform.position.y)
                 : 0f;

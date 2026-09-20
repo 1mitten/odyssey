@@ -29,6 +29,15 @@ Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
 
 A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
 
+**Editing any `.cs` while a batch run is in flight makes its result meaningless, and the run still
+says "passed"** (2026-09-20, two wasted runs). Unity refreshes the asset database once at startup
+and compiles from what it found; a file saved after that point is simply not in the run. The exit
+code is zero, `TestResults/EditMode.xml` is written, the numbers look plausible, and they are the
+numbers for the code as it was several minutes ago. There is nothing in the output to say so. Queue
+edits until the run reports, or accept that the run proves nothing and do it again — which is what
+happened here, twice, because a probe result arriving mid-run is exactly when there is something
+worth changing.
+
 **A first batch run in a fresh worktree is slow, and it is the Synty import.** About seven minutes before a single test executes, with `Library/` growing past 4 GB. `du -sh Library` rising means it is working; an empty `TestResults/` on its own means nothing yet.
 
 **Adding an assembly definition silently removes implicit package references.** Scripts under `Assets/Editor/` compile into `Assembly-CSharp-Editor`, which auto-references most packages. The moment an `.asmdef` covers them, every reference must be explicit. Adding `Odyssey.Editor.asmdef` broke `SyntyImport` because it uses URP types. Symptom: `CS0234: The type or namespace name X does not exist in the namespace Y`. Fix: add the package assemblies (`Unity.RenderPipelines.Core.Editor` and friends) to the asmdef `references`.
@@ -236,6 +245,21 @@ which answers what the geometry is doing regardless of whether anything is being
 reading through that gives −1.500 m and 0.000 m as it should. When an A/B harness reports that its
 two conditions agree exactly, suspect the instrument before believing the result — a real
 no-difference is noisy, and an exact one usually means the two sides are the same code.
+
+**And its opposite number: an instrument should print the quantity it exists to vary** (2026-09-20,
+`SleepCheck`). A sheet built to show a sleeper lying along a *sloping* bed ran with
+`GroundRelief.Amplitude` at nought — it is a static that `OdysseyBootstrap.BuildSession` sets and a
+harness does not — so it photographed four beds on dead level ground and every picture looked
+correct, because on level ground the old code and the new one agree exactly. Nothing failed and
+nothing was proved. The only reason it was caught is that the tool printed the slope at each bed
+beside the file name, and the number was `0.000` four times.
+
+The same run then showed the second half of it: with the relief on, the beds the scenario places
+sat at 0.002 to 0.021 rise per metre — a centimetre to ten across a whole 4.6 m bed — which is *on*
+but nowhere near enough to see. A harness for a condition has to go looking for the condition;
+`SleepCheck` now searches for the steepest buildable footprint near the start and stands a bed on
+it. **Before believing a contact sheet, ask what it printed for the thing it was sweeping.** If it
+did not print one, it is a photograph of the control case.
 
 The other half of the same lesson: **measure everyone, not the subject.** The sheet framed one
 colonist, and a second in the corner of a wide shot still looked sunk. A figure inside a ramp and a
