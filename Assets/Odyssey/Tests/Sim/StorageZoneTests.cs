@@ -7,6 +7,7 @@ using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Storage;
 using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Tests.Sim
@@ -89,6 +90,53 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(IntentRejection.OutOfBounds));
             Assert.That(fix.Zones.Designate(fix.At(2, 2), fix.Cell(2, 2), StoragePreset.Everything),
                 Is.EqualTo(IntentRejection.AlreadyInThatState), "the same cell twice in the same zone");
+        }
+
+        /// <summary>
+        /// <b>The drag the owner actually made.</b> A pointer can only ever name a surface, and on
+        /// open ground that surface is the solid grass — while the store lives in the air cell a
+        /// colonist stands in, one layer up. Every cell of the first drag ever made with this tool
+        /// arrived as the solid cell, was refused as "not walkable", and the whole rectangle
+        /// vanished into a wall of warnings (owner, 2026-09-20: <i>"I used the stockpile order and
+        /// was able to highlight but then let go to place, nothing happened"</i>).
+        /// </summary>
+        [Test]
+        public void ADragOnSolidGroundLandsOnTheCellAColonistStandsIn()
+        {
+            var fix = new Fixture();
+            var ground = new CellRef(4, 4, Ground);
+
+            Assert.That(fix.Zones.Designate(ground, Size.Index(ground), StoragePreset.Everything),
+                Is.EqualTo(IntentRejection.None),
+                "a drag over open ground was refused, which is every drag a player makes outdoors");
+
+            Assert.That(fix.Zones.IsStorage(fix.Cell(4, 4)), Is.True,
+                "the zone went in the ground rather than in the cell above it");
+            Assert.That(fix.Zones.IsStorage(Size.Index(ground)), Is.False,
+                "the solid cell itself must never be zoned — nothing can stand or be put down in it");
+
+            // And the way back out takes the same step, or a cancel over the same ground would
+            // answer "there is nothing here".
+            Assert.That(fix.Zones.Cancel(ground), Is.EqualTo(IntentRejection.None));
+            Assert.That(fix.Zones.ZoneCount, Is.Zero);
+        }
+
+        [Test]
+        public void ADragOnABuiltFloorLandsOnTheFloorsOwnCellAndIsNotLifted()
+        {
+            // The half a growing zone never has to answer, and the reason the step cannot live in
+            // the tool: nothing grows through a slab, so a grow drag is always over soil and can
+            // lift unconditionally. A store's commonest home is a wooden floor indoors, where the
+            // cell the pointer names IS the cell a colonist walks in — lifting there would put the
+            // zone in the air a storey up.
+            var fix = new Fixture();
+            int floor = fix.Cell(6, 6);
+            fix.Grid.Floor[floor] = CoreContent.SlabStructural;
+
+            CellRef at = fix.At(6, 6);
+            Assert.That(fix.Zones.Designate(at, floor, StoragePreset.Everything),
+                Is.EqualTo(IntentRejection.None));
+            Assert.That(fix.Zones.IsStorage(floor), Is.True, "the store went a storey above the floor");
         }
 
         // ---- the anchor rule --------------------------------------------------------------------

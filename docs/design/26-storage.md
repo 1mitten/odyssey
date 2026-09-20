@@ -16,6 +16,13 @@ S1 makes it a thing a player draws, sees and owns: a **stockpile tool** in the o
 zone painted by a drag, drawn on the ground it covers, saved, hashed, and carrying a priority and
 a filter that the simulation reads on every haul.
 
+**And a colony now starts with no store at all** (owner, 2026-09-20, on seeing the first build:
+*"there shouldn't be a default stockpile zone"*). `ScenarioDef.stockpileCells` is nought. That is
+the same call as `ScenarioDef.Playtest` giving no starting orders in 2026-09-17, and it only became
+askable because S1 made the zone visible: a default nobody could see was a default nobody could
+object to. The machinery stays — a scenario may ask for a store and a "prepared site" start
+certainly will — so it keeps its test, with a scenario that asks.
+
 ## 2. The anchor decides, and two zones never merge
 
 The plan's decision 9 said *a drag touching an existing zone extends it*. On the substrate that
@@ -59,6 +66,34 @@ later cell has to found the zone the rest join. The case it cannot tell apart is
 begun from the same refused cell, which become one zone: a worse answer than "two zones" and a much
 better one than "one corrupt zone".
 
+## 2b. Which cell a store actually lives in
+
+**A player can only ever click a surface, and a store does not live on one.** Things rest in the
+walkable cell a colonist stands in. Over open ground that cell is the **air above** the solid grass
+the pointer hit; over a built floor it is the cell whose lower boundary the slab is, which *is* the
+cell the pointer named.
+
+So the rule is not a lift, it is a question — `StorageZones.StoreCellOf`: **solid terrain answers
+for the cell above it, everything else answers for itself.** Every way in goes through it:
+designate, cancel, set-priority, set-filter, and the cell-detail publisher. One owner, because the
+pane must not say a cell is a store that the tool would refuse.
+
+**This was reported the day S1 landed** (owner: *"I used the stockpile order and was able to
+highlight but then let go to place, nothing happened"*). Every cell of every drag on open ground
+arrived as the solid grass cell, `SiteAllows` answered "not walkable", and the whole rectangle was
+refused one cell at a time — visible only as a wall of `NotPermitted` warnings in the log.
+
+**Why it could not be solved in the tool, where the growing zone solves it.**
+`DesignateDirector.OnTheWorkingLayer` lifts a grow-zone cell by one *unconditionally*, and that is
+right because nothing grows through a slab, so the pointed cell is always soil. A store's commonest
+home is a wooden floor indoors, where that same lift would put the zone in the air a storey up. The
+question needs the grid, and the tool is deliberately Unity-free and grid-free.
+
+**The one-step-up rule now exists in three places** — the grow tool, the cell-detail publisher and
+here — and this was the third time it was needed and the first time it was missing. That is the
+shape `docs/bug-patterns.md` catalogues first, and it is worth a fourth reader asking whether the
+three should become one before adding a fifth.
+
 ## 3. The siting gate
 
 A store is a place to put something down, so the question is only whether something *can* be put
@@ -67,11 +102,13 @@ the inside of a room all qualify. Refused are **water** (a stack in a stream is 
 wadeable water is walkable, which is why it is asked apart from `IsWalkable`) and **a cell with
 something standing in it**.
 
-**That last one moved a golden, and it is worth saying exactly how.** Of the nine cells the
-scenario hands the starting zone on the played board, cell 180436 at (76, 63, L12) has a **tree**
-standing in it — walkable, not water, edifice 753. `AddStockpile` asked nothing of a cell, so that
-cell was in the zone and a starting item that landed on it counted as *stored* in a place nothing
-could ever be stored. It is loose now, and a hauler collects it. §7 has the measurement.
+**That last one moved a golden before the default zone was taken out, and the finding is worth
+keeping.** Of the nine cells the scenario used to hand the starting zone on the played board, cell
+180436 at (76, 63, L12) has a **tree** standing in it — walkable, not water, edifice 753.
+`AddStockpile` asked nothing of a cell, so that cell was in the zone and a starting item that
+landed on it counted as *stored* in a place nothing could ever be stored. It is moot now that no
+colony starts with a store, and it is recorded because it is exactly what a player painting over a
+tree will meet: the cell is refused, and the zone has a notch in it until the tree is felled.
 
 ## 4. A configuration is a handle, not an object
 
@@ -167,8 +204,25 @@ orders — on this branch and on `main`, at generation and after the full run:
 | played board, 10,000 ticks | `loose=18 stored=2` against `main`'s `loose=17 stored=3` |
 
 The one difference is §3's tree, and the meadow and the city are unchanged precisely because
-neither has a tree in its starting zone. `docs/design/../Tests/Sim/Golden.cs` carries the same
-paragraph where a re-baker will read it.
+neither has a tree in its starting zone. `Golden.cs` carries the same paragraph where a re-baker
+will read it.
+
+**They were then re-baked again the same day, and that one is a rule change rather than a hash
+change.** With no default store (§1) all three golden colonies have **nowhere to haul anything
+to**: they fell, mine, eat and sleep as before and leave what they cut where it fell. A different
+colony, and rightly a different number.
+
+The rest of the starting kit was measured either side of that too: 5 colonists, 12 meals, 5 beds
+and 8 salvage on the wooded board, identical. The ruined city places **7** salvage rather than 8,
+because the scatter retries once per spot in the pool and the pool is nine spots shorter — a retry
+artefact on the tighter board, not a space problem, and not worth engineering around for one piece
+of scrap.
+
+**Every soak and round-trip fixture whose subject is a working colony now asks for nine cells of
+storage**, because a colony with nowhere to put anything never hauls and those tests measure
+hauling. `SessionRoundTripTests` goes further and **draws** its store through the intent the tool
+sends: it is the one test in the suite that exercises a painted store end to end — the player's
+drag, the colony's haul, the save, and the same colony read back.
 
 ## 8. Things not to undo by tidying
 

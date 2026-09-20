@@ -45,7 +45,22 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int beds = 5;
 
-        public int stockpileCells = 9;
+        /// <summary>
+        /// Cells of storage the colony starts with. <b>Zero</b> (owner, 2026-09-20: <i>"there
+        /// shouldn't be a default stockpile zone"</i>).
+        ///
+        /// <para>It was nine, and for most of the project's life that was invisible — nothing drew
+        /// a stockpile, so nobody ever saw the zone every colony was given. S1 made it visible and
+        /// the answer was immediate: a colony arrives with nothing marked and nothing zoned, and
+        /// the player draws their first store where they want it. The same call as
+        /// <c>ScenarioDef.Playtest</c> giving no starting orders (2026-09-17).</para>
+        ///
+        /// <para>The machinery stays rather than going with it, exactly as the felling and mining
+        /// radii did: a scenario may ask for a starting store, and a later one almost certainly
+        /// will — a "prepared site" start is the obvious use — so it stays under test with a
+        /// scenario that asks.</para>
+        /// </summary>
+        public int stockpileCells;
 
         /// <summary>Loose salvage scattered about, so hauling has work from the first tick.</summary>
         public int salvage = 8;

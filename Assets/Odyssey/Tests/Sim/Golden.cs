@@ -302,6 +302,22 @@ namespace Odyssey.Tests.Sim
         /// <c>Simulated</c> follows for the ordinary reason a divergent start diverges further.
         /// The meadow and the city have no tree in their starting zones, which is exactly why
         /// they are unchanged.</para>
+        ///
+        /// <para><b>Re-baked a fifth time the same day, and this one is a rule change rather than
+        /// a hash change.</b> A colony no longer starts with a stockpile (owner, on seeing S1's
+        /// first build: <i>"there shouldn't be a default stockpile zone"</i>), so
+        /// <c>ScenarioDef.stockpileCells</c> is nought and all three golden colonies now have
+        /// <b>nowhere to haul anything to</b>. They fell, mine, eat and sleep as before and then
+        /// leave what they cut where it fell, which is a different colony and rightly a different
+        /// number. The tree of §7 is moot: there is no starting zone for it to stand in.</para>
+        ///
+        /// <para>The rest of the starting kit was measured either side of it rather than assumed:
+        /// 5 colonists, 12 meals, 5 beds and 8 salvage on the wooded board, identical before and
+        /// after. The ruined city places 7 salvage rather than 8, because the scatter retries once
+        /// per spot in the pool and the pool is nine spots shorter — a retry artefact on the
+        /// tighter board, not a space problem, and not worth engineering around for one piece of
+        /// scrap. <c>ScenarioDefTests.AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid</c>
+        /// carries the same note beside the two placement signatures it pins.</para>
         /// </remarks>
         public static readonly Case Meadow = new Case
         {
@@ -311,8 +327,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 11193074622438250286UL,
-            Simulated = 17877280081220781229UL,
+            Generated = 17008194344181807078UL,
+            Simulated = 4719151686505776620UL,
         };
 
         /// <summary>
@@ -328,8 +344,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 772033680031849527UL,
-            Simulated = 6723158666174932263UL,
+            Generated = 3339421815403079839UL,
+            Simulated = 15373579406289841645UL,
         };
 
         /// <summary>
@@ -365,8 +381,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 8106996521925620474UL,
-            Simulated = 2870299173973909006UL,
+            Generated = 763613953800532440UL,
+            Simulated = 2426006305777484532UL,
         };
     }
 }

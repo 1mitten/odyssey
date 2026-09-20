@@ -30,7 +30,7 @@ namespace Odyssey.Tests.Sim
             public CellRef Start;
         }
 
-        static Harness Build(int x, int z, int y, uint seed = 1u)
+        static Harness Build(int x, int z, int y, uint seed = 1u, ScenarioDef? scenario = null)
         {
             var size = new GridSize(x, z, y);
             var grid = new CellGrid(size);
@@ -54,7 +54,8 @@ namespace Odyssey.Tests.Sim
                     outcome.Placements, out _)
                 .Build();
 
-            var placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, ScenarioDef.Bare());
+            var placement = ColonyScenario.Place(
+                grid, pawns, outcome.StartCell, seed, scenario ?? ScenarioDef.Bare());
             return new Harness
             {
                 Grid = grid, Pawns = pawns, World = world,
@@ -119,13 +120,42 @@ namespace Odyssey.Tests.Sim
                     $"colonist {i} is standing inside solid ground at {pawns[i].Cell}");
         }
 
+        /// <summary>
+        /// Food and beds, and <b>no store</b> — a colony arrives with somewhere to sleep and
+        /// something to eat, and draws its own storage (owner, 2026-09-20: "there shouldn't be a
+        /// default stockpile zone").
+        ///
+        /// <para>The zero is asserted rather than left unsaid, for the reason
+        /// <c>ThePlayedScenarioGivesNoOrdersAtAll</c> asserts on the world rather than on the def's
+        /// radii: what the owner asked for is that a new colony has no store, and a default that
+        /// crept back would otherwise be invisible until somebody played it. The machinery is
+        /// still tested — by the test below, with a scenario that asks.</para>
+        /// </summary>
         [Test]
-        public void TheColonyGetsFoodBedsAndAStockpile()
+        public void TheColonyGetsFoodAndBedsAndNoStore()
         {
             var h = Build(60, 60, 16);
             Assert.That(h.Placement.Meals, Is.GreaterThan(0), $"placement: {h.Placement}");
             Assert.That(h.Placement.Beds, Is.GreaterThan(0), $"placement: {h.Placement}");
+            Assert.That(h.Placement.StockpileCells, Is.Zero,
+                $"a colony arrived with a store nobody drew: {h.Placement}");
+        }
+
+        /// <summary>
+        /// The other half: the placement still lays a store out for a scenario that asks for one,
+        /// so the machinery went nowhere when the default did. A "prepared site" start is the
+        /// obvious thing that will want it back.
+        /// </summary>
+        [Test]
+        public void AScenarioThatAsksForAStoreGetsOne()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.stockpileCells = 9;
+            var h = Build(60, 60, 16, scenario: scenario);
+
             Assert.That(h.Placement.StockpileCells, Is.GreaterThan(0), $"placement: {h.Placement}");
+            Assert.That(h.Pawns.Storage!.ZoneCount, Is.GreaterThan(0),
+                "the cells were counted and no zone was made of them");
         }
 
         [Test]

@@ -248,6 +248,11 @@ namespace Odyssey.Tests.Sim
         {
             var scenario = ScenarioDef.Bare();
             scenario.colonists = Colonists;
+            // A colony no longer starts with a store (owner, 2026-09-20), and this file's whole
+            // subject is a colony living across three storeys — one of which is the store's. The
+            // fixture asks for the nine cells the scenario used to ship, so what is measured here
+            // is what was always measured.
+            scenario.stockpileCells = 9;
             if (acrossStoreys)
             {
                 scenario.stockpileLayerOffset = StockpileStorey;

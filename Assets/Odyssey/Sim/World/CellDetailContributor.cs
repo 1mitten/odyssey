@@ -114,23 +114,15 @@ namespace Odyssey.Sim.World
                 }
             }
 
-            // And the store, if one covers this cell. The same one-step-up lift the field above
-            // uses and for the same reason — a click lands on the ground a zone is drawn on,
-            // while the zone itself lives in the air cell a colonist stands in — with one
-            // difference: a store is commonly painted on a built floor, where the clicked cell
-            // *is* the walked cell and no lift is wanted. Asking the cell first and the cell above
-            // it second gets both without knowing which surface was clicked.
+            // And the store, if one covers this cell. Through `StorageZones.StoreCellOf`, which is
+            // the one owner of "which cell does a store live in, given a cell somebody clicked" —
+            // the same answer the designate and cancel intents get, so the pane cannot say a cell
+            // is a store that the tool would refuse, or the other way round.
             int storageZone = -1;
             byte storagePriority = 0;
             if (_storage != null)
             {
-                int storeCell = cell;
-                if (!_storage.IsStorage(storeCell)
-                    && _grid.IsSolidTerrain(cell)
-                    && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
-                    storeCell += _grid.Size.LayerStride;
-
-                int slot = _storage.ZoneAt(storeCell);
+                int slot = _storage.ZoneAt(_storage.StoreCellOf(cell));
                 if (slot >= 0)
                 {
                     storageZone = slot;

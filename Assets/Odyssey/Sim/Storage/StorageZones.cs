@@ -136,6 +136,41 @@ namespace Odyssey.Sim.Storage
         /// a designation: a floor deconstructed under a zone does not unzone it, and
         /// <c>BestStorageSlot</c> asks again before it sends anybody.</para>
         /// </summary>
+        /// <summary>
+        /// The cell a store actually occupies, given a cell a <b>pointer</b> named.
+        ///
+        /// <para><b>A player can only ever click a surface, and a store does not live on one.</b>
+        /// Things rest in the walkable cell a colonist stands in. Over open ground that cell is
+        /// the air <em>above</em> the solid grass the pointer hit; over a built floor it is the
+        /// cell whose lower boundary the slab is, which is the cell the pointer named. So the rule
+        /// is not a lift, it is a question: solid terrain answers for the cell above it, and
+        /// everything else answers for itself.</para>
+        ///
+        /// <para><b>A growing zone solves this in the interface and a store cannot.</b>
+        /// <c>DesignateDirector.OnTheWorkingLayer</c> lifts a grow-zone cell by one
+        /// unconditionally, which is right because nothing grows through a slab — the pointed cell
+        /// is always soil. A store's commonest home is a wooden floor indoors, where that same
+        /// lift would put the zone in the air a storey up. It belongs here, where the grid can be
+        /// asked, rather than in the tool, which is deliberately Unity-free and grid-free.</para>
+        ///
+        /// <para><b>This was a real fault, reported the day S1 landed</b> (owner: <i>"I used the
+        /// stockpile order and was able to highlight but then let go to place, nothing
+        /// happened"</i>). Every cell of every drag on open ground arrived as the solid grass
+        /// cell, <see cref="SiteAllows"/> answered "not walkable", and the whole rectangle was
+        /// refused one cell at a time — visible only as a wall of <c>NotPermitted</c> warnings in
+        /// the log. The same one-step-up rule was already written twice elsewhere, in
+        /// <c>CellDetailContributor</c> and in the grow tool, and this is the third place it was
+        /// needed and the first place it was missing.</para>
+        /// </summary>
+        public int StoreCellOf(int index)
+        {
+            if ((uint)index >= (uint)_grid.Size.CellCount) return index;
+            if (!_grid.IsSolidTerrain(index)) return index;
+
+            int above = index + _grid.Size.LayerStride;
+            return above < _grid.Size.CellCount ? above : index;
+        }
+
         public bool SiteAllows(int index)
         {
             if (!_grid.IsWalkable(index)) return false;
@@ -161,7 +196,8 @@ namespace Odyssey.Sim.Storage
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
-            int index = _grid.Index(cell);
+            int index = StoreCellOf(_grid.Index(cell));
+            anchor = StoreCellOf(anchor);
             if (!SiteAllows(index)) return IntentRejection.NotPermitted;
 
             int target = TargetFor(anchor, preset);
@@ -192,7 +228,7 @@ namespace Odyssey.Sim.Storage
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
-            int index = _grid.Index(cell);
+            int index = StoreCellOf(_grid.Index(cell));
             if (!_zones.Leave(index)) return IntentRejection.AlreadyInThatState;
 
             // A dissolve can have moved the slot the run was pointing at, and a subtract and an add
@@ -244,12 +280,15 @@ namespace Odyssey.Sim.Storage
             if (!_grid.Contains(intent.Cell.X, intent.Cell.Z, intent.Cell.Y)) return IntentRejection.OutOfBounds;
             if ((uint)intent.A >= StoragePriority.Count) return IntentRejection.NotPermitted;
 
-            StorageSettings? settings = SettingsAt(_grid.Index(intent.Cell));
+            // Through StoreCellOf like every other way in, so that a rung set by clicking the
+            // ground a store is drawn on lands on the store rather than on nothing.
+            int cell = StoreCellOf(_grid.Index(intent.Cell));
+            StorageSettings? settings = SettingsAt(cell);
             if (settings == null) return IntentRejection.NotPermitted;
             if (settings.Priority == intent.A) return IntentRejection.AlreadyInThatState;
 
             settings.Priority = intent.A;
-            MarkZoneOf(_grid.Index(intent.Cell));
+            MarkZoneOf(cell);
             return IntentRejection.None;
         }
 
@@ -258,7 +297,7 @@ namespace Odyssey.Sim.Storage
         {
             if (!_grid.Contains(intent.Cell.X, intent.Cell.Z, intent.Cell.Y)) return IntentRejection.OutOfBounds;
 
-            StorageSettings? settings = SettingsAt(_grid.Index(intent.Cell));
+            StorageSettings? settings = SettingsAt(StoreCellOf(_grid.Index(intent.Cell)));
             if (settings == null) return IntentRejection.NotPermitted;
 
             bool on = intent.C != 0;
