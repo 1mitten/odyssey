@@ -366,11 +366,12 @@ invisible where the game is played.
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
   PR #139 merged with main: EditMode **2,257 total, 2,236 passed, 0 failed**; PlayMode
-  **91 total, 81 passed, 0 failed**. **The 81 is five short of `main`'s 86 because that run had
-  no `Assets/Synty`** — the five are the two `PortraitLightingTests`, the two `AvatarSheetTests`
-  and `FigureCapTests`, each of which ignores itself when the art does not resolve, and each of
-  which says so in its skip reason. Read the skip reasons before reading a lower *passed* count as
-  a regression; `failed` is the number that matters and it was 0.
+  **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the first attempt and that was the
+  machine, not the branch**: `Assets/Synty` had gone missing, so the two `PortraitLightingTests`,
+  the two `AvatarSheetTests` and `FigureCapTests` each ignored itself and said so in its skip
+  reason. Re-run with the art restored it is 86, matching `main` exactly. **Read the skip reasons
+  before reading a lower *passed* count as a regression** — `failed` is the number that matters and
+  it was 0 both times.
   The run before it, on `claude/mark-pass-batching` after merging main: EditMode **2,228 total,
   2,210 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,
   the guard that a marked board costs draws in colours rather than in cells; the two new PlayMode

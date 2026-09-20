@@ -9260,7 +9260,9 @@ dangling at once.
 **The symptom was a skip count, not an error.** Both tiers stayed green with `failed=0`; what moved
 was PlayMode's *passed*, 81 against main's 86, with five tests ignoring themselves for reasons like
 *"the colonist rows resolved to no art"*. A lower pass count with nothing failed is the tell, and it
-is a question about the machine rather than the branch.
+is a question about the machine rather than the branch. Re-run with the packs back it is **86**,
+matching main exactly — which is the confirmation, since guessing that five skips explain a gap of
+five is not the same as watching them come back.
 
 **Recovered.** A deleted worktree lands in `D:\$RECYCLE.BIN`, and the COM recycle-bin listing does not
 show these — enumerating the `$R*` directories on disk found eleven copies of `Assets\Synty`, ten of
