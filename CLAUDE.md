@@ -367,6 +367,13 @@ invisible where the game is played.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
+  PR #143 (RF1 + U44) merged with main: EditMode **2,251 total, 2,233 passed, 0 failed**;
+  PlayMode **91 total, 86 passed, 0 failed**. **The two tiers disagree on `FigureBuildTests`
+  by three**, and that is the tell for missing art rather than a flake: those three ignore
+  themselves when no colonist prefab resolves, so a run with **13** skipped rather than 10 means
+  the packs are gone and every figure is drawing as a primitive. Compare the *skipped* count
+  against another recent run, not the failure count.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
   `claude/mark-pass-batching` after merging main: EditMode **2,228 total, 2,210 passed,
   0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,
   the guard that a marked board costs draws in colours rather than in cells; the two new PlayMode

@@ -323,6 +323,39 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-20 — A chip on the palette with no shape, and the first CI run this branch ever had
+
+Not reported. Found by merging PR #143 (RF1 + U44) with `main` and letting the pull-request checks
+run for the first time: `HudGeometryTests.EveryPaletteKeyHasItsOwnShape` and
+`EveryTileInTheBuildPaletteDrawsSomething`, both PlayMode, both red.
+
+RF1 added a **Pillar** chip to the Build palette's Structure row — a registry key, a label, a
+`PaletteTool`, a `BuildingDef` — and no entry in `PaletteGlyphs.Shapes`. `For(key)` answers
+`HudGlyphKind.Placeholder` for anything it does not know, so the chip drew the placeholder square
+that the palette specification forbids and that the test exists to catch. The stair, added in the
+same branch by U44, *did* have a shape: `ui.arch.tool.stair` had been in the map since before it
+was buildable, because the chip was drawn disabled first. **The tool that was invented whole is the
+one that arrives without a picture**, and nothing on the way in asks for one.
+
+**Why every other gate was green.** Fast tier 915 Sim + 562 Hud, Long tier 23 of 23, both content
+`--check`s clean, EditMode 2,251 with nothing failed. The fast tier compiles neither
+`Odyssey.Presentation` nor the HUD shell, so it cannot see `PaletteGlyphs` at all; EditMode compiles
+it and never builds a panel. The palette is only ever assembled in PlayMode. **And the PR had never
+had a CI run**, because it conflicted with `main` — a conflicting pull request reports *no checks*
+rather than failing ones, which `docs/lessons.md` already records and which is exactly how two red
+tests sat undiscovered under a branch everybody described as green.
+
+**Stopped by** the test that found it, which already existed and already walks every key
+`PaletteTools.IconKeys` returns — there is nothing to add. The lesson is about *when* it runs, not
+about what it asserts: this fault is invisible until the PlayMode tier executes, so a unit that puts
+a new chip on the palette is not provable by the fast tier however many tests it adds. Resolve the
+conflict first and let CI answer, rather than reading the tiers you can run quickly.
+
+Same family as **P13** — the asset cannot draw the thing the code asked for, and nothing says so —
+with the fallback one layer up: there, the font had no glyph for the character; here, the glyph
+table had no shape for the key. Both degrade to something that renders, so every assertion anybody
+could write about the element still passes.
+
 ### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
 
 Owner, from a Play session while spawning colonists: *"it seemed to hover 1.7 ms no matter the

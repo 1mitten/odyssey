@@ -303,16 +303,6 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
-        /// The edifice value the cell at <paramref name="offset"/> along a thing's footprint
-        /// becomes: the head's for 0, and the second cell's — which may differ — for 1.
-        ///
-        /// <para>Here rather than at the two call sites, so "a stair's far half is an upper half"
-        /// is written once.</para>
-        /// </summary>
-        public static ushort EdificeForCell(BuildingDef def, int offset) =>
-            offset == 0 || def.secondEdifice == 0 ? def.edifice : def.secondEdifice;
-
-        /// <summary>
         /// Which material this is, or <see cref="StuffHandle.None"/>. The reverse of
         /// <see cref="StuffDef.stuff"/>, and here for the same reason as
         /// <see cref="BuildingForEdifice"/>: a refund is paid in the material the thing was made

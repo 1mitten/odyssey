@@ -383,6 +383,9 @@ in any owned pack**; one would be Blender work and would not tile with this set.
 - **`FloorCheck` roofs 28 of its 6 × 5 room's 30 cells**, and the two it misses are in the middle.
   The interior is 4 × 3, so **the span rule does not explain them** — every interior cell is within
   two of a wall. Settle it when the probe is re-shot; do not assume it is §5.
-- **A second storey cannot actually be built yet**, whatever RF1 does: a hauler cannot climb a
-  ladder, so no material reaches an upper floor. `U44` stairs is the prerequisite for the thing this
-  unit is in service of, and it is not this unit.
+- ~~A second storey cannot actually be built yet~~ — **closed by `U44`, in this same branch.** The
+  sentence was right and the reason was not: a hauler could not climb a ladder, but building
+  *delivery* had never asked for the hauling mode, so a plank went up one regardless
+  (`28-stairs.md` §3). U44 makes delivery a hauling job *and* makes a stair buildable in the same
+  commit, so the claim and its consequence are now both true and both answered, and RF1's roof over
+  an upper storey is a roof over somewhere a colony can actually build.
