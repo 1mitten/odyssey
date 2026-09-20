@@ -184,6 +184,7 @@ namespace Odyssey.Presentation.Bootstrap
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
         AudioDirector? _audio;
+        DoorDirector? _doors;
 
         /// <summary>
         /// The title screen's bed. Owned by the root rather than by the session, because it is
@@ -252,6 +253,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// rather than with where the simulation keeps them. See <see cref="PawnFigureDirector.TryGetFeet"/>.
         /// </summary>
         public PawnFigureDirector? Figures => _figures;
+        public DoorDirector? Doors => _doors;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -753,6 +755,11 @@ namespace Odyssey.Presentation.Bootstrap
                 size, transform, gameObject.layer, outcome.StartCell.Y);
             AudioSettingsStore.Load().ApplyTo(_audio);
 
+            if (_model != null)
+            {
+                _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+            }
+
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
@@ -1020,6 +1027,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn, _figures);
+
+            _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
 
             DrawStandingOrders(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
@@ -2377,6 +2386,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();
+            _doors?.Dispose();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is
@@ -2396,6 +2406,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio = null;
             _daylight = null;
             _figures = null;
+            _doors = null;
             _colonistMaterials = null;
             _renderer = null;
             _actorMaterial = null;

@@ -7521,3 +7521,42 @@ first structural addition the next kind will ask for.
 **What a raid needs that events should not provide:** a faction and a hostility model, a
 non-colonist pawn kind, an arrival edge, combat and health. The incident is the thing that
 asks for them at a moment; they are their own units.
+
+## 2026-09-20 — Functional doors and room enclosure: sliding leaves, doorway traversal and sealed interiors
+
+Functional, buildable auto-sliding doors and strict room enclosure are in. A doorway connects or seals
+spaces, animates smoothly on pawn passage, and establishes indoor room environments.
+
+**The simulation half: building, traversal, and lifecycle.**
+- **Building handle & content:** `BuildingHandle.Door = 6` (`Count = 7`), registered under
+  `Buildings.xml` and `ConstructionContent.cs` (edifice: `CoreContent.EdificeDoor` (2), cost 5 Wood/Stone,
+  work 135). Buildable through `ui.arch.tool.door` on any standable cell with a floor below.
+- **Traversal & door lifecycle:** `DoorSystem` ticks at order 35 in `TickPhase.Pawns`. When a pawn approaches
+  or occupies a door cell, `DoorSystem` holds the door open. Traversal charges `MoveCost.DoorOpening`
+  (already defined in `NavGrid`) when closed. Once the doorway and approach cells are clear, the door
+  auto-closes after a 30-tick timeout.
+- **Strict room enclosure solver:** `EnclosureGrid` implements a per-layer flood fill bounded horizontally
+  by `EdificeWall`, `EdificeDoor`, or solid rock. Enclosure strictly requires 100% overhead roofs
+  (either solid rock or a built floor slab on layer `y + 1`). Reaching the map edge or exceeding 2,500 cells
+  marks the area outdoors. Dirty tracking wires into wall/door construction, mining, and collapse.
+- **Inspect pane:** `InspectModel` displays `environment: indoors` on cell inspection when `IsIndoors` is true.
+
+**The presentation half: frame, sliding leaf, and audio.**
+- **Frame and leaf split:** The doorway frame (`SM_Bld_Base_Wall_Door_01`) is emitted into chunk batches via
+  `ChunkMesher.EmitDoor`. The sliding leaf (`SM_Prop_Door_01`) is rendered dynamically via `DoorDirector`
+  using `Graphics.RenderMeshInstanced` so chunk batches do not remesh during animation.
+- **Lateral sliding animation:** When pawns approach within 1.6 m or pass through, `DoorDirector` smoothly
+  slides the door leaf laterally into the wall frame pocket over 0.2 s.
+- **Audio:** Transitions trigger `SoundIds.DoorOpen` and `SoundIds.DoorClose` on the world audio bus.
+- **Orientation ownership:** `WorldRenderModel.DoorFacing(x, z, y)` owns doorway orientation across both
+  `ChunkMesher` and `DoorDirector`, ensuring the leaf and frame never diverge.
+
+**The golden master.**
+Ruined city maps stamp `EdificeDoor` edifices. Previously, these edifices never had `NavFlags.Door` registered.
+With `RebuildDoors` active on startup, ruined city doorways now charge opening cost and tick through `DoorSystem`.
+`Generated` remained identical (`15228913419309580379UL`), and `Simulated` moved to `4326887137815085451UL`.
+The meadow baseline maps have no doors and remain unchanged.
+
+**Verification:**
+Fast tier 804 Sim + 467 Hud; EditMode 1,992 / 1,978 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+

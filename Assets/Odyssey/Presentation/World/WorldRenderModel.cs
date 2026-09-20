@@ -405,6 +405,31 @@ namespace Odyssey.Presentation.World
             return chosen & 3;
         }
 
+        /// <summary>
+        /// The direction a door frame and sliding leaf face to align with adjacent walls, 0–3 (<see cref="Directions"/>).
+        ///
+        /// <para>Facing points along the opening (the walkway), with the frame running perpendicular to it.
+        /// When walls stand on opposite sides (e.g. West and East), the doorway opens North/South (yaw 0).
+        /// Shared between <see cref="ChunkMesher"/> and <see cref="DoorDirector"/> so the frame
+        /// and the sliding leaf cannot disagree on orientation.</para>
+        /// </summary>
+        public int DoorFacing(int x, int z, int y)
+        {
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!Size.Contains(nx, nz, y)) return dir;
+                if (!OccludesFace(Size.Index(nx, nz, y))) return dir;
+            }
+            return Directions.North;
+        }
+
+        public int DoorFacing(int index)
+        {
+            CellRef cell = Size.FromIndex(index);
+            return DoorFacing(cell.X, cell.Z, cell.Y);
+        }
+
         /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
         public int BedPillowModule => _bedPillowModule;
 

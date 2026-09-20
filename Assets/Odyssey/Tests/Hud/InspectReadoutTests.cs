@@ -120,9 +120,9 @@ namespace Odyssey.Tests.Hud
         static CellDetail Detail(byte terrain = TerrainHandle.Grass, byte edifice = EdificeHandle.None,
             byte floorStuff = StuffHandle.None, byte support = 0,
             ushort moveCost = 1000, ushort workToClear = 0,
-            byte quality = 0, int owner = 0) =>
+            byte quality = 0, int owner = 0, bool isIndoors = false) =>
             new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear,
-                quality, owner);
+                quality, owner, isIndoors);
 
         /// <summary>The rows as one readable line, in order: "walk speed=33%" and friends.</summary>
         static string Rows(InspectModel model)
@@ -454,6 +454,24 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Title, Is.EqualTo("Wall"));
             Assert.That(model.Site, Is.EqualTo("2 of 5 wood delivered"));
             Assert.That(model.CellRows, Is.Empty, "the site is the whole answer while it stands");
+        }
+
+        [Test]
+        public void AnIndoorsCellDisplaysEnvironmentIndoors()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(isIndoors: true)));
+
+            Assert.That(Rows(model), Does.Contain("environment=indoors"));
+        }
+
+        [Test]
+        public void AnOutdoorsCellDoesNotDisplayEnvironmentIndoors()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(isIndoors: false)));
+
+            Assert.That(Rows(model), Does.Not.Contain("environment=indoors"));
         }
     }
 }

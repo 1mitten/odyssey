@@ -265,12 +265,12 @@ namespace Odyssey.Tests.Sim
         /// ladders inside the window; on the rates trajectory, with every work and move rate
         /// shifted, none does. The ladder code is present in the merge — checked, not assumed.</para>
         ///
-        /// <para><b>Simulated re-baked 2026-09-18</b> for the ladder shaft rule, and the failure
-        /// named its own cause: the board generated identically and only the run diverged. A ladder
-        /// used to need a slab <i>directly above</i> it to register a connector at all, so every
-        /// ladder the city stamps under an open cell was dead; now a landing beside the top counts
-        /// too, and the colony reaches places it could not. Generated is untouched, which is the
-        /// evidence that no generator pass changed.</para>
+        /// <para><b>Simulated re-baked 2026-09-20</b> for functional doors and the auto-closing
+        /// <see cref="DoorSystem"/>: ruined city templates stamp <see cref="CoreContent.EdificeDoor"/>,
+        /// which now rebuilds <see cref="Pathing.NavFlags.Door"/> on the nav graph via
+        /// <see cref="Construction.ConstructionGrid.RebuildDoors"/> and ticks through the door system,
+        /// charging opening movement cost and managing auto-close timeouts during traversal.
+        /// Generated is untouched, confirming worldgen is unchanged.</para>
         /// </summary>
         public static readonly Case City = new Case
         {
@@ -281,7 +281,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 15228913419309580379UL,
-            Simulated = 16449829814357915634UL,
+            Simulated = 4326887137815085451UL,
         };
     }
 }
