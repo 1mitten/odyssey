@@ -2452,6 +2452,14 @@ reading it as a regression**, and read it as a question about the machine rather
 outside every checkout, such as `D:\assets\Synty` — and *every* checkout including the main one is a
 junction into it. Then a worktree removal can only ever take a link.
 
+**Recovery, when it has already happened.** A deleted worktree lands in `D:\$RECYCLE.BIN` under a
+`$R…` directory, and **the COM recycle-bin listing does not show these** — enumerate the `$R*`
+directories on disk instead. Most of the copies found that way are themselves junctions and restore
+nothing; the one that is a *real* directory is the one that matters, and on this project it has
+**18 entries, 15,868 files and 1.54 GB**. `robocopy <src> <dst> /E /COPY:DAT /DCOPY:DAT` it to the
+canonical path, copy `Assets\Synty.meta` beside it, then sweep `D:\code` for junctions whose target
+no longer resolves and repoint them. Copy rather than move, so the bin copy survives as a fallback.
+
 **And before removing a worktree, unlink first:**
 
 ```

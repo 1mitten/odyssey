@@ -9250,16 +9250,36 @@ cheapest form: a comment and the line beneath it.
 Unity EditMode **2,257 / 2,236 / 0 failed**; PlayMode **91 / 81 / 0 failed**, five short of main's
 86 passes because that run had no `Assets/Synty` — see the note below.
 
-**And the machine lost the art packs during this session.** `D:\code\odyssey-audio` held the one
-real copy of `Assets/Synty`; every other checkout on the machine, including `D:\code\odyssey`
-itself, reaches it through a junction chain. That worktree's directory was removed while this
-session was running — it read the packs successfully at the start and found the directory gone
-later — and `git worktree list` now calls it prunable along with five others. The packs are not in
-the recycle bin and no second copy exists on `D:`. **This is a machine-state problem and not a
-branch problem**, but until the packs are reinstalled every checkout draws untextured primitives and
-the five art-dependent PlayMode tests skip. The standing rule in
-`memory/junctions-and-worktree-removal.md` was written after the near-miss; this is the hit. The
-lesson for the project is in `docs/lessons.md`: **the real packs must not live inside a worktree**.
+**And the machine lost the art packs during this session, then got them back.** `D:\code\odyssey-audio`
+was a worktree, and six checkouts — including this one — junctioned their `Assets/Synty` at it
+rather than at the canonical `D:\code\odyssey\Assets\Synty`. That worktree was removed while this
+session was running: it read the packs successfully at the start and found the directory gone later,
+and `git worktree list` now calls it prunable along with five others. All six junctions went
+dangling at once.
+
+**The symptom was a skip count, not an error.** Both tiers stayed green with `failed=0`; what moved
+was PlayMode's *passed*, 81 against main's 86, with five tests ignoring themselves for reasons like
+*"the colonist rows resolved to no art"*. A lower pass count with nothing failed is the tell, and it
+is a question about the machine rather than the branch.
+
+**Recovered.** A deleted worktree lands in `D:\$RECYCLE.BIN`, and the COM recycle-bin listing does not
+show these — enumerating the `$R*` directories on disk found eleven copies of `Assets\Synty`, ten of
+them junctions that restore nothing and one a real directory with the right 15,868 files and
+1.54 GB. The canonical path had been restored from it by the time this session looked; the six
+dangling junctions were repointed at it, `.meta` included, and PlayMode re-run with the art present.
+
+**The lesson is not the recovery, it is the arrangement.** Sixteen checkouts, one copy, no
+duplication — which is why it looked right. Its one non-obvious property is that **the real packs
+were inside something whose whole purpose is to be disposable**. They belong in a plain directory
+outside every checkout, with every checkout including the main one a junction into it; then a
+worktree removal can only ever take a link. `docs/lessons.md`.
+
+**And the disk is the next thing to bite.** `D:` is at 100% with about 8 GB free of 1.9 TB, across
+twenty-seven worktrees each carrying its own multi-gigabyte Unity `Library`. It failed an ordinary
+840 KB file write mid-way during this session and left the file zero bytes — recoverable only
+because it was committed. Anything that writes to that disk should assume the write can fail:
+write to a temporary file in the same directory and `os.replace` it into place, which is what the
+session's own edit helper does now.
 
 ## 2026-09-20 — Skills made visible, and a session that checked its base once (SK2–SK5)
 
