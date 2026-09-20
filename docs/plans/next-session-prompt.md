@@ -1,3 +1,10 @@
+> **Superseded 2026-09-19.** The positions below are from 2026-09-16 and most of the "fix these
+> before any new feature" items have since landed (OQ-47, OQ-21, OQ-15/16, OQ-44/45/46 and the
+> mining merge are all done; the PlayMode input harness in item 1 is still open and is on the
+> hardening list). Start a session from `CLAUDE.md`, then `docs/process.md`, then
+> `docs/audit/2026-09-19-baseline.md` and `docs/plans/vertical-slice.md` §HT. The standing rules
+> at the bottom of this file are still right and are folded into `docs/process.md`.
+
 # Prompt for the next interactive session
 
 Paste everything below the line into a fresh session in `D:\code\odyssey`. It is written for an
