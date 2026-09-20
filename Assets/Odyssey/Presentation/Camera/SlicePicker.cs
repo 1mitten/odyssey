@@ -2,6 +2,7 @@
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
@@ -230,7 +231,7 @@ namespace Odyssey.Presentation.CameraRig
                 int index = size.Index(x, z, layer);
                 float tCellEnd = tEnter + Mathf.Min(tMaxX, tMaxZ);
 
-                if (model.OccludesFace(index))
+                if (model.OccludesFace(index) || model.EdificeDef(index) == CoreContent.EdificeDoor)
                 {
                     cell = new CellRef(x, z, layer);
                     thing = model.EdificeDef(index) != 0;
