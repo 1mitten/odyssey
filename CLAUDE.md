@@ -162,6 +162,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`). **A skill now buys speed at the hoe** — `Work_Growing` carries `rateSkill 4` and cutting's curve, which three comments and this file denied for two days. The debug menu gained **Skip one day** and **Ripen crops**. **Reviewed against main twice on 2026-09-20** (`docs/journal.md`): both givers were missing the `ctx.Reachable` every other giver has, and one unreachable crop cost 159 failed jobs in 2,000 ticks; `PlantDef.yields` was declared and never read; and the zone's translucent cover was both the interior-edge borders the owner photographed and 2,065 draw calls a frame. The zone is a bit on the ground's terrain tint now (`TintCode.TilledBase`), which is no draws at all. |
 | **EV** events | **Merged 2026-09-20 (PR #140)** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
 | **HT** hardening | **Audited 2026-09-19; audit and plan merged as PR #136. Nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
+| **PF** frame budget | **The mark pass, 2026-09-20.** The standing-order marks were the last per-cell draw pass and the last uncounted one (P10): they are gathered by colour and go out as one instanced call each, so 901 orders cost 2 draw calls rather than 901, and the pass finally appears in the budget. **Measured with a control inside one run** (`FrameTimeTests.TheMarkPassCostsWhatItSubmits`, `ChunkRenderer.InstanceCellPlates`): the whole pass is **0.40 ms at 901 orders** and the batching recovers **0.09** — a fortieth of what the 4.6 us constant predicts, which is the finding rather than the fix (§6c.1). Still open: **play resolution and target hardware**, which only the owner's on-screen overlay in a real Play session can answer; the zone snapshot republish and `BestStorageCell`, both of which belong with the storage work. |
 | **FI** falling items | **Merged 2026-09-20 (PR #138)** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
@@ -176,6 +177,7 @@ this file.
 
 | If you are touching | Read |
 |---|---|
+| The frame budget, draw calls, what a submission costs | `docs/design/06-rendering-and-camera.md` §6c, §6c.1 |
 | Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
 | Walls, sites, materials, the build botch | `docs/design/15-building.md` |
 | Cancel, deconstruct | `docs/design/16-cancel-and-deconstruct.md` |
@@ -323,14 +325,16 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **806 Sim + 471 Hud** (2026-09-20, the bed and order-colour branch with events and falling items merged); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~30 s, no Unity): **858 Sim + 484 Hud** (2026-09-20, `claude/mark-pass-batching` off a main carrying growing zones, doors and colonist figures); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
-  `claude/colonist-figures-and-portraits`: EditMode **2,003 total, 1,990 passed, 0 failed**;
-  PlayMode **85 total, 80 passed, 0 failed** (the three new ones are the portrait-lighting and
-  figure-cap guards). The remainder are `[Explicit]` or ignored. The run before it, the same day
-  on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
+  `claude/mark-pass-batching`: EditMode **2,109 total, 2,091 passed, 0 failed**; PlayMode
+  **89 total, 84 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`, the guard
+  that a marked board costs draws in colours rather than in cells; the new PlayMode one is
+  `FrameTimeTests.TheMarkPassCostsWhatItSubmits`. The remainder are `[Explicit]` or ignored. The
+  run before it, the same day on `claude/colonist-figures-and-portraits`, was EditMode
+  2,003 / 1,990 and PlayMode 85 / 80.
 - **The runner has no `Assets/Synty`, so its PlayMode count is lower than this machine's and that
   is correct.** Everything that needs a colonist's art ignores itself there — on 2026-09-20 the
   same commit was 85/80/0 here and 85/75/0 with ten ignored on the runner. **A test that needs the
@@ -368,11 +372,23 @@ invisible where the game is played.
 Frame time under the real player loop, against a 5 ms budget — **and the budget is in the docs, not
 in the assert**: `FrameTimeTests` passes anything under a 30 Hz frame, so a green PlayMode run says
 nothing about it. Measured 2026-09-20 after the surround work: meadow **2.59 ms**, field (2,065
-zone cells) **4.09 ms**, city **2.01 ms**, on an RTX 5070 Ti at 640 × 480. **A per-draw submission
-costs about 4.6 us whatever is in it**, which is the single most useful number for this renderer:
-three passes were submitting per cell, and two of them are fixed (the zone cover, the seed specks).
-The third — `DrawCellMark`/`Shade`/`Cut` for standing orders — is not, and the benchmark cannot see
-it because the meadow case is barren and has nothing to designate. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
+zone cells) **4.09 ms**, city **2.01 ms**, on an RTX 5070 Ti at 640 × 480. All four per-cell draw
+passes are now fixed: the zone cover, the seed specks, the surround's batching, and — later the
+same day — the standing-order marks, which a board of 901 orders took from 2,144 draw calls to
+1,245.
+
+**Two rules before you quote any of that.** This machine runs several editors at once, so a frame
+number is only comparable with one taken in the **same run**: the city canary drifted from 2.01 to
+4.01 ms in an afternoon purely on what a sibling worktree was doing, and the same pass read 1.57,
+0.81 and 0.19 ms on that noise alone. And **"a submission costs about 4.6 us whatever is in it" is
+not a per-call toll.** Measured with a control in one run, a mark plate's submission costs about
+**0.1 us**; the readings the constant came from each drew a real mesh. It is what a *loaded*
+submission costs — the thing to reach for when a pass is slow — and not arithmetic that condemns a
+per-cell loop before it is measured (`docs/design/06-rendering-and-camera.md` §6c.1).
+
+**And none of it is measured at a play resolution or on the target laptop**, which is the largest
+open question in the renderer. The city's move from 0.88 to 1.56 ms is **unexplained** and still
+open.
 
 **Pathfinding is where the tick goes under load, and it is no longer a threat to the frame budget**
 (OQ-19, measured on the real `SimWorld.Tick`): a colony of 50 on 250 × 250 × 40 costs 0.025 ms a

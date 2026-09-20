@@ -257,6 +257,25 @@ namespace Odyssey.Presentation.Bootstrap
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
+
+        /// <summary>
+        /// How long last frame spent inside <c>SimWorld.Tick</c>, in milliseconds.
+        ///
+        /// <para>Exposed because a frame-time difference is not automatically a rendering
+        /// difference, and this project has already read one as though it were. A thousand
+        /// standing orders make the renderer draw a thousand marks <i>and</i> make the work
+        /// givers scan a thousand designated cells; both land on the main thread and both show
+        /// up in <c>Time.unscaledDeltaTime</c>. The developer overlay has printed these two
+        /// numbers since it existed — <c>FrameTimeTests</c> can now read the same pair rather
+        /// than attributing the whole difference to whichever half is being worked on.</para>
+        /// </summary>
+        public double TickMs => _tickMs;
+
+        /// <summary>
+        /// How long last frame spent submitting the world, in milliseconds — the other half of
+        /// the pair <see cref="TickMs"/> describes.
+        /// </summary>
+        public double SubmitMs => _renderMs;
         float _smoothedFrameMs;
         string _catalogueNote = string.Empty;
 
@@ -1120,6 +1139,11 @@ namespace Odyssey.Presentation.Bootstrap
             DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
+            // After everything that marks a cell and before the cursors, which are brackets and
+            // not plates: the order marks, the cut and fill slabs and the drag preview are all
+            // gathered by colour and go out as one instanced call each. They were one submission
+            // per cell, counted nowhere - P10.
+            _renderer.FlushCellPlates();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;

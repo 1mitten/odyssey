@@ -21,6 +21,16 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Do the order marks still draw?** (`claude/mark-pass-batching`,
+  `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
+  fill now goes through one instanced call per colour instead of one submission per cell. Nothing
+  about the geometry moved, so this should look identical — but an instanced draw through a
+  material that does not support instancing **draws nothing at all, silently**, and no test can
+  see pixels. Arm mine or chop, drag a box over a dozen trees or rocks, and say whether the marks
+  appear as they did. Then let a colonist start on one, so the cut slab shows too. A wrong answer
+  looks like: the cells you dragged over look untouched, or the mark is there and the progress
+  slab is not.
+
 - **The profile pictures, after dark** (`claude/colonist-figures-and-portraits`,
   `docs/design/20-avatars.md` §10.7–10.8, §11). A portrait used to be lit by whatever hour it was
   taken at and then kept for the session, so a colonist generated after dusk had a black card for

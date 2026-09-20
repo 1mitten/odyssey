@@ -197,13 +197,22 @@ the frame.
 | `DrawZoneCover` | the ground module again, tinted | 2,065 calls, **3.67 ms of a 5 ms budget**, counted nowhere | a bit on the terrain bucket's tint — no draws |
 | `DrawSeedSpecks` | six unit cubes, one material | six submissions a sown cell | one `RenderMeshInstanced` a frame |
 | `TerrainSkirt` trees | instanced, but split into 760 spatial batches | 3.5 ms; **the tree count was irrelevant** | 272 batches, same 4,169 trees |
-| `DrawCellMark`/`Shade`/`Cut` | a plate per designated cell | **unmeasured** — the benchmark's board is barren and has nothing to designate | open |
+| `DrawCellMark`/`Cut`/`Fill` | a plate per designated cell | **0.40 ms at 901 orders, counted nowhere** | gathered by colour, one instanced call each |
 
 **The tell:** a cost that scales with cells the player painted, designated or planted rather than
 with what is on screen. **The check:** anything fixed to the grid belongs in the chunk mesher,
 where a bucket is one instanced call and inherits culling and the dirty-chunk rebuild.
-`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` is the guard for one of them —
-it fails the moment a zone costs draws in proportion to its cells.
+`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` and
+`CellPlateTests.ABiggerMarkedAreaAddsInstancesRatherThanDraws` are the guards — each fails the
+moment its pass costs draws in proportion to its cells.
+
+**But price the pass before you believe the arithmetic.** The mark pass was the fourth of these
+and the first to be measured with a control in the same run, and it came out at **0.40 ms for
+901 plates, of which batching recovered 0.09** — a twentieth of what "4.6 us a submission times
+901" predicts. A submission's price depends on what is in it after all: the readings that
+constant came from each drew a real mesh, and a mark is a unit cube. The counted-nowhere half of
+this pattern is the reliable one; the it-must-be-expensive half is a hypothesis to test.
+`docs/design/06-rendering-and-camera.md` §6c.1.
 
 **The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
 publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
@@ -213,6 +222,40 @@ its whole tick cost. Per-cell-per-frame and per-cell-per-tick are one pattern we
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — the pass that was free because it never ran
+
+Not a player report: a benchmark reading. A new `FrameTimeTests` case put 901 mine orders on the
+board and measured 4.85 ms against the bare meadow's 4.86 — which reads as "the mark pass costs
+nothing" and is one of the two answers that should never be believed on sight (the other being a
+five-fold regression). The orders were real: placed, published, counted in the snapshot. They
+were simply **outside the band the pass draws**. `DrawStandingOrders` filters every order to
+`LowestSelectableLayer .. HighestSelectableLayer`, the drawn slice was 8..15, and the case walked
+the board row-major from `z = 1`, which is a strip of lower ground. Nothing drew and nothing
+said so.
+
+**The shape: an instrument that can measure nothing and report a number.** It is the sibling of
+"count the pass, or the budget cannot see it" — there the pass ran and was uncounted, here the
+pass was counted and did not run. Both produce a plausible number from an empty measurement, and
+a plausible wrong result is worse than an obviously broken one.
+
+**Stopped by** `ChunkRenderer.CellPlatesDrawn`, printed on every `[FrameTime]` line and asserted
+greater than zero by the case that depends on it, and by the case asking the rig for the band
+rather than assuming the surface is in it.
+
+### 2026-09-20 — two editors on one machine, and a frame number that meant nothing
+
+Also not a player report. The first three frame-time readings of the session had the city canary
+at 4.01, 2.86 and 2.71 ms against its 2.01 ms record, and the mark pass read 1.57 ms, then
+0.81 ms, then 0.19 ms on runs of the same code. The machine was running a sibling checkout's
+PlayMode suite, then its player build, then an editor importing a third worktree. **Every
+absolute was inflated and every cross-run difference was noise.**
+
+**Stopped by** measuring the before and the after **inside one run, seconds apart**:
+`TheMarkPassCostsWhatItSubmits` times one meadow three times and quotes the differences, and
+`ChunkRenderer.InstanceCellPlates` switches the submission strategy without touching the
+geometry. Cross-run comparison on this machine is not a measurement, and the canary was already
+in `docs/lessons.md` saying so.
 
 ### 2026-09-20 — The soil had borders, and the borders were the frame budget
 

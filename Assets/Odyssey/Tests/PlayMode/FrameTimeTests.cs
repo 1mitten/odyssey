@@ -67,6 +67,122 @@ namespace Odyssey.Tests.PlayMode
             Measure(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, "field", SeedField);
 
         /// <summary>
+        /// A thousand standing orders on the board at once, which is what a player marking a
+        /// wood or a quarry actually leaves behind.
+        ///
+        /// <para><b>Why this case had to exist before anything was optimised.</b> The meadow
+        /// case is barren and has nothing designated, so the mark pass — one submission per
+        /// designated cell, incrementing no counter — was invisible to every frame number this
+        /// project has ever quoted (P10, <c>docs/bug-patterns.md</c>). A benchmark measures the
+        /// world it builds; orders were not in any of them.</para>
+        ///
+        /// <para>Mine orders on the topmost solid cell of each column, because that is the one
+        /// designation a barren meadow can carry — it needs neither a tree nor a building — and
+        /// it lands on the surface, which is inside the drawn band the mark pass filters to.</para>
+        ///
+        /// <para><b>Paired, in one world, seconds apart.</b> A frame number is only comparable
+        /// with one measured in the same session (<c>docs/lessons.md</c>), and this machine runs
+        /// more than one Unity at a time — a sibling checkout's PlayMode run took the city canary
+        /// from 2.01 ms to 4.01 on 2026-09-20 while this case was being written. Measuring the
+        /// same meadow before and after the orders go down cancels all of that: the difference is
+        /// the pass, whatever the machine is doing.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMarkPassCostsWhatItSubmits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                float bare = 0f;
+                yield return TimeFrames("orders/none", boot, WarmupFrames, x => bare = x);
+
+                yield return SeedOrders(boot);
+
+                // The control first: the same gathered plates submitted one at a time, which is
+                // what the pass did until 2026-09-20.
+                boot.Renderer!.InstanceCellPlates = false;
+                float perCell = 0f;
+                yield return TimeFrames("orders/per-cell", boot, WarmupFrames, x => perCell = x);
+
+                boot.Renderer!.InstanceCellPlates = true;
+                float instanced = 0f;
+                yield return TimeFrames("orders/instanced", boot, WarmupFrames, x => instanced = x);
+
+                int plates = boot.Renderer!.CellPlatesDrawn;
+                Debug.Log($"[FrameTime] mark pass over {plates} cell plates: " +
+                          $"bare {bare:0.00} ms, per-cell {perCell:0.00} ms " +
+                          $"(+{perCell - bare:0.00}, {(plates > 0 ? (perCell - bare) * 1000f / plates : 0f):0.0} us each), " +
+                          $"instanced {instanced:0.00} ms (+{instanced - bare:0.00}); " +
+                          $"batching saves {perCell - instanced:0.00} ms");
+
+                Assert.That(plates, Is.GreaterThan(0),
+                    "no cell plate was drawn, so this measured nothing: the orders are outside " +
+                    "the band DrawStandingOrders filters to");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>How many cells the order case marks. A wood is hundreds; this is the round
+        /// number above it, and it is the same order of magnitude as the field's 2,000 so the two
+        /// can be read against each other.</summary>
+        const int OrderCells = 1_000;
+
+        /// <summary>
+        /// Designate the board row-major until a thousand orders stand, the same walk and the
+        /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
+        /// refuses what stands on it, and the intent bus has a capacity.
+        ///
+        /// <para><b>Only inside the band the mark pass draws</b>, which is the whole measurement.
+        /// <c>OdysseyBootstrap.DrawStandingOrders</c> filters every order to
+        /// <c>LowestSelectableLayer .. HighestSelectableLayer</c>, and above the surface the
+        /// highest is the active layer itself — so orders placed on a plateau north of the camera
+        /// are published, counted and never drawn. The first version of this case walked from
+        /// <c>z = 1</c> and put all 901 of its orders on ground the slice was not drawing: it
+        /// measured 4.85 ms against the meadow's 4.86, which reads as "the pass is free" and was
+        /// in fact "the pass did not run". The band is asked for here rather than assumed.</para>
+        /// </summary>
+        IEnumerator SeedOrders(OdysseyBootstrap boot)
+        {
+            yield return null;
+            Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+            Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+            Assert.That(boot.cameraRig, Is.Not.Null, "no camera rig, so no drawn band");
+
+            var grid = boot.Colony!.Grid;
+            var size = grid.Size;
+            int lowest = Math.Max(0, boot.cameraRig!.LowestSelectableLayer);
+            int highest = boot.cameraRig!.HighestSelectableLayer;
+
+            int submitted = 0, placed = 0;
+            for (int z = 1; z < size.SizeZ - 1 && placed < OrderCells; z++)
+            for (int x = 1; x < size.SizeX - 1 && placed < OrderCells; x++)
+            {
+                int top = -1;
+                for (int y = size.SizeY - 2; y >= 0; y--)
+                    if ((grid.Flags[size.Index(x, z, y)] & CellFlags.SolidTerrain) != 0)
+                    { top = y; break; }
+                if (top < lowest || top > highest) continue;
+
+                boot.World!.Intents.Submit(new Intent(IntentKind.Designate,
+                    new CellRef(x, z, top), (int)Odyssey.Sim.Designations.DesignationKind.Mine));
+                placed++;
+                if (++submitted % 512 == 0) boot.World!.Tick();
+            }
+            boot.World!.Tick();
+
+            int standing = boot.World!.Views.Current.Orders.Length;
+            Debug.Log($"[FrameTime] orders: {standing} standing orders, drawn band {lowest}..{highest}");
+            Assert.That(standing, Is.GreaterThanOrEqualTo(OrderCells * 8 / 10),
+                $"only {standing} of {OrderCells} designations took inside the drawn band " +
+                $"{lowest}..{highest}, so this is no longer the measure it names");
+        }
+
+        /// <summary>
         /// Paint the board's open ground until the zone passes two thousand cells, sown by the
         /// colony itself: the intents go in, the world ticks forward past four daylight
         /// windows, and what is measured is a field the pawns actually planted — not a mirror
@@ -135,33 +251,8 @@ namespace Odyssey.Tests.PlayMode
             {
                 if (seed != null) yield return seed(boot);
 
-                for (int i = 0; i < WarmupFrames; i++) yield return null;
-
-                float total = 0f, worst = 0f;
-                for (int i = 0; i < TimedFrames; i++)
-                {
-                    yield return null;
-                    float ms = Time.unscaledDeltaTime * 1000f;
-                    total += ms;
-                    if (ms > worst) worst = ms;
-                }
-
-                float mean = total / TimedFrames;
-                ChunkRenderer? renderer = boot.Renderer;
-                // Resolution matters to the reading: a fullscreen pass or a sky costs per pixel,
-                // and the batch game view is not the player's monitor.
-                Debug.Log($"[FrameTime] {label}: mean {mean:0.00} ms, worst {worst:0.00} ms over {TimedFrames} frames; " +
-                          $"{renderer?.DrawCalls ?? 0} draw calls, {renderer?.InstancesDrawn ?? 0} instances, " +
-                          $"{renderer?.ChunksDrawn ?? 0} chunks; " +
-                          // The surround is built once and submitted whole, so its own counts are
-                          // the only way to attribute a frame-time change to it rather than to the
-                          // board. The hill wood in particular is a switch somebody will want to
-                          // weigh, and a number beats an opinion about it.
-                          $"surround {renderer?.Skirt.TreeInstances ?? 0} trees + " +
-                          $"{renderer?.Skirt.FarTreeInstances ?? 0} on the hills, " +
-                          $"{renderer?.Skirt.BatchesDrawn ?? 0} batches; " +
-                          $"{Screen.width}x{Screen.height}, " +
-                          $"{SystemInfo.graphicsDeviceName}");
+                float mean = 0f;
+                yield return TimeFrames(label, boot, WarmupFrames, x => mean = x);
 
                 Assert.That(mean, Is.LessThan(CeilingMs),
                     "the play world takes longer than a 30 Hz frame on a development machine");
@@ -170,6 +261,56 @@ namespace Odyssey.Tests.PlayMode
             {
                 UnityEngine.Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// Warm up, time <see cref="TimedFrames"/> frames, print the line, hand back the mean.
+        ///
+        /// <para>Its own method so a test can time the same world twice and quote the
+        /// difference, which is the only figure this machine can be trusted for.</para>
+        /// </summary>
+        IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean)
+        {
+            for (int i = 0; i < warmup; i++) yield return null;
+
+            float total = 0f, worst = 0f;
+            double tick = 0d, submit = 0d;
+            for (int i = 0; i < TimedFrames; i++)
+            {
+                yield return null;
+                float ms = Time.unscaledDeltaTime * 1000f;
+                total += ms;
+                if (ms > worst) worst = ms;
+                // The two halves the bootstrap already times, so a difference between two
+                // readings can be attributed rather than assumed. A board full of standing
+                // orders costs the work givers as well as the renderer.
+                tick += boot.TickMs;
+                submit += boot.SubmitMs;
+            }
+
+            float meanMs = total / TimedFrames;
+            mean(meanMs);
+
+            ChunkRenderer? renderer = boot.Renderer;
+            // Resolution matters to the reading: a fullscreen pass or a sky costs per pixel,
+            // and the batch game view is not the player's monitor.
+            Debug.Log($"[FrameTime] {label}: mean {meanMs:0.00} ms, worst {worst:0.00} ms over {TimedFrames} frames; " +
+                      $"tick {tick / TimedFrames:0.000} ms, submit {submit / TimedFrames:0.000} ms; " +
+                      $"{renderer?.DrawCalls ?? 0} draw calls, {renderer?.InstancesDrawn ?? 0} instances, " +
+                      // The mark pass drew once per designated cell and counted none of it,
+                      // so a case that designates has to print the pass's own number or the
+                      // reading cannot be told apart from the pass not running at all.
+                      $"{renderer?.CellPlatesDrawn ?? 0} cell plates, " +
+                      $"{renderer?.ChunksDrawn ?? 0} chunks; " +
+                      // The surround is built once and submitted whole, so its own counts are
+                      // the only way to attribute a frame-time change to it rather than to the
+                      // board. The hill wood in particular is a switch somebody will want to
+                      // weigh, and a number beats an opinion about it.
+                      $"surround {renderer?.Skirt.TreeInstances ?? 0} trees + " +
+                      $"{renderer?.Skirt.FarTreeInstances ?? 0} on the hills, " +
+                      $"{renderer?.Skirt.BatchesDrawn ?? 0} batches; " +
+                      $"{Screen.width}x{Screen.height}, " +
+                      $"{SystemInfo.graphicsDeviceName}");
         }
 
         /// <summary>The play scene's objects, built by hand: a camera with the rig, a sun, the bootstrap.</summary>

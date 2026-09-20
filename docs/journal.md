@@ -25,6 +25,68 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-20 — the mark pass, and what a submission actually costs
+
+The last item on §6c's "still outstanding" list was the standing-order marks: one
+`Graphics.RenderMesh` per designated cell, incrementing no counter, unmeasured because the
+benchmark's meadow is barren and has nothing to designate. It is fixed — gathered by colour,
+one `RenderMeshInstanced` per colour, the shape the seed specks already use — and **the
+measurement is the part worth keeping**, because it took three wrong turns to get and it
+qualifies the number this renderer has been reasoning from.
+
+**First wrong turn: the pass was free because it never ran.** A new case designated 901 mine
+orders and measured 4.85 ms against the bare meadow's 4.86. The orders were real — placed,
+published, in the snapshot's `Orders` channel. But `DrawStandingOrders` filters to the drawn
+slice band, the band was 8..15, and the case walked row-major from `z = 1`, which on this seed
+is lower ground. Nothing was drawn and nothing said so. `CellPlatesDrawn` now prints on every
+`[FrameTime]` line and the case refuses to believe its own difference without it. This is the
+mirror of the fault that hid the zone cover: there the pass ran and was uncounted, here it was
+counted and did not run, and both hand you a plausible number from an empty measurement.
+
+**Second wrong turn: the machine.** Four runs across the afternoon put the city canary at 4.01,
+2.86, 2.71 and 2.46 ms against its 2.01 record — a sibling checkout was running its own PlayMode
+suite, then a player build, then an editor import of a third worktree. The same batched pass read
+1.57 ms, then 0.81, then 0.19, on that alone. The canary did its job; the lesson it was written
+for ("never compare a `FrameTimeTests` number with a recorded one across sessions") turns out to
+need a stronger form on this machine — **compare across runs at all and you are measuring the
+other agent.**
+
+**So the answer was a control inside one run.** `TheMarkPassCostsWhatItSubmits` times one meadow
+three times, seconds apart: bare, then with the 901 plates submitted one at a time, then with the
+same plates instanced. `ChunkRenderer.InstanceCellPlates` is the switch, and it is a control
+rather than a second code path — the geometry has one owner in `GatherCellPlate` and only the
+submission changes, which is the discipline the `SubmitToGpu` mistake taught.
+
+    901 standing orders   frame    submit   draw calls
+    none                  3.04 ms  2.322    1,243
+    one submission a cell 3.44 ms  2.701    2,144
+    instanced by colour   3.35 ms  2.614    1,245
+
+**Third wrong turn, and the finding: the arithmetic everyone including this session was doing
+is wrong.** 901 submissions at "about 4.6 us whatever is in it" is 4.1 ms, which is most of the
+budget, which is why this was ranked first. Measured, the **whole pass** is 0.40 ms and the
+899 submissions batching removes are worth **0.09 ms — about 0.1 us each, a fortieth of the
+constant.** Every reading the constant came from drew a real mesh: the zone cover was the ground
+module over itself, translucent and full tile, and the surround was a batch of trees. A mark is
+a twelve-triangle cube in a cached material. So the constant is what a *loaded* submission
+costs — the right thing to reach for when a pass is slow and you want the reason — and not a
+toll that makes any per-cell loop expensive before it is measured. It follows, though it has not
+been measured and now cannot be, that the zone cover's 3.67 ms was **mostly its translucent
+full-tile fill** rather than its call count; the diagnosis was right and its stated mechanism
+probably was not.
+
+**The batching is kept, for reasons that are not the 0.09 ms.** The pass is now counted, which
+was the half of P10 that let a field report 1,782 draw calls while issuing 3,847. The cost is
+flat in the number of orders rather than linear in it, so a five-thousand-cell quarry is the
+same code. And `CellPlateTests` guards the shape: a bigger marked area adds instances, not
+draws.
+
+**What this costs the ranking.** The mark pass was item 1 of the performance list on the strength
+of that arithmetic. It was worth about a twelfth of what the arithmetic said. The zone snapshot
+republish and `BestStorageCell` remain unmeasured at scale and belong with the storage work; the
+real unknown is still play resolution and target hardware, and nothing measured at 640 x 480 on
+an RTX 5070 Ti predicts it.
+
 ## 2026-09-20 — reviewing #119, and the frame it was hiding
 
 The growing branch was reviewed against a `main` that had moved twelve commits past it (events,
