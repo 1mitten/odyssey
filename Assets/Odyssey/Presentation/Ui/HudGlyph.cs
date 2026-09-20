@@ -53,6 +53,14 @@ namespace Odyssey.Presentation.Ui
         Cross,
 
         /// <summary>
+        /// A single centred bar: a tri-state box that is <b>partly</b> ticked (design brief,
+        /// 2026-09-21). Its own kind rather than a reused dash, because the fonts have no
+        /// character that reads as "some of these" at 16 px and a glyph that means two things is
+        /// a glyph that gets restyled for one of them.
+        /// </summary>
+        TriState,
+
+        /// <summary>
         /// A circular arrow: put this back the way it was. The Work tab's reset, which drops a
         /// column sort and returns the rows to the roster's own order.
         /// </summary>
@@ -313,6 +321,14 @@ namespace Odyssey.Presentation.Ui
 
                 case HudGlyphKind.Check:
                     Polyline(painter, true, P(4.5f, 12.4f), P(9.6f, 17.5f), P(19.5f, 6.5f));
+                    return;
+
+                case HudGlyphKind.TriState:
+                    // One bar, centred, the width of the tick it sits beside. The design brief is
+                    // specific and right about why it is this and not a dash character, a minus or
+                    // a square-in-square: at 16 px a bar is the only mark that reads as "partly"
+                    // rather than as "off" or as a second kind of tick.
+                    Polyline(painter, true, P(6f, 12f), P(18f, 12f));
                     return;
 
                 case HudGlyphKind.Cross:

@@ -860,42 +860,117 @@ namespace Odyssey.Presentation.Ui
             var keys = new List<string>(content.Items.Length);
             for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
 
-            _storageSettings.Show(cell, hasStore: true, settings.Priority, storage.CellsOf(slot).Count, keys,
-                accepts: settings.Accepts, categoryOf: i => (int)content.Items[i].category);
+            _storageSettings.Show(cell, slot, hasStore: true, settings.Priority,
+                storage.CellsOf(slot).Count, StorageTitle(slot),
+                keys, settings.Accepts, i => (int)content.Items[i].category, Registry.Label);
 
             _storageRows.Clear();
 
             // The ladder first: it is the thing that decides where the next armful goes, and the
-            // thing a player changes most.
+            // thing a player changes most. Each rung wears its own hue, so the ladder reads
+            // without reading the words.
             for (int i = 0; i < StorageSettingsModel.PriorityKeys.Length; i++)
             {
                 int rung = i;
-                _storageRows.Add(StorageSettingsRow(Registry.Label(StorageSettingsModel.PriorityKeys[i]),
-                    rung == _storageSettings.Priority ? BedPickerMark.ThisBed : BedPickerMark.None,
-                    () => { if (_storageSettings.PressPriority(rung, out var c)) SendStorageCommand(IntentKind.SetStoragePriority, c); }));
+                bool held = rung == _storageSettings.Priority;
+                _storageRows.Add(StorageSettingsRow(
+                    Registry.Label(StorageSettingsModel.PriorityKeys[i]),
+                    held ? StorageSettingsModel.CategoryOn : StorageSettingsModel.CategoryOff,
+                    HudTheme.StoragePriorityHue(rung), indent: 0, caret: StorageCaret.None,
+                    press: () =>
+                    {
+                        if (_storageSettings.PressPriority(rung, out var c))
+                            SendStorageCommand(IntentKind.SetStoragePriority, c);
+                    }));
             }
 
-            for (int i = 0; i < StorageSettingsModel.PresetKeys.Length; i++)
+            // Allow all and Clear all, which are the presets under the words they belong with —
+            // the design brief's own first open question, and it is right that these and the
+            // Everything / Nothing chips were the same two actions said twice. The chips are gone.
+            _storageRows.Add(StorageSettingsRow("Allow all", StorageSettingsModel.CategoryOff,
+                HudTheme.Accent, 0, StorageCaret.None,
+                () => { if (_storageSettings.PressAllowAll(out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
+            _storageRows.Add(StorageSettingsRow("Clear all", StorageSettingsModel.CategoryOff,
+                _storageSettings.ClearAllEnabled ? HudTheme.Accent : HudTheme.TextDim,
+                0, StorageCaret.None,
+                () => { if (_storageSettings.PressClearAll(out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
+
+            // Then the list the model built: six categories in registry order, each expanding to
+            // its commodities in alphabetical order. An empty category keeps its row and its live
+            // box and grows no caret.
+            foreach (StorageSettingsModel.Row row in _storageSettings.Rows)
             {
-                int preset = i;
-                _storageRows.Add(StorageSettingsRow(Registry.Label(StorageSettingsModel.PresetKeys[i]),
-                    BedPickerMark.None,
-                    () => { if (_storageSettings.PressPreset(preset, out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
+                StorageSettingsModel.Row captured = row;
+                if (row.Kind == StorageSettingsModel.RowKind.Commodity)
+                {
+                    _storageRows.Add(StorageSettingsRow(row.Label, row.State, HudTheme.TextPrimary,
+                        indent: 22, caret: StorageCaret.None,
+                        press: () =>
+                        {
+                            if (_storageSettings.PressDef(captured.DefIndex, out var c))
+                                SendStorageCommand(IntentKind.SetStorageFilter, c);
+                        }));
+                    continue;
+                }
+
+                string label = row.State == StorageSettingsModel.CategoryMixed
+                    ? $"{row.Label}   {row.Accepted} of {row.Members}"
+                    : row.Label;
+
+                _storageRows.Add(StorageSettingsRow(label, row.State,
+                    HudTheme.ItemCategoryHue(row.Category), indent: 0,
+                    caret: row.IsEmpty ? StorageCaret.None
+                        : row.Expanded ? StorageCaret.Open : StorageCaret.Closed,
+                    press: () =>
+                    {
+                        var commands = new List<StorageSettingsModel.Command>();
+                        if (!_storageSettings.PressCategory(captured.Category, commands)) return;
+                        foreach (StorageSettingsModel.Command c in commands)
+                            SendStorageCommand(IntentKind.SetStorageFilter, c);
+                    },
+                    pressCaret: () =>
+                    {
+                        if (_storageSettings.ToggleExpanded(captured.Category)) FillStoragePanel();
+                    }));
             }
 
-            // Then one row per commodity. The category rows the model already builds are not drawn
-            // yet: four of the six have no commodity in them, so a parent over a branch of nought
-            // compresses nothing (docs/plans/storage.md decisions 21 and 31). The model carries
-            // their three-way state, so the tree is a layout change when the table is long enough
-            // to need it.
-            foreach (StorageSettingsModel.DefRow row in _storageSettings.Defs)
-            {
-                int def = row.DefIndex;
-                _storageRows.Add(StorageSettingsRow(Registry.Label(row.Key),
-                    row.Accepted ? BedPickerMark.ThisBed : BedPickerMark.None,
-                    () => { if (_storageSettings.PressDef(def, out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
-            }
+            // A store that takes nothing is a legal state, so this is a warning and not an error.
+            if (_storageSettings.NothingAccepted)
+                _storageRows.Add(StorageSettingsRow(StorageSettingsModel.NothingAcceptedLead,
+                    StorageSettingsModel.CategoryOff, HudTheme.Warn, 0, StorageCaret.None, null));
         }
+
+        /// <summary>
+        /// What a zone with no name of its own is called: the registry's noun and an ordinal.
+        /// Never blank and never invented.
+        ///
+        /// <para>The ordinal is the zone's place in <b>cell order</b> — how many zones begin at a
+        /// lower cell than this one — rather than a counter written down somewhere. That makes it
+        /// the same answer on both sides of a save with nothing saved, at the price of a zone's
+        /// number changing when a zone before it is deleted. A name the player has typed is the
+        /// fix for that and it is the next unit; until then the ordinal is what the pane and the
+        /// board both say, which is the property that matters.</para>
+        /// </summary>
+        string StorageTitle(int slot)
+        {
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (storage == null) return Registry.Label(PaletteTools.Stockpile);
+
+            IReadOnlyList<int> mine = storage.CellsOf(slot);
+            int first = mine.Count > 0 ? mine[0] : int.MaxValue;
+
+            int ordinal = 1;
+            for (int other = 0; other < storage.ZoneCount; other++)
+            {
+                if (other == slot) continue;
+                IReadOnlyList<int> cells = storage.CellsOf(other);
+                if (cells.Count > 0 && cells[0] < first) ordinal++;
+            }
+
+            return $"{Registry.Label(PaletteTools.Stockpile)} {ordinal}";
+        }
+
+        enum StorageCaret { None, Closed, Open }
 
         /// <summary>
         /// Submit one of the store's commands about the cell the pane is describing, then rebuild
@@ -910,31 +985,65 @@ namespace Odyssey.Presentation.Ui
             FillStoragePanel();
         }
 
-        VisualElement StorageSettingsRow(string label, BedPickerMark mark, Action press)
+        /// <summary>
+        /// One row of the storage settings: a caret column, a tri-state box, and a label in the
+        /// row's own hue.
+        ///
+        /// <para><b>Every mark is drawn, never typed</b> — the tick, the tri-state bar and the
+        /// caret are all <see cref="HudGlyph"/> shapes. Archivo Narrow has no U+2713, no U+25B8
+        /// and nothing that reads as "partly", so a typed mark is an empty column that neither
+        /// tier can see. <c>HudFontTests</c> holds the line and caught this file once already.</para>
+        /// </summary>
+        VisualElement StorageSettingsRow(string label, int state, HudColour hue, int indent,
+            StorageCaret caret, Action? press, Action? pressCaret = null)
         {
             var row = new VisualElement();
             row.AddToClassList("bedowner__row");
+            if (indent > 0) row.style.paddingLeft = indent;
 
-            // Drawn, not typed, for the reason `BedPickerRow` records at length: Archivo Narrow's
-            // cmap has no U+2713, so a typed tick is an empty column and neither tier can see it.
-            // This row was written with one and `HudFontTests` — which main added the same week,
-            // after the Work tab met the identical fault — caught it on the merge.
-            VisualElement flag;
-            if (mark == BedPickerMark.ThisBed)
+            // The caret sits in its own column whether or not this row has one, so every box in
+            // the list starts at the same x and the column can be read straight down. An empty
+            // category has no caret at all, which is how it says it will not open.
+            VisualElement carets;
+            if (caret == StorageCaret.None)
             {
-                var tick = new HudGlyph(HudGlyphKind.Check, BedPickerMarkSize,
-                    HudTokens.Convert(HudTheme.TextPrimary));
-                tick.AddToClassList("bedowner__mark");
-                flag = tick;
+                carets = new VisualElement();
+                carets.style.width = BedPickerMarkSize;
             }
             else
             {
-                flag = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "bedowner__mark");
+                var glyph = new HudGlyph(
+                    caret == StorageCaret.Open ? HudGlyphKind.ChevronDown : HudGlyphKind.ChevronRight,
+                    BedPickerMarkSize, HudTokens.Convert(hue));
+                if (pressCaret != null) glyph.RegisterCallback<ClickEvent>(e => { pressCaret(); e.StopPropagation(); });
+                carets = glyph;
             }
 
-            row.Add(flag);
-            row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
-            row.RegisterCallback<ClickEvent>(_ => press());
+            row.Add(carets);
+
+            VisualElement box;
+            if (state == StorageSettingsModel.CategoryOn)
+            {
+                box = new HudGlyph(HudGlyphKind.Check, BedPickerMarkSize, HudTokens.Convert(hue));
+            }
+            else if (state == StorageSettingsModel.CategoryMixed)
+            {
+                box = new HudGlyph(HudGlyphKind.TriState, BedPickerMarkSize, HudTokens.Convert(hue));
+            }
+            else
+            {
+                box = new VisualElement();
+                box.style.width = BedPickerMarkSize;
+            }
+
+            box.AddToClassList("bedowner__mark");
+            row.Add(box);
+
+            Label text = HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name");
+            text.style.color = HudTokens.Convert(hue);
+            row.Add(text);
+
+            if (press != null) row.RegisterCallback<ClickEvent>(_ => press());
             return row;
         }
 

@@ -292,6 +292,65 @@ verbs, not one**: Copy duplicates the values into another zone, Link points both
 record — which is S2's storage group, already the reason settings are a handle (§4). Copy is S; Link
 folds into S2.
 
+## 9b. The design brief, 2026-09-21 — the four questions, and five colours
+
+The owner commissioned a full interface specification for the pane and handed it back. It asks
+four questions before building, and they are answered here rather than left open.
+
+| | Question | Answer |
+|---|---|---|
+| 1 | *Allow all / Clear all and Everything / Nothing are the same two actions under two sets of words.* | **Agreed: the preset chips are gone.** The header buttons win because they sit where the list they act on begins, and because a chip row costs 26 px of a pane with a 640 ceiling to say a second time what two text buttons already say. `StoragePreset` stays in the simulation — every zone is founded at *Everything* — and stops being drawn. |
+| 2 | Can the six categories grow? | **No.** `ItemCategory` is an enum in `Sim.Contracts`, fixed at six by decision 23. The category strip needs no scroll of its own and the sticky-header rule is not load-bearing. |
+| 3 | What happens when a store is full, and does priority affect **retrieval**? | **Priority is deposit-only, and that is checkable rather than asserted**: it is read in exactly two places, `BestStorageCell` (which destination) and `StoredPriority` (what a re-stow must beat). Nothing consults it when *taking* — the eat scan and the build-delivery giver choose by distance. A full zone simply stops offering cells (`CellHasSpace` fails per cell), the load goes to the next band down, and with no band left it lies where it fell. The pane needs to show neither today; the "No storage" alert is S3. |
+| 4 | Can a zone ever appear in the 280 px pane? | **No.** 280 is the bare-tile variant: a tile click with no zone keeps it, and a zone always opens the 560. |
+
+### 9c. Five of the brief's colours failed its own acceptance criteria
+
+The brief sets two floors — **4.5:1** for a label against the panel, and *distinguishable with the
+labels masked*. Its palette was measured against both rather than trusted, by
+`StorageThemeTests`, and five values did not clear them:
+
+| Value | Was | Measured | Is | Why |
+|---|---|---|---|---|
+| Last | `#6b737a` | **2.71:1** | `#c6c9cb` | The hue is a *label* colour when a rung is selected, so it has to read as text. Lightening it towards slate then left the two 41 points apart — under the 60 the order hues are held to, and they are adjacent rows — so it went the other way: a pale neutral, far from slate, reading as inactive, which is what the bottom rung means. |
+| Low | `#7f9ab0` | **4.45:1** | `#8ca6bb` | Near enough to pass by eye; not near enough to pass. |
+| Medicine | `#d95a6a` | **3.50:1** | `#f086a8` | Dark saturated reds are the hardest thing to read as a label on a dark panel, and these are labels. Pushed pink rather than lighter red, because lightening alone put it 51 points from Weapons. |
+| Materials | `#b0793f` | **4.08:1**, and 55 from Weapons | `#c4a05a` | Failed both floors at once. |
+| Weapons | `#c85a3f` | **4.03:1** | `#e88d66` | |
+
+Food `#7fb85a`, Books lightened to `#bb94dd` for the same reason, Normal, Preferred and Urgent
+stand as written. **The test is the record**: every pair of categories and every pair of rungs is
+held to 60 channel-points, and all eleven to the contrast floor.
+
+**And one of the brief's claims about its own palette is not true.** *"Cool to warm as urgency
+rises"* does not hold step by step — Normal's cyan is cooler than Low's slate by red-minus-blue,
+because cyan gets its presence from brightness rather than from warmth. Rather than bend five
+colours to satisfy a metric nobody looks at, the test asserts what is both true and meaningful:
+**the two urgent rungs are warmer than all three unurgent ones**, and the split falls exactly
+where the meaning does.
+
+### 9d. What is built, and what is not
+
+**Built:** the whole decision layer — `StorageSettingsModel` — and the palette. Registry order for
+categories and alphabetical order inside them, capitalised display labels, the tri-state cycle with
+the **remembered mixture** (a mis-click must not destroy a hand-built selection), Allow all / Clear
+all with Clear dimming at nothing-accepted, the search that turns itself on above twenty flattened
+rows and marks matches **at their real offset**, the match count, the no-match copy, the footer, the
+warning band, and empty categories that keep a live box and grow no caret. Twenty-seven fast-tier
+tests, which is where most of the brief's acceptance list can actually be checked. Plus
+`HudGlyphKind.TriState`, the one mark the set did not have.
+
+**Not built, and next:** the pane itself — the 560 px frame, the title row, the tab strip with
+**Tile** second, the 320 px scrolling viewport with sticky headers, the search field, and the
+collapsed state. The rows currently draw in the popover, which is the thing the brief is replacing.
+With them: **zone selection** (`InspectSubject` gains a fifth value), the eight-hue rotation with no
+two touching zones alike, the name plate, and the selection tint at 34% — none of which may cost a
+per-cell draw (§6, and the brief agrees).
+
+A zone's title is `Stockpile N` by **cell order** — how many zones begin at a lower cell — so it is
+the same answer on both sides of a save with nothing written down, at the price of renumbering when
+an earlier zone is deleted. A typed name is the fix and it is the unit after the pane.
+
 ## 10. What S1 does not do
 
 - **No panel yet.** The four intents exist, are applied while paused and are tested, and
