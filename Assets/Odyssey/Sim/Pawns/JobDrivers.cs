@@ -207,7 +207,14 @@ namespace Odyssey.Sim.Pawns
             ToilProgress += Rates.Scale;
             if (Pawn.Needs[NeedIndex.Rest] < ctx.Content.Kind.wakeThreshold) return JobStatus.Ongoing;
 
-            if (Job.TargetCell < 0) Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
+            // **Asked of where she slept, not of where she set out for.** Those are the same
+            // answer almost always — and they stopped being the same the moment a colonist with no
+            // bed was given somewhere to walk to, because a spot on the ground is a target like any
+            // other and the old test was `TargetCell < 0`. It is also the truer statement of the
+            // two, and the one `NeedsSystem.RestEffectiveness` has always made: how well she slept
+            // is decided by the cell she is lying in, and so is whether she remembers it.
+            if (!ctx.Items.HasBed(Pawn.Cell))
+                Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
             return JobStatus.Succeeded;
         }
 

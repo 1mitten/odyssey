@@ -159,6 +159,36 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
+        /// <summary>
+        /// Is there a bed standing at this cell — the question "am I sleeping rough", asked of the
+        /// place rather than of the plan.
+        ///
+        /// <para><b>One owner, because two things ask it and they used to disagree.</b>
+        /// <c>NeedsSystem.RestEffectiveness</c> reads the cell the sleeper is actually lying in;
+        /// <c>SleepJobDriver</c> read the cell she set out for. Those are the same answer almost
+        /// always and not always, which is the shape of fault this project keeps meeting — and the
+        /// driver already carries a comment about the one time it bit (a colonist taking the
+        /// ground's thought while asleep in her own bed, because the rate was read off the cell and
+        /// the memory was not).</para>
+        ///
+        /// <para>A binary search, because <see cref="Beds"/> is kept ascending and a colony's worth
+        /// of beds is asked about once per sleeping pawn per needs interval.</para>
+        /// </summary>
+        public bool HasBed(int cell)
+        {
+            int low = 0, high = _beds.Count - 1;
+            while (low <= high)
+            {
+                int mid = (low + high) >> 1;
+                int value = _beds[mid];
+                if (value == cell) return true;
+                if (value < cell) low = mid + 1;
+                else high = mid - 1;
+            }
+
+            return false;
+        }
+
         public void AddBed(int cell)
         {
             int at = _beds.BinarySearch(cell);

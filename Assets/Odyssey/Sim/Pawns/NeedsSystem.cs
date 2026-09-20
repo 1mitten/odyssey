@@ -173,20 +173,7 @@ namespace Odyssey.Sim.Pawns
             BreaksTriggered++;
         }
 
-        bool IsBed(int cell)
-        {
-            var beds = _ctx.Items.Beds;
-            int low = 0, high = beds.Count - 1;
-            while (low <= high)
-            {
-                int mid = (low + high) >> 1;
-                int value = beds[mid];
-                if (value == cell) return true;
-                if (value < cell) low = mid + 1;
-                else high = mid - 1;
-            }
-            return false;
-        }
+        bool IsBed(int cell) => _ctx.Items.HasBed(cell);
 
         /// <summary>
         /// How well a sleeping pawn recovers where it lies, in per cent: the ground at the

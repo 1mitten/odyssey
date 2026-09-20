@@ -7849,3 +7849,52 @@ the ceiling a suggestion. Nothing in the game sets it at all; what the clamp is 
 against is the inspector field somebody adds the next time a crowd looks wrong, when the answer is
 the ordering rather than the count. Moving the ceiling is a frame measurement under the real player
 loop, not an edit. EditMode **2,003 / 1,990**.
+
+## 2026-09-20 — Nobody lies down in a hillside any more, and no hash moved
+
+`22-terrace-steps.md` §4 had stood as a known gap for two days: a colonist who sleeps at the foot of
+a terrace step disappears into the bank drawn there. It named two candidate fixes and refused to
+guess between them. The owner's answer was **both, in that order**, and §4a records what they came
+to. Three things are worth keeping.
+
+**The forecast in §4 was wrong, and it was wrong in the direction that matters.** It said both
+changes "move the state hash, so both want re-baked goldens". Neither moved anything: the whole fast
+tier, all six golden values included, passed untouched at the first run. The reasoning behind the
+forecast was sound — one of the three golden boards is the wooded one and it is covered in terraces
+— and it missed that a colonist reaches the sleeping guard *only when she has no bed at all*, which
+the golden colonies never are. Ten thousand ticks, three boards, and not one colonist ever tried to
+sleep rough at a step.
+
+So the fix arrived green, which is the least informative possible outcome: **a change that shifts no
+hash is either inert or untested, and nothing about the run tells you which.** `TerraceSleepTests`
+exists to tell them apart, on the same hand-built terrace `TerraceSlopeCostTests` uses and for
+exactly the reason that file already gives. That is the second time on this line of work that the
+goldens have been silent about a real change, and both times the answer was to assert the rule
+directly rather than infer it from a colony that never met one.
+
+**The second guard found a bug older than itself.** `ConstructionGrid.Place` validated a bed's
+second cell with `Allows(second)` — the one-argument overload, which answers on behalf of
+`BuildingHandle.Wall`. Every rule that depends on *what is being built* therefore applied to a bed's
+head cell and silently skipped its foot. The bank rule would have skipped it too, which is how it
+was noticed; correcting it to `Allows(second, building)` immediately refused an order that had
+always been allowed — a bed whose far half lands on a stack of logs, which is precisely what
+`needsClearCell` was added for in the first place (owner, 2026-09-18, *"you can see some meals
+poking through the bed"*) and which had never applied to half the bed.
+
+`BedTests.ABedsSecondCellMustBeAbleToTakeItToo` failed, and its failure was the interesting part: it
+had asserted that a bed could be turned away from an obstruction, after *assuming* the target cell
+was free — but the assume asked `Allows(east)` and the assertion exercised `Place`, which asked the
+same wall-shaped question. Two different questions that agreed because both were the wrong one. The
+test now asks about a bed on both sides.
+
+**And the thought had to move with it.** `SleptOnGround` was added when `Job.TargetCell < 0`, a fair
+statement of "she has no bed" only while a colonist with no bed was never given anywhere to walk to.
+The moment `GroundSpot` gives her a cell to step to, the old test says she slept in a bed. It reads
+`ColonyItems.HasBed(pawn.Cell)` now — the cell she is actually lying in, which is the statement
+`NeedsSystem.RestEffectiveness` has always made about the rate she recovers at. The two could not
+disagree before and cannot now, and the binary search they share lives in one place instead of
+being written out twice. `SleepJobDriver` already carried a comment about the one time that
+divergence bit; this is the same fault caught before it did.
+
+**Left open deliberately:** an item dropped in a bank is hidden by it too, and is still unreported.
+The cheap guard is the same one, at whatever chooses where a haul puts something down.

@@ -56,7 +56,11 @@ namespace Odyssey.Tests.Sim
         // wrong side of its cell — a free-standing one had nowhere to take a facing from and fell
         // back to north, which the player could neither predict nor change. A ladder fixed to a
         // wall still hugs it; the rotation only decides where there is nothing to hug.
-        const ulong BuildingFingerprint = 16750019241906452571UL;
+        // 2026-09-20: Building_Bed gained `refusedInTerraceFoot`. Presentation fills the cell at
+        // the foot of a terrace step with a ramp of earth, and a bed built there is buried by it -
+        // the same fact about the bed's shape that `needsClearCell` already states, pointed at the
+        // hillside instead of at a stack of meals. Nothing else in the row moved.
+        const ulong BuildingFingerprint = 81868221930479785UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

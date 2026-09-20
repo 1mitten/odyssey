@@ -395,11 +395,16 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 - **No health model**, so fall damage is designed with a number and nothing to apply it to, a
   colonist rides a collapsing floor down unharmed, and the debug menu has no kill or heal.
 - **No fog of war**, so a sealed cavern is visible if the player scrolls the layer down.
-- **A colonist can still lie down inside a terrace bank.** Trees are guarded out of those cells at
-  generation (`TerraceFoot`, `docs/design/22-terrace-steps.md`), and a walking figure is lifted onto
-  the ramp, but a body lying down is not: sleep on the ground at the foot of a step and the façade
-  hides you. §4 of that document holds the two candidate fixes and why neither was guessed at — both
-  move the state hash. An item dropped in one has the same problem and is unreported.
+- **An item dropped in a terrace bank is still hidden by it.** The other two ways into that cell
+  are closed since 2026-09-20 (`docs/design/22-terrace-steps.md` §4a): a tired colonist with no bed
+  steps out of a bank before lying down, and a bed cannot be built into one. Trees were already
+  guarded at generation. A dropped item is the third and is unreported — and the cheap guard is the
+  same one, at whatever chooses where a haul puts something down.
+
+  **Both fixes moved no hash at all, against §4's forecast that both would.** The golden colonies
+  have beds, so none of them ever reaches the sleeping branch, and nothing in a golden run orders a
+  bed. `TerraceSleepTests` asserts the rules directly for that reason — a change that shifts no
+  hash is either inert or untested.
 - ~~A skill level buys nothing a player can feel~~ — **stale since WS2/WS3 (2026-09-18) and
   caught by the audit a day later**: work speed reads the skill curve and pace reads condition.
   Kept struck through for one release as the example of the failure this section warns about.
