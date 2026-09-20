@@ -876,16 +876,21 @@ namespace Odyssey.Presentation.Ui
             var columns = new VisualElement();
             columns.AddToClassList("settings__columns");
 
-            var leftCol = new VisualElement();
-            leftCol.AddToClassList("settings__column");
-            var rightCol = new VisualElement();
-            rightCol.AddToClassList("settings__column");
-            columns.Add(leftCol);
-            columns.Add(rightCol);
+            var col0 = new VisualElement();
+            col0.AddToClassList("settings__column");
+            var col1 = new VisualElement();
+            col1.AddToClassList("settings__column");
+            var col2 = new VisualElement();
+            col2.AddToClassList("settings__column");
+            columns.Add(col0);
+            columns.Add(col1);
+            columns.Add(col2);
 
             foreach ((string header, HotkeyAction[] actions) in KeyGroups)
             {
-                VisualElement targetCol = (header == "Camera" || header == "Time") ? leftCol : rightCol;
+                VisualElement targetCol = (header == "Camera") ? col0
+                    : (header == "View" || header == "Tools") ? col1
+                    : col2;
                 targetCol.Add(HudText.Make(header, HudTextRole.Meta, ussClass: "settings__section"));
 
                 foreach (HotkeyAction action in actions)
@@ -919,7 +924,7 @@ namespace Odyssey.Presentation.Ui
                 ussClass: "rung settings__reset");
             reset.tooltip = "Every action goes back to the key it shipped with";
             reset.RegisterCallback<ClickEvent>(_ => _directors?.Hotkeys.ResetKeys());
-            rightCol.Add(reset);
+            col2.Add(reset);
 
             _keysSection.Add(columns);
             parent.Add(_keysSection);

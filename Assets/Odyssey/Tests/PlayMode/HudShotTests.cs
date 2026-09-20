@@ -167,6 +167,16 @@ namespace Odyssey.Tests.PlayMode
                     RenderTexture.active = previous;
                     File.WriteAllBytes(Path.GetFullPath("Logs/hud-settings.png"), shot.EncodeToPNG());
                     Object.Destroy(shot);
+
+                    boot.Directors!.Settings.SetTab(Odyssey.Hud.SettingsTab.Keys);
+                    for (int i = 0; i < 10; i++) yield return null;
+                    RenderTexture.active = target;
+                    var shotKeys = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shotKeys.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shotKeys.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-keys.png"), shotKeys.EncodeToPNG());
+                    Object.Destroy(shotKeys);
                 }
 
                 // And the debug menu (2026-09-17), backtick's own panel now — the same argument as

@@ -1609,8 +1609,8 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 620px;
-    max-width: 92%;
+    width: 860px;
+    max-width: 94%;
     max-height: 90%;
 }
 
@@ -1633,7 +1633,9 @@
 }
 
 .settings__scroll {
-    max-height: 520px;
+    max-height: 480px;
+    min-height: 0;
+    flex-shrink: 1;
 }
 
 .settings__columns {
@@ -1746,6 +1748,10 @@
 .settings__section {
     color: rgba(255, 255, 255, 0.50);
     margin: 9px 0 4px 0;
+}
+
+.settings__column > .settings__section:first-child {
+    margin-top: 0;
 }
 
 .settings__row {
