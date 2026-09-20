@@ -425,3 +425,37 @@ out of date (five). The second still stands: hauling has no `ui.skill.*` row, tr
 and has no rate curve by design — so it accrues experience with nowhere to show it and nothing to
 spend it on. Deleting it is still a Defs change, a `SkillIndex` change, a save-format change and a
 hash change, and is still not done.
+
+### 8h. The toast stack is the last thing in the alerts column (merge with main, 2026-09-20)
+
+SK4 was written on a branch that did not know about EV, the incident layer, and EV was written on a
+branch that did not know about SK4. Both put a new panel in the right-hand gutter under the alerts,
+both said so in the same words — *"under the alerts in the same column"* — and both computed its top
+as `alertsTop + alertsHeight + Gap`. So on merging, the toast stack and the Events panel were solved
+to the same origin and the toast drew over the panel.
+
+**Neither branch's tests could see it**, and the reason is worth keeping. Each branch's layout cases
+set its own row count high and the other's to zero, because the other did not exist. The overlap
+sweep is exhaustive over the *cases it is given*, and no case had both.
+
+**The order is the decision, not the accident.** The column is clock, alerts, Events, toasts:
+
+- A toast arrives every couple of minutes per colonist and leaves six seconds later. Anything under
+  it in a stacked column would step down and back up each time, so the thing that moves goes last
+  and nothing is under it.
+- The Events panel is a standing list a player comes back to and scans. A panel that shuffles while
+  being read is a panel that gets misread.
+- The alerts panel is above both because it is the one a colony's survival depends on, and it should
+  never be the thing pushed down the screen.
+
+`HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and two new cases in
+`Cases()` put a full alerts panel, a full Events panel and a full toast stack in one column at all
+three resolutions — the case that would have caught it. Both were confirmed to fail on the pre-merge
+arithmetic before the fix went in. `HudGeometryTests` now counts `.bulletin` rows as well as
+`.toast` ones, so the PlayMode model is told about the panel actually on screen.
+
+**The general shape, for the next pair of parallel branches.** Two features that name the same anchor
+in prose will collide in arithmetic, and an exhaustive sweep over a case list is only as exhaustive
+as the list. When a branch adds a region to a shared column, the merge owes a case with *every*
+member of that column at once — the prose in each branch is the tell, and it is a grep for the anchor's
+name.

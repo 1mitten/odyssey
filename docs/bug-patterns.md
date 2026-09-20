@@ -1631,3 +1631,30 @@ So the marks from the last colony survive into the next one, where `PawnId` 1 is
   clear, then a *higher* level on the same `PawnId` must say nothing, and the rise after that must
   still be reported once. Confirmed to fail on the right assertion with the clear commented out,
   because a test written after a fix is worth nothing until it has seen the bug.
+
+## Two branches that name the same anchor collide in arithmetic (2026-09-20)
+
+**P12.** SK4 added a transient toast stack "under the alerts in the same column". EV added the
+Events panel "under the alerts in the same column". Neither branch knew the other existed, both
+computed their top as `alertsTop + alertsHeight + Gap`, and both were right. Merged, they solve to
+the same origin and the toast draws over the panel.
+
+- **The pattern:** two features written in parallel that anchor to the same landmark in *prose*.
+  The prose is identical on both branches, which is what makes it invisible at review: each reads
+  as a correct sentence about a column that, on that branch, has one new member.
+- **Why the exhaustive test did not catch it.** `HudLayoutTests.NoTwoPanelsOverlap…` sweeps every
+  case in a hand-written list and is genuinely exhaustive over it. SK4's cases set its own row
+  count high and the other's to zero — the parameter did not exist there. EV's did the mirror
+  image. **An exhaustive sweep is only as exhaustive as its case list**, and the conflict
+  resolution that merges two constructors does not write the case that uses both parameters.
+- **Where to look for the next one:** anything a doc comment places relative to a named neighbour
+  rather than at an absolute figure — a column, a docked strip, a stacked overlay. `git log
+  --all --grep` for the anchor's name, or grep the other live branches for the phrase, and if two
+  of them add a member to one stack, the merge owes a case with **every** member at once.
+- **The fix is an ordering decision, not a nudge.** Ask which member comes and goes: the one that
+  appears and disappears goes last, because anything under it steps down and back up every time.
+  Here that is the toast (six seconds, every couple of minutes) against the Events panel (a
+  standing list a player scans).
+- **The check:** `HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and
+  the reason, and two cases in `Cases()` put all three panels in one column at all three
+  resolutions. Both confirmed to fail on the pre-fix arithmetic before the fix went in.

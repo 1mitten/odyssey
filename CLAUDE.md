@@ -360,14 +360,19 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **892 Sim + 562 Hud** (2026-09-20,
-  `claude/mark-pass-batching` merged with a main carrying the Work tab and the sleep pose);
-  Long tier **23**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **898 Sim + 585 Hud** (2026-09-20,
+  PR #139 merged with main); Long tier **23**. `main`'s own tip is 892 + 562.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
-  `claude/mark-pass-batching` after merging main: EditMode **2,228 total, 2,210 passed,
-  0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,
+  PR #139 merged with main: EditMode **2,257 total, 2,236 passed, 0 failed**; PlayMode
+  **91 total, 81 passed, 0 failed**. **The 81 is five short of `main`'s 86 because that run had
+  no `Assets/Synty`** — the five are the two `PortraitLightingTests`, the two `AvatarSheetTests`
+  and `FigureCapTests`, each of which ignores itself when the art does not resolve, and each of
+  which says so in its skip reason. Read the skip reasons before reading a lower *passed* count as
+  a regression; `failed` is the number that matters and it was 0.
+  The run before it, on `claude/mark-pass-batching` after merging main: EditMode **2,228 total,
+  2,210 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,
   the guard that a marked board costs draws in colours rather than in cells; the two new PlayMode
   ones are `FrameTimeTests.TheMarkPassCostsWhatItSubmits` and `TheFrameAgainstColonySize`. The
   remainder are `[Explicit]` or ignored. The run before it, on the Work tab branch, was EditMode

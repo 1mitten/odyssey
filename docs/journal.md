@@ -9195,6 +9195,72 @@ built, and that the collector does not run at all while the panel sits open.
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
 
+## 2026-09-20 — Two branches, one anchor: the toast stack and the Events panel
+
+PR #139 (SK, skills made visible) was based on #119 and written while EV, the incident layer, was
+being written on another branch. #119 merged; EV merged as #140; #145 and #150 merged. This is the
+record of merging #139 onto that main.
+
+**Ten files conflicted and nine were ordinary** — two features appending to the same enum, a
+comment corrected differently on both sides, a journal both had appended to, a generated wiki that
+is rebuilt rather than resolved.
+
+**The tenth was not, and nothing on either branch could have caught it.** SK4 put a transient toast
+stack in the right-hand gutter *under the alerts*. EV put the Events panel in the right-hand gutter
+*under the alerts*. Both computed their top as `alertsTop + alertsHeight + Gap`, both said so in
+prose in the same words, and neither knew the other existed. Merged, they solve to the same origin:
+with an event on screen, the toast draws over the panel.
+
+**Why the layout sweep did not see it.** `HudLayoutTests.NoTwoPanelsOverlapAtAnyOfTheThreeResolutions`
+is exhaustive over its case list and the case list is hand-written. SK4's cases set `toasts` high and
+`bulletins` to zero — the parameter did not exist on that branch. EV's cases did the mirror image.
+The sweep passed on both branches and would have passed on the merge, because the conflict resolution
+that puts both parameters in one constructor does not write the case that uses both. **An exhaustive
+sweep is only as exhaustive as the list it is given**, and that is the lesson worth generalising:
+when a branch adds a region to a shared column, the merge owes a case with every member of that
+column at once, and the prose in each branch is the grep that finds them.
+
+**The resolution, and it is a decision rather than a tie-break.** The column is clock, alerts, Events,
+toasts. The toast is last because it is the only one that comes and goes: it arrives every couple of
+minutes and leaves six seconds later, so anything below it would step down and back up each time.
+The Events panel is a standing list a player scans, and a list that shuffles while being read is a
+list that gets misread. Two tests, both confirmed to fail on the pre-fix arithmetic before the fix
+went in: `TheToastStackIsTheLastThingInTheAlertsColumn` states the order and why, and two new sweep
+cases put all three panels in one column at all three resolutions. `HudGeometryTests` counts
+`.bulletin` rows as well as `.toast` ones now, so the PlayMode model is told about the panel that is
+actually on screen. `docs/design/15-skills.md` §8h.
+
+**Four stale numbers in `SkillCatalogue`, found on the way and fixed.** Its remarks said *"where the
+simulation's three go"* (five, four of them rows), *"thirteen items at half width"* (fourteen), and
+*"Thirteen into seven rows leaves the right column one short"* — which is not merely a wrong number
+but a wrong description of the code, since fourteen into seven fills both columns exactly and the
+`index < order.Count` guard is now the odd case rather than the normal one. The citation
+*"fixed 2026-09-20, SK1/SK5"* named a unit the same PR says does not exist. None of these change
+behaviour; all of them are what the next session would have believed.
+
+**One comment in `HudShell.Inspect` said the opposite of the line under it.** The experience bar's
+block opened *"it is deliberately NOT guarded the way everything above is"* and the next line is
+`if (view.LastProgress == row.Progress) return;`, which is exactly that guard. The guard is right and
+the field's own doc comment already explained it correctly; the call-site comment was reaching for a
+different point — that the guard is *taken* about half the time here and almost always elsewhere —
+and stated it as an absence. This is `docs/bug-patterns.md`'s *one rule with two owners* in its
+cheapest form: a comment and the line beneath it.
+
+**Verified.** Fast tier 898 Sim + 585 Hud, Long tier 23, both content gates clean, wiki rebuilt.
+Unity EditMode **2,257 / 2,236 / 0 failed**; PlayMode **91 / 81 / 0 failed**, five short of main's
+86 passes because that run had no `Assets/Synty` — see the note below.
+
+**And the machine lost the art packs during this session.** `D:\code\odyssey-audio` held the one
+real copy of `Assets/Synty`; every other checkout on the machine, including `D:\code\odyssey`
+itself, reaches it through a junction chain. That worktree's directory was removed while this
+session was running — it read the packs successfully at the start and found the directory gone
+later — and `git worktree list` now calls it prunable along with five others. The packs are not in
+the recycle bin and no second copy exists on `D:`. **This is a machine-state problem and not a
+branch problem**, but until the packs are reinstalled every checkout draws untextured primitives and
+the five art-dependent PlayMode tests skip. The standing rule in
+`memory/junctions-and-worktree-removal.md` was written after the near-miss; this is the hit. The
+lesson for the project is in `docs/lessons.md`: **the real packs must not live inside a worktree**.
+
 ## 2026-09-20 — Skills made visible, and a session that checked its base once (SK2–SK5)
 
 The ask was to "enable skills for chopping, mining and plants/gardening", add a bar in the colonist

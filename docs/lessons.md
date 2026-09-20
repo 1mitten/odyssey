@@ -2423,3 +2423,40 @@ asserted three goldens had moved when none had.
 **And the reverse holds when several agents run in parallel**, which this project does: assume
 somebody else may be in the same file, and prefer a unit that is defensibly yours — a bug nothing
 else is looking at — over one any concurrent session would reach for from the same stale note.
+
+## The licensed packs must not live inside a worktree
+
+**2026-09-20: they did, and the machine lost them.**
+
+`Assets/Synty` is gitignored, so every checkout needs its own copy or its own link. The arrangement
+that had grown up on the Windows machine was a chain: one worktree, `D:\code\odyssey-audio`, held
+the real folder, `D:\code\odyssey\Assets\Synty` was a junction to it, and the other fifteen
+checkouts were junctions to one or the other. Sixteen checkouts, one copy, no duplication — which is
+why it looked like the right answer.
+
+It has one property that is not obvious until it bites: **the real packs are inside something whose
+whole purpose is to be disposable.** A worktree is removed when its branch is done. `git worktree
+remove` and a recursive delete both take the directory, and the directory is where the packs were.
+That worktree was removed while a session was running — the session read the packs at the start and
+found the directory gone later — and every junction on the machine went dangling at once, including
+the one in the main checkout. Nothing is in the recycle bin: neither `rm -rf` nor `git worktree
+remove` puts anything there.
+
+**The symptom does not look like a missing folder.** The build is green, both test tiers pass, and
+`failed` is 0 in both. What changes is the *skipped* count: five PlayMode tests ignore themselves
+with reasons like *"the colonist rows resolved to no art"*, and the game draws untextured primitives
+in the editor. A lower `passed` number with `failed=0` is the tell — **read the skip reasons before
+reading it as a regression**, and read it as a question about the machine rather than the branch.
+
+**The rule:** the real packs live somewhere no git command will ever remove — a plain directory
+outside every checkout, such as `D:\assets\Synty` — and *every* checkout including the main one is a
+junction into it. Then a worktree removal can only ever take a link.
+
+**And before removing a worktree, unlink first:**
+
+```
+cmd /c rmdir "D:\code\<worktree>\Assets\Synty"     # removes the junction, not its target
+git worktree remove D:\code\<worktree>
+```
+
+`rmdir` on a junction removes the link. A recursive delete follows it.

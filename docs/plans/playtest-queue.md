@@ -215,8 +215,17 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   the level watch kept its marks across a session boundary, so a new colony's first colonist
   announced a level she was rolled with (§8f-bis). **The fastest way to see a toast is the debug
   menu's Skip one day** — it runs a real day of ticks, so a working colonist levels inside it and
-  should raise **one** row per skill, not a stack of them. **This row is second because the row
-  above blocks it**: it sits on #119 and cannot merge until that does.
+  should raise **one** row per skill, not a stack of them.
+  **Merged with `main` on 2026-09-20 and re-run there** (`D:\code\odyssey-review-139`): #119 has
+  landed, so nothing blocks this now. EditMode 2,257 / 2,236 / 0, PlayMode 91 / 81 / 0 — the 81 is
+  five short of main's 86 because that machine had lost `Assets/Synty` by then, not because
+  anything failed. **The merge found one fault neither branch could have**: EV's Events panel and
+  this toast stack both placed themselves "under the alerts" and solved to the same top, so with an
+  event on screen the toast drew over the panel. The toast is last in that column now
+  (§8h). **So there is a fifth thing to look at**: fire a supply drop from the debug menu's Events
+  tab and then skip a day, and say whether the toast arriving under the Events panel reads as one
+  column or as two things fighting — a wrong answer looks like the Events row jumping down the
+  screen when a toast lands, which is exactly what the ordering is meant to prevent.
 
 - **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
   `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three

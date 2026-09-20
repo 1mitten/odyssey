@@ -393,13 +393,15 @@ namespace Odyssey.Presentation.Ui
                     view.Fill.style.backgroundColor = PassionInk(row.Passion);
             }
 
-            // ---- the bar, and it is deliberately NOT guarded the way everything above is.
+            // ---- the bar. Guarded on its own value like everything above it, but the guard is
+            // doing a different job here and the difference is worth knowing before tuning it.
             //
-            // Every other field on this row is written only when it changes, because a level moves
-            // about once in a working day. The bar is the opposite: the inspect pane refreshes
-            // fifteen times a second and the bar wants every one of them, because watching it creep
-            // is the whole reason it exists. Only the width is written — no string is built, so a
-            // selected colonist still costs no allocation.
+            // Every other field on this row changes about once in a working day, so its guard is
+            // almost always taken and the write almost never happens. This one moves roughly seven
+            // per mille a second at a minor passion, so the guard is taken about half the time at a
+            // 15 Hz refresh and the write is the normal case — which is the point, because watching
+            // it creep is the whole reason it exists. Only the width is written; no string is
+            // built, so a selected colonist still costs no allocation.
             if (view.Fill == null || !row.Live) return;
             if (view.LastProgress == row.Progress) return;
             view.LastProgress = row.Progress;

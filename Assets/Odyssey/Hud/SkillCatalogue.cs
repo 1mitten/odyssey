@@ -16,7 +16,7 @@ namespace Odyssey.Hud
     /// hides the shape of the game until the last system lands.</para>
     ///
     /// <para><b>Construction and Growing were greyed out here long after they began working</b>
-    /// (fixed 2026-09-20, SK1/SK5). Construction has been fully simulated since U26 — three jobs
+    /// (fixed 2026-09-20, SK5). Construction has been fully simulated since U26 — three jobs
     /// train it and it drives both a build's speed and its botch roll — and Growing since U47,
     /// where sowing and harvest both train it. Both rows still said "nothing is built yet" and
     /// "nothing is planted yet", so the one screen that tells a player what a colonist can do was
@@ -28,8 +28,10 @@ namespace Odyssey.Hud
     /// message sends the author to the first, which is the path the growing branch walked straight
     /// past.</para>
     ///
-    /// <para><b>Where the simulation's three go.</b> <c>Skill_Mining</c> is <c>ui.skill.mining</c>
-    /// and needs no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
+    /// <para><b>Where the simulation's five go, and why only four are rows.</b>
+    /// <c>Skill_Mining</c>, <c>Skill_Construction</c> and <c>Skill_Growing</c> are
+    /// <c>ui.skill.mining</c>, <c>ui.skill.construction</c> and <c>ui.skill.growing</c> and need
+    /// no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
     /// <c>Skill_Hauling</c> has no canon skill at all, deliberately: the design makes hauling a
     /// work type and not a skill, which is also the reference's answer. <b>It is therefore not
     /// listed here, and the open item is on the simulation's side</b> — see
@@ -194,16 +196,17 @@ namespace Odyssey.Hud
         /// left column and then down the right.
         ///
         /// <para><b>Not the same as <see cref="Alphabetical"/>, and that is the whole point.</b> The
-        /// grid is a wrapping flex row — thirteen items at half width, which the engine flows left
+        /// grid is a wrapping flex row — fourteen items at half width, which the engine flows left
         /// to right and then wraps. Appending A, B, C into that gives A and B side by side, which
         /// is across-then-down: the layout the owner refused. So the sequence is interleaved here,
         /// where it can be tested, rather than by giving the stylesheet a column count it would
         /// then own.</para>
         ///
-        /// <para>Thirteen into seven rows leaves the right column one short, so the last row holds
-        /// only the left item and the sequence simply runs out — which is why this is computed
-        /// rather than written as a table of indices that would be wrong the day a skill is
-        /// added.</para>
+        /// <para><see cref="Rows"/> is <c>(All.Length + 1) / 2</c>, so an odd count leaves the
+        /// right column one short and the sequence simply runs out — the <c>index &lt; order.Count</c>
+        /// guard is that case and not a belt-and-braces check. Fourteen happens to divide evenly
+        /// and fill both columns; the day a fifteenth skill is added it will not, which is why this
+        /// is computed rather than written as a table of indices.</para>
         /// </summary>
         public static IReadOnlyList<Entry> ReadingOrder
         {
