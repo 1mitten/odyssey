@@ -7777,3 +7777,66 @@ being a *real* bed still holds for the scenario that has some.
 
 Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 
+## 2026-09-20 — A portrait taken after dark, kept for the session
+
+Owner, from a play-through: *"when generating more colonists — some are not animated and their
+profile picture seems black and they don't play animation."* Two faults, and neither was where the
+first four hypotheses put it.
+
+**What was ruled out, by measurement rather than by reading.** Every one of the sixty-one colonist
+rows has art, three live gait clips, a humanoid rig and a pose clip, and every one of them
+photographs (`CastProbe`, one run each). So the "hole in the catalogue" story — which the code is
+written around and which `LooksFrom` and `ColonistAppearanceBook` both warn about at length — was
+not it. Nor was the pawn: a colony of thirty, five placed and twenty-five through the debug menu's
+own `SpawnPawn` intent, came out with thirty figures and thirty good portraits (`ColonyCastProbe`).
+Several rounds of reading the code produced confident wrong answers before the first thing was
+measured; the standing note about that is earning its keep.
+
+**The picture.** A portrait is rendered once per appearance and cached for the session, and the
+studio is careful that its own light must not escape into the world. The same door swings the other
+way and nobody had looked: the daylight cycle writes `RenderSettings.ambient*`, the fog and the
+skybox, and moves and dims the scene's sun — all global, all read by any camera that renders. So a
+portrait is a photograph of a colonist *at the hour it was taken*. Measured across one day, the
+same colonist ran from a mean luminance of 80 of 255 at noon to **26 at midnight**, and the 26 is
+what gets cached. In a 26 px tile with a white frame, on a dark panel, 26 is a black square. It also
+explains *"some"* with no further mechanism: the starting five are photographed on the first morning
+and a colonist generated after dusk is not.
+
+The studio now takes the environment over for the same synchronous instant it takes its own light.
+Three attempts, because a global can look taken over and not be: writing `ambientMode` and
+`ambientLight` leaves the renderer on the world's stale probe (Unity re-derives it on its own
+schedule, which is what `DaylightDirector.ProbeUpdateHours` is about); `RenderSettings.ambientProbe`
+is honoured **only under `AmbientMode.Custom`**; and the skybox still arrives as the default
+reflection probe, so `reflectionIntensity` has to go too. The spread over the ten hours measured is
+now x1.00. `docs/design/20-avatars.md` §10.7.
+
+**And the cycle had adopted the studio's key light as the sun.** `FindKeyLight` takes the brightest
+directional light in the scene, and from the moment the setup page photographs its first candidate
+the studio's 1.6 key light is one — hidden, unsaved, and switched off except for the instant of a
+shot. That is how the residual variation survived the take-over, and it is why the fix looked
+half-broken for two runs. It needs the scene's own sun to be under 1.6 when a session is built, so
+it has probably not bitten a real game; it is fixed anyway, by skipping lights that carry hide
+flags. §10.8.
+
+**The animation.** Past `MaxFigures` (64) a colonist takes the baked instanced path, which does not
+animate. That is the design. But `Sync` walked the snapshot in order and stopped at the cap, and
+snapshot order is pawn id — so the frozen colonists were a fixed set decided when they were created
+and the camera never changed it, though the cap's own comment says *"a colonist beyond the cap is a
+long way off"*. With eighty-five colonists spread along the board the nearest frozen one stood 134 m
+away while an animated one walked at 179 m. The cap now keeps the nearest, with a quarter's
+stickiness for pawns that already hold a figure so that panning does not swap bodies in and out. It
+does nothing at all under the cap. §11.
+
+Whether the owner's colony had passed 64 is not established — the report says "generating more
+colonists" and not how many — so the picture is the fault that is *proven* to match the words, and
+the cap is a fault proven to produce the symptom.
+
+**Three probes were kept** rather than deleted, because each answered in one run a question that
+reading had got wrong: `CastProbe` (every face's art, gaits, rig and portrait, plus a contact sheet
+of all sixty-one), `ColonyCastProbe` (a growing colony, figure and portrait per pawn, with the
+distances the cap now chooses on), and three PlayMode tests that fail on the old code and pass on
+the new.
+
+Fast tier **806 Sim + 471 Hud**. Unity tier on this branch: EditMode **2,000 total, 1,987 passed,
+0 failed**; PlayMode **85 total, 80 passed, 0 failed** — three more than the 82/77 baseline, which
+is the three tests added here.

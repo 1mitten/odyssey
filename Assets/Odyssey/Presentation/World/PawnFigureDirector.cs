@@ -966,7 +966,8 @@ namespace Odyssey.Presentation.World
             int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
             var pawns = snapshot.Pawns;
 
-            for (int i = 0; i < pawns.Length && Drawn.Count < MaxFigures; i++)
+            _eligible.Clear();
+            for (int i = 0; i < pawns.Length; i++)
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
@@ -976,6 +977,14 @@ namespace Odyssey.Presentation.World
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
                 if (!CanDraw(pawns[i].Id)) continue;
 
+                _eligible.Add(i);
+            }
+
+            ChooseTheNearest(pawns);
+
+            for (int n = 0; n < _eligible.Count; n++)
+            {
+                int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
                     World, pawns, out Vector3 steer);
                 Figure figure = Lease(pawns[i].Id, position);
@@ -990,6 +999,85 @@ namespace Odyssey.Presentation.World
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
         }
+
+        /// <summary>
+        /// Cut the eligible list down to <see cref="MaxFigures"/>, keeping the ones nearest the
+        /// camera.
+        ///
+        /// <para><b>The cap was "the first sixty-four in the snapshot" and the design said it was
+        /// "a long way off".</b> Nothing sorted, so which colonists lost their animation was
+        /// decided by pawn id: a colonist standing in front of you stood frozen while one across
+        /// the map walked, and the set never changed however the camera moved. Measured on
+        /// 2026-09-20 with eighty-five colonists — twenty-one of them still, and always the same
+        /// twenty-one (<c>docs/design/20-avatars.md</c> §11).</para>
+        ///
+        /// <para><b>It does nothing at all under the cap</b>, which is every colony anybody has
+        /// played: no sort, no distances, one comparison. Above it, the cost is one insertion
+        /// sort over the overflow, which is the cheap end of a problem that only exists at a
+        /// scale nothing else here is tuned for either.</para>
+        ///
+        /// <para><b>Cell centres, not drawn positions.</b> The drawn position costs a
+        /// <see cref="PawnPose.Of"/> per pawn and the answer would not change: the two differ by
+        /// less than a cell, and the question is which colonists are across the map.</para>
+        ///
+        /// <para><b>And a pawn that already has a figure counts as nearer than it is</b>, by a
+        /// quarter. Without that, panning the camera across a crowd swaps figures in and out at
+        /// the boundary every few frames, and a re-leased figure starts its gait and its gesture
+        /// memory again — which reads as colonists twitching in the middle distance. The discount
+        /// makes the set sticky enough that a figure is given up only when something is clearly
+        /// nearer.</para>
+        /// </summary>
+        void ChooseTheNearest(ReadOnlySpan<PawnView> pawns)
+        {
+            if (_eligible.Count <= MaxFigures) return;
+
+            Vector3 eye = ViewerPosition ?? _parent.position;
+
+            _order.Clear();
+            for (int n = 0; n < _eligible.Count; n++)
+            {
+                int i = _eligible[n];
+                float distance = (CellMetrics.FloorCentre(pawns[i].Cell) - eye).sqrMagnitude;
+                if (_byPawn.ContainsKey(pawns[i].Id.Value)) distance *= StickyFigure;
+                _order.Add(new Nearest(i, distance));
+            }
+
+            _order.Sort(NearestFirst);
+            _eligible.Clear();
+            for (int n = 0; n < MaxFigures; n++) _eligible.Add(_order[n].Index);
+            // Back into snapshot order, so that leasing, posing and everything downstream sees
+            // the colony in the order it has always seen it. Which pawns are drawn is what this
+            // decides; the order they are drawn in is not its business.
+            _eligible.Sort();
+        }
+
+        /// <summary>
+        /// How much nearer a pawn that already has a figure counts as being. See
+        /// <see cref="ChooseTheNearest"/>; squared distances, so this is the square of the margin.
+        /// </summary>
+        const float StickyFigure = 0.75f;
+
+        readonly struct Nearest
+        {
+            public Nearest(int index, float distance) { Index = index; Distance = distance; }
+            public readonly int Index;
+            public readonly float Distance;
+        }
+
+        static readonly Comparison<Nearest> NearestFirst =
+            (a, b) => a.Distance != b.Distance
+                ? a.Distance.CompareTo(b.Distance)
+                : a.Index.CompareTo(b.Index);
+
+        readonly List<int> _eligible = new List<int>();
+        readonly List<Nearest> _order = new List<Nearest>();
+
+        /// <summary>
+        /// Where the camera is, for the one decision that needs it: which colonists keep a live
+        /// figure when there are more of them than the cap allows. Null falls back to the
+        /// director's own root, which is what a harness with no camera gets.
+        /// </summary>
+        public Vector3? ViewerPosition { get; set; }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
         /// tool can step the clock deliberately rather than relying on a running player.</summary>
