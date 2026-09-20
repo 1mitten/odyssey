@@ -334,7 +334,10 @@ namespace Odyssey.Presentation.Rendering
 
         public bool Emit(in TerrainCell cell, in MeshSink sink)
         {
-            if (!Enabled || !cell.ShowsAFace || !cell.Model.IsEarth(cell.Index)) return false;
+            // Keyed on the terrain the cell CARRIES - the drawn terrain, not the grid's - so a
+            // zoned cell's ground resolves the earth of the dirt it is drawn as, not the grass
+            // it still is underneath.
+            if (!Enabled || !cell.ShowsAFace || !GroundLook.IsEarth(cell.Terrain)) return false;
 
             int variant = GroundLook.Variant(cell.X, cell.Z, cell.Y);
             int exposed = cell.ExposedSides();
@@ -344,13 +347,13 @@ namespace Odyssey.Presentation.Rendering
             if (exposed == 0)
             {
                 yaw = GroundLook.Yaw(cell.X, cell.Z, cell.Y);
-                earth = cell.Model.EarthModule(cell.Index, variant, showsAFace: false);
+                earth = cell.Model.EarthModule(cell.Terrain, variant, showsAFace: false);
             }
             else
             {
                 int canonical = GroundMesh.CanonicalExposure(exposed, out int rotation);
                 yaw = 90f * rotation;
-                earth = cell.Model.EarthFaceModule(cell.Index, variant, canonical);
+                earth = cell.Model.EarthFaceModule(cell.Terrain, variant, canonical);
             }
 
             sink.Body(earth, cell.Tint, cell.Drape * Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)));

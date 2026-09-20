@@ -97,7 +97,7 @@ namespace Odyssey.Tests.Sim
         // ---- scan order --------------------------------------------------------------------
 
         [Test]
-        public void TheShippedColonyScansConstructionThenCuttingThenMiningThenHauling()
+        public void TheShippedColonyScansConstructionThenGrowingThenCuttingThenMiningThenHauling()
         {
             // Pinned deliberately. Adding a kind of work is allowed to change this line — it is
             // the one place in the repository where the scan order is written down — but it must
@@ -107,13 +107,19 @@ namespace Odyssey.Tests.Sim
             // because a site cannot be worked until it has been fed. Cutting, mining and hauling
             // keep the order they have always had, relative to each other.
             //
+            // Growing sits between construction and cutting (U47): a zone's daylight window is the
+            // one clock in the colony that will not wait — a field sown late is a field sown
+            // tomorrow, where a tree keeps until Thursday. Harvest ahead of Sow within the type is
+            // the name tiebreak; both cut and gather at the same patch of soil, and neither has a
+            // claim on the other.
+            //
             // Deconstruct is last within construction, and that is the decision this line records:
             // a colony that pulls a wall down while a half-ordered hut waits for its last plank
             // finishes neither, and demolition is the one job here that is never urgent — the thing
             // being removed is already standing and already doing its job.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
             Assert.That(names, Is.EqualTo(
-                new[] { "Deliver", "Build", "Deconstruct", "Fell", "Mine", "Haul" }));
+                new[] { "Deliver", "Build", "Deconstruct", "Harvest", "Sow", "Fell", "Mine", "Haul" }));
         }
 
         [Test]

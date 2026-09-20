@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
@@ -182,6 +184,48 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// The crop table as it stands, for the same reason as the terrain's. A plant's numbers
+        /// are the field: <c>growTicks</c> prices how long a sowing takes to ripen, the work costs
+        /// price every swing of the hoe and the sickle, and <c>minFertility</c> decides where a
+        /// zone may sit at all.
+        /// </summary>
+        // U46 put the first crop in. The one number to re-check by hand when this moves is
+        // growTicks: 130,000 inside the daylight window is four game days to a full field, which
+        // is the pace the start flow's pantry was tuned against.
+        const ulong PlantFingerprint = 11064235165183955100UL;
+
+        [Test]
+        public void ThePlantsAreStillWhatTheyWere()
+        {
+            ulong actual = DefComparison.Fingerprint(ContentPack.Plants(), "Plant");
+
+            Assert.That(actual, Is.EqualTo(PlantFingerprint),
+                "the plant table has moved. If that was deliberate, set PlantFingerprint to " +
+                $"{actual}UL and say what changed. If it was not, " +
+                "`git diff Assets/Odyssey/Defs/Core` is what moved.");
+        }
+
+        /// <summary>
+        /// A zone record stores its plant as a <see cref="PlantHandle"/> number, so the order list
+        /// and the handles are the save contract, exactly as the terrain index order is. Checked
+        /// by name rather than a sample, for the same reason the terrain order is.
+        /// </summary>
+        [Test]
+        public void ThePlantTableIsInTheDeclaredOrder()
+        {
+            PlantDef[] table = ContentPack.Plants();
+
+            Assert.That(WorldContent.PlantOrder.Length, Is.EqualTo(PlantHandle.Count),
+                "the order list and the plant handle count disagree, so some crop has no handle or two");
+            Assert.That(table, Has.Length.EqualTo(PlantHandle.Count),
+                "the loaded table and the order list disagree in length");
+
+            for (int i = 0; i < table.Length; i++)
+                Assert.That(table[i].defName, Is.EqualTo(WorldContent.PlantOrder[i]),
+                    $"plant {i} loaded as '{table[i].defName}' but the order list says '{WorldContent.PlantOrder[i]}'");
+        }
+
+        /// <summary>
         /// An ore made of a terrain that does not exist is a load error naming the file, not a
         /// stratum of nothing found three seeds later. This is <c>[DefReference]</c> earning its
         /// keep on real content for the first time.
@@ -217,6 +261,7 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(defs.Table<SimTerrainDef>().Count, Is.EqualTo(NaturalContent.TerrainCount));
             Assert.That(defs.Table<OreKindDef>().Count, Is.EqualTo(NaturalContent.OreKindCount));
+            Assert.That(defs.Table<PlantDef>().Count, Is.EqualTo(PlantHandle.Count));
         }
     }
 }

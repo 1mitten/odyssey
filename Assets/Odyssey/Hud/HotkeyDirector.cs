@@ -60,6 +60,9 @@ namespace Odyssey.Hud
         ToolFell,
         ToolCancel,
 
+        /// <summary>Arm or put down the growing-zone tool.</summary>
+        ToolGrowZone,
+
         BuildPalette,
 
         /// <summary>
@@ -147,6 +150,7 @@ namespace Odyssey.Hud
             (HotkeyAction.ToolMine,   HudKey.M, HudKey.None),
             (HotkeyAction.ToolFell,   HudKey.C, HudKey.None),
             (HotkeyAction.ToolCancel, HudKey.X, HudKey.None),
+            (HotkeyAction.ToolGrowZone, HudKey.G, HudKey.None),
 
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
@@ -326,6 +330,7 @@ namespace Odyssey.Hud
             HotkeyAction.ToolMine => "ui.keys.mine",
             HotkeyAction.ToolFell => "ui.keys.fell",
             HotkeyAction.ToolCancel => "ui.keys.cancel",
+            HotkeyAction.ToolGrowZone => "ui.keys.growzone",
             HotkeyAction.BuildPalette => "ui.keys.build",
             HotkeyAction.DebugMenu => "ui.keys.debugmenu",
             _ => KeysKey,

@@ -67,6 +67,7 @@ namespace Odyssey.Presentation.Rendering
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
+                EmitCrop(batch, index, x, z, y);
             }
 
             batch.Version = _model.Version;
@@ -167,13 +168,20 @@ namespace Odyssey.Presentation.Rendering
 
         void EmitTerrain(ChunkBatch batch, int index, int x, int z, int y)
         {
-            ushort terrain = _model.Terrain(index);
+            // The ground a zoned cell draws is dirt: the look swap happens here, on the terrain
+            // quad itself, so a field is seamless and boolean by construction — one quad, one
+            // material, no mesh laid over the ground to sit proud of its tile.
+            ushort terrain = _model.DrawnTerrain(index);
             if (terrain == CoreContent.TerrainAir) return;
 
-            int module = _model.TerrainModule(index);
+            int module = _model.TerrainModuleFor(terrain);
             if (module == 0) return;
 
             int tint = TintCode.Daylit(TintCode.Terrain(terrain), _model.OpenToTheSky(index, y));
+            // Worked soil is this same earth graded darker, and saying so in the bucket key is
+            // the whole of drawing a growing zone: no second mesh, no per-cell draw, no per-frame
+            // work at all. TintCode.TilledBase carries the measurement that justifies it.
+            if (_model.IsZoned(index)) tint = TintCode.Tilled(tint);
             if (DrawnWhole(terrain)) tint = TintCode.Whole(tint);
 
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
@@ -251,7 +259,8 @@ namespace Odyssey.Presentation.Rendering
         {
             if (ScatterDensity <= 0) return;
 
-            ushort terrain = _model.Terrain(index);
+            // The drawn terrain, so a zoned cell - drawn as dirt - grows no tuft through it.
+            ushort terrain = _model.DrawnTerrain(index);
             if (terrain != NaturalContent.TerrainGrass) return;
             if (!_model.IsSolid(index)) return;
 
@@ -295,10 +304,23 @@ namespace Odyssey.Presentation.Rendering
             // the same fault, a layer smaller and much harder to see.
             bool daylit = _model.OpenToTheSky(index, y);
 
+            // A clump is placed in a ring of its own cell but its mesh reaches a metre past
+            // it, and the tile beside a growing zone is tilled ground: before this pull, every
+            // border tile of a plot wore a fringe of meadow lying over it (owner, 2026-09-19:
+            // "remove the grass graphics from the garden plots ... it makes it jarring"). The
+            // neighbours are asked through the zone mirror, so a freshly painted field pulls
+            // its surrounding tufts in on the re-mesh the designation itself marks.
+            bool tilledXPlus = x + 1 < size.SizeX && _model.IsZoned(index + 1);
+            bool tilledXMinus = x > 0 && _model.IsZoned(index - 1);
+            bool tilledZPlus = z + 1 < size.SizeZ && _model.IsZoned(index + size.SizeX);
+            bool tilledZMinus = z > 0 && _model.IsZoned(index - size.SizeX);
+
             for (int slot = 0; slot < count; slot++)
             {
                 GroundScatter.Placement(x, z, slot,
                     out float offsetX, out float offsetZ, out float yaw, out float scale);
+                GroundScatter.PullInFromTilled(
+                    ref offsetX, ref offsetZ, tilledXPlus, tilledXMinus, tilledZPlus, tilledZMinus);
 
                 int which = GroundScatter.VariantFor(x, z, slot, _scatterModules.Length);
                 int module = _scatterModules[which];
@@ -330,6 +352,51 @@ namespace Odyssey.Presentation.Rendering
                     at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
             }
         }
+
+        /// <summary>
+        /// The crop standing in this cell, at its drawn stage, through the ordinary bucket
+        /// machinery — a crop is one more module per chunk, and inherits culling, the slice, the
+        /// depth shade and the single instanced submission with no code path of its own.
+        ///
+        /// <para>It stands at a point, so it is lifted rather than draped (see the class header's
+        /// split), at its own cell's floor — which for a zone cell is the ground surface, where
+        /// <see cref="GroundMesh"/> pins the turf's middle, so a sprout neither floats above the
+        /// field nor starts life buried.</para>
+        ///
+        /// <para>Foliage, not terrain, for the reason <see cref="EmitScatter"/> gives; and daylit
+        /// on the same terms as the ground it grows in, so a crop under a roof reads dimmer than
+        /// one in the open rather than glowing.</para>
+        /// </summary>
+        void EmitCrop(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            int module = _model.CropModule(index);
+            if (module == 0) return;
+
+            // The plot draws its yield: as many plants as the harvest will give, from the first
+            // sprout to the last pull (owner, 2026-09-18). Free by instancing - more matrices in
+            // the same bucket, not more buckets - and scattered at hashed per-cell-per-plant
+            // positions so a field reads as rows of plants rather than one repeated clump. The
+            // offset/scale the catalogue row carries moves every plant alike, so the sink the
+            // row asks for is honoured per plant and not just per cell.
+            bool daylit = _model.OpenToTheSky(index, y);
+            int tint = TintCode.Daylit(TintCode.Foliage(0), daylit);
+
+            int count = _model.CropCount(index);
+            Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y));
+            for (int i = 0; i < count; i++)
+            {
+                uint h = (uint)(index * 747_796_405u + i * 289_133_645_3u);
+                h = (h ^ (h >> 13)) * 1_274_126_177u;
+                float ox = ((h & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 1.1f);
+                float oz = (((h >> 16) & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 1.1f);
+                float yaw = (h % 4u) * 90f;
+
+                AddBody(batch, module, tint, Matrix4x4.TRS(
+                    centre + new Vector3(ox, 0f, oz),
+                    Quaternion.Euler(0f, yaw, 0f), Vector3.one));
+            }
+        }
+
 
         /// <summary>
         /// Resolve the tuft modules once, and keep only the ones that found real art.

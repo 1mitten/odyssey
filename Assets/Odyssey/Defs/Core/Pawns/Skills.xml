@@ -108,4 +108,13 @@
     <label>construction</label>
   </SkillDef>
 
+  <!--
+    The field craft, U47. One skill for sowing and harvest together, as the work type is one
+    (docs/design/22-growing.md section 6).
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Growing</defName>
+    <label>growing</label>
+  </SkillDef>
+
 </Defs>

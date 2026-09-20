@@ -159,7 +159,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 | **CL** the carried load | **Merged 2026-09-19, PR #129**, played once, three faults fixed (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
-| **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
+| **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`). **A skill now buys speed at the hoe** — `Work_Growing` carries `rateSkill 4` and cutting's curve, which three comments and this file denied for two days. The debug menu gained **Skip one day** and **Ripen crops**. **Reviewed against main twice on 2026-09-20** (`docs/journal.md`): both givers were missing the `ctx.Reachable` every other giver has, and one unreachable crop cost 159 failed jobs in 2,000 ticks; `PlantDef.yields` was declared and never read; and the zone's translucent cover was both the interior-edge borders the owner photographed and 2,065 draw calls a frame. The zone is a bit on the ground's terrain tint now (`TintCode.TilledBase`), which is no draws at all. |
 | **EV** events | **Merged 2026-09-20 (PR #140)** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
 | **HT** hardening | **Audited 2026-09-19; audit and plan merged as PR #136. Nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
 | **FI** falling items | **Merged 2026-09-20 (PR #138)** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
@@ -195,6 +195,7 @@ this file.
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
+| **Frame cost, draw batching, the surround's price** | `docs/design/06-rendering-and-camera.md` §6c |
 | The sub-tile sidestep, crowd and tree avoidance | `docs/design/25-pawn-steering.md` |
 | Where a colonist looks, the head turn | `docs/design/23-head-turning-and-gaze.md` |
 | Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
@@ -364,8 +365,14 @@ invisible where the game is played.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
   tick**. Both traps are in `docs/lessons.md` and both have cost a Unity run.
 
-Frame time under the real player loop, against a 5 ms budget: meadow ~0.99 ms, city ~1.56 ms on an
-RTX 5070 Ti at 640 × 480. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
+Frame time under the real player loop, against a 5 ms budget — **and the budget is in the docs, not
+in the assert**: `FrameTimeTests` passes anything under a 30 Hz frame, so a green PlayMode run says
+nothing about it. Measured 2026-09-20 after the surround work: meadow **2.59 ms**, field (2,065
+zone cells) **4.09 ms**, city **2.01 ms**, on an RTX 5070 Ti at 640 × 480. **A per-draw submission
+costs about 4.6 us whatever is in it**, which is the single most useful number for this renderer:
+three passes were submitting per cell, and two of them are fixed (the zone cover, the seed specks).
+The third — `DrawCellMark`/`Shade`/`Cut` for standing orders — is not, and the benchmark cannot see
+it because the meadow case is barren and has nothing to designate. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
 
 **Pathfinding is where the tick goes under load, and it is no longer a threat to the frame budget**
 (OQ-19, measured on the real `SimWorld.Tick`): a colony of 50 on 250 × 250 × 40 costs 0.025 ms a
@@ -438,10 +445,11 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 
 **`docs/bug-patterns.md` is the companion for the bugs themselves** — the symptom, the real cause, the
 measurement that found it, and the check that catches the next one of its kind. **Read its patterns
-before debugging a report**, because this project keeps meeting the same four faults in different
+before debugging a report**, because this project keeps meeting the same five faults in different
 clothes: one rule with two owners; a rule that asks the built world and misses the order; a
-compatibility clause keeping the bug alive; and a conditional rule applied per cell across a drag.
-**Add a row whenever a bug is fixed.**
+compatibility clause keeping the bug alive; a conditional rule applied per cell across a drag;
+and **a pass that draws once per cell** (`P10`), which is a performance fault that reviews cannot
+see and the frame budget could not either. **Add a row whenever a bug is fixed.**
 
 **For a report about how something *looks*, start at that file's runbook, "a tile that looks wrong".**
 One grey tile cost four rounds, three of which produced confident wrong answers reasoned from
