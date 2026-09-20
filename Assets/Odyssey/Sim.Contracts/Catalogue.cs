@@ -197,7 +197,8 @@ namespace Odyssey.Sim.Contracts
         /// with a bed in it has ever left this branch.</para>
         /// </summary>
         public const int Bed = 5;
-        public const int Count = 6;
+        public const int Door = 6;
+        public const int Count = 7;
     }
 
     /// <summary>

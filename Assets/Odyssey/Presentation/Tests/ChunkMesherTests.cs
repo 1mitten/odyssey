@@ -294,10 +294,9 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            // Two walls at three faces and one core each (the face towards the door is hidden by
-            // the door), plus exactly one door leaf. A door has no core: it is a leaf in an
-            // opening, not a piece of wall.
-            Assert.That(Instances(batch.Body), Is.EqualTo(9));
+            // Two walls at four faces (including the jambs bordering the doorway) and one core each,
+            // plus exactly one door frame. A door has no core: it is a frame in an opening, not a piece of wall.
+            Assert.That(Instances(batch.Body), Is.EqualTo(11));
         }
 
         [Test]
