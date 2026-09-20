@@ -893,38 +893,58 @@ Before deleting any tree that a worktree owns, ask whether anything under it is 
 Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
 ```
 
-**If it has already happened**, the packs are recoverable without re-downloading: `D:\code\odyssey-audio`
-holds a *real* copy rather than a junction. `robocopy <source> <dest> /E /COPY:DAT /DCOPY:DAT` restores
-it byte for byte in about ten seconds, and the `.meta` files come with it, so the GUIDs are the ones
-`ModuleCatalogue.asset` already refers to — check one before believing it, e.g. that
-`PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
-`guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
-possible**, so do not "tidy" `odyssey-audio` into a junction as well.
+**It happened again on 2026-09-20, exactly as the paragraphs below predicted, and the arrangement
+they asked for is now in place.** `D:\code\odyssey-audio` was removed — the worktree that held the
+only real copy — and every checkout on the machine went dark at once: sixteen `Assets\Synty`
+junctions all resolving to nothing, including an open editor's. **The real directory now lives in
+the main checkout**, `D:\code\odyssey\Assets\Synty`, 15,868 files and 1.54 GB, with every worktree
+junctioned to it and no chain. That is the inversion the last paragraph of this section used to ask
+for; it is done, and the thing to preserve is that **the canonical path is never itself a link**.
+Check it with `(Get-Item D:\code\odyssey\Assets\Synty -Force).LinkType` — an empty string is a
+real directory, `Junction` means somebody has re-pointed it and the packs are one delete from gone.
 
-**And `odyssey-audio` is no longer a spare copy — it is the live one** (measured 2026-09-18, and
-this paragraph used to imply otherwise). The links now run in a **chain**: the five junctioned
-worktrees point at `D:\code\odyssey\Assets\Synty`, and *that* is itself a junction pointing at
-`D:\code\odyssey-audio\Assets\Synty`, which holds the only real directory — 15,868 files, 1.54 GB,
-eight packs. The main checkout does not own its own art.
+**If it has already happened**, the packs are recoverable without re-downloading, and there is no
+`.unitypackage` on this machine to fall back on — so this is the only route. A deleted worktree
+lands in the recycle bin **intact and not as a junction**, which the 2026-09-17 entry above says it
+does not; that claim was about the delete-through-a-link case and is wrong for an ordinary
+`Remove-Item` of the whole folder. Find it:
 
-Two consequences, and the second is the dangerous one:
+```powershell
+$bin = 'D:\$RECYCLE.BIN\S-1-5-21-3546329425-3711620485-4010140739-1001'
+Get-ChildItem -LiteralPath $bin -Force -Directory | ForEach-Object {
+  $s = Join-Path $_.FullName 'Assets\Synty'
+  if (Test-Path -LiteralPath $s) {
+    "{0} entries={1}" -f $_.Name, (Get-ChildItem -LiteralPath $s -Force | Measure-Object).Count } }
+```
 
-- **Everything dies at one remove.** `rmdir` on the main checkout's `Assets\Synty` unlinks only that
-  hop, but it also cuts the five worktrees that point through it, because their target stops
-  resolving. Any recursive delete of the main checkout's `Assets` follows the chain into
-  `odyssey-audio` and takes the real packs with it.
-- **The only real copy is sitting inside a worktree that looks disposable.** `odyssey-audio` is on
-  `claude/audio-framework`, which is **merged into main and behind it** — exactly the profile of a
-  branch somebody tidies up without thinking. `git worktree remove` on it, or a recursive delete of
-  `D:\code\odyssey-audio`, destroys 1.54 GB of licensed art that is gitignored and recoverable only
-  by re-importing the `.unitypackage` files.
+**Eighteen entries and an empty `LinkType` is the real thing**; zero entries is another dead
+junction that went into the bin with its worktree, and there will be several. Then
 
-**Check before pruning any worktree**, with the `LinkType` command above, or:
-`Get-Item <path>\Assets\Synty -Force | Select Attributes, Target` — a `ReparsePoint` is a link and
-safe to `rmdir`, anything else is the real thing. The arrangement wants inverting when somebody has
-a quiet moment: the real directory belongs in the **main checkout**, with every worktree and
-`odyssey-audio` junctioned to it, so that the packs live where the project does and every worktree
-is genuinely disposable.
+```powershell
+cmd /c rmdir "D:\code\odyssey\Assets\Synty"          # only if it is still a dangling junction
+robocopy <src> "D:\code\odyssey\Assets\Synty" /E /COPY:DAT /DCOPY:DAT
+```
+
+restores it byte for byte in about a minute, `.meta` files and GUIDs included — check one before
+believing it, e.g. that `PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. **Copy, do not move**, so the bin keeps a fallback. Every
+junctioned checkout on the machine repairs itself the moment the canonical path resolves again.
+
+**Note `-LiteralPath` everywhere.** The recycle bin's folder names begin with `$R`, and PowerShell
+expands `$R…` inside double quotes and treats `[` and `]` as wildcards with `-Path`. A plain
+`Get-ChildItem "D:\$RECYCLE.BIN\…"` reports that the path does not exist, which reads exactly like
+"there is no backup" at the one moment you must not believe it.
+
+**How to tell it has happened, rather than guessing.** A worktree whose art has gone still compiles,
+still passes both tiers, and still draws — as untextured primitives. The tell in a test run is
+narrow and easy to miss: `FigureBuildTests` reports three **Ignored** cases (*"no colonist art on
+this machine; the packs are gitignored"*) and the EditMode total is unchanged. So **compare the
+skipped count against another recent run**, not the failure count. Here it was 13 skipped against
+10 on a run from the same afternoon in a sibling worktree, and that three was the whole signal.
+
+Before deleting any tree that a worktree owns, ask whether anything under it is a reparse point —
+and remember the delete that did this was of a *worktree*, not of a junction, so the check has to
+be made on the thing you are removing rather than on the link you can see.
 
 ## Per-cell geometry cracks where a continuous field does not
 
