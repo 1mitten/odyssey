@@ -1222,6 +1222,58 @@ measured 4.85 ms against the bare meadow's 4.86 and looked exactly like a pass t
 nothing. `CellPlatesDrawn` exists for that reason: the case asserts that at least one plate was
 drawn before it believes its own difference.
 
+### 6c.2 What a colony costs, and the O(N squared) in the crowd
+
+**2026-09-20, from a Play report.** The owner watched the developer overlay while spawning
+colonists: *"it seemed to hover 1.7 ms no matter the colony size but then frames dropped after so
+many colonists. I think at pretty high numbers."* Flat then a knee has several possible causes and
+none of them was worth guessing, so `FrameTimeTests.TheFrameAgainstColonySize` measures eight
+colony sizes in one world, seconds apart, with the draw block split by section.
+
+| pawns | figures | frame | tick | submit | World | Figures | Actors |
+|---|---|---|---|---|---|---|---|
+| 8 | 8 | 2.65 | 0.009 | 2.023 | 1.909 | 0.088 | 0.017 |
+| 32 | 32 | 3.14 | 0.013 | 2.368 | 1.905 | 0.435 | 0.019 |
+| 64 | 64 | 4.08 | 0.021 | 3.139 | 1.935 | 1.174 | 0.019 |
+| 96 | 64 | 4.84 | 0.032 | 3.842 | 1.993 | 1.429 | 0.409 |
+| 128 | 64 | 5.70 | 0.041 | 4.692 | 1.985 | 1.710 | 0.985 |
+| 192 | 64 | 8.56 | 0.081 | 7.361 | 2.201 | 2.369 | 2.777 |
+| 256 | 64 | 11.98 | 0.131 | 10.672 | 2.180 | 3.058 | 5.416 |
+| 384 | 64 | 22.45 | 0.310 | 20.691 | 2.486 | 4.908 | 13.275 |
+
+Draw calls across that whole range: **1,243 to 1,324.** Everything else in the frame — Mirror,
+Sight, Audio, Doors, Overlays — stays under 0.02 ms throughout.
+
+**Three things fall out, and the first two are the owner's observation explained.**
+
+- **`World` is flat.** The board, its chunks and the surround cost 1.9 to 2.5 ms whatever the
+  colony is doing. That is the number that hovers.
+- **It is not the simulation and it is not the submissions.** The tick is **0.31 ms at 384 pawns**,
+  1.4% of the frame, which confirms OQ-19 at four times its colony size. Draw calls move by 7%
+  across a 48-fold colony.
+- **It is `Actors` and `Figures`, and they share one cause.** Both call `PawnPose.Of`, and
+  `PawnPose.Of` **scans every other pawn** to find who to sidestep (`SteeringCurve.Proximity`
+  against each). Figures are capped at `FigureCeiling` = 64, so that pass is 64 x N — linear, and
+  it measures linear. Actors is every pawn without a figure, so it is (N-64) x N — quadratic, and
+  it measures quadratic: 147,456 pairs at 384 pawns, each with a `Vector3.Distance`, which at
+  about 90 ns a pair is 13 ms against the 13.275 measured.
+
+**The knee the owner saw is the figure ceiling**, not because the ceiling is wrong but because
+crossing it is where the quadratic term starts: below 64 there are no stand-ins and the only crowd
+scan is the linear one.
+
+**The fix is exact, not an approximation, and that is the point worth carrying.**
+`SteeringCurve.CrowdFarRadius` is 3.0 m and a cell is 2.5 m, so `Proximity` returns **zero** for
+any pawn more than about one cell away — every one of those 147,000 pairs contributes nothing and
+is computed anyway. A cell-bucketed index over the pawn span, built once a frame and shared by
+both callers, makes the pass O(N x k) and **cannot change a single drawn position**, so the
+sidestep the owner has already judged (`25-pawn-steering.md`) is not up for re-judgement. It is
+not done: it is the next unit, and the sweep above is its before.
+
+**At the scale target it is not yet a problem.** Fifty colonists is under the ceiling and the
+whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
+before it binds, and worth fixing because the fix is cheap and provably invisible.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.

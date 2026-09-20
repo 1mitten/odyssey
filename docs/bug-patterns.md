@@ -219,9 +219,59 @@ publishes one `ZoneView` per zoned cell *every tick* for a list that changes onl
 paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
 its whole tick cost. Per-cell-per-frame and per-cell-per-tick are one pattern wearing two coats.
 
+### P11 — A per-actor pass that consults every other actor
+
+**P10's sibling, one level up.** P10 is about a pass priced by cells the player touched; this is
+about a pass priced by the *square* of how many things are alive. It hides even better, because
+each call is obviously correct, the loop around it is three lines, and at the colony size anybody
+tests with the quadratic term is smaller than the noise.
+
+| The pass | What it consults | What it cost | State |
+|---|---|---|---|
+| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **13.3 ms of a 22.5 ms frame at 384 colonists**, 0.02 ms at 64 | open; the fix is exact, see below |
+
+**The tell:** a cost that is flat while the count is small and then bends upward, with **draw
+calls and tick time both flat through the bend**. If neither the submissions nor the simulation
+moved, the cost is in a per-frame loop, and a loop that bends is a loop inside a loop.
+
+**The check:** for every per-actor pass, ask *what does it read that is not its own actor?* If the
+answer is "all of them", ask what the influence radius is. Here `SteeringCurve.CrowdFarRadius` is
+3.0 m against a 2.5 m cell, so all but a handful of the 147,000 pairs at 384 pawns contribute
+**exactly zero** — the pass is not approximating, it is computing nothing, expensively. **A bound
+like that makes the fix exact**, which matters more than the speed: a spatial index that skips
+only zero-weight pairs changes no drawn position, so a judged visual does not have to be judged
+again.
+
+**The instrument:** `OdysseyBootstrap.FrameSectionMs` splits the draw block eight ways and
+`FrameTimeTests.TheFrameAgainstColonySize` sweeps eight colony sizes in one world. A frame number
+that says "the renderer is slow" without saying which part only licences a guess.
+
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
+
+Owner, from a Play session while spawning colonists: *"it seemed to hover 1.7 ms no matter the
+colony size but then frames dropped after so many colonists. I think at pretty high numbers."*
+
+Both halves were true and neither meant what it looked like. The hover is `World` — the board, its
+chunks and the surround — which is flat at 1.9–2.5 ms whatever the colony does. The drop is not
+the simulation (0.31 ms of tick at 384 pawns), not the draw calls (1,243 to 1,324 across a 48-fold
+colony) and not the figure ceiling being too low. It is `PawnPose.Of` scanning **every other
+pawn** for the crowd sidestep, once per posed pawn, every frame: 64 x N for the capped figures and
+(N-64) x N for the instanced stand-ins. The knee is at the ceiling because that is where the
+quadratic term is born.
+
+**The shape: a cost that is invisible at every size anybody tests at, and cubic-looking at sizes
+nobody does.** It is P11, and the reason it is worth a pattern of its own is the check it
+suggests — the influence radius. `CrowdFarRadius` is 3.0 m against a 2.5 m cell, so all but a
+handful of the pairs contribute exactly zero and are computed anyway, which makes a spatial index
+an **exact** rewrite rather than an approximation.
+
+**Found by** `FrameTimeTests.TheFrameAgainstColonySize` and `OdysseyBootstrap.FrameSectionMs`,
+both written for this report. **Not yet fixed** — held as the next unit so the sweep stands as its
+before. `docs/design/06-rendering-and-camera.md` §6c.2, `25-pawn-steering.md`.
 
 ### 2026-09-20 — the pass that was free because it never ran
 

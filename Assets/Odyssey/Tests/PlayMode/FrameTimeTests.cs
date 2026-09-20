@@ -133,6 +133,82 @@ namespace Odyssey.Tests.PlayMode
         const int OrderCells = 1_000;
 
         /// <summary>
+        /// What a colony costs as it grows: the frame at eight colony sizes, in one world.
+        ///
+        /// <para><b>Written from a Play report, 2026-09-20.</b> The owner watched the overlay
+        /// while spawning colonists and said the frame "seemed to hover 1.7 ms no matter the
+        /// colony size but then frames dropped after so many colonists ... at pretty high
+        /// numbers". Flat and then a knee is a specific shape and it has more than one cause —
+        /// the figure ceiling is 64, so the renderer's crowd stops growing there while the
+        /// simulation's does not; and a small linear term hides under a large constant until it
+        /// does not. Neither is worth guessing at when the bootstrap already times both halves
+        /// of the frame separately.</para>
+        ///
+        /// <para>Every step is measured in the same world seconds after the last, which is the
+        /// only comparison this machine supports. The figure ceiling is deliberately left at its
+        /// default: what is being measured is the game as it ships, not a hypothetical.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheFrameAgainstColonySize()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+
+                // Past the 64-figure ceiling on both sides of it, and past the audit's scale
+                // target of fifty, so the shape either side of each is visible rather than
+                // inferred from two points.
+                int[] sizes = { 8, 32, 64, 96, 128, 192, 256, 384 };
+
+                foreach (int size in sizes)
+                {
+                    yield return GrowColonyTo(boot, size);
+
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+                    float mean = 0f;
+                    yield return TimeFrames($"colony/{pawns}", boot, 30, x => mean = x);
+                    Debug.Log($"[FrameTime] colony {pawns} pawns, " +
+                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Spawn colonists until the colony is this big, spread over the middle of the board so
+        /// they do not all arrive in one column and stand on each other.
+        /// </summary>
+        IEnumerator GrowColonyTo(OdysseyBootstrap boot, int wanted)
+        {
+            GridSize size = boot.Colony!.Grid.Size;
+            int side = Mathf.CeilToInt(Mathf.Sqrt(wanted)) + 1;
+            int step = Mathf.Max(1, (size.SizeX / 2) / side);
+            int at = 0;
+
+            while (boot.World!.Views.Current.Pawns.Length < wanted)
+            {
+                int x = size.SizeX / 4 + (at % side) * step;
+                int z = size.SizeZ / 4 + (at / side) * step;
+                at++;
+                if (at > wanted * 4) break;   // the board refused; measure what took
+                if (x >= size.SizeX - 1 || z >= size.SizeZ - 1) { at = 0; continue; }
+
+                boot.World!.Intents.Submit(new Intent(IntentKind.SpawnPawn,
+                    new CellRef(x, z, size.SizeY - 2), 0));
+                boot.World!.Tick();
+            }
+
+            yield return null;
+        }
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.
@@ -275,6 +351,7 @@ namespace Odyssey.Tests.PlayMode
 
             float total = 0f, worst = 0f;
             double tick = 0d, submit = 0d;
+            var sections = new double[(int)OdysseyBootstrap.FrameSection.Count];
             for (int i = 0; i < TimedFrames; i++)
             {
                 yield return null;
@@ -286,6 +363,8 @@ namespace Odyssey.Tests.PlayMode
                 // orders costs the work givers as well as the renderer.
                 tick += boot.TickMs;
                 submit += boot.SubmitMs;
+                System.ReadOnlySpan<double> split = boot.FrameSectionMs;
+                for (int k = 0; k < sections.Length && k < split.Length; k++) sections[k] += split[k];
             }
 
             float meanMs = total / TimedFrames;
@@ -311,6 +390,17 @@ namespace Odyssey.Tests.PlayMode
                       $"{renderer?.Skirt.BatchesDrawn ?? 0} batches; " +
                       $"{Screen.width}x{Screen.height}, " +
                       $"{SystemInfo.graphicsDeviceName}");
+
+            // Submit, split by what it was doing. A frame number that says "the renderer is
+            // slow" without saying which part of it is slow only licences a guess.
+            var parts = new System.Text.StringBuilder();
+            for (int k = 0; k < sections.Length; k++)
+            {
+                if (k > 0) parts.Append(", ");
+                parts.Append((OdysseyBootstrap.FrameSection)k).Append(' ')
+                     .Append((sections[k] / TimedFrames).ToString("0.000"));
+            }
+            Debug.Log($"[FrameTime] {label} submit split: {parts}");
         }
 
         /// <summary>The play scene's objects, built by hand: a camera with the rig, a sun, the bootstrap.</summary>

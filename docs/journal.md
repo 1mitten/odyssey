@@ -25,6 +25,51 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-20 — one sentence from a Play session, and the biggest cost in the renderer
+
+The owner read the developer overlay while spawning colonists and said: *"it seemed to hover
+1.7 ms no matter the colony size but then frames dropped after so many colonists. I think at
+pretty high numbers."* That is one sentence, it names no number anybody could act on, and it
+turned out to be worth more than the whole measured day that preceded it.
+
+**The sweep.** `TheFrameAgainstColonySize` grows one colony through eight sizes and times each,
+seconds apart in the same world. `OdysseyBootstrap.FrameSectionMs` splits the draw block eight
+ways, because "submit is 20 ms" would only have licensed a guess.
+
+| pawns | figures | frame | tick | submit | World | Figures | Actors |
+|---|---|---|---|---|---|---|---|
+| 8 | 8 | 2.65 | 0.009 | 2.023 | 1.909 | 0.088 | 0.017 |
+| 64 | 64 | 4.08 | 0.021 | 3.139 | 1.935 | 1.174 | 0.019 |
+| 128 | 64 | 5.70 | 0.041 | 4.692 | 1.985 | 1.710 | 0.985 |
+| 256 | 64 | 11.98 | 0.131 | 10.672 | 2.180 | 3.058 | 5.416 |
+| 384 | 64 | 22.45 | 0.310 | 20.691 | 2.486 | 4.908 | 13.275 |
+
+**Both halves of the owner's sentence were right and neither meant what it looked like.** The
+hover is `World`, flat at 1.9–2.5 ms whatever the colony does. The drop is not the simulation —
+0.31 ms of tick at 384 pawns, which confirms OQ-19 at four times its colony size and settles the
+obvious first guess. It is not draw calls either: 1,243 to 1,324 across a 48-fold colony, so the
+per-submission work this session spent its day on is not where a colony's cost lives at all.
+
+**It is `PawnPose.Of`, which scans every other pawn for the crowd sidestep, once per posed pawn,
+every frame.** Figures are capped at 64, so that pass is 64 x N and measures linear. The instanced
+stand-ins are everything past the cap, so that pass is (N-64) x N and measures quadratic —
+147,456 pairs at 384 pawns, each with a `Vector3.Distance`, which at about 90 ns is 13 ms against
+the 13.275 measured. Mechanism and measurement agree to within the rounding.
+
+**The knee the owner saw is the figure ceiling**, and the ceiling is not the fault: crossing it is
+simply where the quadratic term is born. Raising or lowering it moves the knee and fixes nothing.
+
+**The fix is exact.** `CrowdFarRadius` is 3.0 m against a 2.5 m cell, so `Proximity` is zero
+beyond about one cell: all but a handful of those pairs contribute nothing and are computed
+anyway. A cell-bucketed index over the pawn span, built once a frame and shared by both callers,
+skips only zero-weight pairs and therefore **cannot move a drawn figure by a millimetre** — which
+means the sidestep the owner has already judged does not come back for judgement. It is held as
+the next unit rather than done tonight, so the sweep stands as its before.
+
+**And the proportion is the lesson.** The mark pass, ranked first on arithmetic, was worth 0.09 ms
+and took a day of careful measurement. One sentence of Play found 13 ms. The audit already says
+the playtest queue is the project's constraint; this is what that costs in the other direction.
+
 ## 2026-09-20 — the mark pass, and what a submission actually costs
 
 The last item on §6c's "still outstanding" list was the standing-order marks: one

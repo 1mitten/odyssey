@@ -276,6 +276,51 @@ namespace Odyssey.Presentation.Bootstrap
         /// the pair <see cref="TickMs"/> describes.
         /// </summary>
         public double SubmitMs => _renderMs;
+
+        /// <summary>
+        /// The parts of the draw block, in the order <c>LateUpdate</c> runs them.
+        ///
+        /// <para><b>Added 2026-09-20, off a Play report.</b> The owner watched the frame stay
+        /// flat while the colony grew and then fall over at a high count, and the sweep that
+        /// followed (<c>FrameTimeTests.TheFrameAgainstColonySize</c>) found the growth is
+        /// entirely in <see cref="SubmitMs"/> — not the tick (0.43 ms at 384 pawns) and not the
+        /// draw calls (1,243 to 1,324 across the whole range). "Submit" is eight different
+        /// things, and a number that says the renderer is slow without saying which part of it
+        /// is slow only licences a guess. These are that split.</para>
+        /// </summary>
+        public enum FrameSection
+        {
+            /// <summary>The render mirror: sites, crops, zones.</summary>
+            Mirror = 0,
+            /// <summary>The eye-to-colonist lines that ghost whatever stands on them.</summary>
+            Sight,
+            /// <summary>The chunk buckets, the surround and the falling items.</summary>
+            World,
+            /// <summary>The live Synty figures, capped at <c>PawnFigureDirector.FigureCeiling</c>.</summary>
+            Figures,
+            /// <summary>Sound: what played, what was culled, the ambience.</summary>
+            Audio,
+            /// <summary>The baked instanced stand-ins for pawns without a figure.</summary>
+            Actors,
+            /// <summary>Doors.</summary>
+            Doors,
+            /// <summary>Orders, zones, sites, the tool preview and the cursors.</summary>
+            Overlays,
+            Count,
+        }
+
+        readonly double[] _sectionMs = new double[(int)FrameSection.Count];
+        readonly Stopwatch _sectionTimer = new Stopwatch();
+
+        /// <summary>Last frame's draw block, split by <see cref="FrameSection"/>.</summary>
+        public System.ReadOnlySpan<double> FrameSectionMs => _sectionMs;
+
+        /// <summary>Charge everything since the last mark to this section, and start the next.</summary>
+        void MarkSection(FrameSection section)
+        {
+            _sectionMs[(int)section] += _sectionTimer.Elapsed.TotalMilliseconds;
+            _sectionTimer.Restart();
+        }
         float _smoothedFrameMs;
         string _catalogueNote = string.Empty;
 
@@ -1074,6 +1119,8 @@ namespace Odyssey.Presentation.Bootstrap
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
 
             _frameTimer.Restart();
+            System.Array.Clear(_sectionMs, 0, _sectionMs.Length);
+            _sectionTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null)
             {
@@ -1090,12 +1137,14 @@ namespace Odyssey.Presentation.Bootstrap
             // not cancel on 2026-09-18.
             _model.SetSites(_world.Views.Current.Sites);
             int movePerTick = MovePerTick;
+            MarkSection(FrameSection.Mirror);
 
             // Before the world is submitted, because it decides how part of the world is drawn.
             // It reads the figures placed on the *previous* frame, which is the one frame of lag
             // this is worth: a tree fading a sixtieth of a second late is not observable, and
             // placing the figures first would mean drawing the world after the people in it.
             UpdateSightLines(_world.Views.Current, movePerTick);
+            MarkSection(FrameSection.Sight);
 
             // The crop mirror: the meshed world must already know a crop ripened this
             // tick before the dirty chunk the simulation marked is rebuilt, or the field
@@ -1106,6 +1155,7 @@ namespace Odyssey.Presentation.Bootstrap
             // place before the dirty chunk a designation marked is rebuilt, or a painted
             // field would show its rows one refresh behind its tint.
             _model.UpdateZones(_world.Views.Current.Zones);
+            MarkSection(FrameSection.Mirror);
 
             if (_renderer != null)
             {
@@ -1113,11 +1163,13 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.FallingItems.Advance(Time.deltaTime);
                 _renderer.Render(activeLayer, slice);
             }
+            MarkSection(FrameSection.World);
 
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
             _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
                 Time.deltaTime);
+            MarkSection(FrameSection.Figures);
 
             // Sound after the figures, so a blow that landed this frame sounds on the same frame
             // its chips fly. The listener is the camera (where the AudioListener lives) and the
@@ -1128,12 +1180,15 @@ namespace Odyssey.Presentation.Bootstrap
                     cameraRig != null ? cameraRig.transform.position : transform.position,
                     cameraRig != null ? cameraRig.Focus : transform.position,
                     activeLayer);
+            MarkSection(FrameSection.Audio);
 
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn, _figures);
+            MarkSection(FrameSection.Actors);
 
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
+            MarkSection(FrameSection.Doors);
 
             DrawStandingOrders(_world.Views.Current);
             DrawZones(_world.Views.Current);
@@ -1145,6 +1200,7 @@ namespace Odyssey.Presentation.Bootstrap
             // per cell, counted nowhere - P10.
             _renderer.FlushCellPlates();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
+            MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
