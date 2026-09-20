@@ -53,6 +53,25 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Why these tests skip themselves, and **why the guard is
+        /// <see cref="PortraitStudio.Available"/> rather than "is there a catalogue".</b>
+        ///
+        /// <para>The catalogue is a committed asset whose prefab references point into the
+        /// gitignored <c>Assets/Synty</c>. On the self-hosted runner it therefore loads perfectly
+        /// and every single reference is null — so a catalogue null-check answers "yes, carry on"
+        /// on exactly the machine that cannot take a photograph, and both of these failed there
+        /// while passing on a machine with the packs. That is the trap
+        /// <c>PortraitStudio.Available</c>'s own doc comment was written about, the first time the
+        /// runner found it; this is the second.</para>
+        ///
+        /// <para><see cref="OdysseyBootstrap.Portraits"/> builds the studio from
+        /// <c>moduleCatalogue</c> on first use and keeps it, so this has to be asked <em>after</em>
+        /// <see cref="GiveItACatalogue"/> and not before.</para>
+        /// </summary>
+        const string NoPacks =
+            "the colonist rows resolved to no art (no Assets/Synty), so there is nobody to photograph";
+
+        /// <summary>
         /// A sun of the scene's own, because the play scene has one and the test rig does not.
         ///
         /// <para>Without a directional light the bootstrap builds no daylight cycle at all, and
@@ -87,8 +106,7 @@ namespace Odyssey.Tests.PlayMode
             try
             {
                 GiveItACatalogue(boot);
-                if (boot.moduleCatalogue == null)
-                    Assert.Ignore("no module catalogue, so there is nobody to photograph");
+                if (!boot.Portraits.Available) Assert.Ignore(NoPacks);
 
                 GiveItASun(root);
                 for (int i = 0; i < 8; i++) yield return null;
@@ -142,8 +160,7 @@ namespace Odyssey.Tests.PlayMode
             try
             {
                 GiveItACatalogue(boot);
-                if (boot.moduleCatalogue == null)
-                    Assert.Ignore("no module catalogue, so there is nobody to photograph");
+                if (!boot.Portraits.Available) Assert.Ignore(NoPacks);
 
                 GiveItASun(root);
                 for (int i = 0; i < 8; i++) yield return null;

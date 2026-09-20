@@ -330,6 +330,14 @@ invisible where the game is played.
   PlayMode **85 total, 80 passed, 0 failed** (the three new ones are the portrait-lighting and
   figure-cap guards). The remainder are `[Explicit]` or ignored. The run before it, the same day
   on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
+- **The runner has no `Assets/Synty`, so its PlayMode count is lower than this machine's and that
+  is correct.** Everything that needs a colonist's art ignores itself there — on 2026-09-20 the
+  same commit was 85/80/0 here and 85/75/0 with ten ignored on the runner. **A test that needs the
+  packs must ask whether the art *resolved*, never whether there is a catalogue**: the catalogue is
+  committed and its prefab references point into the gitignored folder, so it loads perfectly with
+  every reference null on exactly the machine that can draw nobody. `PortraitStudio.Available` and
+  `PawnFigureDirector.Enabled` are the two right questions; a `moduleCatalogue == null` check is
+  the wrong one and has now turned the runner red twice.
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a

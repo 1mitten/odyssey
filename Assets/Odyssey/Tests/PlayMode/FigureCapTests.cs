@@ -61,9 +61,6 @@ namespace Odyssey.Tests.PlayMode
             try
             {
                 GiveItACatalogue(boot);
-                if (boot.moduleCatalogue == null)
-                    Assert.Ignore("no module catalogue, so no colonist can be drawn as a figure");
-
                 for (int i = 0; i < 8; i++) yield return null;
                 shell.Menu.Choose(SessionCommands.NewGameKey);
                 for (int i = 0; i < 10; i++) yield return null;
@@ -72,8 +69,14 @@ namespace Odyssey.Tests.PlayMode
 
                 Assert.That(boot.World, Is.Not.Null, "no world");
                 Assert.That(boot.Figures, Is.Not.Null, "no figure director");
+                // **Whether the art resolved, not whether there is a catalogue.** The catalogue
+                // is committed and its prefab references point into the gitignored Assets/Synty,
+                // so on the self-hosted runner it loads perfectly with every reference null — and
+                // a catalogue null-check says "carry on" on exactly the machine that can draw
+                // nobody. See PortraitLightingTests.NoPacks, where that cost a red build.
                 if (!boot.Figures!.Enabled)
-                    Assert.Ignore("no character art resolved, so nothing is drawn as a figure");
+                    Assert.Ignore("the colonist rows resolved to no art (no Assets/Synty), " +
+                                  "so nothing is drawn as a figure");
 
                 boot.Figures.MaxFigures = Cap;
 
