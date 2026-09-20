@@ -1441,16 +1441,19 @@ namespace Odyssey.Presentation.Rendering
             }
             if (module == 0) return;
 
-            // Flat and unlit, and OPAQUE: the ghost material the brackets ride is the lit
+            // Flat, unlit and TRANSLUCENT: the ghost material the brackets ride is the lit
             // terrain shader made transparent, and on rolled ground it shaded every
             // differently-tilted cover differently - per-tile borders however seamless the
             // geometry, which is what survived two geometric fixes (owner, 2026-09-20: "still
-            // borders on the tiles"). An unlit flat colour is the same colour on every tilt
-            // under every light; the tilled earth beneath stops showing through, and the
-            // field's texture is the seeds, the crops and the soil's own shape.
+            // borders on the tiles"). An unlit tint is the same colour on every tilt under
+            // every light, so it cannot shade, seam or bloom into a line - and because it is
+            // translucent at the colour's own alpha, the tilled earth beneath shows through
+            // and the field is brown with texture, not black paint (owner, later the same
+            // day: "the dirt tile is black with no texture instead the brown that was
+            // before").
             Material material = _materials.Get(
                 _model.Library.FallbackMaterial, colour, Color.black,
-                ghost: false, alpha: 1f, unlit: true);
+                ghost: false, alpha: colour.a, unlit: true);
             var rp = new RenderParams(material)
             {
                 layer = GameObjectLayer,

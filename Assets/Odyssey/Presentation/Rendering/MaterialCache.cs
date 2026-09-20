@@ -144,7 +144,7 @@ namespace Odyssey.Presentation.Rendering
             bool foliage = false, bool water = false, bool unlit = false)
         {
             Material source = unlit ? UnlitBase : ghost ? GhostBase : water ? WaterBase : baseMaterial;
-            var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : water ? tint.a : 1f);
+            var colour = new Color(tint.r, tint.g, tint.b, ghost || unlit ? alpha : water ? tint.a : 1f);
             // Keyed on the material reference rather than its instance id: identity is what we
             // actually mean, and it avoids an API whose name changed between Unity versions.
             var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water, unlit);
@@ -157,7 +157,8 @@ namespace Odyssey.Presentation.Rendering
             };
             SetColour(material, colour);
             SetEmission(material, emission);
-            if (ghost) MakeTransparent(material);
+            if (ghost) MakeTransparent(material, premultiplied: true);
+            else if (unlit && colour.a < 1f) MakeTransparent(material, premultiplied: false);
             if (foliage)
             {
                 if (material.HasProperty(AlphaClipThresholdId)) material.SetFloat(AlphaClipThresholdId, FoliageClipThreshold);
@@ -256,7 +257,7 @@ namespace Odyssey.Presentation.Rendering
             else material.DisableKeyword("_EMISSION");
         }
 
-        static void MakeTransparent(Material material)
+        static void MakeTransparent(Material material, bool premultiplied = true)
         {
             material.SetFloat("_Surface", 1f);
             material.SetFloat("_Blend", 0f);
@@ -267,7 +268,7 @@ namespace Odyssey.Presentation.Rendering
             material.SetFloat("_Cull", (float)CullMode.Back);
             material.DisableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            if (premultiplied) material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
             material.renderQueue = (int)RenderQueue.Transparent;
         }
 
