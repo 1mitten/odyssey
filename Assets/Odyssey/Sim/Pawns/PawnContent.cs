@@ -201,24 +201,43 @@ namespace Odyssey.Sim.Pawns
         public int experiencePerWorkTick;
     }
 
+    /// <summary>
+    /// Aliases of <see cref="WorkHandle"/>, exactly as <see cref="JobIndex"/> aliases
+    /// <see cref="JobHandle"/>: a work priority is written by the player as well as read, so the
+    /// index crosses the seam inside an <see cref="Intent"/> and both sides must agree what it
+    /// counts. The order is <c>Sim.Contracts/Catalogue.cs</c>'s and is written down there.
+    /// </summary>
     public static class WorkTypeIndex
     {
-        public const int Haul = 0;
-        public const int Cutting = 1;
-        public const int Mining = 2;
+        public const int Haul = WorkHandle.Haul;
+        public const int Cutting = WorkHandle.Cutting;
+        public const int Mining = WorkHandle.Mining;
 
         /// <summary>Carrying material to a building site, and working at one. Both, deliberately:
         /// fetching the wood is part of building the wall, not a haul that happens to help.</summary>
-        public const int Construction = 3;
+        public const int Construction = WorkHandle.Construction;
 
         /// <summary>
         /// Breaking ground in a growing zone and cutting what ripens there. One work type for
         /// both ends of the crop, because they are one craft at one patch of soil and a colonist
         /// who will sow but not reap strands the field at its only interesting moment.
         /// </summary>
-        public const int Growing = 4;
+        public const int Growing = WorkHandle.Growing;
 
-        public const int Count = 5;
+        public const int Count = WorkHandle.Count;
+
+        /// <summary>
+        /// The names work types are published under, parallel to the indices above, and the same
+        /// shape as <see cref="SkillIndex.Names"/>. The interface reads
+        /// <c>odyssey.pawn.work.mining.priority</c> by name and never sees this array.
+        ///
+        /// <para><b>It has to stay as long as <see cref="Count"/>.</b> <c>WorkAspects</c> mints one
+        /// key per work type by walking this array to <c>Count</c>, so a work type added to the
+        /// indices and forgotten here is an index-out-of-range at static initialisation rather
+        /// than a missing aspect — which is why growing is in both or in neither.</para>
+        /// </summary>
+        public static readonly string[] Names =
+            { "haul", "cutting", "mining", "construction", "growing" };
     }
 
     /// <summary>

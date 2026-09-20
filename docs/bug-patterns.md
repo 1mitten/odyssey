@@ -179,8 +179,6 @@ used at one fixed shape — pad to it — or not be shared.
 **And treat a Unity warning in a render path as a bug report.** This one named the property, both
 sizes and the exact line, and it had been printing for as long as the feature existed.
 
----
-
 ### P10 — A pass that draws once per cell, in a renderer built on instancing
 
 **A submission costs about 4.6 us whatever is in it** (`docs/design/06-rendering-and-camera.md`
@@ -219,7 +217,50 @@ publishes one `ZoneView` per zoned cell *every tick* for a list that changes onl
 paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
 its whole tick cost. Per-cell-per-frame and per-cell-per-tick are one pattern wearing two coats.
 
-### P11 — A per-actor pass that consults every other actor
+### P11 — A measurement that never measured anything, clamped into plausibility
+
+Every length in the figure director is deliberately *measured* off the rig rather than written down,
+because sixty-one characters have sixty-one sets of proportions and a number of metres is right on
+one of them. That is the correct instinct and it moves the risk rather than removing it: the whole
+of the arithmetic downstream now rests on one reading, and **a reading can be of the wrong thing
+while still being a number.**
+
+`figure.StandingHipHeight` read `animator.GetBoneTransform(HumanBodyBones.Hips)`, which on this
+cast's avatar is a bone named `Root` standing on the floor. The difference it computed was nought.
+A `Mathf.Max(0.2f, …)` then turned "nothing" into "twenty centimetres", and everything that
+consumed it went on working perfectly on a colonist a sixth of her real size.
+
+**The tell is that the bad value is in range.** Nothing throws, nothing logs, no test fails, and the
+symptom appears a long way downstream in a shape that looks like a different bug — here, a body
+drawn in the wrong *place*, which sent two rounds of investigation into the placement arithmetic and
+into the simulation, both of which were right.
+
+**Ask what the measurement returns when it measures nothing**, and make that answer loud rather than
+plausible. A clamp, a `?? default`, a `Mathf.Max` floor and a zero-initialised field are all the
+same trap: they are there so that a missing rig does not crash, and they double as a disguise for a
+rig that is present and being read wrongly. Where the fallback has to exist, it should be a value a
+test can recognise as the fallback — and a test should assert that the real thing is not it.
+
+**Its second face: an aggregate answers the question it aggregates, not the one you asked** (added
+2026-09-20). Here the measurement was real and correctly computed, and still about the wrong thing.
+`SleepPose.Lift` was tuned until the lowest drawn vertex *anywhere* on a sleeping colonist just
+touched the mattress. On a supine sleeper that vertex is her back and the tuning was right. On a
+**side** sleeper it is a drawn-up knee, which props the body up like a kickstand — so half the
+colony lay 9 to 12 cm above its own bedding while the number reported 0.00 and 0.02 and looked
+perfect. A `min` over a whole body is a statement about that body's *extremities*; the thing being
+judged was its trunk.
+
+**Ask what the aggregate is over, and whether the subject is the whole of it.** Where it is not,
+measure the part in question — `SleepProbe` now prints the trunk's clearance beside the whole
+mesh's, so the next person to look can watch the two disagree. This is the harder half of the
+pattern, because there is no clamp and no zero to notice: both numbers are true.
+
+**And prefer the thing the player sees to the thing the rigger named.** A bone's meaning is a
+decision somebody made in a modelling package and cannot be assumed; where the drawn vertices are is
+not. `MeasureSole` already knew this — it bakes the posed mesh rather than believing the root is the
+sole — and the fix was to ask the same question the same way.
+
+### P12 — A per-actor pass that consults every other actor
 
 **P10's sibling, one level up.** P10 is about a pass priced by cells the player touched; this is
 about a pass priced by the *square* of how many things are alive. It hides even better, because
@@ -246,6 +287,38 @@ again.
 `FrameTimeTests.TheFrameAgainstColonySize` sweeps eight colony sizes in one world. A frame number
 that says "the renderer is slow" without saying which part only licences a guess.
 
+### P13 — The asset cannot draw the thing the code asked for, and nothing says so
+
+*Numbered out of order on purpose. It arrived as a second `P10` when two branches merged, and both `P10`s were already cited across the design documents; moving the newer one costs four references and leaves every existing citation true. A number in this catalogue has to resolve to one pattern.*
+
+A string literal, a shader keyword, a sprite name or a font glyph is *valid code* that names
+something the shipped asset does not contain. Nothing throws. The renderer draws its fallback — a
+blank, a magenta quad, a box — and every test passes, because a test asserts the value that was
+asked for and not the picture that came back.
+
+**The tell is that the thing is missing rather than wrong.** A colour that is off is a colour
+somebody chose; a glyph that is simply absent is nobody's decision, and it only shows up in a
+screenshot taken by a person who happens to be looking at that state. The Work tab's Simple mode
+had this in its purest form: `"✓"` and `"✕"` in two labels, Archivo Narrow with neither in
+its cmap and IBM Plex Mono with only the first, so a legend drew two blanks and every "won't do"
+cell drew one. The same fault was already sitting in the bed-owner picker on `main` and had never
+been played.
+
+**Neither tier can see it and that is structural, not an oversight.** The fast tier has no text
+engine at all; the Unity tier runs one and asserts no pixels. So this class has to be caught by
+**reading the asset**, which is cheap: `HudFontTests` parses both `.ttf` cmaps and fails on any
+non-ASCII character in a HUD literal that either font cannot draw. It found the second instance on
+its first run.
+
+**Ask it of anything the code names by string and the pack has to supply**: a glyph, a shader, a
+sprite key, an audio clip, an animation state. If the name is a literal and the asset is a file,
+something should read the file. The project already does this for icons (ADR 0007's validator) and
+for Defs (the content fingerprints); a font is the same question with a different file format.
+
+---
+
+---
+
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
@@ -264,7 +337,7 @@ pawn** for the crowd sidestep, once per posed pawn, every frame: 64 x N for the 
 quadratic term is born.
 
 **The shape: a cost that is invisible at every size anybody tests at, and cubic-looking at sizes
-nobody does.** It is P11, and the reason it is worth a pattern of its own is the check it
+nobody does.** It is P12, and the reason it is worth a pattern of its own is the check it
 suggests — the influence radius. `CrowdFarRadius` is 3.0 m against a 2.5 m cell, so all but a
 handful of the pairs contribute exactly zero and are computed anyway, which makes a spatial index
 an **exact** rewrite rather than an approximation.
@@ -306,6 +379,65 @@ absolute was inflated and every cross-run difference was noise.**
 `ChunkRenderer.InstanceCellPlates` switches the submission strategy without touching the
 geometry. Cross-run comparison on this machine is not a measurement, and the canary was already
 in `docs/lessons.md` saying so.
+
+### 2026-09-20 — Half the colony slept on one knee, and the number said nought (P11)
+
+Owner, watching the sleepers after the length fix landed: *"the body isn't quite flush on to the bed
+surface but the pillow head is placed nicely enough."*
+
+`SleepPose.Lift` had been tuned until the lowest drawn vertex anywhere on the mesh just touched the
+mattress — measured, 0.00 m and +0.02 m on the two side postures, which is a centimetre and reads
+as correct. Measuring the **trunk** alone, the band of baked mesh between the spine and the neck,
+gave **+0.09 m and +0.12 m**: on a side sleeper the lowest vertex is a drawn-up knee, and seating
+it props the whole body up like a kickstand. The two supine postures were genuinely flush and
+always had been, which is why the fault survived a contact sheet — half the pictures were right.
+
+**The shape: a true number about the wrong part of the subject.** Unlike the rest of P11 there is
+no clamp and no missing measurement to find; both figures are real and correctly computed, and the
+aggregate simply answers a question about extremities when the question was about a trunk.
+
+**Stopped by** `ShoulderPerBody` 0.152 → 0.109, set against the trunk, and by `SleepProbe` printing
+both clearances side by side so the disagreement is visible rather than inferred. The deliberate
+price is a knee pressed about 0.10 m into a 0.30 m mattress. `docs/design/20-beds.md` §7d.
+
+### 2026-09-20 — A colonist was laid down a sixth of her own length (P5, P11)
+
+Owner, third report on the same symptom: *"colonists are resting in the centre and hanging off the
+bed and sometimes even off the bed … it should know to always put the head onto the first tile and
+then the rest of the body goes on the 2nd tile."*
+
+The simulation was measured first, because the two previous rounds had both ended in the sim: three
+colonists, three player-built beds, three days, four seeds — **every sleeping tick on the head cell
+of a real bed, none off one**. So the sleeper was in the bed and the drawing was wrong, and the
+drawing is `SleepPose.Place`, whose arithmetic had been read and pronounced correct twice.
+
+It was correct. It was being handed a body 0.38 m long for a colonist 2.49 m tall.
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9`, and `StandingHipHeight` is
+`hips.position.y - transform.position.y` where `hips` is
+`animator.GetBoneTransform(HumanBodyBones.Hips)` — **which on the Synty humanoid avatar is a bone
+literally named `Root`, sitting at the model origin, with the real pelvis as its child.** Nought on
+every one of the sixty-one characters, so the `Mathf.Max(0.2f, …)` clamp was the whole of the
+answer. The root of the lying figure went 0.38 m past the pillow and the rest of her — 2.1 m —
+extended the other way, off the head end of the bed and on to the floor. Measured along the bed:
+body `[−2.57, 0.29]` against a frame of `[−1.05, 3.55]`.
+
+**The shape: a measurement that returns a plausible number for a question it never answered.**
+Nothing downstream could tell, because 0.38 m is a length and every line that consumed it worked
+perfectly. The clamp made it worse by turning "I measured nothing" into "20 cm".
+
+**Why the test written for exactly this missed it.** `ASleeperLiesWithinTheBedsOwnTwoCells` was
+added in the previous round to assert that a sleeper fits the bed, and it passed. It walked a range
+of plausible **hip heights** — 0.70 m to 1.30 m — and checked the body each implies. The value the
+game passed was 0.2 m, which no range starting at 0.70 m can reach. A fixture constant that is a
+reasonable value for a quantity is not evidence that the quantity is reasonable.
+
+**Stopped by** measuring the body instead of deriving it: `FigureBuild.Height` bakes the posed mesh
+and takes the sole and the crown, the idiom `MeasureSole` already uses. `SleepPose.BodyLength`
+guards anything outside 0.5 m to 5 m. The span test now walks the body length rather than a hip,
+from far too short to far too long, and `FigureBuildTests` instantiates a real rig and asserts the
+measurement looks like a person and that the avatar's `Hips` bone is nothing like a body length.
+`scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run` prints the whole of it.
+`docs/design/20-beds.md` §7b.
 
 ### 2026-09-20 — The soil had borders, and the borders were the frame budget
 
@@ -359,6 +491,35 @@ report. Worth remembering when a report says something vanished: ask what would 
 storeroom's — and `LedgerModelTests.TheFieldCropIsCountedWhereverItLies` /
 `TheCropRowStandsEvenWithNoCarrotsInIt`. Stone, iron ore and coal are still uncounted and have
 the same report waiting.
+### 2026-09-20 — Two glyphs the fonts do not have, in two panels, neither ever drawn (P13)
+
+Not reported. Found while reviewing PR #145 by asking a question no test asks: *are the characters
+this code writes actually in the font that draws them?*
+
+The Work tab's Simple mode drew its two readings as the characters U+2713 CHECK MARK and U+2715
+MULTIPLICATION X, in a `Label`. **Archivo Narrow's cmap contains neither and IBM Plex Mono contains
+only the tick.** The cell glyph takes the mono face (it is `numeric: true`, for the digit beside
+it), so every *won't do* cell drew a blank; the legend takes the UI face, so both of its swatches
+drew blanks. The whole of Simple mode was two empty columns of boxes.
+
+**And the same character was already on `main`**, in the bed-owner picker `HudShell.Inspect.cs`
+shipped by PR #141 — `BedPickerMark.ThisBed` is a tick in `HudTextRole.Body`, which is Archivo
+Narrow, which does not have one. The mark that says *this is the bed this colonist owns* has been an
+empty column since it was written, and that panel is still on the playtest queue unplayed.
+
+**Why every test passed.** The fast tier compiles no text engine; the Unity tier compiles one and
+asserts no pixels; the PlayMode smoke test counts framed regions. A `Label` whose `text` is `"✓"`
+has that text in every assertion anybody could write about it. The picture is the only place the
+fault exists and nothing in either tier looks at a picture.
+
+**Stopped by** two things. The shapes are now drawn — `HudGlyphKind.Check` and `HudGlyphKind.Cross`
+on the same 24-unit grid as every other chrome icon, which is what this project does with icons
+anyway — and `HudFontTests.EveryCharacterTheHudWritesExistsInBothFonts` reads both `.ttf` files'
+`cmap` tables and fails the **fast tier** on any non-ASCII character in a string literal under
+`Odyssey.Hud` or `Odyssey.Presentation` that either face cannot draw. It is held to *both* faces
+rather than the one that happens to draw it today, because a label's face is picked by its role and
+roles move. Every other character the HUD uses — `· × – — • … ›` — is in both, so the rule costs
+nothing to hold. The test found the bed-picker instance on its first run.
 
 ### 2026-09-20 — Woken for a bed, and sent to work instead
 

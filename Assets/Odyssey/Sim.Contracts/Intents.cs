@@ -123,6 +123,39 @@ namespace Odyssey.Sim.Contracts
         /// board says "nothing to ripen" rather than quietly succeeding.
         /// </summary>
         DebugRipen,
+        /// Set one colonist's priority for one work type: <c>A</c> is a <c>PawnId</c> value,
+        /// <c>B</c> a <see cref="WorkHandle"/> and <c>C</c> the priority, 0 to 4, where <b>0 is
+        /// never</b> and 1 is most urgent. <see cref="Intent.Cell"/> is unused — this is the second
+        /// intent that names a pawn and the first that names nothing else.
+        ///
+        /// <para><b>The work type crosses as an index and the reason is in
+        /// <c>Catalogue.cs</c>.</b> Skills reach the interface as named aspects and never touch
+        /// this assembly, which is why there is no <c>SkillHandle</c>; a priority is written as
+        /// well as read, and an intent carries integers, so the order has to be agreed somewhere
+        /// and it is agreed there.</para>
+        ///
+        /// <para><b>Applied while paused.</b> Assigning work is exactly the thing a player pauses
+        /// in order to do, and it meets the test the other paused intents meet: it writes state
+        /// the player authored and needs no system to finish it. A priority that did not land
+        /// until you pressed play would be the slab fault told a third time.</para>
+        /// </summary>
+        SetWorkPriority,
+
+        /// <summary>
+        /// Set one colonist's schedule for one hour: <c>A</c> is a <c>PawnId</c> value, <c>B</c>
+        /// the hour 0–23 and <c>C</c> a <see cref="ScheduleHandle"/>.
+        ///
+        /// <para>The third intent that names a pawn, and it carries no cell for the same reason
+        /// <see cref="SetWorkPriority"/> does not: a schedule is a fact about a person and a day,
+        /// not about a place.</para>
+        ///
+        /// <para><b>It writes state nothing reads yet</b>, which is unusual and deliberate — see
+        /// <see cref="ScheduleHandle"/>. That is also why the schedule is saved but <b>not
+        /// hashed</b>: a value no system consults cannot affect a tick, which is the same test the
+        /// saved view passes. The day the job system reads it, it enters the hash and the goldens
+        /// move once, deliberately.</para>
+        /// </summary>
+        SetScheduleBlock,
     }
 
     /// <summary>
@@ -173,6 +206,13 @@ namespace Odyssey.Sim.Contracts
             // paused. Cancelling it likewise. Both write state the player owns outright.
             IntentKind.DesignateZone => true,
             IntentKind.CancelZone => true,
+            // The Work tab is a panel you open while paused, and a grid that accepted twenty
+            // clicks and applied none of them until you pressed play would be the worst version
+            // of the fault this list was written to end.
+            IntentKind.SetWorkPriority => true,
+            // Same test and the same panel: a player pauses to plan the day, and half of that
+            // panel is the day.
+            IntentKind.SetScheduleBlock => true,
             _ => false,
         };
     }

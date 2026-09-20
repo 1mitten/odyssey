@@ -167,6 +167,26 @@ namespace Odyssey.Tests.PlayMode
                     RenderTexture.active = previous;
                     File.WriteAllBytes(Path.GetFullPath("Logs/hud-settings.png"), shot.EncodeToPNG());
                     Object.Destroy(shot);
+
+                    boot.Directors!.Settings.SetTab(Odyssey.Hud.SettingsTab.Graphics);
+                    for (int i = 0; i < 10; i++) yield return null;
+                    RenderTexture.active = target;
+                    var shotGraphics = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shotGraphics.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shotGraphics.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-graphics.png"), shotGraphics.EncodeToPNG());
+                    Object.Destroy(shotGraphics);
+
+                    boot.Directors!.Settings.SetTab(Odyssey.Hud.SettingsTab.Keys);
+                    for (int i = 0; i < 10; i++) yield return null;
+                    RenderTexture.active = target;
+                    var shotKeys = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shotKeys.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shotKeys.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-keys.png"), shotKeys.EncodeToPNG());
+                    Object.Destroy(shotKeys);
                 }
 
                 // And the debug menu (2026-09-17), backtick's own panel now — the same argument as
@@ -185,6 +205,24 @@ namespace Odyssey.Tests.PlayMode
                     RenderTexture.active = previous;
                     File.WriteAllBytes(Path.GetFullPath("Logs/hud-debug.png"), shot.EncodeToPNG());
                     Object.Destroy(shot);
+                }
+
+                var workPanel = doc.rootVisualElement.Q(className: "work");
+                if (workPanel != null)
+                {
+                    if (debugPanel != null) debugPanel.style.display = DisplayStyle.None;
+                    if (panel != null) panel.style.display = DisplayStyle.None;
+                    boot.Directors?.Work.SetOpen(true);
+                    workPanel.style.display = DisplayStyle.Flex;
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    RenderTexture.active = target;
+                    var shotWork = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shotWork.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shotWork.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-work.png"), shotWork.EncodeToPNG());
+                    Object.Destroy(shotWork);
                 }
 
                 Object.Destroy(image);

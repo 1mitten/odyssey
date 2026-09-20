@@ -1,0 +1,515 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Odyssey Work Tab</title>
+<!--
+  Throwaway information-design artefact. Nothing here is the game.
+
+  The owner's supplied mockup, re-pointed at Odyssey's own tokens:
+    - twenty-two ui.work.* columns out of docs/design/icon-keys.csv, not thirteen invented ones,
+      with the four the simulation actually runs live and the other eighteen drawn as "not built"
+    - HudTheme's colours, HudType's six-step scale, Archivo Narrow and IBM Plex Mono
+    - the eleven-item command bar we already ship, with Work on F1
+    - every icon slot driven by docs/design/icon-map.csv through the generated icon-map.js, so
+      the real pixel art appears the moment the sheets land in art-source/icons/sheets/
+
+  The decisions, the arithmetic and everything rejected are docs/design/27-work-tab.md.
+-->
+<script src="icon-map.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* HudTheme, verbatim. Any drift from these is a bug in this file, not a choice. */
+  --panel:#0c1014db;      /* PanelFill      rgba(12,16,20,.86) */
+  --bar:#0c1014e6;        /* BarFill        rgba(12,16,20,.90) */
+  --line:#ffffff21;       /* PanelBorder    rgba(255,255,255,.13) */
+  --div:#ffffff17;        /* Divider        rgba(255,255,255,.09) */
+  --ink:#eef3f6;          /* TextPrimary */
+  --ink2:#ffffffa8;       /* TextMeta       .66 */
+  --ink3:#ffffff80;       /* TextDim        .50 */
+  --ink4:#ffffff59;       /* TextFaint      .35 */
+  --accent:#6fd3e3;       /* Accent */
+  --accent-fill:#6fd3e31f;/* ActiveTabFill  Accent @ .12 */
+  --warn:#e8b55c;         /* Warn — the one amber: flames, and the skilled band */
+  --bad:#e06a5c;          /* Bad */
+  --good:#7fc98c;         /* Good */
+  --scrim:#080b0e;        /* ScrimInk */
+
+  /* The proficiency ramp — 27-work-tab.md §6.2. Three of the five are theme tokens. */
+  --sk0:#a8524a; --sk1:#8f7a5e; --sk2:#c7d0d6; --sk3:#e8b55c; --sk4:#f5c94a;
+
+  /* The priority inks — §6.3, measured in §9. */
+  --p1:#eef3f6; --p2:#d4dde3; --p3:#a4b0b8; --p4:#7c8990;
+
+  --radius:5px;           /* PanelRadius. We are not square-cornered. */
+  --ui:"Archivo Narrow",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+
+  /* Geometry — §3. Every number here is derived in the doc, none is chosen. */
+  --pitch:34px; --cell:28px; --row:30px; --band:104px; --leftcol:192px;
+  --angle:-66deg; --rise:72px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05080c;color:var(--ink);font:13px/1.4 var(--ui);height:100vh;
+     display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ---------------- review rail (not the game) ---------------- */
+.rail{flex:none;background:#0d1319;border-bottom:1px solid var(--line);padding:6px 10px;
+      display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12px}
+.brand{font-weight:700;letter-spacing:.04em;color:var(--accent)}
+.brand small{display:block;font-weight:400;color:var(--ink3);letter-spacing:0}
+.rail label{color:var(--ink3);text-transform:uppercase;font-size:10px;letter-spacing:.08em;
+            margin-right:5px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{padding:3px 9px;color:var(--ink3);border-right:1px solid var(--div)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--accent-fill);color:var(--accent);font-weight:600}
+.sum{color:var(--ink3);font-family:var(--mono);font-size:11px}
+.sum b{color:var(--good);font-weight:500}
+.sum b.no{color:var(--bad)}
+
+/* ---------------- stage ---------------- */
+.stage{flex:1;position:relative;min-height:0;overflow:hidden}
+canvas#world{position:absolute;inset:0;width:100%;height:100%}
+/* "add rgba(8,14,8,.4) over the world so text holds contrast, but no blur and no opaque
+   background" — the one piece of the mockup's chrome kept exactly as supplied. */
+.veil{position:absolute;inset:0;background:rgba(8,14,8,.4);pointer-events:none}
+
+/* ---------------- command bar: ours, eleven items ---------------- */
+.bar{position:absolute;left:0;right:0;bottom:0;height:48px;background:var(--bar);
+     border-top:1px solid var(--line);display:flex;align-items:center;gap:3px;padding:5px;z-index:3}
+.cmd{display:flex;align-items:center;gap:9px;height:38px;padding:0 12px;border-radius:4px;
+     color:#ffffffd1;white-space:nowrap}
+.cmd .lbl{font-size:14px;font-weight:500}
+.cmd .hk{font-family:var(--mono);font-size:11px;color:var(--ink4)}
+.cmd.primary{padding:0 14px;background:#ffffff14}
+.cmd.on{background:var(--accent-fill);box-shadow:inset 0 0 0 1px var(--accent);color:var(--accent)}
+.cmd.dead{color:#ffffff6b}
+.cmd.dead .ico{opacity:.45}
+.bar .spacer{flex:1}
+.bar .rule{width:1px;height:26px;background:var(--line);margin:0 3px}
+
+/* ---------------- the panel ---------------- */
+.work{position:absolute;left:0;bottom:48px;background:var(--panel);border:1px solid var(--line);
+      border-radius:var(--radius);display:flex;flex-direction:column;z-index:2;
+      max-height:calc(100% - 58px)}
+.work__hdr{display:flex;align-items:baseline;gap:10px;padding:8px 12px 7px;
+           border-bottom:1px solid var(--line)}
+.work__title{font-size:19px;font-weight:600;letter-spacing:.02em}
+.work__sub{font-size:12px;color:var(--ink2)}
+.work__hdr .spacer{flex:1}
+.work__mode{display:flex;align-items:center;gap:8px}
+.work__mode>span{font-size:12px;color:var(--ink3)}
+.close{width:32px;height:32px;border:1px solid var(--line);border-radius:4px;color:var(--ink3);
+       font-size:15px;line-height:1}
+.close:hover{color:var(--ink);border-color:#ffffff40}
+
+/* ---------------- grid ---------------- */
+.grid{display:flex;overflow:hidden;flex:1}
+.leftcol{flex:none;width:var(--leftcol);border-right:1px solid var(--line);
+         background:linear-gradient(90deg,#00000000,#00000038)}
+.scroll{flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+.scroll::-webkit-scrollbar{height:7px}
+.scroll::-webkit-scrollbar-thumb{background:#ffffff26;border-radius:4px}
+.cols{width:max-content}
+
+.bandrow{height:var(--band);display:flex;align-items:flex-end}
+.leftcol .bandrow{padding:0 10px 7px;font-size:11px;font-weight:600;letter-spacing:.06em;
+                  color:var(--ink3)}
+
+.colhdr{width:var(--pitch);height:var(--band);position:relative;flex:none}
+.colhdr .rot{position:absolute;left:50%;bottom:calc(var(--cell) + 8px);transform-origin:bottom left;
+             transform:rotate(var(--angle));white-space:nowrap;font-size:13px;color:#ffffffcc;
+             pointer-events:none}
+.colhdr .tile{position:absolute;left:50%;bottom:2px;margin-left:calc(var(--cell) / -2);
+              width:var(--cell);height:var(--cell);display:flex;align-items:center;
+              justify-content:center;border-radius:3px}
+.colhdr.dead .rot,.colhdr.dead .tile{opacity:.42}
+.colhdr:hover .rot{color:var(--ink)}
+
+.rowline{height:var(--row);display:flex;align-items:center;border-top:1px solid var(--div)}
+.leftcol .rowline{padding:0 10px;gap:8px}
+.leftcol .rowline:hover,.cols .rowline.hot{background:#ffffff0a}
+.face{width:24px;height:24px;flex:none;border:1px solid #ffffff61;border-radius:3px;
+      display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;
+      color:#0b1116}
+.nm{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* the cell: four signals, 28px */
+.c{width:var(--pitch);height:var(--row);flex:none;display:flex;align-items:center;
+   justify-content:center}
+.c i{width:var(--cell);height:var(--cell);border-radius:3px;position:relative;display:flex;
+     align-items:center;justify-content:center;font-family:var(--mono);font-size:19px;
+     font-weight:600;line-height:1;cursor:pointer;font-style:normal}
+.c i.assigned{background:rgba(0,0,0,.55)}
+.c i.blank{background:rgba(0,0,0,.42)}
+.c i:hover{outline:1px solid var(--accent);outline-offset:1px}
+/* incapable: inert. No hover, no cursor, one glyph. */
+.c i.inc{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
+         color:rgba(255,255,255,.35);font-size:14px;cursor:default}
+.c i.inc:hover{outline:0}
+/* not built yet: a third state, and it is a whole column, not a cell */
+.colwash{background:rgba(255,255,255,.03)}
+.c i.unbuilt{background:none;border:0;cursor:default}
+.c i.unbuilt:hover{outline:0}
+
+.sk0{border:2px solid var(--sk0)} .sk1{border:2px solid var(--sk1)}
+.sk2{border:2px solid var(--sk2)} .sk3{border:2px solid var(--sk3)}
+.sk4{border:2px solid var(--sk4)}
+.skn{border:1px solid var(--ink4)}      /* hauling: no skill, so no ramp — §6.2 */
+.p1{color:var(--p1)} .p2{color:var(--p2)} .p3{color:var(--p3)} .p4{color:var(--p4)}
+.yes{color:var(--good)} .no{color:var(--bad)}
+
+.flame{position:absolute;top:1px;right:1px;display:flex;gap:1px}
+.flame b{display:block;width:9px;height:11px;background:var(--warn);
+         clip-path:polygon(50% 0,78% 34%,72% 48%,88% 66%,72% 100%,26% 100%,12% 66%,30% 40%)}
+
+/* ---------------- legend ---------------- */
+.legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:7px 12px;
+        border-top:1px solid var(--line);font-size:12px;color:var(--ink2)}
+.legend .grp{display:flex;align-items:center;gap:7px}
+.sw{width:15px;height:15px;border-radius:3px;background:rgba(0,0,0,.55);display:inline-block}
+.legend .spacer{flex:1}
+.legend .note{color:var(--ink3)}
+.fl{position:relative;width:16px;height:15px;display:inline-block}
+.fl .flame{top:2px;right:0}
+</style>
+
+<div class="rail">
+  <div class="brand">ODYSSEY <small>Work tab · work-v1</small></div>
+  <div><label>Priorities</label>
+    <span class="seg" id="modeRail">
+      <button data-mode="simple">Simple</button>
+      <button data-mode="detailed" aria-pressed="true">Detailed</button>
+    </span></div>
+  <div><label>Columns</label>
+    <span class="seg" id="colsRail">
+      <button data-cols="all" aria-pressed="true">All 22</button>
+      <button data-cols="live">Live 4</button>
+    </span></div>
+  <div><label>Labels</label>
+    <span class="seg" id="labelRail">
+      <button data-lab="on" aria-pressed="true">Rotated</button>
+      <button data-lab="off">Icon only</button>
+    </span></div>
+  <div class="sum" id="sum"></div>
+</div>
+
+<div class="stage">
+  <canvas id="world"></canvas>
+  <div class="veil"></div>
+
+  <section class="work" id="panel">
+    <div class="work__hdr">
+      <span class="work__title">Work</span>
+      <span class="work__sub" id="sub"></span>
+      <span class="spacer"></span>
+      <div class="work__mode">
+        <span>Priorities</span>
+        <span class="seg" id="modeSwitch">
+          <button data-mode="simple">Simple</button>
+          <button data-mode="detailed" aria-pressed="true">Detailed</button>
+        </span>
+        <button class="close" title="Close (F1)">✕</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="leftcol" id="leftcol"></div>
+      <div class="scroll"><div class="cols" id="cols"></div></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <nav class="bar" id="bar"></nav>
+</div>
+
+<script>
+/* ======================= content: the twenty-two, out of icon-keys.csv =======================
+   sim: the simulation's own work type, or "" when nothing runs it yet.
+   skill: the skill whose level drives the cell border, or "" for none (hauling, deliberately).
+   Mirrors Assets/Odyssey/Hud/WorkCatalogue.cs — if the two drift, that file is right.          */
+const WORK = [
+  ["ui.work.firefighting","Firefighting","","",        "firefighting arrives with fire (M5)"],
+  ["ui.work.patient",     "Patient",     "","",        "treatment arrives with health (M6)"],
+  ["ui.work.bedrest",     "Bed rest",    "","",        "treatment arrives with health (M6)"],
+  ["ui.work.doctor",      "Doctor",      "","",        "medicine arrives with health (M6)"],
+  ["ui.work.warden",      "Warden",      "","",        "prisoners arrive with factions (M7)"],
+  ["ui.work.handling",    "Handling",    "","",        "animals arrive with M5"],
+  ["ui.work.cooking",     "Cooking",     "","",        "cooking arrives with M5"],
+  ["ui.work.hunting",     "Hunting",     "","",        "animals arrive with M5"],
+  ["ui.work.construction","Construction","construction","construction",""],
+  ["ui.work.growing",     "Growing",     "","",        "growing zones are in review — PR #119"],
+  ["ui.work.mining",      "Mining",      "mining","mining",""],
+  ["ui.work.salvaging",   "Salvaging",   "","",        "salvaging arrives with M5"],
+  ["ui.work.cutting",     "Chopping",    "cutting","cutting",""],
+  ["ui.work.hauling",     "Hauling",     "haul","",    ""],
+  ["ui.work.cleaning",    "Cleaning",    "","",        "filth arrives with M5"],
+  ["ui.work.research",    "Research",    "","",        "research arrives with M7"],
+  ["ui.work.crafting",    "Crafting",    "","",        "benches arrive with M5"],
+  ["ui.work.tailoring",   "Tailoring",   "","",        "apparel arrives with M6"],
+  ["ui.work.fabrication", "Fabrication", "","",        "advanced production arrives with M8"],
+  ["ui.work.art",         "Art",         "","",        "decoration arrives with M6"],
+  ["ui.work.operating",   "Operating",   "","",        "powered machinery arrives with M4"],
+  ["ui.work.rescue",      "Rescue",      "","",        "downed colonists arrive with health (M6)"],
+];
+const NAMES = ["Mira Calloway","Tomas Reed","Ines Varga","Abel Okonkwo","Ruth Pell",
+               "Sanjay Bose","Della Frame","Otto Lindqvist","Noor Haddad","Vance Pike"];
+
+/* the eleven-item command bar, from Assets/Odyssey/Hud/HudCommands.cs */
+const BAR = [
+  ["ui.tab.build","Build","B",true,""],
+  ["ui.tab.work","Work","F1",false,""],
+  ["ui.tab.schedule","Schedule","F2","","schedules arrive with M7"],
+  ["ui.tab.research","Research","F3","","research arrives with M7"],
+  ["ui.tab.colonists","Colonists","F4","","the roster strip is the colonist list for now"],
+  ["ui.tab.animals","Animals","F5","","animals arrive with M5"],
+  ["ui.tab.wildlife","Wildlife","F6","","wildlife arrives with M5"],
+  ["ui.tab.bills","Bills","F7","","bills arrive with M5"],
+  ["ui.tab.factions","Factions","F8","","factions arrive with M7"],
+  ["ui.tab.archive","History","F9","","the archive arrives with M2"],
+];
+
+/* ============================ icons: the real mapping ============================ */
+const MAP = window.ICON_MAP || {}, SHEETS = window.ICON_SHEETS || {}, GAPS = new Set(window.ICON_GAPS || []);
+const SHEET_BASE = "../../../art-source/icons/sheets/";
+function hash(s){ let h=2166136261; for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);} return h>>>0; }
+function icon(key,label,px){
+  const e=document.createElement("i");
+  e.style.cssText=`width:${px}px;height:${px}px;display:flex;align-items:center;justify-content:center;`+
+                  `font-size:9px;font-weight:700;font-style:normal;border-radius:2px;`+
+                  `background-repeat:no-repeat;image-rendering:pixelated`;
+  e.className="ico";
+  e.title=(label||key)+"  ·  "+key+(GAPS.has(key)?"  ·  NO ART IN THE SHEETS":"");
+  const m=MAP[key];
+  if(m&&m.r!==null&&m.c!==null&&SHEETS[m.s]&&SHEETS[m.s].cols){
+    const sh=SHEETS[m.s];
+    e.style.backgroundImage=`url(${SHEET_BASE}${sh.file})`;
+    e.style.backgroundSize=`${sh.cols*px}px ${sh.rows*px}px`;
+    e.style.backgroundPosition=`-${m.c*px}px -${m.r*px}px`;
+  }else{
+    const h=hash(key), hue=h%360;
+    e.style.background=GAPS.has(key)?"#2a1a2a":`hsl(${hue} ${GAPS.has(key)?0:40}% 46%)`;
+    e.style.color=GAPS.has(key)?"#d63ad6":"#0b1116";
+    e.textContent=key.split(".").pop().slice(0,3).toUpperCase();
+  }
+  return e;
+}
+
+/* ============================ sample data ============================
+   Deterministic, so two reviewers looking at "row 4, Mining" see the same cell.
+   Shaped to the acceptance list: all five proficiency tiers, both flame states, incapable
+   cells scattered across rows and columns, and a run of blank-but-capable ones.          */
+function rnd(a,b){ let h=hash(a+"/"+b); return ()=> (h=Math.imul(h^(h>>>15),2246822507)>>>0)/4294967296; }
+const DATA = NAMES.map((n,r)=> WORK.map((w,c)=>{
+  const g=rnd(n,w[0]), t=g(), u=g(), v=g(), x=g();
+  const capable = t>0.12;                       // ~1 in 8 incapable
+  const level   = Math.min(20, Math.floor(u*u*22));
+  const passion = v>0.86?2 : v>0.66?1 : 0;      // ~1 in 3 flamed
+  const pr      = x<0.20 ? 0 : 1+Math.floor(x*4)%4;   // ~1 in 5 blank
+  return {capable, level, passion, pr};
+}));
+/* Pin the two cells the legend is really about, so they are always on screen: a master with a
+   double flame, and a novice who loves it anyway. */
+DATA[0][10]={capable:true,level:18,passion:2,pr:1};
+DATA[4][8] ={capable:true,level:2, passion:2,pr:2};
+
+/* ============================ state ============================ */
+const S={mode:"detailed",cols:"all",labels:"on"};
+const band=l=> l<=3?0 : l<=6?1 : l<=10?2 : l<=14?3 : 4;
+const shown=()=> S.cols==="live" ? WORK.filter(w=>w[2]) : WORK;
+const indexOf=w=> WORK.indexOf(w);
+
+/* ============================ draw ============================ */
+function build(){
+  const cols=shown();
+  document.documentElement.style.setProperty("--leftcol","192px");
+  document.getElementById("panel").style.width=(192+cols.length*34+2)+"px";
+  document.getElementById("sub").textContent=
+    `${NAMES.length} colonists · higher priority runs first`;
+
+  /* --- left column, frozen --- */
+  const L=document.getElementById("leftcol"); L.innerHTML="";
+  const lh=document.createElement("div"); lh.className="bandrow"; lh.textContent="COLONIST";
+  L.appendChild(lh);
+  NAMES.forEach((n,r)=>{
+    const row=document.createElement("div"); row.className="rowline"; row.dataset.row=r;
+    const f=document.createElement("span"); f.className="face";
+    const h=hash(n); f.style.background=`hsl(${h%360} 26% 62%)`;
+    f.textContent=n[0]+n.split(" ")[1][0];
+    const nm=document.createElement("span"); nm.className="nm"; nm.textContent=n;
+    row.append(f,nm); L.appendChild(row);
+  });
+
+  /* --- headers --- */
+  const C=document.getElementById("cols"); C.innerHTML="";
+  const hdr=document.createElement("div"); hdr.className="bandrow";
+  cols.forEach(w=>{
+    const h=document.createElement("div");
+    h.className="colhdr"+(w[2]?"":" dead")+(w[2]?"":" colwash");
+    h.title=w[2] ? w[1] : w[1]+" — "+w[4];
+    if(S.labels==="on"){
+      const rot=document.createElement("span"); rot.className="rot"; rot.textContent=w[1];
+      h.appendChild(rot);
+    }
+    const tile=document.createElement("span"); tile.className="tile";
+    tile.appendChild(icon(w[0],w[1],22));
+    h.appendChild(tile); hdr.appendChild(h);
+  });
+  C.appendChild(hdr);
+
+  /* --- cells --- */
+  NAMES.forEach((n,r)=>{
+    const row=document.createElement("div"); row.className="rowline"; row.dataset.row=r;
+    cols.forEach(w=>{
+      const c=indexOf(w), d=DATA[r][c];
+      const box=document.createElement("div"); box.className="c";
+      const e=document.createElement("i");
+      if(!w[2]){                                   /* not built yet — the third state */
+        box.className="c colwash";                 /* the wash is the whole column, not the cell */
+        e.className="unbuilt";
+        e.title=w[1]+" — "+w[4];
+      }else if(!d.capable){                        /* incapable — inert, one glyph */
+        e.className="inc"; e.textContent="—";
+        e.title=`${n} cannot do ${w[1].toLowerCase()}`;
+      }else{
+        const hasSkill=!!w[3];
+        e.className=(d.pr?"assigned":"blank")+" "+(hasSkill?"sk"+band(d.level):"skn");
+        if(d.pr){
+          e.classList.add(S.mode==="simple"?"yes":"p"+d.pr);
+          e.textContent=S.mode==="simple"?"✓":String(d.pr);
+        }else if(S.mode==="simple"){
+          e.classList.add("no"); e.textContent="✕";
+        }
+        if(hasSkill&&d.passion){
+          const f=document.createElement("span"); f.className="flame";
+          for(let i=0;i<d.passion;i++) f.appendChild(document.createElement("b"));
+          e.appendChild(f);
+        }
+        e.title=`${n} · ${w[1]} · ${d.pr?"priority "+d.pr:"never"}`+
+                (hasSkill?` · level ${d.level}${d.passion?" · "+(d.passion===2?"passion":"interested"):""}`
+                         :" · hauling has no skill");
+        e.onclick=()=>{ d.pr = S.mode==="simple" ? (d.pr?0:3) : (d.pr===4?0:d.pr+1); build(); };
+        e.oncontextmenu=ev=>{ ev.preventDefault(); d.pr = d.pr===0?4:d.pr-1; build(); };
+      }
+      box.appendChild(e); row.appendChild(box);
+    });
+    C.appendChild(row);
+  });
+
+  legend(); summary();
+}
+
+function legend(){
+  const L=document.getElementById("legend"); L.innerHTML="";
+  const grp=(...kids)=>{ const g=document.createElement("span"); g.className="grp"; g.append(...kids); L.appendChild(g); };
+  const sw=cls=>{ const s=document.createElement("span"); s.className="sw "+cls; return s; };
+  const tx=t=>{ const s=document.createElement("span"); s.textContent=t; return s; };
+  const fl=n=>{ const s=document.createElement("span"); s.className="fl";
+                const f=document.createElement("span"); f.className="flame";
+                for(let i=0;i<n;i++) f.appendChild(document.createElement("b"));
+                s.appendChild(f); return s; };
+
+  if(S.mode==="detailed"){
+    [["sk0","0–3"],["sk1","4–6"],["sk2","7–10"],["sk3","11–14"],["sk4","15–20"]]
+      .forEach(([c,r])=>grp(sw(c),tx(r)));
+  }else{
+    const y=sw("sk2"); y.style.cssText+=";color:var(--good);text-align:center;line-height:15px;font-size:11px";
+    y.textContent="✓";
+    const n=sw("sk2"); n.style.cssText+=";color:var(--bad);text-align:center;line-height:15px;font-size:11px";
+    n.textContent="✕";
+    grp(y,tx("will do")); grp(n,tx("won't do"));
+  }
+  grp(fl(1),tx("interested")); grp(fl(2),tx("passion"));
+  const inc=sw(""); inc.style.cssText+=";background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)";
+  grp(inc,tx("incapable"));
+  const note=document.createElement("span"); note.className="note";
+  note.textContent = S.mode==="simple"
+    ? "border colour still shows skill · flames still show passion"
+    : "hauling has no skill, so no border and no flame";
+  grp(note);
+  const sp=document.createElement("span"); sp.className="spacer"; L.appendChild(sp);
+  const foot=document.createElement("span"); foot.className="note";
+  foot.textContent = S.mode==="simple" ? "a tick is priority 3 · the default"
+                                       : "1 highest · 4 lowest · blank means never";
+  L.appendChild(foot);
+}
+
+function bar(){
+  const B=document.getElementById("bar"); B.innerHTML="";
+  BAR.forEach(([k,l,h,primary,reason])=>{
+    const b=document.createElement("button");
+    b.className="cmd"+(primary?" primary":"")+(k==="ui.tab.work"?" on":"")+(reason?" dead":"");
+    b.title=reason?l+" — "+reason:l;
+    b.appendChild(icon(k,l,16));
+    const s=document.createElement("span"); s.className="lbl"; s.textContent=l;
+    const c=document.createElement("span"); c.className="hk"; c.textContent=h;
+    b.append(s,c); B.appendChild(b);
+  });
+  const sp=document.createElement("span"); sp.className="spacer"; B.appendChild(sp);
+  const r=document.createElement("span"); r.className="rule"; B.appendChild(r);
+  const m=document.createElement("button"); m.className="cmd";
+  m.appendChild(icon("ui.tab.menu","Menu",16));
+  const s=document.createElement("span"); s.className="lbl"; s.textContent="Menu";
+  const c=document.createElement("span"); c.className="hk"; c.textContent="Esc";
+  m.append(s,c); B.appendChild(m);
+}
+
+/* The rotation constraint, live, because it is the one acceptance criterion that is arithmetic.
+   Modelled exactly as WorkGridLayout does it: length × size × UiAdvance. */
+function summary(){
+  const size=13, adv=0.50, pitch=34, deg=66;
+  const longest=shown().reduce((a,w)=>w[1].length>a.length?w[1]:a,"");
+  const width=longest.length*size*adv;
+  const foot=Math.cos(deg*Math.PI/180)*width;
+  const ok=foot<pitch;
+  document.getElementById("sum").innerHTML=
+    `longest "${longest}" ≈ ${width.toFixed(0)}px · cos ${deg}° × ${width.toFixed(0)} = `+
+    `<b class="${ok?"":"no"}">${foot.toFixed(1)}px</b> ${ok?"<":"≥"} ${pitch}px pitch · `+
+    `${shown().length} columns · panel ${192+shown().length*34}px`;
+}
+
+/* ============================ the world behind ============================
+   A placeholder, and deliberately a crude one: it exists only so the panel's transparency and
+   the veil can be judged against something that is not flat black. It is not the renderer. */
+function world(){
+  const cv=document.getElementById("world"), cx=cv.getContext("2d");
+  cv.width=cv.clientWidth; cv.height=cv.clientHeight;
+  const g=cx.createLinearGradient(0,0,0,cv.height);
+  g.addColorStop(0,"#1d2a1c"); g.addColorStop(1,"#0e1610");
+  cx.fillStyle=g; cx.fillRect(0,0,cv.width,cv.height);
+  let h=20250920;
+  const r=()=> (h=Math.imul(h^(h>>>15),2246822507)>>>0)/4294967296;
+  for(let i=0;i<2600;i++){
+    const x=r()*cv.width, y=r()*cv.height, s=1+r()*3;
+    cx.fillStyle=`hsl(${95+r()*35} ${18+r()*22}% ${16+r()*16}%)`;
+    cx.fillRect(x,y,s,s*1.6);
+  }
+  for(let i=0;i<40;i++){
+    const x=r()*cv.width, y=r()*cv.height, s=14+r()*22;
+    cx.fillStyle=`hsl(${100+r()*25} 24% ${13+r()*8}%)`;
+    cx.beginPath(); cx.ellipse(x,y,s,s*.62,0,0,7); cx.fill();
+  }
+}
+
+/* ============================ wiring ============================ */
+function segs(id,key,after){
+  document.getElementById(id).addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    S[key]=b.dataset[after];
+    document.querySelectorAll(`#${id} button`).forEach(x=>
+      x.setAttribute("aria-pressed", x===b ? "true":"false"));
+    sync(); build();
+  });
+}
+function sync(){
+  document.querySelectorAll("#modeRail button,#modeSwitch button").forEach(b=>
+    b.setAttribute("aria-pressed", b.dataset.mode===S.mode ? "true":"false"));
+}
+segs("modeRail","mode","mode"); segs("modeSwitch","mode","mode");
+segs("colsRail","cols","cols"); segs("labelRail","labels","lab");
+addEventListener("resize",world);
+world(); bar(); build();
+</script>
