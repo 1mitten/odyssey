@@ -69,6 +69,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The job pipeline, for the per-def counters a soak run asserts on.</summary>
         public JobSystem Jobs { get; }
 
+        /// <summary>The door lifecycle system.</summary>
+        public DoorSystem Doors => Pawns.Doors!;
+
         public CellRef Start => Outcome.StartCell;
 
         /// <summary>
@@ -200,6 +203,7 @@ namespace Odyssey.Sim.Pawns
             // Worldgen's own ladders are already registered, because the board is regenerated from
             // its seed before a save is read over it.
             Construction.RebuildLadderConnectors(Pawns);
+            Construction.RebuildDoors(Pawns);
 
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.

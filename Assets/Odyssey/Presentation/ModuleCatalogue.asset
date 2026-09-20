@@ -285,8 +285,8 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.door
     shape: 1
-    prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
-    prefabName: SM_Bld_Base_Wall_Door_01
+    prefab: {fileID: 4708598954288714395, guid: 83a611f447bb8ee49af1bbcf9d9a51a6, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_Large_01
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -315,8 +315,8 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.door.single
     shape: 1
-    prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
-    prefabName: SM_Bld_Base_Wall_Door_01
+    prefab: {fileID: 4708598954288714395, guid: 83a611f447bb8ee49af1bbcf9d9a51a6, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_Large_01
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -377,6 +377,36 @@ MonoBehaviour:
     shape: 1
     prefab: {fileID: 6601050566410634084, guid: 80f8de5fa3b15d8459024f191962186c, type: 3}
     prefabName: SM_Bld_Base_Wall_Door_Double_Large_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.door.leaf
+    shape: 1
+    prefab: {fileID: 3872603109300624465, guid: 2a0efb0670c655d4ea90059acb092716, type: 3}
+    prefabName: SM_Bld_Base_Door_Large_01
     centreXZ: 1
     baseAtY: 1
     topAtY: 0

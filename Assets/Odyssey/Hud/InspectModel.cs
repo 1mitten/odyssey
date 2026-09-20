@@ -536,6 +536,7 @@ namespace Odyssey.Hud
         int _cellRowsOrderPercent;
         int _cellRowsQuality;
         int _cellRowsOwner;
+        bool _cellRowsIndoors;
 
         /// <summary>
         /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
@@ -593,7 +594,8 @@ namespace Odyssey.Hud
                 && _cellRowsOrderKind == (ordered ? kind : 0)
                 && _cellRowsOrderPercent == (ordered ? orderPercent : 0)
                 && _cellRowsQuality == detail.EdificeQuality
-                && _cellRowsOwner == detail.EdificeOwner) return;
+                && _cellRowsOwner == detail.EdificeOwner
+                && _cellRowsIndoors == detail.IsIndoors) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -605,6 +607,7 @@ namespace Odyssey.Hud
             _cellRowsOrderPercent = ordered ? orderPercent : 0;
             _cellRowsQuality = detail.EdificeQuality;
             _cellRowsOwner = detail.EdificeOwner;
+            _cellRowsIndoors = detail.IsIndoors;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -633,6 +636,9 @@ namespace Odyssey.Hud
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
             }
+
+            if (detail.IsIndoors)
+                Row(n++, "environment", "indoors");
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"
