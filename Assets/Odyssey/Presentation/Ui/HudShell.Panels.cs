@@ -1017,9 +1017,6 @@ namespace Odyssey.Presentation.Ui
             // null director and silence, like every other sound.
             if (_chimes.Step(_alerts.Rows) is { } chime) _boot.Audio?.PlayAlert(chime);
 
-            // The toasts ride this method's four call sites (SK4) — see RefreshToasts.
-            RefreshToasts();
-
             while (_alertViews.Count < _alerts.Rows.Count) _alertViews.Add(NewAlertRow());
             while (_alertViews.Count > _alerts.Rows.Count)
             {
@@ -1062,6 +1059,10 @@ namespace Odyssey.Presentation.Ui
 
             _alertsPanel.style.display =
                 _alerts.Rows.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+
+            // The toasts ride this method's four call sites (SK4) — see RefreshToasts. Last, so the
+            // two stacks are written in the order they are drawn in.
+            RefreshToasts();
         }
 
         AlertRowView NewAlertRow()
