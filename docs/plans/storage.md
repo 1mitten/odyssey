@@ -776,7 +776,7 @@ like. **Its playtest rows go into `docs/plans/playtest-queue.md`.**
 | | What | State | Why this order |
 |---|---|---|---|
 | 1 | ~~**GR** growing zones, PR #119~~ | **merged** `a45b4ec` | Discharged. |
-| 2 | **S0** the zone container | this plan, not started | Behaviour-preserving, and it is cheapest the moment after #119 lands and before a second zone kind exists. |
+| 2 | **S0** the zone container | **built, PR #151** | Behaviour-preserving, and it was cheapest the moment after #119 landed and before a second zone kind existed. Every golden identical. |
 | 3 | **HT1** the navigation rebuild is local | plan written (PR #136 §HT), not started | **Not a block on S1** — §0 row 12 established that a zone edit never touches the nav graph. It **is** the thing S2 wants first, because a crate placement is exactly the 1.19 ms one-cell edit HT1 exists to fix. |
 | 4 | **S1** zones and the storage control | this plan | |
 | 5 | **S2** storage units | this plan | Wants HT1 in front of it; will proceed without and say so. |
@@ -788,11 +788,35 @@ rule `GrowingZones.SiteAllows` reads, and **#145** (the Work tab) edits work typ
 shell. `DesignateTool` and `BuildingHandle` are append-only and their next free numbers must be
 re-read at merge time, not taken from this file.
 
-## §14 — Interview, second round (asked 2026-09-20, unanswered)
+## §14 — Interview, second round (asked and answered 2026-09-20)
 
 Closed by the owner this round: decision 11 (the priority ladder, approved as written), decision 12
-(superseded by 22), decision 5's category set (superseded by 23) and §7c (settled by 24). What is
-left is what those answers opened.
+(superseded by 22), decision 5's category set (superseded by 23) and §7c (settled by 24).
+
+**All eight questions below were then answered "continue" — the recommendations stand as written**,
+and they are decisions 25–32. Marked this way rather than folded silently into the text because
+they were adopted as a block rather than each one spoken: a later reader should be able to tell
+which decisions carry the owner's own words (11, 22, 23, 24) and which carry his assent to a
+recommendation (25–32), because the second kind is the kind to re-raise first if a playtest
+disagrees.
+
+| # | Taken |
+|---|---|
+| 25 | **Salvage is a Material**, not an Item — reclaimer feedstock. Four of the six categories are therefore empty on day one. |
+| 26 | **A book is `stackLimit = 1`.** That is all storage needs to know; what research does with one is the research line's interview. |
+| 27 | **The spoilage inversion is kept** — a sealed crate is warm and stale — **and the wiki description says so**, so the first report back is not "is this a bug?". |
+| 28 | **Two presets: Everything and Nothing.** The six category rows are the rest. |
+| 29 | **The Dumping chip leaves the palette; the key stays.** One zone tool. A real dumping zone later — accepts rubble, never re-stows out, sits at Last — has its name ready. |
+| 30 | **Six flat categories now.** When Materials is the row nobody can use it gets children (Salvage / Structural / Components / Textiles / Fuel), not a seventh top-level row. |
+| 31 | **Decision 21 confirmed: the tri-state tree is deferred out of S1.** `ItemDef.category` and the six registry rows still land in S1. |
+| 32 | **Spoilage is its own unit, its own interview, after S2.** Not a rider on a storage branch. |
+
+**S0 is built.** `ZoneGrid` is extracted, `GrowingZones` sits on it, and the container's two
+historical bugs are asserted directly — **PR #151**, `claude/zone-container`. Fast tier 867 Sim +
+484 Hud, the Long tier and all three goldens 23 passed and identical to `main`, Unity EditMode
+2,118 / 2,100 / 0. The next unit is **S1**.
+
+The questions as they were asked, with the recommendations that became 25–32:
 
 | Q | Question | Recommendation |
 |---|---|---|
