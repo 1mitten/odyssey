@@ -7206,6 +7206,154 @@ generated board, and asserts that no frame ever draws a colonist behind where th
   - Unity PlayMode: **82 total, 75 passed, 0 failed** — scratch worktree with no Synty junction, so
     `AvatarSheetTests`' two art cases skip.
   - Content gates: both clean.
+
+## 2026-09-19 — the baseline audit: a number nobody had, and a list nobody could find
+
+Owner, with the slice nearly closed: *"We're now established workable baseline and this is the
+time to establish ground rules and a proper way forward"* — scalability for larger maps and more
+happening, the process that has been working written down, an audit of every system for gaps,
+performance and monoliths, and everything not yet addressed brought up with a verdict. One agent
+allowed, for tokens. The output is `docs/audit/2026-09-19-baseline.md`, `docs/process.md`,
+`docs/plans/playtest-queue.md` and the **HT** track in `vertical-slice.md`; this entry is the
+reasoning.
+
+**The one measurement, and why it had never been taken.** Every tick benchmark on record holds
+the world still: OQ-19's two arms are a colony at rest and a colony under replan pressure, and the
+soak is five colonists on a meadow. A colony that is mining and building edits the world most
+ticks, and an edit is the one thing that makes `NavGraph.Rebuild` run. So a throwaway console
+program in the session scratchpad, never in the repository, built the wooded colony through
+`ColonyWorld.Build` and mined one face a tick through the same edits `MineJobDriver` makes:
+
+| Board | Colonists | Tick at rest | Tick with one mined cell | `nav.Rebuild` alone |
+|---|---|---|---|---|
+| 120 × 120 × 16 | 5 | 0.014 ms | **0.414 ms** | 0.449 ms |
+| 250 × 250 × 40 | 50 | 0.065 ms | **1.187 ms** | 1.150 ms |
+
+Container, 4-core Xeon at 2.8 GHz, .NET 8. Five edits a tick cost 1.47 ms, not five times more:
+the cost is per *rebuild*, not per edit, and it is `RebuildAdjacency` and `RecomputeDistricts`
+walking every one of 24,000 live regions for a change confined to one 10 × 10 block. The flood
+itself is local and cheap; the three passes after it are global. That is the only cost this
+project has measured that grows with the board rather than with what is happening on it, and it
+is **HT1**. The rest cost at the scale target with fifty colonists — 0.065 ms — agrees with OQ-19
+on a machine three times faster and says the design underneath is right.
+
+**What the one agent was for.** The simulation could be audited by reading; the seven largest
+presentation, HUD and editor files could not be held in one head beside it, so the agent read
+them with a fixed brief and a fixed return format, and its report went into the audit verbatim
+(§4d-i) after four of its line-level claims were spot-checked and held. It found three scaling
+terms the tick audit could not see — one unbatched draw call per standing order and per site, a
+band loop over every chunk with no frustum test, and five aspect-table scans per figure per frame
+— and a low-risk first cut for each monolith. The bootstrap's overlay drawing and the renderer's
+marker primitives are one concern split across two files, which is why they move together.
+
+**The Burst reserve is a promise with no road to it.** ADR 0005 calls Burst "the main remaining
+performance reserve"; the manifest has no Burst, Collections or Mathematics package, and
+`Odyssey.Sim` has `noEngineReferences: true`, which is the property the fast tier and U01's
+reflection test exist to keep. The queue has carried "decide whether Sim may reference Burst" in
+its *needs the owner* list since 2026-09-16. The audit commits to an answer — no; kernel
+interfaces in the Sim, `Odyssey.Sim.Native` implementing them, a test that both kernels hash
+identically — as **HT4**, a decision rather than a build, because a hot path written against the
+wrong seam is the expensive mistake and none has been written yet.
+
+**No event seam, and two bugs that already needed one.** The chime that could not fire and the
+vibration on the terrace steps were both presentation inferring something the simulation knew;
+the journal's own lesson of 2026-09-18 says inferred state is late and partial. The storyteller at M6 has nowhere to write. **HT3** is
+an event log published as sparse rows, the `PawnAspect` shape, not hashed and not saved because
+an event is derived from a state change that already is. C# events and a message bus were
+considered and rejected for the reasons the seam rules already give: cross-seam references,
+ordering by subscription accident, nothing replayable.
+
+**The process finding was the least technical and the most important.** Merges ran at 61, 37 and
+12 a day over three days; playtests at a handful; `CLAUDE.md` held 27 unplayed changes in a
+134-line section of a file its own warning says fails at 982 lines, and two of its lines had gone
+stale in exactly the way it warns about (the skills gap outlived WS2/WS3 by a day; the test
+counts by three PRs). The owner is the only person who can press Play, so the playtest list is
+the critical resource, and it was the hardest thing in the repository to find. So: the list moved
+verbatim to `docs/plans/playtest-queue.md` with a rule (a finished piece of work adds a row, a
+verdict closes one, past about ten open rows the next session takes a fix or a measurement);
+`docs/process.md` writes down the cycle that has actually been working, step by step with the
+gate at each; `next-session-prompt.md` carries a superseded banner; `CLAUDE.md` is 441 lines.
+
+**Two small things fixed on the way, and why they are recorded.** `build_wiki.py` used a nested
+same-quote f-string that only Python 3.12 accepts, so the content gate could not run in this
+container (3.11) — one line, and the floor is now stated. And `01-architecture.md` still named
+assemblies (`Odyssey.Ui.Core`, `Ui.Unity`) that were built as `Odyssey.Hud` and
+`Presentation/Ui`; a note says so rather than the document quietly being wrong.
+
+**What was deliberately not done.** No code changed except the one-line tool fix. Nothing in HT
+is started: the working agreement's phase gate says the plan waits, and this is the plan. The
+job-scan risk (§2c) is read, not measured, and the audit says so; HT6 is the measurement, and the
+listers it might justify are not designed until it has run.
+
+- *Verified:* fast tier in the container **753 Sim + 449 Hud, 0 failed** (dotnet 8.0.131); both
+  content gates clean after the f-string fix; `git diff HEAD -- ProjectSettings/ Assets/Settings/`
+  empty. The Unity tier was not run here (no editor) — the last recorded run is 2026-09-19's
+  1,872 / 82.
+
+### Reviewed the same day, and six things it had missed
+
+The audit was read back against the repository before it merged, which is the check its own §9
+invites. Every load-bearing number held: the fast tier is **753 Sim + 449 Hud** exactly, both
+content gates pass with the f-string fix, `OdysseyBootstrap` is 2,408 lines, `ChunkRenderer`
+1,848, `HudLayout` 1,713, `ConstructionGrid` 1,650, `NavGraph` 1,517 with the three global passes
+at 902/964/1003 where §0 says they are, `Odyssey.Sim.asmdef` does carry `noEngineReferences: true`,
+the manifest has no Burst, Collections or Mathematics, there is no `.editorconfig` or
+`Directory.Build.props` anywhere, `GridMirrorContributor`'s own doc comment says the renderer does
+not read the slice channel, and no district id is saved or hashed — which is the claim **HT1**
+rests on. The playtest queue is a byte-for-byte move of the 130 lines it replaced.
+
+What it missed, all of it the same fault it was written to catch — a status line outliving what it
+described:
+
+- **Two track rows were stale.** TS said "in review — PR #126" (merged 2026-09-18) and CL said
+  "PR #129 ready to merge" (merged 2026-09-19). The audit corrected two stale lines and walked past
+  these.
+- **The Unity tier line was two runs behind**: 1,857/1,843 was the alert-chimes run, while the
+  journal's last entry against `main`'s tip records **1,872/1,858**. The audit's own §4f and §9
+  carried the older number while the journal entry it shipped beside them carried the newer one.
+- **The read-this table had the ladder line twice**, with two different descriptions of the same
+  document. Now one row, the longer one.
+- **Growing zones (PR #119) was nowhere.** The track table, the read-this table and the waiting
+  list had no row for it, on `main` or on this branch — the text existed only as an uncommitted
+  edit to `CLAUDE.md` in the Windows checkout, so the restructure would have buried it. It is now
+  a track row, a read-this row and the first row of the playtest queue, which is where it belongs:
+  it is the one row that blocks a merge.
+- **The queue inherited `CLAUDE.md`'s gaps.** Five changes merged on 18–19 September have no row —
+  pawn avoidance, diagonal movement, head turning, the flush cursor, the sight-fade exemptions —
+  and four of them are looks. A *Not yet listed* table names them so the next session writes each
+  row from the PR's own handover.
+- **The ten-row rule was breached on the day it was written**, at 28 open rows. Left in place and
+  said out loud, because the ceiling is the target; a rule quietly wrong on arrival is one the next
+  session learns to ignore.
+
+Small corrections beside those: `Assets/Editor/Odyssey` is 47 files, not 48; the unused-package
+count is eighteen (ten packages, eight modules) rather than fifteen; `docs/setup/local-dev.md` §1
+already states the Python floor, so HT2 owes only the `python3 --version` check; and the plan has
+**nine** units, HT9 being a gap inherited rather than a finding made.
+
+- *Verified:* fast tier on this branch, Windows, dotnet 8.0.425 — **753 Sim + 449 Hud, 0 failed**;
+  both content gates clean. No Unity run: the numbers above are the journal's, not a fresh tier.
+
+### The first five verdicts, 2026-09-20
+
+The owner, on the *Not yet listed* table the day after it was written: *"gaze, flush cursor and
+sight fade, avoidance and diagonals is all working now."* Five rows closed at once — head turning
+and gaze (#128), the flush selection cursor (#127), the sight-fade exemptions (#123), soft crowd
+avoidance and sub-tile steering (#134), and eight-directional movement with the strict corner rules
+(#132). None of the five produced a fix, so there is no bug-patterns row and no design-doc
+amendment; the *Judged* table records the date, the verdict and that the consequence was none.
+
+Two things worth keeping from it. **The table earned its keep in a day** — those five were merged
+on 18–19 September, had no row anywhere, and would have stayed unjudged because nothing was asking
+about them; naming them was the whole of the work. And **a pass on the look is not a pass on tuning
+invited by name**, which is why the closing note says so: the queue closes the question *does this
+read right*, and a number a design doc still offers for tuning is a separate question that outlives
+the verdict.
+
+`23-head-turning-and-gaze.md` also gained the `CLAUDE.md` pointer it never had — a design document
+with no row in the read-this table is one the next session does not find. `13-gestures.md` and
+`15-skills.md` are still in that state and are not fixed here.
+
 80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
 all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
 render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written
