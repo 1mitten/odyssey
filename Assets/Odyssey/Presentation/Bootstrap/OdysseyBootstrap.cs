@@ -1296,6 +1296,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawSeedSpecks(at, SeedSpeckColour,
                     kneelAge - Gesture.SeedSpecksAfter);
             }
+
+            // Both loops above only gather. One instanced call draws the lot: six cubes a cell
+            // in one material, which used to be six submissions a cell.
+            _renderer.FlushSeedSpecks(SeedSpeckColour);
         }
 
         /// <summary>

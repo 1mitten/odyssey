@@ -339,5 +339,59 @@ namespace Odyssey.Tests.Presentation
                 "a field is a handful of variant buckets, nothing like a draw per tile");
         }
 
+        /// <summary>
+        /// A frame's seed specks are <b>one instanced call</b>, however many cells are sown.
+        ///
+        /// <para>They used to be six <c>Graphics.RenderMesh</c> submissions per sown cell, of the
+        /// same unit cube in the same material. The surround measurement priced a submission at
+        /// about 4.6 us regardless of its contents, so a field part-way through sowing spent
+        /// milliseconds drawing a few hundred cubes. This is the guard on the batching: it fails
+        /// the moment anything goes back to submitting per cell.</para>
+        ///
+        /// <para>It also guards the quieter risk in that change. The speck material is the
+        /// translucent bracket material, and an instanced draw through a material that does not
+        /// support instancing draws nothing at all - silently, and invisibly to the contact sheet,
+        /// which is too far out to show a speck either way (checked: the sheet has no speck pixels
+        /// before the change or after it).</para>
+        /// </summary>
+        [Test]
+        public void AFrameOfSeedSpecksIsOneInstancedCall()
+        {
+            var world = Field();
+            world.Publish();
+            using var renderer = new ChunkRenderer(world.Model);
+
+            int before = renderer.DrawCalls;
+            for (int z = 2; z < 6; z++)
+            for (int x = 2; x < 6; x++)
+                renderer.DrawSeedSpecks(new CellRef(x, z, 2), Color.white);
+
+            Assert.That(renderer.DrawCalls, Is.EqualTo(before),
+                "gathering must not submit anything");
+
+            renderer.FlushSeedSpecks(Color.white);
+
+            Assert.That(renderer.DrawCalls, Is.EqualTo(before + 1),
+                "sixteen sown cells must be one call, not sixteen and not ninety-six");
+            Assert.That(renderer.InstancesDrawn, Is.EqualTo(16 * 6),
+                "and every speck must actually be in it");
+        }
+
+        /// <summary>Flushing twice must not draw the same handful again — the buffer empties.</summary>
+        [Test]
+        public void FlushingSeedSpecksTwiceDrawsThemOnce()
+        {
+            var world = Field();
+            world.Publish();
+            using var renderer = new ChunkRenderer(world.Model);
+
+            renderer.DrawSeedSpecks(new CellRef(3, 3, 2), Color.white);
+            renderer.FlushSeedSpecks(Color.white);
+            int after = renderer.DrawCalls;
+
+            renderer.FlushSeedSpecks(Color.white);
+            Assert.That(renderer.DrawCalls, Is.EqualTo(after), "an empty flush draws nothing");
+        }
+
     }
 }

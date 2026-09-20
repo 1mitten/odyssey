@@ -1829,16 +1829,12 @@ namespace Odyssey.Presentation.Rendering
         /// clear of the ground the way a mark is, and cast no shadows — a shadow the size of the
         /// fleck itself would double it.
         /// </summary>
+        /// <summary>
+        /// Gather one cell's handful of seed specks. Nothing is submitted here - see
+        /// <see cref="FlushSeedSpecks"/>, which draws the whole frame's worth in one call.
+        /// </summary>
         public void DrawSeedSpecks(CellRef cell, Color colour, float sinceDrop = -1f)
         {
-            Material material = BracketMaterial(colour);
-            var rp = new RenderParams(material)
-            {
-                layer = GameObjectLayer,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
-            };
-
             int index = _model.Index(cell.X, cell.Z, cell.Y);
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
             centre.y += MarkLift;
@@ -1883,10 +1879,49 @@ namespace Odyssey.Presentation.Rendering
                         at = Vector3.Lerp(hand, at, t * t);
                     }
                 }
-                Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
-                    Matrix4x4.TRS(at, Quaternion.identity, new Vector3(Size, Size * 0.5f, Size)));
+                if (_speckCount == _speckMatrices.Length)
+                    System.Array.Resize(ref _speckMatrices, _speckMatrices.Length * 2);
+                _speckMatrices[_speckCount++] =
+                    Matrix4x4.TRS(at, Quaternion.identity, new Vector3(Size, Size * 0.5f, Size));
             }
         }
+
+        /// <summary>
+        /// Draw every seed speck gathered this frame, instanced.
+        ///
+        /// <para><b>Why they are gathered at all.</b> Each sown cell wears six specks and each
+        /// used to be its own <c>Graphics.RenderMesh</c> - six calls and a <c>RenderParams</c>
+        /// per cell, of the same unit cube in the same material. The surround taught the price
+        /// of that: a submission costs about 4.6 us whatever is in it, so a field part-way
+        /// through sowing was paying milliseconds to draw a few hundred cubes. They share one
+        /// mesh and one material by construction - the colour is a single constant - so they are
+        /// one instanced call, or a handful once past <see cref="MaxInstancesPerCall"/>.</para>
+        /// </summary>
+        public void FlushSeedSpecks(Color colour)
+        {
+            if (_speckCount == 0) return;
+
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            int drawn = 0;
+            while (drawn < _speckCount)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, _speckCount - drawn);
+                Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _speckMatrices, n, drawn);
+                drawn += n;
+                DrawCalls++;
+                InstancesDrawn += n;
+            }
+            _speckCount = 0;
+        }
+
+        Matrix4x4[] _speckMatrices = new Matrix4x4[512];
+        int _speckCount;
 
 
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
