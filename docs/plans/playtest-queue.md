@@ -28,9 +28,12 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   in the first tile, feet 2.28 m along into the second, resting on the bedding rather than in it.
   Two things want an eye rather than a test. **The two supine postures had their arm angles the
   wrong way round**, so a quarter of the colony slept with its arms a half-metre in the air and
-  another quarter with both forearms through the mattress; both are measured flat now, one at the
-  sides and one stretched above the head, and whether the second reads as *asleep* or as
-  *surrendering* is a look. And **a sleeper lies level while the bed under her is draped**, which on
+  another quarter with both forearms through the mattress; both are measured flat now. **The
+  contact sheet says the second one still reads as *surrendering*** — its arms go out sideways
+  rather than up past the crown, and `Posture` has only one angle per arm so it cannot express
+  what it is named without a second one. Pictures are in `Logs/sleep-*.png`
+  (`scripts/unity.sh shot Odyssey.EditorTools.SleepCheck.Run` remakes them); the call is whether
+  it is worth the extra angle. And **a sleeper lies level while the bed under her is draped**, which on
   a slope disagrees by up to 0.21 m at the pillow — measured, left alone, and the numbers are in
   §7b, because fixing it changes how every sleeper is drawn and it should be judged against a
   picture of the one that is now right.

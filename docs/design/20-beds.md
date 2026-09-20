@@ -407,6 +407,33 @@ flat above the head ending 0.42 m past the crown and still 0.34 m inside the fra
 untouched. Which is the useful half of the result: the fault was in the two postures that share a
 roll of zero, not in the pitching.
 
+### What the contact sheet showed
+
+`SleepCheck` (`scripts/unity.sh shot Odyssey.EditorTools.SleepCheck.Run`) photographs one colonist
+per posture in a real bed, side on, along the bed from the foot, and at the board's own 48° pitch.
+It exists because none of the assertions above answer the question the owner actually has to
+answer: the arithmetic was *correct* throughout the two days the bug existed, and a sheet that
+photographed the body without the bed under it would have looked convincing the whole time.
+
+Two things it settled and one it raised.
+
+- **The fix is visible.** Every colonist on a bed lies along it with her head on the pillow in the
+  first tile and her feet well inside the second. A colonist who could not reach a bed lies
+  person-sized and flat within her own cell rather than as the 0.38 m blob she was.
+- **The mattress beyond the feet is a third of the bed.** A 4.6 m bed and a 2.5 m colonist leave
+  about 1.3 m of empty bedding past her boots, in every shot. That is the cell size doing what the
+  cell size does (ADR 0002, irreversible) and not a fault, but it is the first thing the eye lands
+  on and it is written here so the next report about it is answered in a sentence.
+- **"Back, arms up" reads as arms spread, not as arms overhead.** It is safe — measured, it clears
+  the mattress by a centimetre and stays inside the frame — but at the play camera the arms go out
+  sideways at something near 45° rather than up past the crown, which reads closer to
+  *surrendering* than to *asleep*. **The posture cannot currently express what it is named**:
+  `Posture` carries one pitch per arm, taken about the body's lateral axis, and a rotation
+  about that axis cannot pull an arm in towards the head — whatever lateral spread the idle clip
+  already holds is carried round with it. Bringing the hands in over the crown needs a second angle
+  on the struct (an abduction), which is a change to the shape of the pose rather than a tuning of
+  it, and it is the owner's to call against the picture.
+
 ### What was deliberately not changed
 
 `StandingHipHeight` still measures the floor, and it is left doing so. The only thing that still
