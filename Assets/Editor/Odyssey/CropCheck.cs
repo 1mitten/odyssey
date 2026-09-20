@@ -286,15 +286,10 @@ namespace Odyssey.EditorTools
             model.UpdateCrops(snapshot.Plants);
             model.UpdateZones(snapshot.Zones);
 
-            // The zone cover the composition root draws, drawn here for the same reason it is
-            // drawn there: the cover is the ground's own mesh re-tinted, and only a photograph
-            // can say whether it sits flush - which is the question this sheet exists to answer
-            // for a board with real relief in it.
-            for (int i = 0; i < snapshot.Zones.Length; i++)
-            {
-                CellRef zoned = snapshot.Size.FromIndex(snapshot.Zones[i].CellIndex);
-                renderer.DrawZoneCover(zoned, Odyssey.Presentation.Bootstrap.OdysseyBootstrap.ZoneTintColour);
-            }
+            // No cover pass here any more, and none in the composition root either: the tilled
+            // ground is a bit on the terrain bucket's tint, so it arrives with the chunk mesh
+            // that UpdateZones above has already dirtied. The sheet is still the only thing that
+            // can say whether it reads right on a board with real relief in it.
             for (int frame = 0; frame < 2; frame++)
             {
                 figures.Sync(snapshot, layer, slice, 0f, movePerTick, FrameSeconds);

@@ -178,6 +178,10 @@ namespace Odyssey.Presentation.Rendering
             if (module == 0) return;
 
             int tint = TintCode.Daylit(TintCode.Terrain(terrain), _model.OpenToTheSky(index, y));
+            // Worked soil is this same earth graded darker, and saying so in the bucket key is
+            // the whole of drawing a growing zone: no second mesh, no per-cell draw, no per-frame
+            // work at all. TintCode.TilledBase carries the measurement that justifies it.
+            if (_model.IsZoned(index)) tint = TintCode.Tilled(tint);
             if (DrawnWhole(terrain)) tint = TintCode.Whole(tint);
 
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the

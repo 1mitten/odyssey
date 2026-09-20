@@ -215,75 +215,128 @@ namespace Odyssey.Tests.Presentation
             return batch;
         }
 
+        /// <summary>Every bucket in the batch whose tint is marked as worked soil.</summary>
+        static List<InstanceBucket> TilledBuckets(ChunkBatch batch)
+        {
+            var found = new List<InstanceBucket>();
+            foreach (InstanceBucket bucket in batch.Body)
+                if (TintCode.IsTilled(bucket.Tint))
+                    found.Add(bucket);
+            return found;
+        }
+
+        static ZoneView[] Zones(RenderTestWorld world, params (int X, int Z)[] cells)
+        {
+            var views = new ZoneView[cells.Length];
+            for (int i = 0; i < cells.Length; i++)
+                views[i] = new ZoneView(world.Index(cells[i].X, cells[i].Z, 2), 0);
+            return views;
+        }
+
         /// <summary>
-        /// The zone cover must sit on the ground it covers and be exactly as wide as it - the
-        /// ground's own placement plus a pure vertical lift, and nothing else.
+        /// A zoned cell's ground carries the tilled mark in its <b>bucket tint</b>, and no second
+        /// mesh is laid over it.
         ///
-        /// <para>This pins a real regression rather than a preference. The cover carried a 1.01
-        /// scale in the plane so that adjacent covers overlapped instead of meeting, which is
-        /// sound for an opaque overlay and wrong for this one: the cover is translucent so the
-        /// tilled earth reads through it, and alpha blending is not idempotent. At the tint's
-        /// alpha of 0.78 a doubly-covered band composites to 1-(1-0.78)^2 = 0.95 - the dirt
-        /// showing through drops from 22% to 5% - so a field drew a darker brown line on every
-        /// interior edge and none on its outside edge (owner, 2026-09-20, with the screenshot).
-        /// Any scale in the plane brings it straight back, which is why this asserts the basis
-        /// columns and not merely the width.</para>
+        /// <para>This is the whole of how a growing zone is drawn now, and it fixes both faults
+        /// the cover pass had. Visually: a cover was a second copy of the ground module laid over
+        /// the first, and any offset at all put its box sides above the soil beside it, so a
+        /// translucent strip blended twice and drew a dark line on every interior edge of a field
+        /// (owner, 2026-09-20). Cost: one Graphics.RenderMesh per zoned cell per frame - 2,065
+        /// draw calls and 3.67 ms on the benchmark's field, against 0.17 ms for the same field
+        /// with the pass switched off. A bit on the tint has neither.</para>
         /// </summary>
         [Test]
-        public void AZoneCoverSitsExactlyOnTheGroundItCovers()
+        public void TilledGroundIsMarkedOnTheTerrainBucketAndNotDrawnTwice()
         {
-            const int X = 3, Z = 5, GroundY = 1;
+            var world = Field();
+            world.Model.UpdateZones(Zones(world, (3, 3)));
 
-            foreach (float yaw in new[] { 0f, 90f, 180f, 270f })
-            {
-                // What the earth contributor itself lays the ground module down with.
-                Matrix4x4 ground =
-                    GroundRelief.Drape(CellMetrics.FloorCentre(X, Z, GroundY)) *
-                    Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f));
-                Matrix4x4 cover = ChunkRenderer.ZoneCoverPlacement(X, Z, GroundY, yaw);
+            ChunkBatch batch = MeshOneChunk(world, 1);
+            List<InstanceBucket> tilled = TilledBuckets(batch);
 
-                // The three basis columns carry rotation, shear and scale. Equal columns mean
-                // the cover is the same shape, the same size and the same tilt as the ground -
-                // so two adjacent covers tile exactly as the two ground modules do, and the
-                // ground tiles without a seam.
-                for (int c = 0; c < 3; c++)
-                    Assert.That((Vector3)cover.GetColumn(c),
-                        Is.EqualTo((Vector3)ground.GetColumn(c)).Using(Vectors),
-                        $"yaw {yaw}: basis column {c} differs, so the cover is not the ground's own footprint");
-
-                // And it sits exactly where the ground sits - coplanar, not lifted. A lift
-                // raises a box, its four sides then stand proud of the neighbouring soil by the
-                // lift, and a translucent strip blended twice is the border itself. Same mesh,
-                // same matrix, so the depths match to the bit and LEqual does the rest.
-                Vector3 offset = (Vector3)cover.GetColumn(3) - (Vector3)ground.GetColumn(3);
-                Assert.That(offset.magnitude, Is.EqualTo(0f).Within(1e-5f),
-                    $"yaw {yaw}: the cover is offset from the ground it covers, and any offset "
-                        + "at all puts its sides above the soil beside it");
-            }
+            Assert.That(tilled, Has.Count.EqualTo(1), "one zoned cell is one tilled bucket");
+            Assert.That(tilled[0].Count, Is.EqualTo(1), "and one instance in it");
+            Assert.That(TintCode.IsTerrain(tilled[0].Tint), Is.True,
+                "tilled ground is still terrain, and still tinted as terrain");
         }
 
-        /// <summary>Two covers a cell apart are a tile apart and no closer - the other half of
-        /// "no overlap", stated where a reader looking for it would look.</summary>
+        /// <summary>Paint nothing and nothing is marked — the control, so the test above cannot
+        /// pass on a bit that is always set.</summary>
         [Test]
-        public void TwoNeighbouringCoversAreExactlyOneTileApart()
+        public void GroundOutsideAZoneIsNotTilled()
         {
-            Matrix4x4 here = ChunkRenderer.ZoneCoverPlacement(3, 5, 1, 0f);
-            Matrix4x4 next = ChunkRenderer.ZoneCoverPlacement(4, 5, 1, 0f);
-
-            Vector3 step = (Vector3)next.GetColumn(3) - (Vector3)here.GetColumn(3);
-            Assert.That(step.x, Is.EqualTo(CellMetrics.SizeXZ).Within(1e-4f),
-                "adjacent covers must step one whole tile: closer is an overlap, and a "
-                    + "translucent overlap composites twice and draws a border");
-            Assert.That(step.z, Is.EqualTo(0f).Within(1e-4f));
+            var world = Field();
+            ChunkBatch batch = MeshOneChunk(world, 1);
+            Assert.That(TilledBuckets(batch), Is.Empty);
         }
 
-        static readonly VectorComparer Vectors = new VectorComparer();
-
-        /// <summary>Component-wise, because a basis column is a direction and a length at once.</summary>
-        sealed class VectorComparer : IEqualityComparer<Vector3>
+        /// <summary>
+        /// Worked soil is the earth of its cell graded down, not a colour of its own: the texture
+        /// has to keep reading through it (owner, 2026-09-19: "the dirt tile is black with no
+        /// texture instead the brown that was before").
+        /// </summary>
+        [Test]
+        public void TilledGroundIsTheSameEarthGradedDarker()
         {
-            public bool Equals(Vector3 a, Vector3 b) => (a - b).sqrMagnitude < 1e-8f;
-            public int GetHashCode(Vector3 v) => 0;
+            int plain = TintCode.Daylit(
+                TintCode.Terrain(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth), true);
+            int tilled = TintCode.Tilled(plain);
+
+            ChunkRenderer.ResolveColour(plain, fallback: false, shade: 1f, out Color a, out Color _);
+            ChunkRenderer.ResolveColour(tilled, fallback: false, shade: 1f, out Color b, out Color _);
+
+            Assert.That(b.r, Is.LessThan(a.r), "tilled soil must be darker than the earth it is");
+            Assert.That(b.r, Is.EqualTo(a.r * ChunkRenderer.TilledGrade.r).Within(1e-4f));
+            Assert.That(b.g, Is.EqualTo(a.g * ChunkRenderer.TilledGrade.g).Within(1e-4f));
+            Assert.That(b.b, Is.EqualTo(a.b * ChunkRenderer.TilledGrade.b).Within(1e-4f));
+
+            // A multiply, so the texture's own variation survives at the graded contrast rather
+            // than being flattened onto a pedestal - and warm, because the cover this replaces
+            // carried its warmth in that pedestal and a uniform grade read grey without it.
+            Assert.That(b.r / b.b, Is.GreaterThan(a.r / a.b),
+                "worked soil must be no cooler than the earth it is, or it stops reading brown");
+        }
+
+        static (int Buckets, int Instances) TilledField(int from, int to)
+        {
+            var world = Field();
+            var cells = new List<(int, int)>();
+            for (int z = from; z <= to; z++)
+            for (int x = from; x <= to; x++)
+                cells.Add((x, z));
+            world.Model.UpdateZones(Zones(world, cells.ToArray()));
+
+            List<InstanceBucket> tilled = TilledBuckets(MeshOneChunk(world, 1));
+            int instances = 0;
+            for (int i = 0; i < tilled.Count; i++) instances += tilled[i].Count;
+            return (tilled.Count, instances);
+        }
+
+        /// <summary>
+        /// The performance invariant, stated where it can fail: <b>a bigger field adds instances,
+        /// not draws</b>. That is the whole difference between a carrot plot and a stockpile
+        /// painted across a base, and it is what the old cover pass got wrong - one
+        /// Graphics.RenderMesh per zoned cell per frame, 2,065 draw calls and 3.67 ms on the
+        /// benchmark's field against 0.17 ms with the pass off.
+        ///
+        /// <para>Not "one bucket": the earth wears one of <c>GroundMesh.Variants</c> tops per
+        /// cell and a bucket is keyed by (module, part, tint), so a field costs the same handful
+        /// of buckets that the ordinary ground around it costs. The test is that the handful does
+        /// not grow with the field.</para>
+        /// </summary>
+        [Test]
+        public void ABiggerFieldAddsInstancesRatherThanDraws()
+        {
+            (int Buckets, int Instances) small = TilledField(2, 5);   // 16 cells
+            (int Buckets, int Instances) large = TilledField(1, 6);   // 36 cells
+
+            Assert.That(small.Instances, Is.EqualTo(16), "every zoned cell is drawn");
+            Assert.That(large.Instances, Is.EqualTo(36), "every zoned cell is drawn");
+            Assert.That(large.Buckets, Is.EqualTo(small.Buckets),
+                $"the field more than doubled and the draws went {small.Buckets} -> "
+                    + $"{large.Buckets}; a zone must cost instances, not draws");
+            Assert.That(large.Buckets, Is.LessThan(large.Instances / 2),
+                "a field is a handful of variant buckets, nothing like a draw per tile");
         }
 
     }

@@ -697,6 +697,18 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
+            // Worked soil: the earth of the cell, graded down. A multiply rather than a blend
+            // towards black, because this is a tint on the ground's own texture and the texture
+            // is the point - the field has to read as soil somebody turned over, not as paint
+            // (owner, 2026-09-19: "the dirt tile is black with no texture instead the brown that
+            // was before"). The factor is the old translucent cover's own arithmetic: it sat at
+            // alpha 0.78 over the lit ground, so 22% of the earth came through, and 0.25 lands in
+            // the same place while keeping every bit of the texture's variation instead of
+            // flattening it onto a near-black pedestal.
+            if (TintCode.IsTilled(tintCode))
+                tint = new Color(tint.r * TilledGrade.r, tint.g * TilledGrade.g,
+                    tint.b * TilledGrade.b, tint.a);
+
             // Open to the sky means the depth shade has nothing to say. The shade measures how far
             // you are peering *through* the world, and there is nothing over an outdoor surface —
             // so a lower terrace is not dim ground, it is ground. Without this the meadow came out
@@ -1472,111 +1484,6 @@ namespace Odyssey.Presentation.Rendering
         /// tinted with it, which is right where a plot meets a terrace edge - the soil column
         /// is the plot - and buried everywhere else.</para>
         /// </summary>
-        /// <summary>
-        /// Where a zone cover's module goes: <b>the ground's own placement and a pure vertical
-        /// lift, and nothing else</b> - draped at the ground cell's floor, turned to the bearing
-        /// the earth contributor chose, raised clear of the face it is laid on. The lift is along
-        /// the world up and shared, so neighbouring covers part by exactly the terrain's own step
-        /// and their tinted sides fill it.
-        ///
-        /// <para><b>Exactly one tile in the plane, and it has to stay that way.</b> This used to
-        /// carry a 1.01 scale so that adjacent covers overlapped rather than met, on the reasoning
-        /// that "an overlap of the same tint is invisible by construction". That is true of an
-        /// opaque overlay and false of this one. The cover is deliberately translucent so the
-        /// tilled earth shows through it, and alpha blending is not idempotent: at the tint's own
-        /// alpha of 0.78 a band covered twice composites to 1-(1-0.78)^2 = 0.95, so the dirt
-        /// showing through fell from 22% to 5%. That is a darker brown line on every INTERIOR
-        /// edge of a field and none at all on its outside edge - which is the exact shape the
-        /// owner photographed (2026-09-20: "remove the borders from dirt/soil tiles").
-        ///
-        /// <para>The sliver the overlap was guarding against had a different cause and was
-        /// already fixed above: the first cover drew the plain default block instead of the drawn
-        /// variant clump, and it was the mismatched SHAPE that parted. Same module, same variant,
-        /// same drape means the same footprint as the ground itself, and the ground tiles without
-        /// a seam - so there is nothing left for an overlap to close, and any overlap at all draws
-        /// a border. Pinned by <c>AZoneCoverSitsExactlyOnTheGroundItCovers</c>.</para>
-        /// </summary>
-        public static Matrix4x4 ZoneCoverPlacement(int x, int z, int groundY, float yaw) =>
-            Matrix4x4.Translate(Vector3.up * CoverLift) *
-            GroundRelief.Drape(CellMetrics.FloorCentre(x, z, groundY)) *
-            Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f));
-
-        public void DrawZoneCover(CellRef cell, Color colour)
-        {
-            // The cover must be THE MESH THE GROUND DRAWS, not a stand-in: the earth resolves
-            // a variant clump (and a face cut, where sides show) per cell, and the first cover
-            // drew the plain default block - a different shape, whose partings against the
-            // drawn clumps showed slivers of untinted earth as a grid over the whole field
-            // (owner, 2026-09-20, twice: the flat photo sheet that said "no seams" could not
-            // see it, because a board with no amplitude has no partings to show). The module,
-            // the variant, the bearing and the drape below are the earth contributor's own
-            // choices, read the same way it reads them, so the cover is the drawn ground
-            // itself, lifted - identical geometry, no sliver anywhere it can come from.
-            int airIndex = _model.Index(cell.X, cell.Z, cell.Y);
-            int groundIndex = airIndex - _model.Size.LayerStride;
-            if (groundIndex < 0) return;
-            ushort terrain = _model.DrawnTerrain(groundIndex);
-
-            int groundY = cell.Y - 1;
-            int variant = GroundLook.Variant(cell.X, cell.Z, groundY);
-            // The mesher's own exposure rule, read here from the mirror: which of the four
-            // sides of the ground cell stand open, as a bitmask over Directions.
-            int exposed = 0;
-            for (int dir = 0; dir < Directions.Count; dir++)
-            {
-                int nx = cell.X + Directions.DeltaX[dir], nz = cell.Z + Directions.DeltaZ[dir];
-                if (!_model.Size.Contains(nx, nz, groundY)) continue;
-                if (!_model.IsSolid(_model.Size.Index(nx, nz, groundY))) exposed |= 1 << dir;
-            }
-
-            float yaw;
-            int module;
-            if (exposed == 0)
-            {
-                yaw = GroundLook.Yaw(cell.X, cell.Z, groundY);
-                module = _model.EarthModule(terrain, variant, showsAFace: false);
-            }
-            else
-            {
-                int canonical = GroundMesh.CanonicalExposure(exposed, out int rotation);
-                yaw = 90f * rotation;
-                module = _model.EarthFaceModule(terrain, variant, canonical);
-            }
-            if (module == 0) return;
-
-            // Flat, unlit and TRANSLUCENT: the ghost material the brackets ride is the lit
-            // terrain shader made transparent, and on rolled ground it shaded every
-            // differently-tilted cover differently - per-tile borders however seamless the
-            // geometry, which is what survived two geometric fixes (owner, 2026-09-20: "still
-            // borders on the tiles"). An unlit tint is the same colour on every tilt under
-            // every light, so it cannot shade, seam or bloom into a line - and because it is
-            // translucent at the colour's own alpha, the tilled earth beneath shows through
-            // and the field is brown with texture, not black paint (owner, later the same
-            // day: "the dirt tile is black with no texture instead the brown that was
-            // before").
-            Material material = _materials.Get(
-                _model.Library.FallbackMaterial, colour, Color.black,
-                ghost: false, alpha: colour.a, unlit: true);
-            var rp = new RenderParams(material)
-            {
-                layer = GameObjectLayer,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
-            };
-
-            Matrix4x4 at = ZoneCoverPlacement(cell.X, cell.Z, cell.Y - 1, yaw);
-
-            var parts = _model.Library[module].Parts;
-            for (int p = 0; p < parts.Length; p++)
-                Graphics.RenderMesh(in rp, parts[p].Mesh, parts[p].Submesh, at * parts[p].Local);
-
-            // Counted, because it was not and the instrument therefore under-reported a field by
-            // its entire cover pass: FrameTimeTests prints DrawCalls, a 2,000-cell field adds
-            // 2,000-odd submissions here, and the printed figure moved by fifty. A pass the
-            // budget cannot see is a pass nobody optimises.
-            DrawCalls += parts.Length;
-            InstancesDrawn += parts.Length;
-        }
         public void DrawCellMark(CellRef cell, Color colour, float inset)
         {
             Material material = BracketMaterial(colour);
@@ -1900,23 +1807,20 @@ namespace Odyssey.Presentation.Rendering
         const float MarkLift = 0.05f;
 
         /// <summary>
-        /// <b>Nought, and that is the fix.</b> A cover is the ground's own module drawn again over
-        /// itself, so any lift at all raises a BOX: its four vertical sides then stand proud of the
-        /// neighbouring soil by exactly the lift, and because the cover is translucent those
-        /// protruding strips blend a second time over the tile beside them - a dark line on every
-        /// interior edge of a field and none on its outside edge (owner, 2026-09-20: "remove the
-        /// borders from dirt/soil tiles"). At 5 cm, which is <see cref="MarkLift"/>, that is the
-        /// line in the screenshot; at 4 mm it is a dotted hairline; at nought it is gone.
+        /// How far worked soil is graded below the earth it is, per channel. See
+        /// <see cref="TintCode.TilledBase"/> for why it is a grade on the ground's own bucket
+        /// rather than a second mesh laid over it.
         ///
-        /// <para><b>Why coplanar does not z-fight here, when <see cref="MarkLift"/> exists
-        /// precisely because it would.</b> A mark is a different primitive laid ON a face and has
-        /// to clear it. This is the same mesh, at the same drape, under the same matrix, so its
-        /// depth is the ground's depth to the bit and the default LEqual test passes everywhere the
-        /// ground is visible - and fails, correctly, for every buried face. Measured on the crop
-        /// sheet at nought: no seam, no speckle, the earth's texture still reading through. If this
-        /// ever has to become non-zero, the sides have to stop being drawn first.</para>
+        /// <para><b>Derived from the cover it replaces, so the field keeps the colour that was
+        /// already agreed</b> (owner, 2026-09-18: "make the entire tile brown so they can look
+        /// like one patch and make it a darker brown"). The cover composited as
+        /// <c>0.78 x (0.06, 0.032, 0.012) + 0.22 x ground</c> - a scale plus a warm pedestal -
+        /// and against a representative lit earth of about (0.55, 0.45, 0.38) that lands on
+        /// (0.168, 0.124, 0.093). These are the per-channel factors that reach the same place by
+        /// multiply alone. Uniform 0.25 was tried first and read grey: the pedestal was carrying
+        /// the warmth, and dropping it took the brown out of the brown.</para>
         /// </summary>
-        const float CoverLift = 0f;
+        public static readonly Color TilledGrade = new Color(0.305f, 0.276f, 0.245f);
 
         /// <summary>
         /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to

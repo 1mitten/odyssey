@@ -1199,6 +1199,35 @@ namespace Odyssey.Presentation.Bootstrap
         /// <see cref="DrawStandingOrders"/> gives: the zone was painted where the player could
         /// see, and that is where it must be drawn.</para>
         /// </summary>
+        /// <summary>Is this cell in the published zone channel? Binary, because the channel is
+        /// ascending by cell index - see <c>GrowingZones.Contribute</c>.</summary>
+        static bool ZoneHolds(System.ReadOnlySpan<ZoneView> zones, int cellIndex)
+        {
+            int lo = 0, hi = zones.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = (int)(((uint)lo + (uint)hi) >> 1);
+                int at = zones[mid].CellIndex;
+                if (at == cellIndex) return true;
+                if (at < cellIndex) lo = mid + 1; else hi = mid - 1;
+            }
+            return false;
+        }
+
+        /// <summary>The same search over the crop channel, which is ascending for the same reason.</summary>
+        static bool PlantStands(System.ReadOnlySpan<PlantView> planted, int cellIndex)
+        {
+            int lo = 0, hi = planted.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = (int)(((uint)lo + (uint)hi) >> 1);
+                int at = planted[mid].CellIndex;
+                if (at == cellIndex) return true;
+                if (at < cellIndex) lo = mid + 1; else hi = mid - 1;
+            }
+            return false;
+        }
+
         void DrawZones(WorldSnapshot snapshot)
         {
             if (_renderer == null || cameraRig == null) return;
@@ -1210,12 +1239,10 @@ namespace Odyssey.Presentation.Bootstrap
             int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
             int highest = cameraRig.HighestSelectableLayer;
 
-            for (int i = 0; i < zones.Length; i++)
-            {
-                CellRef cell = size.FromIndex(zones[i].CellIndex);
-                if (cell.Y < lowest || cell.Y > highest) continue;
-                _renderer.DrawZoneCover(cell, ZoneTintColour);
-            }
+            // The tilled ground itself is not drawn here any more and must not be again: it is
+            // a bit on the terrain bucket's tint (TintCode.TilledBase), so the field is part of
+            // the chunk mesh and costs a field nothing per frame. What is left in this method is
+            // the seed, which is genuinely per-event and genuinely transient.
 
             // The seed the sower left (owner, 2026-09-18: "some kind of seed on the surface like
             // speckled white tiny dots to indicate it's sown"). A sown cell is a dark tile until
@@ -1257,13 +1284,12 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef at = pawns[i].Cell;
                 if (at.Y < lowest || at.Y > highest) continue;
                 int atIndex = size.Index(at.X, at.Z, at.Y);
-                bool taken = false;
-                for (int z = 0; z < zones.Length; z++)
-                    if (zones[z].CellIndex == atIndex) { taken = true; break; }
-                if (!taken) continue;
-                for (int p = 0; p < planted.Length; p++)
-                    if (planted[p].CellIndex == atIndex) { taken = false; break; }
-                if (!taken) continue;
+                // Both channels are published in ascending cell order, so these are searches
+                // and not sweeps. They were sweeps, which is O(sowers x zone cells) every frame
+                // - nothing on a carrot plot and a real cost on the stockpile-sized zones this
+                // same channel is about to carry.
+                if (!ZoneHolds(zones, atIndex)) continue;
+                if (PlantStands(planted, atIndex)) continue;
                 // How long since the handful opened: the bundle shows at the hand, the specks
                 // scatter and fall to their spots, and from then they are the seeds. The age
                 // past its threshold is the drop's own clock, so nothing else is timed.
