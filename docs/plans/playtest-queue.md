@@ -32,7 +32,16 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   whether the flight *reads* as a flight, given no stair has ever been photographed and the art is
   the Synty half-flight at 1.5 m a cell; whether the rotate key lands the stair the way you expect;
   and whether losing ladder-borne delivery is felt as a loss before the stair is affordable.
-  Fast tier 915 Sim + 562 Hud after merging main, Long tier 23 of 23, **no golden moved**.
+  **Played once, 2026-09-21, and it found two faults** (`docs/design/28-stairs.md` §8b). The flight
+  was drawn as *two* descending half-flights, one floating 1.5 m above and beyond the other — the
+  art ascends toward its own local −Z, so yawing each half by its climb direction turned both of
+  them about. And nothing could be clicked: a stair does not occlude and is drawn climbing, so the
+  whole flight sat in front of the cells that answered for it, which is the bed's fault of
+  2026-09-19 in another costume. Both fixed and photographed (`Logs/stair-side.png`). Deconstruct
+  was checked and was already right. What is left for a person: whether the flight now reads as
+  *one* staircase in play rather than in a still, whether clicking anywhere along it selects it,
+  and whether a deconstruct mark painted on the treads is legible.
+  Fast tier 917 Sim + 562 Hud, Long tier 23 of 23, **no golden moved**.
 
 - **Nobody has seen a roof go on, or looked up out of a roofed building** (PR #143,
   `claude/adoring-ptolemy-baq5te`,
