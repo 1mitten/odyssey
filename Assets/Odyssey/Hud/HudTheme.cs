@@ -620,6 +620,7 @@ namespace Odyssey.Hud
             { "ui.tab.bills", HudCategory.Work },
             { "ui.tab.factions", HudCategory.Record },
             { "ui.tab.archive", HudCategory.Record },
+            { "ui.tab.almanac", HudCategory.Record },
             { "ui.tab.menu", HudCategory.Neutral },
         };
 

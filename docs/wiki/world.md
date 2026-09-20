@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-91 entries, 66 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+92 entries, 66 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -83,6 +83,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Trade** | `ui.tab.trade` | Caravans and traders | sheet 08 (salvage gear), high | M1 |
 | **Factions** | `ui.tab.factions` | Who likes us, and how much | sheet 08 (salvage gear), high | M1 |
 | **History** | `ui.tab.archive` | Everything that has happened | sheet 08 (salvage gear), high | M1 |
+| **Almanac** | `ui.tab.almanac` | The colony reference: every terrain, material, structure, item and craft | sheet 08 (salvage gear), high | M1 |
 | **Menu** | `ui.tab.menu` | Save, load, settings, quit <br>**Needs:** a settings or menu mark | no art | M1 |
 
 ## Game speed

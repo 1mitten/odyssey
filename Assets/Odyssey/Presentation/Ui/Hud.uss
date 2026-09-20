@@ -859,6 +859,18 @@
 }
 
 .inspect__close:hover { border-color: #e06a5c; }
+.inspect__info {
+    width: 26px;
+    height: 26px;
+    margin-left: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+    cursor: link;
+}
+.inspect__info:hover { border-color: #7fd0e0; }
 
 .inspect__tabs {
     flex-direction: row;
@@ -2519,3 +2531,481 @@
     -unity-text-align: middle-left;
 }
 .bedowner__mark--this { color: rgb(238, 250, 253); }
+
+/* =========================================================================
+   Almanac Reference Browser
+   Full-bleed, 3-column reference browser (Category Rail, Index, Detail Pane)
+   ========================================================================= */
+
+.almanac-panel {
+    background-color: rgba(8, 12, 10, 0.96);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.22);
+}
+
+.almanac-hdr {
+    height: 54px;
+    padding: 0 16px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.22);
+    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: space-between;
+}
+
+.almanac-hdr__title {
+    color: #ffffff;
+    margin-right: 12px;
+}
+
+.almanac-search {
+    height: 34px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+    background-color: rgba(235, 240, 242, 0.6);
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.almanac-search__input {
+    flex-grow: 1;
+    height: 100%;
+    border-width: 0;
+    background-color: transparent;
+    color: #000000;
+}
+
+/* Unity's TextField draws the typed text in a nested element under the field; the
+   outer class alone does not reach it, which left the text invisible (owner, 2026-09-20). */
+.almanac-search__input .unity-base-text-field__input,
+.almanac-search__input .unity-text-input__field,
+.almanac-search__input .unity-base-text-field__input .unity-text-element {
+    color: #000000;
+}
+
+.almanac-search__hint {
+    color: rgba(0, 0, 0, 0.45);
+    margin-left: 4px;
+}
+
+/* The search box and its reset docked to the box's right edge, one middle element of the
+   header so the header's space-between spread is unchanged by the reset appearing. */
+.almanac-search-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+/* Transparent until hovered, so the panel's chrome stays quiet while the search is
+   doing its job. */
+.almanac-search-reset {
+    width: 28px;
+    height: 34px;
+    margin-left: 4px;
+    align-items: center;
+    justify-content: center;
+}
+
+.almanac-search-reset:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 4px;
+}
+
+.almanac-hdr__btn {
+    width: 32px;
+    height: 32px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    margin-left: 6px;
+    justify-content: center;
+    align-items: center;
+    cursor: link;
+}
+
+.almanac-hdr__btn:hover {
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.12);
+}
+
+.almanac-hdr__btn--off {
+    opacity: 0.35;
+}
+
+.almanac-hdr__close:hover {
+    border-color: #e06a5c;
+    background-color: rgba(224, 106, 92, 0.12);
+}
+
+.almanac-rail {
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.22);
+    padding: 8px 0;
+}
+
+.almanac-cat {
+    height: 38px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16px;
+    cursor: link;
+}
+
+.almanac-cat:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.almanac-cat--active {
+    background-color: rgba(127, 208, 224, 0.14);
+    border-left-width: 3px;
+    border-left-color: #7fd0e0;
+}
+
+.almanac-cat__icon {
+    margin-right: 10px;
+}
+
+.almanac-cat__name {
+    flex-grow: 1;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.almanac-cat--active .almanac-cat__name {
+    color: #7fd0e0;
+}
+
+.almanac-cat__count {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.almanac-index {
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.22);
+}
+
+.almanac-index__hdr {
+    height: 34px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(0, 0, 0, 0.25);
+}
+
+.almanac-index__title {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.almanac-index__sort {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.almanac-idx-row {
+    height: 52px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    cursor: link;
+}
+
+.almanac-idx-row:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.almanac-idx-row--active {
+    background-color: rgba(127, 208, 224, 0.14);
+    border-left-width: 3px;
+    border-left-color: #7fd0e0;
+}
+
+.almanac-idx-row__sq {
+    width: 26px;
+    height: 26px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+    margin-right: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.almanac-idx-row__texts {
+    flex-grow: 1;
+}
+
+.almanac-idx-row__name {
+    color: #ffffff;
+}
+
+.almanac-idx-row--active .almanac-idx-row__name {
+    color: #7fd0e0;
+}
+
+.almanac-idx-row__summary {
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.almanac-detail {
+    padding: 24px 32px;
+}
+
+.almanac-band1 {
+    flex-direction: row;
+    margin-bottom: 28px;
+}
+
+.almanac-sq96 {
+    width: 96px;
+    height: 96px;
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    margin-right: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.almanac-id-col {
+    flex-grow: 1;
+    max-width: 820px;
+}
+
+.almanac-title-line {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.almanac-detail__title {
+    color: #ffffff;
+    margin-right: 12px;
+}
+
+.almanac-chip {
+    padding: 3px 8px;
+    border-width: 1px;
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.15);
+    color: #7fd0e0;
+    border-radius: 3px;
+    margin-right: 6px;
+}
+
+.almanac-chip--nature {
+    border-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.almanac-definition {
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 8px;
+}
+
+.almanac-live {
+    color: #7fd0e0;
+}
+
+.almanac-actions-col {
+    margin-left: 20px;
+    align-items: flex-end;
+}
+
+.almanac-action-btn {
+    padding: 8px 16px;
+    border-width: 1px;
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.16);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    cursor: link;
+}
+
+.almanac-action-btn:hover {
+    background-color: rgba(127, 208, 224, 0.28);
+}
+
+.almanac-pin-btn {
+    padding: 4px 10px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    cursor: link;
+}
+
+/* Picking is off in code as well; this says so in ink. */
+.almanac-pin-btn--off {
+    border-color: rgba(255, 255, 255, 0.08);
+    opacity: 0.38;
+    cursor: default;
+}
+
+.almanac-grid {
+    flex-direction: row;
+}
+
+.almanac-sec-label {
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 12px;
+}
+
+.almanac-props-col {
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.15);
+    padding-right: 24px;
+}
+
+.almanac-prop-row {
+    height: 34px;
+    flex-direction: row;
+    align-items: center;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-prop-key {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.almanac-prop-val {
+    color: rgba(255, 255, 255, 0.9);
+    flex-grow: 1;
+}
+
+.almanac-body-col {
+    padding-left: 24px;
+}
+
+.almanac-body-paragraph {
+    color: rgba(255, 255, 255, 0.78);
+    margin-bottom: 16px;
+}
+
+.almanac-card {
+    padding: 12px 16px;
+    border-radius: 4px;
+    border-width: 1px;
+    margin-bottom: 10px;
+}
+
+.almanac-card--best {
+    border-color: rgba(77, 158, 90, 0.5);
+    background-color: rgba(77, 158, 90, 0.08);
+}
+
+.almanac-card--avoid {
+    border-color: rgba(200, 70, 70, 0.5);
+    background-color: rgba(200, 70, 70, 0.08);
+}
+
+.almanac-card__title {
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.almanac-card__text {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.almanac-level-row {
+    height: 30px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-level-badge {
+    width: 50px;
+    color: #7fd0e0;
+}
+
+.almanac-level-name {
+    width: 140px;
+    color: #ffffff;
+}
+
+.almanac-level-note {
+    color: rgba(255, 255, 255, 0.55);
+    flex-grow: 1;
+}
+
+.almanac-spec-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-spec-hdr {
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 2px;
+}
+
+.almanac-spec-val {
+    color: #ffffff;
+}
+
+.almanac-spec-detail {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.almanac-eff-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-eff-title {
+    color: #7fd0e0;
+    margin-bottom: 2px;
+}
+
+.almanac-eff-desc {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.almanac-rel-chip {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 12px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.04);
+    margin-right: 8px;
+    margin-bottom: 8px;
+    cursor: link;
+}
+
+.almanac-rel-chip:hover {
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.14);
+}
+
+.almanac-rel-thumb {
+    width: 20px;
+    height: 20px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin-right: 8px;
+    justify-content: center;
+    align-items: center;
+}
+
+.almanac-rel-name {
+    color: #ffffff;
+}
+
+.almanac-rel-reason {
+    color: rgba(255, 255, 255, 0.45);
+    margin-left: 6px;
+}
+

@@ -1,0 +1,2754 @@
+<title>Odyssey Almanac — In-Game Wiki</title>
+<style>
+:root {
+  --bg: #05080c;
+  --wash: rgba(8, 14, 8, 0.5);
+  --panel-bg: rgba(0, 0, 0, 0.8);
+  --panel-rail-bg: rgba(6, 9, 12, 0.85);
+  --divider: rgba(255, 255, 255, 0.22);
+  --divider-subtle: rgba(255, 255, 255, 0.08);
+  --ink: #ffffff;
+  --ink-body: rgba(255, 255, 255, 0.82);
+  --ink-key: rgba(255, 255, 255, 0.55);
+  --ink-sub: rgba(255, 255, 255, 0.5);
+  --ink-dim: rgba(255, 255, 255, 0.4);
+  --cyan: #7fd0e0;
+  --cyan-fill-rail: rgba(127, 208, 224, 0.16);
+  --cyan-fill-idx: rgba(127, 208, 224, 0.14);
+  --cyan-fill-tab: rgba(127, 208, 224, 0.18);
+  --cyan-border: #7fd0e0;
+  --f-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Proficiency ramp */
+  --ramp-0: #a8453f;
+  --ramp-1: #9a7a5a;
+  --ramp-2: #c9cdd2;
+  --ramp-3: #e0c05a;
+  --ramp-4: #f5c518;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100vw; height: 100vh; overflow: hidden;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-ui); font-size: 15px; line-height: 1.45;
+  user-select: none;
+}
+
+/* Background simulated game world */
+#world-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+.world-wash {
+  position: absolute; inset: 0; background: var(--wash);
+  pointer-events: none; z-index: 1;
+}
+
+/* Full bleed Almanac panel: left:0; right:0; top:0; bottom:70px */
+.almanac-panel {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 70px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--divider);
+  z-index: 10;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header strip */
+.header-strip {
+  height: 58px; min-height: 58px; flex: none;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--divider);
+  background: rgba(0, 0, 0, 0.4);
+}
+.header-left {
+  display: flex; align-items: baseline; gap: 14px;
+}
+.panel-title {
+  font-size: 21px; font-weight: 700; color: #fff; letter-spacing: 0.05em;
+}
+.count-subtitle {
+  font-size: 14px; color: var(--ink-sub); font-weight: 400;
+}
+
+/* 360px Search Field */
+.search-container {
+  position: relative; width: 360px;
+}
+.search-input-wrap {
+  position: relative; width: 360px; height: 34px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex; align-items: center; padding: 0 10px; gap: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input-wrap.focused {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+.search-glyph {
+  width: 16px; height: 16px; stroke: rgba(255, 255, 255, 0.6);
+  fill: none; stroke-width: 2; flex: none;
+}
+.search-input-wrap.focused .search-glyph {
+  stroke: var(--cyan);
+}
+.search-input {
+  flex: 1; height: 100%; background: transparent; border: none; outline: none;
+  font-family: inherit; font-size: 15px; color: #fff;
+}
+.search-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.search-hint {
+  font-family: var(--f-mono); font-size: 12px; color: var(--ink-sub);
+  background: rgba(255, 255, 255, 0.1); padding: 1px 6px; border-radius: 3px;
+}
+.search-count {
+  font-size: 12px; color: var(--cyan); font-weight: 600; white-space: nowrap;
+}
+
+.search-results-dropdown {
+  position: absolute; top: 40px; left: 0; width: 360px; max-height: 480px;
+  background: #090e13; border: 1px solid var(--cyan);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  overflow-y: auto; z-index: 100; display: none;
+}
+.search-group-title {
+  padding: 8px 12px 4px; font-size: 11px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan);
+  background: rgba(127, 208, 224, 0.08); border-bottom: 1px solid rgba(127, 208, 224, 0.15);
+}
+.search-result-row {
+  padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+  cursor: pointer; border-bottom: 1px solid var(--divider-subtle);
+}
+.search-result-row:hover, .search-result-row.selected {
+  background: var(--cyan-fill-rail); color: var(--cyan);
+}
+.search-result-row .res-name { font-size: 15px; color: #fff; flex: 1; }
+.search-result-row:hover .res-name { color: var(--cyan); }
+.search-result-row .res-sub { font-size: 12px; color: var(--ink-sub); }
+
+.header-right {
+  display: flex; align-items: center; gap: 6px;
+}
+.header-btn {
+  width: 32px; height: 32px; border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.3); color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.header-btn:hover:not(:disabled) {
+  border-color: var(--cyan); color: var(--cyan);
+}
+.header-btn:disabled {
+  opacity: 0.25; cursor: default;
+}
+.header-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* 3-Column Almanac Body */
+.almanac-body {
+  flex: 1; display: flex; overflow: hidden; position: relative;
+}
+
+/* Section label style */
+.section-label {
+  font-size: 13px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: rgba(255, 255, 255, 0.5);
+}
+
+/* Column 1 — Category Rail (250px, fixed) */
+.category-rail {
+  width: 250px; min-width: 250px; max-width: 250px;
+  border-right: 1px solid var(--divider);
+  padding: 8px; overflow-y: auto; background: var(--panel-rail-bg);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.category-row {
+  height: 38px; min-height: 38px; padding: 0 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; border: 1px solid transparent; color: #fff;
+  transition: background 0.1s, border-color 0.1s;
+}
+.category-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.category-row.active {
+  background: var(--cyan-fill-rail);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.cat-left {
+  display: flex; align-items: center; gap: 10px;
+}
+.cat-icon {
+  width: 19px; height: 19px; display: flex; align-items: center; justify-content: center;
+}
+.cat-icon svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.cat-name {
+  font-size: 18px; font-weight: 400;
+}
+.cat-count {
+  font-size: 14px; color: var(--ink-dim);
+}
+.category-row.active .cat-count {
+  color: var(--cyan);
+}
+
+/* Column 2 — Index (290px, fixed) */
+.index-column {
+  width: 290px; min-width: 290px; max-width: 290px;
+  border-right: 1px solid var(--divider);
+  display: flex; flex-direction: column;
+  overflow: hidden; background: rgba(0, 0, 0, 0.4);
+}
+.index-header {
+  height: 34px; min-height: 34px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--divider);
+  background: rgba(255, 255, 255, 0.02);
+}
+.index-sort-hint {
+  font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.08em;
+}
+.index-list {
+  flex: 1; overflow-y: auto;
+}
+.index-row {
+  min-height: 48px; max-height: 52px; height: 50px;
+  padding: 0 14px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--divider-subtle);
+  cursor: pointer; position: relative;
+  white-space: nowrap; overflow: hidden;
+}
+.index-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.index-row.active {
+  background: var(--cyan-fill-idx);
+  box-shadow: inset 3px 0 0 0 var(--cyan);
+}
+.index-row.active .index-name {
+  color: var(--cyan);
+}
+.index-identity-sq {
+  width: 26px; height: 26px; min-width: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+.index-identity-sq.swatch {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.index-identity-sq svg {
+  width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8;
+}
+.index-text {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
+  overflow: hidden;
+}
+.index-name {
+  font-size: 18px; font-weight: 400; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.index-summary {
+  font-size: 14px; font-weight: 400; color: var(--ink-sub);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Column 3 — Detail Pane (fills the rest) */
+.detail-pane {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  overflow-y: auto; background: rgba(0, 0, 0, 0.2);
+}
+
+/* Band 1 · Identity */
+.band-identity {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--divider);
+  display: flex; gap: 24px; align-items: flex-start;
+}
+.identity-visual-96 {
+  width: 96px; height: 96px; min-width: 96px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  position: relative;
+}
+.identity-visual-96.icon-mode {
+  border-width: 1px;
+}
+.identity-visual-96 svg {
+  width: 56px; height: 56px; stroke: currentColor; fill: none; stroke-width: 1.8;
+}
+.identity-content {
+  flex: 1; min-width: 0;
+}
+.identity-title-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.entry-title {
+  font-size: 38px; font-weight: 700; color: #fff; line-height: 1.1;
+}
+.type-chip {
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 3px 8px; border: 1px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.7);
+}
+.nature-chip {
+  font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 3px 8px; border-width: 1px; border-style: solid;
+}
+.entry-definition {
+  font-size: 19px; font-weight: 400; line-height: 1.45;
+  color: var(--ink-body); max-width: 820px;
+  text-wrap: pretty; margin-bottom: 10px;
+}
+.live-state-line {
+  font-size: 15px; font-weight: 400; color: var(--ink-sub);
+  display: flex; align-items: center; gap: 8px;
+}
+.live-state-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #68c05e;
+}
+.identity-actions {
+  display: flex; align-items: center; gap: 8px; flex: none;
+}
+.btn-primary-action {
+  height: 34px; padding: 0 14px;
+  border: 1px solid var(--cyan); background: rgba(127, 208, 224, 0.12);
+  color: var(--cyan); font-family: inherit; font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+}
+.btn-primary-action:hover {
+  background: var(--cyan); color: #000;
+}
+.btn-primary-action svg {
+  width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2;
+}
+.btn-pin {
+  width: 34px; height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.7); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.btn-pin:hover { border-color: #f5c518; color: #f5c518; }
+.btn-pin.pinned { border-color: #f5c518; background: rgba(245, 197, 24, 0.15); color: #f5c518; }
+.btn-pin svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+.btn-pin.pinned svg { fill: currentColor; }
+
+/* Mid section: Band 2 Properties (fixed 520px) + Band 3 Body (rest) + Band 4 Related */
+.band-mid-columns {
+  display: flex; flex: 1; min-height: 0;
+}
+
+/* Band 2 · Properties — fixed 520px */
+.band-properties {
+  width: 520px; min-width: 520px; max-width: 520px;
+  padding: 18px 24px; border-right: 1px solid var(--divider);
+}
+.band-properties .section-label {
+  margin-bottom: 12px;
+}
+.properties-table {
+  display: flex; flex-direction: column;
+}
+.property-row {
+  height: 34px; min-height: 34px;
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--divider-subtle);
+  font-size: 17px;
+}
+.prop-key {
+  width: 150px; min-width: 150px; max-width: 150px;
+  color: var(--ink-key); font-weight: 400;
+}
+.prop-val {
+  flex: 1; min-width: 0; color: #fff; font-weight: 400;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lateral-link {
+  color: #fff; text-decoration: none; cursor: pointer;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+}
+.lateral-link:hover {
+  text-decoration: underline; color: var(--cyan); border-bottom-color: var(--cyan);
+}
+
+/* Right column for Band 3 (Body) + Band 4 (Related pinned to bottom) */
+.body-and-related-col {
+  flex: 1; min-width: 0; padding: 18px 24px;
+  display: flex; flex-direction: column;
+}
+
+/* Band 3 · Body */
+.band-body {
+  flex: 1 0 auto;
+}
+.band-body .section-label {
+  margin-bottom: 14px;
+}
+.body-paragraph {
+  font-size: 16px; line-height: 1.55; color: var(--ink-body); max-width: 760px;
+  margin-bottom: 18px;
+}
+.cards-row {
+  display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.card {
+  flex: 1; min-width: 240px; padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.card-hdr {
+  font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+.card-hdr.best { color: #68c05e; }
+.card-hdr.avoid { color: #e06a5c; }
+.card-text {
+  font-size: 15px; color: var(--ink-body); line-height: 1.45;
+}
+
+/* Skill levels ladder (5 x 40px rows) */
+.ladder {
+  display: flex; flex-direction: column; gap: 4px; max-width: 680px; margin-bottom: 20px;
+}
+.ladder-row {
+  height: 40px; min-height: 40px; padding: 0 14px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex; align-items: center; gap: 14px;
+  border-left-width: 3px; border-left-style: solid;
+}
+.ladder-range {
+  width: 54px; font-family: var(--f-mono); font-size: 14px; font-weight: 600;
+}
+.ladder-tier {
+  width: 120px; font-size: 15px; font-weight: 600; color: #fff;
+}
+.ladder-desc {
+  flex: 1; font-size: 14px; color: var(--ink-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Band 4 · Related (pinned with margin-top: auto) */
+.band-related {
+  margin-top: auto; padding-top: 24px; border-top: 1px solid var(--divider-subtle);
+}
+.band-related .section-label {
+  margin-bottom: 12px;
+}
+.related-chips {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.related-chip {
+  padding: 6px 12px; background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.15); cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.related-chip:hover {
+  border-color: var(--cyan); background: var(--cyan-fill-rail);
+}
+.rel-sq {
+  width: 20px; height: 20px; min-width: 20px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.rel-sq svg {
+  width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8;
+}
+.rel-name {
+  font-size: 17px; font-weight: 400; color: #fff;
+}
+.related-chip:hover .rel-name { color: var(--cyan); }
+.rel-reason {
+  font-size: 14px; font-weight: 400; color: var(--ink-sub);
+}
+
+/* Missing icon dashed square */
+.missing-icon {
+  width: 100%; height: 100%;
+  border: 1.6px dashed rgba(255, 255, 255, 0.4);
+}
+
+/* Bottom tab bar: 70px, rgba(0,0,0,.72), 1px top border */
+.bottom-tab-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 70px;
+  background: rgba(0, 0, 0, 0.72); border-top: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex; align-items: center; padding: 0 16px; gap: 6px;
+  z-index: 20;
+}
+.tab-btn {
+  height: 50px; padding: 0 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.65);
+  cursor: pointer; transition: all 0.1s;
+}
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.07); color: #fff; border-color: rgba(255, 255, 255, 0.25);
+}
+.tab-btn.active {
+  background: var(--cyan-fill-tab);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+}
+.tab-label {
+  font-size: 13px; font-weight: 600; letter-spacing: 0.04em;
+}
+.tab-hotkey {
+  font-family: var(--f-mono); font-size: 10.5px; opacity: 0.75;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); }
+</style>
+
+<canvas id="world-canvas"></canvas>
+<div class="world-wash"></div>
+
+<!-- Full bleed Almanac reference browser -->
+<div class="almanac-panel" id="almanac-panel">
+  <!-- Header strip -->
+  <div class="header-strip">
+    <div class="header-left">
+      <span class="panel-title">ALMANAC</span>
+      <span class="count-subtitle" id="count-subtitle">Loading...</span>
+    </div>
+
+    <!-- 360px Search Field -->
+    <div class="search-container">
+      <div class="search-input-wrap" id="search-wrap">
+        <svg class="search-glyph" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" class="search-input" id="search-input" placeholder="Search entries" autocomplete="off" spellcheck="false">
+        <span class="search-hint" id="search-hint">/</span>
+        <span class="search-count" id="search-count" style="display:none">0 matches</span>
+      </div>
+      <div class="search-results-dropdown" id="search-dropdown"></div>
+    </div>
+
+    <!-- History & Close -->
+    <div class="header-right">
+      <button class="header-btn" id="btn-back" title="Back (Alt+Left)" disabled>
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <button class="header-btn" id="btn-fwd" title="Forward (Alt+Right)" disabled>
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+      <button class="header-btn" id="btn-close" title="Close Almanac (Esc)">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3-Column Body -->
+  <div class="almanac-body">
+    <!-- Column 1: Category Rail (250px) -->
+    <div class="category-rail" id="category-rail"></div>
+
+    <!-- Column 2: Index (290px) -->
+    <div class="index-column" id="index-column">
+      <div class="index-header">
+        <span class="section-label" id="index-cat-label">INDEX</span>
+        <span class="index-sort-hint">A–Z</span>
+      </div>
+      <div class="index-list" id="index-list"></div>
+    </div>
+
+    <!-- Column 3: Detail Pane (fills rest) -->
+    <div class="detail-pane" id="detail-pane"></div>
+  </div>
+</div>
+
+<!-- Bottom tab bar: 70px -->
+<div class="bottom-tab-bar" id="bottom-tab-bar">
+  <button class="tab-btn"><span class="tab-label">Build</span><span class="tab-hotkey">B</span></button>
+  <button class="tab-btn"><span class="tab-label">Work</span><span class="tab-hotkey">F1</span></button>
+  <button class="tab-btn"><span class="tab-label">Schedule</span><span class="tab-hotkey">F2</span></button>
+  <button class="tab-btn"><span class="tab-label">Research</span><span class="tab-hotkey">F3</span></button>
+  <button class="tab-btn"><span class="tab-label">Colonists</span><span class="tab-hotkey">F4</span></button>
+  <button class="tab-btn"><span class="tab-label">Animals</span><span class="tab-hotkey">F5</span></button>
+  <button class="tab-btn"><span class="tab-label">Wildlife</span><span class="tab-hotkey">F6</span></button>
+  <button class="tab-btn"><span class="tab-label">Bills</span><span class="tab-hotkey">F7</span></button>
+  <button class="tab-btn"><span class="tab-label">Factions</span><span class="tab-hotkey">F8</span></button>
+  <button class="tab-btn active" title="Almanac (F9)"><span class="tab-label">Almanac</span><span class="tab-hotkey">(F9)</span></button>
+  <button class="tab-btn" style="margin-left:auto"><span class="tab-label">Menu</span><span class="tab-hotkey">Esc</span></button>
+</div>
+
+<script>
+/* =========================================================================
+   DATABASE: Odyssey Almanac content
+   Only items, structures, terrain, and concepts that currently exist in game.
+   Every entry has its own explicit SVG line path string { name, colour, path }.
+   ========================================================================= */
+const ALMANAC_DATA = {
+  "categories": [
+    {
+      "name": "Terrain",
+      "iconPath": "M2 18l5-10 6 5 9-9v14H2z",
+      "entries": [
+        {
+          "name": "Grass",
+          "summary": "Fast walking meadow cover, pasture base",
+          "typeChip": "Terrain",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#4d9e5a",
+          "icon": {
+            "name": "grass",
+            "colour": "#4d9e5a",
+            "path": "M4 20c2-6 5-11 8-16 3 5 6 10 8 16M8 20c1-4 3-7 5-10M16 20c-1-4-3-7-5-10"
+          },
+          "definition": "The standard surface vegetation of the meadow plateau. Supports foot traffic and sows readily into cultivated zones.",
+          "liveState": "Seen on this map · 1,284 tiles · surface layer",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Move cost", "value": "100% (Normal)" },
+            { "key": "Fertility", "value": "100%" },
+            { "key": "Work to clear", "value": "150 ticks" },
+            { "key": "Cleanliness", "value": "Neutral (0)" },
+            { "key": "Supports building", "value": "Light & Heavy" },
+            { "key": "Sub-layer", "value": "Soil" },
+            { "key": "Drop on clear", "value": "Plant matter" },
+            { "key": "Flammability", "value": "Low (15%)" }
+          ],
+          "body": {
+            "type": "terrain",
+            "sectionLabel": "BEHAVIOUR",
+            "paragraph": "Grass covers the vast majority of the upper clearing. Colonists cross it at baseline pace without foot penalty. Sustained heavy traffic will compress it over seasons into packed pathways.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Rapid colony transit lines, outdoor stockpiles, grazing animals and surface farming plots." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Medical sterile bays and enclosed high-tech electronics storage." }
+            ]
+          },
+          "related": [
+            { "name": "Soil", "reason": "sub-layer directly beneath" },
+            { "name": "Bare Earth", "reason": "what grass becomes under heavy traffic" },
+            { "name": "Carrot Plant", "reason": "optimal crop sown into grass clearings" }
+          ]
+        },
+        {
+          "name": "Soil",
+          "summary": "Rich loam underlying meadow turf",
+          "typeChip": "Terrain",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#8a6b4b",
+          "icon": {
+            "name": "soil",
+            "colour": "#8a6b4b",
+            "path": "M2 18c4-3 8-3 10 0 2-3 6-3 10 0M4 12c3-2 6-2 8 0 2-2 5-2 8 0"
+          },
+          "definition": "Unvegetated topsoil formed by generations of decaying river silt and botanical compost.",
+          "liveState": "Seen on this map · 412 tiles · surface layer",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Move cost", "value": "105% (Slight drag)" },
+            { "key": "Fertility", "value": "100%" },
+            { "key": "Work to clear", "value": "120 ticks" },
+            { "key": "Cleanliness", "value": "-0.2" },
+            { "key": "Supports building", "value": "Light & Heavy" },
+            { "key": "Sub-layer", "value": "Subsoil" },
+            { "key": "Moisture", "value": "Moderate" },
+            { "key": "Flammability", "value": "None (0%)" }
+          ],
+          "body": {
+            "type": "terrain",
+            "sectionLabel": "BEHAVIOUR",
+            "paragraph": "Exposed loam is slightly softer underfoot than grass. Readily takes wooden support foundations, paving slabs, and tilled furrow lines.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Excavation, agricultural zones, foundation leveling." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Unpaved interior corridors subject to dust tracking." }
+            ]
+          },
+          "related": [
+            { "name": "Grass", "reason": "overlying natural turf" },
+            { "name": "Subsoil", "reason": "dense substrate stratum below" },
+            { "name": "Gravel", "reason": "coarser stone soil mixture" }
+          ]
+        },
+        {
+          "name": "Rock",
+          "summary": "Solid subterranean bedrock seam",
+          "typeChip": "Terrain",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#87929e",
+          "icon": {
+            "name": "rock",
+            "colour": "#87929e",
+            "path": "M4 18l3-11 9-3 5 7-2 7z M7 7l6 5 4-5"
+          },
+          "definition": "Dense natural stone formation. Impassable until excavated with pickaxes, leaving rough stone piles.",
+          "liveState": "Seen on this map · 3,410 tiles · subterranean layers",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Move cost", "value": "Impassable (Solid)" },
+            { "key": "Fertility", "value": "0%" },
+            { "key": "Work to clear", "value": "700 ticks (Mining)" },
+            { "key": "Cleanliness", "value": "Neutral (0)" },
+            { "key": "Supports building", "value": "Overhead Ceiling" },
+            { "key": "Drop on clear", "value": "Stone" },
+            { "key": "Collapse risk", "value": "Zero (Self-supporting)" },
+            { "key": "Flammability", "value": "None (0%)" }
+          ],
+          "body": {
+            "type": "terrain",
+            "sectionLabel": "BEHAVIOUR",
+            "paragraph": "Rock formations form the mountain flanks and sealed underground chambers. Requires dedicated mining labour to clear, yielding valuable stone chunks.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Deep defensive bunkers, overhead vault roofs, rock chunk harvest." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Rapid tunnel expansion without high-skill miners." }
+            ]
+          },
+          "related": [
+            { "name": "Stone", "reason": "quarried material chunk" },
+            { "name": "Mining", "reason": "governing excavation skill" },
+            { "name": "Bedrock", "reason": "unbreakable base stone layer" }
+          ]
+        },
+        {
+          "name": "Gravel",
+          "summary": "Coarse loose aggregate and pebbles",
+          "typeChip": "Terrain",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#7d7a74",
+          "icon": {
+            "name": "gravel",
+            "colour": "#7d7a74",
+            "path": "M6 16a3 2 0 1 0 6 0 3 2 0 1 0-6 0M14 12a4 2.5 0 1 0 8 0 4 2.5 0 1 0-8 0M8 8a2.5 2 0 1 0 5 0 2.5 2 0 1 0-5 0"
+          },
+          "definition": "Loose fragmented stones mixed with coarse grit. Poor drainage and low agricultural yield.",
+          "liveState": "Seen on this map · 295 tiles · riverside banks",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Move cost", "value": "110% (Crunch)" },
+            { "key": "Fertility", "value": "55% (Barren)" },
+            { "key": "Work to clear", "value": "110 ticks" },
+            { "key": "Cleanliness", "value": "-0.1" },
+            { "key": "Supports building", "value": "Light only" },
+            { "key": "Sub-layer", "value": "Rock" },
+            { "key": "Moisture", "value": "Dry" },
+            { "key": "Flammability", "value": "None (0%)" }
+          ],
+          "body": {
+            "type": "terrain",
+            "sectionLabel": "BEHAVIOUR",
+            "paragraph": "Gravel forms naturally around terrace steps, river bends, and rock edges. It refuses most crops due to thin nutrient holding.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Firebreaks, perimeter drainage trenches, unpaved service yards." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Carrot cultivation and heavy wall construction." }
+            ]
+          },
+          "related": [
+            { "name": "Packed Gravel", "reason": "rolled and tamped version" },
+            { "name": "Soil", "reason": "fertile partner" },
+            { "name": "Sand", "reason": "finer river silt equivalent" }
+          ]
+        },
+        {
+          "name": "Pavement",
+          "summary": "Pre-collapse asphalt roadway and slab",
+          "typeChip": "Terrain",
+          "natureChip": "Manufactured",
+          "hasColor": true,
+          "color": "#616c78",
+          "icon": {
+            "name": "pavement",
+            "colour": "#616c78",
+            "path": "M3 3h8v8H3z M13 3h8v8h-8z M3 13h8v8H3z M13 13h8v8h-8z"
+          },
+          "definition": "Engineered concrete and bitumen pavement laid down before the city fell. Extremely fast to cross.",
+          "liveState": "Seen on this map · 512 tiles · street grid",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Move cost", "value": "85% (Swift)" },
+            { "key": "Fertility", "value": "0% (Sterile)" },
+            { "key": "Work to clear", "value": "350 ticks" },
+            { "key": "Cleanliness", "value": "+0.1" },
+            { "key": "Supports building", "value": "Heavy structural" },
+            { "key": "Sub-layer", "value": "Engineered Fill" },
+            { "key": "Drop on clear", "value": "Concrete" },
+            { "key": "Flammability", "value": "None (0%)" }
+          ],
+          "body": {
+            "type": "terrain",
+            "sectionLabel": "BEHAVIOUR",
+            "paragraph": "Ancient highway slabs remain durable even centuries later. Haulers move at peak speed across them, reducing round-trip delivery cycles.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Primary arterial corridors, heavy machine pads, perimeter haulways." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Any attempt at farming or underground piping access." }
+            ]
+          },
+          "related": [
+            { "name": "Concrete", "reason": "binding composite material" },
+            { "name": "Cracked Pavement", "reason": "weather-degraded variant" },
+            { "name": "Floor", "reason": "interior tile counterpart" }
+          ]
+        },
+        {
+          "name": "Shallow Water",
+          "summary": "Ankle to knee-deep streaming water",
+          "typeChip": "Terrain",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#4aa9b8",
+          "icon": {
+            "name": "shallow-water",
+            "colour": "#4aa9b8",
+            "path": "M2 9c4-2 7 2 10 0s6-2 10 0M2 15c4-2 7 2 10 0s6-2 10 0"
+          },
+          "definition": "Flowing surface streams and river shallows. Waded by pawns with a slight speed and carrying jolt.",
+          "liveState": "Seen on this map · 186 tiles · river bends",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Move cost", "value": "160% (Wade drag)" },
+            { "key": "Fertility", "value": "0%" },
+            { "key": "Work to clear", "value": "Cannot clear" },
+            { "key": "Cleanliness", "value": "+0.2 (Flowing)" },
+            { "key": "Supports building", "value": "None (Bridges only)" },
+            { "key": "Sub-layer", "value": "Gravel / Sand" },
+            { "key": "Carried load", "value": "Hidden in water" },
+            { "key": "Flammability", "value": "Zero" }
+          ],
+          "body": {
+            "type": "terrain",
+            "sectionLabel": "BEHAVIOUR",
+            "paragraph": "Water bodies form natural terrain boundaries. Colonists wading through water experience distinct footsteps and sound effects. Loads carried in water are held low.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Natural moat defensive lines, fire extinguishing, thermal sinks." },
+              { "title": "Avoid for", "kind": "avoid", "text": "High-urgency haul routes and fragile storage." }
+            ]
+          },
+          "related": [
+            { "name": "Deep Water", "reason": "swimmable deep variant" },
+            { "name": "Marsh", "reason": "vegetated wetland bog" },
+            { "name": "Sand", "reason": "common bank shoreline" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Materials",
+      "iconPath": "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z",
+      "entries": [
+        {
+          "name": "Wood",
+          "summary": "Felled timber planks and framing posts",
+          "typeChip": "Material",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#9e6f3d",
+          "icon": {
+            "name": "wood",
+            "colour": "#9e6f3d",
+            "path": "M12 2l8 4v12l-8 4-8-4V6l8-4z M12 2v20 M4 10l8 4 8-4"
+          },
+          "definition": "Cut and seasoned timber harvested from conifer or deciduous trees. The foundation material of early colony structures.",
+          "liveState": "In stockpiles · 142 units · main yard",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Stuff category", "value": "Woody" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Work to build factor", "value": "100%" },
+            { "key": "Wall HP", "value": "180" },
+            { "key": "Flammability", "value": "High (80%)" },
+            { "key": "Beauty", "value": "Warm (+1)" },
+            { "key": "Mass", "value": "0.4 kg" },
+            { "key": "Market value", "value": "1.2 chits" }
+          ],
+          "body": {
+            "type": "material",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Wood is quick to work and universally available wherever woodland grows. It builds walls, floors, doors and comfortable beds, but burns rapidly when sparked.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Rapid early shelter, bunk frames, temporary partition walls." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Exterior battlements and blast-resistant reactor enclosures." }
+            ]
+          },
+          "related": [
+            { "name": "Pine", "reason": "conifer timber source" },
+            { "name": "Wall", "reason": "primary construction application" },
+            { "name": "Bed", "reason": "essential furniture recipe" }
+          ]
+        },
+        {
+          "name": "Stone",
+          "summary": "Quarried masonry blocks from cleared rock",
+          "typeChip": "Material",
+          "natureChip": "Natural",
+          "hasColor": true,
+          "color": "#948b80",
+          "icon": {
+            "name": "stone",
+            "colour": "#948b80",
+            "path": "M3 6h18v12H3z M8 6v12M16 6v12M3 12h18"
+          },
+          "definition": "Dressed blocks hewn from mountain stone or rubble chunks. Highly fireproof and sturdy under compression.",
+          "liveState": "In stockpiles · 85 units · quarry depot",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Stuff category", "value": "Stony" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Work to build factor", "value": "135%" },
+            { "key": "Wall HP", "value": "350" },
+            { "key": "Flammability", "value": "None (0%)" },
+            { "key": "Beauty", "value": "Rustic (0)" },
+            { "key": "Mass", "value": "1.2 kg" },
+            { "key": "Market value", "value": "1.8 chits" }
+          ],
+          "body": {
+            "type": "material",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Heavier and slower to assemble than timber, but impervious to fire and capable of supporting multiple upper floor slabs.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Outer defensive perimeters, chimney hearths, permanent storehouses." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Urgent temporary shelters requiring quick erection." }
+            ]
+          },
+          "related": [
+            { "name": "Rock", "reason": "quarried geologic origin" },
+            { "name": "Wall", "reason": "high-durability wall material" },
+            { "name": "Floor", "reason": "smooth stone flagging" }
+          ]
+        },
+        {
+          "name": "Concrete",
+          "summary": "Cast cement and aggregate matrix",
+          "typeChip": "Material",
+          "natureChip": "Manufactured",
+          "hasColor": true,
+          "color": "#6e7782",
+          "icon": {
+            "name": "concrete",
+            "colour": "#6e7782",
+            "path": "M4 4h16v16H4z M9 9h6v6H9z M4 9h5M15 9h5M4 15h5M15 15h5"
+          },
+          "definition": "Synthetic stone composite reconstituted from reclaimed dust and binding agent.",
+          "liveState": "In stockpiles · 40 units · salvage yard",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Stuff category", "value": "Stony" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Work to build factor", "value": "115%" },
+            { "key": "Wall HP", "value": "310" },
+            { "key": "Flammability", "value": "None (0%)" },
+            { "key": "Smoothness", "value": "High" },
+            { "key": "Mass", "value": "0.9 kg" },
+            { "key": "Market value", "value": "1.5 chits" }
+          ],
+          "body": {
+            "type": "material",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Pours cleanly into forms and slab foundations. Provides sterile, flat ground cover for high-traffic colony areas.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Deck plate foundations, factory floors, laboratory rooms." },
+              { "title": "Avoid for", "kind": "avoid", "text": "High-luxury bedrooms without surface cladding." }
+            ]
+          },
+          "related": [
+            { "name": "Pavement", "reason": "historical exterior road surface" },
+            { "name": "Deck Plate", "reason": "industrial floor support" },
+            { "name": "Steel", "reason": "paired reinforcement metal" }
+          ]
+        },
+        {
+          "name": "Steel",
+          "summary": "Rolled structural alloy beams and plates",
+          "typeChip": "Material",
+          "natureChip": "Manufactured",
+          "hasColor": true,
+          "color": "#768b99",
+          "icon": {
+            "name": "steel",
+            "colour": "#768b99",
+            "path": "M5 4h14v4H5z M9 8h6v8H9z M5 16h14v4H5z"
+          },
+          "definition": "High-tensile refined ferrous alloy. Indispensable for machinery, strong doors, conduits, and heavy framing.",
+          "liveState": "In stockpiles · 62 units · workshop",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Stuff category", "value": "Metallic" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Work to build factor", "value": "120%" },
+            { "key": "Wall HP", "value": "450" },
+            { "key": "Flammability", "value": "Low (10%)" },
+            { "key": "Conductivity", "value": "High" },
+            { "key": "Mass", "value": "0.5 kg" },
+            { "key": "Market value", "value": "2.4 chits" }
+          ],
+          "body": {
+            "type": "material",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Provides superior structural integrity. Used wherever high compressive or tensile stress occurs, such as ladders and automatic blast doors.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Doors, vertical ladders, machinery frames, weapon smithing." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Ordinary non-load-bearing room dividers." }
+            ]
+          },
+          "related": [
+            { "name": "Iron Ore", "reason": "unrefined feedstock" },
+            { "name": "Door", "reason": "armoured access hatch" },
+            { "name": "Ladder", "reason": "vertical shaft access" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Structures",
+      "iconPath": "M3 21h18M3 7v14M21 7v14M9 21V11h6v10M2 7l10-4 10 4",
+      "entries": [
+        {
+          "name": "Wall",
+          "summary": "Vertical partition and roof support",
+          "typeChip": "Structure",
+          "natureChip": "Manufactured",
+          "hasColor": false,
+          "icon": {
+            "name": "wall",
+            "colour": "#7fd0e0",
+            "path": "M4 4h16v16H4z M4 9h16 M4 14h16 M10 4v5 M15 9v5 M9 14v6"
+          },
+          "definition": "A 3-metre structural wall block. Blocks line of sight, isolates indoor atmosphere, and holds up roofs.",
+          "liveState": "Colony count · 48 built · 6 under construction",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Cost", "value": "5 × Material" },
+            { "key": "Work to build", "value": "135 ticks" },
+            { "key": "Min skill", "value": "0 (Construction)" },
+            { "key": "Blocks movement", "value": "Yes" },
+            { "key": "Blocks sight", "value": "Yes" },
+            { "key": "Roof support span", "value": "6 cells" },
+            { "key": "Hit points", "value": "Varies by material" },
+            { "key": "Category", "value": "Architect > Structure" }
+          ],
+          "body": {
+            "type": "structure",
+            "sectionLabel": "STRUCTURAL INTEGRITY",
+            "paragraph": "Walls are the cornerstone of shelter. They delimit room enclosures, enabling temperature regulation, indoor beauty ratings, and defense.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Enclosing bedrooms, food storehouse cold-rooms, and outer defensive walls." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Interior bottlenecks where two colonists frequently pass." }
+            ]
+          },
+          "related": [
+            { "name": "Wood", "reason": "common material choice" },
+            { "name": "Door", "reason": "access portal through wall" },
+            { "name": "Floor", "reason": "matching horizontal surface" }
+          ]
+        },
+        {
+          "name": "Door",
+          "summary": "Hinged access portal in a wall run",
+          "typeChip": "Structure",
+          "natureChip": "Manufactured",
+          "hasColor": false,
+          "icon": {
+            "name": "door",
+            "colour": "#7fd0e0",
+            "path": "M5 3h14v18H5z M15 12a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"
+          },
+          "definition": "An operable entrance that allows colonists to traverse rooms while holding back weather and hostile intruders.",
+          "liveState": "Colony count · 7 built · all operational",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Cost", "value": "5 × Material" },
+            { "key": "Work to build", "value": "180 ticks" },
+            { "key": "Min skill", "value": "1 (Construction)" },
+            { "key": "Open speed", "value": "Fast (Wood) / Sturdy (Steel)" },
+            { "key": "Room boundary", "value": "Yes (Encloses room)" },
+            { "key": "Passable", "value": "Yes (When open)" },
+            { "key": "Supports roof", "value": "Yes" },
+            { "key": "Rotatable", "value": "Yes (R key)" }
+          ],
+          "body": {
+            "type": "structure",
+            "sectionLabel": "STRUCTURAL INTEGRITY",
+            "paragraph": "Doors seal rooms against ambient thermal loss while swinging open smoothly for friendly pawns. Steel doors take longer to swing than light timber.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Barracks entries, airlocks, kitchen cleanliness seals." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Placing in lines of high-volume hauling without auto-openers." }
+            ]
+          },
+          "related": [
+            { "name": "Wall", "reason": "wall frame pairing" },
+            { "name": "Wood", "reason": "fast-swinging door material" },
+            { "name": "Steel", "reason": "armoured blast door choice" }
+          ]
+        },
+        {
+          "name": "Ladder",
+          "summary": "Vertical connector between layer levels",
+          "typeChip": "Structure",
+          "natureChip": "Manufactured",
+          "hasColor": false,
+          "icon": {
+            "name": "ladder",
+            "colour": "#7fd0e0",
+            "path": "M7 2v20 M17 2v20 M7 6h10 M7 11h10 M7 16h10"
+          },
+          "definition": "A 1-cell vertical climbway allowing rapid transit straight up and down through shaft holes in slabs.",
+          "liveState": "Colony count · 3 built · terrace access",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Cost", "value": "8 × Material" },
+            { "key": "Work to build", "value": "200 ticks" },
+            { "key": "Min skill", "value": "2 (Construction)" },
+            { "key": "Shaft requirement", "value": "Must have hole above" },
+            { "key": "Footprint", "value": "1 cell" },
+            { "key": "Transit speed", "value": "Moderate climb pace" },
+            { "key": "Carried load rule", "value": "Empty hands only" },
+            { "key": "Layer range", "value": "Single layer step" }
+          ],
+          "body": {
+            "type": "structure",
+            "sectionLabel": "STRUCTURAL INTEGRITY",
+            "paragraph": "Ladders take only one cell of footprint, making them ideal for tight shafts, scout platforms, and terrace climbs.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Watchtowers, cliff exploration, quick vertical shortcuts." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Major freight hauling corridors (haulers require stairs)." }
+            ]
+          },
+          "related": [
+            { "name": "Floor", "reason": "requires unpoured shaft cell above" },
+            { "name": "Steel", "reason": "preferred rigid rung material" },
+            { "name": "Construction", "reason": "fabrication skill" }
+          ]
+        },
+        {
+          "name": "Bed",
+          "summary": "Dedicated sleeping furniture piece",
+          "typeChip": "Structure",
+          "natureChip": "Manufactured",
+          "hasColor": false,
+          "icon": {
+            "name": "bed",
+            "colour": "#7fd0e0",
+            "path": "M2 17v4 M22 17v4 M2 17h20v-5a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v5z M4 10V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v4"
+          },
+          "definition": "A 2-cell sleeping berth. Provides fast rest recovery and prevents the 'Slept on cold ground' negative mood debuff.",
+          "liveState": "Colony count · 4 assigned · 1 free",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Cost", "value": "10 × Wood / Steel" },
+            { "key": "Work to build", "value": "250 ticks" },
+            { "key": "Footprint", "value": "2 cells (Rotatable)" },
+            { "key": "Rest effectiveness", "value": "100% (Normal tier)" },
+            { "key": "Comfort", "value": "+12 mood buffer" },
+            { "key": "Quality tiers", "value": "Awful to Masterwork" },
+            { "key": "Ownership", "value": "Per-colonist assignment" },
+            { "key": "Surgery legal", "value": "Yes" }
+          ],
+          "body": {
+            "type": "structure",
+            "sectionLabel": "STRUCTURAL INTEGRITY",
+            "paragraph": "Every colonist requires an assigned bed to sleep soundly. Built quality directly scales rest replenishment rate.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Private quarters, medical infirmaries, hospital recovery bays." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Damp exterior soil cells subject to rain." }
+            ]
+          },
+          "related": [
+            { "name": "Rest", "reason": "replenished primary need" },
+            { "name": "Wood", "reason": "comfortable frame stuff" },
+            { "name": "Construction", "reason": "crafting builder" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "iconPath": "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
+      "entries": [
+        {
+          "name": "Ration Pack",
+          "summary": "Preserved nutrient bar, never rots",
+          "typeChip": "Item",
+          "natureChip": "Manufactured",
+          "hasColor": false,
+          "icon": {
+            "name": "ration",
+            "colour": "#e0c05a",
+            "path": "M3 7h18v10H3z M7 7v10 M17 7v10 M11 11h2v2h-2z"
+          },
+          "definition": "Sealed pre-collapse emergency rations. Provides 900 nutrition units (0.9 meal value) with zero refrigeration needs.",
+          "liveState": "In stock · 24 packs · pantry shelf",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Nutrition", "value": "900 units" },
+            { "key": "Stack limit", "value": "20" },
+            { "key": "Rot time", "value": "Never (Permanent)" },
+            { "key": "Eaten raw", "value": "Yes (No cooking)" },
+            { "key": "Mood effect", "value": "Neutral (Bland)" },
+            { "key": "Mass", "value": "0.3 kg" },
+            { "key": "Market value", "value": "15 chits" },
+            { "key": "Origin", "value": "Supply drop / Scavenge" }
+          ],
+          "body": {
+            "type": "item",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Ration packs are the lifeline of a newly founded colony before carrot fields ripen. Because they never spoil, keep them reserved for emergencies.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Emergency stores, caravan rations, non-refrigerated pantries." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Feeding high-expectation colonists seeking gourmet meals." }
+            ]
+          },
+          "related": [
+            { "name": "Food", "reason": "replenished hunger need" },
+            { "name": "Carrots", "reason": "fresh agricultural alternative" },
+            { "name": "Supply Drop", "reason": "incident source" }
+          ]
+        },
+        {
+          "name": "Carrots",
+          "summary": "Crisp harvest root vegetable",
+          "typeChip": "Item",
+          "natureChip": "Natural",
+          "hasColor": false,
+          "icon": {
+            "name": "carrots",
+            "colour": "#e07a3c",
+            "path": "M17 3l-3 3M19 6l-3-3M16 5l5-2M13 7l-8 13 3 1 10-9z"
+          },
+          "definition": "Hardy orange root crop yielding 180 nutrition per unit. Eaten raw by colonists without culinary preparation.",
+          "liveState": "In stock · 80 units · cellar",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Nutrition", "value": "180 units" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Per meal count", "value": "5 carrots (= 900 nut.)" },
+            { "key": "Spoilage", "value": "Long shelf life" },
+            { "key": "Eaten raw", "value": "Yes" },
+            { "key": "Mass", "value": "0.08 kg" },
+            { "key": "Crop source", "value": "Carrot Plant" },
+            { "key": "Market value", "value": "2 chits" }
+          ],
+          "body": {
+            "type": "item",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Five carrots constitute a full adult meal. Sown by growers in rich topsoil, carrots provide sustainable food autonomy for the settlement.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Everyday colony sustenance, rapid raw consumption, seed stock." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Leaving out in damp exterior mud pools." }
+            ]
+          },
+          "related": [
+            { "name": "Carrot Plant", "reason": "parent field crop" },
+            { "name": "Plants", "reason": "governing skill" },
+            { "name": "Food", "reason": "satisfied colonist need" }
+          ]
+        },
+        {
+          "name": "Salvage",
+          "summary": "Mixed metallic and electronic debris",
+          "typeChip": "Item",
+          "natureChip": "Manufactured",
+          "hasColor": false,
+          "icon": {
+            "name": "salvage",
+            "colour": "#9a7a5a",
+            "path": "M4 4l16 16M20 4L4 20M4 12h16M12 4v16"
+          },
+          "definition": "Assorted scrap parts, sheared bolts, and warped brackets gathered from dead city ruins.",
+          "liveState": "In stock · 110 units · scrap yard",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Item class", "value": "Commodity / Bulk" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Reclaim yield", "value": "Steel, Wire, Scrap" },
+            { "key": "Work to salvage", "value": "180 ticks" },
+            { "key": "Mass", "value": "0.6 kg" },
+            { "key": "Flammability", "value": "Low (10%)" },
+            { "key": "Market value", "value": "1.0 chit" },
+            { "key": "Origin", "value": "City ruins & rubble" }
+          ],
+          "body": {
+            "type": "item",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Salvage is the raw crude ore of the ruined city. Hauled to reclamation benches to extract refined components.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Reclamation into usable building metals and machine fittings." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Direct use as building stuff without sorting." }
+            ]
+          },
+          "related": [
+            { "name": "Steel", "reason": "reclaimed primary metal" },
+            { "name": "Salvage (Skill)", "reason": "disassembly discipline" },
+            { "name": "Rubble", "reason": "terrain origin" }
+          ]
+        },
+        {
+          "name": "Iron Ore",
+          "summary": "Dense mineral hematite lumps",
+          "typeChip": "Item",
+          "natureChip": "Natural",
+          "hasColor": false,
+          "icon": {
+            "name": "iron-ore",
+            "colour": "#c2653c",
+            "path": "M12 3a9 9 0 0 0-9 9c0 5 4 9 9 9s9-4 9-9a9 9 0 0 0-9-9zm0 4l3 5-3 5-3-5 3-5z"
+          },
+          "definition": "Crude unrefined ore quarried from buried mountain veins. Awaits industrial smelting.",
+          "liveState": "In stock · 54 units · foundry bin",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Item class", "value": "Raw Mineral" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Smelt output", "value": "Refined Steel" },
+            { "key": "Mining yield", "value": "35 per cell" },
+            { "key": "Mass", "value": "1.5 kg" },
+            { "key": "Hardness", "value": "High" },
+            { "key": "Market value", "value": "1.4 chits" },
+            { "key": "Vein depth", "value": "Layers z-1 to z-5" }
+          ],
+          "body": {
+            "type": "item",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Heavier than stone, iron ore sits patiently in stockpiles until the colony erects smelting furnaces.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Foundry stockpiling for long-term industrial steel independence." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Hauling with injured pawns due to high unit mass." }
+            ]
+          },
+          "related": [
+            { "name": "Mining", "reason": "extraction skill" },
+            { "name": "Steel", "reason": "smelted end product" },
+            { "name": "Coal", "reason": "smelting fuel partner" }
+          ]
+        },
+        {
+          "name": "Coal",
+          "summary": "High-carbon combustible fuel chunks",
+          "typeChip": "Item",
+          "natureChip": "Natural",
+          "hasColor": false,
+          "icon": {
+            "name": "coal",
+            "colour": "#424b54",
+            "path": "M12 2l7 5-3 11-8 4-6-6 3-10z M12 2v14M5 16l7-5 7 5"
+          },
+          "definition": "Anthracite carbon mined from deep subterranean strata. Burns at sustained high temperatures.",
+          "liveState": "In stock · 65 units · generator pad",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Item class", "value": "Fuel / Mineral" },
+            { "key": "Stack limit", "value": "75" },
+            { "key": "Energy density", "value": "4,200 kJ / unit" },
+            { "key": "Burn rate", "value": "Steady" },
+            { "key": "Mass", "value": "0.8 kg" },
+            { "key": "Flammability", "value": "Extreme (100%)" },
+            { "key": "Market value", "value": "1.1 chits" },
+            { "key": "Smoke output", "value": "Dense" }
+          ],
+          "body": {
+            "type": "item",
+            "sectionLabel": "SPECIFICATION",
+            "paragraph": "Coal fires generators, smelting crucibles, and communal winter heaters. Always store clear of timber buildings.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Winter heating, furnace fuel, thermal generator power plants." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Storing directly beside wooden furniture or flammable grain." }
+            ]
+          },
+          "related": [
+            { "name": "Iron Ore", "reason": "smelting process partner" },
+            { "name": "Mining", "reason": "extraction discipline" },
+            { "name": "Cold Snap", "reason": "life-saving winter fuel" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Skills",
+      "iconPath": "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+      "entries": [
+        {
+          "name": "Construction",
+          "summary": "Assembly of walls, floors, doors, and furniture",
+          "typeChip": "Skill",
+          "natureChip": "Mental & Physical",
+          "hasColor": false,
+          "icon": {
+            "name": "construction",
+            "colour": "#e0c05a",
+            "path": "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+          },
+          "definition": "The practical engineering knowledge required to erect plumb walls, seal weather doors, and assemble quality beds.",
+          "liveState": "Best in the colony · Jude 14 · Kester 13 · Wrenn 9",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Work speed factor", "value": "WS Curve (80% - 175%)" },
+            { "key": "Botch chance", "value": "12% at Lv 0 -> 0.5% at Lv 15" },
+            { "key": "Furniture quality", "value": "Directly rolled from level" },
+            { "key": "Governing work", "value": "Construct" },
+            { "key": "XP per tick", "value": "+0.11 on hammer stroke" },
+            { "key": "Passion bonus", "value": "100% / 150% / 200%" },
+            { "key": "Relevant items", "value": "Wall, Door, Bed, Ladder" },
+            { "key": "Key stat", "value": "Manipulation, Sight" }
+          ],
+          "body": {
+            "type": "skill",
+            "sectionLabel": "LEVELS",
+            "paragraph": "Higher construction skill dramatically speeds up building cycles and almost eliminates wasted materials from collapsed sites.",
+            "ladder": [
+              { "range": "0–3", "tier": "Novice", "desc": "Frequent botched frames, rough misaligned joints", "color": "#a8453f" },
+              { "range": "4–6", "tier": "Competent", "desc": "Solid functional walls and basic beds", "color": "#9a7a5a" },
+              { "range": "7–10", "tier": "Skilled", "desc": "Consistent quality furniture with high comfort bonus", "color": "#c9cdd2" },
+              { "range": "11–14", "tier": "Expert", "desc": "Fast assembly, masterwork beds, negligible botch rate", "color": "#e0c05a" },
+              { "range": "15–20", "tier": "Master", "desc": "Legendary craftsmanship, instant structure erection", "color": "#f5c518" }
+            ]
+          },
+          "related": [
+            { "name": "Construct", "reason": "associated work assignment" },
+            { "name": "Wall", "reason": "primary construction piece" },
+            { "name": "Bed", "reason": "furniture quality recipient" }
+          ]
+        },
+        {
+          "name": "Mining",
+          "summary": "Pickaxe quarrying of rock, ores, and caverns",
+          "typeChip": "Skill",
+          "natureChip": "Physical",
+          "hasColor": false,
+          "icon": {
+            "name": "mining",
+            "colour": "#9a7a5a",
+            "path": "M14 2l8 8-4 4-8-8 4-4zm-8 8l4 4-8 8-2-2 6-10z"
+          },
+          "definition": "The stamina and precision needed to cleave through solid stone faces, buried coal seams, and subterranean veins.",
+          "liveState": "Best in the colony · Kester 12 · Sable 10 · Jude 4",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Mining speed", "value": "WS Curve (65% - 190%)" },
+            { "key": "Ore yield factor", "value": "80% to 125%" },
+            { "key": "Governing work", "value": "Mine" },
+            { "key": "Exertion cost", "value": "High hunger / rest burn" },
+            { "key": "XP per stroke", "value": "+0.14 XP" },
+            { "key": "Relevant terrain", "value": "Rock, Iron Ore, Coal Seam" },
+            { "key": "Key stat", "value": "Moving, Manipulation" },
+            { "key": "Tool efficiency", "value": "Scales pickaxe swing" }
+          ],
+          "body": {
+            "type": "skill",
+            "sectionLabel": "LEVELS",
+            "paragraph": "Miners spend hours swinging heavy pickaxes against rock faces. Skilled miners carve chambers in hours rather than days.",
+            "ladder": [
+              { "range": "0–3", "tier": "Novice", "desc": "Exhausts quickly, chips small stone shards", "color": "#a8453f" },
+              { "range": "4–6", "tier": "Competent", "desc": "Steady progress through limestone and shale", "color": "#9a7a5a" },
+              { "range": "7–10", "tier": "Skilled", "desc": "Clean vein separation with maximum ore retention", "color": "#c9cdd2" },
+              { "range": "11–14", "tier": "Expert", "desc": "Tunnels effortlessly through deep mountain rock", "color": "#e0c05a" },
+              { "range": "15–20", "tier": "Master", "desc": "Carves vast subterranean halls at relentless pace", "color": "#f5c518" }
+            ]
+          },
+          "related": [
+            { "name": "Mine", "reason": "governing work type" },
+            { "name": "Rock", "reason": "primary mining terrain" },
+            { "name": "Iron Ore", "reason": "valuable mineral target" }
+          ]
+        },
+        {
+          "name": "Plants",
+          "summary": "Agricultural sowing, tending, and harvesting",
+          "typeChip": "Skill",
+          "natureChip": "Natural & Mental",
+          "hasColor": false,
+          "icon": {
+            "name": "plants",
+            "colour": "#68c05e",
+            "path": "M12 22v-9 M12 13c-4-4-5-8-1-11 4 3 3 7 1 11z M12 15c4-2 7-1 8 3-3 2-6 0-8-3z"
+          },
+          "definition": "Botanical understanding of crop sunlight cycles, soil fertility requirements, and clean harvest cuts.",
+          "liveState": "Best in the colony · Wrenn 11 · Jude 8 · Sable 3",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Sowing speed", "value": "170 ticks base (Scales with skill)" },
+            { "key": "Harvest speed", "value": "200 ticks base" },
+            { "key": "Harvest yield", "value": "5 carrots / plant (98% chance)" },
+            { "key": "Governing work", "value": "Grow" },
+            { "key": "Key crop", "value": "Carrot Plant" },
+            { "key": "XP per harvest", "value": "+24 XP" },
+            { "key": "Fertility check", "value": "Ensures valid soil" },
+            { "key": "Key stat", "value": "Manipulation, Sight" }
+          ],
+          "body": {
+            "type": "skill",
+            "sectionLabel": "LEVELS",
+            "paragraph": "Speed at the hoe depends directly on plant skill. Expert growers harvest fields rapidly before frost or dusk.",
+            "ladder": [
+              { "range": "0–3", "tier": "Novice", "desc": "Slow seed placement, occasional botched crop cuts", "color": "#a8453f" },
+              { "range": "4–6", "tier": "Competent", "desc": "Reliable carrot field yields and regular re-sowing", "color": "#9a7a5a" },
+              { "range": "7–10", "tier": "Skilled", "desc": "Fast garden turnover with zero lost yields", "color": "#c9cdd2" },
+              { "range": "11–14", "tier": "Expert", "desc": "Maintains extensive acres of crops single-handedly", "color": "#e0c05a" },
+              { "range": "15–20", "tier": "Master", "desc": "Peerless agriculturalist feeding an entire city", "color": "#f5c518" }
+            ]
+          },
+          "related": [
+            { "name": "Grow", "reason": "associated field labor" },
+            { "name": "Carrot Plant", "reason": "staple field species" },
+            { "name": "Carrots", "reason": "harvested food item" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Work types",
+      "iconPath": "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
+      "entries": [
+        {
+          "name": "Construct",
+          "summary": "Assemble designated structures and furniture",
+          "typeChip": "Work type",
+          "natureChip": "Labor",
+          "hasColor": false,
+          "icon": {
+            "name": "work-construct",
+            "colour": "#e0c05a",
+            "path": "M2 22l8-8 4 4-8 8H2v-4z M17 3l4 4-2 2-4-4 2-2z"
+          },
+          "definition": "Workers assigned to Construct build designated walls, install doors, pave flooring slabs, and frame beds.",
+          "liveState": "Currently assigned · 2 colonists active",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Priority order", "value": "Priority 9 in Work Grid" },
+            { "key": "Governing skill", "value": "Construction" },
+            { "key": "Requires tools", "value": "Hammer" },
+            { "key": "Prerequisite", "value": "Materials hauled to site" },
+            { "key": "Urgency rating", "value": "Standard" },
+            { "key": "Auto-cleans cell", "value": "Yes (Clears debris)" },
+            { "key": "Exertion level", "value": "Medium" },
+            { "key": "Relevant tool", "value": "Architect > Structure" }
+          ],
+          "body": {
+            "type": "work",
+            "sectionLabel": "RESPONSIBILITIES",
+            "paragraph": "Construction workers will fetch needed supplies from stockpiles and pound them into finished buildings.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Pawns with passion in Construction and good mobility." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Pawns with damaged manipulation prone to building botches." }
+            ]
+          },
+          "related": [
+            { "name": "Construction", "reason": "governing capability skill" },
+            { "name": "Wall", "reason": "primary construction target" },
+            { "name": "Haul", "reason": "dependent material hauling" }
+          ]
+        },
+        {
+          "name": "Grow",
+          "summary": "Plow, sow, and harvest agricultural crops",
+          "typeChip": "Work type",
+          "natureChip": "Labor",
+          "hasColor": false,
+          "icon": {
+            "name": "work-grow",
+            "colour": "#68c05e",
+            "path": "M12 2a10 10 0 0 0-10 10c0 4 3 7 7 8v2h6v-2c4-1 7-4 7-8a10 10 0 0 0-10-10zm0 15v-6"
+          },
+          "definition": "Field hands sow designated growing zone cells, tend crops through maturation, and reap ripe food.",
+          "liveState": "Currently assigned · 1 colonist active",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Priority order", "value": "Priority 10 in Work Grid" },
+            { "key": "Governing skill", "value": "Plants" },
+            { "key": "Requires tool", "value": "Hoe & Sickle" },
+            { "key": "Daylight bound", "value": "Grows during day window" },
+            { "key": "Auto re-sow", "value": "Yes (When zone enabled)" },
+            { "key": "Yield hauling", "value": "Leaves in cell for Haulers" },
+            { "key": "Exertion level", "value": "Medium" },
+            { "key": "Relevant zone", "value": "Growing Zone tool" }
+          ],
+          "body": {
+            "type": "work",
+            "sectionLabel": "RESPONSIBILITIES",
+            "paragraph": "Growers ensure continuous colony nutrition. In harvest season, prioritize Grow to collect food before spoilage or rot sets in.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Dedicated agriculturalists with high outdoor movement speed." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Night owls sleeping during peak daylight hours." }
+            ]
+          },
+          "related": [
+            { "name": "Plants", "reason": "governing skill" },
+            { "name": "Carrot Plant", "reason": "managed field crop" },
+            { "name": "Haul", "reason": "subsequent harvest retrieval" }
+          ]
+        },
+        {
+          "name": "Mine",
+          "summary": "Excavate rock walls and subterranean mineral seams",
+          "typeChip": "Work type",
+          "natureChip": "Labor",
+          "hasColor": false,
+          "icon": {
+            "name": "work-mine",
+            "colour": "#9a7a5a",
+            "path": "M3 21l8-8 3 3-8 8H3v-3zm14-14l4 4-2 2-4-4 2-2z M10 4l6 6"
+          },
+          "definition": "Miners take pickaxes into mountains and tunnels to excavate living space and harvest raw mineral stock.",
+          "liveState": "Currently assigned · 2 colonists active",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Priority order", "value": "Priority 11 in Work Grid" },
+            { "key": "Governing skill", "value": "Mining" },
+            { "key": "Requires tool", "value": "Pickaxe" },
+            { "key": "Yield left on floor", "value": "Stone / Ore chunks" },
+            { "key": "Urgency rating", "value": "High when digging bunkers" },
+            { "key": "Dust hazard", "value": "Tracked into clean rooms" },
+            { "key": "Exertion level", "value": "Heavy physical" },
+            { "key": "Relevant tool", "value": "Designate > Mine (M)" }
+          ],
+          "body": {
+            "type": "work",
+            "sectionLabel": "RESPONSIBILITIES",
+            "paragraph": "Mining is rigorous, dirty, and essential for expansion. Heavy pickaxe strokes slowly crumble rock blocks into manageable hauled chunks.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "High-stamina, strong colonists with Mining passion." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Weak or sick colonists prone to exhaustion." }
+            ]
+          },
+          "related": [
+            { "name": "Mining", "reason": "governing skill" },
+            { "name": "Rock", "reason": "excavated terrain" },
+            { "name": "Haul", "reason": "partner work hauling chunks" }
+          ]
+        },
+        {
+          "name": "Haul",
+          "summary": "Transport items and commodities to stockpiles",
+          "typeChip": "Work type",
+          "natureChip": "Labor",
+          "hasColor": false,
+          "icon": {
+            "name": "work-haul",
+            "colour": "#7fd0e0",
+            "path": "M5 9h14M5 15h14 M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5z"
+          },
+          "definition": "Porters carry harvested timber, carrots, quarried chunks, and supply drops into organized stockpile zones.",
+          "liveState": "Currently assigned · 3 colonists active",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Priority order", "value": "Priority 13 in Work Grid" },
+            { "key": "Governing skill", "value": "Move speed & Capacity" },
+            { "key": "Load capacity", "value": "1 full stack per trip" },
+            { "key": "Carried visual", "value": "Rides in pawn palms" },
+            { "key": "Water behavior", "value": "Carried load hidden" },
+            { "key": "Stairs vs ladder", "value": "Cannot carry up ladders" },
+            { "key": "Exertion level", "value": "Pace-dependent" },
+            { "key": "Relevant zone", "value": "Stockpile Zone" }
+          ],
+          "body": {
+            "type": "work",
+            "sectionLabel": "RESPONSIBILITIES",
+            "paragraph": "Without hauling, builders stall for lack of wood and harvested crops rot in the mud. A dedicated porter keeps colony circulation flowing.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Fast-walking colonists with healthy limbs and no heavy skills." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Injured pawns with leg fractures or reduced carrying limits." }
+            ]
+          },
+          "related": [
+            { "name": "Wood", "reason": "hauled construction resource" },
+            { "name": "Carrots", "reason": "hauled perishable food" },
+            { "name": "Moving", "reason": "governing pawn capacity" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Needs",
+      "iconPath": "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z",
+      "entries": [
+        {
+          "name": "Food",
+          "summary": "Metabolic fuel, drops steadily each interval",
+          "typeChip": "Need",
+          "natureChip": "Biological",
+          "hasColor": false,
+          "icon": {
+            "name": "need-food",
+            "colour": "#e07a3c",
+            "path": "M18 8h1a4 4 0 0 1 0 8h-1 M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z M6 1v3 M10 1v3 M14 1v3"
+          },
+          "definition": "The physiological hunger meter. A colonist burns roughly 1,600 nutrition points per day, demanding regular meals.",
+          "liveState": "Colony average · 72% saturated · 0 starving",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Daily burn", "value": "1,600 units / day" },
+            { "key": "Cadence", "value": "400 intervals / day" },
+            { "key": "Meal satisfied", "value": "900 units per ration" },
+            { "key": "Hungry threshold", "value": "Below 25% (Warning)" },
+            { "key": "Starvation state", "value": "0% (Health damage)" },
+            { "key": "Pace penalty", "value": "Pawn slows as hunger dips" },
+            { "key": "Alert raised", "value": "ui.alert.starvation" },
+            { "key": "Meal search", "value": "Scans closest edible food" }
+          ],
+          "body": {
+            "type": "need",
+            "sectionLabel": "METABOLISM",
+            "paragraph": "Hunger steadily pulls pawns away from tasks to eat. Keeping ration packs or carrots stocked near sleeping bunks minimizes transit downtime.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Maintaining full nutrition bars to secure the 'Well Fed' mood buff." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Letting pawns venture into deep mines without pocket rations." }
+            ]
+          },
+          "related": [
+            { "name": "Ration Pack", "reason": "high-nutrition emergency meal" },
+            { "name": "Carrots", "reason": "cultivated crop food" },
+            { "name": "Mood", "reason": "impacted by starvation" }
+          ]
+        },
+        {
+          "name": "Rest",
+          "summary": "Neurological fatigue, restored by sleep",
+          "typeChip": "Need",
+          "natureChip": "Biological",
+          "hasColor": false,
+          "icon": {
+            "name": "need-rest",
+            "colour": "#7fd0e0",
+            "path": "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+          },
+          "definition": "The sleep replenishment meter. Drains over 16 wakeful hours and requires 8 hours of uninterrupted bedding rest.",
+          "liveState": "Colony average · 64% rested · all awake",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Drain rate", "value": "Full bar drained in 16 hours" },
+            { "key": "Bed recovery", "value": "Restored in 7-8 hours" },
+            { "key": "Floor sleep", "value": "Slow recovery + mood penalty" },
+            { "key": "Collapse point", "value": "Zero rest = collapse on spot" },
+            { "key": "Bed quality", "value": "Directly speeds recharge" },
+            { "key": "Arrival vs collapse", "value": "Arrival at bed beats collapse" },
+            { "key": "Pose", "value": "Lying pose in bed bounds" },
+            { "key": "Disturbed sleep", "value": "Walking past bed wakes pawn" }
+          ],
+          "body": {
+            "type": "need",
+            "sectionLabel": "METABOLISM",
+            "paragraph": "Exhausted pawns suffer heavy work rate penalties and eventually drop unconscious. Assigned beds protect colonists from the cold ground penalty.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Assigning dedicated bedrooms with high comfort beds." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Drafting exhausted colonists for non-emergency haul runs." }
+            ]
+          },
+          "related": [
+            { "name": "Bed", "reason": "primary rest appliance" },
+            { "name": "Mood", "reason": "suffers from sleep deprivation" },
+            { "name": "Night Owl", "reason": "shifted rest schedule trait" }
+          ]
+        },
+        {
+          "name": "Mood",
+          "summary": "Psychological equilibrium and mental resilience",
+          "typeChip": "Need",
+          "natureChip": "Psychological",
+          "hasColor": false,
+          "icon": {
+            "name": "need-mood",
+            "colour": "#e0c05a",
+            "path": "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M8 14s1.5 2 4 2 4-2 4-2 M9 9h.01 M15 9h.01"
+          },
+          "definition": "The balance of all positive and negative colonist experiences. High mood inspires; low mood leads to breakdowns.",
+          "liveState": "Colony status · Content · lowest Jude (58%)",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Scale", "value": "0 to 1,000 points" },
+            { "key": "Minor break threshold", "value": "35% (Sad wander)" },
+            { "key": "Major break threshold", "value": "20% (Tantrum, Daze)" },
+            { "key": "Extreme break threshold", "value": "10% (Catatonia)" },
+            { "key": "Bands", "value": "Joyful / Content / Unhappy / Grim" },
+            { "key": "Positive buffers", "value": "Fine meal, good bed, recreation" },
+            { "key": "Negative drains", "value": "Hunger, cold, darkness, corpses" },
+            { "key": "Inspiration chance", "value": "Available above 85%" }
+          ],
+          "body": {
+            "type": "need",
+            "sectionLabel": "METABOLISM",
+            "paragraph": "Colonist mood reacts to physical comfort, social interactions, and environmental beauty. Watching mood alerts prevents sudden mental breaks.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Keeping comfortable rooms, balanced work hours, and good meals." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Stacking unroofed sleep, darkness, and rotten food debuffs." }
+            ]
+          },
+          "related": [
+            { "name": "Food", "reason": "vital physical contributor" },
+            { "name": "Rest", "reason": "exhaustion directly lowers mood" },
+            { "name": "Bed", "reason": "comfort mood protector" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Traits",
+      "iconPath": "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+      "entries": [
+        {
+          "name": "Hard Worker",
+          "summary": "Innate work pace bonus across all jobs",
+          "typeChip": "Trait",
+          "natureChip": "Personality",
+          "hasColor": false,
+          "icon": {
+            "name": "trait-hardworker",
+            "colour": "#e0c05a",
+            "path": "M13 2L3 14h9l-1 8 10-12h-9l1-8z"
+          },
+          "definition": "An unstoppable work ethic. This colonist attacks jobs with vigor and moves quickly between work assignments.",
+          "liveState": "In colony · Jude holds this trait",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Global work speed", "value": "+20%" },
+            { "key": "Rest drain rate", "value": "+10%" },
+            { "key": "Idleness tolerance", "value": "Low (Prefers having tasks)" },
+            { "key": "Mental break resist", "value": "Slightly elevated" },
+            { "key": "Reroll probability", "value": "4.2%" },
+            { "key": "Opposite trait", "value": "Slothful" },
+            { "key": "Affects skills", "value": "All manual tasks" },
+            { "key": "Mood impact", "value": "Unhappy when completely idle" }
+          ],
+          "body": {
+            "type": "trait",
+            "sectionLabel": "EFFECTS & BEHAVIOUR",
+            "paragraph": "Hard Workers are the productive core of any new colony. They build, dig, and harvest faster than their peers, though they tire a little sooner.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Assigning to high-volume hauling, construction, or mining." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Leaving without designated jobs for extended periods." }
+            ]
+          },
+          "related": [
+            { "name": "Construct", "reason": "amplified labor rate" },
+            { "name": "Mine", "reason": "fast quarry progress" },
+            { "name": "Rest", "reason": "elevated rest consumption" }
+          ]
+        },
+        {
+          "name": "Night Owl",
+          "summary": "Thrives during nighttime hours, dislikes sun",
+          "typeChip": "Trait",
+          "natureChip": "Circadian",
+          "hasColor": false,
+          "icon": {
+            "name": "trait-nightowl",
+            "colour": "#7fd0e0",
+            "path": "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z M19 3v4 M21 5h-4"
+          },
+          "definition": "Prefers to be awake while the world sleeps. Receives mood bonuses at night and penalties in daylight.",
+          "liveState": "In colony · Kester holds this trait",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Night mood bonus", "value": "+16 (23:00 to 06:00)" },
+            { "key": "Day mood penalty", "value": "-10 (11:00 to 18:00)" },
+            { "key": "Optimal schedule", "value": "Sleep during afternoon" },
+            { "key": "Work penalty at night", "value": "None (Full speed in dark)" },
+            { "key": "Reroll probability", "value": "5.0%" },
+            { "key": "Compatible work", "value": "Night watch, cooking, hauling" },
+            { "key": "Opposite trait", "value": "None" },
+            { "key": "Darkness debuff", "value": "Exempt" }
+          ],
+          "body": {
+            "type": "trait",
+            "sectionLabel": "EFFECTS & BEHAVIOUR",
+            "paragraph": "Adjusting a Night Owl's schedule grid to sleep through midday unlocks continuous +16 happiness with zero downside.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Operating night shifts, fire watch, and late-night kitchen baking." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Forcing standard 9-to-5 daylight field cultivation." }
+            ]
+          },
+          "related": [
+            { "name": "Rest", "reason": "schedule alignment" },
+            { "name": "Mood", "reason": "positive nightly mood lift" },
+            { "name": "Hard Worker", "reason": "compatible synergy" }
+          ]
+        },
+        {
+          "name": "Iron Stomach",
+          "summary": "Immune to food poisoning from raw meals",
+          "typeChip": "Trait",
+          "natureChip": "Physiological",
+          "hasColor": false,
+          "icon": {
+            "name": "trait-ironstomach",
+            "colour": "#68c05e",
+            "path": "M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8zm0 11l-3-3 1.4-1.4 1.6 1.6 3.6-3.6 1.4 1.4-5 5z"
+          },
+          "definition": "A cast-iron digestive tract capable of eating raw vegetables, unwashed forage, and dubious field rations without nausea.",
+          "liveState": "In colony · Wrenn holds this trait",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Food poison chance", "value": "0% (Immune)" },
+            { "key": "Raw food penalty", "value": "Ignored" },
+            { "key": "Rotten food resist", "value": "Extreme" },
+            { "key": "Reroll probability", "value": "3.8%" },
+            { "key": "Digestion speed", "value": "Normal" },
+            { "key": "Survival rating", "value": "Very High" },
+            { "key": "Sick days lost", "value": "Zero" },
+            { "key": "Compatible food", "value": "Carrots, Rations, Forage" }
+          ],
+          "body": {
+            "type": "trait",
+            "sectionLabel": "EFFECTS & BEHAVIOUR",
+            "paragraph": "Colonists with Iron Stomach never suffer bed-confining food poisoning, making them ideal scouts and survival pioneers.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Consuming raw carrots in the field without kitchen cooking." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Wasting expensive gourmet luxury rations on them." }
+            ]
+          },
+          "related": [
+            { "name": "Food", "reason": "immune to food illness" },
+            { "name": "Carrots", "reason": "eats raw without hesitation" },
+            { "name": "Ration Pack", "reason": "staple diet" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "iconPath": "M22 12h-4l-3 9L9 3l-3 9H2",
+      "entries": [
+        {
+          "name": "Consciousness",
+          "summary": "Primary neurological awareness and cognition",
+          "typeChip": "Capacity",
+          "natureChip": "Vital",
+          "hasColor": false,
+          "icon": {
+            "name": "cap-consciousness",
+            "colour": "#e0c05a",
+            "path": "M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z M9 21h6"
+          },
+          "definition": "The central cognitive capacity that caps all other pawn functions. If consciousness drops to zero, the colonist dies.",
+          "liveState": "Colony status · All pawns 100% conscious",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Baseline", "value": "100%" },
+            { "key": "Lethal floor", "value": "0% (Brain death)" },
+            { "key": "Unconscious threshold", "value": "Below 30% (Coma)" },
+            { "key": "Governing organ", "value": "Brain" },
+            { "key": "Affected by", "value": "Pain, Blood loss, Concussion" },
+            { "key": "Caps other stats", "value": "Moving, Manipulation, Sight" },
+            { "key": "Treatment", "value": "Bed rest, Medicine" },
+            { "key": "Recovery rate", "value": "Tied to tending quality" }
+          ],
+          "body": {
+            "type": "health",
+            "sectionLabel": "VITAL CAPACITY",
+            "paragraph": "Consciousness dictates how sharply a colonist thinks and acts. Any head trauma or severe blood loss degrades overall efficiency.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Keeping protected with head helmets and safe rear lines." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Allowing pawns with concussion to operate complex building sites." }
+            ]
+          },
+          "related": [
+            { "name": "Moving", "reason": "proportional to consciousness" },
+            { "name": "Rest", "reason": "restores mental fog" },
+            { "name": "Bed", "reason": "recovery recuperation spot" }
+          ]
+        },
+        {
+          "name": "Moving",
+          "summary": "Locomotion speed across grid terrain and steps",
+          "typeChip": "Capacity",
+          "natureChip": "Somatic",
+          "hasColor": false,
+          "icon": {
+            "name": "cap-moving",
+            "colour": "#7fd0e0",
+            "path": "M13 4a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm-2 4l-4 6 3 2 2-4 3 4 5-1-3-4-2 1-1-4z M7 22l4-8"
+          },
+          "definition": "The physical ability to walk, run, climb ladders, and step terrace slopes. Governed by legs, feet, and spine.",
+          "liveState": "Colony status · 100% baseline mobility",
+          "primaryAction": "Who has it",
+          "properties": [
+            { "key": "Baseline pace", "value": "4.6 m / s" },
+            { "key": "Immobile floor", "value": "0% (Bedridden)" },
+            { "key": "Governing parts", "value": "Left Leg, Right Leg, Spine" },
+            { "key": "Terrace climb cost", "value": "Scaled by moving capacity" },
+            { "key": "Water wade drag", "value": "Compounded by low moving" },
+            { "key": "Affected by", "value": "Fractures, Cuts, Fatigue" },
+            { "key": "Key for work", "value": "Haul, Firefight, Hunt" },
+            { "key": "Tended with", "value": "Splints, Medicine, Rest" }
+          ],
+          "body": {
+            "type": "health",
+            "sectionLabel": "VITAL CAPACITY",
+            "paragraph": "Moving speed governs how quickly colonists cross the meadow, climb terrace steps, and deliver items to stockpiles.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Rapid response firefighting and high-throughput hauling." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Sending leg-fractured pawns on long-distance foraging trips." }
+            ]
+          },
+          "related": [
+            { "name": "Haul", "reason": "heavily dependent labor" },
+            { "name": "Grass", "reason": "standard crossing terrain" },
+            { "name": "Pavement", "reason": "fast running surface" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fauna",
+      "iconPath": "M12 5c.67 0 1.35.09 2 .26V2h2v4.32a9.98 9.98 0 0 1 4.7 3.5l2.12-2.12 1.42 1.42-2.3 2.3A10 10 0 0 1 22 17h-2a8 8 0 0 0-8-8c-4.42 0-8 3.58-8 8H2a10 10 0 0 1 10-12z",
+      "entries": [
+        {
+          "name": "Scraphound",
+          "summary": "Domesticated canine survivor, keen hauler",
+          "typeChip": "Fauna",
+          "natureChip": "Biological",
+          "hasColor": false,
+          "icon": {
+            "name": "fauna-scraphound",
+            "colour": "#c9cdd2",
+            "path": "M10 5l4 3 4-2-1 5 3 3-4 1-2 5-3-4-5 1 2-5-3-3 4-1z"
+          },
+          "definition": "A hardy cross-breed hound adapted to city ruins. Loyal, trainable for hauling, and alert to hostile feral synths.",
+          "liveState": "In wild · 2 spotted near northern terrace",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Wildness", "value": "25% (Easy to tame)" },
+            { "key": "Diet", "value": "Omnivorous (Scraps, Meat)" },
+            { "key": "Training potential", "value": "Obedience, Hauling" },
+            { "key": "Move speed", "value": "5.2 m/s (Fast)" },
+            { "key": "Life span", "value": "12 years" },
+            { "key": "Meat yield", "value": "45 raw meat" },
+            { "key": "Leather yield", "value": "20 leather" },
+            { "key": "Manhunter chance", "value": "Low (5%)" }
+          ],
+          "body": {
+            "type": "fauna",
+            "sectionLabel": "ECOLOGY & TEMPERAMENT",
+            "paragraph": "Scraphounds roam the meadow perimeter scavenging scraps. Tamed hounds become invaluable colony haulers.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Taming for automatic stockpile hauling and early alert barking." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Allowing them access to unprotected cooked meal pantries." }
+            ]
+          },
+          "related": [
+            { "name": "Haul", "reason": "trainable animal duty" },
+            { "name": "Feral Synth", "reason": "natural mechanical rival" },
+            { "name": "Duct Rat", "reason": "prey animal" }
+          ]
+        },
+        {
+          "name": "Duct Rat",
+          "summary": "Prolific rodent pest of subterranean tunnels",
+          "typeChip": "Fauna",
+          "natureChip": "Biological",
+          "hasColor": false,
+          "icon": {
+            "name": "fauna-ductrat",
+            "colour": "#9a7a5a",
+            "path": "M17 17c-2 1-4 1-6 0-3-2-6-1-8 2m16-6c-1-3-4-5-7-4-2 0-3 2-4 4m6-2a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"
+          },
+          "definition": "Ubiquitous city vermin that infests abandoned drainage conduits. Harmless alone, but chews food stockpiles.",
+          "liveState": "In wild · 8 active in sub-level shafts",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Wildness", "value": "10%" },
+            { "key": "Diet", "value": "Omnivorous (Grains, Carrots)" },
+            { "key": "Training potential", "value": "None" },
+            { "key": "Move speed", "value": "3.8 m/s" },
+            { "key": "Life span", "value": "3 years" },
+            { "key": "Meat yield", "value": "12 raw meat" },
+            { "key": "Pest rating", "value": "High (Eats crops)" },
+            { "key": "Hunt difficulty", "value": "Very Easy" }
+          ],
+          "body": {
+            "type": "fauna",
+            "sectionLabel": "ECOLOGY & TEMPERAMENT",
+            "paragraph": "Duct rats reproduce rapidly in dark corners. Colony hunters should cull them to preserve food reserves.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Target practice for novice hunters, emergency meat source." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Allowing unchecked entry into winter root cellars." }
+            ]
+          },
+          "related": [
+            { "name": "Carrots", "reason": "targeted food source" },
+            { "name": "Scraphound", "reason": "natural predator" },
+            { "name": "Rubble", "reason": "common nesting terrain" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Flora",
+      "iconPath": "M12 2a9 9 0 0 0-9 9c0 4.17 2.84 7.67 6.69 8.69L8 22h8l-1.69-2.31C18.16 18.67 21 15.17 21 11a9 9 0 0 0-9-9z",
+      "entries": [
+        {
+          "name": "Carrot Plant",
+          "summary": "Domesticated root crop in growing zones",
+          "typeChip": "Flora",
+          "natureChip": "Agricultural",
+          "hasColor": false,
+          "icon": {
+            "name": "flora-carrotplant",
+            "colour": "#e07a3c",
+            "path": "M12 2L8 8h8l-4-6zm-4 8l-2 10 6 2 6-2-2-10H8z"
+          },
+          "definition": "The primary agricultural crop of Odyssey. Takes 130,000 window ticks across four days of daylight growth.",
+          "liveState": "In field · 24 plants growing · 80% ripe",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Grow ticks", "value": "130,000 window ticks" },
+            { "key": "Daylight required", "value": "32,500 ticks/day window" },
+            { "key": "Sow work ticks", "value": "170 ticks" },
+            { "key": "Harvest work ticks", "value": "200 ticks" },
+            { "key": "Yield count", "value": "5 × Carrots" },
+            { "key": "Min fertility", "value": "70% (Grass or Soil)" },
+            { "key": "Flammability", "value": "Low (20%)" },
+            { "key": "Harvest item", "value": "Item_Carrots" }
+          ],
+          "body": {
+            "type": "flora",
+            "sectionLabel": "BOTANICAL PROFILE",
+            "paragraph": "Carrots are exceptionally dependable. A modest 5×5 plot in meadow soil yields 125 carrots per cycle, easily feeding five colonists.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Sowing in sunny meadow soil directly beside base kitchens." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Sowing in unfertile gravel or shadowy cave mouths." }
+            ]
+          },
+          "related": [
+            { "name": "Carrots", "reason": "harvested food product" },
+            { "name": "Plants", "reason": "governing skill" },
+            { "name": "Grow", "reason": "field assignment" }
+          ]
+        },
+        {
+          "name": "Pine",
+          "summary": "Evergreen conifer tree yielding felled timber",
+          "typeChip": "Flora",
+          "natureChip": "Wild",
+          "hasColor": false,
+          "icon": {
+            "name": "flora-pine",
+            "colour": "#4d9e5a",
+            "path": "M12 2l-5 6h3l-4 5h3l-5 6h16l-5-6h3l-4-5h3l-5-6z M11 20v4h2v-4"
+          },
+          "definition": "Stout evergreen conifer native to the highland meadow terraces. Felled with axes to provide wood timber.",
+          "liveState": "In wild · 64 mature trees in meadow",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Wood yield", "value": "35 × Wood" },
+            { "key": "Work to fell", "value": "800 ticks" },
+            { "key": "Growth time", "value": "18 days to mature" },
+            { "key": "Hit points", "value": "250" },
+            { "key": "Min fertility", "value": "50%" },
+            { "key": "Cover value", "value": "25% (Combat cover)" },
+            { "key": "Flammability", "value": "Medium (50%)" },
+            { "key": "Harvest tool", "value": "Designate > Fell (C)" }
+          ],
+          "body": {
+            "type": "flora",
+            "sectionLabel": "BOTANICAL PROFILE",
+            "paragraph": "Pines ring the clearing and cluster along terrace banks. Felling them supplies the raw logs needed for early walls, doors, and beds.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Continuous lumber supply, windbreaks, natural decorative cover." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Leaving inside agricultural zone borders where they block crops." }
+            ]
+          },
+          "related": [
+            { "name": "Wood", "reason": "yielded construction lumber" },
+            { "name": "Construct", "reason": "consumes wood product" },
+            { "name": "Grass", "reason": "natural forest floor" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "iconPath": "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+      "entries": [
+        {
+          "name": "Supply Drop",
+          "summary": "Orbital canister parachuting rations to the colony",
+          "typeChip": "Event",
+          "natureChip": "Incident",
+          "hasColor": false,
+          "icon": {
+            "name": "event-supplydrop",
+            "colour": "#7fd0e0",
+            "path": "M12 2a8 8 0 0 0-8 8c0 3 2 5 4 6l4 6 4-6c2-1 4-3 4-6a8 8 0 0 0-8-8zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"
+          },
+          "definition": "A high-altitude orbital drop pod descending from 120 metres, delivering sealed rations to a surface cell.",
+          "liveState": "Incident ledger · 1 recorded · Day 2 arrival",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Incident Def", "value": "Incident_SupplyDrop" },
+            { "key": "Descent height", "value": "120 m (6 seconds fall)" },
+            { "key": "Target cell", "value": "Topmost walkable surface" },
+            { "key": "Payload", "value": "10 to 20 × Ration Pack" },
+            { "key": "Audio cue", "value": "Skyfaller chime & sonic wash" },
+            { "key": "Trigger", "value": "Debug Events tab / Storyteller" },
+            { "key": "Impact damage", "value": "None (Soft chute landing)" },
+            { "key": "Ledger entry", "value": "Saved & hashed memory" }
+          ],
+          "body": {
+            "type": "event",
+            "sectionLabel": "INCIDENT PROFILE",
+            "paragraph": "The skyfaller streaks down through the cloud cover at constant speed, landing softly with a landing pad on the surface before popping open.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Replenishing depleted pantry stocks when early crops fail." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Leaving landed rations exposed in rain where duct rats gather." }
+            ]
+          },
+          "related": [
+            { "name": "Ration Pack", "reason": "delivered food supplies" },
+            { "name": "Haul", "reason": "urgent priority to retrieve drop" },
+            { "name": "Food", "reason": "satisfied colony need" }
+          ]
+        },
+        {
+          "name": "Cold Snap",
+          "summary": "Sudden sharp drop in ambient outdoor temperature",
+          "typeChip": "Event",
+          "natureChip": "Incident",
+          "hasColor": false,
+          "icon": {
+            "name": "event-coldsnap",
+            "colour": "#5ec8dc",
+            "path": "M12 2v20 M2 12h20 M4.93 4.93l14.14 14.14 M4.93 19.07l14.14-14.14"
+          },
+          "definition": "An arctic atmospheric front sweeping over the plateau, plunging temperatures below freezing for several days.",
+          "liveState": "Incident ledger · Scheduled potential hazard",
+          "primaryAction": "Find on map",
+          "properties": [
+            { "key": "Temperature drop", "value": "−18 °C to −25 °C" },
+            { "key": "Duration", "value": "2 to 4 days" },
+            { "key": "Crop effect", "value": "Halts growth, risks frost death" },
+            { "key": "Hypothermia risk", "value": "Active outdoors without coat" },
+            { "key": "Countermeasure", "value": "Coal heaters, indoor roofing" },
+            { "key": "Alert raised", "value": "ui.alert.cold" },
+            { "key": "Water effect", "value": "Freezes marsh edges" },
+            { "key": "Pawn pace", "value": "Slowed by icy chill" }
+          ],
+          "body": {
+            "type": "event",
+            "sectionLabel": "INCIDENT PROFILE",
+            "paragraph": "Cold snaps endanger unharvested crops and force colonists indoors around coal burners. Proper roof insulation keeps indoor rooms warm.",
+            "cards": [
+              { "title": "Best for", "kind": "best", "text": "Preserving fresh food naturally without refrigeration." },
+              { "title": "Avoid for", "kind": "avoid", "text": "Drafting pawns in light cotton clothing outdoors." }
+            ]
+          },
+          "related": [
+            { "name": "Coal", "reason": "crucial heating fuel" },
+            { "name": "Carrot Plant", "reason": "vulnerable to freezing" },
+            { "name": "Wall", "reason": "insulates heated interiors" }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+/* =========================================================================
+   APPLICATION CONTROLLER
+   - Category -> Index -> Entry navigation
+   - Search across all entries with live count
+   - Lateral links with history back/forward
+   - Dashed square fallback for any missing icon
+   ========================================================================= */
+class AlmanacApp {
+  constructor(data) {
+    this.data = data;
+    this.categories = data.categories;
+    this.currentCatIndex = 0;
+    this.currentEntryIndex = 0;
+    this.lastSelectedPerCat = {};
+    this.history = [];
+    this.historyIndex = -1;
+    this.pinnedEntries = new Set();
+    this.searchQuery = "";
+
+    // Flat list of all entries for search & lateral links
+    this.allEntries = [];
+    this.categories.forEach((cat, cIdx) => {
+      cat.entries.forEach((ent, eIdx) => {
+        ent._catName = cat.name;
+        ent._catIndex = cIdx;
+        ent._entryIndex = eIdx;
+        this.allEntries.push(ent);
+      });
+    });
+
+    this.dom = {
+      subtitle: document.getElementById("count-subtitle"),
+      searchWrap: document.getElementById("search-wrap"),
+      searchInput: document.getElementById("search-input"),
+      searchHint: document.getElementById("search-hint"),
+      searchCount: document.getElementById("search-count"),
+      searchDropdown: document.getElementById("search-dropdown"),
+      btnBack: document.getElementById("btn-back"),
+      btnFwd: document.getElementById("btn-fwd"),
+      btnClose: document.getElementById("btn-close"),
+      catRail: document.getElementById("category-rail"),
+      indexCatLabel: document.getElementById("index-cat-label"),
+      indexList: document.getElementById("index-list"),
+      detailPane: document.getElementById("detail-pane"),
+      panel: document.getElementById("almanac-panel")
+    };
+
+    this.init();
+  }
+
+  init() {
+    this.dom.subtitle.textContent = `${this.allEntries.length} entries · everything the colony knows`;
+
+    this.renderCategoryRail();
+    this.selectCategory(0, 0, false);
+    this.bindEvents();
+    this.drawWorldCanvas();
+  }
+
+  renderSvg(path, colour = "currentColor", strokeWidth = 1.8) {
+    if (!path) {
+      return `<div class="missing-icon" title="Missing icon: rendered as neutral dashed square"></div>`;
+    }
+    return `<svg viewBox="0 0 24 24" style="stroke:${colour};stroke-width:${strokeWidth};"><path d="${path}"></path></svg>`;
+  }
+
+  renderCategoryRail() {
+    this.dom.catRail.innerHTML = "";
+    this.categories.forEach((cat, idx) => {
+      const row = document.createElement("div");
+      row.className = "category-row" + (idx === this.currentCatIndex ? " active" : "");
+      row.dataset.catIndex = idx;
+      row.innerHTML = `
+        <div class="cat-left">
+          <div class="cat-icon">${this.renderSvg(cat.iconPath)}</div>
+          <span class="cat-name">${cat.name}</span>
+        </div>
+        <span class="cat-count">${cat.entries.length}</span>
+      `;
+      row.onclick = () => {
+        const savedEntryIdx = this.lastSelectedPerCat[idx] || 0;
+        this.selectCategory(idx, savedEntryIdx, true);
+      };
+      this.dom.catRail.appendChild(row);
+    });
+  }
+
+  selectCategory(catIdx, entryIdx = 0, recordHist = true) {
+    this.currentCatIndex = catIdx;
+    this.lastSelectedPerCat[catIdx] = entryIdx;
+
+    // Highlight rail
+    const rows = this.dom.catRail.querySelectorAll(".category-row");
+    rows.forEach((r, i) => r.classList.toggle("active", i === catIdx));
+
+    const cat = this.categories[catIdx];
+    this.dom.indexCatLabel.textContent = cat.name;
+
+    this.renderIndexList(cat, entryIdx);
+    this.selectEntry(catIdx, entryIdx, recordHist);
+  }
+
+  renderIndexList(cat, activeEntryIdx) {
+    this.dom.indexList.innerHTML = "";
+    cat.entries.forEach((entry, idx) => {
+      const row = document.createElement("div");
+      row.className = "index-row" + (idx === activeEntryIdx ? " active" : "");
+      row.dataset.entryIndex = idx;
+
+      let idBox = "";
+      if (entry.hasColor && entry.color) {
+        idBox = `<div class="index-identity-sq swatch" style="background:${entry.color};"></div>`;
+      } else {
+        const iconCol = entry.icon && entry.icon.colour ? entry.icon.colour : "#7fd0e0";
+        idBox = `<div class="index-identity-sq" style="color:${iconCol};border-color:${iconCol}55;background:${iconCol}1f;">
+          ${this.renderSvg(entry.icon ? entry.icon.path : "")}
+        </div>`;
+      }
+
+      row.innerHTML = `
+        ${idBox}
+        <div class="index-text">
+          <div class="index-name">${entry.name}</div>
+          ${entry.summary ? `<div class="index-summary">${entry.summary}</div>` : ""}
+        </div>
+      `;
+
+      row.onclick = () => {
+        this.selectEntry(this.currentCatIndex, idx, true);
+      };
+      this.dom.indexList.appendChild(row);
+    });
+  }
+
+  selectEntry(catIdx, entryIdx, recordHist = true) {
+    this.currentCatIndex = catIdx;
+    this.currentEntryIndex = entryIdx;
+    this.lastSelectedPerCat[catIdx] = entryIdx;
+
+    // Update index selection UI
+    const indexRows = this.dom.indexList.querySelectorAll(".index-row");
+    indexRows.forEach((r, i) => r.classList.toggle("active", i === entryIdx));
+
+    const entry = this.categories[catIdx].entries[entryIdx];
+    this.renderDetailPane(entry);
+
+    if (recordHist) {
+      this.pushHistory(catIdx, entryIdx);
+    }
+  }
+
+  renderDetailPane(entry) {
+    const pane = this.dom.detailPane;
+    pane.scrollTop = 0;
+
+    // 1 · Identity visual box (96px square)
+    let identityBox = "";
+    const primaryColor = entry.hasColor && entry.color ? entry.color : (entry.icon?.colour || "#7fd0e0");
+    if (entry.hasColor && entry.color) {
+      identityBox = `<div class="identity-visual-96" style="background:${entry.color};box-shadow:inset 0 0 20px rgba(0,0,0,0.35);"></div>`;
+    } else {
+      identityBox = `<div class="identity-visual-96 icon-mode" style="color:${primaryColor};border-color:${primaryColor}80;background:${primaryColor}1f;">
+        ${this.renderSvg(entry.icon?.path, primaryColor, 2)}
+      </div>`;
+    }
+
+    const isPinned = this.pinnedEntries.has(entry.name);
+
+    // 2 · Properties rows (150px key)
+    const propRowsHtml = entry.properties.map(p => {
+      // Check if value links to another known entry
+      const target = this.findEntryByName(p.value);
+      const valHtml = target ?
+        `<a class="lateral-link" data-goto="${target.name}">${p.value}</a>` :
+        `<span class="prop-val">${p.value}</span>`;
+
+      return `
+        <div class="property-row">
+          <span class="prop-key">${p.key}</span>
+          ${valHtml}
+        </div>
+      `;
+    }).join("");
+
+    // 3 · Body band content
+    let bodyContentHtml = "";
+    if (entry.body.paragraph) {
+      bodyContentHtml += `<p class="body-paragraph">${entry.body.paragraph}</p>`;
+    }
+    if (entry.body.cards) {
+      bodyContentHtml += `<div class="cards-row">` + entry.body.cards.map(c => `
+        <div class="card">
+          <div class="card-hdr ${c.kind}">${c.title}</div>
+          <div class="card-text">${c.text}</div>
+        </div>
+      `).join("") + `</div>`;
+    }
+    if (entry.body.ladder) {
+      bodyContentHtml += `<div class="ladder">` + entry.body.ladder.map(row => `
+        <div class="ladder-row" style="border-left-color:${row.color};">
+          <span class="ladder-range" style="color:${row.color};">${row.range}</span>
+          <span class="ladder-tier">${row.tier}</span>
+          <span class="ladder-desc">${row.desc}</span>
+        </div>
+      `).join("") + `</div>`;
+    }
+
+    // 4 · Related chips (pinned to bottom)
+    const relatedChipsHtml = entry.related.map(r => {
+      const relEntry = this.findEntryByName(r.name);
+      let idThumb = "";
+      if (relEntry && relEntry.hasColor && relEntry.color) {
+        idThumb = `<div class="rel-sq" style="background:${relEntry.color};"></div>`;
+      } else if (relEntry && relEntry.icon) {
+        idThumb = `<div class="rel-sq" style="color:${relEntry.icon.colour};">${this.renderSvg(relEntry.icon.path)}</div>`;
+      } else {
+        idThumb = `<div class="rel-sq">${this.renderSvg("")}</div>`;
+      }
+      return `
+        <div class="related-chip" data-goto="${r.name}">
+          ${idThumb}
+          <span class="rel-name">${r.name}</span>
+          <span class="rel-reason">${r.reason}</span>
+        </div>
+      `;
+    }).join("");
+
+    pane.innerHTML = `
+      <!-- Band 1 · Identity -->
+      <div class="band-identity">
+        ${identityBox}
+        <div class="identity-content">
+          <div class="identity-title-row">
+            <h1 class="entry-title">${entry.name}</h1>
+            <span class="type-chip">${entry.typeChip}</span>
+            <span class="nature-chip" style="color:${primaryColor};border-color:${primaryColor}66;background:${primaryColor}14;">${entry.natureChip}</span>
+          </div>
+          <div class="entry-definition">${entry.definition}</div>
+          <div class="live-state-line">
+            <span class="live-state-dot"></span>
+            <span>${entry.liveState}</span>
+          </div>
+        </div>
+        <div class="identity-actions">
+          <button class="btn-primary-action" id="btn-primary">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>${entry.primaryAction}</span>
+          </button>
+          <button class="btn-pin ${isPinned ? 'pinned' : ''}" id="btn-pin" title="Pin / Favourite">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mid container: Band 2 Properties (520px fixed) + Right Column for Band 3 & 4 -->
+      <div class="band-mid-columns">
+        <!-- Band 2 · Properties (fixed 520px) -->
+        <div class="band-properties">
+          <div class="section-label">PROPERTIES</div>
+          <div class="properties-table">
+            ${propRowsHtml}
+          </div>
+        </div>
+
+        <!-- Right Column: Band 3 Body + Band 4 Related -->
+        <div class="body-and-related-col">
+          <!-- Band 3 · Body -->
+          <div class="band-body">
+            <div class="section-label">${entry.body.sectionLabel || "DETAILS"}</div>
+            ${bodyContentHtml}
+          </div>
+
+          <!-- Band 4 · Related (pinned with margin-top: auto) -->
+          <div class="band-related">
+            <div class="section-label">RELATED</div>
+            <div class="related-chips">
+              ${relatedChipsHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Bind lateral navigation links and pin
+    pane.querySelectorAll("[data-goto]").forEach(el => {
+      el.onclick = () => {
+        const name = el.dataset.goto;
+        this.navigateToEntryByName(name);
+      };
+    });
+
+    const pinBtn = pane.querySelector("#btn-pin");
+    if (pinBtn) {
+      pinBtn.onclick = () => {
+        if (this.pinnedEntries.has(entry.name)) {
+          this.pinnedEntries.delete(entry.name);
+          pinBtn.classList.remove("pinned");
+        } else {
+          this.pinnedEntries.add(entry.name);
+          pinBtn.classList.add("pinned");
+        }
+      };
+    }
+  }
+
+  findEntryByName(name) {
+    if (!name) return null;
+    const clean = name.trim().toLowerCase();
+    return this.allEntries.find(e => e.name.toLowerCase() === clean || e.name.toLowerCase().includes(clean));
+  }
+
+  navigateToEntryByName(name) {
+    const target = this.findEntryByName(name);
+    if (!target) return;
+    this.selectCategory(target._catIndex, target._entryIndex, true);
+  }
+
+  pushHistory(catIdx, entryIdx) {
+    if (this.historyIndex >= 0) {
+      const cur = this.history[this.historyIndex];
+      if (cur && cur.catIdx === catIdx && cur.entryIdx === entryIdx) return;
+    }
+    // Truncate any forward history
+    this.history = this.history.slice(0, this.historyIndex + 1);
+    this.history.push({ catIdx, entryIdx });
+    this.historyIndex = this.history.length - 1;
+    this.updateHistoryButtons();
+  }
+
+  navigateHistory(delta) {
+    const nextIdx = this.historyIndex + delta;
+    if (nextIdx < 0 || nextIdx >= this.history.length) return;
+    this.historyIndex = nextIdx;
+    const state = this.history[nextIdx];
+    this.selectCategory(state.catIdx, state.entryIdx, false);
+    this.updateHistoryButtons();
+  }
+
+  updateHistoryButtons() {
+    this.dom.btnBack.disabled = this.historyIndex <= 0;
+    this.dom.btnFwd.disabled = this.historyIndex >= this.history.length - 1;
+  }
+
+  bindEvents() {
+    this.dom.btnBack.onclick = () => this.navigateHistory(-1);
+    this.dom.btnFwd.onclick = () => this.navigateHistory(1);
+    this.dom.btnClose.onclick = () => {
+      this.dom.panel.style.display = this.dom.panel.style.display === "none" ? "flex" : "none";
+    };
+
+    // Global keyboard hotkeys: / for search, Esc to close/clear
+    window.addEventListener("keydown", e => {
+      if (e.key === "/" && document.activeElement !== this.dom.searchInput) {
+        e.preventDefault();
+        this.dom.searchInput.focus();
+        this.dom.searchInput.select();
+      } else if (e.key === "Escape") {
+        if (this.dom.searchDropdown.style.display === "block") {
+          this.closeSearch();
+        } else {
+          // Toggle or close
+          this.dom.panel.style.display = this.dom.panel.style.display === "none" ? "flex" : "none";
+        }
+      } else if (e.key === "F9") {
+        e.preventDefault();
+        this.dom.panel.style.display = this.dom.panel.style.display === "none" ? "flex" : "none";
+      } else if (e.altKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        this.navigateHistory(-1);
+      } else if (e.altKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        this.navigateHistory(1);
+      }
+    });
+
+    // Search field handling
+    const input = this.dom.searchInput;
+    input.addEventListener("focus", () => {
+      this.dom.searchWrap.classList.add("focused");
+      this.dom.searchHint.style.display = "none";
+      this.dom.searchCount.style.display = "block";
+      this.onSearchInput();
+    });
+    input.addEventListener("blur", () => {
+      setTimeout(() => {
+        this.dom.searchWrap.classList.remove("focused");
+        if (!input.value) {
+          this.dom.searchHint.style.display = "block";
+          this.dom.searchCount.style.display = "none";
+        }
+        this.dom.searchDropdown.style.display = "none";
+      }, 200);
+    });
+    input.addEventListener("input", () => this.onSearchInput());
+  }
+
+  closeSearch() {
+    this.dom.searchInput.blur();
+    this.dom.searchDropdown.style.display = "none";
+    this.dom.searchWrap.classList.remove("focused");
+  }
+
+  onSearchInput() {
+    const q = this.dom.searchInput.value.trim().toLowerCase();
+    if (!q) {
+      this.dom.searchCount.textContent = "0 matches";
+      this.dom.searchDropdown.style.display = "none";
+      return;
+    }
+
+    const matches = this.allEntries.filter(e => {
+      return e.name.toLowerCase().includes(q) ||
+             (e.summary && e.summary.toLowerCase().includes(q)) ||
+             e.definition.toLowerCase().includes(q) ||
+             e.properties.some(p => p.key.toLowerCase().includes(q) || p.value.toLowerCase().includes(q));
+    });
+
+    this.dom.searchCount.textContent = `${matches.length} match${matches.length === 1 ? '' : 'es'}`;
+    this.renderSearchResults(matches);
+  }
+
+  renderSearchResults(matches) {
+    const drop = this.dom.searchDropdown;
+    drop.innerHTML = "";
+    if (matches.length === 0) {
+      drop.innerHTML = `<div style="padding:14px;color:var(--ink-sub);font-size:14px;">No matching entries found</div>`;
+      drop.style.display = "block";
+      return;
+    }
+
+    // Group by category
+    const grouped = {};
+    matches.forEach(m => {
+      if (!grouped[m._catName]) grouped[m._catName] = [];
+      grouped[m._catName].push(m);
+    });
+
+    for (const catName in grouped) {
+      const gTitle = document.createElement("div");
+      gTitle.className = "search-group-title";
+      gTitle.textContent = `${catName} (${grouped[catName].length})`;
+      drop.appendChild(gTitle);
+
+      grouped[catName].forEach(entry => {
+        const row = document.createElement("div");
+        row.className = "search-result-row";
+        row.innerHTML = `
+          <span class="res-name">${entry.name}</span>
+          <span class="res-sub">${entry.typeChip}</span>
+        `;
+        row.onmousedown = (e) => {
+          e.preventDefault();
+          this.selectCategory(entry._catIndex, entry._entryIndex, true);
+          this.closeSearch();
+        };
+        drop.appendChild(row);
+      });
+    }
+
+    drop.style.display = "block";
+  }
+
+  drawWorldCanvas() {
+    const canvas = document.getElementById("world-canvas");
+    const ctx = canvas.getContext("2d");
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      this.paintWorld(ctx, canvas.width, canvas.height);
+    };
+    window.addEventListener("resize", resize);
+    resize();
+  }
+
+  paintWorld(ctx, w, h) {
+    ctx.fillStyle = "#0c151c";
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw isometric meadow grid lines and buildings in distance
+    ctx.strokeStyle = "rgba(45, 85, 60, 0.25)";
+    ctx.lineWidth = 1;
+    const step = 40;
+    for (let y = -h; y < h * 2; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y + w * 0.5);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(w, y);
+      ctx.lineTo(0, y + w * 0.5);
+      ctx.stroke();
+    }
+
+    // Scattered pine green clusters
+    ctx.fillStyle = "rgba(40, 95, 55, 0.4)";
+    for (let i = 0; i < 40; i++) {
+      const x = (i * 137) % w;
+      const y = (i * 241) % h;
+      ctx.beginPath();
+      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// Instantiate on load
+window.addEventListener("DOMContentLoaded", () => {
+  window.almanacApp = new AlmanacApp(ALMANAC_DATA);
+});
+</script>

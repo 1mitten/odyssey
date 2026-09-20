@@ -46,6 +46,8 @@ namespace Odyssey.Tests.Hud
             Assert.That(hotkeys.Key(HotkeyAction.ToolCancel, 0), Is.EqualTo(HudKey.X));
             Assert.That(hotkeys.Key(HotkeyAction.BuildPalette, 0), Is.EqualTo(HudKey.B));
             Assert.That(hotkeys.Key(HotkeyAction.DebugMenu, 0), Is.EqualTo(HudKey.Backquote));
+            Assert.That(hotkeys.Key(HotkeyAction.WorkTab, 0), Is.EqualTo(HudKey.F1));
+            Assert.That(hotkeys.Key(HotkeyAction.Almanac, 0), Is.EqualTo(HudKey.F9));
         }
 
         [Test]
