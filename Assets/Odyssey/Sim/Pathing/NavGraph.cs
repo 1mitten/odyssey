@@ -1151,6 +1151,37 @@ namespace Odyssey.Sim.Pathing
             return -1;
         }
 
+        /// <summary>
+        /// A two-cell connector with this cell at its lower end, or -1.
+        ///
+        /// <para><see cref="OneCellConnectorAt"/>'s twin for a stair (U44), and a separate method
+        /// rather than a widening of that one because a one-cell question and a two-cell question
+        /// are different questions and a caller should have to say which it is asking. Everything
+        /// else about it is the same — <b>asked rather than remembered</b>, scoped to the block's
+        /// own list, so a connector stays derived from the edifice list and a demolish after a load
+        /// cannot leave a portal behind.</para>
+        ///
+        /// <para><b>Touching rather than matching</b>, deliberately: the caller that wants to
+        /// <em>remove</em> a stale connector has by then lost the record it would need to name the
+        /// far cell, so it has to be able to ask about the one cell it still has. Whether the
+        /// connector found is the one wanted is the caller's comparison, against
+        /// <see cref="Connector.LowerCells"/>, which the constructor has sorted.</para>
+        /// </summary>
+        public int TwoCellConnectorTouching(int lowerCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
+            if (!_connectorsByBlock.TryGetValue(BlockIndexOfCell(lowerCell), out List<int>? ids)) return -1;
+
+            for (int i = 0; i < ids.Count; i++)
+            {
+                Connector? con = GetConnector(ids[i]);
+                if (con == null || con.LowerCells.Length != 2) continue;
+                if (con.LowerCells[0] == lowerCell || con.LowerCells[1] == lowerCell) return con.Id;
+            }
+
+            return -1;
+        }
+
         // =====================================================================================
         // Doors and hazards — the sticky flags
         // =====================================================================================

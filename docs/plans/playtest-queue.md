@@ -21,6 +21,19 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Nobody has ever seen a stair** — stamped or built (`claude/adoring-ptolemy-baq5te`,
+  `docs/design/28-stairs.md`). `U44`, the last M3 unit. A **Stair** chip is live under Structure: two
+  cells, rotatable with the rotate key like a bed, 6 wood and 150 ticks. It is the only way up a
+  **hauler** can use, so an upper storey is somewhere a colony can build rather than merely visit —
+  and in the same change **delivering building material became a hauling job**, which it never was,
+  so a ladder alone no longer supplies a second storey. Also bundled: **a tired colonist with no bed
+  no longer lies down inside a terrace bank** and vanishes into the façade.
+  Open questions a test cannot answer: whether 6 wood and 150 ticks feel right for two cells;
+  whether the flight *reads* as a flight, given no stair has ever been photographed and the art is
+  the Synty half-flight at 1.5 m a cell; whether the rotate key lands the stair the way you expect;
+  and whether losing ladder-borne delivery is felt as a loss before the stair is affordable.
+  Fast tier 782 Sim + 449 Hud, Long tier 21 of 21, **no golden moved**. Both Unity tiers owed.
+
 - **Nobody has seen a roof go on, or looked up out of a roofed building** (`claude/adoring-ptolemy-baq5te`,
   `docs/design/27-roofs.md`). RF1, and most of it was already built — a roof has been a slab since U29.
   Three things changed. **(a)** Pointing at the floor of an upper storey and ordering a slab now roofs

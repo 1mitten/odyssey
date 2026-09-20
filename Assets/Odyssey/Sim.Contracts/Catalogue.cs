@@ -174,7 +174,23 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Pillar = 6;
 
-        public const int Count = 7;
+        /// <summary>
+        /// A stair: two adjacent cells on one layer, rising 1.5 m each, joining the layer above
+        /// (U44, docs/design/28-stairs.md).
+        ///
+        /// <para><b>Two cells on ONE layer, which is the thing to get right.</b> The halves are
+        /// side by side and the upper one is <em>drawn</em> 1.5 m up inside its own cell; the
+        /// connector's upper end is those same two cells one layer higher, derived. So the
+        /// footprint is the bed's shape and not a vertical one.</para>
+        ///
+        /// <para>Unlike every other buildable this one finishes as <b>two</b> edifice values —
+        /// <c>EdificeStairLower</c> at the head and <c>EdificeStairUpper</c> at the second cell,
+        /// which is exactly what worldgen stamps, so a stair a colonist built and a stair the
+        /// generator stamped are the same thing to the mesher, the labels and the graph.</para>
+        /// </summary>
+        public const int Stair = 7;
+
+        public const int Count = 8;
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
+using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -352,7 +353,7 @@ namespace Odyssey.Sim.Pawns
         /// one of the eight neighbours on the same layer, so the colonist stands at the trunk's
         /// side and the wood falls where the tree stood.
         /// </summary>
-        public static int StandBeside(PawnContext ctx, Pawn pawn, int tree)
+        public static int StandBeside(PawnContext ctx, Pawn pawn, int tree, TraverseMode? mode = null)
         {
             GridSize size = ctx.Size;
             CellRef at = size.FromIndex(tree);
@@ -367,7 +368,11 @@ namespace Odyssey.Sim.Pawns
                 if (!ctx.Cells.IsWalkable(cell)) continue;
                 int distance = ctx.Distance(pawn.Cell, cell);
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, cell)) continue;
+                // The mode the *job* will walk in, when the caller knows it. A scan that tested a
+                // laxer mode than the job would hand out work that fails on its first step — which
+                // is exactly what a delivery up a ladder was doing before U44.
+                if (!(mode is TraverseMode m ? ctx.Reachable(pawn, cell, m) : ctx.Reachable(pawn, cell)))
+                    continue;
                 bestDistance = distance;
                 best = cell;
             }

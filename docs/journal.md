@@ -7462,3 +7462,80 @@ would have left that terrace drawn and unclickable. It is asked of the cell now 
   not compile — so the renderer and picker changes have not been compiled, let alone run or looked
   at. `docs/lessons.md` and `CLAUDE.md` both say two green tiers say nothing about whether the game
   runs; one green tier that cannot see the assembly says less.
+
+### Stairs: U44, and the eighty per cent that was already there, 2026-09-20
+
+The owner, after RF1: take stairs next. It is the last M3 unit and the thing roofs are in service of
+— RF1 made roofing pleasant at ground level and said in as many words that it could not make a
+second storey worth having.
+
+**Grounding found most of a stair already built**, which is now the third unit running to discover
+that (`CellGrid.IsRoofed` and the support pillar were the other two). `ConnectorKind.Stair` with its
+`AllMask`, `MoveCost.StairUp` 290 / `StairDown` 230, `NavFlags.ConnectorStair`, `EdificeStairLower`
+and `Upper`, worldgen stamping stairs and registering their connectors after the damage pass,
+`ShellTemplate` refusing an unpaired one as a content error, `ChunkMesher.EmitStair` drawing both
+halves, `SM_Bld_Base_Stairs_01` mapped for all three module ids, the palette chip drawn disabled,
+the glyph, the registry label and the wiki row. Two status lines in the code say *"stairs are not in
+the game yet"* and both are true only of the build tool. What was missing was a `BuildingDef`, a
+placement rule and a connector refresh.
+
+**Both halves are on one layer**, which two independent readings of the code disagreed about and
+which decided the shape of the whole unit. `EmitStair` lifts the upper half 1.5 m *inside its own
+cell*; `RecordConnectors` derives the connector's upper end as `lower + LayerStride`. So the
+footprint is the bed's and `EdificeFootprint` needed no vertical variant — the reading that said
+otherwise would have sent the unit off building one.
+
+**The justification was half false, and nothing tested it.** `CLAUDE.md`, the `U43` and `U44` plan
+rows, `21-ladders-and-climbing.md` §5 and `24-carrying.md` all say a hauler cannot climb a ladder so
+nothing can be built on an upper storey. `job.Mode = Hauler` is assigned in **exactly one place** in
+the simulation — `HaulWorkGiver` — so `DeliverWorkGiver`, which carries building material to a site,
+ran as a colonist and a plank went up a ladder happily. `LadderTests.AHaulerCannotClimbALadder...`
+asks `Reachable(pawn, landing, Hauler)` directly: it proves the *mode* is excluded and says nothing
+about which jobs use it. **A test that asserts a rule is not a test that asserts the rule is
+reached.** Delivery takes the hauling mode in this unit and not before, on the owner's instruction,
+so the day it stops going up a ladder is the day it starts going up a stair.
+
+**Three owner decisions**, all taken: fix the delivery mode inside U44; a built stair is two edifice
+values and one site, matching what worldgen stamps; bundle the terrace-bank fix into the re-bake
+this was expected to force.
+
+**Two things the code corrected after the design was written.**
+
+*Both ends or nothing was wrong.* `ConnectorRegistrar` says of stamped stairs that *"half a
+stairwell is not a narrower stairwell, it is a portal whose far end is a hole"*, and the obvious
+reading — both upper cells must be arrivable — registered **nothing at all**. You walk on to the
+lower half, climb to the upper, and step off at the top; the cell over the lower half is passed
+through, not arrived in. Worldgen never met it because a stamped shell has a real floor over both
+cells. The rule is now: both upper cells **open**, at least one of them **arriving**.
+
+*The far cell was being asked a wall's question.* `Place` answered for a two-cell thing's second
+cell with the one-argument `Allows`, which is all a bed has ever needed. A stair is the first
+buildable whose far half has a rule of its own. Narrowed to `secondEdifice` rather than widened to
+every two-cell thing, because asking the bed properly would newly demand a clear cell of its far
+half — a real change, to a different unit, riding in on this one.
+
+**The bug that mattered was caught by the Long tier, not the fast one.** `RefreshStair` managed
+*every* stair it found, and a stamped stair carries no facing — the generator had nowhere to put one
+and the mesher infers it by scanning for the partner — so deriving the far half from `Facing` 0
+named the wrong cell, `wanted` came out false, and the connector `ConnectorRegistrar` had placed was
+torn out on every colony edit. The fast tier was green.
+`ThreePawnsLiveInARuinedShellForADay` starved a colonist two storeys under its food and
+`TheStairsInTheDemoAreTheScenariosDoingAndNotTheMaps` fell from nine stair steps in a day to three.
+One line — the generator's stairs are not ours to manage, the same split
+`RebuildLadderConnectors` already states — and a fast regression test that says it in a quarter of a
+second.
+
+**And a near miss worth more than the bug.** Four of the eleven tests written for this unit use
+`Assume` for their controls, which is the project's idiom and the right one. A failed `Assume` is
+reported by NUnit as **skipped**, `dotnet test`'s summary did not even count them, and the tier read
+`Failed: 0, Passed: 774` while the feature did nothing at all. The total was six higher than the
+baseline when eleven cases had been added — the only visible sign. The one test with no `Assume` in
+it is what failed. `docs/lessons.md` has the rule: **check the total went up by what you added.**
+
+- *Verified here:* fast tier **782 Sim + 449 Hud, 0 failed, 0 skipped** (770 + 449 before; U44 adds
+  12), Long tier **21 of 21**, both content gates clean.
+- **No golden moved**, which the plan expected to. Nothing in any golden scenario builds a stair,
+  delivers building material or lies down on a terrace, so all three changes are invisible to them.
+- *Not verified here:* **no Unity tier ran** — this container has neither Unity nor Windows. U44 is
+  entirely simulation-side, so unlike RF1b the fast tier does compile and run all of it; what is
+  owed is the authoritative run, and a first look at a stair, which nobody has ever had.

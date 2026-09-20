@@ -153,7 +153,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 |---|---|
 | **M0** foundations | **Closed.** CI runs two tiers per push and PR: a *fast tier* on GitHub-hosted Linux (Sim, Hud, Long, both content checks) and a *Unity tier* on the owner's Windows machine as a self-hosted runner, switched on by the repository variable `UNITY_RUNNER=1`. |
 | **M1** world, **M2** pawns | **Done and reported** — `docs/milestones/M1-report.md`, `M2-report.md`. Both went further than the plan asked. |
-| **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
+| **M3** build and dig | **Every unit is in.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders, beds and now **stairs** (`U44`, 2026-09-20). What is left is the gate: the ten-day headless run (`U32`). |
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. The card is identity alone — name, age, occupation — at 76 px, which is the face plus its padding on both sides, and **a card is now asserted to clear its own avatar by that padding**; the skills live in the detail pane beside it, two columns and a heading. |
 | **TS** terrace steps | **Merged 2026-09-18, PR #126.** Nothing generates at the foot of a step any more (`TerraceFoot`, a sim-side copy of the bank rule checked cell-by-cell against `BankLayout`), and crossing one is priced and drawn against the path it is *drawn* along rather than against a flat cell: the foot cell is a **slope** costing what the hop out of it costs, `PawnPose.StepPace` spends each step's time where its climbing is, and a climbing figure is drawn on the ramp surface itself. Came out of four owner reports in two days; the arithmetic and every rejected alternative are in `docs/design/22-terrace-steps.md` §4b–4c. Three faults older than the work fell out of it: a 1.51 m teleport climbing a sheer face, its 657 mm mirror on a sheer drop, and a two-frame hitch at the start of every step costing more than a flat cell. |
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
@@ -162,6 +162,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
 | **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
 | **RF** roofs | **`RF1` done on `claude/adoring-ptolemy-baq5te`** — `docs/design/27-roofs.md`. Mostly a finding: **a roof has been a slab since U29** and three things that sounded like work were already built, `CellGrid.IsRoofed` included (written, never called). What was missing was roofing as a *gesture*. Pointing at an upper storey's floor now orders the roof above it instead of being refused in silence; a roof two or more layers above the slice is never drawn, so a tall building cannot hide its own ground floor, while the storey directly overhead is untouched; and the **support pillar** is buildable — measured, a 10 × 10 hall takes nine holes in its roof and one pillar closes all nine. The solver needed **no change at all**: `IsGrounded` already grounds a slab on any edifice below. `RF2` is the pitched cap (art exists, cell-sized, 3.25 m in a 3.00 m layer so decoration only; a cap makes the roof non-walkable — decided, not built). Enclosure stays M4. |
+| **ST** stairs | **`U44` done on `claude/adoring-ptolemy-baq5te`** — `docs/design/28-stairs.md`, and the last M3 unit. Mostly a finding again: the connector kind, its `AllMask`, both edifice values, worldgen's stamping and the drawing were all built; what was missing was a `BuildingDef`, a two-cell placement rule and a connector refresh. A stair is **two adjacent cells on one layer**, finishing as two edifice values from one site — the shape worldgen stamps, so nothing downstream changed. **Delivery became a hauling job in the same commit** (see the gap below). Two corrections the code made to the design: a stair needs both upper cells *open* but only one *arriving*, and the generator's own stairwells are not the colony's to manage — managing them tore them out on every edit, which the Long tier caught and the fast tier did not. |
 | **FI** falling items | **Done on `claude/falling-items`** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
@@ -176,6 +177,7 @@ this file.
 
 | If you are touching | Read |
 |---|---|
+| Stairs, the two-cell placement rule, who owns a connector | `docs/design/28-stairs.md` |
 | Roofs, roofing a room, the support pillar, what the slice drops | `docs/design/27-roofs.md` |
 | Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
 | Walls, sites, materials, the build botch | `docs/design/15-building.md` |
@@ -296,7 +298,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **770 Sim + 449 Hud** (2026-09-20, dotnet 8.0.425; RF1 added 11 Sim); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **782 Sim + 449 Hud** (2026-09-20, dotnet 8.0.425; RF1 added 11 Sim and U44 12); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last recorded 2026-09-20 on
@@ -356,11 +358,11 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 - **No health model**, so fall damage is designed with a number and nothing to apply it to, a
   colonist rides a collapsing floor down unharmed, and the debug menu has no kill or heal.
 - **No fog of war**, so a sealed cavern is visible if the player scrolls the layer down.
-- **A colonist can still lie down inside a terrace bank.** Trees are guarded out of those cells at
-  generation (`TerraceFoot`, `docs/design/22-terrace-steps.md`), and a walking figure is lifted onto
-  the ramp, but a body lying down is not: sleep on the ground at the foot of a step and the façade
-  hides you. §4 of that document holds the two candidate fixes and why neither was guessed at — both
-  move the state hash. An item dropped in one has the same problem and is unreported.
+- ~~A colonist can still lie down inside a terrace bank~~ — **closed by `U44`, 2026-09-20**, taking
+  candidate 1 of `docs/design/22-terrace-steps.md` §4: a tired colonist with no bed who is standing
+  in a terrace foot lies down in the first walkable neighbour that is not one. Zero rest still
+  collapses where it stands, which is WS3's rule and deliberate. **An item dropped in one has the
+  same problem and is still unreported.**
 - ~~A skill level buys nothing a player can feel~~ — **stale since WS2/WS3 (2026-09-18) and
   caught by the audit a day later**: work speed reads the skill curve and pace reads condition.
   Kept struck through for one release as the example of the failure this section warns about.
@@ -368,8 +370,14 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
   update type `Editor`, so `wasPressedThisFrame` never fires); `FloorToolClickTests` and
   `InputHarnessTests` carry ignored tests. Un-ignore them together the day the harness can. This is
   why this line of work has had three silent failures.
-- **A hauler cannot climb a ladder**, so material cannot be carried up. Stairs (`U44`) are the next
-  unit rather than a maybe.
+- ~~A hauler cannot climb a ladder, so material cannot be carried up~~ — **closed by `U44`,
+  2026-09-20, and it was never quite true.** A hauler still cannot climb a ladder, but *delivery of
+  building material* never asked for the hauling mode, so a plank went up one regardless: the
+  conclusion four documents drew from it was false. Delivery is a hauling job now and a stair is
+  buildable, so the sentence and its consequence are both true and both answered.
+- **A stamped stairwell cannot be deconstructed with its connector.** `RefreshStair` deliberately
+  leaves the generator's stairs alone — a stamped one carries no facing to derive its partner from —
+  so taking one apart would leave its portal behind. Reclaim is the line that answers it.
 - **A ladder now needs a hole left in the floor above it** (2026-09-18,
   `docs/design/21-ladders-and-climbing.md`). A ladder under an unbroken slab is refused at the order,
   and so is a slab poured over a standing ladder: the shaft cell stays open and the colonist steps

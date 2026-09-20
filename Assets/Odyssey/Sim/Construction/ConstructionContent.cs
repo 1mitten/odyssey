@@ -22,6 +22,25 @@ namespace Odyssey.Sim.Construction
         /// <summary>The <c>CoreContent.Edifice*</c> value this becomes when it is finished.</summary>
         public ushort edifice;
 
+        /// <summary>
+        /// The edifice value the <b>second</b> cell becomes, when that differs from the first.
+        /// 0 — the default and every building but the stair — means both cells carry
+        /// <see cref="edifice"/>, which is what a bed does.
+        ///
+        /// <para>Only meaningful with <see cref="footprint"/> 2. A stair's halves really are
+        /// different things — one sits on the floor and one 1.5 m up, facing opposite ways — and
+        /// worldgen has always stamped them as two values, so a built stair carrying one value
+        /// would be the odd one out for the mesher's partner scan, for <c>EdificeLabels</c> and for
+        /// the render mirror (U44, docs/design/28-stairs.md §4).</para>
+        ///
+        /// <para><b>A field rather than a special case in two helpers.</b>
+        /// <see cref="BuildingForEdifice"/> and <c>EdificeFootprint.Cells</c> both resolve a
+        /// building from one value, so without this the second cell would answer
+        /// <see cref="BuildingHandle.None"/> and report a one-cell footprint — and stop being
+        /// claimed by its own site.</para>
+        /// </summary>
+        public ushort secondEdifice;
+
         /// <summary>Whether the finished thing stops a colonist walking through the cell.</summary>
         public bool blocking = true;
 
@@ -272,8 +291,26 @@ namespace Odyssey.Sim.Construction
         {
             for (int i = 1; i < BuildingTable.Length; i++)
                 if (BuildingTable[i].edifice == edifice) return i;
+
+            // The second half of a two-value thing answers its own building too, or a stair's
+            // upper cell would be nobody's (U44). Walked separately rather than folded into the
+            // loop above so the head still wins when a def names the same value twice.
+            for (int i = 1; i < BuildingTable.Length; i++)
+                if (BuildingTable[i].secondEdifice != 0 && BuildingTable[i].secondEdifice == edifice)
+                    return i;
+
             return BuildingHandle.None;
         }
+
+        /// <summary>
+        /// The edifice value the cell at <paramref name="offset"/> along a thing's footprint
+        /// becomes: the head's for 0, and the second cell's — which may differ — for 1.
+        ///
+        /// <para>Here rather than at the two call sites, so "a stair's far half is an upper half"
+        /// is written once.</para>
+        /// </summary>
+        public static ushort EdificeForCell(BuildingDef def, int offset) =>
+            offset == 0 || def.secondEdifice == 0 ? def.edifice : def.secondEdifice;
 
         /// <summary>
         /// Which material this is, or <see cref="StuffHandle.None"/>. The reverse of
@@ -331,7 +368,7 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed", "Building_Pillar",
+            "Building_Bed", "Building_Pillar", "Building_Stair",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -454,6 +491,31 @@ namespace Odyssey.Sim.Construction
                     edifice = CoreContent.EdificePillar, blocking = true,
                     costCount = 3, workToBuild = 90, minSkill = 0,
                     iconKey = "ui.arch.tool.pillar",
+                },
+
+                // The way up that carries something (U44, docs/design/28-stairs.md). Two adjacent
+                // cells on ONE layer - the upper half is drawn 1.5 m up inside its own cell, and
+                // the connector's upper end is those two cells one layer higher, derived. So the
+                // footprint is the bed's shape, not a vertical one.
+                //
+                // Two edifice values, which no other buildable has: worldgen has always stamped a
+                // stair as Lower + Upper, and matching that means the mesher's partner scan,
+                // EdificeLabels and the render mirror all keep working untouched, and a built stair
+                // is indistinguishable from a stamped one.
+                //
+                // blocking false for the ladder's reason exactly: a stair you cannot enter is a
+                // decoration. 6 and 150 against a wall's 5 and 135 and a ladder's 4 and 90 - two
+                // cells of carpentry, and the thing a colony saves up for rather than knocks
+                // together. Neither number derives from anything and nothing derives from them;
+                // they are the owner's to tune.
+                new BuildingDef
+                {
+                    defName = "Building_Stair", label = "stair",
+                    edifice = CoreContent.EdificeStairLower,
+                    secondEdifice = CoreContent.EdificeStairUpper,
+                    footprint = 2, rotates = true, blocking = false,
+                    costCount = 6, workToBuild = 150, minSkill = 0,
+                    iconKey = "ui.arch.tool.stair",
                 },
             };
         }

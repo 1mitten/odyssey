@@ -572,7 +572,51 @@ namespace Odyssey.Sim.Pawns
             // No bed within reach is not a failure: a tired colonist lies down in the rubble and
             // remembers having done so.
             job.TargetCell = own >= 0 ? own : bestBed;
+
+            // **But not in a terrace foot**, where the bank would swallow her (22-terrace-steps.md
+            // §4, candidate 1, taken with U44's re-bake because both move the hash). A standing
+            // figure is lifted on to the bank's drawn surface; a body lying down is not, and it
+            // spans the cell the ramp rises across — so the owner watched a colonist sleep at the
+            // foot of a step and vanish into the façade.
+            //
+            // Only when there is no bed, and only for a walk: zero rest above is a collapse and
+            // goes down where it stands, bank or no bank, which is WS3's rule and is deliberate.
+            if (job.TargetCell < 0) job.TargetCell = OutOfTheBank(pawn, ctx);
             return true;
+        }
+
+        /// <summary>
+        /// Somewhere to lie down that is not a terrace foot: this cell if it is already clear, or
+        /// the first orthogonal neighbour that is walkable and is not a foot either.
+        ///
+        /// <para>-1 — lie down where you stand — is still the answer when nothing better is beside
+        /// her, because refusing to sleep is worse than sleeping badly, and a colonist ringed by
+        /// steps has nowhere else to be.</para>
+        ///
+        /// <para>Orthogonal, in a fixed direction order, first match wins: the choice is state and
+        /// state has to be the same on every machine.</para>
+        /// </summary>
+        static int OutOfTheBank(Pawn pawn, PawnContext ctx)
+        {
+            var grid = ctx.Cells;
+            if (!Worldgen.TerraceFoot.IsFoot(grid, pawn.Cell)) return -1;
+
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int x = at.X + (dir == 1 ? 1 : dir == 3 ? -1 : 0);
+                int z = at.Z + (dir == 0 ? 1 : dir == 2 ? -1 : 0);
+                if (!size.Contains(x, z, at.Y)) continue;
+
+                int cell = size.Index(x, z, at.Y);
+                if (!grid.IsWalkable(cell)) continue;
+                if (Worldgen.TerraceFoot.IsFoot(grid, cell)) continue;
+                if (!ctx.Reachable(pawn, cell)) continue;
+                return cell;
+            }
+
+            return -1;
         }
     }
 

@@ -132,8 +132,9 @@
     than a wall and quicker to put up than a floor, and like both of those neither number derives
     from anything. The owner's to tune.
 
-    Stairs are deliberately NOT here yet. A stair is two cells and rises 1.5 m per cell, so it
-    carries a placement rule of its own; a ladder needs none.
+    Stairs were deliberately not here until U44, for the reason given at the time: a stair is two
+    cells and rises 1.5 m per cell, so it carries a placement rule a ladder needs none of. That
+    rule is written now - see Building_Stair below and docs/design/28-stairs.md.
   -->
   <BuildingDef>
     <defName>Building_Ladder</defName>
@@ -216,6 +217,42 @@
     <workToBuild>90</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.pillar</iconKey>
+  </BuildingDef>
+
+  <!--
+    U44. The way up that carries something. A ladder excludes a hauler by its connector's own mode
+    mask; a stair carries AllMask, so material reaches an upper storey and a second storey becomes
+    somewhere a colony can actually build. docs/design/28-stairs.md.
+
+    TWO CELLS ON ONE LAYER, which is the thing to get right: the halves are side by side, and the
+    upper one is DRAWN 1.5 m up inside its own cell. The connector's upper end is those same two
+    cells one layer higher, derived - so this is the bed's footprint and not a vertical one.
+
+    edifice 5 and secondEdifice 6 are EdificeStairLower and EdificeStairUpper. Two values is unique
+    to the stair, and it is not an inconsistency: worldgen has stamped a stair as Lower + Upper
+    since the first template, so matching it means the mesher's partner scan, EdificeLabels and the
+    render mirror all keep working untouched and a built stair is indistinguishable from a stamped
+    one. A stair takes no quality and nobody owns one, so the only thing its two records must ever
+    agree about is existing and being torn out together.
+
+    blocking false for the ladder's reason exactly: a stair you cannot enter is a decoration.
+
+    costCount 6 and workToBuild 150 against a wall's 5 and 135 and a ladder's 4 and 90 - two cells
+    of carpentry, and the thing a colony saves up for rather than knocks together. Neither number
+    derives from anything and nothing derives from them; they are the owner's to tune.
+  -->
+  <BuildingDef>
+    <defName>Building_Stair</defName>
+    <label>stair</label>
+    <edifice>5</edifice>
+    <secondEdifice>6</secondEdifice>
+    <footprint>2</footprint>
+    <rotates>true</rotates>
+    <blocking>false</blocking>
+    <costCount>6</costCount>
+    <workToBuild>150</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.stair</iconKey>
   </BuildingDef>
 
   <!--

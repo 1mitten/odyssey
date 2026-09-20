@@ -61,7 +61,12 @@ namespace Odyssey.Tests.Sim
         // since the bed has been. It needed no change to the support solver at all: IsGrounded
         // already ends at `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as
         // long as the solver has run and there was simply nothing that could build one.
-        const ulong BuildingFingerprint = 9905424667026776188UL;
+        // U44 appended Building_Stair at handle 7 - two adjacent cells on ONE layer, rotatable,
+        // blocking false, 6 stuff and 150 ticks, and the first and only buildable to finish as TWO
+        // edifice values (`secondEdifice`): EdificeStairLower at the head and EdificeStairUpper at
+        // the far cell, which is exactly what worldgen has always stamped. The new field is on
+        // every row, so the whole table's fingerprint moves and not only the stair's.
+        const ulong BuildingFingerprint = 8816546351831793275UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

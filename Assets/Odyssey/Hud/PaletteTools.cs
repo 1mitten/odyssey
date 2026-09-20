@@ -100,6 +100,14 @@ namespace Odyssey.Hud
         /// and the slab, because a wall, its roof and the pillar holding the middle of that roof
         /// up are one job. <c>docs/design/27-roofs.md</c> §5.
         /// </summary>
+        /// <summary>
+        /// The <b>stair</b> (U44): two cells on one layer, and the only way up a hauler can use,
+        /// so it is what makes an upper storey somewhere a colony can build rather than merely
+        /// visit. Under <c>Structure</c> beside the ladder, where its chip has been drawn disabled
+        /// since the catalogue was written. <c>docs/design/28-stairs.md</c>.
+        /// </summary>
+        public const string Stair = "ui.arch.tool.stair";
+
         public const string Pillar = "ui.arch.tool.pillar";
 
         public const string Bed = "ui.arch.tool.bed";
@@ -132,7 +140,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, Pillar, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", Stair, Ladder, Slab, Pillar, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
@@ -244,6 +252,13 @@ namespace Odyssey.Hud
             new PaletteTool(Ladder,
                 d => d.ArmBuild(BuildingHandle.Ladder),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
+                wantsMaterial: true),
+
+            // The way up that carries something (U44). Two cells and rotatable, so it arms the
+            // same way the bed does: one per click, turned with the rotate key while it is held.
+            new PaletteTool(Stair,
+                d => d.ArmBuild(BuildingHandle.Stair),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Stair,
                 wantsMaterial: true),
 
             // What holds the middle of a wide roof up (RF1). Beside the slab, because the order a

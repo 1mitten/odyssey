@@ -191,6 +191,7 @@ namespace Odyssey.Sim.Pawns
             // Worldgen's own ladders are already registered, because the board is regenerated from
             // its seed before a save is read over it.
             Construction.RebuildLadderConnectors(Pawns);
+            Construction.RebuildStairConnectors(Pawns);
 
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.

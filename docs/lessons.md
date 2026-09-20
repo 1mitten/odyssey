@@ -2169,3 +2169,26 @@ window is the mechanism.
   `FrameTimeTests`, and any future row that prints a number. `docs/process.md` §2 already says a
   number names its machine and its date; this is the other half — **a number that disagrees with
   itself across runs on identical code is naming the machine, not the code.**
+
+## A failed NUnit `Assume` is reported as skipped, and the tier summary can hide it entirely
+
+**2026-09-20, U44.** Eleven new tests, four of them using `Assume` for their controls — the
+project's own idiom, and the right one: *"the control comes first and is not optional."* The stair
+being built registered no connector at all, so those four `Assume`s failed and the unit did nothing.
+
+**The tier stayed green.** NUnit treats a failed `Assume` as **inconclusive**, `dotnet test` reports
+it as **skipped**, and the summary line — `Failed: 0, Passed: 774, Skipped: 0, Total: 776` — did not
+even count them: the total was six higher than the baseline when eleven cases had been added. The
+one test that caught it, `EveryModeMayUseAStair`, was the only one with no `Assume` in it.
+
+- **A green tier after adding tests is not a green tier. Check the total went up by what you added.**
+  Five missing cases is the whole feature not working.
+- **Run a new suite on its own once, with `-l "console;verbosity=normal"`,** and read the per-test
+  lines. `Skipped` beside a test you just wrote means its control failed, which almost always means
+  the feature is not doing anything — the opposite of what the summary implies.
+- The idiom is still right: a control that cannot fail is worthless, and `Assume` is how this
+  project states one. **Pair it with at least one test in the suite that asserts the same claim
+  outright**, so the suite cannot go quiet all at once.
+- This is the same family as the three silent failures on the click-reaches-the-game line
+  (`CLAUDE.md`, known gaps) and as `OQ-40`'s vacuously passing PlayMode tests: **a test that does
+  not run is indistinguishable from a test that passes, unless something is counting.**

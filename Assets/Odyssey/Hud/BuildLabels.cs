@@ -23,12 +23,13 @@ namespace Odyssey.Hud
     {
         /// <summary>
         /// Parallel to <see cref="BuildingHandle"/>: None, Wall, Floor, DeckPlate, Ladder, Bed,
-        /// Pillar.
+        /// Pillar, Stair.
         /// </summary>
         public static readonly string[] BuildingKeys =
         {
             "", "ui.arch.tool.wall", "ui.arch.tool.roof", "ui.arch.tool.deckplate",
             "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.pillar",
+            "ui.arch.tool.stair",
         };
 
         /// <summary>

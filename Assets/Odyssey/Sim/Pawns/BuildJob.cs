@@ -1,6 +1,7 @@
 #nullable enable
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -26,6 +27,26 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Before <see cref="BuildWorkGiver"/>: a site cannot be worked until it is fed.</summary>
         public override int IntraPriority => 0;
+
+        /// <summary>
+        /// <b>Carrying a plank is carrying something</b> (U44, docs/design/28-stairs.md §3).
+        ///
+        /// <para>This was <see cref="TraverseMode.Colonist"/> by omission until stairs landed, and
+        /// the omission was invisible because nothing tested it: <c>job.Mode = Hauler</c> was
+        /// assigned in exactly one place in the simulation, <c>HaulWorkGiver</c>, so the ladder's
+        /// exclusion covered stockpile hauling and not construction delivery. Four documents said
+        /// a ladder meant nothing could be built on an upper storey; a colonist could carry a plank
+        /// up one and build with it.</para>
+        ///
+        /// <para>It changes <b>with</b> stairs and not before, on the owner's instruction: the day
+        /// delivery stops going up a ladder is the day it starts going up a stair, so nothing a
+        /// player could do yesterday is taken away today.</para>
+        ///
+        /// <para>The mode is fixed for the whole job and the scan tests reachability in the same
+        /// mode the job will walk in — <c>HaulWorkGiver</c>'s rule, and for its reason: a scan that
+        /// tested a laxer mode would hand out jobs that fail on their first step.</para>
+        /// </summary>
+        const TraverseMode Mode = TraverseMode.Hauler;
 
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
@@ -55,11 +76,11 @@ namespace Odyssey.Sim.Pawns
                 int wanted = ConstructionContent.StuffAt(sites.StuffAt(site)).item;
                 if (wanted < 0) continue;
 
-                ColonyItem? load = NearestLoad(pawn, ctx, wanted);
+                ColonyItem? load = NearestLoad(pawn, ctx, wanted, Mode);
                 if (load == null) continue;
 
                 int stand = BuildWorkGiver.StandToBuild(
-                    ctx, pawn, site, ConstructionContent.BuildingAt(sites.At(site)).slab);
+                    ctx, pawn, site, ConstructionContent.BuildingAt(sites.At(site)).slab, Mode);
                 if (stand < 0) continue;
 
                 bestDistance = distance;
@@ -71,6 +92,8 @@ namespace Odyssey.Sim.Pawns
             if (bestSite < 0 || bestLoad == null) return false;
 
             job.Reset(JobIndex.Deliver);
+            // After Reset, which puts it back to Colonist.
+            job.Mode = Mode;
             job.TargetItem = bestLoad.Id;
             job.TargetCell = bestLoad.Cell;
             job.DestCell = bestSite;
@@ -88,7 +111,7 @@ namespace Odyssey.Sim.Pawns
         /// refusing to take wood out of one would mean a colony that can only build from wood it
         /// has not tidied away yet.</para>
         /// </summary>
-        static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex)
+        static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex, TraverseMode mode)
         {
             ColonyItem? best = null;
             int bestDistance = int.MaxValue;
@@ -112,7 +135,7 @@ namespace Odyssey.Sim.Pawns
 
                 int distance = ctx.Distance(pawn.Cell, item.Cell);
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, item.Cell)) continue;
+                if (!ctx.Reachable(pawn, item.Cell, mode)) continue;
 
                 bestDistance = distance;
                 best = item;
@@ -251,21 +274,24 @@ namespace Odyssey.Sim.Pawns
         /// existing floor still prefers the stance on that floor, because <c>StandBeside</c> is
         /// asked first and answers whenever there is anything up there to stand on.</para>
         /// </summary>
-        public static int StandToBuild(PawnContext ctx, Pawn pawn, int site, bool slab)
+        public static int StandToBuild(PawnContext ctx, Pawn pawn, int site, bool slab,
+            TraverseMode? mode = null)
         {
-            int beside = FellJobDriver.StandBeside(ctx, pawn, site);
+            int beside = FellJobDriver.StandBeside(ctx, pawn, site, mode);
             if (beside >= 0 || !slab) return beside;
 
             int below = site - ctx.Size.LayerStride;
             if (below < 0) return -1;
 
-            int besideBelow = FellJobDriver.StandBeside(ctx, pawn, below);
+            int besideBelow = FellJobDriver.StandBeside(ctx, pawn, below, mode);
             if (besideBelow >= 0) return besideBelow;
 
             // Directly under it, last: a colonist that floors over its own head is walled in only
             // if it has also walled itself in, and refusing the stance would refuse the first
             // ceiling of every room built from the inside.
-            return ctx.Cells.IsWalkable(below) && ctx.Reachable(pawn, below) ? below : -1;
+            return ctx.Cells.IsWalkable(below)
+                && (mode is TraverseMode m ? ctx.Reachable(pawn, below, m) : ctx.Reachable(pawn, below))
+                ? below : -1;
         }
 
         /// <summary>
