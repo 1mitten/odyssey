@@ -43,7 +43,7 @@ matters; can build crates so they are not drawing zones for ever; and can say "t
 | 3 | **Deconstruct empties first, then spills.** The order marks contents for hauling out; anything left on completion goes to the nearest free cells. Nothing is ever destroyed. |
 | 4 | **Haul-urgently is a marking tool that clears when the item is stored.** |
 | 5 | **Item categories land in S1**, with a two-level tri-state tree filter from the first commit. Proposed set: Materials, Components, Food, Textiles, Consumables, Junk. |
-| 6 | **A zone draws a border always, a fill only when a zone tool is armed or the zone is selected.** |
+| 6 | ~~A zone draws a border always, a fill only when a zone tool is armed or the zone is selected.~~ **Withdrawn 2026-09-20 — see decision 15.** Kept struck through rather than deleted, because the reason it was wrong is the useful part: it was decided before this plan knew `DrawZoneCover` existed. |
 | 7 | **`StorageSettings` is a shareable record from the first commit; the group *UI* ships in S2.** |
 | 8 | **Refrigeration is a design doc now, built later.** The food refusal itself ships in S2 as a Def flag. |
 | 9 | **Drag adds cells; a drag touching an existing zone extends it; right-drag subtracts; a zone reduced to nothing is deleted.** |
@@ -199,10 +199,14 @@ is not saved and not hashed.
 
 ### Presentation
 
-- A zone overlay director: **thin border always, translucent fill only while a zone tool is armed
-  or that zone is selected.** Colour ramps by priority within one hue family, so five zones read as
-  one feature at five strengths rather than as five features.
+- **`DrawZoneCover` with a storage tint** — the growing zone's own mechanism, unchanged: the drawn
+  terrain's module placed with the same drape and lifted a mark's height along the drape's own up,
+  so it is flush from every angle by construction. Do not write a second cover.
+- Priority ramps the tint within one hue family, so five zones read as one feature at five
+  strengths rather than as five features.
 - Standing rule held: nothing in a cell, a save or the hash.
+- Read `docs/design/22-growing.md` (arrives with PR #119) before touching any of this. Its zone
+  section records two rejected covers and the screenshots that rejected them.
 
 ### Content and wiki (same commit, both gates)
 
@@ -312,16 +316,16 @@ priority ladder, the preset masks, and the rejected alternatives.
 
 Per branch, in this order:
 
-1. `scripts/test-fast.sh` — currently 741 Sim + 445 Hud. New suites: `StorageSettingsTests`
+1. `scripts/test-fast.sh` — currently 753 Sim + 449 Hud. New suites: `StorageSettingsTests`
    (presets, tri-state roll-up, category toggles), `StorageZoneEditTests` (extend, subtract,
    no-overlap-by-construction, delete-when-empty, load guard), `StockpileTests` extended,
    `StorageUnitTests` (capacity, spill with nowhere free, food refusal beating a ticked filter),
    `HaulUrgentTests` (an urgent item beats an ordinary one *and* beats a felling job),
    `RegistryTests` for the new keys.
 2. `python3 tools/wiki/build_wiki.py --check` and `tools/wiki/emit_labels.py --check`.
-3. `scripts/unity.sh test editmode` — authoritative. Last known 1871 total, 1857 passed, 0 failed.
-   The fast tier compiles neither Presentation nor Editor, so the overlay and the crate module are
-   unproven until this runs.
+3. `scripts/unity.sh test editmode` — authoritative. Last recorded 1,872 total, 1,858 passed,
+   0 failed. The fast tier compiles neither Presentation nor Editor, so the zone cover and the
+   crate module are unproven until this runs.
 4. `dotnet run --project tools/dotnet/Odyssey.SaveProbe` on a save holding zones and a full crate,
    to confirm round-trip by inspection and not only by hash.
 5. **The ten-day headless soak on three seeds**, which is M3's own gate — and with the economy
@@ -331,16 +335,56 @@ Per branch, in this order:
    green tiers say nothing about whether the player runs.
 7. Golden re-bake in S1 only, measured as described above.
 
+8. **Scale, per `docs/process.md` §3.** This work adds two per-tick loops and neither may be
+   measured on the meadow alone: the haul scan over `LooseItems` / `StoredItems` /
+   `ContainedItems`, and zone edits feeding `NavGraph.Rebuild` — which the baseline audit already
+   measures at **1.19 ms for a one-cell edit on 250 × 250 × 40**, against 0.065 ms at rest. A
+   storage zone edit paints a whole rectangle. Measure it at the scale target before S1 is called
+   done, and record the number whether or not it is comfortable.
+
 Each branch ends with the handover `CLAUDE.md` requires: the full path, the branch, the PR, whether
 Synty is junctioned, then the **what changed** table and the **what to test** table — the latter
 holding only questions a person at the keyboard can answer, each with what a wrong answer looks
-like.
+like. **Its playtest rows go into `docs/plans/playtest-queue.md`**, which is where that list lives
+now, not into `CLAUDE.md`'s status section.
 
-## Still to decide (2026-09-20)
+## Decided 2026-09-20, after the merge
 
-| # | Question | Recommendation |
-|---|---|---|
-| A | **Merge order.** S1 needs PR #119's zone substrate. Wait for it, or build storage's own and let #119 rebase? | **Wait.** #119 is in review, played and fixed six times; storage duplicating its zone code would guarantee the two drift. |
-| B | **One substrate or two?** Extract a shared `CellZones` from `GrowingZones`, or give storage its own copy of the proven shape? | **Extract**, in S1, immediately after #119 merges — `docs/bug-patterns.md` names "one rule with two owners" as the project's commonest fault, and merge-on-touch in two copies is precisely that. The cost is editing a feature that has just landed. |
-| C | **Decision 6, withdrawn.** Does a storage zone draw as `DrawZoneCover` with its own tint? | **Yes.** The border-and-fill overlay was proposed before this plan knew `DrawZoneCover` existed, and a second way of drawing a zone re-opens a question the owner already closed with screenshots. |
-| D | The five priority names, and the six item categories. | Unchanged from the interview; still awaiting veto. |
+| # | Decision |
+|---|---|
+| 13 | **Wait for PR #119.** S1 starts once growing-zones merges and builds on its zone code. It has been played and fixed six times; storage writing a second zone system would guarantee drift and make #119's rebase painful. |
+| 14 | **Extract a shared substrate in S1.** Pull the zone geometry out of `GrowingZones` into a `CellZones` both kinds sit on, immediately after #119 merges — one owner for merge-on-touch. Safe to do because that code arrives with its own ~400-line suite (`GrowingZoneTests`, `GrowingZoneSaveTests`). |
+| 15 | **Decision 6 is withdrawn.** A storage zone is a tinted ground cover drawn by `DrawZoneCover`, exactly like a growing zone, differing only in colour. One way of drawing a zone in the whole game, and it inherits the flush-from-every-angle fix instead of re-discovering it. |
+
+**Decisions 11 and 12 (the five priority names, the six item categories) are still awaiting veto.**
+Both become wiki content and both are read by the filter tree.
+
+## Three things are in flight at once
+
+`main` now carries the baseline audit, and two other plans are waiting for approval alongside this
+one. The merge order matters and is the thing most easily lost between sessions:
+
+| | What | State | Why this order |
+|---|---|---|---|
+| 1 | **GR** growing zones, PR #119 | in review, played, six fixes in | Storage S1 is blocked on its zone substrate. |
+| 2 | **HT** hardening, PR #136 | plan written, no unit started | The audit measured a one-cell edit at 1.19 ms on 250 × 250 × 40, nearly all of it `NavGraph.Rebuild`. Storage adds zone edits to that same path, so hardening first means S1 is measured against a fixed baseline rather than a moving one. **Not a hard block** — if HT is slow to start, S1 proceeds and its scaling is measured against whatever the baseline then is, and said so. |
+| 3 | **ST** storage, this plan, PR #137 | plan written, awaiting approval | |
+
+## Process, as of `main`'s current tip
+
+Three things moved under this plan and it should follow them rather than the copies it was written
+against:
+
+- **`docs/process.md` is the cycle** a unit goes through — ground, decide in a design doc, test
+  first, measure, hand over, merge, play, record. S1/S2/S3 each run it once.
+- **Its §3 scaling rules apply to every per-tick loop**, and this work adds two: the haul scan over
+  `LooseItems` / `StoredItems` / `ContainedItems`, and zone edits feeding `NavGraph.Rebuild`.
+  Measure both at the scale target, not at the meadow's 120 × 120 × 16.
+- **Playtest items go in `docs/plans/playtest-queue.md`**, not into `CLAUDE.md`'s status section.
+  Each branch's handover adds rows there and a verdict closes them.
+
+Current tier baselines to compare against: fast tier **753 Sim + 449 Hud**, Long **21**; Unity
+EditMode **1,872 total, 1,858 passed, 0 failed**; PlayMode **82 total, 75 passed** (75 rather than
+77 because that run had no Synty junction, so two `AvatarSheetTests` art cases skipped).
+
+*This file and `docs/plans/storage.md` diverge from here until the next commit syncs them.*
