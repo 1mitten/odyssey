@@ -842,7 +842,7 @@ namespace Odyssey.Sim.Pawns
                     ctx.Growing.ZonePlantAt(item.Cell) >= 0)
                     dest = ctx.Items.NearestCellWithSpace(
                         ctx.Cells, item.Cell, item.DefIndex, item.Stack, maxRadius: 12,
-                        accept: c => ctx.Growing!.ZonePlantAt(c) < 0);
+                        accept: ctx.NotZoned);
                 if (dest < 0) continue;
 
                 bestDistance = distance;

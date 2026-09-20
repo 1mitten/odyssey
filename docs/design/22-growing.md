@@ -498,6 +498,42 @@ registry; only the model had to learn it.
 **Stone, iron ore and coal are still uncounted** and have the same problem waiting. They are
 mining's commodities, not growing's, so they are recorded here rather than fixed here.
 
+### 7b. What a field costs the tick, measured (2026-09-20)
+
+Nothing had measured it. `TickBenchmarkTests` uses a structured world with no zone in it and
+`FrameTimeTests` measures the frame, so growing's three additions to the tick — the growth pass,
+the two work-giver scans, and the zone snapshot channel — had never been priced.
+`FieldTickBenchmarkTests` is the instrument; it is `[Explicit]`, like every other benchmark here.
+
+The same 120 x 120 board, six colonists, 4,000 ticks:
+
+| | ms/tick | heap/tick |
+|---|---|---|
+| no field | 0.0056 | 4 B |
+| an 8 x 8 plot, 54 cells | 0.0071 | 150 B |
+| a 45 x 45 field, 2,015 cells | 0.0468 | 199 B |
+| the same field, one colonist | 0.0356 | 33 B |
+| the same field, **no colonists at all** | 0.0347 | 4 B |
+
+**The cost is the snapshot channel, not the work.** With nobody alive to think, scan or sow, a
+2,015-cell field still costs 0.035 ms a tick — and switching off `Contribute` takes that to
+0.0010, and the six-colonist case from 0.0468 to 0.0093. So roughly **80% of a large field's
+tick is republishing zone rows that did not change**, and with an idle colony it is 97%.
+
+It is not a problem yet: 0.037 ms against three ticks in a 16.6 ms frame is about half a per
+cent. It is recorded because it is **O(zone cells) every tick for ever**, and because storage
+zones are the same channel painted across a whole base rather than a plot — which is where it
+stops being free. The fix is a generation counter on the zone set and a snapshot channel that
+carries over when it has not moved; it belongs with the storage work, not here, because it
+changes the frame buffer that every channel shares.
+
+The allocation line is honest too: 199 bytes a tick with six colonists, and **zero gen-0
+collections over 4,000 ticks**, so it is churn rather than a cost. Two per-call allocations were
+removed on the way (a captured lambda in both yield searches, now `PawnContext.NotZoned`, and a
+`new HaulWorkGiver()` inside the sow scan, now one shared stateless instance) — both are right,
+and **neither moved this number**, so the source is elsewhere and is not worth hunting until it
+collects something.
+
 ## 8. Hooks: what is deliberately not here
 
 Each of these was considered and deferred, and each has a named landing place rather than a

@@ -20,6 +20,14 @@ namespace Odyssey.Sim.Pawns
 
         public override int WorkType => WorkTypeIndex.Growing;
 
+        /// <summary>
+        /// The haul giver this one borrows when a field's own tile is blocked. One instance,
+        /// because a work giver holds no per-call state and <c>new</c>-ing one inside a scan is
+        /// an allocation on the think path - which is measured at a few hundred bytes a tick
+        /// with six colonists on a large field, in a tick that otherwise allocates four.
+        /// </summary>
+        static readonly HaulWorkGiver Clearing = new HaulWorkGiver();
+
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             var zones = ctx.Growing;
@@ -74,7 +82,7 @@ namespace Odyssey.Sim.Pawns
                     int blocked = cells[i];
                     if (zones.IsPlanted(blocked)) continue;
                     if (ctx.Items.ItemAt(blocked) == null) continue;
-                    return new HaulWorkGiver().TryGiveJob(pawn, ctx, job);
+                    return Clearing.TryGiveJob(pawn, ctx, job);
                 }
                 return false;
             }
@@ -360,7 +368,7 @@ namespace Odyssey.Sim.Pawns
 
             int at = ctx.Items.NearestCellWithSpace(
                 ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 12,
-                accept: c => zones.ZonePlantAt(c) < 0);
+                accept: ctx.NotZoned);
             if (at < 0)
                 at = ctx.Items.NearestCellWithSpace(
                     ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 3);

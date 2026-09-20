@@ -17,6 +17,7 @@ namespace Odyssey.Sim.Pawns
     {
         public PawnContext(CellGrid cells, NavGraph nav, PathService paths, PawnContent content)
         {
+            NotZoned = cell => Growing == null || Growing.ZonePlantAt(cell) < 0;
             Cells = cells;
             Nav = nav;
             Paths = paths;
@@ -106,6 +107,18 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Growing.GrowingZones? Growing { get; set; }
 
+
+        /// <summary>
+        /// "This cell is in no growing zone" as a delegate that already exists.
+        ///
+        /// <para>Both callers used to write the lambda inline, and a lambda that captures
+        /// anything is an allocation every time the line is reached — in a work-giver scan, that
+        /// is per candidate per think. Measured on a 45 x 45 field: 199 bytes a tick with six
+        /// colonists against 4 with none, all of it pawn-scaled. Held here rather than on either
+        /// giver because both want the same question and the context is what both already
+        /// have.</para>
+        /// </summary>
+        public System.Func<int, bool> NotZoned { get; }
 
         /// <summary>The world being ticked, valid inside a pawn system's tick.</summary>
         public SimWorld? World { get; private set; }
