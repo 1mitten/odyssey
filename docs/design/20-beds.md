@@ -244,6 +244,23 @@ The job ends as a **failure**, which is what releases the bed she was holding.
 `ASleeperWhoClaimsTheBedSheIsLyingInIsNotWokenByHerOwnClaim` is the negative control and is the one
 that matters; `AColonistAsleepOnTheGroundGetsUpForABedSheIsGiven` is the case draft one missed.
 
+**And an interrupted sleep resumes** (second play day, 2026-09-20: *"when I assigned someone else
+to a bed — everyone just started going back to work"*). The first version got her up and handed
+her to the think tree, and the tree sleeps below the rest `seekThreshold` of 280 and wakes at 950.
+A colonist got up at 600, halfway through the night, was by the tree's lights not tired, and went
+to work at three in the morning — both of them did, the one who lost the bed and the one who was
+given it, which in a colony of three is "everyone". Every test of the rule had assigned the bed
+within a tick of her lying down, at a rest of 40, and so never crossed the gap between the two
+thresholds. Now the sweep runs in **two passes**: every affected sleep ends first, so every claim
+is released, and then each woken colonist goes straight back through `TrySleep` — her own bed if
+she has one, the nearest free one if not, the ground if there is none — past the tiredness gate,
+because she was asleep and the only question is where. Two passes rather than one because the bed
+the player just gave B is the bed A is still lying in: choose in the same pass and whether B gets
+her own bed or the nearest spare depends on which of the two the colony list holds first.
+`AColonistWokenMidNightGoesToTheBedSheWasGivenNotToWork` and
+`GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse` hold it, the second in the
+colony's own shape: three colonists, five starting beds, each claimed on the first night.
+
 ## 8. The pane and the popover
 
 `CellDetail` widens by two sparse fields, the same shape as its neighbours (ADR 0004 amendment

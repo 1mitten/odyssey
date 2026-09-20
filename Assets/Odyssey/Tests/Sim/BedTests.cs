@@ -1051,6 +1051,10 @@ namespace Odyssey.Tests.Sim
         // ---- a bed given to a sleeper ---------------------------------------------------------
 
         /// <summary>Tick until this colonist is asleep, or fail saying she never was.</summary>
+        /// <summary>The kind of job she is on now, or -1 when she is between jobs.</summary>
+        static int DriverOf(ColonyWorld colony, Pawn pawn) =>
+            pawn.CurrentJob == null ? -1 : colony.Pawns.Content.Jobs[pawn.CurrentJob.DefIndex].driver;
+
         static void SleepNow(ColonyWorld colony, Pawn pawn, int budget = 6_000)
         {
             pawn.Needs[NeedIndex.Rest] = 40;
@@ -1208,6 +1212,98 @@ namespace Odyssey.Tests.Sim
                 colony.World.Tick();
             Assert.That(sleeper.Cell, Is.EqualTo(head), "she never walked to it");
             Assert.That(sleeper.Asleep, Is.True);
+        }
+
+        /// <summary>
+        /// <b>A colonist woken mid-night goes to the bed she was given, not to work</b> (owner,
+        /// 2026-09-20, second play day: <i>"when I assigned someone else to a bed - everyone just
+        /// started going back to work"</i>).
+        ///
+        /// <para>The three tests above all assign the bed within a tick of her falling asleep, at a
+        /// rest of 40 — well under the seek threshold of 280 — so when the sweep ended her sleep,
+        /// the tree found her tired and sent her to the new bed. A player assigns beds in the
+        /// middle of the night, when she has slept for hours and is at 600. The sweep got her up
+        /// correctly, and the think tree, asked whether she wanted to sleep, said no: she is above
+        /// the seek threshold, so she went to work at three in the morning. The wake threshold is
+        /// 950. Everything between the two is a sleep interrupted, and an interrupted sleep
+        /// resumes.</para>
+        /// </summary>
+        [Test]
+        public void AColonistWokenMidNightGoesToTheBedSheWasGivenNotToWork()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+
+            int near = OpenFootprint(colony, out int nearFoot);
+            Assume.That(near, Is.GreaterThanOrEqualTo(0));
+            int far = AnotherOpenFootprint(colony, near, nearFoot, out _);
+            Assume.That(far, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, near);
+            RaiseABed(colony, far);
+
+            SleepNow(colony, pawn);
+            Assume.That(pawn.Cell, Is.EqualTo(near));
+
+            // Half a night's sleep: well above the seek threshold, well below the wake threshold.
+            int seek = colony.Pawns.Content.Needs[NeedIndex.Rest].seekThreshold;
+            for (int i = 0; i < 20_000 && pawn.Needs[NeedIndex.Rest] < seek + 300; i++) colony.World.Tick();
+            Assume.That(pawn.Asleep, Is.True, "she woke before the assignment arrived");
+            Assume.That(pawn.Needs[NeedIndex.Rest], Is.GreaterThan(seek));
+
+            Assert.That(Assign(colony, far, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(pawn.Asleep, Is.False, "she is still asleep in a bed that is not hers");
+            Assert.That(DriverOf(colony, pawn), Is.EqualTo(JobIndex.Sleep),
+                "she got up and went to work instead of to the bed she was given");
+            Assert.That(pawn.CurrentJob!.TargetCell, Is.EqualTo(far));
+
+            for (int i = 0; i < 6_000 && !(pawn.Asleep && pawn.Cell == far); i++) colony.World.Tick();
+            Assert.That(pawn.Cell, Is.EqualTo(far), "she never walked to the bed she was given");
+            Assert.That(pawn.Asleep, Is.True);
+        }
+
+        /// <summary>
+        /// The shape the owner actually played: a colony whose colonists each claimed a starting
+        /// bed on the first night, and a bed given mid-night from one sleeper to another. Two
+        /// people are concerned — the one whose bed it was and the one it now is — and both
+        /// should be asleep again shortly, in beds. The third is not concerned and does not stir.
+        /// </summary>
+        [Test]
+        public void GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 5;
+            ColonyWorld colony = ColonyWorld.Build(Size, Seed, scenario);
+            var all = colony.Pawns.Pawns.All;
+            var a = all[0]; var b = all[1]; var c = all[2];
+
+            foreach (var p in all) p.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 6_000 && !(a.Asleep && b.Asleep && c.Asleep); i++) colony.World.Tick();
+            Assume.That(a.Asleep && b.Asleep && c.Asleep, Is.True, "they never all got to sleep");
+            int bedA = a.Cell, bedB = b.Cell, bedC = c.Cell;
+            Assume.That(colony.Construction.BedOwnerAt(bedA), Is.EqualTo(a.Id.Value), "each claimed her own");
+            Assume.That(colony.Construction.BedOwnerAt(bedB), Is.EqualTo(b.Id.Value));
+
+            int seek = colony.Pawns.Content.Needs[NeedIndex.Rest].seekThreshold;
+            for (int i = 0; i < 20_000 && a.Needs[NeedIndex.Rest] < seek + 300; i++) colony.World.Tick();
+            Assume.That(a.Asleep && b.Asleep && c.Asleep, Is.True);
+
+            Assert.That(Assign(colony, bedA, b.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(c.Asleep, Is.True, "the colonist whose bed did not change was woken");
+            Assert.That(c.Cell, Is.EqualTo(bedC));
+
+            Assert.That(DriverOf(colony, a), Is.EqualTo(JobIndex.Sleep),
+                "she lost her bed and went to work rather than to another one");
+            Assert.That(DriverOf(colony, b), Is.EqualTo(JobIndex.Sleep),
+                "she was given a bed and went to work rather than to it");
+
+            for (int i = 0; i < 6_000 && !(a.Asleep && b.Asleep && b.Cell == bedA); i++) colony.World.Tick();
+            Assert.That(b.Cell, Is.EqualTo(bedA), "she never reached the bed she was given");
+            Assert.That(b.Asleep, Is.True);
+            Assert.That(a.Asleep, Is.True, "she never went back to sleep");
+            Assert.That(colony.Pawns.Items.Beds, Has.Member(a.Cell), "she is not in a bed");
+            Assert.That(a.Cell, Is.Not.EqualTo(bedA));
+            Assert.That(c.Asleep, Is.True);
         }
 
         /// <summary>

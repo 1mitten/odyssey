@@ -39,10 +39,13 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   out along whatever spots the storey search found. A picture answers neither — it wants a look at
   a new colony.
 
-- **Nobody has seen a colonist get up when given a bed** (same branch). Assign a bed to a sleeping
-  colonist and she should stand, walk and lie down in the new one. Measured and tested; what no
-  test can say is whether it reads as *obeying* or as *startling* — a colonist snapping upright
-  mid-night may want a beat before she moves.
+- **A colonist given a bed mid-night has been seen once, and went to work** (same branch, second
+  play day). That is fixed — an interrupted sleep resumes, in the new bed for the one given it and
+  in the nearest free bed for the one who lost it — and the fix is unplayed. Assign a sleeper's
+  bed to another sleeper at night: both should stand, walk, and lie down again, and the third
+  colonist should not stir. A wrong answer is anybody picking up an axe before dawn, or the new
+  owner lying down in a spare bed while the one she was given stays empty. Still open from the
+  first round: whether standing up mid-night reads as *obeying* or as *startling*.
 - **Nobody has seen falling items drop and land** (`claude/falling-items`, `docs/design/26-falling-items.md`).
   When ground or a floor slab beneath resting items is destroyed or deconstructed, items drop down onto
   the nearest solid floor below (or despawn if over the void). Presentation accelerates airborne items

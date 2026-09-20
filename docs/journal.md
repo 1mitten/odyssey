@@ -7568,3 +7568,44 @@ the only tier that caught the board-size fault: the fast tier cannot, because `P
 is null headless, and EditMode did not, because nothing there builds a session through
 `OdysseyBootstrap`. Three tests failed, all in `StartScreenTests`, all with the same stack, and
 the new code in the stack was not the wrong code.
+
+## 2026-09-20 — The second play day: woken for a bed, and sent to work
+
+The branch's first play day had put the bed rule in front of the owner, and the report back was
+one line: *"the issue here is when I assigned someone else to a bed — everyone just started going
+back to work — the rest of the fixes seemed fine."*
+
+**Reproduced before it was read**, in two tests, because the last three days have taught that
+reading this code says it is correct. The first is the report in its simplest shape: one colonist,
+two beds, asleep in the near one, given the far one after half a night. The second is the colony
+the owner actually played — three colonists, five starting beds, each claimed on the first night —
+with one sleeper's bed given to another at night. Both failed on the same line: the woken colonist
+was on a **work** job the tick after the assignment. The third colonist, whose bed had not
+changed, slept on; so "everyone" was the two people concerned, which in a colony of three it is.
+
+**The cause was the hand-over, not the sweep.** `GetOutOfTheWrongBed` ended the right sleeps and
+then left each colonist to the think tree, and the tree's sleep branch is gated on rest below the
+`seekThreshold` of 280 — the question *should she start sleeping?* A sleeper wakes at 950, so a
+colonist got up at 600 was, by that gate, not tired, and the work branch took her. Every one of
+the five existing tests had assigned the bed within a tick of her lying down, at the rest of 40 the
+helper sets, and so never crossed the 670-point gap between the two thresholds. A test that probes
+a range at one point proves the rule at that point.
+
+**The fix is that an interrupted sleep resumes.** The sweep now runs in two passes — every
+affected sleep ends first, so every claim is released, and then each woken colonist goes straight
+back through `TrySleep`, past the gate, because she was asleep and the only question is where.
+Two passes rather than one because the bed the player just gave B is the bed A is still lying in:
+choose in the same pass and whether B gets her own bed or the nearest spare depends on which of the
+two the colony list holds first, which is the kind of order-dependence that passes every test
+until the day it does not. `TrySleep` became public for it; the scratch list of the woken is
+cleared before and after every use and is neither saved nor hashed.
+
+Fast tier **777 Sim + 455 Hud**, Long **21**. The goldens did not move: no golden run assigns a
+bed, and an arrival claim on one's own bed still falls through the sweep's first case. Unity could
+not be run from this session — the owner's editor is open on this worktree — so the Unity tier
+is the pull request's to prove.
+
+Also this session: `origin/main` had taken the falling-items branch (PR #138), and this branch
+conflicted with it only in the three documents both had appended to. Both journal entries and both
+playtest-queue rows were kept, and the tier line keeps this branch's counts, re-run after the merge.
+

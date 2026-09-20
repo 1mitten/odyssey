@@ -185,6 +185,30 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-20 — Woken for a bed, and sent to work instead
+
+Owner, second play day: *"when I assigned someone else to a bed — everyone just started going back
+to work."*
+
+`JobSystem.GetOutOfTheWrongBed` ended the sleep of everybody the assignment concerned — correctly,
+and only them — and handed each to the think tree. The tree's sleep branch is gated on rest below
+the `seekThreshold` (280 of 1000); a sleeper wakes at 950. A colonist got up at 600 was, by that
+gate, not tired, so `WorkThinkNode` took her. In a colony of three the two people concerned are
+"everyone".
+
+**The shape: a rule that reuses a decision made for a different question.** "Should she start
+sleeping?" and "she was asleep; where should she continue?" share a chooser but not a gate, and
+routing the second through the first's gate was invisible while the gate happened to be open.
+
+**Why five tests missed it.** All five assigned the bed within a tick of her lying down, at the
+rest of 40 the helper sets, so the gate was open in every one. A test that probes a range at one
+point proves the rule at that point. The repro sleeps her to `seek + 300` first.
+
+**Stopped by** the sweep resuming the sleep itself, in two passes (end every affected sleep, then
+choose again, so that the bed just given to B is not still reserved by A when B chooses), through
+`CriticalNeedsThinkNode.TrySleep` made public. `BedTests.AColonistWokenMidNightGoesToTheBedSheWasGivenNotToWork`,
+`GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse`. `docs/design/20-beds.md` §7.
+
 ### 2026-09-20 — The board had two sizes, and only a write could tell
 
 Not reported, and not reportable: it was silent until something wrote.

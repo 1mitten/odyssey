@@ -185,7 +185,7 @@ namespace Odyssey.Sim.Pawns
         public void Tick(SimWorld world)
         {
             _ctx.Sync(world);
-            GetOutOfTheWrongBed();
+            GetOutOfTheWrongBed(world.CurrentTick);
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) TickPawn(pawns[i], world.CurrentTick);
         }
@@ -219,21 +219,36 @@ namespace Odyssey.Sim.Pawns
         ///
         /// <para>Anything else — asleep in an unowned bed, or on the ground with no bed to go to —
         /// is left where it is. The job ends as a failure, which is what releases the bed she was
-        /// holding, and the tree is consulted in the same tick a job ends, so she is walking
-        /// before the player's hand has left the mouse.</para>
+        /// holding, so she is walking before the player's hand has left the mouse.</para>
+        ///
+        /// <para><b>And an interrupted sleep resumes; it is not handed to the tree.</b> The first
+        /// version did hand it over, and the owner's second play day found what that meant
+        /// (<i>"when I assigned someone else to a bed - everyone just started going back to
+        /// work"</i>): the tree sleeps below the <c>seekThreshold</c> of 280 and wakes at 950, so a
+        /// colonist got up at 600 in the middle of the night was, by the tree's lights, not tired,
+        /// and went to work. Every test of the rule had assigned the bed at a rest of 40 and never
+        /// met the gap. So the woken colonist goes straight back through <c>TrySleep</c> — her own
+        /// bed if she has one, the nearest free one if not, the ground if there is none — and
+        /// only if that cannot start does the tree get her on her own tick.</para>
+        ///
+        /// <para><b>Two passes, not one.</b> Every affected sleep ends before anybody chooses
+        /// again, because the bed the player just gave B is the bed A is still lying in: choose
+        /// in the same pass and whether B gets her own bed or the nearest spare depends on which
+        /// of the two the colony list happens to hold first.</para>
         ///
         /// <para>Every sleeper is examined rather than a named few, once, on the same tick the
         /// assignment arrived — intents drain at step 1 and this runs at step 4. An assignment is
         /// a player's click; the sweep costs one pass over the colony and a bed lookup each, and
         /// it cannot be wrong about who was left out.</para>
         /// </summary>
-        void GetOutOfTheWrongBed()
+        void GetOutOfTheWrongBed(int tick)
         {
             Construction.ConstructionGrid? sites = _ctx.Construction;
             if (sites == null || !sites.BedOwnershipChanged) return;
             sites.ClearBedOwnershipChanged();
 
             var pawns = _ctx.Pawns.All;
+            _woken.Clear();
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn pawn = pawns[i];
@@ -246,8 +261,30 @@ namespace Odyssey.Sim.Pawns
                 if (owner == 0 && !sites.PawnOwnsABed(pawn.Id.Value)) continue;
 
                 EndJob(pawn, JobStatus.Failed);
+                _woken.Add(pawn);
             }
+
+            for (int i = 0; i < _woken.Count; i++) ResumeSleep(_woken[i], tick);
+            _woken.Clear();
         }
+
+        /// <summary>
+        /// Put a colonist whose sleep was interrupted back to bed, wherever the sleep chooser now
+        /// sends her. Not through the tree, which would ask whether she is tired enough to
+        /// <i>start</i> sleeping; she was asleep, so the only question is where. If the job
+        /// cannot start — its claim refused, which the chooser has already ruled out — she is
+        /// between jobs and <see cref="TickPawn"/> consults the tree for her this same tick.
+        /// </summary>
+        void ResumeSleep(Pawn pawn, int tick)
+        {
+            var job = pawn.JobBuffer;
+            job.Reset(JobIndex.Wait);
+            if (CriticalNeedsThinkNode.TrySleep(pawn, _ctx, job)) StartJob(pawn, job, tick);
+        }
+
+        // Scratch for the sweep above: cleared before and after every use, so it is neither
+        // state nor a second copy of who is asleep.
+        readonly List<Pawn> _woken = new List<Pawn>();
 
         void TickPawn(Pawn pawn, int tick)
         {
@@ -579,7 +616,12 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
-        static bool TrySleep(Pawn pawn, PawnContext ctx, Job job)
+        /// <summary>
+        /// Choose where to sleep and write it into <paramref name="job"/>. Public because the job
+        /// system resumes an interrupted sleep through it directly, past the tiredness gate in
+        /// <see cref="TryGiveJob"/>.
+        /// </summary>
+        public static bool TrySleep(Pawn pawn, PawnContext ctx, Job job)
         {
             // Zero rest is a collapse, not a journey (WS3, design 17 §4c): a body that has run
             // out goes down where it stands, however comfortable the bed it was walking towards.
