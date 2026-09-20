@@ -95,11 +95,13 @@ namespace Odyssey.Hud
     /// anything decided in a stylesheet is unproven until an editor run, and the decisions worth
     /// testing are moved here on purpose.</para>
     ///
-    /// <para><b>The default is three, not never.</b> <c>Pawn</c> initialises every work priority to
-    /// 3, so a fresh colony opens this panel on a grid of threes in four columns. That is correct,
-    /// it is what the player then edits, and it is why <see cref="DefaultPriority"/> is a named
-    /// constant here as well as a literal there — two copies of a number that must agree, with a
-    /// test that says so.</para>
+    /// <para><b>The default is three, not never</b> — <c>Pawn</c> initialises every work priority
+    /// to 3, which is why <see cref="DefaultPriority"/> is a named constant here as well as a
+    /// literal there: two copies of a number that must agree, with a test that says so. <b>But the
+    /// grid does not open on a colony of threes</b>, and this comment said it did until the code
+    /// was read: <c>ColonyScenario.AssignTrade</c> deals the first miners Mining 1 / Chopping 3 and
+    /// everybody else the reverse, so the panel's first screen is a division of labour somebody
+    /// else chose. Design 27 §6.3.</para>
     /// </summary>
     public sealed class WorkGridModel
     {

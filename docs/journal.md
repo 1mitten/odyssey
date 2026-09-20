@@ -7851,3 +7851,24 @@ Presentation nor Editor and it is the half that cannot be proven without a Unity
 **Neither tier was run for this work.** The container has no dotnet SDK and no Unity, and the
 egress policy refuses `builds.dotnet.microsoft.com`, so every C# file here is unproven. Both content
 checks pass, because no content changed — the panel's own chrome words are the open question OQ-W1.
+
+**Correction, same day, before CI ran.** This entry and the design both said the Work tab opens on a
+colony of threes. It does not. `ColonyScenario.AssignTrade` has been dealing the first `miners`
+colonists **Mining 1 / Chopping 3** and everybody else the reverse since the scenario was written,
+and its own comment says exactly why: *"until the player can set priorities from the interface the
+scenario has to do it, exactly as it has to give the first orders."* The claim came from reading
+`Pawn`'s constructor and stopping there — which is the failure `CLAUDE.md` opens by warning about,
+committed in the same session that quotes the warning.
+
+It is a better fact than the one it replaces. **The panel's first screen is a division of labour
+somebody already chose on the player's behalf**, in the two columns a player can actually feel, and
+that is a more interesting thing to hand them than a blank slate. The test that would have caught it
+existed and was pointed at the wrong board: `Bare()` sets `miners = 0`, so a fixture that only ever
+used the bare scenario saw threes and would have taught the next session the same wrong thing.
+There are now two tests — the constructor's default on the bare board, and the played scenario's
+split — and the second names `AssignTrade` so the connection is findable from either end.
+
+**And `AssignTrade` is now on notice**, which is the part worth carrying forward. It exists only
+because nothing could set a priority; this panel is the thing it was waiting for. Removing it is not
+this unit's business — it moves the state hash and changes how every existing colony starts — but
+whoever does should know the panel replaced its reason.

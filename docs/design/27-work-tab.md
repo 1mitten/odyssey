@@ -238,9 +238,25 @@ An **assigned-but-blank** cell — capable, priority 0, "never" — is bordered 
 reads, with a slightly *lighter* fill than an assigned one so that a blank column does not read as a
 hole: `rgba(0,0,0,.42)` against `rgba(0,0,0,.55)`.
 
-**The default is 3, not blank**, because `Pawn` initialises every priority to 3. So a new colony
-opens this panel on a grid that is entirely `3`s in four columns, which is correct and is the thing
-the player then edits.
+**The default is 3, not blank**, because `Pawn` initialises every priority to 3 — but *"the grid
+opens on a colony of threes"* is **wrong**, and it was written into this document before the code
+was checked. `ColonyScenario.AssignTrade` deals the first `miners` colonists **Mining 1 / Chopping
+3** and everybody else the reverse, and its own comment says why: *"until the player can set
+priorities from the interface the scenario has to do it, exactly as it has to give the first
+orders."*
+
+So **the Work tab opens on a visible division of labour**, not a blank slate, and that is a better
+first screen than the one this design assumed: the player's first look at the panel shows them a
+choice somebody already made on their behalf, in the two columns they can actually feel. The bare
+test board has `miners = 0` and does open on threes, which is why a test that only ever saw `Bare()`
+would have taught the next session the wrong thing;
+`WorkPriorityTests.ThePlayedScenarioDealsADivisionOfLabourAndTheGridWillShowIt` pins the real one.
+
+**And `AssignTrade` is now on notice.** It exists only because nothing could set a priority; this
+panel is the thing it was waiting for. Removing it is not this unit's business — it would move the
+state hash and change how every existing colony starts — but whoever does should know the panel
+replaced its reason, and that a colony of identical colonists all walking to the same trees is what
+it was written to prevent.
 
 **Simple.** The same cell swaps the digit for `✓` (`HudTheme.Good`) or `✕` (`HudTheme.Bad`).
 Priority > 0 is a tick. Setting a tick writes **3**, the default, and clearing writes 0, so a

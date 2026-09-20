@@ -37,14 +37,45 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void EveryColonistIsBornOnPriorityThree()
+        public void APawnIsBornOnPriorityThreeAndTheBareBoardLeavesItThere()
         {
+            // Pawn's constructor fills every priority with 3, and Bare() sets miners = 0, so
+            // AssignTrade returns early and nothing moves. This is the control for the test below.
             ColonyWorld colony = Board();
 
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
             for (int w = 0; w < WorkTypeIndex.Count; w++)
                 Assert.That(pawn.WorkPriority(w), Is.EqualTo(3),
-                    "The grid opens on a colony of threes, and that is what the player then edits.");
+                    "Bare() has no miners, so the scenario leaves the constructor's threes alone.");
+        }
+
+        [Test]
+        public void ThePlayedScenarioDealsADivisionOfLabourAndTheGridWillShowIt()
+        {
+            // The correction to a claim this design made and got wrong: a colony a player
+            // actually starts does NOT open on a grid of threes. ColonyScenario.AssignTrade deals
+            // the first `miners` colonists Mining 1 / Cutting 3 and everybody else the reverse,
+            // "until the player can set priorities from the interface" — which is what this panel
+            // is. The Work tab therefore opens on a visible division of labour, and that is the
+            // thing it has to draw correctly on day one.
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 4;
+            scenario.miners = 2;
+            ColonyWorld colony = ColonyWorld.Build(Size, 1u, scenario, barren: true, wooded: true);
+
+            var pawns = colony.Pawns.Pawns.All;
+            Assert.That(pawns.Count, Is.EqualTo(4));
+
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                bool miner = i < scenario.miners;
+                Assert.That(pawns[i].WorkPriority(WorkTypeIndex.Mining), Is.EqualTo(miner ? 1 : 3));
+                Assert.That(pawns[i].WorkPriority(WorkTypeIndex.Cutting), Is.EqualTo(miner ? 3 : 1));
+
+                Assert.That(pawns[i].WorkPriority(WorkTypeIndex.Haul), Is.EqualTo(3),
+                    "AssignTrade touches two work types and no others.");
+                Assert.That(pawns[i].WorkPriority(WorkTypeIndex.Construction), Is.EqualTo(3));
+            }
         }
 
         [Test]
