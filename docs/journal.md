@@ -9195,6 +9195,46 @@ built, and that the collector does not run at all while the panel sits open.
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
 
+## 2026-09-21 — The experience bar's first look: an underline becomes a column
+
+The owner played PR #139 and asked for three things: the bar between the label and the value, the
+needs' green instead of the passion tint, and slightly thicker with good spacing.
+
+**The first one quietly changes what kind of thing the bar is.** It shipped absolutely positioned
+along the row's bottom edge, and §8 of `15-skills.md` argued hard for that: `.skill` is 19 px, the
+colonist pane is one fixed height across every tab, and a bar in the flow would grow all seven rows
+and move the pane's top edge on a change of tab. Moving it looks like undoing a recorded decision.
+
+It is not, and the distinction is worth having written down. **That argument is about a bar stacked
+under the text.** A bar beside the text costs no height at all while it is shorter than the row. So
+the constraint survives intact — no layout constant moved, `.skill` is still 19, no overlap case or
+coverage figure changed — and only the means changed. The stylesheet now says so at the point
+somebody would be tempted to tidy it.
+
+**What is genuinely new is that the row has a width budget.** Out of the flow the bar could not
+squeeze anything; in the flow it can, and the thing it squeezes is the only flexible part, the name,
+silently, until *Construction* clips. Nothing would have reported that: the panel still lays out,
+no overlap case moves, and the fast tier has no text engine to see a truncation. So the parts are
+named in `HudLayout` and `SkillNameWidth` is derived from them rather than written down, and
+`TheSkillRowsPartsFitTheRow` holds the sum to 256 px and the name to a floor of 95.
+
+**That floor is a ratchet, not a measurement, and the test says which it is.** The fast tier cannot
+prove *Construction* fits in 95 px — that needs a font and a text engine. What it can do is make
+widening the bar a deliberate edit to a number somebody then looks at, rather than a discovery in a
+screenshot a week later. Confirmed to fail on the right assertion by widening the bar to 96 and
+watching the name column report 71.
+
+**The passion tint was defended in §8 and is gone.** The argument was that the fill was the only
+place the ×0.35/×1.0/×1.5 learning rate was visible while it was happening. It was wrong about which
+question the bar answers: a player reading the row wants *how far along is she*, which is what a
+food bar answers and deserves the same colour. The passion is a different fact and is still on the
+row in the pips, where it was always the more legible of the two. `HudTokens.Good`, from the token
+so the bar and a food bar cannot drift — and **one colour rather than a band**, because `NeedBand`
+runs good to bad and a skill has no bad end, so asking it would paint a new colonist's skills red
+for being new. Set once at build now rather than on every passion change.
+
+Fast tier 898 Sim + 586 Hud, EditMode **2,258 / 2,240 / 0**, PlayMode **91 / 86 / 0**.
+
 ## 2026-09-20 — Two branches, one anchor: the toast stack and the Events panel
 
 PR #139 (SK, skills made visible) was based on #119 and written while EV, the incident layer, was

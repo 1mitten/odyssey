@@ -459,3 +459,60 @@ in prose will collide in arithmetic, and an exhaustive sweep over a case list is
 as the list. When a branch adds a region to a shared column, the merge owes a case with *every*
 member of that column at once — the prose in each branch is the tell, and it is a grep for the anchor's
 name.
+
+### 8i. The bar's first look: into the row, green, and thicker (owner, 2026-09-21)
+
+> *"it works great but some visual change — the experience bar needs to sit between the skill label
+> and the skill value, it should also be using the same green as used for the rest, food bars, if
+> possible can we make the bars slightly thicker if space allows with good spacing."*
+
+Three changes, and the first is the one with consequences.
+
+**It is a column of the row now, not an underline drawn along it.** It shipped absolutely
+positioned at `bottom: 0`, spanning from the name to the row's right edge. It sits between
+`.skill__name` and `.skill__level` in the flow.
+
+**The reason for the old positioning still holds and is met a different way.** §8 argued the bar had
+to leave the flow because `.skill` is 19 px, `HudLayout.SkillRow` says so, the colonist pane is one
+fixed height across every tab, and a bar in the flow would grow all seven rows and move the pane's
+top edge on every change of tab. That argument is about a bar stacked *under* the text. A bar
+*beside* the text costs no height at all while it is shorter than the row, which at 6 px in a 19 px
+row it is. **No layout constant moved and no overlap case changed**; `.skill` is still 19, the pane
+is still one height, and the coverage figures are untouched.
+
+**The row has a width budget now, and that is new.** While the bar was out of the flow it could not
+squeeze anything. In the flow it can: widen it and the only flexible part, the name, silently loses
+the difference until *Construction* — the longest of the fourteen labels — clips. So the parts are
+named in `HudLayout` (`SkillIconWidth`, `SkillIconGap`, `SkillBarWidth`, `SkillBarGap`,
+`SkillLevelWidth`, `SkillPassionGap`, `SkillPassionWidth`) and `SkillNameWidth` is what is left,
+derived rather than written down. `HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the sum to the
+row's 256 px and holds the name column to a floor of **95 px**.
+
+That floor is a ratchet rather than a measurement, and the test says so. The fast tier has no text
+engine, so it cannot prove *Construction* fits in 95 px; what it can do is make the day somebody
+wants a wider bar a day they lower that number on purpose and look at the result, rather than find
+the clipping in a screenshot a week later.
+
+**The bar is a fixed width and the name is what flexes**, which is the arrangement rather than an
+implementation detail. Everything to the bar's right is a fixed width, so a fixed bar sits at a
+fixed offset from the row's right edge and every bar in the grid lines up on both edges without
+anything measuring text. Flex the bar instead and its left edge tracks the name beside it, so
+*Construction* and *Mining* would start their bars in different places and the column would read as
+ragged.
+
+**Green, and the passion tint goes.** The fill is `HudTokens.Good` — the needs' own green, the one a
+food bar is drawn in — taken from the token so the two cannot drift. It is **one colour, not a
+band**: `NeedBand` runs good to bad because a need has a bad end a player must be told about, and a
+skill has none, so a new colonist's skills would otherwise be painted red for being new.
+
+The tint it replaces was argued for in §8 as *the only place the ×0.35/×1.0/×1.5 learning rate is
+visible while it is happening*. That argument was wrong about which question the bar answers. A
+player reading this row wants **how far along is she**, which is what a food bar answers and
+deserves the same colour; the passion is a different fact and is still on the row, in the pips,
+where it was always the more legible of the two. The colour is also now set **once at build**
+rather than on every passion change, because unlike a need it never changes.
+
+**Six pixels, not three, with eight either side.** `SkillBarHeight` and `SkillBarGap`. Six leaves
+six and a half above and below inside the 19 px row, centred by `.skill`'s existing
+`align-items: center`. The row did not grow and must not: the test asserts the bar stays shorter
+than its row, which is the surviving half of the constraint §8 was protecting.

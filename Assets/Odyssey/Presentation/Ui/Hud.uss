@@ -994,8 +994,13 @@
    catalogue's "disabled with a reason" rule — but visibly not a number you have. */
 .skill--off { opacity: 0.45; }
 
+/* The one flexible part of the row. Everything else is a fixed width, so this is what absorbs a
+   change to any of them - HudLayout.SkillNameWidth is that arithmetic, and
+   HudLayoutTests.TheSkillRowsPartsFitTheRow is what stops this being squeezed until "Construction"
+   clips. */
 .skill__name {
     flex-grow: 1;
+    flex-shrink: 1;
     margin-left: 9px;
     color: #eef3f6;
     white-space: nowrap;
@@ -1026,38 +1031,51 @@
     background-color: #e8b55c;
 }
 
-/* The experience bar (SK3). Absolutely positioned, which is the whole trick: `.skill` is 19px and
-   HudLayout.SkillRow says so, the colonist pane is one fixed height across every tab, and a bar in
-   the flow would have grown all seven rows and moved the pane's top edge on every change of tab —
-   the exact thing that fixed height was introduced to stop.
+/* The experience bar (SK3). A column of the row, between the name and the level, on the owner's
+   first look at it (2026-09-21: "the experience bar needs to sit between the skill label and the
+   skill value"). It shipped as a 3px underline absolutely positioned along the row's bottom edge.
+
+   WHAT THE OLD POSITIONING WAS PROTECTING, because it still has to be protected. `.skill` is 19px,
+   HudLayout.SkillRow says so, and the colonist pane is one fixed height across every tab; a bar
+   stacked UNDER the text would have grown all seven rows and moved the pane's top edge on every
+   change of tab, which is the exact thing that fixed height exists to stop. A bar placed BESIDE
+   the text costs no height at all as long as it is shorter than the row, which at 6px in a 19px
+   row it is. The constraint is kept; only the means changed. Do not read "it is in the flow now"
+   as permission to make it taller than the row.
+
+   Fixed width, and the NAME is what flexes. Everything to the bar's right is a fixed width, so a
+   fixed bar sits at a fixed offset from the row's right edge and every bar in the grid lines up on
+   both edges without anything measuring text. The numbers are HudLayout's - SkillBarWidth,
+   SkillBarGap, SkillBarHeight - and TheSkillRowsPartsFitTheRow holds them to the row's width.
 
    Hidden by default so a row with no simulation behind it needs nothing done to it, which also
    covers the row that is born dead and never changes: the code only touches this when liveness
-   changes, and for that row it never does.
-
-   It starts at the name rather than at the row's left edge, so the icon column stays clean and the
-   bar reads as belonging to the words above it.
-
-   `.skill` needs no `position: relative` for this: relative is UI Toolkit's default, so the row is
-   already the containing block. Do not "tidy" `.skill` to `position: absolute`. */
+   changes, and for that row it never does. `display: none` on a flex child takes its width back
+   too, so a dead row's name simply runs on through where the bar would have been. */
 .skill__track {
     display: none;
-    position: absolute;
-    left: 25px;
-    right: 0;
-    bottom: 0;
-    height: 3px;
-    border-radius: 2px;
+    width: 72px;
+    height: 6px;
+    margin-left: 8px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.10);
 }
 
-/* Width is set from code, per mille in and per cent out. The colour is set from code too, from the
-   passion: the fill is the only place the x0.35/x1.0/x1.5 learning rate is visible while it is
-   happening. */
+/* Width is set from code, per mille in and per cent out. The colour is the needs' own green
+   (HudTokens.Good), set from code so this row and a food bar cannot drift apart - owner,
+   2026-09-21: "it should also be using the same green as used for the rest, food bars".
+
+   It was tinted by passion until then, on the argument that the fill was the only place the
+   x0.35/x1.0/x1.5 learning rate was visible while it was happening. That argument was wrong about
+   which question the bar answers: a player reading this row wants "how far along is she", which is
+   the same question a food bar answers and deserves the same colour. The passion is still on the
+   row, in the pips, which is where it was always legible. */
 .skill__fill {
-    height: 3px;
+    height: 6px;
     width: 0;
-    border-radius: 2px;
+    border-radius: 3px;
     background-color: rgba(255, 255, 255, 0.55);
 }
 

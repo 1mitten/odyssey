@@ -308,12 +308,16 @@ namespace Odyssey.Presentation.Ui
 
             view.Root.Add(view.Icon);
             view.Root.Add(view.Name);
-            view.Root.Add(view.Value);
-            view.Root.Add(view.Passion);
 
             // The experience bar (SK3), on the inspect pane only. The setup page's grid shows a
             // candidate who has not started working, so a part-filled bar there would be a
             // progress reading for progress nobody has made.
+            //
+            // It goes in HERE, between the name and the level, because that is where the owner
+            // put it (2026-09-21: "the experience bar needs to sit between the skill label and
+            // the skill value"). It was a bar drawn along the row's bottom edge and is a column
+            // of the row now, so the order of these Add calls is the order on screen and is the
+            // whole of the change. Hud.uss carries why that costs the row no height.
             if (withBar)
             {
                 view.Track = new VisualElement();
@@ -321,10 +325,14 @@ namespace Odyssey.Presentation.Ui
 
                 view.Fill = new VisualElement();
                 view.Fill.AddToClassList("skill__fill");
+                view.Fill.style.backgroundColor = ExperienceInk;
 
                 view.Track.Add(view.Fill);
                 view.Root.Add(view.Track);
             }
+
+            view.Root.Add(view.Value);
+            view.Root.Add(view.Passion);
 
             grid.Add(view.Root);
             return view;
@@ -384,13 +392,6 @@ namespace Odyssey.Presentation.Ui
                 for (int i = 0; i < view.Passion.childCount; i++)
                     view.Passion[i].style.display =
                         row.Live && row.Passion > i ? DisplayStyle.Flex : DisplayStyle.None;
-
-                // The bar takes its colour from the passion, which is the multiplier it is filling
-                // at: x0.35, x1.0, x1.5. A burning skill therefore both fills faster and looks
-                // different while doing it, which is the only way the four-fold spread between no
-                // passion and a major one is legible at all in something that moves this slowly.
-                if (view.Fill != null)
-                    view.Fill.style.backgroundColor = PassionInk(row.Passion);
             }
 
             // ---- the bar. Guarded on its own value like everything above it, but the guard is
@@ -412,18 +413,28 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The experience bar's colour for a passion (SK3): none, minor, major.
+        /// The experience bar's colour (SK3): the needs' own green, the one a food bar is drawn
+        /// in. Owner, 2026-09-21: <i>"it should also be using the same green as used for the rest,
+        /// food bars"</i>.
         ///
-        /// <para>Not a need band — those run good-to-bad and a skill has no bad end. These run
-        /// quiet-to-loud, and the loud one is the passion pip's own amber so the row's two marks
-        /// for the same fact agree.</para>
+        /// <para><b>One colour, not a band.</b> <see cref="HudTokens.NeedBand"/> runs good to bad
+        /// because a need has a bad end and a player has to be told about it. A skill has no bad
+        /// end — a bar three tenths along is not a warning — so it takes the good end of that
+        /// scale and stays there. Asking <c>NeedBand</c> for it would paint a new colonist's
+        /// skills red for being new.</para>
+        ///
+        /// <para><b>It was tinted by passion until the owner's first look</b>, on the argument
+        /// that the fill was the only place the ×0.35/×1.0/×1.5 learning rate was visible while it
+        /// was happening. That argument was wrong about which question the bar answers: a player
+        /// reading this row wants <i>how far along is she</i>, which is what a food bar answers
+        /// and deserves the same colour. The passion is still on the row, in the pips, which is
+        /// where it was always the more legible of the two.</para>
+        ///
+        /// <para>Taken from the token rather than written as a literal, so this row and a food bar
+        /// cannot drift apart — and set once at build rather than per refresh, because unlike a
+        /// need it never changes.</para>
         /// </summary>
-        static Color PassionInk(int passion) => passion switch
-        {
-            >= 2 => HudTokens.Accent,
-            1 => HudTokens.TextMeta,
-            _ => HudTokens.TextFaint,
-        };
+        static Color ExperienceInk => HudTokens.Good;
 
         void SetNeed(int index, int thousandths)
         {

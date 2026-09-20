@@ -828,6 +828,70 @@ namespace Odyssey.Hud
         /// page's own grid can be derived from it rather than from a second literal.</summary>
         public const int SkillRowWidth = 256;
 
+        // ---------------------------------- the skill row's width budget (owner, 2026-09-21)
+        //
+        // The experience bar moved out of the row's bottom edge and INTO the row, between the name
+        // and the level, on the owner's first look at it: *"the experience bar needs to sit between
+        // the skill label and the skill value"*. That turns a decoration drawn over the row into a
+        // fifth column of it, so the row now has a width budget and these are it. `Hud.uss` is
+        // written from these numbers and `HudLayoutTests.TheSkillRowsPartsFitTheRow` is what stops
+        // the two drifting.
+        //
+        // <b>The bar is a fixed width and the NAME is what flexes</b>, which is the decision worth
+        // keeping. Everything to the bar's right is a fixed width, so a fixed bar sits at a fixed
+        // offset from the row's right edge and every bar in the grid lines up on both edges without
+        // anything measuring text. Flex the bar instead and its left edge tracks the name beside
+        // it, so "Construction" and "Mining" would start their bars in different places and the
+        // column would read as ragged.
+
+        /// <summary>The icon badge at the head of a skill row (<c>IconBadge.RowSize</c>).</summary>
+        public const int SkillIconWidth = 17;
+
+        /// <summary>Between the icon and the name.</summary>
+        public const int SkillIconGap = 9;
+
+        /// <summary>
+        /// The experience bar's track (SK3). Fixed, so every bar in the grid aligns — see the note
+        /// above.
+        /// </summary>
+        public const int SkillBarWidth = 72;
+
+        /// <summary>The air either side of the bar, so it is not crowded by the name or the
+        /// number (owner, 2026-09-21: <i>"with good spacing"</i>).</summary>
+        public const int SkillBarGap = 8;
+
+        /// <summary>
+        /// How thick the bar is drawn. Six rather than the three it shipped at, on the owner's
+        /// first look: <i>"can we make the bars slightly thicker if space allows"</i>.
+        ///
+        /// <para><b>The row does not grow for it and must not.</b> <see cref="SkillRow"/> is 19 and
+        /// the colonist pane is one fixed height across every tab on purpose, so the bar is only
+        /// ever allowed the height it can take inside a row that is already that tall. Six leaves
+        /// six and a half either side of it, centred. This is the same constraint the absolutely
+        /// positioned version was protecting, met by staying short rather than by leaving the
+        /// flow.</para>
+        /// </summary>
+        public const int SkillBarHeight = 6;
+
+        /// <summary>The level number's column.</summary>
+        public const int SkillLevelWidth = 22;
+
+        /// <summary>The passion pips, and the air before them.</summary>
+        public const int SkillPassionWidth = 18;
+
+        public const int SkillPassionGap = 7;
+
+        /// <summary>
+        /// What is left for the name once every fixed part of the row has taken its width. The
+        /// name is the only thing that flexes, so this is the number that shrinks when somebody
+        /// widens anything else — which is why it is derived here and asserted rather than written
+        /// into the stylesheet as a literal nobody would recompute.
+        /// </summary>
+        public const int SkillNameWidth =
+            SkillRowWidth - SkillIconWidth - SkillIconGap
+            - SkillBarGap - SkillBarWidth - SkillBarGap
+            - SkillLevelWidth - SkillPassionGap - SkillPassionWidth;
+
         /// <summary>Between two columns of skills.</summary>
         public const int SkillColumnGap = 18;
 

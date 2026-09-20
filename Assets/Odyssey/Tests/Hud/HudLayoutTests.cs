@@ -537,6 +537,48 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// SK3, after the owner's first look (2026-09-21): the experience bar is a column of the
+        /// skill row, between the name and the level, so the row now has a width budget and its
+        /// parts have to come to exactly the row's width.
+        ///
+        /// <para><b>Why this test exists at all.</b> While the bar was absolutely positioned it
+        /// cost the row no width and could not squeeze anything. In the flow it can: widen the bar
+        /// or its margins and the only flexible part, the name, silently loses the difference until
+        /// "Construction" clips. Nothing else would report that — the panel still lays out, no
+        /// overlap case moves, and the fast tier has no text engine to notice the truncation.</para>
+        ///
+        /// <para><b>What this can and cannot prove.</b> It proves the arithmetic closes and that
+        /// the name column has not been eaten. It cannot prove "Construction" fits in it, because
+        /// that needs a text engine and a font; that question belongs to the Unity tier and
+        /// ultimately to the eye. So the name width is also held to a floor: it is 95 px today, and
+        /// the day somebody wants the bar wider they have to lower that number deliberately and
+        /// look at the result, rather than discover it in a screenshot a week later.</para>
+        /// </summary>
+        [Test]
+        public void TheSkillRowsPartsFitTheRow()
+        {
+            int fixedParts = HudLayout.SkillIconWidth + HudLayout.SkillIconGap
+                           + HudLayout.SkillBarGap + HudLayout.SkillBarWidth + HudLayout.SkillBarGap
+                           + HudLayout.SkillLevelWidth
+                           + HudLayout.SkillPassionGap + HudLayout.SkillPassionWidth;
+
+            Assert.That(fixedParts + HudLayout.SkillNameWidth,
+                Is.EqualTo(HudLayout.SkillRowWidth),
+                "the skill row's parts do not come to the row's width");
+
+            Assert.That(HudLayout.SkillNameWidth, Is.GreaterThanOrEqualTo(95),
+                "the name column has been squeezed; the longest label is \"Construction\" and "
+                + "lowering this is a decision to be looked at, not a side effect of widening the bar");
+
+            // The bar must stay shorter than the row. This is the constraint the absolutely
+            // positioned version was protecting and the only one that survived the move into the
+            // flow: the colonist pane is one fixed height across every tab, so a bar taller than
+            // the row would grow all seven rows and move the pane's top edge on a change of tab.
+            Assert.That(HudLayout.SkillBarHeight, Is.LessThan(HudLayout.SkillRow),
+                "a bar at least as tall as its row grows the row, and the pane with it");
+        }
+
+        /// <summary>
         /// SK4 against EV: the toast stack is the LAST thing in that column, under the Events
         /// panel, and that order is the decision rather than an accident of who was written first.
         /// A toast arrives every couple of minutes and leaves six seconds later; anything below it

@@ -193,6 +193,17 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   calendar days to a harvest reads as slow, and whether the interim green tint reads as "growing here"
   or as a texture fault (`22-growing.md` §9). **This row blocks a merge**, which is why it is first.
 
+- **The experience bar has had its first look and three changes** (owner, 2026-09-21: *"it works
+  great but some visual change"*). The bar moved out of the row's bottom edge and **into** the row,
+  between the label and the value; it is the needs' **green** now rather than tinted by passion; and
+  it is **6 px rather than 3** with 8 px either side. No layout constant moved — the row is still
+  19 px and the pane still one height — but the row has a **width budget** now, and
+  `HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the name column to 95 px so a future widening
+  cannot silently clip *Construction*. `docs/design/15-skills.md` §8i. **What is still unjudged is
+  the same list below**, minus the passion tint which no longer exists: whether the creep reads as
+  progress, whether four bars on fourteen rows read as "four skills you have", and whether the
+  toast reads as good news.
+
 - **Nobody has seen the experience bar or heard a level-up** (2026-09-20, PR #139,
   `docs/design/15-skills.md` §8). A live skill's row now carries a 3 px underline that fills towards
   the next level, tinted by passion; reaching a level raises a **toast** under the alerts and chimes
