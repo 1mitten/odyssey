@@ -167,6 +167,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **PF** frame budget | **The mark pass, 2026-09-20.** The standing-order marks were the last per-cell draw pass and the last uncounted one (P10): they are gathered by colour and go out as one instanced call each, so 901 orders cost 2 draw calls rather than 901, and the pass finally appears in the budget. **Measured with a control inside one run** (`FrameTimeTests.TheMarkPassCostsWhatItSubmits`, `ChunkRenderer.InstanceCellPlates`): the whole pass is **0.40 ms at 901 orders** and the batching recovers **0.09** — a fortieth of what the 4.6 us constant predicts, which is the finding rather than the fix (§6c.1). **Then one sentence of Play found something forty times larger.** The owner watched the overlay while spawning colonists — *"it seemed to hover 1.7 ms no matter the colony size but then frames dropped after so many colonists"* — and the sweep that followed (`FrameTimeTests.TheFrameAgainstColonySize`, `OdysseyBootstrap.FrameSectionMs`) found **`PawnPose.Of` scans every other pawn for the crowd sidestep, once per posed pawn, every frame**: 13.3 ms of a 22.5 ms frame at 384 colonists, against 0.02 ms at 64. Not the tick (0.31 ms at 384), not draw calls (1,243 to 1,324 across a 48-fold colony). **Open, and the next unit** — the fix is *exact*, because `CrowdFarRadius` is 3.0 m against a 2.5 m cell so the skipped pairs contribute zero, so the judged sidestep is not re-opened (§6c.2, `25-pawn-steering.md`, P11). Also still open: **play resolution and target hardware**; the zone snapshot republish and `BestStorageCell`, both with the storage work. |
 | **FI** falling items | **Merged 2026-09-20 (PR #138)** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 | **GS** graphics settings | **Built 2026-09-20, not yet run in Unity.** The Graphics tab gained a **Display** group beside the older toggles: VSync, frame cap, render scale, anti-aliasing, shadow distance, display mode and resolution. Numbers rather than yes/no, so `GraphicsLadder` is one owner for the snap-write-raise rule instead of seven copies, and the HUD's three duplicate ladder builders collapsed into `BuildLadderRow`. The three URP levers write through a **runtime copy** of the pipeline asset, the `PanelSettings` trick from `HudShell.EnsurePanelCopy`, or pressing a settings row would dirty the committed `PC_RPAsset.asset`. Nothing polls per frame. `docs/design/27-graphics-settings.md`. |
+| **MZ** map size | **Built 2026-09-21, PR pending. The frame half is owed.** A fourth board, **Huge 240 x 240 x 16** (921,600 cells), beside Small, Standard and Large; Standard stays the default and stays the baseline every number on record was taken on. The size picker already existed, so the content change is three lines and a CSV row; everything else is measurement. Measured on all four boards in one run each (`docs/design/28-map-size.md` §2): Huge is **0.883 ms per edited cell** against Standard's 0.298 and the scale target's 1.047, **69.8 bytes a cell** (61.3 MiB, ~78 with the render mirror), **90 ms** to generate and **581 KB** to save. **The audit's 0.449 / 1.150 ms are corroborated.** Two findings fell out. **`TickBenchmarkTests` does not build the game's world** — its room lattice carries 19,606 regions at 120 x 120 x 16 against a generated map's 2,110, so its new edit arm reports an order of magnitude more than the same edit costs in the game; it now prints its own region count and names the arm to quote instead. And **"four times Standard" is the wrong multiplier for anything but cells**: Huge is 1.04x Large's render chunks, because a chunk is 25 x 25 within one layer. `FrameTimeTests.TheBoardSizeAgainstTheFrame` is written, compiles and is **unrun** — an editor was open and a frame number taken beside a sibling Unity is worthless. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -182,6 +183,7 @@ this file.
 |---|---|
 | The frame budget, draw calls, what a submission costs | `docs/design/06-rendering-and-camera.md` §6c, §6c.1 |
 | Storage zones, what a store accepts, where a load goes | `docs/design/26-storage.md` |
+| **Board sizes, what a bigger map costs, the ceiling** | `docs/design/28-map-size.md` |
 | Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
 | The Work tab, priorities, the rotated headers | `docs/design/27-work-tab.md` |
 | VSync, frame cap, render scale, resolution, the URP copy | `docs/design/27-graphics-settings.md` |
@@ -360,11 +362,13 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **892 Sim + 562 Hud** (2026-09-20,
-  `claude/mark-pass-batching` merged with a main carrying the Work tab and the sleep pose);
-  Long tier **23**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **912 Sim + 583 Hud** (2026-09-21,
+  `claude/huge-map`); Long tier **34**, up from 23 because the per-board measurement arms all
+  carry `Category("Long")`.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
-  HUD shell is unproven until Unity has compiled it, however green the seconds look.
+  HUD shell is unproven until Unity has compiled it, however green the seconds look. It cost a
+  round on 2026-09-21: a callback parameter in `FrameTimeTests` shadowed a local, the fast tier was
+  green in twenty seconds, and only the Unity tier saw it.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
   `claude/mark-pass-batching` after merging main: EditMode **2,228 total, 2,210 passed,
   0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,

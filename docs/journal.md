@@ -9196,3 +9196,147 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+
+---
+
+## 2026-09-21 — a bigger board, and the number that turned out to be measuring the wrong world
+
+The owner asked for a map twice the size in every direction, for an honest answer about how big we
+could realistically go, and to be interviewed first. The interview settled four things: **twice the
+ground, not the depth** (240 × 240 × 16); a **fourth size** rather than a new default; **measure
+first and change behaviour second**; and the ceiling to be answered against the **2022 laptop** the
+docs still name as the target.
+
+**The first thing grounding found was that the feature already existed.** A board-size picker has
+been on the setup page since 2026-09-17 — Small, Standard, Large — so "a bigger map" is a fourth
+entry in a three-element array. `MapSizes.Default` is an index and Huge goes after Large, so nothing
+shifts; the index is not persisted anywhere (not `PlayerPrefs`, not `ViewStateSection`, not
+`SaveRecipe` — a save carries `SaveHeader.Size`), so a fourth entry cannot invalidate a save.
+`MenuDirectorTests` already iterates `MapSizes.All`, so the cycle, the clamp and the label came for
+free. The content change is three lines and a CSV row.
+
+**The second thing it found is worth more: Large already ships and nothing has ever run it.**
+180 × 180 × 24 is 777,600 cells against Huge's 921,600 — 84% — and 1,536 render chunks against
+1,600, which is 96%. So "four times Standard" is true of cells and of almost nothing that costs,
+because a chunk is 25 × 25 *within one layer* and Large carries eight more layers. The multiplier
+somebody will quote at a frame number is wrong before the frame is measured. Every arm written this
+session runs Large too, for that reason.
+
+### The measurement that mattered, and the one that was lying
+
+The plan was to take the edit tick — the audit's one finding that scales with the board rather than
+with what is happening on it — at each board size. `TickBenchmarkTests` was the obvious place: it
+already runs fifty pawns at the scale target and reports per-phase timing. It also, as the audit had
+noted, **never edits the world**, which is the one state in which `NavGraph.Rebuild` returns on its
+first line. So it got `MineOneCell` and a busy arm.
+
+The first numbers were alarming: 5.23 ms per tick on Standard, 17.78 on Huge, 40.4 at the scale
+target, against the audit's 0.414 and 1.187. Twelve to thirty-four times worse, on a machine several
+times faster than the audit's container. Either the audit was wrong or the new arm was.
+
+**Neither. The benchmark does not build the game's world.** `BuildColony` lays an 11 × 11 room
+lattice with 8% rubble scattered through it, which fragments every block: **19,606 regions at
+120 × 120 × 16 against a generated map's 2,110**, and 207,293 at the scale target against 24,141.
+The rebuild's cost tracks the region count almost exactly — the isolated diagnostic confirmed it,
+19,606 regions → 6.0 ms and 207,293 → 40.1 ms — so the arm was reporting roughly an order of
+magnitude more than the same edit costs in the game, and reporting it under a label that read like
+the game.
+
+That is the failure this project keeps meeting in different clothes: **a measurement that is correct
+about the thing it measures and wrong about the thing it is named after.** The fix is not to delete
+the arm — a heavily built colony tends towards exactly that lattice, so it is a fair floor to hold —
+but to make it say its own region count in its report line and to name, in its summary, which arm to
+quote instead.
+
+The figure a board size is actually bought with went where the real boards already are:
+`NavGraphStatisticsTests`, which generates each map and walks its graph, gained `TimePerEdit`. On a
+board the generator made:
+
+| Board | Regions | Links | Rebuild per mined cell |
+|---|---|---|---|
+| Standard 120 × 120 × 16 | 2,110 | 1,477 | 0.298 ms |
+| Large 180 × 180 × 24 | 7,360 | 3,511 | 0.587 ms |
+| Huge 240 × 240 × 16 | 8,406 | 6,180 | 0.883 ms |
+| Scale target 250 × 250 × 40 | 24,141 | 6,772 | 1.047 ms |
+
+**The audit is corroborated** — it read 0.449 and 1.150 on a 4-core Xeon; this reads 0.298 and 1.047
+on a faster machine, same shape. Huge costs 2.96× Standard's edit tick, which at speed 3 is about
+2.6 ms of a 16.6 ms frame against 0.9 ms today. Real, and nowhere near fatal.
+
+One prediction worth recording because it held: before measuring, live regions were estimated at
+~8,500 for Huge from the live-block count. Measured 8,406. The model — regions track live 10 × 10 × 1
+blocks, not cells — is sound enough to price a board that has not been built.
+
+### What else the numbers said
+
+**Memory is 69.8 bytes a cell** and flat across every board, so Huge is 61.3 MiB simulation-side and
+about 78 MiB with the presentation mirror. The estimate going in was 67 B/cell. `CellGrid`'s
+docstring claiming "22 MB at 2.5M cells" is stale by 1.7× and has been for a while — its six arrays
+are fifteen bytes wide.
+
+**Generation is 90 ms** median over five seeds, and **nothing throws**. That mattered more than it
+sounds: `minReachablePercent` and `maxForcedFords` are per-map absolutes while `pondsPer10000Columns`
+is per-area, so Huge draws roughly four times the ponds against the same three-ford budget, and
+`EnsureReachable` can throw *"The water shapes have severed the map"*. Twenty boards, four sizes by
+five seeds, and it did not — but that arm is now the cheapest thing that can veto a board size, and
+it runs first for exactly that reason.
+
+The same per-map/per-area split shows up where the generator is not broken but is arguably wrong:
+`streamCount = 2`, so Standard puts four water bodies on 300 m and Huge puts five on 600 m. A Huge
+board is drier per acre. And every noise period is in **cells** — `surfacePeriod = 34`,
+`treeClumpPeriod = 11` — so a bigger board is *more map at the same grain* rather than the same map
+enlarged. Both are owner calls, both are in the playtest table, neither was changed.
+
+### The frame half is owed, and saying so is the point
+
+A Unity editor was open on this machine from 00:39 onwards. `CLAUDE.md` is explicit that a frame
+number taken beside a sibling Unity is worthless — the city canary drifted 2.01 to 4.01 ms on
+nothing else — and the rule about not killing a process that might be somebody's editor is there
+because it has been wrong before. So `TheBoardSizeAgainstTheFrame` is written and compiled and
+unrun.
+
+It is written as **one test and not three arms**, which is the whole design of it: all three boards
+timed seconds apart inside one run, so the answer is a ratio that survives a noisy machine even
+though the absolutes will not. And it **holds the colony fixed**, because the largest open cost in
+the frame is not board-shaped at all — `PawnPose.Of`'s crowd scan is 13.3 ms of a 22.5 ms frame at
+384 colonists, larger than every board-scaled term put together, and an arm that varied both would
+read one as the other.
+
+The prior is stated in the design doc before the measurement, deliberately: `FrameSection.World` is
+flat at 1.9–2.5 ms across a 48-fold colony at Standard, so Huge is 4× a ~2 ms term and not 4× a 5 ms
+frame. That is a much less alarming starting position than the audit implied, and it is worth
+writing down *first* so the result reads as confirmation or surprise rather than as whatever it
+happens to be.
+
+### A number that was retired on the way past
+
+The plan going in priced the standing-order marks at ~4.6 us a submission, making a 300-cell drag
+~1.4 ms and the first thing to fix. That was **wrong by about forty times**, and the branch that
+fixed it had already merged: a mark plate's submission costs about 0.1 us, the whole pass is 0.40 ms
+at 901 orders, and the 4.6 us constant is what a *loaded* submission costs. The consequence is that
+**frustum culling is now the only behaviour change HT8's numbers decide.** A plan is allowed to
+carry a wrong number; it is not allowed to carry it into a design document.
+
+### So how big, honestly
+
+Three things set the ceiling and only the first is about cells: the four global navigation passes
+(HT1 removes the board from the term entirely), per-frame work that scales with the board rather
+than the view (five rows, all fixable to scale with what is visible, none fixed), and the colony
+rather than the board — which is already the binding term at Standard.
+
+With HT1 and view-scaled rendering, the 250 × 250 × 40 design target is reachable and the board
+stops being the limiting number; memory puts a hard stop near 400 × 400 × 40 on an 8 GB laptop.
+Without either, 240 × 240 × 16 is comfortable, which is what the measurements say.
+
+Depth is the axis to be careful of, and the reason is ours rather than inherent: the region graph
+allocates a region for solid rock too, because rooms and atmosphere want a substrate. Only 6.8% of
+the wilderness's regions are walkable, so skipping all-impassable blocks would cut the count roughly
+tenfold — at the cost of M4's substrate. A design decision, not an optimisation.
+
+The outside reading converged from four directions on the same sentence, and it is the one to keep:
+**what makes a large colony map expensive is connected, reachable, searchable area — not cells, not
+bytes, not triangles.** RimWorld bounds a region to its 12 × 12 square so one edit costs one flood;
+Dwarf Fortress tells you to *seal* cavern levels rather than delete them; HPA\* recomputes one
+cluster; voxel storage pays off because most of the world is uniform and can be skipped. We already
+have the hard half of the first — `NavGraph.BlockSize = 10` is exactly that bound. What we lack is
+the incremental relink, which is HT1, which is already written down and waiting.

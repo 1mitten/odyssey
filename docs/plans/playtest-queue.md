@@ -21,6 +21,37 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Is a Huge board more room, or more walking?** (`claude/huge-map`, `docs/design/28-map-size.md`.)
+  New Game → the **Size** control now cycles a fourth board, **Huge, 240 × 240 × 16** — twice
+  Standard's ground at Standard's depth. Standard is still the default, so nothing changes unless
+  you pick it. The simulation is measured and comfortable (0.883 ms per edited cell against
+  Standard's 0.298, 69.8 bytes a cell, 90 ms to generate); **what no test can answer is whether the
+  board is worth crossing.** Five things to look at, in the order they will hit:
+
+  1. **Zoom out as far as it goes.** `maxDistance` is 160 m and the board is 600 m across, so you
+     will see about an eighth of it. This is *already* true at Standard — "see the whole map" has
+     never actually worked — but Huge is where it stops being ignorable. A wrong answer looks like:
+     you cannot tell where your colony is relative to anything, in which case zoom wants to scale
+     with the board and that is its own unit.
+  2. **Pan corner to corner without the fast modifier.** 23 seconds at `panSpeed = 26`. A wrong
+     answer looks like: you reach for the fast key every time, so the base speed is wrong for this
+     board and not just slow.
+  3. **Play twenty minutes.** A wrong answer looks like: colonists spend the session in transit and
+     the extra ground is a tax rather than a choice — in which case Large (180 × 180 × 24, which
+     ships and which nobody has ever played either) may be the size that was actually wanted.
+  4. **Look for water.** `streamCount` is a per-map absolute, so Huge gets 5 water bodies on 600 m
+     where Standard gets 4 on 300 m. A wrong answer looks like: the board reads as arid, or you walk
+     a long way to find a pond.
+  5. **Walk the wilderness for a minute.** Every noise period is in cells, not fractions of the
+     board, so Huge is *more map at the same grain* rather than the same map enlarged. A wrong
+     answer looks like: the same copse and the same hillside keep recurring, which means the
+     periods want to scale.
+
+  **Not a playtest item, and please do not treat it as one:** whether the frame holds. That is
+  `FrameTimeTests.TheBoardSizeAgainstTheFrame`, which is written and **unrun** because an editor was
+  open — a frame number taken beside a sibling Unity is worthless. It is owed as a measurement, not
+  as an opinion.
+
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
   fill now goes through one instanced call per colour instead of one submission per cell. Nothing

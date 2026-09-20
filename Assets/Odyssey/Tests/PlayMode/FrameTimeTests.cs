@@ -209,6 +209,101 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// What a bigger board costs the frame: the three boards the menu offers, each carrying
+        /// the same standing orders, timed one after another inside one test.
+        ///
+        /// <para><b>One test rather than three arms, and that is the whole design of it.</b> This
+        /// machine runs several editors at once and a frame number is only comparable with one
+        /// taken in the same run — the city canary drifted from 2.01 ms to 4.01 in an afternoon
+        /// purely on what a sibling worktree was doing. Three separate arms would let a noisy
+        /// minute be read as a board-size effect, which is exactly the wrong conclusion to draw
+        /// from this measurement.</para>
+        ///
+        /// <para><b>The colony is held still on purpose.</b> The largest open cost in the frame is
+        /// not board-shaped: <c>PawnPose.Of</c> scans every other pawn for the crowd sidestep once
+        /// per posed pawn, which is 13.3 ms of a 22.5 ms frame at 384 colonists and 0.02 at 64. If
+        /// this arm varied the colony as well as the board, the board's signal would sit
+        /// underneath a pawn-count signal an order of magnitude larger. Same scenario, same seed,
+        /// same order count, one thing different.</para>
+        ///
+        /// <para><b>Read the split, not the total.</b> <c>FrameSection.World</c> is the chunk
+        /// buckets and the surround — the term that actually scales with the board — and
+        /// <c>FrameSection.Doors</c> is <c>DoorDirector</c>, which scans every cell in the world
+        /// for doors whenever anything has been edited. Those two are what a board size buys, and
+        /// the rest of the frame should be flat across all three.</para>
+        ///
+        /// <para>It asserts nothing about time. Every number here is 640 x 480 on a development
+        /// GPU and the target is a 2022 laptop, so a threshold would be a threshold on the wrong
+        /// machine; what it asserts is that each board really was built and really was designated,
+        /// because a world that failed to generate reports a beautifully fast frame.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBoardSizeAgainstTheFrame()
+        {
+            (string Label, int X, int Z, int Y)[] boards =
+            {
+                ("standard", 120, 120, 16),
+                ("large", 180, 180, 24),
+                ("huge", 240, 240, 16),
+            };
+
+            var means = new float[boards.Length];
+            var world = new double[boards.Length];
+            var doors = new double[boards.Length];
+            var chunks = new int[boards.Length];
+
+            for (int b = 0; b < boards.Length; b++)
+            {
+                (string label, int x, int z, int y) = boards[b];
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                    out OdysseyBootstrap boot, x, z, y);
+                try
+                {
+                    yield return SeedOrders(boot);
+
+                    float mean = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"board/{label}", boot, WarmupFrames,
+                        m => mean = m, p => split = p);
+
+                    means[b] = mean;
+                    world[b] = Section(split, OdysseyBootstrap.FrameSection.World);
+                    doors[b] = Section(split, OdysseyBootstrap.FrameSection.Doors);
+                    chunks[b] = boot.Renderer?.ChunksDrawn ?? 0;
+
+                    Assert.That(boot.Colony, Is.Not.Null, $"{label} never built a colony");
+                    Assert.That(chunks[b], Is.GreaterThan(0),
+                        $"{label} drew no chunks, so this timed an empty frame rather than a board");
+                }
+                finally
+                {
+                    UnityEngine.Object.Destroy(root);
+                }
+
+                // Let the old world's arrays go before the next one is built, so a later board is
+                // not timed against a heap still holding an earlier one.
+                yield return null;
+                GC.Collect();
+                yield return null;
+            }
+
+            for (int b = 0; b < boards.Length; b++)
+                Debug.Log($"[FrameTime] board {boards[b].Label} " +
+                          $"{boards[b].X}x{boards[b].Z}x{boards[b].Y}: " +
+                          $"frame {means[b]:0.00} ms, World {world[b]:0.000} ms, " +
+                          $"Doors {doors[b]:0.000} ms, {chunks[b]} chunks drawn " +
+                          $"(x{(means[0] > 0 ? means[b] / means[0] : 0):0.00} frame, " +
+                          $"x{(world[0] > 0 ? world[b] / world[0] : 0):0.00} World against standard)");
+
+            Assert.That(chunks[2], Is.GreaterThan(chunks[0]),
+                "the huge board drew no more chunks than the standard one, so the size seam did " +
+                "not take and all three readings are the same board");
+        }
+
+        static double Section(double[] split, OdysseyBootstrap.FrameSection section) =>
+            split.Length > (int)section ? split[(int)section] : 0d;
+
+        /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the
         /// same draining <see cref="SeedField"/> uses and for the same reasons: the meadow
         /// refuses what stands on it, and the intent bus has a capacity.
@@ -345,13 +440,14 @@ namespace Odyssey.Tests.PlayMode
         /// <para>Its own method so a test can time the same world twice and quote the
         /// difference, which is the only figure this machine can be trusted for.</para>
         /// </summary>
-        IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean)
+        IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean,
+                               Action<double[]>? sections = null)
         {
             for (int i = 0; i < warmup; i++) yield return null;
 
             float total = 0f, worst = 0f;
             double tick = 0d, submit = 0d;
-            var sections = new double[(int)OdysseyBootstrap.FrameSection.Count];
+            var sectionTotals = new double[(int)OdysseyBootstrap.FrameSection.Count];
             for (int i = 0; i < TimedFrames; i++)
             {
                 yield return null;
@@ -364,7 +460,7 @@ namespace Odyssey.Tests.PlayMode
                 tick += boot.TickMs;
                 submit += boot.SubmitMs;
                 System.ReadOnlySpan<double> split = boot.FrameSectionMs;
-                for (int k = 0; k < sections.Length && k < split.Length; k++) sections[k] += split[k];
+                for (int k = 0; k < sectionTotals.Length && k < split.Length; k++) sectionTotals[k] += split[k];
             }
 
             float meanMs = total / TimedFrames;
@@ -394,17 +490,26 @@ namespace Odyssey.Tests.PlayMode
             // Submit, split by what it was doing. A frame number that says "the renderer is
             // slow" without saying which part of it is slow only licences a guess.
             var parts = new System.Text.StringBuilder();
-            for (int k = 0; k < sections.Length; k++)
+            for (int k = 0; k < sectionTotals.Length; k++)
             {
                 if (k > 0) parts.Append(", ");
                 parts.Append((OdysseyBootstrap.FrameSection)k).Append(' ')
-                     .Append((sections[k] / TimedFrames).ToString("0.000"));
+                     .Append((sectionTotals[k] / TimedFrames).ToString("0.000"));
             }
             Debug.Log($"[FrameTime] {label} submit split: {parts}");
+
+            if (sections != null)
+            {
+                var perFrame = new double[sectionTotals.Length];
+                for (int k = 0; k < sectionTotals.Length; k++) perFrame[k] = sectionTotals[k] / TimedFrames;
+                sections(perFrame);
+            }
         }
 
         /// <summary>The play scene's objects, built by hand: a camera with the rig, a sun, the bootstrap.</summary>
-        static GameObject Build(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren, out OdysseyBootstrap boot)
+        static GameObject Build(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren,
+                                out OdysseyBootstrap boot,
+                                int sizeX = 120, int sizeZ = 120, int layers = 16)
         {
             var root = new GameObject("FrameTime");
 
@@ -446,9 +551,9 @@ namespace Odyssey.Tests.PlayMode
             // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
             // what this rig is asserting is that a session exists.
             boot.buildOnPlay = true;
-            boot.sizeX = 120;
-            boot.sizeZ = 120;
-            boot.layers = 16;
+            boot.sizeX = sizeX;
+            boot.sizeZ = sizeZ;
+            boot.layers = layers;
             boot.seed = 1;
             boot.mapType = mapType;
             boot.barrenMap = barren;
