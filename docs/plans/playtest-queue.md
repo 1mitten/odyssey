@@ -21,6 +21,30 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
+  `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
+  its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm
+  amber**, **deconstruct orange where it used to be red**, cancel red, build cyan. A deconstruct
+  order is a floor plate on the top of the wall now, like a mine order on rock, instead of a
+  whole-cell wash. Open questions a picture cannot answer: whether an orange plate on a wall top
+  reads as *coming down* at the play camera, and whether mine's new blue and the build blueprint's
+  cyan are far enough apart when a colony is half dug and half planned — that pair is the one thing
+  the owner's chosen option (*toolbar wins*) traded away, and reversing it is one constant.
+
+- **A new game starts with no beds now** (same branch, `docs/design/20-beds.md` §7a). The owner saw
+  the five real starting beds once and ruled them out; the played scenario has none, so the
+  colonists sleep on the grass with the slept-on-ground thought until a bed is built. Unplayed
+  since. What to look for: whether the first night on the ground reads as *build a bed* or as a
+  bug, and whether a built bed is claimed on the first night by whoever reaches it, as §7 says.
+  A wrong answer is a colonist still sleeping on the ground beside an unowned bed.
+
+- **A colonist given a bed mid-night has been seen once, and went to work** (same branch, second
+  play day). That is fixed — an interrupted sleep resumes, in the new bed for the one given it and
+  in the nearest free bed for the one who lost it — and the fix is unplayed. Assign a sleeper's
+  bed to another sleeper at night: both should stand, walk, and lie down again, and the third
+  colonist should not stir. A wrong answer is anybody picking up an axe before dawn, or the new
+  owner lying down in a spare bed while the one she was given stays empty. Still open from the
+  first round: whether standing up mid-night reads as *obeying* or as *startling*.
 - **Nobody has seen falling items drop and land** (`claude/falling-items`, `docs/design/26-falling-items.md`).
   When ground or a floor slab beneath resting items is destroyed or deconstructed, items drop down onto
   the nearest solid floor below (or despawn if over the void). Presentation accelerates airborne items

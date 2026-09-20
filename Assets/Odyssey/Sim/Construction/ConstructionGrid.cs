@@ -1380,15 +1380,25 @@ namespace Odyssey.Sim.Construction
         static void MarkChunksAround(PawnContext ctx, int cell)
         {
             if (ctx.Chunks == null) return;
-            GridSize size = ctx.Size;
-            CellRef at = size.FromIndex(cell);
+
+            // **The chunk grid's own bounds, not the cell grid's.** This loop decides which
+            // chunks to dirty, so the grid it is about to write into is the one to ask. It used
+            // to ask `ctx.Size`, which is right only while the two agree — and on 2026-09-20 they
+            // did not: a new game on any board but the scene's default built its chunk grid from
+            // the inspector's numbers and its world from the setup page's, and this wrote past
+            // the end of the array with the check one line above passing. `OdysseyBootstrap`
+            // decides the size once now, so they cannot disagree; asking the right grid is the
+            // half of the fix that does not depend on remembering that.
+            ChunkGrid chunks = ctx.Chunks;
+            GridSize size = chunks.Size;
+            CellRef at = ctx.Size.FromIndex(cell);
 
             for (int dy = -1; dy <= 1; dy++)
             for (int dz = -1; dz <= 1; dz++)
             for (int dx = -1; dx <= 1; dx++)
             {
                 int x = at.X + dx, z = at.Z + dz, y = at.Y + dy;
-                if (size.Contains(x, z, y)) ctx.Chunks.MarkDirty(x, z, y);
+                if (size.Contains(x, z, y)) chunks.MarkDirty(x, z, y);
             }
         }
 
@@ -1455,10 +1465,36 @@ namespace Odyssey.Sim.Construction
                 }
             }
 
+            // Somebody's night just changed. Which body it is, is not this class's question —
+            // see `BedOwnershipChanged`.
+            BedOwnershipChanged = true;
+
             placed.Owner = pawnId;
             _edifices[handle] = placed;
             return IntentRejection.None;
         }
+
+        /// <summary>
+        /// A bed changed hands this tick, so somebody may be asleep in the wrong one.
+        /// <c>JobSystem.GetOutOfTheWrongBed</c> reads it, acts, and clears it.
+        ///
+        /// <para><b>A flag rather than a list of the colonists involved</b>, and the first draft
+        /// was the list. Naming the old owner and the new one misses the
+        /// commonest case there is: a colony short of beds keeps them unowned and shared
+        /// (<see cref="TryClaimForSleeper"/>), so the colonist actually lying in a bed when the
+        /// player gives it away is very often nobody's owner and appears in no such list. Who is
+        /// affected is a question about where people are sleeping, and this class does not know
+        /// that — the job system does.</para>
+        ///
+        /// <para><b>Not saved and not hashed, and it cannot be.</b> Intents drain at step 1 of
+        /// <c>SimWorld.Tick</c> and the pawn phase runs at step 4 of the same tick, so the flag is
+        /// raised and lowered inside one tick and never crosses a save boundary. That is what
+        /// keeps it from being a second copy of world state.</para>
+        /// </summary>
+        public bool BedOwnershipChanged { get; private set; }
+
+        /// <summary>Lower the flag, once it has been acted on.</summary>
+        public void ClearBedOwnershipChanged() => BedOwnershipChanged = false;
 
         // ---- the bed, as the sleep chooser and the pane read it --------------------------------
 
@@ -1470,7 +1506,8 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>Who owns the bed at this cell, or 0 where no bed stands here or it is nobody's.</summary>
-        public int BedOwnerAt(int cell) => BedAt(cell).Owner;
+        public int BedOwnerAt(int cell) =>
+            (uint)cell < (uint)_grid.Edifice.Length ? BedAt(cell).Owner : 0;
 
         /// <summary><see cref="BedOwnerAt(int)"/> by cell reference, which is how the pane holds one.</summary>
         public int BedOwnerAt(CellRef cell) =>
