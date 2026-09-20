@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -136,10 +137,59 @@ namespace Odyssey.Hud
             return Math.Acos(room) * 180.0 / Math.PI;
         }
 
+        // ------------------------------------------------------------------ the schedule half
+
+        /// <summary>
+        /// An hour's column, and <b>equal to <see cref="Pitch"/> on purpose</b>.
+        ///
+        /// <para>This is the one number the combined table turns on. A priority cell and an hour
+        /// block are the same click target and sit on the same rhythm, so the eye reads one
+        /// continuous row rather than two tables that happen to be adjacent. A constant defined as
+        /// the other constant rather than as 34, so that widening one half cannot silently
+        /// desynchronise the two.</para>
+        /// </summary>
+        public const int HourPitch = Pitch;
+
+        /// <summary>Hours in the day, which is <see cref="ScheduleHandle.Hours"/>.</summary>
+        public const int Hours = 24;
+
+        /// <summary>
+        /// The heavier rule between the work half and the schedule half. Two halves of one row
+        /// still want a seam, or the last work column and the midnight hour read as neighbours.
+        /// </summary>
+        public const int SectionDivider = 1;
+
+        /// <summary>The now-line, and the only saturated thing on the panel that is not a band.</summary>
+        public const int NowLineWidth = 2;
+
+        /// <summary>
+        /// Where the now-line sits inside the schedule half: the centre of the current hour's
+        /// column.
+        ///
+        /// <para><b>Relative to the schedule container, never to the panel.</b> The supplied spec
+        /// warns about this and it is right — measuring from the panel puts the line one frozen
+        /// name column out, which lands it on a different hour and looks like an off-by-one in the
+        /// clock rather than in the layout.</para>
+        /// </summary>
+        public static float NowLineCentre(int hour) => hour * HourPitch + HourPitch / 2f;
+
+        /// <summary>The schedule half's own width.</summary>
+        public const int ScheduleWidth = Hours * HourPitch;
+
         // ------------------------------------------------------------------ the whole panel
 
-        /// <summary>How wide the panel is for a given number of columns.</summary>
+        /// <summary>How wide the work half alone is for a given number of columns.</summary>
         public static int WidthFor(int columns) => LeftColumn + columns * Pitch;
+
+        /// <summary>
+        /// The combined table: the frozen name column, every work column, and the whole day.
+        ///
+        /// <para>At twenty-two work types this is <c>192 + 748 + 816 = 1756</c>, which is 91% of
+        /// the 1920 reference — it fits, and only because our type is narrow. At the supplied
+        /// spec's 40px pitch the same table is 2,026px and does not.</para>
+        /// </summary>
+        public static int CombinedWidthFor(int columns) =>
+            WidthFor(columns) + SectionDivider + ScheduleWidth;
 
         /// <summary>How tall it is for a given number of rows, grid only — no header, no legend.</summary>
         public static int GridHeightFor(int rows) => HeaderBand + rows * RowHeight;

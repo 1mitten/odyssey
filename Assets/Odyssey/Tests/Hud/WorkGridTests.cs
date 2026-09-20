@@ -359,10 +359,13 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheSubtitleSaysWhichEndIsUrgent()
+        public void TheSubtitleSaysWhatTheWholeTableIs()
         {
-            Assert.That(Model(Frame()).Subtitle(),
-                Is.EqualTo("2 colonists · higher priority runs first"));
+            // "what they do, and when" rather than naming the two halves: the claim of the
+            // combined table is that they are one question, not two panels side by side.
+            Assert.That(Model(Frame()).Subtitle(), Is.EqualTo("2 colonists · what they do, and when"));
+            Assert.That(Model(Frame()).Subtitle(nowHour: 13),
+                Is.EqualTo("2 colonists · what they do, and when · 13h"));
         }
     }
 }

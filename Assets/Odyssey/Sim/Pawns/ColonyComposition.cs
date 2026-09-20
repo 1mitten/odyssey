@@ -124,6 +124,8 @@ namespace Odyssey.Sim.Pawns
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.
                 .AddIntentHandler(IntentKind.SetWorkPriority, pawns.Pawns.HandleSetWorkPriority)
+                // The other half of the same panel: what they do, and when.
+                .AddIntentHandler(IntentKind.SetScheduleBlock, pawns.Pawns.HandleSetScheduleBlock)
                 // The debug menu's two rows. Neither is player content — see the doc comments on
                 // the intents themselves — so both live beside the ordinary handlers rather than in
                 // a debug-only wiring path a real colony would not otherwise get.

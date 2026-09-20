@@ -62,6 +62,39 @@ namespace Odyssey.Sim.Contracts
         public const int None = -1;
     }
 
+    /// <summary>
+    /// See <see cref="JobHandle"/>: what a colonist is told to be doing in one hour of the day, as
+    /// <see cref="IntentKind.SetScheduleBlock"/> carries it.
+    ///
+    /// <para><b>Six, and <see cref="Anything"/> is the one that means "no instruction".</b> It is
+    /// deliberately index 0 so that a zeroed array is a colonist nobody has scheduled, and so that
+    /// the day the job system reads this, an unscheduled hour behaves exactly as today.</para>
+    ///
+    /// <para><b>Nothing reads these yet</b> (design 27 §12). The schedule is authored, saved,
+    /// published and editable; the hour a colonist sleeps is still decided by their rest need. The
+    /// unit that makes the job system obey this is the one that puts the schedule into the state
+    /// hash and re-bakes the goldens.</para>
+    /// </summary>
+    public static class ScheduleHandle
+    {
+        /// <summary>No instruction. Work, rest or idle as needs dictate — today's behaviour.</summary>
+        public const int Anything = 0;
+
+        public const int Work = 1;
+        public const int Sleep = 2;
+        public const int Recreation = 3;
+        public const int Eat = 4;
+
+        /// <summary>Quiet hours. Named now because the grid draws six colours; what it will mean
+        /// is not this unit's business.</summary>
+        public const int Meditate = 5;
+
+        public const int Count = 6;
+
+        /// <summary>Hours in a scheduled day, which is the clock's own <c>HoursPerDay</c>.</summary>
+        public const int Hours = 24;
+    }
+
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
     public static class ItemHandle
     {

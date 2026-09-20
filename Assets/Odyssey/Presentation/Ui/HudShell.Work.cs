@@ -40,6 +40,11 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<WorkGridMode, Label> _workModeChips = new();
         readonly List<WorkRowView> _workRows = new List<WorkRowView>();
 
+        /// <summary>The schedule half's rows, and the line that says which hour it is.</summary>
+        VisualElement _workHourRows = null!;
+        VisualElement _workNowLine = null!;
+        int _workNowHour = -1;
+
         /// <summary>
         /// The roster the rows were last built from. Rebuilding twenty-two cells per colonist on
         /// every refresh would allocate for as long as the panel is open, which is ADR 0003's flip
@@ -56,6 +61,10 @@ namespace Odyssey.Presentation.Ui
             public AvatarGlyph Avatar = null!;
             public Label Name = null!;
             public readonly List<WorkCellView> Boxes = new List<WorkCellView>();
+
+            /// <summary>The twenty-four bands. One element each, no glyph, no border.</summary>
+            public VisualElement Hours = null!;
+            public readonly List<VisualElement> Blocks = new List<VisualElement>();
         }
 
         /// <summary>One cell: the box that carries the border and fill, the glyph, and the flames.</summary>
@@ -81,7 +90,7 @@ namespace Odyssey.Presentation.Ui
             _workPanel.style.position = Position.Absolute;
             _workPanel.style.left = HudLayout.Edge;
             _workPanel.style.bottom = HudCommands.ItemHeight + HudCommands.BarPad * 2;
-            _workPanel.style.width = WorkGridLayout.WidthFor(WorkGridModel.Columns.Count) + 2;
+            _workPanel.style.width = WorkGridLayout.CombinedWidthFor(WorkGridModel.Columns.Count) + 2;
             _workPanel.style.maxHeight = Length.Percent(80);
 
             BuildWorkHeaderExtras();
@@ -111,11 +120,27 @@ namespace Odyssey.Presentation.Ui
 
             var scroller = new ScrollView(ScrollViewMode.Horizontal);
             scroller.style.flexGrow = 1;
+
+            // Both halves ride one scroller, so the day never slides out from under the work
+            // columns. The frozen name column is outside it and stays put for both.
+            var halves = new VisualElement();
+            halves.style.flexDirection = FlexDirection.Row;
+
             var cols = new VisualElement();
             cols.Add(BuildWorkHeaderBand());
             _workGridRows = new VisualElement();
             cols.Add(_workGridRows);
-            scroller.Add(cols);
+            halves.Add(cols);
+
+            // The seam. Two halves of one row still want a rule, or the last work column and
+            // midnight read as neighbours.
+            var seam = new VisualElement();
+            seam.style.width = WorkGridLayout.SectionDivider;
+            seam.style.backgroundColor = HudTokens.PanelBorder;
+            halves.Add(seam);
+
+            halves.Add(BuildScheduleHalf());
+            scroller.Add(halves);
             grid.Add(scroller);
 
             _workPanel.Add(grid);
@@ -241,6 +266,131 @@ namespace Odyssey.Presentation.Ui
             return band;
         }
 
+        /// <summary>
+        /// The schedule half: twenty-four hour numbers over twenty-four rows of solid bands, with
+        /// the now-line laid over all of it.
+        ///
+        /// <para><b>Colour is the entire signal.</b> No text, no icons, no borders, no gaps — a
+        /// row of the day has to read as one unbroken band from across the desk, and anything
+        /// drawn inside a block breaks that at exactly the distance the panel is useful.</para>
+        /// </summary>
+        VisualElement BuildScheduleHalf()
+        {
+            var half = new VisualElement();
+            half.style.width = WorkGridLayout.ScheduleWidth;
+            half.style.flexShrink = 0;
+            // The now-line is absolutely positioned against this, which is what keeps it on the
+            // right hour: measured from the panel it would be one frozen name column out.
+            half.style.position = Position.Relative;
+
+            var band = new VisualElement();
+            band.style.flexDirection = FlexDirection.Row;
+            band.style.height = WorkGridLayout.HeaderBand;
+            for (int h = 0; h < WorkGridLayout.Hours; h++)
+            {
+                var slot = new VisualElement();
+                slot.style.width = WorkGridLayout.HourPitch;
+                slot.style.flexShrink = 0;
+                slot.style.justifyContent = Justify.FlexEnd;
+                slot.style.alignItems = Align.Center;
+                slot.style.paddingBottom = 7;
+
+                // Deliberately the lightest text on the panel: the hours are a ruler, and a ruler
+                // that competes with what it measures is a worse ruler.
+                Label number = HudText.Make(h.ToString("00"), HudTextRole.Meta, numeric: true);
+                number.style.color = HudTokens.TextFaint;
+                slot.Add(number);
+                band.Add(slot);
+            }
+            half.Add(band);
+
+            _workHourRows = new VisualElement();
+            half.Add(_workHourRows);
+
+            _workNowLine = new VisualElement();
+            _workNowLine.style.position = Position.Absolute;
+            _workNowLine.style.top = 0;
+            _workNowLine.style.bottom = 0;
+            _workNowLine.style.width = WorkGridLayout.NowLineWidth;
+            _workNowLine.style.backgroundColor = HudTokens.Accent;
+            _workNowLine.pickingMode = PickingMode.Ignore;
+            _workNowLine.style.display = DisplayStyle.None;
+            half.Add(_workNowLine);
+
+            return half;
+        }
+
+        /// <summary>One colonist's day: twenty-four bands, packed edge to edge.</summary>
+        VisualElement BuildScheduleRow(WorkRowView view, int rowIndex)
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.height = WorkGridLayout.RowHeight;
+            row.style.borderTopWidth = HudTheme.BorderWidth;
+            row.style.borderTopColor = HudTokens.Divider;
+
+            for (int h = 0; h < WorkGridLayout.Hours; h++)
+            {
+                var block = new VisualElement();
+                block.style.width = WorkGridLayout.HourPitch;
+                block.style.height = WorkGridLayout.RowHeight;
+                block.style.flexShrink = 0;
+
+                int capturedRow = rowIndex;
+                int capturedHour = h;
+                block.RegisterCallback<PointerDownEvent>(evt =>
+                    OnScheduleBlockPressed(evt, capturedRow, capturedHour));
+
+                view.Blocks.Add(block);
+                row.Add(block);
+            }
+            return row;
+        }
+
+        /// <summary>
+        /// Left cycles the six blocks forward, right cycles back, shift paints the hour down the
+        /// whole colony — the same three gestures the work half answers to, so one row is one
+        /// vocabulary rather than two.
+        /// </summary>
+        void OnScheduleBlockPressed(PointerDownEvent evt, int row, int hour)
+        {
+            if (_directors == null || row >= _work.Rows.Count) return;
+            evt.StopPropagation();
+
+            if (!_work.TryClickHour(row, hour, evt.button == 1, out Intent intent)) return;
+
+            if (evt.shiftKey)
+            {
+                for (int r = 0; r < _work.Rows.Count; r++)
+                    Submit(WorkGridModel.SetSchedule(_work.Rows[r].Id, hour, intent.C));
+            }
+            else
+            {
+                Submit(intent);
+            }
+            RefreshWork();
+        }
+
+        /// <summary>
+        /// Put the now-line on the centre of the current hour's column, and show it only when
+        /// there is a clock to ask.
+        /// </summary>
+        void RefreshNowLine(WorldSnapshot frame)
+        {
+            int hour = WorkGridModel.NowHour(frame);
+            if (hour == _workNowHour) return;
+            _workNowHour = hour;
+
+            if (hour < 0 || hour >= WorkGridLayout.Hours)
+            {
+                _workNowLine.style.display = DisplayStyle.None;
+                return;
+            }
+            _workNowLine.style.display = DisplayStyle.Flex;
+            _workNowLine.style.left =
+                WorkGridLayout.NowLineCentre(hour) - WorkGridLayout.NowLineWidth / 2f;
+        }
+
         // ============================================================ refresh
 
         void RefreshWork()
@@ -253,7 +403,7 @@ namespace Odyssey.Presentation.Ui
             _work.Mode = _directors.Work.Mode;
             _work.Refresh(frame, _roster.CustomOrder, _directors.Selection.Pawns);
 
-            HudText.Set(_workSubtitle, _work.Subtitle(), HudTextRole.Meta);
+            HudText.Set(_workSubtitle, _work.Subtitle(WorkGridModel.NowHour(frame)), HudTextRole.Meta);
 
             if (RosterChanged()) RebuildWorkRows();
 
@@ -271,7 +421,13 @@ namespace Odyssey.Presentation.Ui
 
                 for (int c = 0; c < view.Boxes.Count && c < row.Cells.Count; c++)
                     PaintWorkCell(view.Boxes[c], row.Cells[c]);
+
+                for (int h = 0; h < view.Blocks.Count && h < row.Hours.Count; h++)
+                    view.Blocks[h].style.backgroundColor =
+                        HudTokens.Convert(ScheduleCatalogue.ColourOf(row.Hours[h]));
             }
+
+            RefreshNowLine(frame);
         }
 
         /// <summary>Whether the colony is a different set of people from the one the rows were
@@ -288,6 +444,7 @@ namespace Odyssey.Presentation.Ui
         {
             _workLeftRows.Clear();
             _workGridRows.Clear();
+            _workHourRows.Clear();
             _workRows.Clear();
             _workBuiltFor.Clear();
 
@@ -331,6 +488,10 @@ namespace Odyssey.Presentation.Ui
                     view.Cells.Add(BuildWorkCell(view, r, c));
 
                 _workGridRows.Add(view.Cells);
+
+                view.Hours = BuildScheduleRow(view, r);
+                _workHourRows.Add(view.Hours);
+
                 _workRows.Add(view);
             }
         }
@@ -515,6 +676,11 @@ namespace Odyssey.Presentation.Ui
 
             AddLegendFlames(1, "interested");
             AddLegendFlames(2, "passion");
+
+            // The day's six colours, in the order the click cycles them, so the legend doubles as
+            // the map of what the next click does.
+            foreach (ScheduleCatalogue.Entry block in ScheduleCatalogue.All)
+                AddLegendBand(block);
             AddLegendSwatch(WorkBands.IncapableBorder, "incapable", HudTheme.BorderWidth);
 
             Label note = HudText.Make(_work.Mode == WorkGridMode.Simple
@@ -529,9 +695,8 @@ namespace Odyssey.Presentation.Ui
             spacer.style.flexGrow = 1;
             _workLegend.Add(spacer);
 
-            Label foot = HudText.Make(_work.Mode == WorkGridMode.Simple
-                    ? "a tick is priority 3 — the default"
-                    : "1 highest · 4 lowest · blank means never",
+            Label foot = HudText.Make(
+                "one row is one colonist's whole day · colonists do not follow the schedule yet",
                 HudTextRole.Meta);
             foot.style.color = HudTokens.TextDim;
             _workLegend.Add(foot);
@@ -570,6 +735,19 @@ namespace Odyssey.Presentation.Ui
             label.style.unityTextAlign = TextAnchor.MiddleCenter;
             group.Add(label);
             group.Add(HudText.Make(text, HudTextRole.Meta));
+        }
+
+        /// <summary>A schedule swatch: the band's own colour, unbordered, as it is drawn.</summary>
+        void AddLegendBand(ScheduleCatalogue.Entry block)
+        {
+            VisualElement group = LegendGroup();
+            var box = new VisualElement();
+            box.style.width = 15;
+            box.style.height = 15;
+            box.style.marginRight = 6;
+            box.style.backgroundColor = HudTokens.Convert(block.Colour);
+            group.Add(box);
+            group.Add(HudText.Make(block.Label, HudTextRole.Meta));
         }
 
         void AddLegendFlames(int count, string text)

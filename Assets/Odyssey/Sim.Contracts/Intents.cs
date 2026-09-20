@@ -116,6 +116,22 @@ namespace Odyssey.Sim.Contracts
         /// until you pressed play would be the slab fault told a third time.</para>
         /// </summary>
         SetWorkPriority,
+
+        /// <summary>
+        /// Set one colonist's schedule for one hour: <c>A</c> is a <c>PawnId</c> value, <c>B</c>
+        /// the hour 0–23 and <c>C</c> a <see cref="ScheduleHandle"/>.
+        ///
+        /// <para>The third intent that names a pawn, and it carries no cell for the same reason
+        /// <see cref="SetWorkPriority"/> does not: a schedule is a fact about a person and a day,
+        /// not about a place.</para>
+        ///
+        /// <para><b>It writes state nothing reads yet</b>, which is unusual and deliberate — see
+        /// <see cref="ScheduleHandle"/>. That is also why the schedule is saved but <b>not
+        /// hashed</b>: a value no system consults cannot affect a tick, which is the same test the
+        /// saved view passes. The day the job system reads it, it enters the hash and the goldens
+        /// move once, deliberately.</para>
+        /// </summary>
+        SetScheduleBlock,
     }
 
     /// <summary>
@@ -165,6 +181,9 @@ namespace Odyssey.Sim.Contracts
             // clicks and applied none of them until you pressed play would be the worst version
             // of the fault this list was written to end.
             IntentKind.SetWorkPriority => true,
+            // Same test and the same panel: a player pauses to plan the day, and half of that
+            // panel is the day.
+            IntentKind.SetScheduleBlock => true,
             _ => false,
         };
     }

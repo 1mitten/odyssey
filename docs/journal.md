@@ -7925,3 +7925,69 @@ file a parse error takes down wholesale. The colours are still never literals.
 Fast tier was green on the model half before any of this (CI, 14:01:43). **The draw is again
 unproven here** — no dotnet SDK, no Unity — so `HudSmokeTests` naming a fourteenth framed region is
 the first thing that will actually exercise it.
+
+## 2026-09-20 — Work and Schedule become one table
+
+The owner supplied a second specification: fold the Schedule tab into the Work tab, one row per
+colonist carrying their whole day — what they do on the left, when on the right, sharing one frozen
+column of names. Schedule leaves the bottom bar and does not go anywhere else.
+
+**The first finding was that the spec's central assumption was false here.** It says "assume the
+priority model and the hour-assignment model already exist". The priority model did, which is what
+made the last pass easy. **The schedule model did not exist at all** — no state on the pawn, no
+Def, no `ui.schedule.*` keys, nothing in the job system. The panel catalogue reserved B3 for M7 and
+it was never built. So this was not a layout change with a data source waiting; it was a mechanic.
+
+**The second finding was that the geometry only works at our pitch.** At the spec's 40px, our
+twenty-two work columns plus twenty-four hours is **2,026px**, wider than the 1920 reference, so it
+could not be drawn without dropping columns or scrolling from the first frame. At our existing 34px
+it is **1,756px** and fits with room. The narrow type we adopted for the rotated labels is what
+makes the combined table possible at all, which was not a thing anybody designed for.
+`HourPitch` is defined *as* `Pitch` rather than as 34, so widening one half cannot silently
+desynchronise the two.
+
+**The load-bearing decision was what to do about the hash.** A schedule that governs behaviour has
+to be in the state hash, and putting it there moves all six golden numbers — which this container
+cannot re-bake, because `ODYSSEY_REGOLDEN=1` needs the dotnet SDK it does not have. Rather than
+guess, the fork went to the owner, who took the staged option.
+
+So: **the schedule is authored, saved (format 7), published hour by hour, editable, drawn — and read
+by no system.** The hour a colonist sleeps is still decided by their rest need. It is therefore
+deliberately *outside* the hash, on exactly the test the saved view passes — *a value no system
+consults cannot affect a tick* — and no golden moved.
+`ScheduleTests.EditingTheDayDoesNotMoveTheStateHash` is the assertion, and it is written so that
+**the day somebody wires the job system to the schedule, that test fails**, which is the signal to
+put it in the hash and re-bake once with a sentence. The panel says the same thing out loud in its
+footnote, because a schedule you can paint that quietly does nothing is the worst available
+outcome; one that says it does nothing *yet* is a staged delivery.
+
+**The default day is a real day, and that was a judgement call worth recording.** Defaulting all
+twenty-four hours to *Anything* would have been the literal truth of a schedule nothing reads — and
+a panel nobody could learn to read, since every row would be one flat grey band. The default is the
+shape the colony will keep when the schedule starts governing, so the picture is not a lie about the
+future, only about the present. OQ-W8 asks whether that is too convincing.
+
+**The HUD got its first categorical colour scale, and the first attempt at it was wrong.** Every
+other colour in this interface is a *signal* — good, bad, warn, accent — carrying meaning by
+intensity, and six nominal categories cannot come out of four signal tokens without two colliding.
+The six blocks were measured against each other rather than eyeballed, because they sit edge to edge
+in an unbroken band, which is a harder test than two chips in a legend. The first pass put
+**Anything 77 channel-points from Sleep** — a flat grey against a dark indigo, which is precisely
+the pair a player has to separate at a glance in a night row. Both moved; the closest pair is now
+**96**, and every block is at least that far from the accent, which is drawn *over* them as the
+now-line.
+
+**Twenty-four aspects a colonist**, not three packed ints. That is eight times what this mechanism
+has been asked for before, and the answer is the one `SkillAspects` already gave at one eighth the
+size: packing saves twenty-one rows and costs the reader a decode it can get wrong. Recorded as the
+first place to look if the scale target ever makes 41 rows a colonist matter.
+
+**One deliberate asymmetry between the halves:** a work cell can be inert — incapable, or a column
+the simulation does not run — and **an hour never can**, because nobody is incapable of a time of
+day. Copying the work half's guard across would have made a colonist who cannot mine also unable to
+be sent to bed, so there is a test named after the sentence.
+
+Three existing tests had to change and all three were right to fail: the save-format assertion
+(6 → 7), the subtitle (it says *what they do, and when* now, because the claim of the combined table
+is that they are one question), and F2 leaving the command bar. Neither tier was run here — still no
+dotnet SDK, still no Unity — so CI is again the first compiler to see any of it.

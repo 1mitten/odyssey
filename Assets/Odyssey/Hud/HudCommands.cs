@@ -82,6 +82,12 @@ namespace Odyssey.Hud
         /// <summary>
         /// Opens the Work tab. The second command on this bar to do something, and the first of
         /// the function keys to stop being a legend (design 27).
+        ///
+        /// <para><b>Schedule left this bar on 2026-09-20</b> and did not go anywhere else: the two
+        /// are one table now, work on the left and the day on the right, sharing one frozen column
+        /// of names. Two tabs would have meant two answers to "what is this colonist doing", read
+        /// one after the other, which is the comparison the combined row exists to remove. The key
+        /// <c>ui.tab.schedule</c> is kept in the registry and says so; F2 is free again.</para>
         /// </summary>
         public const string WorkKey = "ui.tab.work";
 
@@ -92,7 +98,6 @@ namespace Odyssey.Hud
         {
             (BuildKey, "B", ""),
             (WorkKey, "F1", ""),
-            ("ui.tab.schedule", "F2", "schedules arrive with M7"),
             ("ui.tab.research", "F3", "research arrives with M7"),
             ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
             ("ui.tab.animals", "F5", "animals arrive with M5"),

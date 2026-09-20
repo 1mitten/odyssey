@@ -118,6 +118,27 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// <c>SetScheduleBlock(A = pawn, B = hour, C = block)</c> — the Work tab's other command.
+        ///
+        /// <para>Checked and never clamped, for the reason <see cref="HandleSetWorkPriority"/>
+        /// gives: an hour of 25 is a caller that has misunderstood the day, not a player asking
+        /// for something unusual.</para>
+        /// </summary>
+        public IntentRejection HandleSetScheduleBlock(Intent intent)
+        {
+            Pawn? pawn = Get(new PawnId(intent.A));
+            if (pawn == null) return IntentRejection.NotPermitted;
+            if (intent.B < 0 || intent.B >= ScheduleHandle.Hours) return IntentRejection.NotPermitted;
+            if (intent.C < 0 || intent.C >= ScheduleHandle.Count) return IntentRejection.NotPermitted;
+
+            if (pawn.ScheduleHours[intent.B] == (byte)intent.C)
+                return IntentRejection.AlreadyInThatState;
+
+            pawn.ScheduleHours[intent.B] = (byte)intent.C;
+            return IntentRejection.None;
+        }
+
         /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
         public Pawn Adopt(Pawn pawn)
         {
@@ -257,6 +278,14 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], 1);
                 }
 
+                // The day, one aspect an hour. Twenty-four rows a colonist is the most this
+                // mechanism has ever been asked for, and it is still the right shape: packing the
+                // day into three ints would save twenty-one rows and cost the reader a decode it
+                // could get wrong, which is the argument SkillAspects already settled. The buffer
+                // is reused, so a steady-state publish still allocates nothing.
+                for (int h = 0; h < ScheduleHandle.Hours; h++)
+                    writer.AddPawnAspect(pawn.Id, ScheduleAspects.Hour[h], pawn.ScheduleHours[h]);
+
                 // The seed this colonist was rolled from (U40), which is what the interface names
                 // them by: a reroll on the select screen has to give you a different person rather
                 // than the same person with different numbers, and a name keyed on the pawn id
@@ -351,6 +380,12 @@ namespace Odyssey.Sim.Pawns
                 // and a width mismatch here corrupts every field after it.
                 for (int w = 0; w < pawn.WorkPriorities.Length; w++) writer.Write((int)pawn.WorkPriorities[w]);
 
+                // The day's schedule (design 27 §12). Format 7. Ints for the reason the two
+                // arrays above are ints: the reader asks for an int and a width mismatch here
+                // corrupts every field after it.
+                writer.Write(pawn.ScheduleHours.Length);
+                for (int h = 0; h < pawn.ScheduleHours.Length; h++) writer.Write((int)pawn.ScheduleHours[h]);
+
                 writer.Write(pawn.BreakTicksLeft);
                 writer.Write(pawn.Asleep);
                 writer.Write(pawn.JobStartsInWindow);
@@ -444,6 +479,20 @@ namespace Odyssey.Sim.Pawns
                 {
                     int value = reader.ReadInt();
                     if (w < pawn.WorkPriorities.Length) pawn.WorkPriorities[w] = (byte)value;
+                }
+
+                // Format 7 added the schedule. An older save has none, and the constructor's
+                // default day is the right answer for it: a colony saved before schedules existed
+                // was being played without one, so it gets the shape every new colonist gets
+                // rather than twenty-four blank hours.
+                if (reader.FormatVersion >= 7)
+                {
+                    int hourCount = reader.ReadInt();
+                    for (int h = 0; h < hourCount; h++)
+                    {
+                        int value = reader.ReadInt();
+                        if (h < pawn.ScheduleHours.Length) pawn.ScheduleHours[h] = (byte)value;
+                    }
                 }
 
                 pawn.BreakTicksLeft = reader.ReadInt();

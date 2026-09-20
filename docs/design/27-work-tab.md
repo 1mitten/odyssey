@@ -1,4 +1,4 @@
-# The Work tab — the priority assignment grid
+# The Work tab — one table: what they do, and when
 
 **Status:** design settled from the owner's supplied mockup, 2026-09-20; branch `claude/happy-tesla-2onz0q`.
 **Read first:** `10-ui-panel-catalogue.md` §B2 (which already specified this panel), `14-hud-layout.md` (the command bar and the regions), `09-ui-and-input.md` §7a (the placeholder-icon naming rule, which decides the column headers), `15-skills.md` (why hauling is not a skill), `17-rates-and-stats.md` (what a skill level buys).
@@ -389,3 +389,132 @@ what the remaining eight rows join.
 - **OQ-W4 — where does the panel go when the work list grows?** Twenty-two fits 940px. The
   catalogue budgets twenty-five, which is 1042px, still fine. Thirty is 1214px and wants the
   horizontal scroll the left column is already frozen against.
+
+
+## 12. The schedule half (2026-09-20)
+
+The owner supplied a second specification folding the Schedule tab into this one: **one tab, one
+table, one frozen column of names** — the priority grid on the left, the twenty-four-hour band on
+the right. Schedule leaves the command bar and does not go anywhere else.
+
+### 12a. Why one table rather than two tabs
+
+Two tabs are two answers to *what is this colonist doing*, read one after the other and held in the
+head in between. The combined row removes that comparison: **one row is one colonist's whole day.**
+That is the whole argument, and it is why the two halves must share a pitch rather than merely sit
+beside each other.
+
+### 12b. It fits, and only because our type is narrow
+
+The supplied spec sizes everything at a 40px pitch with thirteen work columns. Ours are
+twenty-two, and at 40px the combined table is **2,026px** — wider than the 1920 reference, so it
+could not be drawn without either dropping columns or scrolling from the first frame.
+
+At our existing **34px** it is **1,756px**:
+
+```
+192 name  +  22 × 34 work (748)  +  1 seam  +  24 × 34 hours (816)   =  1,757
+```
+
+which is 91% of the reference and leaves the horizontal scroller as a safety valve below it rather
+than a permanent condition. `WorkGridLayout.HourPitch` is defined *as* `Pitch` rather than as 34, so
+widening one half cannot silently desynchronise the two, and `ScheduleGridTests` asserts both the
+equality and the total.
+
+### 12c. What a colonist actually carries
+
+| | |
+|---|---|
+| State | `Pawn.ScheduleHours`, a `byte[24]` of `ScheduleHandle` values |
+| Default | sleep 0–5, anything 6–8, work 9–17, recreation 18–21, sleep 22–23 |
+| Saved | yes — **save format 7**, read behind `FormatVersion >= 7` so older saves take the default day |
+| Published | `odyssey.pawn.schedule.h00` … `h23`, one aspect an hour |
+| Written by | `IntentKind.SetScheduleBlock` (`A` pawn, `B` hour, `C` block), applied while paused |
+| **Hashed** | **no, deliberately — §12d** |
+
+**Twenty-four aspects a colonist, not three packed ints.** That is eight times what any feature has
+asked of this mechanism before, and the answer is the one `SkillAspects` already gave at one eighth
+the size: packing would save twenty-one rows and cost the reader a decode it could get wrong. The
+buffer is reused, so a steady-state publish still allocates nothing. If the scale target ever makes
+41 rows a colonist matter, this is the first place to look and the packing is still available.
+
+### 12d. Nothing obeys it yet, and that is why it is not in the hash
+
+**The schedule is authored, saved, published, editable and drawn — and read by no system.** The hour
+a colonist sleeps is still decided by their rest need.
+
+It is therefore **deliberately outside the state hash**, on exactly the test the saved view passes:
+*a value no system consults cannot affect a tick*. Hashing it now would move all six golden numbers
+for a change that alters no behaviour, and the honest version of that trade is to leave it out until
+it means something. `ScheduleTests.EditingTheDayDoesNotMoveTheStateHash` is the assertion, and it is
+written so that **the day somebody makes the job system obey the schedule, that test fails** — which
+is the signal to put it in the hash and re-bake the goldens once, with a sentence.
+
+**The panel says so.** The footnote reads *"one row is one colonist's whole day · colonists do not
+follow the schedule yet"*. A schedule you can paint that quietly does nothing is the worst outcome
+here; a schedule you can paint that says it does nothing yet is a staged delivery.
+
+**The default day is a real day rather than twenty-four grey hours.** Defaulting everything to
+*Anything* would have been the literal truth of a schedule nothing reads — and a panel nobody could
+learn to read, since every row would be one flat band. The default is the shape the colony will keep
+when the schedule starts governing, so the picture is not a lie about the future, only about the
+present, which the footnote states.
+
+### 12e. The six blocks, and the HUD's first categorical scale
+
+| Block | Colour | Where it comes from |
+|---|---|---|
+| Anything | `#4e4e50` | neutral, and the least interesting thing on the row: it is the absence of a decision |
+| Work | `#e8b55c` | **`HudTheme.Warn`, unchanged** |
+| Sleep | `#323fa0` | deep blue, saturated rather than dark — night is a third of the table and a near-black band reads as a hole in it |
+| Recreation | `#4f9a63` | |
+| Eat | `#d9782a` | |
+| Meditate | `#7a4fa8` | |
+
+**This is the HUD's first categorical colour scale**, and that is why it has its own file. Every
+other colour here is a *signal* — good, bad, warn, accent — carrying meaning by intensity, and six
+nominal categories cannot come out of four signal tokens without two colliding.
+
+**Distinctness is measured, not assumed.** These sit edge to edge in an unbroken band, which is a
+harder test than two chips in a legend. The first pass put **Anything 77 channel-points from
+Sleep** — a flat grey against a dark indigo, which is precisely the pair a player has to separate at
+a glance in a night row. Both moved; the closest pair is now **96**, and every block is at least
+that far from `HudTheme.Accent`, which is drawn *over* them as the now-line.
+
+### 12f. The now-line
+
+A 2px `Accent` rule at the centre of the current hour's column, from `GameClock.HourOfDay` — a real
+clock, not an invented one. **Positioned against the schedule container and never the panel**: the
+spec warns about this and it is right, because measuring from the panel puts the line one frozen
+name column out, landing it on a different hour and reading as a bug in the clock rather than in the
+layout. `WorkGridLayout.NowLineCentre` is the one owner of that arithmetic and the tests pin it.
+
+### 12g. One vocabulary across both halves
+
+Click cycles, right-click cycles back, shift paints the column. The same three gestures answer a
+priority cell and an hour block, so one row is one vocabulary rather than two.
+
+**The one deliberate difference:** a work cell can be inert (incapable, or a column the simulation
+does not run); **an hour never can.** Nobody is incapable of a time of day. Copying the work half's
+guard across would have made a colonist who cannot mine also unable to be sent to bed, so
+`EveryHourIsClickableBecauseNobodyIsIncapableOfATimeOfDay` pins it.
+
+## 13. What is built, and what is still owed
+
+| Layer | State |
+|---|---|
+| Both halves draw, share a pitch and a frozen name column | **in** |
+| Schedule saved (format 7), published, editable, paused-safe | **in** |
+| Schedule obeyed by the job system | **not built** — §12d, and it is the unit that re-bakes the goldens |
+| Drag-paint across cells | **not built** — OQ-W5 |
+| Schedule presets (a day shift, a night shift) | **not built** — OQ-W6 |
+
+## 14. Open questions added by the schedule
+
+- **OQ-W6 — presets.** Painting a night shift is twenty-four clicks, or one shift-click per hour.
+  A row of preset buttons is the obvious answer and it is also the obvious thing to get wrong
+  before anybody has used the grid in anger.
+- **OQ-W7 — is 1,756px too wide to read?** It fits, which is not the same as being comfortable.
+  If the answer is no, the live-four switch from the mockup is the cheapest lever.
+- **OQ-W8 — does the default day mislead while nothing obeys it?** The footnote says the schedule
+  is not followed yet, but a legible day is a more convincing lie than a grey one.

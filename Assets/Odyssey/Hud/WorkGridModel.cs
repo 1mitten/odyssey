@@ -83,6 +83,9 @@ namespace Odyssey.Hud
         public string Name = string.Empty;
         public bool Selected;
         public readonly List<WorkCell> Cells = new List<WorkCell>();
+
+        /// <summary>This colonist's twenty-four hours, as <c>ScheduleHandle</c> values.</summary>
+        public readonly List<int> Hours = new List<int>();
     }
 
     /// <summary>
@@ -158,6 +161,9 @@ namespace Odyssey.Hud
                 for (int c = 0; c < Columns.Count; c++)
                     row.Cells.Add(ReadCell(snapshot, id, c));
 
+                for (int h = 0; h < WorkGridLayout.Hours; h++)
+                    row.Hours.Add(ReadHour(snapshot, id, h));
+
                 Rows.Add(row);
             }
         }
@@ -199,6 +205,28 @@ namespace Odyssey.Hud
 
             return new WorkCell(column, true, capable, priority, passion, level);
         }
+
+        /// <summary>
+        /// One hour of one colonist's day.
+        ///
+        /// <para>A missing aspect reads as <c>Anything</c> — no instruction — which is both the
+        /// honest answer for a build that does not publish schedules and the value a colonist
+        /// nobody has scheduled carries.</para>
+        /// </summary>
+        public static int ReadHour(WorldSnapshot snapshot, PawnId pawn, int hour)
+        {
+            if (hour < 0 || hour >= WorkGridLayout.Hours) return ScheduleHandle.Anything;
+            return snapshot.TryGetPawnAspect(pawn, ScheduleKeys.Hour[hour], out int block)
+                ? Clamp(block, 0, ScheduleHandle.Count - 1)
+                : ScheduleHandle.Anything;
+        }
+
+        /// <summary>
+        /// Which hour the colony is in, for the now-line, or -1 when there is no clock to ask.
+        /// <see cref="GameClock.HourOfDay"/> is the one owner of that arithmetic.
+        /// </summary>
+        public static int NowHour(WorldSnapshot snapshot) =>
+            snapshot.Tick < 0 ? -1 : GameClock.HourOfDay(snapshot.Tick);
 
         static int Clamp(int value, int low, int high) =>
             value < low ? low : value > high ? high : value;
@@ -252,6 +280,26 @@ namespace Odyssey.Hud
         public static Intent SetPriority(PawnId pawn, int workHandle, int priority) =>
             new Intent(IntentKind.SetWorkPriority, default, pawn.Value, workHandle, priority);
 
+        /// <summary>The other half of the row: one colonist, one hour, one block.</summary>
+        public static Intent SetSchedule(PawnId pawn, int hour, int block) =>
+            new Intent(IntentKind.SetScheduleBlock, default, pawn.Value, hour, block);
+
+        /// <summary>
+        /// The intent one click on an hour emits. Unlike a work cell there is no inert case: every
+        /// colonist has every hour, and nothing about a schedule can be unavailable to somebody.
+        /// </summary>
+        public bool TryClickHour(int row, int hour, bool back, out Intent intent)
+        {
+            intent = default;
+            if (row < 0 || row >= Rows.Count) return false;
+            if (hour < 0 || hour >= Rows[row].Hours.Count) return false;
+
+            int current = Rows[row].Hours[hour];
+            int next = back ? ScheduleCatalogue.CycleBack(current) : ScheduleCatalogue.Cycle(current);
+            intent = SetSchedule(Rows[row].Id, hour, next);
+            return true;
+        }
+
         /// <summary>
         /// The sentence a cell says when hovered. Built here rather than in the shell because it
         /// is the one place the four signals are stated in words, and a reader checking that the
@@ -280,9 +328,19 @@ namespace Odyssey.Hud
                    " · level " + cell.Level + passion;
         }
 
-        /// <summary>The subtitle: how many colonists, and which end is urgent.</summary>
-        public string Subtitle() =>
-            Rows.Count + (Rows.Count == 1 ? " colonist" : " colonists") +
-            " · higher priority runs first";
+        /// <summary>
+        /// The subtitle: how many colonists, what the table is, and what hour it is.
+        ///
+        /// <para>It says <i>what they do, and when</i> rather than naming the two halves, because
+        /// the whole claim of the combined table is that they are one question.</para>
+        /// </summary>
+        public string Subtitle(int nowHour = -1)
+        {
+            string people = Rows.Count + (Rows.Count == 1 ? " colonist" : " colonists");
+            string clock = nowHour >= 0 && nowHour < WorkGridLayout.Hours
+                ? " · " + nowHour.ToString("00") + "h"
+                : string.Empty;
+            return people + " · what they do, and when" + clock;
+        }
     }
 }

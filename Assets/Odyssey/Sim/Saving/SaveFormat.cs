@@ -230,7 +230,7 @@ namespace Odyssey.Sim.Saving
         /// <para>Version 1, 2, 3, 4 and 5 files all still load; <see cref="ReadHeader"/> is the one
         /// place that knows which versions wrote what.</para>
         /// </summary>
-        public const int CurrentFormatVersion = 6;
+        public const int CurrentFormatVersion = 7;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
