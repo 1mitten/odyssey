@@ -285,8 +285,8 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.door
     shape: 1
-    prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
-    prefabName: SM_Bld_Base_Wall_Door_01
+    prefab: {fileID: 4708598954288714395, guid: 83a611f447bb8ee49af1bbcf9d9a51a6, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_Large_01
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -315,8 +315,8 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.door.single
     shape: 1
-    prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
-    prefabName: SM_Bld_Base_Wall_Door_01
+    prefab: {fileID: 4708598954288714395, guid: 83a611f447bb8ee49af1bbcf9d9a51a6, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_Large_01
     centreXZ: 1
     baseAtY: 1
     topAtY: 0
@@ -405,8 +405,8 @@ MonoBehaviour:
       quality: 0
   - moduleId: odyssey.module.door.leaf
     shape: 1
-    prefab: {fileID: 1500522491994108, guid: 6d6091aea9e88a74d9d033aecac4842e, type: 3}
-    prefabName: SM_Prop_Door_01
+    prefab: {fileID: 3872603109300624465, guid: 2a0efb0670c655d4ea90059acb092716, type: 3}
+    prefabName: SM_Bld_Base_Door_Large_01
     centreXZ: 1
     baseAtY: 1
     topAtY: 0

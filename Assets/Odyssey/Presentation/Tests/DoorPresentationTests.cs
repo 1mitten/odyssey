@@ -41,6 +41,21 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void ADoorFacesOutdoorsWhenOneSideIsRoofed()
+        {
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(2, 3, 1, CoreContent.EdificeWall)
+                .Edifice(3, 3, 1, CoreContent.EdificeDoor, blocking: false)
+                .Edifice(4, 3, 1, CoreContent.EdificeWall)
+                .Slab(3, 4, 2)
+                .Publish();
+
+            int facing = world.Model.DoorFacing(3, 3, 1);
+            Assert.That(facing, Is.EqualTo(Directions.South),
+                "doorway should face towards unroofed outdoor facade (South)");
+        }
+
+        [Test]
         public void ADoorLeafStartsClosed()
         {
             var world = new RenderTestWorld(8, 8, 3)

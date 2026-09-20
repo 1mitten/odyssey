@@ -24,7 +24,7 @@ namespace Odyssey.Presentation.World
     {
         public const float OpenDuration = 0.2f;
         public const float CloseDuration = 0.2f;
-        public const float SlideDistance = 1.05f;
+        public const float SlideDistance = 1.15f;
         public const float ProximityRange = 1.6f;
 
         public struct DoorState
@@ -117,14 +117,15 @@ namespace Odyssey.Presentation.World
                     state = new DoorState { OpenFactor = 0f, TargetOpen = false };
                 }
 
-                Vector3 floor = CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y);
+                int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y);
+                Vector3 faceFloor = CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir);
 
                 if (targetOpen && !state.TargetOpen)
                 {
                     state.TargetOpen = true;
                     if (state.OpenFactor <= 0.01f)
                     {
-                        audio?.PlayOneShot(SoundIds.DoorOpen, floor);
+                        audio?.PlayOneShot(SoundIds.DoorOpen, faceFloor);
                     }
                 }
                 else if (!targetOpen && state.TargetOpen)
@@ -142,14 +143,13 @@ namespace Odyssey.Presentation.World
                     state.OpenFactor = Mathf.MoveTowards(state.OpenFactor, 0f, dt / CloseDuration);
                     if (prev > 0f && state.OpenFactor == 0f)
                     {
-                        audio?.PlayOneShot(SoundIds.DoorClose, floor);
+                        audio?.PlayOneShot(SoundIds.DoorClose, faceFloor);
                     }
                 }
 
                 _states[cellIndex] = state;
 
-                int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y);
-                Matrix4x4 root = GroundRelief.Drape(floor) *
+                Matrix4x4 root = GroundRelief.Drape(faceFloor) *
                                  Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f));
                 Vector3 slide = new Vector3(SlideDistance * state.OpenFactor, 0f, 0f);
                 Matrix4x4 placement = root * Matrix4x4.Translate(slide);
@@ -162,7 +162,8 @@ namespace Odyssey.Presentation.World
 
         public bool IsApproachedOrOccupied(WorldSnapshot snapshot, CellRef cell)
         {
-            Vector3 doorFloor = CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y);
+            int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y);
+            Vector3 doorFace = CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir);
             float rangeSq = ProximityRange * ProximityRange;
 
             var pawns = snapshot.Pawns;
@@ -182,8 +183,8 @@ namespace Odyssey.Presentation.World
                 if (pcell.Y == cell.Y)
                 {
                     Vector3 pfloor = CellMetrics.FloorCentre(pcell.X, pcell.Z, pcell.Y);
-                    float dx = pfloor.x - doorFloor.x;
-                    float dz = pfloor.z - doorFloor.z;
+                    float dx = pfloor.x - doorFace.x;
+                    float dz = pfloor.z - doorFace.z;
                     if (dx * dx + dz * dz <= rangeSq)
                         return true;
                 }

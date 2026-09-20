@@ -7813,3 +7813,33 @@ The meadow baseline maps have no doors.
 
 **Verification:**
 Fast tier 822 Sim + 473 Hud; EditMode 2,024 / 2,011 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+
+## 2026-09-20 — Door wall alignment and colonist clearance: flush face placement and tall Base doors
+
+The initial door implementation placed the frame and sliding leaf at `CellMetrics.FloorCentre(x, z, y)`.
+Because walls in Odyssey are placed along cell boundary faces (`CellMetrics.FaceCentre(x, z, y, dir)`),
+doors were recessed 1.25 m into the cell, creating a visible gap and misalignment with adjoining wall
+panels. Furthermore, colonist figures with hats measure between 2.05 m and 2.20 m tall, clipping the
+1.97 m opening of `SM_Bld_Base_Wall_Door_01`.
+
+**Flush wall alignment and orientation:**
+- **Face placement:** `ChunkMesher.EmitDoor` and `DoorDirector` now compute their transform anchors via
+  `CellMetrics.FaceCentre(x, z, y, dir)`. The door frame now sits coplanar with neighbouring wall panels,
+  forming a continuous wall line.
+- **Exterior facade facing:** `WorldRenderModel.DoorFacing(x, z, y)` now evaluates `IsRoofed` on adjacent
+  open sides. When dividing an interior room from an exterior space, the door frame automatically faces
+  the outdoor facade.
+- **Proximity and audio origin:** Pawns triggering door traversal and the positional open/close audio
+  now calculate distance against the face center rather than cell center.
+
+**Colonist clearance and asset consistency:**
+- **Large Base door frame:** Swapped from `SM_Bld_Base_Wall_Door_01` to `SM_Bld_Base_Wall_Door_Large_01`
+  (2.47 m clear opening height), providing ample clearance for all colonists and headgear without clipping.
+- **Matching Base sliding leaf:** Swapped the temporary sci-fi prop door leaf for `SM_Bld_Base_Door_Large_01`
+  (1.13 m wide, 2.47 m high), maintaining aesthetic consistency with the Base wall theme.
+- **Slide distance:** Increased `DoorDirector.SlideDistance` from 1.05 m to 1.15 m to fully clear the
+  wider opening into the wall pocket.
+
+**Verification:**
+Fast tier 822 Sim + 473 Hud; EditMode 2,025 / 2,012 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+

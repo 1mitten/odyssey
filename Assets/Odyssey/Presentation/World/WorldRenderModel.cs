@@ -415,6 +415,33 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public int DoorFacing(int x, int z, int y)
         {
+            bool westWall = Size.Contains(x - 1, z, y) && OccludesFace(Size.Index(x - 1, z, y));
+            bool eastWall = Size.Contains(x + 1, z, y) && OccludesFace(Size.Index(x + 1, z, y));
+            bool northWall = Size.Contains(x, z + 1, y) && OccludesFace(Size.Index(x, z + 1, y));
+            bool southWall = Size.Contains(x, z - 1, y) && OccludesFace(Size.Index(x, z - 1, y));
+
+            if (westWall || eastWall)
+            {
+                // East-West wall run: opening is North/South.
+                // If South is outdoors and North is indoors, face South (outdoors facade).
+                // If North is outdoors and South is indoors, face North.
+                bool southRoofed = Size.Contains(x, z - 1, y) && IsRoofed(x, z - 1, y);
+                bool northRoofed = Size.Contains(x, z + 1, y) && IsRoofed(x, z + 1, y);
+                if (northRoofed && !southRoofed) return Directions.South;
+                if (southRoofed && !northRoofed) return Directions.North;
+                return Directions.North;
+            }
+
+            if (northWall || southWall)
+            {
+                // North-South wall run: opening is East/West.
+                bool westRoofed = Size.Contains(x - 1, z, y) && IsRoofed(x - 1, z, y);
+                bool eastRoofed = Size.Contains(x + 1, z, y) && IsRoofed(x + 1, z, y);
+                if (westRoofed && !eastRoofed) return Directions.East;
+                if (eastRoofed && !westRoofed) return Directions.West;
+                return Directions.East;
+            }
+
             for (int dir = 0; dir < Directions.Count; dir++)
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
@@ -422,6 +449,16 @@ namespace Odyssey.Presentation.World
                 if (!OccludesFace(Size.Index(nx, nz, y))) return dir;
             }
             return Directions.North;
+        }
+
+        public bool IsRoofed(int x, int z, int y)
+        {
+            for (int aboveY = y + 1; aboveY < Size.SizeY; aboveY++)
+            {
+                int idx = Size.Index(x, z, aboveY);
+                if (IsSolid(idx) || _floor[idx] != CoreContent.SlabNone) return true;
+            }
+            return false;
         }
 
         public int DoorFacing(int index)

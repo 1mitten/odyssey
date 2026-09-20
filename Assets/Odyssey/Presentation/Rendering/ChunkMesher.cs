@@ -657,7 +657,7 @@ namespace Odyssey.Presentation.Rendering
         {
             int dir = _model.DoorFacing(x, z, y);
             AddBody(batch, module, tint,
-                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                GroundRelief.Drape(CellMetrics.FaceCentre(x, z, y, dir)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
         }
 
