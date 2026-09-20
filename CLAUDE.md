@@ -162,6 +162,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
 | **EV** events | **Built on `claude/events-system`, 2026-09-20** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
 | **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
+| **FI** falling items | **Done on `claude/falling-items`** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -175,6 +176,7 @@ this file.
 
 | If you are touching | Read |
 |---|---|
+| Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
 | Walls, sites, materials, the build botch | `docs/design/15-building.md` |
 | Cancel, deconstruct | `docs/design/16-cancel-and-deconstruct.md` |
 | The Build palette's three layouts | `docs/design/17-build-palette-layouts.md` |
@@ -294,14 +296,14 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **780 Sim + 465 Hud** (2026-09-20, the events branch; 753 + 449 on 2026-09-19); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **786 Sim + 465 Hud** (2026-09-20, the events branch with falling items merged; 753 + 449 on 2026-09-19); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
-  branch (`claude/events-system`, after the first-look fixes): EditMode **1,951 total, 1,937 passed, 0 failed**; PlayMode **82 total,
+  branch (`claude/events-system`, after the first-look fixes and the falling-items merge): EditMode **1,966 total, 1,952 passed, 0 failed**; PlayMode **82 total,
   77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
-  The remainder are `[Explicit]` or ignored. The previous run, 2026-09-19 on the pawn-avoidance work at
-  `main`'s tip, was EditMode 1,872 / 1,858 and PlayMode 82 / 75 (two art cases skipped for want of a Synty junction).
+  The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, now
+  at `main`'s tip), was EditMode 1,916 / 1,902 and PlayMode 82 / 77.
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a

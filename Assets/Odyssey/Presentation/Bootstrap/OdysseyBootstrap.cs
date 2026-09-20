@@ -768,6 +768,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _figures.LoadLifted += OnLoadLifted;
                 _figures.LoadSet += OnLoadSet;
             }
+            if (_renderer != null)
+            {
+                _renderer.FallingItems.ItemLanded += OnLoadSet;
+            }
 
             if (cameraRig != null)
             {
@@ -991,7 +995,12 @@ namespace Odyssey.Presentation.Bootstrap
             // this is worth: a tree fading a sixtieth of a second late is not observable, and
             // placing the figures first would mean drawing the world after the people in it.
             UpdateSightLines(_world.Views.Current, movePerTick);
-            _renderer.Render(activeLayer, slice);
+            if (_renderer != null)
+            {
+                _renderer.FallingItems.UpdateSnapshot(_world.Views.Current);
+                _renderer.FallingItems.Advance(Time.deltaTime);
+                _renderer.Render(activeLayer, slice);
+            }
 
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
@@ -2360,6 +2369,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _figures.BlowLanded -= OnBlowLanded;
                 _figures.LoadLifted -= OnLoadLifted;
                 _figures.LoadSet -= OnLoadSet;
+            }
+            if (_renderer != null)
+            {
+                _renderer.FallingItems.ItemLanded -= OnLoadSet;
             }
             _audio?.Dispose();
             _daylight?.Dispose();

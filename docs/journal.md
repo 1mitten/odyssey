@@ -7354,6 +7354,26 @@ the verdict.
 with no row in the read-this table is one the next session does not find. `13-gestures.md` and
 `15-skills.md` are still in that state and are not fixed here.
 
+### Falling items and floor-drop motion, 2026-09-20
+
+The owner, on loose items floating when ground or floors beneath them are destroyed: *"logs and items can appear in mid air - if the ground or floor beneath is destroyed, drop the object with a motion on to the floor below if possible? - or whatever you recommend"*.
+
+**The design (`docs/design/26-falling-items.md`, branch `claude/falling-items`).**
+Five questions resolved with the owner before any code was written:
+1. **Simulation relocation is immediate; motion is presentation-only.** In the simulation (`Odyssey.Sim`), as soon as a floor slab is removed (`ConstructionGrid.RemoveSlab`) or a pawn deconstructs a floor (`DeconstructJob`), any items resting on that cell immediately relocate their `item.Cell` to the first solid floor directly below (`Cells.FirstFloorAtOrBelow`). If no floor exists anywhere below (over the bottomless void), the item despawns rather than hangs.
+2. **Deconstruction salvage refunds drop directly to the landing floor.** When a floor slab or fixture is dismantled, salvage refunds spawned by `DeconstructJob` resolve `FirstFloorAtOrBelow` before finding space via `NearestCellWithSpace`, preventing materials from appearing in mid-air above an empty void.
+3. **Pawn drop on deconstruction is distress-free.** A colonist deconstructing the floor beneath her own feet drops to the landing floor without thought (`Falling.NoThought`), matching the existing rule for digging out rock beneath oneself.
+4. **Presentation tracks drops frame-to-frame with gravity acceleration.** `ItemFallingTracker` inspects `WorldSnapshot.Things` each frame. When an item's Y-coordinate drops between frames, an active fall record is registered. Downward offset accelerates quadratically ($t \propto \sqrt{h}$, quadratic easing $y(t) = h \cdot (1 - (t/T)^2)$, durations ~0.4s for 1 storey to ~0.85s for 4 storeys). When $t$ crosses $T$, `ItemLanded` fires, emitting `SoundIds.CarryDrop` at the touchdown coordinates.
+5. **Renderer and Bootstrap integration.** `ChunkRenderer` offsets both `ItemHeap` props and individual commodity props during `RenderThings` by `worldFallOffset`. `OdysseyBootstrap` wires `FallingItems.ItemLanded` to `AudioSystem.PlayAt` and steps the tracker in `RenderWorld`.
+6. **Safety sweep.** In addition to reactive drops on `RemoveSlab` and deconstruction, a safety check `Falling.DropFloatingItems(ctx)` sweeps orphaned floating items during world support consequence resolution, safeguarding against obscure mid-air item bugs.
+
+**The trap:** In `ItemFallingTracker.Advance`, updating `_activeFalls[id] = fall;` inside a `foreach (var kvp in _activeFalls)` loop threw `InvalidOperationException: Collection was modified; enumeration operation may not execute` under Unity's Mono runtime. CoreCLR (.NET 8) in the fast tier had not thrown, and presentation is not tested in the fast tier anyway. Fixed cleanly by snapshotting keys into a reusable allocation-free scratch list `_activeKeys`.
+
+- *Verified:*
+  - Fast tier: **759 Sim + 449 Hud, 0 failed**; both content gates clean.
+  - Unity EditMode: **1,916 total, 1,902 passed, 0 failed** (includes new tests in `ItemFallMotionTests`, `ItemFallingTrackerTests`, `FallingTests`, `FloorsAndCollapseTests`).
+  - Unity PlayMode: **82 total, 77 passed, 0 failed**.
+
 ## 2026-09-20 — Events: the incident layer, and the storyteller that is deliberately not there
 
 The owner asked for a world-event system aligned with RimWorld's — cadence types (regular, weekly,

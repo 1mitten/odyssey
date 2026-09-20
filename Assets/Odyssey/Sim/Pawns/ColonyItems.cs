@@ -314,7 +314,11 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int NearestCellWithSpace(CellGrid cells, int origin, int defIndex, int count, int maxRadius)
         {
-            if (CellHasSpace(origin, defIndex, count)) return origin;
+            if (!cells.HasFloor(origin))
+                origin = cells.FirstFloorAtOrBelow(origin);
+
+            if (cells.HasFloor(origin) && cells.IsWalkable(origin) && CellHasSpace(origin, defIndex, count))
+                return origin;
 
             GridSize size = cells.Size;
             CellRef at = size.FromIndex(origin);

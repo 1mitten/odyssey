@@ -151,16 +151,16 @@ namespace Odyssey.Sim.Pawns
                 : ctx.Construction.Demolish(ctx, cell, out _);
             if (!removed) return;
 
-            // Where the wall stood, or as near as will take it — the same landing felled wood and
-            // mined stone already use, so a row of walls comes down into a few stacks rather than
-            // a scatter.
+            // Where the wall or floor stood, or as near as will take it on a real floor below.
+            // Slabs and open-air cuts resolve to FirstFloorAtOrBelow so refunds never hang in mid-air.
             int refund = Refund(ctx, cell, building, stuff, tick);
             if (refund <= 0) return;
 
             int item = ConstructionContent.StuffAt(stuff).item;
             if (item < 0) return;
 
-            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, item, refund, maxRadius: 3);
+            int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, landing, item, refund, maxRadius: 3);
             if (at >= 0) ctx.Items.Spawn(item, at, refund);
         }
 

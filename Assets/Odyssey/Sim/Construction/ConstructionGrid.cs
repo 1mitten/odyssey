@@ -1286,6 +1286,10 @@ namespace Odyssey.Sim.Construction
             int above = cell + _grid.Size.LayerStride;
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
 
+            // Pawns and loose items resting on the removed slab drop to the landing floor below.
+            // A colonist tearing down the floor underfoot steps down without panic (NoThought).
+            Falling.OutOf(ctx, cell, thought: Falling.NoThought, tick: 0);
+
             // The floor that has just gone was holding up whatever was beside it on this boundary.
             // This is the line that lets a player pull the last support out of a room and watch it
             // come down, which is what the unit is for.
