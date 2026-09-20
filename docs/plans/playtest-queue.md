@@ -46,8 +46,10 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   Measured — a 10 × 10 hall takes nine holes in its roof and one pillar closes all nine.
   Open questions a test cannot answer: whether the pillar's cost and the cell of floor it eats feel
   like a fair price for the span; whether losing every roof two storeys up reads as clarity or as
-  the building being unfinished; and whether a roof still reading as the same grey plate as a floor
-  is the next thing worth fixing (RF2 has the pitched cap ready to go, art and all).
+  the building being unfinished; whether the **Pillar chip's new icon** reads as a column holding a
+  plate up rather than as a wall seen end-on — it had no shape at all until the review and drew the
+  placeholder square; and whether a roof still reading as the same grey plate as a floor is the next
+  thing worth fixing (RF2 has the pitched cap ready to go, art and all).
   Merged with main on 2026-09-20 — see the handover for what the merge moved.
 
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
