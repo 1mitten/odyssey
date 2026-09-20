@@ -93,6 +93,22 @@ namespace Odyssey.Sim.Construction
         public bool needsClearCell;
 
         /// <summary>
+        /// Whether a terrace bank would swallow this thing, so it may not be built at the foot of a
+        /// step.
+        ///
+        /// <para><b>The same fact about shape that <see cref="needsClearCell"/> states, pointed the
+        /// other way.</b> Presentation fills the cell at the foot of a terrace step with a ramp of
+        /// earth from the lower floor to the rim above (<c>BankLayout</c>, and
+        /// <c>Worldgen.TerraceFoot</c> is the simulation's copy of the rule). A wall fills its own
+        /// cell and stands out of that ramp; a bed is broad and low and open, so it is buried by it
+        /// — the same reason a stack of meals shows through a mattress and not through a wall.</para>
+        ///
+        /// <para>A field rather than a test for the bed by name, because the next low, wide piece of
+        /// furniture wants the same answer and should not have to be remembered.</para>
+        /// </summary>
+        public bool refusedInTerraceFoot;
+
+        /// <summary>
         /// Units of stuff a site swallows before any work can start.
         ///
         /// <para>Five for a wall, which is the reference's number for a wall of any material
@@ -424,7 +440,8 @@ namespace Odyssey.Sim.Construction
                 {
                     defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
-                    needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
+                    needsClearCell = true, refusedInTerraceFoot = true,
+                    costCount = 5, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.bed",
                 },
 

@@ -59,7 +59,13 @@ namespace Odyssey.Tests.Sim
         // 2026-09-20: Appended Building_Door at handle 6 — edifice 2 (CoreContent.EdificeDoor),
         // passable (blocking false), 5 stuff and 135 ticks matching a wall. Gained `rotates`
         // so doors can be oriented by the player before placement and at wall corners/reveals.
-        const ulong BuildingFingerprint = 4156044371283347139UL;
+        // 2026-09-20, and again on the merge: Building_Bed gained `refusedInTerraceFoot`.
+        // Presentation fills the cell at the foot of a terrace step with a ramp of earth, and a
+        // bed built there is buried by it — the same fact about the bed's shape that
+        // `needsClearCell` already states, pointed at the hillside instead of at a stack of meals.
+        // The value below is the table with BOTH changes in it: the door landed on main while this
+        // branch was open, so neither side's number survives and it is taken from the merged table.
+        const ulong BuildingFingerprint = 11422731967665721810UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

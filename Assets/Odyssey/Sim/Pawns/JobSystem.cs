@@ -674,8 +674,74 @@ namespace Odyssey.Sim.Pawns
             // No bed within reach is not a failure: a tired colonist lies down in the rubble and
             // remembers having done so.
             job.TargetCell = own >= 0 ? own : bestBed;
+
+            // — unless the rubble is the foot of a terrace step, where she would lie down inside a
+            // hillside. See GroundSpot.
+            if (job.TargetCell < 0) job.TargetCell = GroundSpot(pawn, ctx);
             return true;
         }
+
+        /// <summary>
+        /// Where a colonist with no bed should lie down: normally exactly where she stands, which
+        /// is <c>-1</c> — and somewhere else when where she stands is the foot of a terrace step.
+        ///
+        /// <para><b>A bank is drawn in that cell, floor to the rim of the step above</b>
+        /// (<c>BankLayout</c>, and <see cref="Worldgen.TerraceFoot"/> is the simulation's copy of
+        /// the same rule). A figure standing there is lifted on to the ramp's surface and reads
+        /// correctly; a body lying down is not, and it spans the cell the ramp rises across, so she
+        /// disappears into the hillside. The owner watched it happen
+        /// (<c>docs/design/22-terrace-steps.md</c> §4).</para>
+        ///
+        /// <para><b>Only the walk, never the collapse.</b> Rest that reaches nought drops a
+        /// colonist where she stands, bank or no bank, and that is deliberate (WS3, design 17 §4c)
+        /// — it is the control that stops "go somewhere better" becoming "never sleep rough". This
+        /// is reached only on the branch where she is merely tired and simply has nowhere to go, so
+        /// stepping one cell aside costs her nothing she was going to use.</para>
+        ///
+        /// <para><b>And it gives up rather than keeps her awake.</b> Along a terrace edge the cells
+        /// beside a foot are feet too, so the way out is the cell away from the step; where the
+        /// eight neighbours are all banks or all taken, <c>-1</c> is the honest answer and she lies
+        /// down in the hillside as she did before. A colonist who cannot sleep is worse than a
+        /// colonist who sleeps somewhere that looks wrong.</para>
+        /// </summary>
+        /// <remarks>Public for the same reason <see cref="TrySleep"/> is: it is a rule worth
+        /// asserting on its own, and reaching it through the chooser means first arranging for a
+        /// colony to have beds it cannot use.</remarks>
+        public static int GroundSpot(Pawn pawn, PawnContext ctx)
+        {
+            World.CellGrid cells = ctx.Cells;
+            if (!Worldgen.TerraceFoot.IsFoot(cells, pawn.Cell)) return -1;
+
+            GridSize size = cells.Size;
+            CellRef at = size.FromIndex(pawn.Cell);
+            int me = pawn.Id.Value;
+
+            // The eight neighbours in a fixed order, because which spot she picks is hashed state
+            // and "the first acceptable one" has to mean the same thing on every machine.
+            for (int i = 0; i < NeighbourX.Length; i++)
+            {
+                int x = at.X + NeighbourX[i], z = at.Z + NeighbourZ[i];
+                if (!size.Contains(x, z, at.Y)) continue;
+
+                int cell = size.Index(x, z, at.Y);
+                if (Worldgen.TerraceFoot.IsFoot(cells, cell)) continue;
+
+                // Not into somebody's bed: she is sleeping rough, and wandering on to a free
+                // mattress would hand her its rest rate and its ownership for nothing.
+                if (ctx.Items.HasBed(cell)) continue;
+
+                long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                if (!ctx.Reachable(pawn, cell)) continue;
+
+                return cell;
+            }
+
+            return -1;
+        }
+
+        static readonly int[] NeighbourX = { 0, 1, 0, -1, 1, 1, -1, -1 };
+        static readonly int[] NeighbourZ = { 1, 0, -1, 0, 1, -1, -1, 1 };
     }
 
     /// <summary>

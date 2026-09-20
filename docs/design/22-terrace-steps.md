@@ -86,7 +86,12 @@ along steps and does not reshuffle it: everywhere else the same trees stand as b
 hop, and the bank is drawn there precisely to make that hop legible. Nothing about this belongs in
 `NavGraph`.
 
-**Not guarded yet: sleeping.** The owner has seen a colonist sleep at the foot of a step and vanish
+**Guarded since 2026-09-20: sleeping, and building a bed. See §4a below — the owner's answer to
+the choice this paragraph poses was "both". The paragraph stands as written because it is the record
+of what was known when it was, including a forecast about the state hash that turned out to be
+wrong.**
+
+**Not guarded when this was written: sleeping.** The owner has seen a colonist sleep at the foot of a step and vanish
 into the bank. A standing figure is lifted onto the bank's surface; a body lying down is not, and it
 spans the cell the ramp rises across. Two candidate fixes, neither taken here:
 
@@ -99,6 +104,75 @@ spans the cell the ramp rises across. Two candidate fixes, neither taken here:
 
 Both change the state hash, so both want re-baked goldens and a decision rather than a guess. The
 predicate is in place for whichever is chosen.
+
+### 4a. Both guards, taken (2026-09-20)
+
+§4 above left sleeping unguarded and named two candidate fixes, saying *"both change the state hash,
+so both want re-baked goldens and a decision rather than a guess."* The owner's decision was **both,
+in that order**. This is what they came to.
+
+#### 1. A tired colonist steps out of a bank to lie down
+
+`CriticalNeedsThinkNode.GroundSpot` — consulted only on the branch where she has no bed at all. If
+the cell she is standing in is a terrace foot, she is sent to the first of its eight neighbours that
+is not one, is reachable, is unreserved and has no bed standing in it. Otherwise, and everywhere
+else on the board, the answer is `-1` and she lies down exactly where she stands as she always has.
+
+Three things it deliberately does not do.
+
+- **It never touches the collapse.** Rest that reaches nought drops a colonist where she is, bank or
+  no bank (WS3, design 17 §4c). That is the control that stops "go somewhere better" becoming "never
+  sleep rough", and the guard is reached only when she is merely tired and has somewhere to walk.
+- **It gives up rather than keeps her awake.** Where all eight neighbours are banks or taken it
+  returns `-1` and she lies in the hillside as before. A colonist who cannot sleep is a worse bug
+  than one who sleeps somewhere that looks wrong.
+- **It does not walk her into a bed.** She is sleeping rough; arriving on a free mattress would hand
+  her its rest rate and, through `TryClaimForSleeper`, its ownership.
+
+**And it needed one thing fixed on the way.** `SleptOnGround` was added when `Job.TargetCell < 0`,
+which had been a fair statement of "she has no bed" only while a colonist with no bed was never
+given anywhere to walk to. It reads the cell she is actually lying in now —
+`ColonyItems.HasBed(pawn.Cell)` — which is the statement `NeedsSystem.RestEffectiveness` has always
+made about the rate she recovers at. The two could not disagree before and cannot now; the binary
+search they both use lives in `ColonyItems` instead of being written out twice.
+
+#### 2. A bed cannot be built into one
+
+`BuildingDef.refusedInTerraceFoot`, set on the bed, checked in `ConstructionGrid.Allows`. A field
+rather than a test for the bed by name, because it is the same fact about shape that
+`needsClearCell` already states, pointed at the hillside instead of at a stack of meals: a wall
+fills its own cell and stands out of the ramp, a bed is broad and low and open and is buried by it.
+
+**The cell stays walkable and stays buildable for everything that fills it.** It is the take-off
+cell for the hop and the whole reason a bank is drawn there is to make that hop legible; a rule that
+took it away from the player entirely would be a worse trade than the bug.
+
+#### What this turned up on the way
+
+**The far half of a bed was being checked as though it were a wall.** `Place` validated the second
+cell with `Allows(second)` — the one-argument overload, which answers on behalf of
+`BuildingHandle.Wall`. So *every* rule that depends on what is being built applied to a bed's head
+cell and silently skipped its foot, and the bank rule would have skipped it too. Corrected to
+`Allows(second, building)`, which immediately refused an order that had always been allowed: a bed
+whose far half lands on a stack of logs, which is the exact thing `needsClearCell` was added for
+(owner, 2026-09-18, *"you can see some meals poking through the bed, this is invalid"*) and which
+had never applied to half of the bed. `BedTests.ABedsSecondCellMustBeAbleToTakeItToo` caught it by
+failing, having previously asserted the two halves agreed while asking each a different question.
+
+#### The hash did not move, and the forecast was wrong
+
+§4 predicted both changes would move the state hash. **Neither did** — the whole fast tier, all six
+golden values included, passed untouched at the first run.
+
+The forecast was not silly. One of the three golden boards is the wooded one and it is covered in
+terraces. But a colonist reaches the sleeping guard only when she has no bed at all, and the golden
+colonies have beds; in ten thousand ticks not one of them ever tried to sleep rough at a step. The
+placement guard is reached only by an order, and nothing in a golden run orders a bed.
+
+**A change that shifts no hash is either inert or untested**, and the two are told apart by
+asserting the rule directly rather than inferring it from a colony that never met one —
+`TerraceSleepTests`, on the same hand-built terrace `TerraceSlopeCostTests` prices its hop on, for
+exactly the same reason.
 
 ## 4b. Crossing a step: the price and the motion
 

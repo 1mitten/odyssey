@@ -164,7 +164,14 @@ namespace Odyssey.Sim.Construction
             if (def.footprint > 1)
             {
                 int second = EdificeFootprint.SecondCell(index, def.edifice, facing, _grid.Size);
-                if (second < 0 || !Allows(second)) return IntentRejection.NotPermitted;
+
+                // **Asked about the thing being built, not about a wall.** This was `Allows(second)`,
+                // which is the one-argument overload and therefore asks the question on behalf of a
+                // *wall* - so every rule that depends on what is being built was applied to a bed's
+                // head cell and silently skipped for its foot. A bed is two cells and both of them
+                // are the bed: it is the far half that a terrace bank would bury just as readily,
+                // and the far half that a stack of meals stands up through.
+                if (second < 0 || !Allows(second, building)) return IntentRejection.NotPermitted;
 
                 // A site standing on the far cell is an order the bed would eat: refuse rather
                 // than refund somebody's half-delivered wall out from under them.
@@ -421,6 +428,12 @@ namespace Odyssey.Sim.Construction
             if (!NaturalContent.TerrainAt(_grid.Terrain[index]).buildable) return false;
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
+
+            // Not into a terrace bank. Presentation fills the foot of a step with a ramp of earth
+            // and a bed laid there is buried by it, exactly as a body lying in one is
+            // (docs/design/22-terrace-steps.md 4). The cell stays walkable and stays buildable for
+            // everything that fills it - this refuses only what the bank would swallow.
+            if (def.refusedInTerraceFoot && Worldgen.TerraceFoot.IsFoot(_grid, index)) return false;
 
             // The shaft rule, stated once, for both sides of it and for both orders it can be given
             // in. See ShaftRulePermits.

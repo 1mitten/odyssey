@@ -141,14 +141,29 @@ namespace Odyssey.Tests.Sim
                 colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing: 0),
                 Is.EqualTo(IntentRejection.NotPermitted));
 
-            // Facing east instead: a different second cell, if that one is open. If the east
-            // neighbour happens to be taken the board has grown a hedge around the start, and the
-            // assume below says so rather than passing vacuously.
-            int east = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 1, Size);
-            Assume.That(east, Is.GreaterThanOrEqualTo(0));
-            Assume.That(colony.Construction.Allows(east), Is.True);
+            // Turned away from the wall instead: a different second cell, and the order becomes
+            // legal again, which is the point of rotation.
+            //
+            // **Asked of the cell as a bed, not as a wall**, and that is a correction. It used to
+            // assume `Allows(east)` - the one-argument overload, which answers on behalf of a wall
+            // - and then assert that the bed order succeeded. Those are different questions, and
+            // `Place` was asking the wall's one too, so the pair agreed for the wrong reason: a
+            // bed needs a clear cell and a wall does not, and the start is strewn with wood. With
+            // `Place` corrected to ask about the thing being built, a bed whose far half lands on
+            // a stack of logs is refused - which is the rule the flag was added for (owner,
+            // 2026-09-18, meals poking through a mattress) and which had never applied to the far
+            // half until now.
+            int facing = -1;
+            for (int turn = 1; turn < 4 && facing < 0; turn++)
+            {
+                int cell = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, turn, Size);
+                if (cell >= 0 && colony.Construction.Allows(cell, BuildingHandle.Bed)) facing = turn;
+            }
+
+            Assume.That(facing, Is.GreaterThanOrEqualTo(0),
+                "every other way round is blocked too - the board has grown a hedge around the start");
             Assert.That(
-                colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing: 1),
+                colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing),
                 Is.EqualTo(IntentRejection.None));
         }
 

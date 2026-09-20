@@ -182,6 +182,7 @@
     <rotates>true</rotates>
     <takesQuality>true</takesQuality>
     <needsClearCell>true</needsClearCell>
+    <refusedInTerraceFoot>true</refusedInTerraceFoot>
     <costCount>5</costCount>
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
