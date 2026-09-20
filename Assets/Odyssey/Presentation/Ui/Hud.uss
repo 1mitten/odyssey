@@ -512,6 +512,55 @@
     white-space: nowrap;
 }
 
+/* ---------------------------------------------------------------- toasts (SK4)
+
+   The transient stack, under the alerts in the same column. Design 09 §2.3 calls this a "transient
+   toast" and distinguishes it from a bulletin; §3.1 keeps alerts and bulletins apart because
+   "merging them produces a system that is wrong for both", and this is the third of the three.
+
+   No header row, unlike .alerts: a heading earns its place over a standing list a player returns
+   to, and would be the tallest thing in this stack for most of its life. HudLayout.ToastsHeight
+   models it without one. */
+.toasts {
+    position: relative;
+    width: 100%;
+    margin-top: 9px;
+}
+
+/* The negative bottom margin cancels the last row's own gap, exactly as .alerts__rows does, so the
+   realised box is rows * height + (rows - 1) * gap and matches HudLayout.ToastsHeight. */
+.toasts__rows { margin-bottom: -4px; }
+
+/* One line, sized like an alert row so the two stacks read as one column. No dismiss control and no
+   justify-content: space-between — there is nothing on the right to push away from. */
+.toast {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-left: 4px;
+    padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
+}
+
+.toast:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.toast__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.toast__lead {
+    color: #eef3f6;
+    white-space: nowrap;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
 .alert__dismiss {
     width: 18px;
     height: 18px;
@@ -907,6 +956,41 @@
     margin-right: 3px;
     border-radius: 3px;
     background-color: #e8b55c;
+}
+
+/* The experience bar (SK3). Absolutely positioned, which is the whole trick: `.skill` is 19px and
+   HudLayout.SkillRow says so, the colonist pane is one fixed height across every tab, and a bar in
+   the flow would have grown all seven rows and moved the pane's top edge on every change of tab —
+   the exact thing that fixed height was introduced to stop.
+
+   Hidden by default so a row with no simulation behind it needs nothing done to it, which also
+   covers the row that is born dead and never changes: the code only touches this when liveness
+   changes, and for that row it never does.
+
+   It starts at the name rather than at the row's left edge, so the icon column stays clean and the
+   bar reads as belonging to the words above it.
+
+   `.skill` needs no `position: relative` for this: relative is UI Toolkit's default, so the row is
+   already the containing block. Do not "tidy" `.skill` to `position: absolute`. */
+.skill__track {
+    display: none;
+    position: absolute;
+    left: 25px;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Width is set from code, per mille in and per cent out. The colour is set from code too, from the
+   passion: the fill is the only place the x0.35/x1.0/x1.5 learning rate is visible while it is
+   happening. */
+.skill__fill {
+    height: 3px;
+    width: 0;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.55);
 }
 
 .need__line {

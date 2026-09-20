@@ -216,7 +216,8 @@ namespace Odyssey.Tests.PlayMode
                     storeRows: Visible(doc, "stores__row"),
                     alerts: Visible(doc, "alert"),
                     layers: doc.rootVisualElement.Query(className: "ruler__tick").ToList().Count,
-                    needRows: 0);
+                    needRows: 0,
+                    toasts: Visible(doc, "toast"));
 
                 Dictionary<HudRegion, HudRect> model = HudLayout.Solve(canvas.width, canvas.height, content);
 
@@ -1959,7 +1960,8 @@ namespace Odyssey.Tests.PlayMode
                     storeRows: Visible(doc, "stores__row"),
                     alerts: Visible(doc, "alert"),
                     layers: doc.rootVisualElement.Query(className: "ruler__tick").ToList().Count,
-                    needRows: 0);
+                    needRows: 0,
+                    toasts: Visible(doc, "toast"));
 
                 HudRect modelled = HudLayout.Solve(canvas.width, canvas.height, content)[HudRegion.Inspect];
                 Assert.That(modelled.Height, Is.EqualTo(0f),

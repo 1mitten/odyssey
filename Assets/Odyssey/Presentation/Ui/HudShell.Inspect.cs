@@ -281,7 +281,8 @@ namespace Odyssey.Presentation.Ui
         /// not a reason for two builders.</para>
         /// </summary>
         static SkillLineView SkillLine(VisualElement grid, string? modifier = null,
-            HudTextRole nameRole = HudTextRole.Body, HudTextRole levelRole = HudTextRole.Meta)
+            HudTextRole nameRole = HudTextRole.Body, HudTextRole levelRole = HudTextRole.Meta,
+            bool withBar = false)
         {
             var view = new SkillLineView();
 
@@ -309,6 +310,21 @@ namespace Odyssey.Presentation.Ui
             view.Root.Add(view.Name);
             view.Root.Add(view.Value);
             view.Root.Add(view.Passion);
+
+            // The experience bar (SK3), on the inspect pane only. The setup page's grid shows a
+            // candidate who has not started working, so a part-filled bar there would be a
+            // progress reading for progress nobody has made.
+            if (withBar)
+            {
+                view.Track = new VisualElement();
+                view.Track.AddToClassList("skill__track");
+
+                view.Fill = new VisualElement();
+                view.Fill.AddToClassList("skill__fill");
+
+                view.Track.Add(view.Fill);
+                view.Root.Add(view.Track);
+            }
 
             grid.Add(view.Root);
             return view;
@@ -345,6 +361,13 @@ namespace Odyssey.Presentation.Ui
                 view.LastLive = row.Live;
                 view.Root.EnableInClassList("skill--off", !row.Live);
                 view.Icon.Inherit(row.Live ? HudTokens.TextMeta : HudTokens.TextFaint);
+
+                // The bar belongs to the rows that have a simulation behind them, and the
+                // stylesheet hides the track by default so a dead row needs nothing done to it —
+                // which matters because this block does not run for a row that was born dead and
+                // stayed dead, LastLive being false to begin with.
+                if (view.Track != null)
+                    view.Track.style.display = row.Live ? DisplayStyle.Flex : DisplayStyle.None;
             }
 
             // A level moves once in a working day, so the string is built on the change and not
@@ -355,12 +378,50 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(view.Value, row.Live ? row.Level.ToString("0") : "—", view.LevelRole);
             }
 
-            if (view.LastPassion == row.Passion) return;
-            view.LastPassion = row.Passion;
-            for (int i = 0; i < view.Passion.childCount; i++)
-                view.Passion[i].style.display =
-                    row.Live && row.Passion > i ? DisplayStyle.Flex : DisplayStyle.None;
+            if (view.LastPassion != row.Passion)
+            {
+                view.LastPassion = row.Passion;
+                for (int i = 0; i < view.Passion.childCount; i++)
+                    view.Passion[i].style.display =
+                        row.Live && row.Passion > i ? DisplayStyle.Flex : DisplayStyle.None;
+
+                // The bar takes its colour from the passion, which is the multiplier it is filling
+                // at: x0.35, x1.0, x1.5. A burning skill therefore both fills faster and looks
+                // different while doing it, which is the only way the four-fold spread between no
+                // passion and a major one is legible at all in something that moves this slowly.
+                if (view.Fill != null)
+                    view.Fill.style.backgroundColor = PassionInk(row.Passion);
+            }
+
+            // ---- the bar, and it is deliberately NOT guarded the way everything above is.
+            //
+            // Every other field on this row is written only when it changes, because a level moves
+            // about once in a working day. The bar is the opposite: the inspect pane refreshes
+            // fifteen times a second and the bar wants every one of them, because watching it creep
+            // is the whole reason it exists. Only the width is written — no string is built, so a
+            // selected colonist still costs no allocation.
+            if (view.Fill == null || !row.Live) return;
+            if (view.LastProgress == row.Progress) return;
+            view.LastProgress = row.Progress;
+
+            // Per mille in, per cent out. A width rather than a scale so the bar's left edge stays
+            // put and only its right edge moves.
+            view.Fill.style.width = Length.Percent(row.Progress / 10f);
         }
+
+        /// <summary>
+        /// The experience bar's colour for a passion (SK3): none, minor, major.
+        ///
+        /// <para>Not a need band — those run good-to-bad and a skill has no bad end. These run
+        /// quiet-to-loud, and the loud one is the passion pip's own amber so the row's two marks
+        /// for the same fact agree.</para>
+        /// </summary>
+        static Color PassionInk(int passion) => passion switch
+        {
+            >= 2 => HudTokens.Accent,
+            1 => HudTokens.TextMeta,
+            _ => HudTokens.TextFaint,
+        };
 
         void SetNeed(int index, int thousandths)
         {
@@ -553,7 +614,7 @@ namespace Odyssey.Presentation.Ui
                 _skillsGrid = new VisualElement();
                 _skillsGrid.AddToClassList("skills");
                 for (int i = 0; i < _inspect.Skills.Count; i++)
-                    _skills.Add(SkillLine(_skillsGrid));
+                    _skills.Add(SkillLine(_skillsGrid, withBar: true));
                 tabBody.Add(_skillsGrid);
 
                 _inspectBody.Add(tabBody);

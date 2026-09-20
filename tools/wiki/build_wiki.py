@@ -53,10 +53,13 @@ SECTIONS = [
     ("health", "Health and anatomy", ["ui.health"],
      "Body parts, injuries and conditions. The anatomy sheet covers this better than any other "
      "part of the game, which is either fortunate or ominous."),
-    ("events", "Events", ["ui.alert", "ui.bulletin"],
-     "Alerts are conditions that persist until fixed. Bulletins are things that happened. Both "
-     "carry the layer they occurred on and jump the camera there, which a flat colony sim never "
-     "has to think about."),
+    ("events", "Events", ["ui.alert", "ui.bulletin", "ui.toast"],
+     "Three channels, and the difference is not cosmetic. Alerts are conditions that persist until "
+     "fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things "
+     "that happened and are gone in six seconds, which is the right home for anything that recurs "
+     "often enough that clearing it by hand would become a chore. Alerts and bulletins carry the "
+     "layer they occurred on and jump the camera there, which a flat colony sim never has to think "
+     "about."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
                                       "ui.tab", "ui.speed", "ui.settings"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
@@ -69,7 +72,8 @@ NS_TITLES = {
     "ui.command": "Commands", "ui.work": "Work types", "ui.skill": "Skills",
     "ui.pawn": "Kinds of pawn", "ui.need": "Needs", "ui.mood": "Mood states",
     "ui.status": "Current activity", "ui.health": "Body parts and conditions",
-    "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.weather": "Weather",
+    "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.toast": "Toasts",
+    "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",
     "ui.speed": "Game speed", "ui.settings": "Settings",
 }

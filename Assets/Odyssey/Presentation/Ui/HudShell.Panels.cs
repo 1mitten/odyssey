@@ -891,6 +891,93 @@ namespace Odyssey.Presentation.Ui
             // Hidden outright when there is nothing to say.
             _alertsPanel.style.display = DisplayStyle.None;
             column.Add(_alertsPanel);
+
+            // ---- toasts, under the alerts in the same column (SK4). No header: the alerts panel
+            // earns a heading because it is a standing list a player comes back to, and a toast is
+            // a line that is already leaving.
+            _toastsPanel = Panel("toasts", "toasts");
+            _toastRows = new VisualElement();
+            _toastRows.AddToClassList("toasts__rows");
+            _toastsPanel.Add(_toastRows);
+            _toastsPanel.style.display = DisplayStyle.None;
+            column.Add(_toastsPanel);
+        }
+
+        /// <summary>
+        /// The transient toast stack (SK4): what happened, said once, gone by itself.
+        ///
+        /// <para>Driven from <see cref="RefreshAlerts"/> rather than from the frame loop directly,
+        /// because that method has four call sites and a toast that is not expired on every one of
+        /// them is a toast that never leaves. One place to call it from is worth more here than the
+        /// tidier separation.</para>
+        /// </summary>
+        void RefreshToasts()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+
+            _toasts.Refresh(world.Views.Current, Time.unscaledTimeAsDouble);
+
+            // One chime for the refresh however many rows arrived in it, the way the alerts panel
+            // sounds once for several conditions crossing together. The count comes from the model:
+            // AlertChimeWatch's own remarks record what it cost when the audio kept its own copy of
+            // a rule a model already owned.
+            if (_toasts.Added > 0)
+                _boot.Audio?.PlayAlert(Audio.AlertChime.ForSeverity(_toasts.LoudestAdded));
+
+            _toastsPanel.style.display =
+                _toasts.Rows.Count == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+
+            while (_toastViews.Count < _toasts.Rows.Count) _toastViews.Add(NewToastRow());
+            while (_toastViews.Count > _toasts.Rows.Count)
+            {
+                _toastViews[^1].Root.RemoveFromHierarchy();
+                _toastViews.RemoveAt(_toastViews.Count - 1);
+            }
+
+            for (int i = 0; i < _toasts.Rows.Count; i++)
+            {
+                ToastRow model = _toasts.Rows[i];
+                ToastRowView view = _toastViews[i];
+
+                if (view.Serial == model.Serial) continue;
+                view.Serial = model.Serial;
+                view.TargetPawn = model.Pawn;
+
+                view.Icon.Kind = HudGlyphKind.Info;
+                view.Icon.Tint = HudTokens.Accent;
+                HudText.Set(view.Lead, model.Lead, HudTextRole.Body);
+            }
+        }
+
+        ToastRowView NewToastRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("toast");
+
+            var icon = new HudGlyph(HudGlyphKind.Info, IconBadge.BarSize, HudTokens.Accent);
+            icon.AddToClassList("toast__icon");
+
+            Label lead = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__lead");
+
+            row.Add(icon);
+            row.Add(lead);
+            _toastRows.Add(row);
+
+            var view = new ToastRowView { Root = row, Icon = icon, Lead = lead };
+
+            // Clicking selects the colonist it is about, the way an alert row does. There is no
+            // dismiss control: the row is already leaving, and a control that raced a six-second
+            // timer would be a control that sometimes did nothing.
+            row.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                var world = _boot?.World;
+                if (world == null || !view.TargetPawn.IsValid) return;
+                _directors?.ChooseColonist(view.TargetPawn, world.Views.Current);
+            });
+
+            return view;
         }
 
         void RefreshClock()
@@ -929,6 +1016,9 @@ namespace Odyssey.Presentation.Ui
             // as two events. The watch decides what is new; a clone with no catalogue gets a
             // null director and silence, like every other sound.
             if (_chimes.Step(_alerts.Rows) is { } chime) _boot.Audio?.PlayAlert(chime);
+
+            // The toasts ride this method's four call sites (SK4) — see RefreshToasts.
+            RefreshToasts();
 
             while (_alertViews.Count < _alerts.Rows.Count) _alertViews.Add(NewAlertRow());
             while (_alertViews.Count > _alerts.Rows.Count)
