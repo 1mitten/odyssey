@@ -108,16 +108,17 @@ namespace Odyssey.Presentation.World
                 CellRef cell = _model.Size.FromIndex(cellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
+                int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y);
+
                 bool targetOpen = IsOpenOverride != null
                     ? IsOpenOverride(cellIndex)
-                    : IsApproachedOrOccupied(snapshot, cell);
+                    : IsApproachedOrOccupied(snapshot, cell, dir);
 
                 if (!_states.TryGetValue(cellIndex, out DoorState state))
                 {
                     state = new DoorState { OpenFactor = 0f, TargetOpen = false };
                 }
 
-                int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y);
                 Vector3 faceFloor = CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir);
 
                 if (targetOpen && !state.TargetOpen)
@@ -160,9 +161,11 @@ namespace Odyssey.Presentation.World
             SubmitPlacements();
         }
 
-        public bool IsApproachedOrOccupied(WorldSnapshot snapshot, CellRef cell)
+        public bool IsApproachedOrOccupied(WorldSnapshot snapshot, CellRef cell) =>
+            IsApproachedOrOccupied(snapshot, cell, _model.DoorFacing(cell.X, cell.Z, cell.Y));
+
+        public bool IsApproachedOrOccupied(WorldSnapshot snapshot, CellRef cell, int dir)
         {
-            int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y);
             Vector3 doorFace = CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir);
             float rangeSq = ProximityRange * ProximityRange;
 
