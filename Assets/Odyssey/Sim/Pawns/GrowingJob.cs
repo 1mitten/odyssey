@@ -54,7 +54,24 @@ namespace Odyssey.Sim.Pawns
                 best = cell;
             }
 
-            if (best < 0) return false;
+            if (best < 0)
+            {
+                // No tile to sow - and if the reason is a thing lying on one, the sower clears
+                // it herself rather than leaving it to the haul order, which a busy field
+                // starves: growing scans at order one and hauling at four, so a field with
+                // endless sowing and reaping never hands anyone the stone on its own tile
+                // (owner, 2026-09-20: "the items were not picked up and removed from the
+                // dirt/garden tile"). The haul scan prefers a zoned blocker over every ordinary
+                // pile, so the job handed out here is the field's own blocker first.
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    int blocked = cells[i];
+                    if (zones.IsPlanted(blocked)) continue;
+                    if (ctx.Items.ItemAt(blocked) == null) continue;
+                    return new HaulWorkGiver().TryGiveJob(pawn, ctx, job);
+                }
+                return false;
+            }
 
             job.Reset(JobIndex.Sow);
             job.TargetCell = best;
@@ -308,11 +325,15 @@ namespace Odyssey.Sim.Pawns
             // Off the soil first (owner, 2026-09-19: "harvested materials should not be laid on
             // the soil and should look to be moved off it"): a yield dropped where it grew
             // reads as a plot nobody cleared, and the sower who follows kneels in it. The
-            // nearest ground that is outside every zone wins; where nothing within three cells
-            // qualifies, the felling argument takes over - nowhere at all that can take the
-            // yield is a board packed too solid for anything in the game to have produced.
+            // nearest ground outside every zone wins, searched wide enough to reach grass
+            // from the middle of any field the player paints - a three-cell ring found only
+            // dirt inside a field six tiles across, and the fallback below put the yield on
+            // the next tile of the plot (owner, 2026-09-20: "they should put it on the next
+            // free terrain tile that isn't dirt/soil"). Where nothing at all qualifies, the
+            // felling argument takes over - nowhere that can take the yield is a board packed
+            // too solid for anything in the game to have produced.
             int at = ctx.Items.NearestCellWithSpace(
-                ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 3,
+                ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 12,
                 accept: c => zones.ZonePlantAt(c) < 0);
             if (at < 0)
                 at = ctx.Items.NearestCellWithSpace(

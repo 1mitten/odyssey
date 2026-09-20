@@ -7679,6 +7679,36 @@ with nowhere to be stored is cleared to the nearest free cell off the zone now, 
 can have it back when it has room. The lesson the flat sheet earned went into lessons already:
 an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
 board's amplitude and the blindness is recorded beside it.
+### The third border day: the light was the border (2026-09-20)
+
+The borders survived the same-mesh cover, and the cause was not geometry at all: the bracket
+material is the lit terrain shader made transparent, and on rolled ground it shades every
+differently-tilted cover differently - per-tile brightness steps that read as borders however
+seamless the shape, unseen under the sheet's flat light and plain under the play sun. The
+cover is opaque unlit now: one colour, every tilt, every light. An unlit flat colour cannot
+shade, cannot seam, and cannot be bloomed into a line. It is opaque, so the tilled earth no
+longer shows through; the field's texture is the seeds, the crops and the soil's own shape.
+
+And the stone that still was not picked up: growing scans at order one and hauling at four, so
+a busy field starves the haul order and its own blocker waits forever - the bias and the
+clear-to-grass fallback were both in place and both idle, because nobody ever reached the
+scan that had them. The sow scan hands out the clearing itself now: when every tile is sown
+or waiting on a thing, the job a sower takes is the haul of that thing. Clearing the dirt is
+the sowing work.
+
+
+### The brown comes back and the yield finds grass (2026-09-20)
+
+The opaque unlit cover killed the borders by killing the light and the texture in one stroke,
+and the owner wanted the brown. The cover is translucent unlit now - the tint's own alpha
+through the straight-alpha recipe - so the tilled earth shows through and the field is brown
+with texture, while staying one flat colour per tint on every tilt and under every light.
+
+And the items that landed on the next dirt tile: the off-zone searches ran out of ring at
+three cells for the harvest yield and six for the clearing, and a field six tiles across has
+nothing but dirt within three of its middle - the fallback then put the pile back on the plot.
+Both searches reach twelve cells now, which covers any field the player has painted.
+
 ## 2026-09-20 — Skills made visible, and a session that checked its base once (SK2–SK5)
 
 The ask was to "enable skills for chopping, mining and plants/gardening", add a bar in the colonist
