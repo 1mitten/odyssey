@@ -87,12 +87,29 @@ namespace Odyssey.Tests.Hud
 
         // ------------------------------------------------------------------ the columns
 
+        /// <summary>
+        /// The grid draws the design's list, not the simulation's — and the gap between the two
+        /// is the thing that is supposed to close.
+        ///
+        /// <para>It was four live columns of twenty-two when the panel was written and is five
+        /// since the growing zones landed on 2026-09-20. <b>The live count is asserted rather than
+        /// left loose</b> so that a work type reaching the simulation and not reaching this
+        /// catalogue fails here: the column would otherwise go on drawing itself as <i>not built
+        /// yet</i> over work the colony can now actually do, and nobody would find out by
+        /// looking.</para>
+        /// </summary>
         [Test]
-        public void TheGridDrawsTheDesignsTwentyTwoAndNotTheSimulationsFour()
+        public void TheGridDrawsTheDesignsTwentyTwoAndNotTheSimulationsFive()
         {
             Assert.That(WorkCatalogue.All.Count, Is.EqualTo(22));
-            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(4),
-                "Construction, Chopping, Mining and Hauling are what WorkTypes.xml runs.");
+            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(5),
+                "Construction, Chopping, Mining, Hauling and Growing are what WorkTypes.xml runs.");
+
+            // And every one the simulation runs has a column: the two counts are the same list
+            // seen from two sides, so a fifth work type with no column is this test failing.
+            Assert.That(WorkCatalogue.LiveCount, Is.EqualTo(WorkHandle.Count),
+                "a work type the simulation runs with no live column here is a column still " +
+                "telling the player it does not exist yet");
         }
 
         [Test]

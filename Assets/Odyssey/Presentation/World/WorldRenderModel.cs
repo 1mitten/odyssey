@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
@@ -58,6 +60,47 @@ namespace Odyssey.Presentation.World
         readonly byte[] _edificeFacing;
         readonly bool[] _bedHead;
 
+
+        /// <summary>The crop standing in each cell as <c>plant handle + 1</c>, or 0 for fallow. A crop is not in the grid — it lives in zone state — so this mirror is fed from the published snapshot, not from a contributor.</summary>
+        readonly byte[] _cropPlant;
+
+        /// <summary>The drawn stage of the crop in each cell, 1–3. Meaningless where <see cref="_cropPlant"/> is 0.</summary>
+        readonly byte[] _cropStage;
+
+        /// <summary>One module per plant per drawn stage, resolved once at construction: three stages in a row per plant, the order <see cref="CropModule"/> indexes.</summary>
+        readonly int[] _cropModules;
+
+        /// <summary>
+        /// How many plants stand in a sown cell of each crop — the yield the plot will give,
+        /// drawn from the first sprout (owner, 2026-09-18: the number of carrots grown/growing
+        /// is the amount in the plot). Free by instancing: more matrices in the same bucket, not
+        /// more buckets. Clamped, because a content error of a thousand would draw a thousand.
+        /// </summary>
+        readonly int[] _plantCounts;
+
+        /// <summary>The plant table, in handle order. Resolved once at construction; injectable for a test.</summary>
+        readonly PlantDef[] _plants;
+
+        /// <summary>The cells <see cref="UpdateCrops"/> last stamped, ascending — the merge twin of the next snapshot's crop list.</summary>
+        int[] _cropApplied = Array.Empty<int>();
+        int _cropAppliedCount;
+        int[] _cropScratch = Array.Empty<int>();
+
+        /// <summary>
+        /// Whether each cell is in a growing zone — the tilled ground rides this, exactly as a
+        /// crop rides the plant channel. Fed from the published snapshot; a zone is authored
+        /// state that changes no terrain, so the mirror is the only place the field's ground
+        /// exists.
+        /// </summary>
+        readonly bool[] _zoned;
+
+        /// <summary>The zoned cells <see cref="UpdateZones"/> last stamped, ascending — the merge twin of the next snapshot's zone list.</summary>
+        int[] _zoneApplied = Array.Empty<int>();
+        int _zoneAppliedCount;
+        int[] _zoneScratch = Array.Empty<int>();
+
+
+
         /// <summary>
         /// The cells holding a building site, and what is going up in each.
         ///
@@ -85,6 +128,7 @@ namespace Odyssey.Presentation.World
         /// </summary>
         readonly Dictionary<int, byte> _sites = new Dictionary<int, byte>();
 
+
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
         readonly int[][] _stoneModule;
@@ -100,7 +144,7 @@ namespace Odyssey.Presentation.World
         readonly int _bedModule;
         readonly int _bedPillowModule;
 
-        public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library)
+        public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library, PlantDef[]? plants = null)
         {
             Size = size;
             Chunks = chunks;
@@ -116,6 +160,24 @@ namespace Odyssey.Presentation.World
             _slot = new ushort[count];
             _edificeFacing = new byte[count];
             _bedHead = new bool[count];
+            _cropPlant = new byte[count];
+            _cropStage = new byte[count];
+            _zoned = new bool[count];
+
+            // The plant table is content, not world state, and content is written once: the ids
+            // come from the Defs the simulation itself loads, so a stage renamed in the XML needs
+            // no edit here. A test may hand its own table in; by default the shipped pack's.
+            _plants = plants ?? ContentPack.Plants();
+            _plantCounts = new int[_plants.Length];
+            for (int i = 0; i < _plants.Length; i++)
+                _plantCounts[i] = Math.Clamp(_plants[i].yieldCount, 1, 8);
+            _cropModules = new int[_plants.Length * 3];
+            for (int i = 0; i < _plants.Length; i++)
+            {
+                _cropModules[i * 3 + 0] = library.Resolve(_plants[i].moduleIdSmall, ModuleShape.Pillow);
+                _cropModules[i * 3 + 1] = library.Resolve(_plants[i].moduleIdMedium, ModuleShape.Pillow);
+                _cropModules[i * 3 + 2] = library.Resolve(_plants[i].moduleIdLarge, ModuleShape.Pillow);
+            }
 
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
             _terrainModule = ResolveTerrain(library);
@@ -305,6 +367,144 @@ namespace Odyssey.Presentation.World
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// The module for the crop standing in this cell, at its drawn stage, or 0 for fallow.
+        ///
+        /// <para>One bucket per species per stage, exactly the argument that made a tree one
+        /// bucket per species: a field of one crop at one stage is then a single instanced draw
+        /// per chunk, and the stage transitions that re-mesh a chunk change the bucket key only
+        /// when the drawn stage actually changes — which is the rule the growth system marks the
+        /// chunk by, so a re-mesh never redraws a field that looks the same.</para>
+        /// </summary>
+        /// <summary>How many plants a sown cell of this cell's crop draws, or 0 where nothing grows.</summary>
+        public int CropCount(int index)
+        {
+            byte plant = _cropPlant[index];
+            return plant == 0 ? 0 : _plantCounts[plant - 1];
+        }
+
+        public int CropModule(int index)
+        {
+            byte plant = _cropPlant[index];
+            // Stage nought is the seed day: the specks are the plant, and there is no module
+            // to draw. Guarded on its own line because it once fell through to the slot
+            // arithmetic and would have indexed backwards off the table.
+            if (plant == 0 || _cropStage[index] == 0) return 0;
+            int slot = (plant - 1) * 3 + _cropStage[index] - 1;
+            return slot < _cropModules.Length ? _cropModules[slot] : 0;
+        }
+
+
+        /// <summary>
+        /// The terrain this cell's ground should draw as: bare earth where it is zoned and grass
+        /// under it — the tile IS the terrain quad, so it is seamless and boolean by construction
+        /// (owner, 2026-09-18: "it has a brown tile or not"). Drawn look only; the grid's own
+        /// terrain is untouched, and an unzoned cell reverts to what it was. Named DrawnTerrain
+        /// because GroundLook is already this namespace's static classifier.
+        /// </summary>
+        public ushort DrawnTerrain(int index) =>
+            IsZoned(index) && _terrain[index] == Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass
+                ? Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth
+                : _terrain[index];
+        /// <summary>
+        /// Whether this GROUND cell is tilled - which asks the zone one layer up, because a
+        /// zone is painted on the air the colonist stands in and the soil it tills is the cell
+        /// beneath her feet. The first version asked the mirror at the ground cell itself and
+        /// the answer was always no: the tilled-earth swap never fired, the plots' own tufts
+        /// never left, and every brown tile the owner had ever seen was the cover overlay
+        /// rather than soil (found 2026-09-19, from the owner's flush screenshots and a photo
+        /// sheet that kept saying "carrots growing out of grass").
+        ///
+        /// <para>Asked for its own sake by the tuft pass, beside the drawn-terrain swap: a
+        /// clump's mesh reaches past its own cell, and the tufts beside a tilled tile are
+        /// pulled off it.</para>
+        /// </summary>
+        public bool IsZoned(int index)
+        {
+            int above = index + Size.LayerStride;
+            return above < _zoned.Length && _zoned[above];
+        }
+        /// <summary>
+        /// Restamp the crop mirror from the published snapshot's crop channel.
+        ///
+        /// <para><b>Called between ticks, not contributed.</b> The geometry mirror is filled by a
+        /// snapshot contributor because it reads the cell grid; a crop is not in the grid, and the
+        /// crop channel already exists on the snapshot the composition root holds. Copying it here
+        /// — before the renderer runs, after the tick has published — keeps the crop picture in
+        /// step with the crop orders the same frame shows.</para>
+        ///
+        /// <para><b>A merge walk, not a clear-and-restamp.</b> Both lists are in cell-index order
+        /// — the crop channel's contract — so the cells that lost their crop are exactly the ones
+        /// the walk passes on one side, and a 2,000-cell field costs O(planted) a frame rather
+        /// than O(board). No dirty marks are raised here: the simulation marks the chunk when a
+        /// crop is sown, ripens a stage or is taken out, and it knows which stage transitions
+        /// change what is drawn and which do not.</para>
+        /// </summary>
+        public void UpdateCrops(ReadOnlySpan<PlantView> plants)
+        {
+            if (_cropScratch.Length < plants.Length) _cropScratch = new int[plants.Length];
+
+            int old = 0, now = 0;
+            while (old < _cropAppliedCount || now < plants.Length)
+            {
+                int priorCell = old < _cropAppliedCount ? _cropApplied[old] : int.MaxValue;
+                int freshCell = now < plants.Length ? plants[now].CellIndex : int.MaxValue;
+
+                if (priorCell < freshCell)
+                {
+                    _cropPlant[priorCell] = 0;
+                    _cropStage[priorCell] = 0;
+                    old++;
+                }
+                else
+                {
+                    if (priorCell == freshCell) old++;
+                    PlantView view = plants[now];
+                    _cropPlant[view.CellIndex] = (byte)(view.Plant + 1);
+                    _cropStage[view.CellIndex] = (byte)Math.Clamp((int)view.Stage, 0, 3);
+                    _cropScratch[now] = view.CellIndex;
+                    now++;
+                }
+            }
+
+            (_cropApplied, _cropScratch) = (_cropScratch, _cropApplied);
+            _cropAppliedCount = plants.Length;
+        }
+
+        /// <summary>
+        /// Take this frame's zone cells, as <see cref="UpdateCrops"/> takes its plants: a merge
+        /// walk over two ascending lists, so a 2,000-cell field costs O(zoned) a frame. No dirty
+        /// marks are raised here — the simulation marks the chunk when a cell is zoned or
+        /// unzoned, which is exactly when the ground under it changes.
+        /// </summary>
+        public void UpdateZones(ReadOnlySpan<ZoneView> zones)
+        {
+            if (_zoneScratch.Length < zones.Length) _zoneScratch = new int[zones.Length];
+
+            int old = 0, now = 0;
+            while (old < _zoneAppliedCount || now < zones.Length)
+            {
+                int priorCell = old < _zoneAppliedCount ? _zoneApplied[old] : int.MaxValue;
+                int freshCell = now < zones.Length ? zones[now].CellIndex : int.MaxValue;
+
+                if (priorCell < freshCell)
+                {
+                    _zoned[priorCell] = false;
+                    old++;
+                }
+                else
+                {
+                    if (priorCell == freshCell) old++;
+                    _zoned[zones[now].CellIndex] = true;
+                    _zoneScratch[now] = zones[now].CellIndex;
+                    now++;
+                }
+            }
+
+            (_zoneApplied, _zoneScratch) = (_zoneScratch, _zoneApplied);
+            _zoneAppliedCount = zones.Length;
         }
 
         /// <summary>
@@ -665,12 +865,12 @@ namespace Odyssey.Presentation.World
         /// that gets the test wrong draws a cube rather than nothing at all — the same courtesy
         /// <see cref="StoneModule"/> extends.</para>
         /// </summary>
-        public int EarthModule(int index, int variant, bool showsAFace)
+        public int EarthModule(ushort terrain, int variant, bool showsAFace)
         {
-            if (showsAFace) return EarthFaceModule(index, variant, 0b1111);
+            if (showsAFace) return EarthFaceModule(terrain, variant, 0b1111);
 
-            int[] variants = _turfModule[_terrain[index]];
-            return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+            int[] variants = _turfModule[terrain];
+            return variants.Length == 0 ? _terrainModule[terrain] : variants[variant % variants.Length];
         }
 
         /// <summary>
@@ -682,10 +882,10 @@ namespace Odyssey.Presentation.World
         /// the same courtesy <see cref="StoneModule"/> extends: a caller that gets the test wrong
         /// draws a cube rather than nothing at all.</para>
         /// </summary>
-        public int EarthFaceModule(int index, int variant, int canonicalExposure)
+        public int EarthFaceModule(ushort terrain, int variant, int canonicalExposure)
         {
-            int[] family = _earthFaceModule[_terrain[index]];
-            if (family.Length == 0) return _terrainModule[_terrain[index]];
+            int[] family = _earthFaceModule[terrain];
+            if (family.Length == 0) return _terrainModule[terrain];
 
             int pattern = GroundMesh.PatternIndex(canonicalExposure);
             if (pattern < 0) pattern = GroundMesh.ExposurePatterns.Length - 1;

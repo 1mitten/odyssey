@@ -123,7 +123,7 @@ namespace Odyssey.Hud
             new Entry("ui.work.cooking",      NotSimulated, NoSkill, "cooking arrives with M5"),
             new Entry("ui.work.hunting",      NotSimulated, NoSkill, "animals arrive with M5"),
             new Entry("ui.work.construction", "construction", "construction", "", WorkHandle.Construction),
-            new Entry("ui.work.growing",      NotSimulated, NoSkill, "growing zones are in review"),
+            new Entry("ui.work.growing",      "growing",      "growing",      "", WorkHandle.Growing),
             new Entry("ui.work.mining",       "mining",       "mining",       "", WorkHandle.Mining),
             new Entry("ui.work.salvaging",    NotSimulated, NoSkill, "salvaging arrives with M5"),
             new Entry("ui.work.cutting",      "cutting",      "cutting",      "", WorkHandle.Cutting),
@@ -151,7 +151,7 @@ namespace Odyssey.Hud
             return keys;
         }
 
-        /// <summary>How many columns the simulation actually runs today. Four.</summary>
+        /// <summary>How many columns the simulation actually runs today. Five, since growing.</summary>
         public static int LiveCount
         {
             get

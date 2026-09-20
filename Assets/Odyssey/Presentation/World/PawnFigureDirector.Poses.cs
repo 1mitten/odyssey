@@ -87,29 +87,24 @@ namespace Odyssey.Presentation.World
         /// </summary>
         static float LowestDrawnPoint(Figure figure)
         {
-            float lowest = float.MaxValue;
-            Mesh? baked = null;
-
-            for (int i = 0; i < figure.Skins.Length; i++)
-            {
-                SkinnedMeshRenderer skin = figure.Skins[i];
-                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
-
-                baked ??= new Mesh { name = "Odyssey/SoleProbe" };
-                skin.BakeMesh(baked, useScale: true);
-
-                Vector3[] vertices = baked.vertices;
-                Transform at = skin.transform;
-                for (int v = 0; v < vertices.Length; v++)
-                {
-                    float y = at.TransformPoint(vertices[v]).y;
-                    if (y < lowest) lowest = y;
-                }
-            }
-
-            if (baked != null) UnityEngine.Object.DestroyImmediate(baked);
+            FigureBuild.DrawnExtent(figure.Skins, out float lowest, out _);
             return lowest;
         }
+
+        /// <summary>
+        /// How long a body this figure has to lay down when it sleeps: its own drawn height, sole
+        /// to crown, measured once at bind off the posed mesh.
+        ///
+        /// <para><b>This replaces deriving it from the hip, which was measuring the floor.</b>
+        /// <c>SleepPose.BodyLength</c> used to be <c>StandingHipHeight * 1.9</c>, and
+        /// <see cref="Figure.StandingHipHeight"/> is <c>hips.position.y - transform.position.y</c>
+        /// where the Synty avatar maps <c>Hips</c> to a bone named <c>Root</c> at the model
+        /// origin. Nought on all sixty-one, clamped up to 0.2 m, and a 2.49 m colonist was laid
+        /// down 0.38 m long — so her feet landed near the pillow and the rest of her hung two and
+        /// a half metres off the head end of the bed. <c>docs/design/20-beds.md</c> §7b.</para>
+        /// </summary>
+        static float MeasureBody(Figure figure) =>
+            FigureBuild.Height(figure.Skins, figure.Transform.position.y, FigureBuild.FallbackHeight);
 
         /// <summary>
         /// Lay the work pose over whatever the mixer just wrote.
@@ -619,15 +614,27 @@ namespace Odyssey.Presentation.World
             {
                 Pitch(figure.RightUpperArm, axis, posture.RightArm * weight);
                 Pitch(figure.LeftUpperArm, axis, posture.LeftArm * weight);
+
+                // Out from the midline, about the body's forward axis, and after the pitch rather
+                // than before it: the pitch decides where along the body the arm points and this
+                // decides how far out from it, which is the order they read in. Mirrored by the
+                // sign the caller gives each arm, because "out" is opposite on the two sides.
+                Vector3 out_ = figure.Transform.forward;
+                if (posture.RightArmOut != 0f) Pitch(figure.RightUpperArm, out_, posture.RightArmOut * weight);
+                if (posture.LeftArmOut != 0f) Pitch(figure.LeftUpperArm, out_, posture.LeftArmOut * weight);
+
                 Pitch(figure.RightLowerArm, axis, posture.RightElbow * weight);
                 Pitch(figure.LeftLowerArm, axis, posture.LeftElbow * weight);
             }
 
             if (figure.RightUpperLeg != null && figure.LeftUpperLeg != null)
             {
-                Pitch(figure.RightUpperLeg, axis, posture.Hip * weight);
+                // The shared bend first, then the right leg's own on top of it: that is what
+                // makes one knee drawn up and the other flat, and it is why Lead* is an extra
+                // rather than a replacement.
+                Pitch(figure.RightUpperLeg, axis, (posture.Hip + posture.LeadHip) * weight);
                 Pitch(figure.LeftUpperLeg, axis, posture.Hip * weight);
-                Pitch(figure.RightLowerLeg, axis, posture.Knee * weight);
+                Pitch(figure.RightLowerLeg, axis, (posture.Knee + posture.LeadKnee) * weight);
                 Pitch(figure.LeftLowerLeg, axis, posture.Knee * weight);
             }
 
@@ -776,7 +783,9 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Which curve a gesture follows. See <see cref="Gesture"/>.</summary>
         static Gesture GestureOf(PawnGesture kind) =>
-            kind == PawnGesture.Stow ? Gesture.Stow : Gesture.Lift;
+            kind == PawnGesture.Stow ? Gesture.Stow
+            : kind == PawnGesture.Sow ? Gesture.Sow
+            : Gesture.Lift;
 
         /// <summary>
         /// How far down a crouch may take the hips before the legs are asked for more than they

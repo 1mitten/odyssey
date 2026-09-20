@@ -96,17 +96,23 @@ wiki entries and icon-map rows. They are canon. The mockup's thirteen are invent
 another game and three of them (Farming, Cleaning, Animals) are not even spelled the way ours are
 (Growing, Cleaning, Handling).
 
-**Four of the twenty-two are simulated today**: `Work_Construction`, `Work_Cutting` (Chopping),
-`Work_Mining` and `Work_Haul`. The other eighteen have no work giver and no Def.
+**Five of the twenty-two are simulated today**: `Work_Construction`, `Work_Cutting` (Chopping),
+`Work_Mining`, `Work_Haul` and `Work_Growing`. The other seventeen have no work giver and no Def.
+
+**Growing was the fourth of those to be written as a dead column and the first to come alive** — it
+said *"growing zones are in review"* until PR #119 merged on 2026-09-20, and turning it on was three
+lines: a `WorkHandle`, a name in `WorkTypeIndex.Names`, and a catalogue entry pointing at both. That
+is the whole cost of a column arriving, and it is the argument §4a makes for drawing all
+twenty-two.
 
 This is exactly the situation `SkillCatalogue` met in 2026-09-17 and the owner's answer there
 governs here: **show the design's list, and draw what the simulation cannot run as unavailable with
 the reason beside it**, because *"a tab that hides the shape of the game until the last system
-lands"* is worse. So all twenty-two columns are drawn and eighteen are **not built yet**.
+lands"* is worse. So all twenty-two columns are drawn and seventeen are **not built yet**.
 
 **Not built yet is a third state and must not be drawn as the second.** An incapable cell (§6.1)
 and a column that does not exist yet are different facts and greying both identically would teach
-the player that eighteen of their colonists' columns are a disability. So:
+the player that seventeen of their colonists' columns are a disability. So:
 
 - an **unbuilt column** dims its whole header — icon and label at `HudTheme.TextFaint` — and lays
   one `rgba(255,255,255,.03)` wash down the entire column, with the header's tooltip carrying the
@@ -339,7 +345,7 @@ would make this the one panel in the game that is shaped differently from the ot
 |---|---|---|
 | Design | this file | done |
 | Mockup | `docs/reference/mockups/work-v1.html` | done — all twenty-two columns, the real icon mapping, both modes |
-| Model | `Assets/Odyssey/Hud/WorkCatalogue.cs` | the twenty-two, four live, eighteen with reasons |
+| Model | `Assets/Odyssey/Hud/WorkCatalogue.cs` | the twenty-two, five live, seventeen with reasons |
 | Model | `Assets/Odyssey/Hud/WorkGridLayout.cs` | the geometry above, and the rotation constraint |
 | Model | `Assets/Odyssey/Hud/WorkBands.cs` | the skill ramp and the priority inks |
 | Model | `Assets/Odyssey/Hud/WorkGridModel.cs` | rows from the snapshot, the cycle, the intent payload |
@@ -380,7 +386,7 @@ what the remaining eight rows join.
 - **OQ-W1 — should panel chrome be registry-owned?** *Simple*, *Detailed*, *interested*, *passion*,
   *incapable*, *will do*, *won't do* and the two footnotes are player-facing strings written in C#.
   Doing it properly needs a `ui.panel.*` namespace in the wiki builder. §7.
-- **OQ-W2 — do twenty-two columns read, or do eighteen dead ones cost more than they teach?**
+- **OQ-W2 — do twenty-two columns read, or do seventeen dead ones cost more than they teach?**
   The `SkillCatalogue` precedent says show them. That precedent was set at thirteen rows with three
   live, not twenty-two columns with four. Worth a look at the screen before it is settled.
 - **OQ-W3 — hauling's borderless cell.** It is honest, but a column that is visibly different from
@@ -636,7 +642,7 @@ twenty-four. So the panel's cost grew with the colony and nothing capped it.
 
 | | Number | Why this one |
 |---|---|---|
-| Work columns a page | **11** | 22 divides by it exactly — two full pages, no ragged remainder. The owner's call over 8, which would have fitted a 1366 window and gathered all four live columns on page two, but left page one entirely dead and made three pages of it |
+| Work columns a page | **11** | 22 divides by it exactly — two full pages, no ragged remainder. The owner's call over 8, which would have fitted a 1366 window and gathered every live column on page two, but left page one entirely dead and made three pages of it |
 | Colonist rows a page | **12** | The panel stands 464px of grid at its fullest, and the grid is capped at twelve rows however large the colony grows |
 
 The day is **not** paged. All twenty-four hours stay on the right of every page, because a row being
@@ -647,11 +653,18 @@ is what stops somebody reclaiming that 816px later.
 **The panel is therefore one width, for ever:** `192 + 11×34 + 1 + 24×34 = 1,383`, plus two for the
 frame. It clears a 1440-wide window and leaves a quarter of the reference screen showing the world.
 
-**The cost of eleven**, stated plainly because it is a real one: the four live columns split two and
-two across the pages, so you cannot see all the work the colony can actually do at once. That is a
-fact about the *order* in `icon-keys.csv`, not about the number — Construction, Mining, Cutting and
-Hauling sit at positions 9 to 14 because the list is ordered by urgency. Reordering the catalogue is
-where that gets fixed, and the catalogue is the place a reordering belongs.
+**The cost of eleven**, stated plainly because it is a real one: the live columns split across the
+pages, so you cannot see all the work the colony can actually do at once.
+
+| | Page 1 | Page 2 |
+|---|---|---|
+| Live columns | Construction, Growing, Mining | Cutting, Hauling |
+
+That is a fact about the *order* in `icon-keys.csv`, not about the number — the live five sit at
+positions 9 to 14 because the list is ordered by urgency, and they only cluster there by accident.
+Reordering the catalogue is where that gets fixed, and the catalogue is the place a reordering
+belongs. **Watch this split as columns come alive**: it was two and two the day the number was
+chosen and became three and two the same afternoon, when growing landed.
 
 ### 16c. Performance, which is the half that was asked for
 

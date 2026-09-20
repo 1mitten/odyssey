@@ -28,6 +28,22 @@ namespace Odyssey.Sim.Contracts
         CancelBuilding,
 
         /// <summary>
+        /// Put a growing-zone cell down: <c>A</c> is a <c>PlantHandle</c>. Its own kind rather
+        /// than a <see cref="Designate"/> with a payload, for the same reason
+        /// <see cref="PlaceBuilding"/> is: a designation is a verb applied to whatever is already
+        /// there, and this founds a thing that was not there — a zone carries its plant with it,
+        /// and the component that owns zones is not the one that owns orders.
+        /// </summary>
+        DesignateZone,
+
+        /// <summary>
+        /// Take a cell back out of its growing zone, crop and all: a crop exists only inside its
+        /// zone, so one intent removes field and planting together
+        /// (docs/design/22-growing.md §4).
+        /// </summary>
+        CancelZone,
+
+        /// <summary>
         /// Give one built bed to one colonist, or take it back: <see cref="Intent.Cell"/> is any
         /// cell of the bed and <c>A</c> the <c>PawnId</c>, or -1 to leave the bed unowned.
         ///
@@ -99,6 +115,14 @@ namespace Odyssey.Sim.Contracts
         InvokeIncident,
 
         /// <summary>
+        /// Debug-menu-only: bring every standing crop to ripeness at once, daylight window and
+        /// all. <see cref="Intent.Cell"/> and the payloads are unused — the ask is the whole
+        /// field, because the menu is testing the harvest half and the four-day wait is the
+        /// thing being skipped, not the thing being simulated. Refused with
+        /// <see cref="IntentRejection.AlreadyInThatState"/> when nothing stands, so an empty
+        /// board says "nothing to ripen" rather than quietly succeeding.
+        /// </summary>
+        DebugRipen,
         /// Set one colonist's priority for one work type: <c>A</c> is a <c>PawnId</c> value,
         /// <c>B</c> a <see cref="WorkHandle"/> and <c>C</c> the priority, 0 to 4, where <b>0 is
         /// never</b> and 1 is most urgent. <see cref="Intent.Cell"/> is unused — this is the second
@@ -177,6 +201,11 @@ namespace Odyssey.Sim.Contracts
             // while paused — and a popover you pick a colonist from that leaves the row still
             // reading "nobody" until you press play is the slab fault told again.
             IntentKind.AssignBedOwner => true,
+            // Painting a growing zone is the same act as designating: the player authored it,
+            // nothing needs to run to make it true, and the brush is a thing you drag while
+            // paused. Cancelling it likewise. Both write state the player owns outright.
+            IntentKind.DesignateZone => true,
+            IntentKind.CancelZone => true,
             // The Work tab is a panel you open while paused, and a grid that accepted twenty
             // clicks and applied none of them until you pressed play would be the worst version
             // of the fault this list was written to end.

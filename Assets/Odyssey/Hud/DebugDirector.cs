@@ -39,6 +39,9 @@ namespace Odyssey.Hud
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
+        public const string SkipDayKey = "ui.debug.skipday";
+        public const string SkipMorningKey = "ui.debug.skipmorning";
+        public const string RipenCropsKey = "ui.debug.ripen";
 
         /// <summary>
         /// Every key the panel puts on screen that is its own, so <c>RegistryTests</c> can hold
@@ -48,6 +51,7 @@ namespace Odyssey.Hud
         public static readonly string[] IconKeys =
         {
             PanelKey, CheatsKey, EventsKey, SpawnPawnKey, GiveWoodKey, GiveStoneKey, GiveFoodKey,
+            SkipDayKey, SkipMorningKey, RipenCropsKey,
         };
 
         public static string TabKey(DebugTab tab) => tab == DebugTab.Events ? EventsKey : CheatsKey;

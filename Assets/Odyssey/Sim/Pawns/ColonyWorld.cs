@@ -33,6 +33,9 @@ namespace Odyssey.Sim.Pawns
         public PawnContext Pawns { get; }
         public DesignationGrid Designations { get; }
 
+        /// <summary>The colony's growing zones, built by the composition and reachable here for tests and the debug menu.</summary>
+        public Growing.GrowingZones? Growing { get; }
+
         /// <summary>What the colony has ordered built but has not built yet.</summary>
         public ConstructionGrid Construction { get; }
         public SimWorld World { get; }
@@ -97,6 +100,7 @@ namespace Odyssey.Sim.Pawns
             Grid = grid;
             Pawns = pawns;
             Designations = designations;
+            Growing = pawns.Growing;
             Construction = construction;
             World = world;
             Outcome = outcome;
@@ -111,6 +115,11 @@ namespace Odyssey.Sim.Pawns
                 pawns.Pawns,
                 jobs,
                 designations,
+                // After the designations and before the construction, appended rather than
+                // spliced between two sections a save already depends on. A file written before
+                // growing existed simply has no section here, and the zones come back as they
+                // were when it did not: none.
+                pawns.Growing!,
                 construction,
                 // Taken off the construction grid rather than built here, because that is the one
                 // class that appends a building to the list at run time. The guard against

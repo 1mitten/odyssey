@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Designations;
 using UnityEngine;
 
@@ -127,6 +128,38 @@ namespace Odyssey.Presentation.Tests
                 Color colour = OdysseyBootstrap.OrderColour(kind);
                 Assert.That(colour.a, Is.InRange(0.2f, 0.8f), $"{kind}'s marker is {colour.a:0.00} alpha");
             }
+        }
+
+        /// <summary>
+        /// A painted growing zone reads as a field — earthy brown, worked soil, the ground's own
+        /// texture showing through (owner, 2026-09-18: the first green was hard to see on the
+        /// surface) — and is a colour no order wears. It is the one thing drawn on the board that
+        /// is not an order, so the distinctness argument
+        /// <see cref="EveryKindOfOrderHasItsOwnColour"/> makes extends to it: a field painted in
+        /// the felling green would be a patch of cells that look ordered for something.
+        ///
+        /// <para><b>Asked of what actually draws, since 2026-09-20.</b> This used to read
+        /// <c>OdysseyBootstrap.ZoneTintColour</c>, the tint of a translucent cover mesh laid over
+        /// the ground. There is no cover any more — the zone is a grade on the ground's own
+        /// terrain bucket, which is what removed 2,065 draw calls a frame — so the colour to hold
+        /// to this rule is the graded soil itself.</para>
+        /// </summary>
+        [Test]
+        public void APaintedZoneReadsAsSoilAndAsNoOrder()
+        {
+            int tilled = TintCode.Tilled(TintCode.Daylit(
+                TintCode.Terrain(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth), true));
+            ChunkRenderer.ResolveColour(tilled, fallback: false, shade: 1f, out Color soil, out Color _);
+
+            foreach (DesignationKind kind in Enum.GetValues(typeof(DesignationKind)))
+            {
+                if (kind == DesignationKind.None) continue;
+                Assert.That(soil, Is.Not.EqualTo(OdysseyBootstrap.OrderColour(kind)),
+                    $"worked soil is indistinguishable from a {kind} order");
+            }
+
+            Assert.That(soil.r, Is.GreaterThan(soil.g), "it does not read as soil");
+            Assert.That(soil.g, Is.GreaterThan(soil.b), "it does not read as soil");
         }
     }
 }

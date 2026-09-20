@@ -21,6 +21,29 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **A sleeping colonist is now the size she is drawn** (`worktree-bed-sleep-pose`,
+  `docs/design/20-beds.md` §7b). She was being laid down 0.38 m long — the figure director's
+  "hip height" is the 0.2 m floor of a clamp on a bone that stands on the floor — so she reached
+  1.5 m past the head of the bed and lay inside the mattress. She is 2.49 m now, head on the pillow
+  in the first tile, feet 2.28 m along into the second, resting on the bedding rather than in it.
+  Two things want an eye rather than a test. **The two supine postures had their arm angles the
+  wrong way round**, so a quarter of the colony slept with its arms a half-metre in the air and
+  another quarter with both forearms through the mattress; both are measured flat now, and
+  and after the owner watched it, **the arms-above-head posture is gone entirely** — it was a
+  quarter of every colony, because a posture is a hash modulo four — replaced by another arms-down
+  shape with one knee drawn up (§7d). **The two side sleepers no longer float**: the lift had been
+  set by whatever hung lowest, which on a side sleeper is a knee propping the body up, so half the
+  colony rode 9 to 12 cm above its own bedding. It is set by the trunk now. A sleeper also lies *along* the bed now rather than level across it, which on the
+  steepest ground the relief makes was 0.21 m of disagreement at the pillow. Pictures are in
+  `Logs/sleep-*.png` (`scripts/unity.sh shot Odyssey.EditorTools.SleepCheck.Run` remakes them),
+  including one bed found on a 0.39 m end-to-end slope. **What is left is entirely a look**:
+  whether four sleepers read as four people asleep, and whether a third of the mattress lying
+  empty past their boots bothers you — the bed is 4.6 m and a colonist is 2.5 m, which the cell
+  size fixes. And **a sleeper lies level while the bed under her is draped**, which on
+  a slope disagrees by up to 0.21 m at the pillow — measured, left alone, and the numbers are in
+  §7b, because fixing it changes how every sleeper is drawn and it should be judged against a
+  picture of the one that is now right.
+
 - **The profile pictures, after dark** (`claude/colonist-figures-and-portraits`,
   `docs/design/20-avatars.md` §10.7–10.8, §11). A portrait used to be lit by whatever hour it was
   taken at and then kept for the session, so a colonist generated after dusk had a black card for
@@ -50,6 +73,10 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   with a *Live 4* switch the real one does not have — if the four-column view is the one you want to
   stay in, that switch is the panel's real default.
 
+  **Growing is a live column now**, since PR #119 merged: five of the twenty-two do something
+  rather than four, and the hoe has a skill behind it, so a growing cell has a border band and can
+  carry flames like the others.
+
   **Reviewed and corrected before this first play** (`27-work-tab.md` §15). Seven things moved, and
   two of them change what there is to look at: **Simple mode drew nothing at all** — its tick and
   cross were characters neither shipped font has a glyph for, so the whole mode was empty boxes and
@@ -62,9 +89,9 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   a page**, two pages, `‹ 1 / 2 ›` in the panel header; **12 colonists a page**, `‹ 1 / 3 ›` over the
   names; wheel turns the rows, shift-wheel the columns. The day is never paged. The panel is a
   constant 1,385 px and nothing about it resizes any more. What only a person can answer: **whether
-  splitting the four live columns across two pages is a daily annoyance** — Construction and Mining
-  are on page 1, Cutting and Hauling on page 2, and if that turns out to be a constant page-turn the
-  fix is reordering `icon-keys.csv` rather than changing the page size. Also whether the column
+  splitting the live columns across two pages is a daily annoyance** — Construction, Growing and
+  Mining are on page 1, Cutting and Hauling on page 2, and if that turns out to be a constant
+  page-turn the fix is reordering `icon-keys.csv` rather than changing the page size. Also whether the column
   pager is findable in the panel header at all, and whether shift-wheel is a gesture anybody
   discovers. A wrong answer on the first looks like you turning the page every time you set a
   priority.

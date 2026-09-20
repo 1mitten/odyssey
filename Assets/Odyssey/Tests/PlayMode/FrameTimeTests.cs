@@ -1,9 +1,12 @@
 #nullable enable
+using System;
 using System.Collections;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.World;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -49,12 +52,89 @@ namespace Odyssey.Tests.PlayMode
         public IEnumerator TheCityRendersInsideAFrame() =>
             Measure(Odyssey.Sim.Worldgen.Natural.MapType.RuinedCity, barren: false, "city");
 
-        IEnumerator Measure(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren, string label)
+        /// <summary>
+        /// A field at the size a serious one actually is: over 2,000 growing-zone cells tinted
+        /// every frame through the same span path the standing orders use, with crops in the
+        /// ground across their stages — the mesher's per-species stage buckets at their fullest.
+        ///
+        /// <para>The growth pass itself is off the render frame — O(planted) every 250 ticks,
+        /// simulation-side. What this measures is what the player sees, which is the tint and
+        /// the crop meshes, and its log line is the number <c>22-growing.md</c> records
+        /// against the frame budget.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ATwoThousandCellFieldRendersInsideAFrame() =>
+            Measure(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true, "field", SeedField);
+
+        /// <summary>
+        /// Paint the board's open ground until the zone passes two thousand cells, sown by the
+        /// colony itself: the intents go in, the world ticks forward past four daylight
+        /// windows, and what is measured is a field the pawns actually planted — not a mirror
+        /// filled by hand.
+        ///
+        /// <para>The board is walked rather than a block painted because the meadow refuses
+        /// what stands on it — water, trees, marsh — and a fixed 45×45 block over the start
+        /// came up 860 of 2,025 on seed 1, which is not the measure this test names. Draining
+        /// every few hundred submissions keeps the intent bus under its capacity, and the
+        /// walking order is row-major, so the field is the band across the top of the map.</para>
+        /// </summary>
+        IEnumerator SeedField(OdysseyBootstrap boot)
+        {
+            // One frame for Start to have built the session.
+            yield return null;
+            Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+            Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+            Assert.That(boot.Colony!.Growing, Is.Not.Null, "the session has no growing zones");
+
+            var grid = boot.Colony.Grid;
+            var size = grid.Size;
+            int submitted = 0;
+            for (int z = 1; z < size.SizeZ - 1 && boot.Colony.Growing.Cells.Count < 2_000; z++)
+            for (int x = 1; x < size.SizeX - 1 && boot.Colony.Growing.Cells.Count < 2_000; x++)
+            {
+                // The air cell above the column's topmost solid ground, which is the cell a
+                // zone lives in — the same lift the designate gesture applies.
+                int top = -1;
+                for (int y = size.SizeY - 2; y >= 0; y--)
+                    if ((grid.Flags[size.Index(x, z, y)] & CellFlags.SolidTerrain) != 0)
+                    { top = y; break; }
+                if (top < 0 || top + 1 >= size.SizeY) continue;
+
+                boot.World!.Intents.Submit(new Intent(IntentKind.DesignateZone,
+                    new CellRef(x, z, top + 1), PlantHandle.Carrot + 1));
+                if (++submitted % 512 == 0) boot.World!.Tick();
+            }
+            boot.World!.Tick();
+
+            Assert.That(boot.Colony.Growing.Cells.Count, Is.GreaterThanOrEqualTo(2_000),
+                $"only {boot.Colony.Growing.Cells.Count} field cells took, so this is no " +
+                "longer a two-thousand-cell measure");
+
+            // Past four daylight windows (~227,500 growth ticks) plus the sowing of the whole
+            // zone: most of the field is ripe or already cut and re-sown, which is the
+            // mixed-stage state a real field is measured in.
+            boot.World!.Tick(600_000);
+            LogFieldState(boot.Colony);
+        }
+
+        static void LogFieldState(Odyssey.Sim.Pawns.ColonyWorld colony)
+        {
+            int ripe = 0;
+            foreach (int cell in colony.Growing!.Planted)
+                if (colony.Growing.IsRipe(cell)) ripe++;
+            Debug.Log($"[FrameTime] field: {colony.Growing.Cells.Count} zone cells, " +
+                      $"{colony.Growing.Planted.Count} in the ground, {ripe} ripe at measure time");
+        }
+
+        IEnumerator Measure(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren, string label,
+                            Func<OdysseyBootstrap, IEnumerator>? seed = null)
         {
             GameObject root = Build(mapType, barren, out OdysseyBootstrap boot);
 
             try
             {
+                if (seed != null) yield return seed(boot);
+
                 for (int i = 0; i < WarmupFrames; i++) yield return null;
 
                 float total = 0f, worst = 0f;
@@ -88,7 +168,7 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
-                Object.Destroy(root);
+                UnityEngine.Object.Destroy(root);
             }
         }
 

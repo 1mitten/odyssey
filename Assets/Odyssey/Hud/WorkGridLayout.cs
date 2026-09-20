@@ -218,10 +218,11 @@ namespace Odyssey.Hud
         /// built every one of the twenty-two columns for every colonist whether or not any of them
         /// was on screen. A page builds what it shows and nothing else.</para>
         ///
-        /// <para>The cost is that the four live columns split two and two across the pages, which
-        /// is a fact about the order in <c>icon-keys.csv</c> rather than about this number — the
-        /// alternative, eight per page, gathers all four on page two and leaves page one entirely
-        /// dead. Eleven was the owner's call on that trade.</para>
+        /// <para>The cost is that the live columns split across the pages, which is a fact about
+        /// the order in <c>icon-keys.csv</c> rather than about this number — the alternative, eight
+        /// per page, gathers every live one on page two and leaves page one entirely dead. Eleven
+        /// was the owner's call on that trade. <c>docs/design/27-work-tab.md</c> §16b has the split
+        /// as it stands, and it moves whenever a column comes alive.</para>
         /// </summary>
         public const int ColumnsPerPage = 11;
 

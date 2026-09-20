@@ -37,11 +37,33 @@ namespace Odyssey.Presentation.Rendering
         public const int MaxInstancesPerCall = ChunkRenderer.MaxInstancesPerCall;
 
         /// <summary>
-        /// How wide a tree sector is. Trees reach 90 m past the rim, so on the 300 m board this
-        /// cuts the wood into roughly forty batches — small enough that off-screen ones cull, big
-        /// enough that each is still a worthwhile instanced call.
+        /// How wide a tree sector is - the spatial half of a batch key, and so the knob that
+        /// decides how many instanced calls the near wood costs.
+        ///
+        /// <para><b>400 m since 2026-09-20, up from 80, and it is worth two milliseconds.</b>
+        /// The surround was 3.65 ms of a 5 ms frame on the played meadow and the trees were all
+        /// of it - its ground and its tufts are free to within noise. The instinct is that 4,169
+        /// trees are too many trees, and the measurement says otherwise: dropping the 2,577 hill
+        /// trees changed nothing at all (5.37 ms against 5.04), while the cost tracked the BATCH
+        /// count almost exactly - 760 batches 3.5 ms, 438 batches 2.1 ms, about 4.6 us a batch.
+        /// It is per-call overhead, not trees and not fill; at 640x480 there are not enough
+        /// pixels on the board for fill to cost this.</para>
+        ///
+        /// <para>So the wood is kept and the calls are cut. At 80 m the board's ring fell into
+        /// hundreds of sectors holding a handful of trees each; at 400 m the same trees ride in
+        /// 266 batches instead of 760, and the meadow went 5.04 -> 2.52 ms with the wood
+        /// unchanged. Past 400 it saturates - 2,000 m measured 204 batches and 2.22 ms, the
+        /// floor being the variants, themes, mute steps and parts, which no sector size can
+        /// merge.</para>
+        ///
+        /// <para><b>The trade, stated.</b> A coarser sector is a looser <c>worldBounds</c>, so
+        /// less of the wood frustum-culls and more of it is submitted every frame. That is the
+        /// right way round here and was measured to be: the draw the culling saves is cheaper
+        /// than the per-batch cost of being able to save it. If a weaker machine ever reverses
+        /// that, this is the one number to turn, and
+        /// <see cref="NearWoodDensityPercent"/> is the other.</para>
         /// </summary>
-        public const float TreeSectorMetres = 80f;
+        public const float TreeSectorMetres = 400f;
 
         /// <summary>
         /// How wide a sector of the far wood is.
@@ -128,6 +150,26 @@ namespace Odyssey.Presentation.Rendering
         /// since the trees are the only part of the skirt with a real vertex cost.
         /// </summary>
         public int TreeDensityPercent { get; set; } = 100;
+
+        /// <summary>
+        /// How much of that again the <b>near</b> wood gets - the ring of full-size trees just
+        /// outside the rim, as against the hill wood behind it. <b>100 by default: this is a
+        /// lever, not a setting, and nothing turns it today.</b>
+        ///
+        /// <para>It is separate from <see cref="TreeDensityPercent"/> because the two halves of
+        /// the wood cost very different amounts and only one of them is doing the job. Dropping
+        /// the 2,577 hill trees changed the frame by nothing measurable; dropping the 1,592 near
+        /// trees took the meadow from 5.04 ms to 2.26. The hill wood is what sells distance and
+        /// it is nearly free; the near ring is the detailed half.</para>
+        ///
+        /// <para>It exists unturned because the cost turned out not to be the trees at all - see
+        /// <see cref="TreeSectorMetres"/>, where cutting the batch count from 760 to 272 bought
+        /// the same two milliseconds with the wood left whole. Thinning was measured too (30 per
+        /// cent took 1,592 trees to 435 and saved 1.5 ms) and is strictly worse: it costs the
+        /// look and buys less. Keep it here as the second knob for a machine that still cannot
+        /// afford the wood after the first one.</para>
+        /// </summary>
+        public int NearWoodDensityPercent { get; set; } = 100;
 
         /// <summary>
         /// Whether the wood carries on over the background hills.
@@ -497,7 +539,7 @@ namespace Odyssey.Presentation.Rendering
 
             GridSize size = _model.Size;
             SkirtLayout.BuildTrees(size, MeasuredTreeDensity, treeModules.Length,
-                TreeDensityPercent * 0.01f, _scattered);
+                TreeDensityPercent * NearWoodDensityPercent * 0.0001f, _scattered);
             if (_scattered.Count == 0) return;
 
             // Trees stand on top of the surface cell, exactly as the mesher stands them on the

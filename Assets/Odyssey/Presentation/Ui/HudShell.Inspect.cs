@@ -223,7 +223,8 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
 
-            if (_inspect.Subject == InspectSubject.Cell) SyncCellRows();
+            if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
+                SyncCellRows();
 
             if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned) return;
 
@@ -560,10 +561,12 @@ namespace Odyssey.Presentation.Ui
                 ShowActiveTab();
             }
 
-            if (_inspect.Subject == InspectSubject.Cell)
+            if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
             {
                 // The tile's facts, one row each. Rows are added by SyncCellRows as the answer
                 // arrives and the facts change, so the pane never rebuilds its tree for a value.
+                // Items too, since 2026-09-19: a pile lying in a field carries the field's
+                // growing row, so the tile answers wherever on it the click lands.
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
                 _inspectBody.Add(_cellRowsGrid);

@@ -207,10 +207,195 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 ---
 
+### P10 — A pass that draws once per cell, in a renderer built on instancing
+
+**A submission costs about 4.6 us whatever is in it** (`docs/design/06-rendering-and-camera.md`
+§6c). So a pass that issues one `Graphics.RenderMesh` per cell is priced by how much of the board
+the player has touched, not by how much there is to see — and it is invisible to review, because
+each call is obviously correct and the loop around it is three lines.
+
+It hides especially well when the pass **does not increment `DrawCalls`**: the budget then cannot
+see it at all, and a milestone can report a healthy number while the pass is the largest thing in
+the frame.
+
+| The pass | What it drew per cell | What it cost | Now |
+|---|---|---|---|
+| `DrawZoneCover` | the ground module again, tinted | 2,065 calls, **3.67 ms of a 5 ms budget**, counted nowhere | a bit on the terrain bucket's tint — no draws |
+| `DrawSeedSpecks` | six unit cubes, one material | six submissions a sown cell | one `RenderMeshInstanced` a frame |
+| `TerrainSkirt` trees | instanced, but split into 760 spatial batches | 3.5 ms; **the tree count was irrelevant** | 272 batches, same 4,169 trees |
+| `DrawCellMark`/`Shade`/`Cut` | a plate per designated cell | **unmeasured** — the benchmark's board is barren and has nothing to designate | open |
+
+**The tell:** a cost that scales with cells the player painted, designated or planted rather than
+with what is on screen. **The check:** anything fixed to the grid belongs in the chunk mesher,
+where a bucket is one instanced call and inherits culling and the dirty-chunk rebuild.
+`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` is the guard for one of them —
+it fails the moment a zone costs draws in proportion to its cells.
+
+**The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
+publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
+paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
+its whole tick cost. Per-cell-per-frame and per-cell-per-tick are one pattern wearing two coats.
+
+### P11 — A measurement that never measured anything, clamped into plausibility
+
+Every length in the figure director is deliberately *measured* off the rig rather than written down,
+because sixty-one characters have sixty-one sets of proportions and a number of metres is right on
+one of them. That is the correct instinct and it moves the risk rather than removing it: the whole
+of the arithmetic downstream now rests on one reading, and **a reading can be of the wrong thing
+while still being a number.**
+
+`figure.StandingHipHeight` read `animator.GetBoneTransform(HumanBodyBones.Hips)`, which on this
+cast's avatar is a bone named `Root` standing on the floor. The difference it computed was nought.
+A `Mathf.Max(0.2f, …)` then turned "nothing" into "twenty centimetres", and everything that
+consumed it went on working perfectly on a colonist a sixth of her real size.
+
+**The tell is that the bad value is in range.** Nothing throws, nothing logs, no test fails, and the
+symptom appears a long way downstream in a shape that looks like a different bug — here, a body
+drawn in the wrong *place*, which sent two rounds of investigation into the placement arithmetic and
+into the simulation, both of which were right.
+
+**Ask what the measurement returns when it measures nothing**, and make that answer loud rather than
+plausible. A clamp, a `?? default`, a `Mathf.Max` floor and a zero-initialised field are all the
+same trap: they are there so that a missing rig does not crash, and they double as a disguise for a
+rig that is present and being read wrongly. Where the fallback has to exist, it should be a value a
+test can recognise as the fallback — and a test should assert that the real thing is not it.
+
+**Its second face: an aggregate answers the question it aggregates, not the one you asked** (added
+2026-09-20). Here the measurement was real and correctly computed, and still about the wrong thing.
+`SleepPose.Lift` was tuned until the lowest drawn vertex *anywhere* on a sleeping colonist just
+touched the mattress. On a supine sleeper that vertex is her back and the tuning was right. On a
+**side** sleeper it is a drawn-up knee, which props the body up like a kickstand — so half the
+colony lay 9 to 12 cm above its own bedding while the number reported 0.00 and 0.02 and looked
+perfect. A `min` over a whole body is a statement about that body's *extremities*; the thing being
+judged was its trunk.
+
+**Ask what the aggregate is over, and whether the subject is the whole of it.** Where it is not,
+measure the part in question — `SleepProbe` now prints the trunk's clearance beside the whole
+mesh's, so the next person to look can watch the two disagree. This is the harder half of the
+pattern, because there is no clamp and no zero to notice: both numbers are true.
+
+**And prefer the thing the player sees to the thing the rigger named.** A bone's meaning is a
+decision somebody made in a modelling package and cannot be assumed; where the drawn vertices are is
+not. `MeasureSole` already knew this — it bakes the posed mesh rather than believing the root is the
+sole — and the fix was to ask the same question the same way.
+
+---
+
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-20 — Half the colony slept on one knee, and the number said nought (P11)
+
+Owner, watching the sleepers after the length fix landed: *"the body isn't quite flush on to the bed
+surface but the pillow head is placed nicely enough."*
+
+`SleepPose.Lift` had been tuned until the lowest drawn vertex anywhere on the mesh just touched the
+mattress — measured, 0.00 m and +0.02 m on the two side postures, which is a centimetre and reads
+as correct. Measuring the **trunk** alone, the band of baked mesh between the spine and the neck,
+gave **+0.09 m and +0.12 m**: on a side sleeper the lowest vertex is a drawn-up knee, and seating
+it props the whole body up like a kickstand. The two supine postures were genuinely flush and
+always had been, which is why the fault survived a contact sheet — half the pictures were right.
+
+**The shape: a true number about the wrong part of the subject.** Unlike the rest of P11 there is
+no clamp and no missing measurement to find; both figures are real and correctly computed, and the
+aggregate simply answers a question about extremities when the question was about a trunk.
+
+**Stopped by** `ShoulderPerBody` 0.152 → 0.109, set against the trunk, and by `SleepProbe` printing
+both clearances side by side so the disagreement is visible rather than inferred. The deliberate
+price is a knee pressed about 0.10 m into a 0.30 m mattress. `docs/design/20-beds.md` §7d.
+
+### 2026-09-20 — A colonist was laid down a sixth of her own length (P5, P11)
+
+Owner, third report on the same symptom: *"colonists are resting in the centre and hanging off the
+bed and sometimes even off the bed … it should know to always put the head onto the first tile and
+then the rest of the body goes on the 2nd tile."*
+
+The simulation was measured first, because the two previous rounds had both ended in the sim: three
+colonists, three player-built beds, three days, four seeds — **every sleeping tick on the head cell
+of a real bed, none off one**. So the sleeper was in the bed and the drawing was wrong, and the
+drawing is `SleepPose.Place`, whose arithmetic had been read and pronounced correct twice.
+
+It was correct. It was being handed a body 0.38 m long for a colonist 2.49 m tall.
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9`, and `StandingHipHeight` is
+`hips.position.y - transform.position.y` where `hips` is
+`animator.GetBoneTransform(HumanBodyBones.Hips)` — **which on the Synty humanoid avatar is a bone
+literally named `Root`, sitting at the model origin, with the real pelvis as its child.** Nought on
+every one of the sixty-one characters, so the `Mathf.Max(0.2f, …)` clamp was the whole of the
+answer. The root of the lying figure went 0.38 m past the pillow and the rest of her — 2.1 m —
+extended the other way, off the head end of the bed and on to the floor. Measured along the bed:
+body `[−2.57, 0.29]` against a frame of `[−1.05, 3.55]`.
+
+**The shape: a measurement that returns a plausible number for a question it never answered.**
+Nothing downstream could tell, because 0.38 m is a length and every line that consumed it worked
+perfectly. The clamp made it worse by turning "I measured nothing" into "20 cm".
+
+**Why the test written for exactly this missed it.** `ASleeperLiesWithinTheBedsOwnTwoCells` was
+added in the previous round to assert that a sleeper fits the bed, and it passed. It walked a range
+of plausible **hip heights** — 0.70 m to 1.30 m — and checked the body each implies. The value the
+game passed was 0.2 m, which no range starting at 0.70 m can reach. A fixture constant that is a
+reasonable value for a quantity is not evidence that the quantity is reasonable.
+
+**Stopped by** measuring the body instead of deriving it: `FigureBuild.Height` bakes the posed mesh
+and takes the sole and the crown, the idiom `MeasureSole` already uses. `SleepPose.BodyLength`
+guards anything outside 0.5 m to 5 m. The span test now walks the body length rather than a hip,
+from far too short to far too long, and `FigureBuildTests` instantiates a real rig and asserts the
+measurement looks like a person and that the avatar's `Hips` bone is nothing like a body length.
+`scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run` prints the whole of it.
+`docs/design/20-beds.md` §7b.
+
+### 2026-09-20 — The soil had borders, and the borders were the frame budget
+
+Owner, with a screenshot: *"Remove the borders from dirt/soil tiles — each tile must have some
+kind of border/shade ... or could be something overlaying and reacting."* The second guess was
+right.
+
+A growing zone was drawn as the ground's own module laid over itself, tinted and translucent. It
+carried a 1.01 scale so neighbours **overlapped rather than met**, on the reasoning that an
+overlap of one tint is invisible by construction. That is true of an opaque overlay and false of
+a translucent one: alpha blending is not idempotent, so at alpha 0.78 a doubly-covered band
+composites to 1-(1-0.78)^2 = 0.95 and the dirt showing through falls from 22% to 5%. Hence a dark
+line on every **interior** edge and none on the outside edge — which is the shape in the
+photograph, and the thing that identifies the cause without reading any code. Under it,
+`MarkLift` did the same again in miniature: lifting a cover raises a *box*, whose four sides then
+stand proud of the neighbouring soil by exactly the lift.
+
+**The shape: a geometric fix and a blending fix that are incompatible, each correct alone.** The
+overlap was added to close a sliver; the sliver's real cause (the cover drew the plain default
+block instead of the drawn variant clump) had already been fixed, so the overlap was belt over
+braces, and the braces were made of alpha.
+
+**Settled by four photographs rather than argument** — bug, overlap removed, alpha 1.0 (seamless,
+so the meshes tile with no gap), alpha 0 (seamless, so the ground has no seam of its own). Two
+controls that each eliminate one candidate outright.
+
+**And the same pass was 3.67 ms of a 5 ms frame**, one submission per zoned cell, incrementing no
+counter (P10). Because the look fix had made the cover provably the ground's own mesh in the
+ground's own place, the answer to both was to stop drawing it twice.
+
+**Stopped by** `TintCode.TilledBase` — worked soil is a bit on the terrain bucket's tint —
+and by `GrowingRenderTests.AZoneCoverSitsExactlyOnTheGroundItCovers` before it was deleted,
+`ABiggerFieldAddsInstancesRatherThanDraws` after. `docs/design/22-growing.md` §6a,
+`06-rendering-and-camera.md` §6c.
+
+### 2026-09-20 — The carrots did not disappear; there was nowhere to see one
+
+Owner: *"I thought people picked up the carrots ... but they seemed to disappear now?"*
+
+They did not. The ten-day field soak accounts for every one — 116 harvests at five apiece, 501
+still on the map, the rest eaten — and the contact sheet shows the pile spawning off the soil and
+drawing correctly. `LedgerModel` counted meals, wood and salvage and nothing else, so the whole
+visible life of a carrot was: a pile appears, a hauler carries it to the store or a colonist eats
+it, and then nothing in the interface mentions carrots again.
+
+**The shape: a complete feature with no readout, reported as a simulation bug.** For a commodity
+the player is meant to decide on, "cannot be seen anywhere" and "does not exist" are the same
+report. Worth remembering when a report says something vanished: ask what would have shown it.
+
+**Stopped by** a Carrots row counted wherever it lies — the ledger is the colony's count, not the
+storeroom's — and `LedgerModelTests.TheFieldCropIsCountedWhereverItLies` /
+`TheCropRowStandsEvenWithNoCarrotsInIt`. Stone, iron ore and coal are still uncounted and have
+the same report waiting.
 ### 2026-09-20 — Two glyphs the fonts do not have, in two panels, neither ever drawn (P10)
 
 Not reported. Found while reviewing PR #145 by asking a question no test asks: *are the characters

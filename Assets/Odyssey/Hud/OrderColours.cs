@@ -67,6 +67,14 @@ namespace Odyssey.Hud
             DesignateTool.Mine => Mine,
             DesignateTool.Deconstruct => HudTheme.Warn,
             DesignateTool.Cancel => HudTheme.Bad,
+            // The growing zone, on the olive its own Build category already wears. It comes
+            // through here rather than keeping the switch it arrived with, because this file's
+            // whole point is that a mode has one colour on every surface it appears - and the
+            // zone appears on four: the category tile, the pinned chip, the drag cursor and the
+            // armed banner. Its committed ground is NOT this colour and is not meant to be: a
+            // painted field is worked soil (ChunkRenderer.TilledGrade), which is the result
+            // rather than the order, exactly as a built wall is not the blue of its blueprint.
+            DesignateTool.GrowZone => HudTheme.ZonesHue,
             _ => HudTheme.Accent,
         };
 

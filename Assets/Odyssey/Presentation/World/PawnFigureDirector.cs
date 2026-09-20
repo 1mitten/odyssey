@@ -895,6 +895,17 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float MeasuredSoleOffset { get; private set; }
 
+        /// <summary>
+        /// The drawn height of the tallest figure built so far, in metres.
+        ///
+        /// <para>Printed by the contact sheets beside the sole, and for a sharper reason than
+        /// curiosity: this is the number whose collapse put a sleeping colonist two and a half
+        /// metres off the end of her bed. A figure at <see cref="FigureBuild.FallbackHeight"/>
+        /// exactly is one whose mesh could not be measured — worth looking at rather than
+        /// trusting.</para>
+        /// </summary>
+        public float MeasuredStandingHeight { get; private set; }
+
 
         /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
         bool CanDraw(PawnId pawn)
@@ -1171,16 +1182,28 @@ namespace Odyssey.Presentation.World
                 Vector3 origin = GroundRelief.Lift(BedShape.Origin(at.X, at.Z, at.Y, facing));
                 var along = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
 
+                // **The mattress is a tilted plane, because the bed is draped on to one.**
+                // `BedShape.Root` is `GroundRelief.Drape(...)`, a shear that takes the ground's
+                // tangent plane at the bed's own origin and carries the whole 4.6 m of bed along
+                // it. Sampling one height here and laying the body flat on it was right about a
+                // level bed and wrong by up to 0.21 m at the pillow on the steepest ground the
+                // relief makes. The same slope, read at the same point the drape reads it at.
+                GroundRelief.SlopeAt(origin.x, origin.z, out float slopeX, out float slopeZ);
+                float alongSlope = slopeX * along.x + slopeZ * along.z;
+
                 // The head goes on the pillow, which is a point the bed itself decides — so moving
                 // the pillow moves the sleeper and the two cannot drift apart.
                 figure.SleepHeadAt = origin + along * BedShape.HeadRestAlong;
-                figure.SleepSurfaceY = origin.y + BedShape.MattressTop;
+                // And the surface is the one under *that* point rather than under the bed's middle,
+                // because that is what the body is laid from.
+                figure.SleepSurfaceY =
+                    origin.y + BedShape.MattressTop + alongSlope * BedShape.HeadRestAlong;
                 figure.SleepAlong = along;
+                figure.SleepSlope = alongSlope;
                 return;
             }
 
             Vector3 floor = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
-            figure.SleepSurfaceY = floor.y;
 
             // Whatever it was facing when it lay down. Held rather than recomputed, so a colonist
             // asleep on the ground does not swing round as the yaw eases.
@@ -1189,8 +1212,15 @@ namespace Odyssey.Presentation.World
 
             // No pillow to aim at, so the body is centred on the cell it dropped in: the head goes
             // half a body-length back along the way it is lying.
-            figure.SleepHeadAt =
-                floor - figure.SleepAlong * (SleepPose.BodyLength(figure.StandingHipHeight) * 0.5f);
+            float half = SleepPose.BodyLength(figure.StandingHeight) * 0.5f;
+            figure.SleepHeadAt = floor - figure.SleepAlong * half;
+
+            // The ground is draped too, cell by cell, so a body on a hillside lies along the hill
+            // for the same reason it lies along a bed. Read at the cell she dropped in, and the
+            // surface under her head follows from it.
+            GroundRelief.SlopeAt(floor.x, floor.z, out float groundX, out float groundZ);
+            figure.SleepSlope = groundX * figure.SleepAlong.x + groundZ * figure.SleepAlong.z;
+            figure.SleepSurfaceY = floor.y - figure.SleepSlope * half;
         }
 
         /// <summary>
@@ -1779,7 +1809,7 @@ namespace Odyssey.Presentation.World
             {
                 SleepPose.Place(
                     SleepPose.PostureFor(figure.Pawn), figure.SleepHeadAt, figure.SleepAlong,
-                    figure.SleepSurfaceY, figure.StandingHipHeight, figure.SleepWeight,
+                    figure.SleepSurfaceY, figure.StandingHeight, figure.SleepSlope, figure.SleepWeight,
                     figure.Transform.position, figure.Transform.rotation,
                     out Vector3 lain, out Quaternion laid);
                 figure.Transform.position = lain;
@@ -2218,6 +2248,12 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
             figure.SoleOffset = MeasureSole(figure);
+            // And how long a body there is to lay down. Measured here, beside the sole, because
+            // both are one bake of the posed mesh and both are properties of the rig rather than
+            // of the colonist wearing it.
+            figure.StandingHeight = MeasureBody(figure);
+            if (figure.StandingHeight > MeasuredStandingHeight)
+                MeasuredStandingHeight = figure.StandingHeight;
             if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
             _figures.Add(figure);
             return figure;

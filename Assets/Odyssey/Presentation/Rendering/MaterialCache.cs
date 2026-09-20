@@ -31,8 +31,10 @@ namespace Odyssey.Presentation.Rendering
             readonly bool _ghost;
             readonly bool _foliage;
             readonly bool _water;
+            readonly bool _unlit;
 
-            public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage, bool water)
+            public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage, bool water,
+                bool unlit = false)
             {
                 _base = baseMaterial;
                 _tint = tint;
@@ -40,6 +42,7 @@ namespace Odyssey.Presentation.Rendering
                 _ghost = ghost;
                 _foliage = foliage;
                 _water = water;
+                _unlit = unlit;
             }
 
             // Foliage is part of the key because a foliage clone carries a queue and a cutoff a
@@ -48,6 +51,7 @@ namespace Odyssey.Presentation.Rendering
             public bool Equals(Key other) =>
                 ReferenceEquals(_base, other._base) && _tint == other._tint &&
                 _emission == other._emission && _ghost == other._ghost &&
+                _unlit == other._unlit &&
                 _foliage == other._foliage && _water == other._water;
 
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
@@ -59,6 +63,7 @@ namespace Odyssey.Presentation.Rendering
         readonly Dictionary<Key, Material> _cache = new Dictionary<Key, Material>();
         readonly List<Material> _owned = new List<Material>();
         Material? _ghostBase;
+        Material? _unlitBase;
         Material? _waterBase;
         TreeMaterials? _trees;
 
@@ -136,13 +141,13 @@ namespace Odyssey.Presentation.Rendering
         /// ground tile, and a clone without the packs draws exactly the same water as one with.
         /// </param>
         public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha,
-            bool foliage = false, bool water = false)
+            bool foliage = false, bool water = false, bool unlit = false)
         {
-            Material source = ghost ? GhostBase : water ? WaterBase : baseMaterial;
-            var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : water ? tint.a : 1f);
+            Material source = unlit ? UnlitBase : ghost ? GhostBase : water ? WaterBase : baseMaterial;
+            var colour = new Color(tint.r, tint.g, tint.b, ghost || unlit ? alpha : water ? tint.a : 1f);
             // Keyed on the material reference rather than its instance id: identity is what we
             // actually mean, and it avoids an API whose name changed between Unity versions.
-            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water);
+            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water, unlit);
             if (_cache.TryGetValue(key, out Material cached)) return cached;
 
             var material = new Material(source)
@@ -152,7 +157,8 @@ namespace Odyssey.Presentation.Rendering
             };
             SetColour(material, colour);
             SetEmission(material, emission);
-            if (ghost) MakeTransparent(material);
+            if (ghost) MakeTransparent(material, premultiplied: true);
+            else if (unlit && colour.a < 1f) MakeTransparent(material, premultiplied: false);
             if (foliage)
             {
                 if (material.HasProperty(AlphaClipThresholdId)) material.SetFloat(AlphaClipThresholdId, FoliageClipThreshold);
@@ -251,7 +257,7 @@ namespace Odyssey.Presentation.Rendering
             else material.DisableKeyword("_EMISSION");
         }
 
-        static void MakeTransparent(Material material)
+        static void MakeTransparent(Material material, bool premultiplied = true)
         {
             material.SetFloat("_Surface", 1f);
             material.SetFloat("_Blend", 0f);
@@ -262,8 +268,28 @@ namespace Odyssey.Presentation.Rendering
             material.SetFloat("_Cull", (float)CullMode.Back);
             material.DisableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            if (premultiplied) material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
             material.renderQueue = (int)RenderQueue.Transparent;
+        }
+
+        /// <summary>
+        /// The one material a flat-colour overlay is cloned from: URP's unlit shader, so the
+        /// colour is the colour on every tilt and under every light. A lit overlay - the ghost
+        /// path - shades each differently-tilted tile differently, and on rolled ground that
+        /// read as per-tile borders however seamless the geometry (the growing-zone cover,
+        /// 2026-09-20: fixed twice geometrically before the light was caught).
+        /// </summary>
+        Material UnlitBase
+        {
+            get
+            {
+                if (_unlitBase != null) return _unlitBase;
+                Shader? shader = Shader.Find("Universal Render Pipeline/Unlit");
+                if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
+                _unlitBase = new Material(shader) { name = "Odyssey/Flat", enableInstancing = true };
+                _owned.Add(_unlitBase);
+                return _unlitBase;
+            }
         }
 
         Material GhostBase
