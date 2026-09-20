@@ -728,6 +728,45 @@ namespace Odyssey.Tests.Hud
             Assert.That(MapSizes.At(99).Key, Is.EqualTo(MapSizes.All[MapSizes.Default].Key));
         }
 
+        /// <summary>
+        /// The boards the benchmarks measure are the boards the menu offers.
+        ///
+        /// <para><b>This is the only thing stopping the measurement drifting off the game.</b>
+        /// <c>Odyssey.Tests.Sim.BoardSizes</c> mirrors this list, because the simulation assembly
+        /// does not reference the interface one and must not start; every scale figure in
+        /// <c>docs/design/28-map-size.md</c> is taken against that mirror. Nothing else compares
+        /// the two, so without this test a size could be retuned here and the benchmarks would go
+        /// on quoting the old board for ever, in a document whose whole purpose is to say what
+        /// the shipped boards cost.</para>
+        ///
+        /// <para>Written against literals rather than against <c>BoardSizes</c> on purpose: this
+        /// assembly cannot see the Sim test assembly either, and a guard that imported one of the
+        /// two copies would only be comparing a copy with itself.</para>
+        /// </summary>
+        [Test]
+        public void TheMeasuredBoardsAreTheBoardsOffered()
+        {
+            var measured = new Dictionary<string, (int X, int Z, int Y)>
+            {
+                ["ui.newgame.size.small"] = (80, 80, 16),
+                ["ui.newgame.size.standard"] = (120, 120, 16),
+                ["ui.newgame.size.large"] = (180, 180, 24),
+                ["ui.newgame.size.huge"] = (240, 240, 16),
+            };
+
+            Assert.That(MapSizes.All.Count, Is.EqualTo(measured.Count),
+                "a board was added or removed without telling Odyssey.Tests.Sim.BoardSizes");
+
+            foreach (MapSizes.Choice size in MapSizes.All)
+            {
+                Assert.That(measured, Does.ContainKey(size.Key),
+                    size.Key + " is offered but nothing measures it");
+                Assert.That((size.X, size.Z, size.Y), Is.EqualTo(measured[size.Key]),
+                    size.Key + " has been retuned; Odyssey.Tests.Sim.BoardSizes and " +
+                    "docs/design/28-map-size.md still carry the old numbers");
+            }
+        }
+
         // ------------------------------------------------ choosing which one to read
 
         [Test]
