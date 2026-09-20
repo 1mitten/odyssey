@@ -77,14 +77,14 @@ matters; can build crates so they are not drawing zones for ever; and can say "t
 | 2 | **A storage unit is a 1-cell crate holding 8 stacks** (≈600 wood). A larger tier is later, one Def row. | Stands. |
 | 3 | **Deconstruct empties first, then spills.** Nothing is ever destroyed. | Stands, **with the hole named**: under one-stack-per-cell "nothing is destroyed" is not always satisfiable. §7d. |
 | 4 | **Haul-urgently is a marking tool that clears when the item is stored.** | Stands; the machinery it needs is not the machinery the plan named. §8. |
-| 5 | **Item categories land in S1**, with a two-level tri-state tree from the first commit. | **Questioned** — seven item defs, six categories, two of them empty. §5d. |
+| 5 | **Item categories land in S1**, with a two-level tri-state tree from the first commit. | **The set is superseded by decision 23.** The *tree* is still questioned by decision 21 — under the new set, four of six categories are empty on day one. §5d, §14 Q7. |
 | 6 | ~~A zone draws a border always, a fill only when a zone tool is armed or the zone is selected.~~ | Withdrawn 2026-09-20. Superseded by 15, which is itself superseded by **16**. |
 | 7 | **`StorageSettings` is a shareable record from the first commit; the group *UI* ships in S2.** | Stands, and becomes **the load-bearing idea**: §3a makes it a handle rather than an object, which is what makes S2's groups a repoint instead of a rewrite. |
-| 8 | **Refrigeration is a design doc now, built later.** The food refusal ships in S2 as a Def flag. | Stands, **with a consequence to accept knowingly**: §7c. |
+| 8 | **Refrigeration is a design doc now, built later.** The food refusal ships in S2 as a Def flag. | **Half superseded by decision 24.** Refrigeration is still a document; the **food refusal does not ship** — a crate takes food, and the eat scan learns containers because of it. §7c. |
 | 9 | **Drag adds cells; a drag touching an existing zone extends it; right-drag subtracts; a zone reduced to nothing is deleted.** | **Amended.** "Touching extends" cannot survive per-zone settings. §4. |
 | 10 | **A crate shows a fill tell on the model, and the exact count in the inspect pane.** | Stands. |
-| 11 | **Five priorities: Last, Low, Normal, Preferred, Urgent.** Named, not numbered. | Still awaiting veto. |
-| 12 | **Filter presets at creation** (Everything / Materials / Food / Dumping / Nothing), defaulting to Everything. | Still awaiting veto. Note `ui.arch.tool.dumping` already exists as a palette chip, so "Dumping" is a preset *and* a second armed tool. |
+| 11 | **Five priorities: Last, Low, Normal, Preferred, Urgent.** Named, not numbered. | **Approved by the owner, 2026-09-20.** |
+| 12 | **Filter presets at creation** (Everything / Materials / Food / Dumping / Nothing), defaulting to Everything. | **Superseded by decision 22** — a new zone is a dumping zone: everything goes in it and the player narrows it. The preset *list* is re-derived from the new categories (§14 Q4). |
 
 Settled without a question, both following `a-14` and existing code: an item nothing accepts
 **just sits where it fell** — no "haul it anywhere" fallback — and the build-delivery giver learns
@@ -108,7 +108,30 @@ construction cannot reach would be a trap.
 | 18 | **A drag never merges two existing zones. The anchor decides.** Start inside a zone and the whole drag extends *that* zone; start outside and the drag founds a new one, taking cells from any zone it crosses. | Merge-on-touch is safe for growing zones because a zone is identified by its plant and two touching same-plant zones are interchangeable. A storage zone carries settings, so merge-on-touch silently destroys one of two configurations. §4. |
 | 19 | **`ColonyItem.ContainerId` lands in S1's save version even though nothing writes it until S2.** | One format bump instead of two, and the v6 → v7 reader is written once by the person who is already writing one. §5e. |
 | 20 | **`Emergency` is made to mean what S3 needs it to mean**, by scanning emergency givers in a pass ahead of the player's 1–4 loop, gated on the pawn having the work type enabled at all. | Today the flag is inert and untested; S3's headline behaviour does not work without this. §8a. |
-| 21 | **The category tree is deferred to the commit that gives it something to compress.** S1 ships presets + priority + seven per-item rows; `ItemDef.category` still lands in S1 as content. | Seven item defs and six categories means two empty branches and a tri-state roll-up over rows of one. §5d. Owner's call — decision 5 was taken in interview. |
+| 21 | **The category tree is deferred to the commit that gives it something to compress.** S1 ships presets + priority + seven per-item rows; `ItemDef.category` still lands in S1 as content. | Seven item defs and six categories means two empty branches and a tri-state roll-up over rows of one — and under decision 23 it is **three** empty of six. §5d. Owner's call — decision 5 was taken in interview. |
+
+## Decisions taken 2026-09-20 (owner, second round)
+
+| # | Decision |
+|---|---|
+| 22 | **A new stockpile is a dumping zone.** Everything is accepted at creation and the player narrows it — "anything goes but you can then choose". This keeps decision 12's default and removes its *Dumping* preset, which would now be the same thing under a second name. Whether the separate `ui.arch.tool.dumping` palette chip survives is §14 Q5. |
+| 23 | **Six categories, in this order: Food, Medicine, Materials, Books, Items, Weapons.** Replaces the proposed Materials / Components / Food / Textiles / Consumables / Junk. **Books are research obtained elsewhere** — a hauled, stored good rather than a produced one, which is content information beyond storage and is recorded here so the research line inherits it (§14 Q2). |
+| 24 | **Food may be stored in a container**, reversing the `refusesCategory = Food` half of decision 8 — **and it spoils quicker inside one.** |
+
+**On 24, the part that is not buildable yet, stated plainly.** There is **no spoilage system**, anywhere: no clock, no field, no Def entry, nothing in `ColonyItem`. It is catalogued as system 8 at **M5** (`docs/design/03-systems-catalogue.md` §8) and was deliberately left out of growing (`docs/design/22-growing.md` §8: *"spoilage (rot clocks on stacks; the ration pack's rot-free declaration is already consistent with it)"*). The only thing that exists is the **name**: `ui.alert.spoilage` → "Spoiling" is already a registry key.
+
+So decision 24 splits cleanly in two, and only the first half is S2's:
+
+- **"Food may be stored in a container" is buildable now** and is a simplification — the crate Def loses `refusesCategory`, the filter loses its dimmed rows, and §7c's objection (a refusal naming a mechanic that does not exist) disappears.
+- **"and it spoils quicker inside one" is a multiplier on a clock that does not exist.** It is recorded as the first stated requirement of the spoilage unit and is **not** built in S2. Writing a `containerSpoilMultiplier` that nothing reads is the same fault in a new coat.
+
+Three things the spoilage unit will have to settle when it is taken, all found while checking this answer, all recorded so the interview does not start from nothing:
+
+| | What | Why it is not obvious |
+|---|---|---|
+| a | **The merge rule.** Rot is per stack and is **averaged on merge** in the reference (`a-14` §4). Our stacks merge on *every* put-down — `ColonyItems.Drop:207` and `MoveTo:243` fold a load into the resident stack and despawn the incoming one — so a rot clock needs a deterministic integer weighted average, in the hash, at a site that currently carries no arithmetic at all. |
+| b | **The pantry.** A colony starts with 240 ration packs and that is ten days of food (`a-08` §"What the current scenario does"). The ration pack is the packaged class and is declared **rot-free**; if it ever rots, the starting kit is a four-day clock and the scenario has to be re-tuned. |
+| c | **The inversion.** In the reference a shelf is *protective* — "anything in a shelf = no deterioration, even outdoors in rain" (`a-14` §6) — and spoilage itself is temperature-driven and stopped by cold, not by containment. A crate that makes food rot **faster** is the opposite of what a player arriving from the genre expects. It is a good rule if it is deliberate: it gives refrigeration a job before refrigeration exists, and "do not box your food" is a lesson a player can learn in one colony. §14 Q3 asks whether it is deliberate. |
 
 ---
 
@@ -406,13 +429,15 @@ carries a string today**, so naming a zone is a contract change and not a field.
   owner picker (`InspectModel`, `HudShell.Inspect.cs:752`) and `HudLayout.PopoverBottomFor`.
 
 **On the category tree (decision 21).** The game has seven item defs: ration pack, salvage, wood,
-stone, iron ore, coal, carrots. Against the six proposed categories, Textiles and Components have
-no members at all and Food has two. A tri-state parent over a branch of one is a control that
-costs a fortnight and compresses nothing. The recommendation is to ship `ItemDef.category` as
+stone, iron ore, coal, carrots. Against the owner's six categories (decision 23) that is **Food**
+two, **Materials** four or five depending on where salvage lands, and **Medicine, Books, Weapons**
+— and possibly **Items** — with no members at all. A tri-state parent over a branch of nought
+compresses nothing and costs a fortnight. The recommendation is to ship `ItemDef.category` as
 **content** in S1 — the wiki rows, the Def attribute, the registry keys — so nothing needs
-re-touching, and ship the *tree* in the commit where the item table first exceeds about fifteen
-defs. Until then the filter is seven rows and five presets, which fits in a popover without
-scrolling. **Owner's call: decision 5 was taken in interview and this is a reversal of it.**
+re-touching, and to ship the *tree* in the commit where the item table first exceeds about fifteen
+defs, which on `icon-keys.csv`'s 50 named commodities will not be long. Until then the filter is
+seven rows and two presets (§14 Q4), which fits in a popover without scrolling. **Owner's call:
+decision 5 was taken in interview and this is a reversal of it.**
 
 ### 5e. Save and hash
 
@@ -523,7 +548,7 @@ trivial because the rectangle is known before the first cell is painted.
 
 - `BuildingHandle.Crate = 7`, `Count = 8` — append-only, handle order is the save contract.
 - A `Building_Crate` Def in `Defs/Core/World/Buildings.xml`: one cell, wood or stone through the
-  existing pipeline, `stackSlots = 8`, `refusesCategory = Food`.
+  existing pipeline, `stackSlots = 8`. **No `refusesCategory`** — decision 24.
 - `StorageUnits` — a component, not a field on `PlacedEdifice`: the edifice record is a value
   struct and cannot hold a list, which is exactly why `Owner` (a scalar) rides it and this does
   not. One record per crate, keyed by **edifice handle**, which is stable by contract (removed
@@ -544,7 +569,7 @@ and each needs its own decision. This is the bill the plan did not have:
 | Site | Reads it as | Under containers |
 |---|---|---|
 | `JobSystem.cs:814` haul scan | "not haulable now" | **Right by accident**: a contained item must not be hauled *unless* its crate is emptying or a better zone exists. Add the `ContainedItems` lister and scan it third, after loose and stored. |
-| `JobSystem.cs:598` eat scan | "not edible now" | **Correct only while crates refuse food** (decision 8). If that refusal is ever lifted without this site, colonists starve beside a full crate. See §7c. |
+| `JobSystem.cs:598` eat scan | "not edible now" | **Must change — mandatory, decision 24.** A crate takes food now, so a colonist who cannot see into one starves beside a full crate. §7c has the scan rule and the control test. |
 | `BuildJob.cs:108`, `:300` delivery | "not deliverable" | **Must change.** Material in a crate is invisible to construction otherwise, and a crate the builders cannot reach into is the trap the interview already ruled out. |
 | `JobDrivers.cs:22, 95` haul toils | "the thing moved or vanished" | Must accept "it is in the crate I am reaching into". |
 | `PawnRegistry.cs:274` publishing | "do not draw it" | **Correct unchanged** — a contained item is drawn by the crate's fill tell, not as a pile. |
@@ -555,22 +580,26 @@ A test that no site is missed: a control that puts one stack of every def in a c
 and asserts the colony's total stack count is unchanged — the shape that catches an item that has
 fallen out of every lister and become unreachable rather than lost.
 
-### 7c. The food refusal, and what it costs to keep
+### 7c. Food in a crate — settled, and what it now costs
 
-Decision 8 ships `refusesCategory = Food` in S2 and refrigeration later. Two consequences worth
-taking knowingly:
+**Decision 24: crates take food.** `refusesCategory` does not ship, the dimmed "needs cooling" rows
+do not ship, and the crate is a plain container for everything. That removes a rule with no
+simulation behind it and makes the S2 playtest able to ask the only question worth asking of a
+container — *does a pantry work*.
 
-- it **keeps the eat scan simple** (§7b row 2), which is a real saving;
-- and it means **the first container in the game refuses the only commodity with a consumer**. The
-  S2 playtest cannot ask "does a pantry work", because there are no pantries; and the dimmed rows
-  reading "needs cooling" advertise a mechanic that does not exist — spoilage is not built, so a
-  meal in a crate and a meal on the floor are identical in every way the simulation can measure.
+It has one price, and it is the row §7b marked as depending on it: **`CriticalNeedsThinkNode.TryEat`
+(`JobSystem.cs:589`) skips anything with `Cell < 0`**, so a colonist will starve beside a full crate
+unless the eat scan learns containers. That is now **mandatory in S2**, not optional: one scan site
+(walk `ContainedItems` after the loose items, and prefer the loose one at equal distance so a crate
+is not opened while a meal sits on the floor beside it) and one toil (the eater reaches into the
+crate exactly as a hauler does, through the same container reservation).
 
-The alternative, for the owner: **crates accept food in S2**, and the refusal lands in the same
-commit as spoilage, where it has something to be true about. It costs the eat-from-container path
-(one scan site, one toil). Recommendation is to take it — a rule with no simulation behind it is
-the "compatibility clause keeping the bug alive" pattern arriving early — but it is decision 8 and
-therefore the owner's.
+The control that proves it: a colony with no loose food, one full crate and five hungry colonists
+survives a day. Without the scan change every one of them starves, which is a loud failure and the
+right kind.
+
+**Spoiling faster inside is not built in S2** — see the note under decision 24. The crate's Def
+carries no spoilage field until there is a clock for it to multiply.
 
 ### 7d. Deconstruct, and the promise that cannot always be kept
 
@@ -759,12 +788,19 @@ rule `GrowingZones.SiteAllows` reads, and **#145** (the Work tab) edits work typ
 shell. `DesignateTool` and `BuildingHandle` are append-only and their next free numbers must be
 re-read at merge time, not taken from this file.
 
-## §13 — Still open
+## §14 — Interview, second round (asked 2026-09-20, unanswered)
 
-- **Decisions 11 and 12** (the five priority names, the six item categories) await veto. Both
-  become wiki content and both are read by the filter.
-- **Decision 21** reverses decision 5 (the category tree in S1) and is the owner's to take.
-- **§7c** asks whether crates should accept food in S2, which reverses part of decision 8.
-- **The dumping zone.** `ui.arch.tool.dumping` is already a palette chip and decision 12 already
-  has a Dumping *preset*. One of the two should go: a preset that arms a second tool is two ways to
-  say one thing, and this file has now removed three of those.
+Closed by the owner this round: decision 11 (the priority ladder, approved as written), decision 12
+(superseded by 22), decision 5's category set (superseded by 23) and §7c (settled by 24). What is
+left is what those answers opened.
+
+| Q | Question | Recommendation |
+|---|---|---|
+| 1 | **Where does each of today's seven item defs sit** in Food / Medicine / Materials / Books / Items / Weapons? The obvious reading is Food = ration pack, carrots; Materials = wood, stone, iron ore, coal; Items = salvage — which leaves **Medicine, Books and Weapons empty on day one**. | Salvage → **Materials**, not Items: it is reclaimer feedstock, and `icon-keys.csv` describes it as "mixed unsorted salvage". That makes Materials five of seven and Items empty too — four empty categories of six, which is the argument for decision 21. |
+| 2 | **What is a Book?** A hauled, stored good that research consumes; or one that is read once and unlocks something permanently; or a durable thing that sits on a shelf and gives a bonus while it is there? This is research content, not storage content, and storage only needs to know **whether a book is a stack**. | A book is a **stack of one that does not stack** (`stackLimit = 1`), like salvage. That is all S1 needs; the rest belongs to the research line's own interview. |
+| 3 | **Is food spoiling *faster* in a crate deliberate?** The reference has containment *protect* — "anything in a shelf = no deterioration, even outdoors in rain" — and rot stopped by cold, not by air. A crate that rots food faster inverts what a player brings with them. | **Keep the inversion** if the intent is that a sealed box is warm and stale: it gives refrigeration a job before refrigeration exists, and it makes the crate a genuine trade-off rather than a free upgrade. But say so out loud in the wiki description, or the first report will be "food rots in my crate, is that a bug?". |
+| 4 | **What are the presets now?** Decision 12's list (Everything / Materials / Food / Dumping / Nothing) had two entries that decision 22 and 23 have dissolved. The natural replacement is **Everything, Nothing, and one per category** — which is eight buttons that say the same thing the category rows say. | **Everything** and **Nothing** only, plus the six category rows, which *are* the presets. Two buttons, not eight. |
+| 5 | **Does the Dumping zone chip survive?** `ui.arch.tool.dumping` is in `icon-keys.csv` and in the palette's Zones category. Under decision 22 a plain stockpile already accepts everything, so the chip would arm a tool that makes exactly what the other tool makes. | **Take the chip off the palette and keep the key.** One zone tool. The key stays as content because a later dumping zone — one that *also* accepts rubble, forbids re-stowing out and sits at Last priority — is a real thing worth having a name ready for. |
+| 6 | **Does Materials want subdividing later?** Of the 50 commodities already named in `icon-keys.csv`, about **27 land in Materials** — girders, wire, circuitry, fuel, coolant, fabric, wood, stone, coal. Food takes about twelve, Medicine six, Weapons ten, and Books one. | Ship the six flat now. When Materials is the row nobody can use, it gets **one level of children** (Salvage / Structural / Components / Textiles / Fuel) rather than a seventh top-level category — which is exactly what the tri-state tree in decision 5 was for, and the reason to keep the tree's design even while deferring its build. |
+| 7 | **Decision 21 still stands open**: does the tri-state category tree ship in S1, or does S1 ship presets + priority + seven per-item rows? | **Defer it.** Four of six categories are empty on day one, and a roll-up over branches of nought compresses nothing. `ItemDef.category` and the six registry rows still land in S1, so nothing is re-touched when the tree arrives. |
+| 8 | **When does spoilage get taken, and is it storage's or its own?** It needs a per-stack clock, a merge rule, an alert (the name is already reserved), and it re-opens the starting kit's ten-day pantry. | **Its own unit, its own interview, after S2** — and not inside the storage line. The three things it will have to settle are recorded under decision 24 so that interview starts with evidence rather than from nothing. |
