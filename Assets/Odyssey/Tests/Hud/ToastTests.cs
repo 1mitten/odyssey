@@ -245,6 +245,14 @@ namespace Odyssey.Tests.Hud
 
             // The words come from the registry with the three varying things filled in, so the
             // wiki and the screen cannot disagree. Nothing is left unsubstituted.
+            //
+            // All three are named individually rather than relying on the "{" sweep alone,
+            // because that sweep passes on a registry line somebody has trimmed: drop {level}
+            // from icon-keys.csv and the toast silently stops saying which level was reached,
+            // with no placeholder left to catch. The name is the one this comment used to claim
+            // and not check.
+            Assert.That(row.Lead, Does.Contain(ColonistNames.Of(snapshot: after, id: pawn)),
+                "the colonist's own name, from the one place names are decided");
             Assert.That(row.Lead, Does.Contain("Mining"), "the skill's own registry word");
             Assert.That(row.Lead, Does.Contain("5"), "the level reached");
             Assert.That(row.Lead, Does.Not.Contain("{"), "a placeholder reached the screen");
