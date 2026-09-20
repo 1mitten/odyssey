@@ -1071,7 +1071,11 @@
    x0.35/x1.0/x1.5 learning rate was visible while it was happening. That argument was wrong about
    which question the bar answers: a player reading this row wants "how far along is she", which is
    the same question a food bar answers and deserves the same colour. The passion is still on the
-   row, in the pips, which is where it was always legible. */
+   row, in the pips, which is where it was always legible.
+
+   The colour declared below is never seen. Every .skill__fill is built in one place and given
+   ExperienceInk on the next line, so this is a placeholder rather than the white the bar is drawn
+   in - do not "fix" it to a green literal, which would be a second owner for HudTheme.Good. */
 .skill__fill {
     height: 6px;
     width: 0;
