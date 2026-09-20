@@ -98,7 +98,7 @@ overwritten. Edit the source, then rebuild:
 | `docs/design/icon-keys.csv` | the name, namespace, milestone and description of every named thing |
 | `docs/design/icon-map.csv` | whether the owner's pixel-art sheets can draw it |
 | `docs/design/proper-nouns.csv` | people, places, factions, creatures, the calendar |
-| `docs/design/colonist-names.csv` | the 244 colonist given names, with register and gender |
+| `docs/design/colonist-names.csv` | the 240 colonist given names, with register and gender |
 
 ```
 python3 tools/wiki/build_wiki.py            # rebuild docs/wiki
@@ -160,9 +160,9 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 | **CL** the carried load | **Merged 2026-09-19, PR #129**, played once, three faults fixed (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
-| **EV** events | **Built on `claude/events-system`, 2026-09-20** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
-| **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
-| **FI** falling items | **Done on `claude/falling-items`** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
+| **EV** events | **Merged 2026-09-20 (PR #140)** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
+| **HT** hardening | **Audited 2026-09-19; audit and plan merged as PR #136. Nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
+| **FI** falling items | **Merged 2026-09-20 (PR #138)** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -271,6 +271,20 @@ invisible where the game is played.
   the simulation put something where this is drawn?* If it can, the rule needs a sim-side copy —
   `TerraceFoot`, checked cell-by-cell against `BankLayout` — and the guard goes where the thing is
   placed. `docs/design/22-terrace-steps.md`.
+- **A render that is kept is a render of everything that was true at that instant.** A portrait is
+  taken once per appearance and cached for the session, and the daylight cycle writes the *global*
+  ambient, fog, sky and sun — so until 2026-09-20 a colonist photographed after dusk kept a black
+  card for ever. `PortraitStudio` now owns the whole environment for the synchronous instant of its
+  render and hands it back. Anything else one-shot and cached owes the same. `docs/design/20-avatars.md`
+  §10.7, and **measure the take-over rather than reading it**: three versions of that fix looked
+  right and were not.
+- **A budget applied in arrival order is a budget on identity.** `PawnFigureDirector.MaxFigures`
+  caps live animated colonists and its own comment says the rest are "a long way off"; nothing
+  sorted, so the frozen ones were the highest pawn ids wherever the camera was. It keeps the
+  nearest now, and does nothing at all under the cap. **64 is a hard ceiling**
+  (`PawnFigureDirector.FigureCeiling`, owner 2026-09-20): the setter clamps, `FigureCeilingTests`
+  fails on anything that raises it, and moving it is a frame measurement rather than an edit.
+  §11 of the same document.
 - **Content is written once.** The XML under `Assets/Odyssey/Defs/Core` is the only copy of the pawn
   tuning and the world tables. Callers go through `ContentPack.Pawns()` and `WorldContent.Table`.
 - **Content values are pinned by fingerprints, and they earn their keep.** Editing rock's
@@ -311,11 +325,19 @@ invisible where the game is played.
 - **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **806 Sim + 471 Hud** (2026-09-20, the bed and order-colour branch with events and falling items merged); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
-  branch (`claude/events-system`, after the first-look fixes, the falling-items merge and the extensibility review): EditMode **1,968 total, 1,954 passed, 0 failed**; PlayMode **82 total,
-  77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
-  The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, now
-  at `main`'s tip), was EditMode 1,916 / 1,902 and PlayMode 82 / 77.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
+  `claude/colonist-figures-and-portraits`: EditMode **2,003 total, 1,990 passed, 0 failed**;
+  PlayMode **85 total, 80 passed, 0 failed** (the three new ones are the portrait-lighting and
+  figure-cap guards). The remainder are `[Explicit]` or ignored. The run before it, the same day
+  on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
+- **The runner has no `Assets/Synty`, so its PlayMode count is lower than this machine's and that
+  is correct.** Everything that needs a colonist's art ignores itself there — on 2026-09-20 the
+  same commit was 85/80/0 here and 85/75/0 with ten ignored on the runner. **A test that needs the
+  packs must ask whether the art *resolved*, never whether there is a catalogue**: the catalogue is
+  committed and its prefab references point into the gitignored folder, so it loads perfectly with
+  every reference null on exactly the machine that can draw nobody. `PortraitStudio.Available` and
+  `PawnFigureDirector.Enabled` are the two right questions; a `moduleCatalogue == null` check is
+  the wrong one and has now turned the runner red twice.
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
@@ -449,7 +471,11 @@ The two that come up daily:
 - **dotnet SDK 8.0.425** is installed on the Windows machine at `%USERPROFILE%/.dotnet` and powers `scripts/test-fast.sh`. A remote container without Unity can still run every Sim test through it, given an SDK.
 - **Python 3.13.15** is installed on the Windows machine as of 2026-09-16 (`%LOCALAPPDATA%\Programs\Python\Python313`, ahead of `WindowsApps` in PATH, with a `python3.exe` copy beside `python.exe` because CPython ships none). The wiki, icon and mockup tooling therefore runs on **both** machines now. `PYTHONUTF8=1` is set for the user and is required: without it Windows Python reads the docs as cp1252 and `build_wiki.py --check` calls every file stale. See `docs/lessons.md`.
 - **Blender (optional):** only for gaps no Synty asset fills (a stair or ladder variant at the cell size, UV or atlas fixes, rig or animation retargeting). Synty first. Blender-made pieces go under `Assets/Art/Custom/` and are committed; they must match the Synty style and snap to the cell grid.
-- **Unity MCP:** IvanMurzak/Unity-MCP, installed per `docs/setup/local-dev.md`. Once connected, Claude Code can open scenes, run EditMode/PlayMode tests, read the console and execute editor C#. Prefer `scripts/unity.sh` for anything that must also work in CI.
+- **Unity MCP:** the project's committed `.mcp.json` registers a hosted **AI Game Developer**
+  relay (the IvanMurzak/Unity-MCP lineage, `ai-game.dev`) at project scope; the in-manifest
+  plugin route in `docs/setup/local-dev.md` §5 is **not** wired up. Once connected, Claude Code
+  can open scenes, run EditMode/PlayMode tests, read the console and execute editor C#. Prefer
+  `scripts/unity.sh` for anything that must also work in CI.
 
 ## Conventions for code (apply from Phase 4 / M0 onwards)
 
