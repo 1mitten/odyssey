@@ -339,11 +339,18 @@ invisible where the game is played.
 - **Fast tier** (`scripts/test-fast.sh`, ~35 s, no Unity): **826 Sim + 523 Hud** (2026-09-20, the reviewed Work tab branch merged with main); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
-  `claude/colonist-figures-and-portraits`: EditMode **2,003 total, 1,990 passed, 0 failed**;
-  PlayMode **85 total, 80 passed, 0 failed** (the three new ones are the portrait-lighting and
-  figure-cap guards). The remainder are `[Explicit]` or ignored. The run before it, the same day
-  on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the
+  reviewed Work tab branch merged with main (doors included): EditMode **2,104 total, 2,091 passed,
+  0 failed**; PlayMode **85 total, 80 passed, 0 failed**. The remainder are `[Explicit]` or ignored.
+  The run before it, the same day on `claude/colonist-figures-and-portraits`, was EditMode
+  2,003 / 1,990 and PlayMode 85 / 80.
+- **Do not run the PlayMode tier while another Unity batch run is going.** It carries the timing
+  tests, and `HudStressTests` failed at 3.770 ms against a 1.167 ms budget beside two other
+  `unity.sh` runs and passed at 0.603 ms alone, on the same commit. **The baseline the test logs is
+  the tell** — it moved 2.5× between the two and a real regression would have left it alone. Check
+  `Get-CimInstance Win32_Process -Filter "Name='Unity.exe'"` first, and wait for
+  `TestResults/PlayMode.xml` to be *newer* than the run you started rather than merely to exist:
+  the previous run's file sits there until the new one finishes. `docs/lessons.md`.
 - **The runner has no `Assets/Synty`, so its PlayMode count is lower than this machine's and that
   is correct.** Everything that needs a colonist's art ignores itself there — on 2026-09-20 the
   same commit was 85/80/0 here and 85/75/0 with ten ignored on the runner. **A test that needs the
