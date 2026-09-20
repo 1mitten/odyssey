@@ -82,11 +82,22 @@
     interesting moment. It scans behind construction and ahead of cutting - a site is work
     already begun, and a zone's daylight window is the one clock in the colony that will not
     wait, where a tree keeps until Thursday.
+
+    And the skill finally buys speed at the hoe (owner, 2026-09-19: "make sure the speed of the
+    sowing and harvesting is determined by the relevant skill"). The seam is this def and nothing
+    else - WorkRatePerMille has carried the curve for every work type since WS2, and growing was
+    the one def without a rateSkill. Cutting's own numbers, read as a judgement: a novice runs
+    at six tenths of the tuned speed and each level buys a tenth more, so the tuned speed sits
+    around level four where the starting rolls put a colonist who has hoed a season. The skill
+    curve itself (17-rates-and-stats 3a) belongs to the skills work when it lands.
   -->
   <WorkTypeDef>
     <defName>Work_Growing</defName>
     <label>growing</label>
     <order>1</order>
+    <rateSkill>4</rateSkill>
+    <workRateBasePerMille>600</workRateBasePerMille>
+    <workRateSlopePerLevel>100</workRateSlopePerLevel>
   </WorkTypeDef>
 
 </Defs>

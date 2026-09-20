@@ -242,6 +242,89 @@ namespace Odyssey.Tests.Sim
                 "the harvest pile was never carried to a stockpile");
         }
 
+        [Test]
+        public void ASeasonedGrowerHoesFasterThanANovice()
+        {
+            // The seam is the def and nothing else (owner, 2026-09-19: "make sure the speed of
+            // the sowing and harvesting is determined by the relevant skill - another agent is
+            // addressing skills"): WorkRatePerMille has carried the curve since WS2, and both
+            // growing drivers already pay at it, so the def's rateSkill is the whole change.
+            // Cutting's numbers were read as the judgement: a novice at six tenths, a level a
+            // tenth, the tuned speed at level four.
+            ColonyWorld colony = Field(colonists: 2);
+            var work = colony.Pawns.Content.WorkTypes[WorkTypeIndex.Growing];
+            Assert.That(work.rateSkill, Is.EqualTo(SkillIndex.Growing),
+                "growing must read the growing skill or the curve prices the wrong craft");
+
+            var novice = colony.Pawns.Pawns.All[0];
+            var seasoned = colony.Pawns.Pawns.All[1];
+            int level = 8, xp = 0;
+            int[] ladder = colony.Pawns.Content.Skills[SkillIndex.Growing].experienceToAdvance;
+            for (int i = 0; i < level && i < ladder.Length; i++) xp += ladder[i];
+            novice.Skills[SkillIndex.Growing] = 0;
+            seasoned.Skills[SkillIndex.Growing] = xp;
+
+            Assert.That(novice.SkillLevel(SkillIndex.Growing), Is.EqualTo(0));
+            Assert.That(seasoned.SkillLevel(SkillIndex.Growing), Is.EqualTo(level));
+            Assert.That(seasoned.WorkRatePerMille(WorkTypeIndex.Growing),
+                Is.GreaterThan(novice.WorkRatePerMille(WorkTypeIndex.Growing)),
+                "eight seasons at the hoe bought nothing");
+            Assert.That(novice.WorkRatePerMille(WorkTypeIndex.Growing),
+                Is.EqualTo(work.WorkRatePerMille(0)),
+                "the composed rate is the def's own curve - condition aside, and there is none here");
+        }
+
+        [Test]
+        public void AThingOnTilledSoilIsClearedBeforeANearerPile()
+        {
+            // The sowing scan will not touch a cell that still carries a thing, so a pile on
+            // tilled soil is the field's blocker and the haul prefers it over any nearer
+            // ordinary pile (owner, 2026-09-19: "all items should be removed by colonists
+            // first from the dirt before sowing to an appropriate place").
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            CellRef plot = colony.Start;
+            Sow(colony, plot);
+
+            // A second zone tile, chosen free: the scenario's meal store fills the cells
+            // right beside the start, and the thing this test piles onto the dirt has to be
+            // the only thing there.
+            CellRef beside = default; bool found = false;
+            foreach (var step in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                var cand = new CellRef(plot.X + step.Item1, plot.Z + step.Item2, plot.Y);
+                if (colony.Pawns.Items.ItemAt(Size.Index(cand)) != null) continue;
+                if (zones.Designate(cand, PlantHandle.Carrot) != IntentRejection.None) continue;
+                beside = cand; found = true; break;
+            }
+            Assume.That(found, Is.True, "no free, zone-able cell beside the start");
+
+            // The blocked tile already sown, so the colony has no growing work at all and the
+            // haul is the first job anyone takes. Salvage stands on the zoned tile; wood is
+            // nearer the colonist but on open grass.
+            zones.Sow(Size.Index(beside));
+            colony.Pawns.Items.Spawn(ItemIndex.Salvage, Size.Index(beside), 1);
+
+            // The wood goes on open grass beside the plot, at whatever free cell is nearest -
+            // the scenario's own meal store stands right where a fixed offset would land.
+            int nearCell = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, Size.Index(plot), ItemIndex.Wood, 5, maxRadius: 2);
+            Assume.That(nearCell, Is.GreaterThanOrEqualTo(0), "nowhere near the plot for the wood");
+            CellRef nearPile = Size.FromIndex(nearCell);
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, nearCell, 5);
+
+            bool salvageWent = false, woodWent = false;
+            for (int tick = 0; tick < 12_000 && !salvageWent && !woodWent; tick++)
+            {
+                colony.World.Tick();
+                salvageWent = colony.Pawns.Items.ItemAt(Size.Index(beside)) == null;
+                woodWent = colony.Pawns.Items.ItemAt(Size.Index(nearPile)) == null;
+            }
+
+            Assert.That(salvageWent, Is.True, "the thing on the tilled soil was never cleared");
+            Assert.That(woodWent, Is.False,
+                "the nearer ordinary pile went first: the field is still waiting on its blocker");
+        }
         static int CarrotsOnTheGround(ColonyWorld colony)
         {
             int total = 0;
