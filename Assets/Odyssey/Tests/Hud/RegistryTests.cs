@@ -56,6 +56,42 @@ namespace Odyssey.Tests.Hud
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
         }
 
+        /// <summary>
+        /// The Work tab's three key sets, and <b>the third time a catalogue has arrived carrying an
+        /// <c>IconKeys</c> array for a registry test that nobody wrote</b>.
+        ///
+        /// <para><c>AlertModel</c> did it and went two milestones unchecked; <c>DebugDirector</c>
+        /// did it and was caught by the events work; <c>WorkCatalogue</c>, <c>ScheduleCatalogue</c>
+        /// and <c>WorkDirector</c> all did it on 2026-09-20 and were caught by this review. The
+        /// array is not the guard — <b>the loop over it is</b>, and an array that no loop reads is
+        /// a comment claiming a test exists.</para>
+        ///
+        /// <para>What it buys: the grid's twenty-two column headers, the legend's six block names
+        /// and the panel's own title all come out of <c>Registry.Label</c>, and a key the CSV does
+        /// not know draws as a raw key on the screen. Twenty-nine names, checked in the fast tier,
+        /// before the panel is ever opened.</para>
+        /// </summary>
+        [Test]
+        public void EveryWorkTabKeyIsARegisteredName()
+        {
+            foreach (string key in WorkCatalogue.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in ScheduleCatalogue.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in WorkDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // And the two lists are the ones the panel actually draws from, not copies of them:
+            // an entry added to a catalogue and forgotten in its IconKeys would pass the loops
+            // above by saying nothing, which is the failure mode this pairing closes.
+            Assert.That(WorkCatalogue.IconKeys.Length, Is.EqualTo(WorkCatalogue.All.Count));
+            Assert.That(ScheduleCatalogue.IconKeys.Length, Is.EqualTo(ScheduleCatalogue.All.Count));
+            for (int i = 0; i < WorkCatalogue.All.Count; i++)
+                Assert.That(WorkCatalogue.IconKeys[i], Is.EqualTo(WorkCatalogue.All[i].Key));
+            for (int i = 0; i < ScheduleCatalogue.All.Count; i++)
+                Assert.That(ScheduleCatalogue.IconKeys[i], Is.EqualTo(ScheduleCatalogue.All[i].Key));
+        }
+
         [Test]
         public void EveryIncidentKeyIsARegisteredNameAndTheTableIsTheHandleTable()
         {

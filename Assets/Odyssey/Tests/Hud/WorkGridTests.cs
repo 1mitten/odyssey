@@ -284,7 +284,7 @@ namespace Odyssey.Tests.Hud
         {
             var model = Model(Frame(miningPriority: 3));
 
-            Assert.That(model.TryClick(0, Mining, out Intent intent), Is.True);
+            Assert.That(model.TryClick(0, Mining, back: false, out Intent intent), Is.True);
             Assert.That(intent.Kind, Is.EqualTo(IntentKind.SetWorkPriority));
             Assert.That(intent.A, Is.EqualTo(Ada.Value));
             Assert.That(intent.B, Is.EqualTo(WorkHandle.Mining));
@@ -298,8 +298,11 @@ namespace Odyssey.Tests.Hud
         {
             var model = Model(Frame(capable: false));
 
-            Assert.That(model.TryClick(0, Mining, out _), Is.False);
-            Assert.That(model.TryClick(0, Research, out _), Is.False);
+            Assert.That(model.TryClick(0, Mining, back: false, out _), Is.False);
+            Assert.That(model.TryClick(0, Research, back: false, out _), Is.False);
+            Assert.That(model.CellIsInteractive(0, Research), Is.False);
+            Assert.That(model.CellIsInteractive(0, -1), Is.False, "and it bounds-checks");
+            Assert.That(model.CellIsInteractive(99, Mining), Is.False);
         }
 
         [Test]

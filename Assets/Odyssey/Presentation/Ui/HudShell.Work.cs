@@ -687,24 +687,25 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnWorkCellPressed(PointerDownEvent evt, int row, int column)
         {
-            if (_directors == null || row >= _work.Rows.Count) return;
-            WorkCell cell = _work.Rows[row].Cells[column];
-            if (!cell.Interactive) return;
+            if (_directors == null) return;
+
+            // The model decides whether this cell answers a click and what the click makes it.
+            // This method used to decide both for itself, which meant the rule the fast tier held
+            // and the rule the panel ran were two rules that happened to agree.
+            if (!_work.TryClick(row, column, back: evt.button == 1, out Intent intent)) return;
 
             evt.StopPropagation();
-
-            int next = evt.button == 1 ? _work.CycleBack(cell.Priority) : _work.Cycle(cell.Priority);
             int handle = WorkGridModel.Columns[column].Handle;
 
             if (evt.shiftKey)
             {
                 for (int r = 0; r < _work.Rows.Count; r++)
-                    if (_work.Rows[r].Cells[column].Interactive)
-                        Submit(WorkGridModel.SetPriority(_work.Rows[r].Id, handle, next));
+                    if (_work.CellIsInteractive(r, column))
+                        Submit(WorkGridModel.SetPriority(_work.Rows[r].Id, handle, intent.C));
             }
             else
             {
-                Submit(WorkGridModel.SetPriority(_work.Rows[row].Id, handle, next));
+                Submit(intent);
             }
 
             // Repaint now rather than waiting out the refresh bucket: a grid that answers a click

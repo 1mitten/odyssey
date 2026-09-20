@@ -296,8 +296,15 @@ namespace Odyssey.Hud
         /// <summary>
         /// The intent one click emits, or none when the cell is inert. <c>A</c> is the pawn,
         /// <c>B</c> the work type's simulation index and <c>C</c> the new priority.
+        ///
+        /// <para><b>The shell calls this rather than repeating it</b>, which it did until the
+        /// review: it had its own bounds check, its own inertness check and its own choice of
+        /// <see cref="Cycle"/> or <see cref="CycleBack"/>, so the rule the tests hold was not the
+        /// rule the panel ran. <see cref="TryClickHour"/> had taken <c>back</c> from the start and
+        /// the schedule half went through it; this is the work half made to match, which is also
+        /// what design 27 §12g claims about the two halves sharing one vocabulary.</para>
         /// </summary>
-        public bool TryClick(int row, int column, out Intent intent)
+        public bool TryClick(int row, int column, bool back, out Intent intent)
         {
             intent = default;
             if (row < 0 || row >= Rows.Count) return false;
@@ -306,9 +313,16 @@ namespace Odyssey.Hud
             WorkCell cell = Rows[row].Cells[column];
             if (!cell.Interactive) return false;
 
-            intent = SetPriority(Rows[row].Id, Columns[column].Handle, Cycle(cell.Priority));
+            int next = back ? CycleBack(cell.Priority) : Cycle(cell.Priority);
+            intent = SetPriority(Rows[row].Id, Columns[column].Handle, next);
             return true;
         }
+
+        /// <summary>Whether the cell at this position can be clicked at all — the question the
+        /// shell has to ask before it swallows a press.</summary>
+        public bool CellIsInteractive(int row, int column) =>
+            row >= 0 && row < Rows.Count && column >= 0 && column < Columns.Count &&
+            Rows[row].Cells[column].Interactive;
 
         /// <summary>
         /// The intent for one deliberate value, which is what a drag and a shift-click paint with.
