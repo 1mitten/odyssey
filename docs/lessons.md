@@ -603,6 +603,42 @@ load. Two things that *were* wrong and are fixed on the same day, and would have
 test if left: one of the three clumps was a flat olive-brown patch, and the sky's underside was a
 dark grey that showed as a band between the board's rim and the horizon.
 
+**A probe that disables the thing you are pricing will lie to you.** `TerrainSkirt` has a
+`SubmitToGpu` flag; switching it off left the whole submit loop running — the batch walk, the
+`RenderParams` construction — and made the surround look nearly free, which reads as "the CPU
+side is fine, it must be the GPU". It is not: the flag skips the `Graphics.RenderMeshInstanced`
+calls, and those calls *are* the cost. An hour went the wrong way on that. A control must remove
+the **suspect** and keep everything else, not remove the measurement.
+
+**A frame number is only comparable with one measured in the same session.** Reviewing on a
+freshly imported `Library`, PlayMode reported the meadow at 4.94 ms against the ~0.99 ms then on
+record — which reads as a five-fold regression from the branch under review. The control settled
+it in one run: `origin/main` alone, same worktree, same warm Library, measured the *same* meadow
+at 5.90 ms. The whole machine was running about five times slow. Never compare a `FrameTimeTests`
+number with a recorded one across sessions; check out the base branch in the same worktree and
+re-run. **Use the city case as the canary** — it shares no content with the meadow or the field,
+so when it drifts from ~2.0 ms the session is noisy and nothing measured in it is worth quoting.
+Within one session, the *difference* between two cases cancels the noise; the absolutes do not.
+
+**Count the pass, or the budget cannot see it.** `DrawZoneCover` submitted once per zoned cell
+per frame and incremented no counter, so `FrameTimeTests` printed a field's draw calls with the
+entire pass missing — 1,782 reported where 3,847 were issued. It was 3.67 ms of a 5 ms budget and
+nothing in the instrument could have pointed at it. Any new draw path increments `DrawCalls` and
+`InstancesDrawn` in the same commit that adds it.
+
+**The useful constant for this renderer: a submission costs about 4.6 us whatever is in it.**
+Measured three ways round on the surround (760 batches 3.5 ms, 438 batches 2.1 ms, 272 batches
+after the fix) and it explains every rendering cost found so far. At 640 x 480 there are not
+enough pixels for fill to explain anything, so when a pass is slow, count its submissions first.
+
+**And the tick wants its own instrument.** `TickBenchmarkTests` uses a structured world with no
+zone in it, so growing's additions to the tick went unpriced until `FieldTickBenchmarkTests` was
+written for it. A benchmark measures the world it builds; a feature that does not appear in that
+world is not covered however green the suite looks. The finding it produced is worth carrying:
+with **no colonists alive at all**, a 2,015-cell field still cost 0.035 ms a tick, because the
+snapshot republished every zoned cell every tick. Measure with the actors removed — what is left
+is what the data structure costs by existing.
+
 ## Compiling the game code while the editor holds the project
 
 `scripts/unity.sh` refuses to run while the editor is open, and the editor is often open because the

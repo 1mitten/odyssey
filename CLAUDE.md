@@ -195,6 +195,7 @@ this file.
 | Avatars and portraits | `docs/design/20-avatars.md` |
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
+| **Frame cost, draw batching, the surround's price** | `docs/design/06-rendering-and-camera.md` §6c |
 | The sub-tile sidestep, crowd and tree avoidance | `docs/design/25-pawn-steering.md` |
 | Where a colonist looks, the head turn | `docs/design/23-head-turning-and-gaze.md` |
 | Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
@@ -422,10 +423,11 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 
 **`docs/bug-patterns.md` is the companion for the bugs themselves** — the symptom, the real cause, the
 measurement that found it, and the check that catches the next one of its kind. **Read its patterns
-before debugging a report**, because this project keeps meeting the same four faults in different
+before debugging a report**, because this project keeps meeting the same five faults in different
 clothes: one rule with two owners; a rule that asks the built world and misses the order; a
-compatibility clause keeping the bug alive; and a conditional rule applied per cell across a drag.
-**Add a row whenever a bug is fixed.**
+compatibility clause keeping the bug alive; a conditional rule applied per cell across a drag;
+and **a pass that draws once per cell** (`P10`), which is a performance fault that reviews cannot
+see and the frame budget could not either. **Add a row whenever a bug is fixed.**
 
 **For a report about how something *looks*, start at that file's runbook, "a tile that looks wrong".**
 One grey tile cost four rounds, three of which produced confident wrong answers reasoned from
