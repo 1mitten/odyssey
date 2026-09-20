@@ -48,9 +48,11 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
      periods want to scale.
 
   **Not a playtest item, and please do not treat it as one:** whether the frame holds. That is
-  `FrameTimeTests.TheBoardSizeAgainstTheFrame`, which is written and **unrun** because an editor was
-  open — a frame number taken beside a sibling Unity is worthless. It is owed as a measurement, not
-  as an opinion.
+  measured — Huge is **7.82 ms against a 5 ms budget** at 640 x 480 on a 5070 Ti, against Standard's
+  3.18 and Large's 6.09, and all of the difference is `FrameSection.World`. **Frustum culling in
+  `ChunkRenderer.Render` is the named fix and it is HT8's last open decision.** So if Huge feels
+  heavy, that is expected and already has a work item; what is wanted from the keyboard is whether
+  the board is worth crossing, not whether it is fast.
 
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build

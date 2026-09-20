@@ -82,19 +82,45 @@ arrays are 15 bytes wide.
 
 ### Frame
 
-**Owed.** `FrameTimeTests.TheBoardSizeAgainstTheFrame` exists and times all three boards inside one
-run, but a Unity editor was open on this machine throughout, and `CLAUDE.md` is explicit that a
-frame number taken beside a sibling Unity is worthless — the city canary drifted 2.01 → 4.01 ms on
-nothing but that. The arm is written so its answer is a *ratio* taken seconds apart, which survives
-a noisy machine; the absolutes will not.
+`FrameTimeTests.TheBoardSizeAgainstTheFrame`, 2026-09-20 23:46Z, 180 timed frames a board after
+120 of warm-up, wooded map, ~900 standing orders on each, **640 × 480 on an RTX 5070 Ti**. One
+Unity was live on another project throughout, so **read the ratios**; the timing tests in the same
+run all passed, which is the tell that contention was not gross.
 
-The two terms to read when it runs are `FrameSection.World` (chunk buckets and the surround — the
-term that scales with the board) and `FrameSection.Doors` (`DoorDirector`, §3.2). Everything else
-should be flat across all three boards.
+| Board | Frame | `World` | `Doors` | Draw calls | Instances | Chunks drawn | Surround batches |
+|---|---|---|---|---|---|---|---|
+| Standard | 3.18 ms | 2.146 ms | 0.000 | 1,475 | 42,821 | 104 | 266 |
+| Large | 6.09 ms | 4.513 ms | 0.000 | 3,205 | 78,319 | 250 | 430 |
+| **Huge** | **7.82 ms** | **5.950 ms** | 0.000 | **5,392** | **125,380** | **443** | 464 |
 
-**The prior, stated before the measurement so the result reads as confirmation or surprise rather
-than as whatever it happens to be:** `World` is flat at 1.9–2.5 ms across a 48-fold colony at
-Standard (`06-rendering-and-camera.md` §6c.2). Huge is 4× a ~2 ms term, not 4× a 5 ms frame.
+**Huge is 2.46× Standard's frame and 2.77× its `World` term, and it is over the 5 ms budget.**
+Everything outside `World` is flat, as expected: `Figures` 0.062–0.068 ms, `Overlays` 0.234–0.251,
+`Mirror`, `Sight`, `Audio` and `Actors` at or under 0.02. **The board shows up in exactly one term**,
+and that term is draw submission — 5,392 calls at roughly 1.1 us each.
+
+**A prior stated before this measurement was wrong and is worth keeping as the correction.** The
+mark-pass work found `World` flat at 1.9–2.5 ms across a 48-fold *colony*, and this document
+originally reasoned from that to "Huge is 4× a ~2 ms term, not 4× a 5 ms frame". `World` is flat in
+the colony and **not** flat in the board — which is the whole point of §3.2 and should have been the
+expectation. A term that does not move with what is happening on the board is exactly the term that
+moves with the board.
+
+**`Doors` reads 0.000 on every board, and that is a gap rather than a result.** `EnsureDoorList`
+rescans only when `WorldRenderModel.Version` moves, and this arm designates and then lets the world
+settle, so the 922k-cell scan is never exercised. The hazard in §3.2 is unmeasured, not absent.
+**Measuring it needs an arm that keeps editing while it times**, which is the same shape as
+`MineOneCell` and is the obvious next thing.
+
+**Chunks drawn rise 4.26× where the frame rises 2.46×**, so the cost is sublinear in chunks and the
+slice band is already doing real work — 443 of Huge's 1,600 chunks are drawn at all. But there is
+**no frustum or distance test**, so all 443 are walked and submitted wherever the camera points; on
+a 600 m board seen through a 160 m camera (§5) most of them are off-screen. **That makes frustum
+culling in `ChunkRenderer.Render` the clear first fix, and it is now evidence rather than a
+suspicion** — it is also the only behaviour change HT8 still had to decide.
+
+The surround grows with the perimeter as expected: 266 → 464 batches, 1,330 → 2,095 near trees.
+`TerrainSkirt.TreeSectorMetres = 400f` was tuned on a 300 m board and is the second lever if the
+first is not enough (`06-rendering-and-camera.md` §6c).
 
 ## 3. What scales with the board, and what does not
 
@@ -196,10 +222,21 @@ The ceiling is set by three things, in this order, and **only the first is about
 3. **The colony, not the board.** Pawns, items, standing orders, designated cells — §3.3 is already
    the binding term at Standard and it does not care how big the map is.
 
-**With HT1 and view-scaled rendering, the design target of 250 × 250 × 40 is reachable and the board
-stops being the limiting number.** Memory puts a hard stop somewhere near 400 × 400 × 40 (6.4M
-cells, ~430 MiB simulation plus ~115 MiB mirror) on an 8 GB laptop. **Without either,
-240 × 240 × 16 is comfortable**, which is what the measurements above say.
+**Measured, the answer splits.** In the tick, Huge is comfortable: 0.883 ms an edited cell and
+nothing at rest. In the frame it is **not** — 7.82 ms against a 5 ms budget, at 640 × 480 on a
+development GPU, before the target laptop is considered at all. **So today, Standard is the board
+this renderer is sized for, Large (6.09 ms) is already over, and Huge ships as a choice a player
+makes with that cost.**
+
+**One fix is expected to change that, and it is named.** All 443 of Huge's drawn chunks are
+submitted wherever the camera points, because `ChunkRenderer.Render` has no frustum or distance
+test; on a 600 m board seen through a 160 m camera most of them are off-screen. Frustum culling is
+HT8's remaining decision and is now backed by a number rather than by a suspicion. **Until it is
+done, treat 7.82 ms as what Huge costs.**
+
+**With HT1 and view-scaled rendering, the design target of 250 × 250 × 40 is reachable and the
+board stops being the limiting number.** Memory puts a hard stop somewhere near 400 × 400 × 40
+(6.4M cells, ~430 MiB simulation plus ~115 MiB mirror) on an 8 GB laptop.
 
 The next step up in *depth* is the one to be careful of, because our region graph allocates a region
 for solid rock too (`RegionKind.Impassable`, kept so rooms and atmosphere have a substrate). Only

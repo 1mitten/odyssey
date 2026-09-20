@@ -9340,3 +9340,44 @@ Dwarf Fortress tells you to *seal* cavern levels rather than delete them; HPA\* 
 cluster; voxel storage pays off because most of the world is uniform and can be skipped. We already
 have the hard half of the first — `NavGraph.BlockSize = 10` is exactly that bound. What we lack is
 the incremental relink, which is HT1, which is already written down and waiting.
+
+### The frame half, run after all — and a prior of mine that was wrong
+
+The editor that made the frame measurement untrustworthy turned out to be on another project, and
+the run went ahead once EditMode was clear. The arm is built to survive a noisy machine anyway —
+three boards timed seconds apart inside one run — and every timing test in the same PlayMode run
+passed, which is the tell that contention was not gross.
+
+| Board | Frame | `World` | Draw calls | Chunks drawn | Surround batches |
+|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 3.18 ms | 2.146 | 1,475 | 104 | 266 |
+| Large 180 × 180 × 24 | 6.09 ms | 4.513 | 3,205 | 250 | 430 |
+| Huge 240 × 240 × 16 | **7.82 ms** | 5.950 | 5,392 | 443 | 464 |
+
+**Huge is over the 5 ms budget**, at 640 × 480 on a 5070 Ti, before the target laptop is considered
+at all. So the answer splits: comfortable in the tick, over budget in the frame. Large is over too,
+at 6.09 — and Large has shipped for days.
+
+**And the cost is one term.** `FrameSection.World` goes 2.146 → 5.950 while `Figures`, `Overlays`,
+`Mirror`, `Sight`, `Audio` and `Actors` are flat to two decimal places across all three boards. That
+is the cleanest signal this renderer has produced: the board shows up in draw submission and
+nowhere else.
+
+**I had stated the opposite prior, in writing, before measuring — and keeping the correction is the
+point of having stated it.** The mark-pass work found `World` flat at 1.9–2.5 ms across a *48-fold
+colony*, and I reasoned from that to "Huge is 4× a ~2 ms term, not 4× a 5 ms frame". `World` is flat
+in the colony and is not flat in the board. It should have been obvious: a term that does not move
+with what is *happening* is exactly the term that moves with *how much there is*. Writing the
+prediction down first is what turned that into a correction instead of a silently revised memory.
+
+**The decision HT8 existed to make is now made.** `ChunkRenderer.Render` has no frustum or distance
+test, so all 443 of Huge's drawn chunks are submitted wherever the camera points — and on a 600 m
+board seen through a 160 m camera most of them are off-screen. Culling goes ahead, with a number
+behind it rather than a suspicion.
+
+**One thing the arm did not measure, and says so.** `FrameSection.Doors` read 0.000 on every board.
+`DoorDirector.EnsureDoorList` only rescans when `WorldRenderModel.Version` moves, and this arm
+designates and then lets the world settle, so the 922k-cell scan never fired. The hazard is
+unmeasured, not absent, and measuring it wants an arm that keeps editing while it times — the same
+shape as `MineOneCell`. Recorded rather than quietly left as a zero, because a zero in a table is
+indistinguishable from a cost that is genuinely nil.
