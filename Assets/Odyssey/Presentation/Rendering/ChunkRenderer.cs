@@ -90,6 +90,9 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
 
+        /// <summary>Tracks loose items falling between layers and provides their drop offset.</summary>
+        public ItemFallingTracker FallingItems { get; } = new ItemFallingTracker();
+
         /// <summary>
         /// Metres beyond which chunks draw no grass. Infinite by default: grass is drawn to the
         /// rim of the board.
@@ -868,9 +871,15 @@ namespace Odyssey.Presentation.Rendering
                 Vector3 falling = Vector3.zero;
                 if (carried != null
                     && carried.TryGetSettling(things[i].Id.Value, out Vector3 leftHands, out float since))
+                {
                     falling = Vector3.Lerp(
                         leftHands - GroundRelief.Lift(floor), Vector3.zero,
                         CarryHandover.Fallen(since));
+                }
+                else if (FallingItems.TryGetFallingOffset(things[i].Id.Value, out Vector3 worldFallOffset))
+                {
+                    falling = worldFallOffset;
+                }
 
                 // Rubble is several rocks, and how many says how much. See ItemHeap: everything
                 // else on the floor is one prop, and stone drawn that way was a cairn standing in

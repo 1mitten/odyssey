@@ -43,6 +43,14 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   colonist and she should stand, walk and lie down in the new one. Measured and tested; what no
   test can say is whether it reads as *obeying* or as *startling* — a colonist snapping upright
   mid-night may want a beat before she moves.
+- **Nobody has seen falling items drop and land** (`claude/falling-items`, `docs/design/26-falling-items.md`).
+  When ground or a floor slab beneath resting items is destroyed or deconstructed, items drop down onto
+  the nearest solid floor below (or despawn if over the void). Presentation accelerates airborne items
+  downward quadratically ($t \propto \sqrt{h}$) and triggers `SoundIds.CarryDrop` on touchdown.
+  Pawns on deconstructed floors drop without distress (`NoThought`), matching digging beneath oneself.
+  Open questions a test cannot answer: whether the landing audio volume and timing feels tactile,
+  and whether 0.4s to 0.85s fall duration feels visually satisfying across multiple storeys.
+  Unity EditMode **1,916 total, 1,902 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**.
 
 - **Nobody has given a verdict on the growing zone** (`claude/growing-zones`, **PR #119, still
   open**, `docs/design/22-growing.md`). `U46`–`U50`: the carrot crop, the paint-a-zone tool in the

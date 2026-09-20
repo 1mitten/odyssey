@@ -161,6 +161,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **CL** the carried load | **Merged 2026-09-19, PR #129**, played once, three faults fixed (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`, which arrives with the PR). Growing carries no rate curve yet, so a skill still buys nothing at the hoe. The debug menu gained **Skip one day** and **Ripen crops** so the harvest can be seen without the four-day wait (`docs/design/18-debug-menu.md`). It has had its first play day — nine owner looks, six fixes: the sower kneels rather than chops, the zone is a near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane reads Carrot × 5 — N% grown. |
 | **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
+| **FI** falling items | **Done on `claude/falling-items`** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -174,6 +175,7 @@ this file.
 
 | If you are touching | Read |
 |---|---|
+| Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
 | Walls, sites, materials, the build botch | `docs/design/15-building.md` |
 | Cancel, deconstruct | `docs/design/16-cancel-and-deconstruct.md` |
 | The Build palette's three layouts | `docs/design/17-build-palette-layouts.md` |
@@ -304,13 +306,13 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **769 Sim + 455 Hud** (2026-09-20); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **775 Sim + 455 Hud** (2026-09-20); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the
   bed and order-colour work: EditMode **1,931 total, 1,918 passed, 0 failed**; PlayMode
   **82 total, 77 passed, 0 failed**. The remainder of each are `[Explicit]` or ignored. The
-  1,872/1,858 previously on this line was the pawn-avoidance run.
+  1,916/1,902 previously on this line was the falling-items run.
   **A first run in a fresh worktree is slow and it is the Synty import, not a hang** — the Library
   builds to about 4 GB before a single test runs, which took roughly seven minutes here. Check
   `du -sh Library` before concluding anything is stuck. And **cancelling the wrapper does not
