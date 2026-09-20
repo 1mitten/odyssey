@@ -142,8 +142,42 @@ namespace Odyssey.Presentation.World
             public Transform? RightLowerLeg;
             public Transform? RightFoot;
 
-            /// <summary>This figure's own hip height when it stands, in metres. See BindWorkBones.</summary>
+            /// <summary>
+            /// <b>Not a hip height.</b> <c>hips.position.y - transform.position.y</c>, where the
+            /// Synty humanoid avatar maps <c>HumanBodyBones.Hips</c> to a bone named <c>Root</c>
+            /// sitting at the model origin — so this is nought on every one of the sixty-one
+            /// characters and comes back as the 0.2 m floor <c>BindWorkBones</c> clamps it to.
+            ///
+            /// <para>It is left exactly as it is because the one thing that still reads it, the
+            /// gesture crouch, is tuned against it by photograph: <c>ApplyGesturePose</c> draws
+            /// <c>min(depth, DeepestCrouch) * StandingHipHeight</c> and the owner has signed off
+            /// the stoop and the lift that come out of it. Correcting the measurement without
+            /// retuning those would deepen every crouch six-fold, which is a visual change nobody
+            /// asked for, and retuning them is a contact sheet rather than a test.
+            ///
+            /// <para><b>Do not use it as a length.</b> The sleep pose did, and laid a 2.49 m
+            /// colonist down 0.38 m long (<c>docs/design/20-beds.md</c> §7b). Anything that needs
+            /// a real length takes <see cref="StandingHeight"/>.</para>
+            /// </summary>
             public float StandingHipHeight;
+
+            /// <summary>
+            /// The gradient of the surface this sleeper is lying on, along the way she is lying:
+            /// nought on the level, positive where the foot of the bed is higher than its head.
+            ///
+            /// <para>Everything fixed to the grid is draped, so a bed is sheared along the ground's
+            /// tangent plane while a body laid level across it sinks at one end and floats at the
+            /// other. <c>docs/design/20-beds.md</c> §7b.</para>
+            /// </summary>
+            public float SleepSlope;
+
+            /// <summary>
+            /// This figure's drawn height, sole to crown, in metres — and so the length of body
+            /// there is to lay down when it sleeps. Measured off the posed mesh at bind by
+            /// <c>MeasureBody</c>; see <see cref="FigureBuild"/> for why it is not taken off a
+            /// bone.
+            /// </summary>
+            public float StandingHeight;
 
             /// <summary>Thigh plus shin, in metres, measured off this figure's own rig. See
             /// <see cref="ClimbPose"/>: every foothold is a fraction of it.</summary>

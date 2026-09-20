@@ -184,6 +184,7 @@ namespace Odyssey.Presentation.Bootstrap
         PawnFigureDirector? _figures;
         DesignatePresenter? _designate;
         AudioDirector? _audio;
+        DoorDirector? _doors;
 
         /// <summary>
         /// The title screen's bed. Owned by the root rather than by the session, because it is
@@ -252,6 +253,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// rather than with where the simulation keeps them. See <see cref="PawnFigureDirector.TryGetFeet"/>.
         /// </summary>
         public PawnFigureDirector? Figures => _figures;
+        public DoorDirector? Doors => _doors;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -517,10 +519,25 @@ namespace Odyssey.Presentation.Bootstrap
             GroundRelief.Amplitude = groundRelief;
             GroundRelief.Period = groundReliefPeriod;
 
+            // **The board's size, decided once, before anything is built from it.**
+            //
             // A loaded session takes its shape from the file, not from the inspector. WorldSave
             // refuses a save whose seed or size differs from the world it is opened into, so this
-            // is not a convenience — it is the only way a load can succeed at all.
-            GridSize size = from != null ? from.Size : new GridSize(sizeX, sizeZ, layers);
+            // is not a convenience — it is the only way a load can succeed at all. Otherwise the
+            // setup page's choice when the player made one, and the inspector's when they did not.
+            //
+            // <b>The setup page's choice used to be applied at the request and nowhere else</b>,
+            // three lines further down, while the chunk grid and the render model below were built
+            // from the inspector's numbers. So a new game on any board but the scene's default had
+            // a mirror and a chunk grid of one size over a world of another, and every cell index
+            // near the far edge landed outside them. Nothing had ever written to the chunk grid
+            // during a world build, so it stayed silent until the scenario started raising beds
+            // (2026-09-20) and three PlayMode tests threw `IndexOutOfRangeException` from
+            // `ChunkGrid.MarkDirty` — with the bounds check one frame above it passing, because
+            // it asked the *cell* grid. One rule, two owners, and the usual silence.
+            GridSize size = from != null
+                ? from.Size
+                : sizeOverride ?? new GridSize(sizeX, sizeZ, layers);
             var chunks = new ChunkGrid(size);
 
             // The render model is built before the world, because the mirror the world publishes
@@ -557,10 +574,10 @@ namespace Odyssey.Presentation.Bootstrap
             var generation = Stopwatch.StartNew();
             ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
             {
-                // The setup page's choice when there is one, the inspector's otherwise, and never
-                // on a load: a save is refused outright if the world it opens into is a different
-                // size, so taking the page's here would turn a mismatch into a confusing refusal.
-                Size = from == null && sizeOverride.HasValue ? sizeOverride.Value : size,
+                // The one `size` decided above, which already folds in the setup page's choice,
+                // the file's shape and the inspector's default. It was decided here once and the
+                // chunk grid above was left on the inspector's — see the note up there.
+                Size = size,
                 Seed = sessionSeed,
                 Scenario = scenarioDef,
                 // From the file when loading, for the reason SaveRecipe.Barren sets out: three
@@ -753,6 +770,11 @@ namespace Odyssey.Presentation.Bootstrap
                 size, transform, gameObject.layer, outcome.StartCell.Y);
             AudioSettingsStore.Load().ApplyTo(_audio);
 
+            if (_model != null)
+            {
+                _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+            }
+
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
@@ -767,6 +789,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _figures.BlowLanded += OnBlowLanded;
                 _figures.LoadLifted += OnLoadLifted;
                 _figures.LoadSet += OnLoadSet;
+            }
+            if (_renderer != null)
+            {
+                _renderer.FallingItems.ItemLanded += OnLoadSet;
             }
 
             if (cameraRig != null)
@@ -895,6 +921,50 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The debug menu's day skip: spend this many real ticks right now, in one synchronous
+        /// batch, and let the next frame's normal loop redraw what moved. About a fifth of a
+        /// second for a whole day (the ten-day soak runs in under two), so it lands as one hitch
+        /// rather than a freeze.
+        ///
+        /// <para><b>Why a method on the root and not an intent.</b> Ticking is this class's one
+        /// job and the intent bus is drained <i>inside</i> a tick — a skip sent through it would
+        /// ask the world to re-enter its own tick, and a warp is not state for the simulation to
+        /// author anyway; it is the tester spending the same ticks the clock would have spent.
+        /// Every tick skipped is an ordinary tick: colonists walk, eat, sow and harvest through
+        /// it, the hash is taken at the same boundaries, and it works while paused, because the
+        /// paused branch only refuses the <em>clock</em>, not the world. The crop's four-day
+        /// wait is what this exists to skip (docs/design/22-growing.md §9): a day a press, and
+        /// the stage changes arrive at the same hour of the day each time.</para>
+        /// </summary>
+        public void DebugSkipTicks(int count)
+        {
+            if (_world == null || count <= 0) return;
+            _world.Tick(count);
+            _daylight?.Apply(_world.CurrentTick);
+        }
+
+        /// <summary>
+        /// The other half of the day skip (owner, 2026-09-19): skipping a WHOLE day lands where
+        /// you started, and everything that happened in between - the harvest above all -
+        /// happened inside the warp, unseen, so a field that ripes and ripes-again reads as
+        /// "seeds back down before a harvest I never watched". Skipping to MORNING hands the
+        /// clock back with a whole day ahead of it: the crops finish, the harvesters walk, the
+        /// sowers kneel, all at watchable speed, and the skip-a-day row stays for the long haul.
+        /// Morning is a sixth past midnight, ahead of the growth window's 15,000, so the day is
+        /// seen whole.
+        /// </summary>
+        public void DebugSkipToMorning()
+        {
+            if (_world == null || Colony == null) return;
+            int day = Colony.Pawns.Content.DayTicks;
+            int morning = day / 6;
+            int now = _world.CurrentTick % day;
+            int skip = (morning - now + day) % day;
+            if (skip == 0) skip = day;
+            DebugSkipTicks(skip);
+        }
+
+        /// <summary>
         /// The scene's own key light, when the inspector field is empty.
         ///
         /// <para>Found rather than created, because the scene builder already places a sun and a
@@ -908,6 +978,16 @@ namespace Odyssey.Presentation.Bootstrap
             foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
             {
                 if (light.type != LightType.Directional) continue;
+                // **The scene's own sun, and only that.** A light on a hidden, unsaved object
+                // belongs to something that built a rig of its own — today that is
+                // PortraitStudio's key light, which exists from the moment the setup page
+                // photographs its first candidate, sits at 1.6 and is switched off except for the
+                // instant a portrait is taken. Hand *that* to the daylight cycle and two things go
+                // wrong at once: the world loses its sun, and every portrait is lit by a light the
+                // clock has been recolouring and dimming behind the studio's back. Measured on
+                // 2026-09-20: the portrait's brightness still tracked the time of day after the
+                // studio had been made to own the ambient, and this was why.
+                if (light.gameObject.hideFlags != HideFlags.None) continue;
                 if (best == null || light.intensity > best.intensity) best = light;
             }
             return best;
@@ -976,7 +1056,13 @@ namespace Odyssey.Presentation.Bootstrap
 
             _frameTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
-            if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
+            if (cameraRig != null)
+            {
+                _renderer.ViewerPosition = cameraRig.transform.position;
+                // And the figure director wants it for one decision of its own: which colonists
+                // keep a live figure when there are more of them than the cap allows.
+                if (_figures != null) _figures.ViewerPosition = cameraRig.transform.position;
+            }
 
             // Before anything reads the mirror, because the picker reads it and a waiting order is
             // one of the things a click can land on (WorldRenderModel.SetSites). Until this line
@@ -991,7 +1077,23 @@ namespace Odyssey.Presentation.Bootstrap
             // this is worth: a tree fading a sixtieth of a second late is not observable, and
             // placing the figures first would mean drawing the world after the people in it.
             UpdateSightLines(_world.Views.Current, movePerTick);
-            _renderer.Render(activeLayer, slice);
+
+            // The crop mirror: the meshed world must already know a crop ripened this
+            // tick before the dirty chunk the simulation marked is rebuilt, or the field
+            // would redraw one stage behind what the orders and the figures show.
+            _model.UpdateCrops(_world.Views.Current.Plants);
+
+            // The zone mirror for the same reason: the field's tilled ground must be in
+            // place before the dirty chunk a designation marked is rebuilt, or a painted
+            // field would show its rows one refresh behind its tint.
+            _model.UpdateZones(_world.Views.Current.Zones);
+
+            if (_renderer != null)
+            {
+                _renderer.FallingItems.UpdateSnapshot(_world.Views.Current);
+                _renderer.FallingItems.Advance(Time.deltaTime);
+                _renderer.Render(activeLayer, slice);
+            }
 
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
@@ -1012,7 +1114,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn, _figures);
 
+            _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
+
             DrawStandingOrders(_world.Views.Current);
+            DrawZones(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
             DrawToolPreview();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
@@ -1092,15 +1197,178 @@ namespace Odyssey.Presentation.Bootstrap
                 var kind = (DesignationKind)orders[i].Kind;
                 Color tint = OrderColour(kind);
 
-                // A wall fills its cell, so the floor plate every other order gets would be drawn
-                // inside the very thing it is marking. See ChunkRenderer.DrawCellShade — this is
-                // the fault the owner reported as "deconstruct has no visual marker".
-                if (kind == DesignationKind.Deconstruct) _renderer.DrawCellShade(cell, tint);
-                else _renderer.DrawCellMark(cell, tint);
+                // One shape for every order, at whatever height the thing in the cell puts it —
+                // WorldRenderModel.MarkHeight. Deconstruct had a whole-cell wash of its own until
+                // 2026-09-20, because a floor plate under a wall is inside the wall; the owner
+                // asked for it to "mark the tile for deconstruction instead like you would mark
+                // in mining", and marking the wall's top face is what mining already does to rock.
+                _renderer.DrawCellMark(cell, tint);
 
                 if (orders[i].Progress > 0)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
+        }
+
+        /// <summary>The colour a growing zone's whole-tile cover is drawn in — a dark worked-soil
+        /// brown (owner, 2026-09-18: "make the entire tile brown so they can look like one patch
+        /// and make it a darker brown"). Drawn as a full-cell cover, no inset, at a higher alpha
+        /// than an order's mark, so the dirt texture underneath flattens into one patch; still no
+        /// order's hue, so a field and an order never ask to be told apart by reading a
+        /// tooltip.</summary>
+        /// <summary>The colour of a sown cell's seed specks - pale enough to read as seed against the dark soil, and nothing else on the board's floor is white.</summary>
+        public static readonly Color SeedSpeckColour = new Color(0.92f, 0.90f, 0.82f, 1f);
+
+
+        /// <summary>
+        /// Every growing-zone cell on a drawn layer, tinted.
+        ///
+        /// <para>The interim overlay until the crisp-bordered region shader of
+        /// <c>09-ui-and-input.md</c> §4.6 — the same debt the stockpiles carry, and the same
+        /// answer: paint the cells the player set aside so a field reads as one thing and not as
+        /// a mystery patch of short carrots.</para>
+        ///
+        /// <para><b>A cell mark, not a cell shade, and the geometry is why.</b>
+        /// <see cref="ChunkRenderer.DrawCellShade"/> fills its cell's whole volume, which is right
+        /// for a deconstruct order standing in the wall it is taking apart — and on a zone cell,
+        /// which is open air above the soil, it would draw a three-metre glass box standing over
+        /// every row of the field. <see cref="ChunkRenderer.DrawCellMark"/>'s plate sits at the
+        /// floor of that air cell, which is the ground surface: paint on the field, where the
+        /// player's eye already is.</para>
+        ///
+        /// <para>Filtered to the drawn band rather than the active layer, for the reason
+        /// <see cref="DrawStandingOrders"/> gives: the zone was painted where the player could
+        /// see, and that is where it must be drawn.</para>
+        /// </summary>
+        /// <summary>Is this cell in the published zone channel? Binary, because the channel is
+        /// ascending by cell index - see <c>GrowingZones.Contribute</c>.</summary>
+        static bool ZoneHolds(System.ReadOnlySpan<ZoneView> zones, int cellIndex)
+        {
+            int lo = 0, hi = zones.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = (int)(((uint)lo + (uint)hi) >> 1);
+                int at = zones[mid].CellIndex;
+                if (at == cellIndex) return true;
+                if (at < cellIndex) lo = mid + 1; else hi = mid - 1;
+            }
+            return false;
+        }
+
+        /// <summary>The same search over the crop channel, which is ascending for the same reason.</summary>
+        static bool PlantStands(System.ReadOnlySpan<PlantView> planted, int cellIndex)
+        {
+            int lo = 0, hi = planted.Length - 1;
+            while (lo <= hi)
+            {
+                int mid = (int)(((uint)lo + (uint)hi) >> 1);
+                int at = planted[mid].CellIndex;
+                if (at == cellIndex) return true;
+                if (at < cellIndex) lo = mid + 1; else hi = mid - 1;
+            }
+            return false;
+        }
+
+        void DrawZones(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+
+            System.ReadOnlySpan<ZoneView> zones = snapshot.Zones;
+            if (zones.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+
+            // The tilled ground itself is not drawn here any more and must not be again: it is
+            // a bit on the terrain bucket's tint (TintCode.TilledBase), so the field is part of
+            // the chunk mesh and costs a field nothing per frame. What is left in this method is
+            // the seed, which is genuinely per-event and genuinely transient.
+
+            // The seed the sower left (owner, 2026-09-18: "some kind of seed on the surface like
+            // speckled white tiny dots to indicate it's sown"). A sown cell is a dark tile until
+            // the sprout's first stage is big enough to read, so the sowing itself is invisible
+            // for the first hours; the specks are the feedback, one handful per planted cell.
+            // The seed day and the sprout only: the specks are the seed, and they germinate away
+            // once there is a plant to see (owner, 2026-09-19: "the seeds should stay there at
+            // first - the sprouting should appear after a day rather than immediately" - which
+            // made the first day a stage of its own, nought, that draws specks and no plant).
+            System.ReadOnlySpan<PlantView> planted = snapshot.Plants;
+            for (int i = 0; i < planted.Length; i++)
+            {
+                if (planted[i].Stage > 1) continue;
+                CellRef cell = size.FromIndex(planted[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+                _renderer.DrawSeedSpecks(cell, SeedSpeckColour);
+            }
+
+            // And while the seed is still going in (owner, 2026-09-18: "seeds should appear
+            // during when the colonist is on the ground for a little time, not after"). Gated on
+            // the KNEEL and not the job: a sower walks to her plot inside the same job, and the
+            // first version drew specks under her feet on every zoned tile she crossed - the
+            // owner watched seeds appear on a tile she merely walked over. The kneel plays only
+            // in the work toil, and a cell that already stands a plant draws its own specks (or
+            // its plants) and none of these.
+            //
+            // And not from the first frame of the kneel either (owner, 2026-09-19: "it should
+            // have a delay so the colonist is actually bent down for some time and seeds
+            // appear"): the specks wait out <see cref="Gesture.SeedSpecksAfter"/>
+            // of the kneel, measured on the serial's own clock below, so the ground stays bare
+            // while she is only arriving at the soil.
+            System.ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                if (pawns[i].JobDef != JobIndex.Sow) continue;
+                if (pawns[i].Gesture != PawnGesture.Sow) continue;
+                float kneelAge = KneelAge(pawns[i].Id, pawns[i].GestureSerial);
+                if (kneelAge < Gesture.SeedSpecksAfter) continue;
+                CellRef at = pawns[i].Cell;
+                if (at.Y < lowest || at.Y > highest) continue;
+                int atIndex = size.Index(at.X, at.Z, at.Y);
+                // Both channels are published in ascending cell order, so these are searches
+                // and not sweeps. They were sweeps, which is O(sowers x zone cells) every frame
+                // - nothing on a carrot plot and a real cost on the stockpile-sized zones this
+                // same channel is about to carry.
+                if (!ZoneHolds(zones, atIndex)) continue;
+                if (PlantStands(planted, atIndex)) continue;
+                // How long since the handful opened: the bundle shows at the hand, the specks
+                // scatter and fall to their spots, and from then they are the seeds. The age
+                // past its threshold is the drop's own clock, so nothing else is timed.
+                _renderer.DrawSeedSpecks(at, SeedSpeckColour,
+                    kneelAge - Gesture.SeedSpecksAfter);
+            }
+
+            // Both loops above only gather. One instanced call draws the lot: six cubes a cell
+            // in one material, which used to be six submissions a cell.
+            _renderer.FlushSeedSpecks(SeedSpeckColour);
+        }
+
+        /// <summary>
+        /// When each pawn's current gesture began, on the frame clock: pawn id to the serial it
+        /// was last seen wearing and the time that serial was first seen in. The same
+        /// serial-differs test the figure director uses to fire a pose, answering a lazier
+        /// question — not "did it just begin" but "has it been running this long" — which is
+        /// what a drawn effect that should wait out part of a hold needs and no snapshot field
+        /// carries. Never cleared: a stale entry costs one dictionary slot per pawn the colony
+        /// has ever had, and a pawn that kneels again bumps its serial and re-times itself.
+        /// </summary>
+        readonly Dictionary<int, (byte Serial, float Started)> _gestureBegan = new();
+
+        /// <summary>
+        /// How long this pawn's current gesture has been running, in seconds — or -1 on
+        /// the first frame a serial is seen, the figure-director rule that keeps a colonist
+        /// walking into view from playing a gesture it never made. The seed specks read it
+        /// twice: once against <see cref="Gesture.SeedSpecksAfter"/> for the delay the kneel
+        /// is owed, and once past it, as the drop's own clock.
+        /// </summary>
+        float KneelAge(PawnId pawn, byte serial)
+        {
+            int id = pawn.Value;
+            if (!_gestureBegan.TryGetValue(id, out var began) || began.Serial != serial)
+            {
+                _gestureBegan[id] = (serial, Time.time);
+                return -1f;
+            }
+            return Time.time - began.Started;
         }
 
         /// <summary>
@@ -1282,11 +1550,20 @@ namespace Odyssey.Presentation.Bootstrap
             // fixed to if there is one, and the rotation the player has turned it to if there is
             // not. Asked of the model rather than worked out here, because that rule has one owner
             // and two systems have already disagreed about it once.
-            Matrix4x4 placed =
-                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y));
-            if (what.edifice == CoreContent.EdificeLadder && _model != null && _grid != null)
-                placed *= Matrix4x4.Rotate(Quaternion.Euler(
-                    0f, Directions.Yaw[_model.LadderFacing(_grid.Index(cell), facing)], 0f));
+            Matrix4x4 placed;
+            if (what.edifice == CoreContent.EdificeDoor && _model != null)
+            {
+                int dir = _model.DoorFacing(cell.X, cell.Z, cell.Y, facing);
+                placed = GroundRelief.Drape(CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir)) *
+                         Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f));
+            }
+            else
+            {
+                placed = GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y));
+                if (what.edifice == CoreContent.EdificeLadder && _model != null && _grid != null)
+                    placed *= Matrix4x4.Rotate(Quaternion.Euler(
+                        0f, Directions.Yaw[_model.LadderFacing(_grid.Index(cell), facing)], 0f));
+            }
 
             _renderer.DrawGhost(module, tint, placed);
         }
@@ -1512,17 +1789,10 @@ namespace Odyssey.Presentation.Bootstrap
             // build no longer has one: a ghost is tinted by its material or by its refusal, so a
             // green arm here would be a colour nothing reads.
             //
-            // Deconstruct is named rather than left to fall through. It fell through to the cancel
-            // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
-            // while the player was demolishing, and tuning the cancel colour would have silently
-            // re-tinted it.
-            Color tint = director.Tool switch
-            {
-                DesignateTool.Mine => MineOrderColour,
-                DesignateTool.Fell => FellOrderColour,
-                DesignateTool.Deconstruct => DeconstructOrderColour,
-                _ => PreviewCancelColour,
-            };
+            // One line, and the mapping is `OrderColours`' rather than this file's. It was a
+            // switch here with four constants below it, and it disagreed with the palette chip on
+            // two of the four — see that class for the whole of why.
+            Color tint = Ui.HudTokens.Convert(OrderColours.Cursor(director.Tool));
 
             for (int z = min.Z; z <= max.Z; z++)
             for (int x = min.X; x <= max.X; x++)
@@ -1726,72 +1996,39 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>
         /// The build cursor over a run that will build nothing.
         ///
-        /// <para>The cancel cursor's own red at the build cursor's own alpha. Both halves are
-        /// deliberate: the hue is one a player has already seen mean "this takes something away or
-        /// does nothing", and the alpha matches the green it replaces so the cursor changes colour
-        /// without changing weight. Its own constant rather than a reuse of
-        /// <see cref="PreviewCancelColour"/> for the reason <see cref="DeconstructOrderColour"/> is
-        /// its own — tuning the cancel cursor should not silently re-tint this.</para>
+        /// <para>The cancel tool's own hue at a heavier alpha. Both halves are deliberate: the
+        /// colour is one a player has already seen mean "this takes something away or does
+        /// nothing", and it is heavier than any order mark because it is a refusal and has to be
+        /// read before the button is let go. Its own line rather than a call to
+        /// <see cref="Odyssey.Hud.OrderColours"/>'s cursor alpha, because this is not the cancel
+        /// tool and tuning that one should not re-weight this.</para>
         /// </summary>
-        static readonly Color PreviewRefusedColour = new Color(0.95f, 0.38f, 0.34f, 0.70f);
+        static readonly Color PreviewRefusedColour =
+            Ui.HudTokens.Convert(OrderColours.Hue(DesignateTool.Cancel).WithAlpha(0.70f));
 
         int _previewLayer;
         Func<int, int, int>? _previewLayerAt;
         readonly List<PreviewBox> _previewBoxes = new List<PreviewBox>();
 
         /// <summary>
-        /// The box being dragged with a build tool. Green: the colour of a thing about to be added,
-        /// used nowhere else on the board, and brighter than a placed order because it is following
-        /// the pointer and has to be found instantly.
-        /// </summary>
-
-        /// <summary>The box being dragged with the cancel tool. Red, for the one tool that takes away.</summary>
-        static readonly Color PreviewCancelColour = new Color(0.95f, 0.38f, 0.34f, 0.60f);
-
-        /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
-        static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
-
-        /// <summary>Marks a tree ordered felled.</summary>
-        static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
-
-        /// <summary>
-        /// Marks a building ordered taken apart. Red, which the owner asked for by name and which
-        /// is right for the reason they asked: it is the only standing order that <b>destroys
-        /// something that already exists</b>. Mining and felling take from the world as it was
-        /// found; this takes from what the colony has made.
-        ///
-        /// <para>Deliberately its own constant rather than a reuse of
-        /// <see cref="PreviewCancelColour"/>, although both are red. That one is a cursor following
-        /// the pointer and this one is paint on the board, so they want different alpha — and
-        /// sharing a constant would mean tuning the cursor silently re-tinted every marked wall in
-        /// the colony.</para>
-        /// </summary>
-        static readonly Color DeconstructOrderColour = new Color(0.93f, 0.31f, 0.27f, 0.38f);
-
-        /// <summary>
         /// What colour a standing order is drawn in.
         ///
-        /// <para><b>Total over the enum, and that is the point.</b> This was a two-branch ternary —
-        /// <c>Kind == Mine ? mine : fell</c> — answering a three-kind question, so a deconstruct
-        /// order was drawn in the felling green. Exactly the shape of the fault that made a palette
-        /// chip arm a tool and never light, and it will be the shape of the next one unless the
-        /// mapping is total. <c>OrderColoursTests</c> walks every <c>DesignationKind</c>.</para>
+        /// <para><b>Four constants used to live here</b>, and the reason they do not any more is
+        /// that a colour is not a rendering detail: it is what tells a player which tool they are
+        /// holding, and the same four tools are coloured on the orders strip and in the palette
+        /// header by <see cref="Odyssey.Hud.HudTheme"/>. Two of the four disagreed —
+        /// <see cref="Odyssey.Hud.OrderColours"/> has the history. This method stays because
+        /// <c>DesignationKind</c> lives in the simulation and the Hud assembly cannot name it; it
+        /// converts a kind to a tool and asks, and decides nothing itself.</para>
+        ///
+        /// <para><b>Total over the enum, and that is still the point.</b> This was a two-branch
+        /// ternary — <c>Kind == Mine ? mine : fell</c> — answering a three-kind question, so a
+        /// deconstruct order was drawn in the felling green. Exactly the shape of the fault that
+        /// made a palette chip arm a tool and never light. <c>OrderColoursTests</c> walks every
+        /// kind and every tool, in the fast tier, which is where the mapping now lives.</para>
         /// </summary>
-        public static Color OrderColour(DesignationKind kind) => kind switch
-        {
-            DesignationKind.Mine => MineOrderColour,
-            DesignationKind.Fell => FellOrderColour,
-            DesignationKind.Deconstruct => DeconstructOrderColour,
-            _ => BuildOrderColour,
-        };
-
-        /// <summary>
-        /// Marks a cell ordered built. The interface accent rather than a third warm hue, because
-        /// a build order is the one standing order that is <em>additive</em> — mine and fell take
-        /// something away, and a colour the rest of the interface already uses for "the player
-        /// asked for this" separates the two at a glance.
-        /// </summary>
-        static readonly Color BuildOrderColour = new Color(0.44f, 0.83f, 0.89f, 0.42f);
+        public static Color OrderColour(DesignationKind kind) =>
+            Ui.HudTokens.Convert(OrderColours.Mark((byte)kind));
 
         /// <summary>
         /// The thing going up. Pale and translucent like <see cref="CutColour"/> and for the same
@@ -2361,9 +2598,14 @@ namespace Odyssey.Presentation.Bootstrap
                 _figures.LoadLifted -= OnLoadLifted;
                 _figures.LoadSet -= OnLoadSet;
             }
+            if (_renderer != null)
+            {
+                _renderer.FallingItems.ItemLanded -= OnLoadSet;
+            }
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();
+            _doors?.Dispose();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is
@@ -2383,6 +2625,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio = null;
             _daylight = null;
             _figures = null;
+            _doors = null;
             _colonistMaterials = null;
             _renderer = null;
             _actorMaterial = null;

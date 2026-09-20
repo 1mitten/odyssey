@@ -380,6 +380,7 @@ namespace Odyssey.Sim.Pawns
             ctx.Nav.MarkDirty(cell);
             int above = cell + size.LayerStride;
             if (above < size.CellCount) ctx.Nav.MarkDirty(above);
+            ctx.Enclosure?.MarkDirty(cell);
 
             // 3a. Nothing is declared to get out of the hole. A colonist jumps up one block and
             //     no more (owner, 2026-09-16), and DesignationGrid.CanBeLeftAfterCutting refuses

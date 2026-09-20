@@ -21,6 +21,75 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **A sleeping colonist is now the size she is drawn** (`worktree-bed-sleep-pose`,
+  `docs/design/20-beds.md` §7b). She was being laid down 0.38 m long — the figure director's
+  "hip height" is the 0.2 m floor of a clamp on a bone that stands on the floor — so she reached
+  1.5 m past the head of the bed and lay inside the mattress. She is 2.49 m now, head on the pillow
+  in the first tile, feet 2.28 m along into the second, resting on the bedding rather than in it.
+  Two things want an eye rather than a test. **The two supine postures had their arm angles the
+  wrong way round**, so a quarter of the colony slept with its arms a half-metre in the air and
+  another quarter with both forearms through the mattress; both are measured flat now, and
+  and after the owner watched it, **the arms-above-head posture is gone entirely** — it was a
+  quarter of every colony, because a posture is a hash modulo four — replaced by another arms-down
+  shape with one knee drawn up (§7d). **The two side sleepers no longer float**: the lift had been
+  set by whatever hung lowest, which on a side sleeper is a knee propping the body up, so half the
+  colony rode 9 to 12 cm above its own bedding. It is set by the trunk now. A sleeper also lies *along* the bed now rather than level across it, which on the
+  steepest ground the relief makes was 0.21 m of disagreement at the pillow. Pictures are in
+  `Logs/sleep-*.png` (`scripts/unity.sh shot Odyssey.EditorTools.SleepCheck.Run` remakes them),
+  including one bed found on a 0.39 m end-to-end slope. **What is left is entirely a look**:
+  whether four sleepers read as four people asleep, and whether a third of the mattress lying
+  empty past their boots bothers you — the bed is 4.6 m and a colonist is 2.5 m, which the cell
+  size fixes. And **a sleeper lies level while the bed under her is draped**, which on
+  a slope disagrees by up to 0.21 m at the pillow — measured, left alone, and the numbers are in
+  §7b, because fixing it changes how every sleeper is drawn and it should be judged against a
+  picture of the one that is now right.
+
+- **The profile pictures, after dark** (`claude/colonist-figures-and-portraits`,
+  `docs/design/20-avatars.md` §10.7–10.8, §11). A portrait used to be lit by whatever hour it was
+  taken at and then kept for the session, so a colonist generated after dusk had a black card for
+  ever; the studio now owns the ambient, the fog, the sky reflection and every other directional
+  light for the instant of the shot. Two things a measurement cannot settle. **Is the fixed studio
+  light the right light** — the cast is a little flatter than a noon portrait was, because there is
+  no sun raking across it, and the question is whether that reads as a passport photograph or as a
+  portrait. And **is one light enough**: every colonist is now lit identically from the front left,
+  which is consistent and may be dull. Play into the evening, spawn a colonist from the debug menu
+  after dark, and say whether the new card is *worse than the daylight ones used to look* or merely
+  different. A wrong answer looks like: the cards all read the same and you stop using the face to
+  tell people apart.
+
+- **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
+  `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
+  its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm
+  amber**, **deconstruct orange where it used to be red**, cancel red, build cyan. A deconstruct
+  order is a floor plate on the top of the wall now, like a mine order on rock, instead of a
+  whole-cell wash. Open questions a picture cannot answer: whether an orange plate on a wall top
+  reads as *coming down* at the play camera, and whether mine's new blue and the build blueprint's
+  cyan are far enough apart when a colony is half dug and half planned — that pair is the one thing
+  the owner's chosen option (*toolbar wins*) traded away, and reversing it is one constant.
+
+- **A new game starts with no beds now** (same branch, `docs/design/20-beds.md` §7a). The owner saw
+  the five real starting beds once and ruled them out; the played scenario has none, so the
+  colonists sleep on the grass with the slept-on-ground thought until a bed is built. Unplayed
+  since. What to look for: whether the first night on the ground reads as *build a bed* or as a
+  bug, and whether a built bed is claimed on the first night by whoever reaches it, as §7 says.
+  A wrong answer is a colonist still sleeping on the ground beside an unowned bed.
+
+- **A colonist given a bed mid-night has been seen once, and went to work** (same branch, second
+  play day). That is fixed — an interrupted sleep resumes, in the new bed for the one given it and
+  in the nearest free bed for the one who lost it — and the fix is unplayed. Assign a sleeper's
+  bed to another sleeper at night: both should stand, walk, and lie down again, and the third
+  colonist should not stir. A wrong answer is anybody picking up an axe before dawn, or the new
+  owner lying down in a spare bed while the one she was given stays empty. Still open from the
+  first round: whether standing up mid-night reads as *obeying* or as *startling*.
+- **Nobody has seen falling items drop and land** (`claude/falling-items`, `docs/design/26-falling-items.md`).
+  When ground or a floor slab beneath resting items is destroyed or deconstructed, items drop down onto
+  the nearest solid floor below (or despawn if over the void). Presentation accelerates airborne items
+  downward quadratically ($t \propto \sqrt{h}$) and triggers `SoundIds.CarryDrop` on touchdown.
+  Pawns on deconstructed floors drop without distress (`NoThought`), matching digging beneath oneself.
+  Open questions a test cannot answer: whether the landing audio volume and timing feels tactile,
+  and whether 0.4s to 0.85s fall duration feels visually satisfying across multiple storeys.
+  Unity EditMode **1,916 total, 1,902 passed, 0 failed**; PlayMode **82 total, 77 passed, 0 failed**.
+
 - **Nobody has given a verdict on the growing zone** (`claude/growing-zones`, **PR #119, still
   open**, `docs/design/22-growing.md`). `U46`–`U50`: the carrot crop, the paint-a-zone tool in the
   palette and the orders strip, and sow → daylight-window growth → harvest → auto re-sow. It has had

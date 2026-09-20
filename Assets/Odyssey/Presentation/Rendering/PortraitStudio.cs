@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Odyssey.Presentation.Rendering
 {
@@ -214,8 +215,25 @@ namespace Odyssey.Presentation.Rendering
             // Everything in the rig is off except for the length of this call, which is
             // synchronous. That is what keeps a portrait's own light out of the world's frame
             // without a spare layer or a rendering-layer mask — a directional light is global.
+            //
+            // **And the same door swings both ways**, which is the fault this file shipped with:
+            // the world's own light, ambient and fog are global too, so a portrait was lit by
+            // whatever time of day it happened to be taken at — and then cached for the session
+            // (§10.7). The studio therefore takes the environment over for the same instant it
+            // takes the light, and hands it straight back.
             subject.SetActive(true);
-            if (_light != null) _light.enabled = true;
+            Environs world = TakeOverEnvironment();
+            if (_light != null)
+            {
+                // Re-asserted rather than trusted. The light is set up once in EnsureRig and
+                // nothing here should be able to move it — but it is a directional light in a
+                // live scene, and one thing did: see OdysseyBootstrap.FindKeyLight. Three writes
+                // per portrait is a cheap way of never having to wonder again.
+                _light.transform.rotation = KeyLightAim;
+                _light.color = Color.white;
+                _light.intensity = KeyLightIntensity;
+                _light.enabled = true;
+            }
 
             RenderTexture previous = RenderTexture.active;
             try
@@ -236,8 +254,143 @@ namespace Odyssey.Presentation.Rendering
             {
                 RenderTexture.active = previous;
                 if (_light != null) _light.enabled = false;
+                Restore(world);
                 subject.SetActive(false);
             }
+        }
+
+        /// <summary>
+        /// The global rendering state a portrait must not be at the mercy of, saved so it can be
+        /// put back. See <see cref="TakeOverEnvironment"/>.
+        /// </summary>
+        readonly struct Environs
+        {
+            public Environs(AmbientMode mode, SphericalHarmonicsL2 probe, bool fog,
+                float reflections, Light[] suns)
+            {
+                Mode = mode;
+                Probe = probe;
+                Fog = fog;
+                Reflections = reflections;
+                Suns = suns;
+            }
+
+            /// <summary>
+            /// The ambient light itself, as the renderer actually reads it.
+            ///
+            /// <para><b>The probe and not the three <c>RenderSettings.ambient*</c> colours</b>,
+            /// which is the difference between this fix working and appearing to. Writing the
+            /// colours asks Unity to re-integrate the probe, and it does that on its own schedule
+            /// — <see cref="DaylightDirector.ProbeUpdateHours"/> exists precisely because
+            /// <c>DynamicGI.UpdateEnvironment</c> is too dear to call often. So the first version
+            /// of this set a flat grey ambient, rendered against the world's *stale* probe, and
+            /// measured a portrait that still tracked the clock. The probe is a direct write and
+            /// takes effect on the next draw.</para>
+            /// </summary>
+            public readonly SphericalHarmonicsL2 Probe;
+
+            /// <summary>Which ambient setting the renderer was reading before we took over.</summary>
+            public readonly AmbientMode Mode;
+
+            public readonly bool Fog;
+
+            /// <summary>The skybox reflection's strength. The last thing the sky reaches us by.</summary>
+            public readonly float Reflections;
+
+            /// <summary>The scene's own directional lights, switched off and to be switched on.</summary>
+            public readonly Light[] Suns;
+        }
+
+        /// <summary>
+        /// Where the key light points: the way the camera looks, tilted down and a little to one
+        /// side. See <see cref="EnsureRig"/> for what the first version of this got wrong.
+        /// </summary>
+        static readonly Quaternion KeyLightAim = Quaternion.Euler(24f, -22f, 0f);
+
+        /// <summary>How hard the key light is driven.</summary>
+        const float KeyLightIntensity = 1.6f;
+
+        /// <summary>
+        /// The studio's own ambient: one flat grey, the same at midnight as at noon.
+        ///
+        /// <para><b>Chosen against the daylight reference rather than picked.</b> The cast
+        /// photographed at noon under the world's own light measured a mean luminance of about 80
+        /// of 255 over the lit pixels, and that is what the owner has been looking at and has not
+        /// complained of. This is the value that reproduces it with the world switched off
+        /// (<c>docs/design/20-avatars.md</c> §10.7).</para>
+        /// </summary>
+        static readonly Color StudioAmbient = new Color(0.62f, 0.62f, 0.66f);
+
+        /// <summary>
+        /// How many of the scene's own directional lights the last shot had to switch off.
+        /// Diagnostic: zero at night, one in the day, and anything else is worth looking at.
+        /// </summary>
+        public int SunsHidden { get; private set; }
+
+        static readonly List<Light> Scratch = new List<Light>();
+
+        /// <summary>
+        /// Take the global environment over for the length of one synchronous render: a fixed
+        /// ambient probe, no fog, no skybox reflection, and every other directional light off.
+        ///
+        /// <para><b>Every <em>other</em> directional light, found each time rather than cached.</b>
+        /// A portrait is taken once per appearance and never again, so the scan is rare; caching
+        /// it would mean holding references to lights a session teardown has destroyed, which is
+        /// the more expensive mistake. <see cref="Light.cullingMask"/> would be the cheaper answer
+        /// and is not available to us: URP ignores it on whichever directional light it picks as
+        /// the main one, which is exactly the light in the way.</para>
+        /// </summary>
+        Environs TakeOverEnvironment()
+        {
+            Scratch.Clear();
+            // FindObjectsOfTypeAll rather than FindObjectsByType, because the ordinary find skips
+            // hidden objects and a light that lights the subject counts however it was made. The
+            // two filters below are what that costs: the all-objects find also returns lights
+            // that belong to prefabs on disk, which light nothing.
+            foreach (Light light in Resources.FindObjectsOfTypeAll<Light>())
+            {
+                if (light == null || ReferenceEquals(light, _light)) continue;
+                if (light.type != LightType.Directional) continue;
+                if (!light.gameObject.scene.IsValid()) continue;
+                if (!light.isActiveAndEnabled) continue;
+                light.enabled = false;
+                Scratch.Add(light);
+            }
+
+            SunsHidden = Scratch.Count;
+
+            var saved = new Environs(
+                RenderSettings.ambientMode,
+                RenderSettings.ambientProbe,
+                RenderSettings.fog,
+                RenderSettings.reflectionIntensity,
+                Scratch.ToArray());
+
+            var flat = new SphericalHarmonicsL2();
+            flat.AddAmbientLight(StudioAmbient);
+            // Custom is the one mode in which the renderer reads the probe we just wrote. Under
+            // Trilight — which is what the daylight cycle sets — Unity re-derives the probe from
+            // its own three colours and the write is silently thrown away, which is exactly what
+            // the first attempt at this measured.
+            RenderSettings.ambientMode = AmbientMode.Custom;
+            RenderSettings.ambientProbe = flat;
+            RenderSettings.fog = false;
+            // A fixed ambient is not the whole of the sky's reach: the default reflection probe
+            // is the skybox, and the skybox is the time of day.
+            RenderSettings.reflectionIntensity = 0f;
+            return saved;
+        }
+
+        /// <summary>Put back what <see cref="TakeOverEnvironment"/> took.</summary>
+        static void Restore(in Environs saved)
+        {
+            RenderSettings.reflectionIntensity = saved.Reflections;
+            RenderSettings.fog = saved.Fog;
+            RenderSettings.ambientProbe = saved.Probe;
+            RenderSettings.ambientMode = saved.Mode;
+
+            for (int i = 0; i < saved.Suns.Length; i++)
+                if (saved.Suns[i] != null) saved.Suns[i].enabled = true;
         }
 
         void EnsureRig()
@@ -268,10 +421,10 @@ namespace Odyssey.Presentation.Rendering
             // Pointing the same way the camera looks, tilted down and a little to one side. The
             // first version was Euler(28, 200, 0), which is a light aimed at the back of their
             // heads — measured on Logs/portraits.png, where the whole cast came out dim and flat.
-            lightObject.transform.rotation = Quaternion.Euler(24f, -22f, 0f);
+            lightObject.transform.rotation = KeyLightAim;
             _light = lightObject.AddComponent<Light>();
             _light.type = LightType.Directional;
-            _light.intensity = 1.6f;
+            _light.intensity = KeyLightIntensity;
             _light.shadows = LightShadows.None;
             _light.enabled = false;
 

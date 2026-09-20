@@ -1,7 +1,7 @@
 # 16 — Cancelling orders, chopping trees, and taking things apart
 
-**Status: both built. Cancel and the chip have been played; deconstruct has not.** Written
-2026-09-17 on `claude/cancel-tool`. The owner's decisions are §3 and they are settled, not
+**Status: both built. Cancel and the chip have been played; deconstruct has been played once and
+its marker re-done — see §6b, which supersedes §6a.** Written 2026-09-17 on `claude/cancel-tool`. The owner's decisions are §3 and they are settled, not
 proposals. This closes **U26**'s "deconstruct refunds half" line; only the success roll at
 completion remains outstanding on that row.
 
@@ -344,6 +344,76 @@ have silently re-tinted it. It is named now.
 
 **Still unjudged:** whether a 0.38-alpha red wash reads at the camera's working distance, and
 whether 3 cm is enough clearance at the nearest the camera comes.
+
+## 6b. Superseded, 2026-09-20: the wash goes, the colour follows the toolbar
+
+The owner played it and reported both halves of §6a back:
+
+> *"The deconstruct order when placed puts down an entire square as the blueprint to deconstruct,
+> the placement shouldn't be red — it should use the same colour as deconstruct (the orange colour)
+> and make it mark the tile for deconstruction instead like you would mark in mining … Also match
+> the orders blueprints/placement titles to the color assigned on their toolbar."*
+
+**The shape.** §6a was right that a floor plate under a wall is inside the wall, and wrong about
+what to do with it. The answer was never a different shape — it was the same shape at the right
+height, which is exactly what a mine order already does: rock is solid, so its mark goes on the
+top face, and that is the face you read it from. `WorldRenderModel.MarkHeight` is now the one rule
+for where an order's paint sits: **the top of the cell for anything that fills it**
+(`OccludesFace` — solid rock, and a wall, door, window, pillar or vault), **the top of itself for
+anything that stands up without filling it** (`StandHeight`, which today means a bed), and **the
+floor for everything else** — a tree ordered felled, a ladder, a slab, an empty cell waiting to be
+built in. Trees fall through to the floor deliberately: a fell order is read on the ground the tree
+stands in, and lifting it three metres would hang it in the canopy. `ChunkRenderer.DrawCellShade`
+is deleted; it had one caller and its reason for existing is gone.
+
+**The colour.** There were two mappings of tool to colour, in two assemblies, written months apart:
+`HudTheme.PinnedActionHue` said what a palette chip was, and four `Color` constants in
+`OdysseyBootstrap` said what the board was. **They disagreed on two of the four.** Deconstruct was
+orange on the chip and red on the board — the interface's own colour for *cancel*, so the panel and
+the cursor told the player two different things about which tool was in their hand. Mine was pale
+blue on the chip and warm amber on the board.
+
+`Odyssey.Hud.OrderColours` is the one owner now. `PinnedActionHue` delegates to it, the drag cursor
+and the board mark are transparencies of the same hue, and `OrderColoursTests` runs in the **fast
+tier** — which is the point of putting the mapping in a Unity-free assembly. The mapping that goes
+wrong is a tool added to the palette and forgotten in the colour table, and that has to be caught
+in two seconds rather than in a playtest.
+
+**Which way the conflict resolved.** Asked, because it could not be answered from the code (owner,
+2026-09-20, from three offered): **the toolbar wins**. The chip is what a player presses and so
+what they learn the colour from; the board follows it. Mine therefore loses the warm amber §6a's
+sibling chose for standing out against cool stone — a real reason that lost to a better one, and
+recorded here rather than quietly dropped.
+
+| Tool | Chip and board | Was on the board |
+|---|---|---|
+| Chop trees | `HudTheme.Good` green | the same green — already agreed |
+| Mine | `OrderColours.Mine`, a deeper blue | warm amber |
+| Deconstruct | `HudTheme.Warn` orange | red, as a whole-cell wash |
+| Cancel | `HudTheme.Bad` red | the same red (cursor only) |
+| Build blueprint | `HudTheme.Accent` cyan | unchanged |
+
+**Mine's blue is the one hue here that is not an existing signal token**, and that is deliberate.
+Matching the chip exactly would have made a mine order `HudTheme.Info` `#8fd0e3`, 60 channel-points
+from `Accent` `#6fd3e3` — what a *pending build* is marked in — so a colony half dug and half
+planned would have been two blues nobody could separate at the play camera. It is `#4a90c8`, used
+on **both** surfaces so the chip and the mark still match exactly.
+
+**The green channel is what does the work, and the first attempt got that wrong.** `#5fb2d8`
+looked deeper and bluer and measured at *exactly* 60 from the accent — it passed a 60-point
+threshold by sitting on it, for the one pair the threshold existed to police. A blue reads as cyan
+when its green is near its blue, so the separation had to come out of green: 144 against the
+accent's 211, which is 131 points away. `NoTwoOrdersLookAlikeOnTheBoard` asks for 80 now, which is
+the most the existing palette clears — Deconstruct's orange against Cancel's red is the closest
+pair at 83, and those two the owner has already looked at and kept.
+
+**Build blueprints keep one cyan** whatever is being placed (owner's second answer, same day): the
+board says *something is pending here*, and the ghost under the cursor already shows which thing,
+tinted by its material. Colouring a pending wall, floor and bed differently would have added five
+hues to say what the cursor says better.
+
+**Still unjudged:** whether an orange plate on the top of a wall reads as "coming down" at the play
+camera, and whether mine's new blue and the build blueprint's cyan are far enough apart in practice.
 
 ## 7. What could make this bigger than it looks
 

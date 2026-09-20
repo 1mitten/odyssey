@@ -30,13 +30,23 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly bool WantsMaterial;
 
+        /// <summary>
+        /// Whether arming this tool makes the "planted with" row meaningful. True only for the
+        /// growing-zone tool, whose order carries a crop with it the way a build order carries a
+        /// material — which is why the two flags exist as separate questions rather than one
+        /// "has a payload" flag: the two rows answer with different tables, and a flag that
+        /// answered both would arm both rows on both kinds of tool.
+        /// </summary>
+        public readonly bool WantsPlant;
+
         public PaletteTool(string key, Action<DesignateDirector> arm,
-            Func<DesignateDirector, bool> armed, bool wantsMaterial = false)
+            Func<DesignateDirector, bool> armed, bool wantsMaterial = false, bool wantsPlant = false)
         {
             Key = key;
             _arm = arm;
             _armed = armed;
             WantsMaterial = wantsMaterial;
+            WantsPlant = wantsPlant;
         }
 
         /// <summary>Pick this tool up, or put it down if it is already held.</summary>
@@ -93,6 +103,7 @@ namespace Odyssey.Hud
         /// its floor and the ladder onto it are one job.
         /// </summary>
         public const string Ladder = "ui.arch.tool.ladder";
+        public const string Door = "ui.arch.tool.door";
 
         public const string Bed = "ui.arch.tool.bed";
         public const string Mine = "ui.arch.tool.mine";
@@ -101,17 +112,30 @@ namespace Odyssey.Hud
         public const string Deconstruct = "ui.arch.tool.deconstruct";
 
         /// <summary>
-        /// The seven categories the palette offers, in the order they are drawn, each with a few
+        /// The growing zone (U49): paint soil, and the colony sows it, harvests it and sows it
+        /// again for as long as the zone stands. The key predates the tool — it was written into
+        /// the naming CSV with the rest of the zones row back when the category was taken off the
+        /// palette — so arriving is a matter of going live, not of naming anything.
+        /// </summary>
+        public const string GrowZone = "ui.arch.tool.growzone";
+
+        /// <summary>
+        /// The categories the palette offers, in the order they are drawn, each with a few
         /// of its tools. Every icon key exists in the registry; a tool not in <see cref="Live"/>
         /// is drawn and disabled, so the shape of the game is visible before the thing behind a
         /// key exists.
         ///
-        /// <para><b>Seven, not ten</b> (specification, 2026-09-17). Orders, Zones and Salvage came
-        /// out. All three were answering a different question from the other seven: those seven
-        /// are kinds of thing to <i>put down</i>, and a palette whose tiles do not all answer one
-        /// question is a palette the player has to read rather than aim at. Zones and Salvage take
-        /// nothing live with them. Orders did, and <see cref="Pinned"/> is where its two live
-        /// tools went.</para>
+        /// <para><b>Eight, after being seven</b> (2026-09-18). Orders, Zones and Salvage came out
+        /// on 2026-09-17 — "seven, not ten" — because those three answered a different question
+        /// from the rest: kinds of thing to <i>put down</i> versus questions about what was
+        /// already there. <b>Zones is back because the question changed.</b> A growing zone
+        /// <i>is</i> a thing to put down: painted like a floor, made of soil and a crop, worked
+        /// by colonists afterwards. What came out in the specification's sweep was zones as a
+        /// grab-bag — stockpiles, dumping, areas — next to the salvage pile; what comes back is
+        /// one placeable thing whose home has to be somewhere, and a palette row is where the
+        /// player looks for things to place. Stockpile and Dumping stay in the row drawn and
+        /// disabled, which is how the palette shows the shape of what is coming. Orders did not
+        /// come back; <see cref="Pinned"/> is still where its live tools live.</para>
         ///
         /// <para><b>A category has no label here, and that is the point</b> (owner, 2026-09-17:
         /// <i>"ensure that consistency can be enforced using a centralised place"</i>). It carried
@@ -124,12 +148,13 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
+            ("ui.arch.category.zones", new[] { GrowZone, "ui.arch.tool.stockpile", "ui.arch.tool.dumping" }),
             ("ui.arch.category.recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
@@ -146,19 +171,27 @@ namespace Odyssey.Hud
         public static readonly int[] Materials = { StuffHandle.Wood, StuffHandle.Stone };
 
         /// <summary>
-        /// The tools that belong to no category and are always on show. They are the orders strip
-        /// down the right-hand gutter, under the depth rail.
+        /// What a zone may be planted with, in the order the player meets them — the plant
+        /// counterpart of <see cref="Materials"/>, and one entry long because one crop exists.
+        /// The growing-zone tool's picker walks this, exactly as the material band walks
+        /// <see cref="Materials"/>, so a second crop is one row here.
+        /// </summary>
+        public static readonly int[] Plants = { PlantHandle.Carrot };
+
+        /// <summary>
+        /// The tools that belong to no category — with one exception, see below — and are always
+        /// on show. They are the orders strip down the right-hand gutter, under the depth rail.
         ///
-        /// <para><b>None of these is a kind of thing to build.</b> Every tile in the seven
-        /// categories answers "what would you like to put down"; each of these answers a question
-        /// about <em>what is already on the board</em> — stop that, take that apart, dig that out,
-        /// cut that down — and each is wanted at the moment the player is holding something else,
-        /// which is exactly when the category tier is showing something different and reaching for
-        /// it would cost two clicks and a hunt. Filing them under a category was tidy and wrong in
-        /// practice (owner, 2026-09-17, of Cancel: <i>"would be a good idea to be able to access
-        /// the cancel button on the build sub menu"</i>, and of Deconstruct, having failed to
-        /// reach it from Orders: <i>"could you put deconstruct next to cancel as a button so we
-        /// can at least deconstruct this way"</i>).</para>
+        /// <para><b>Why a strip at all.</b> Every tile in the categories answers "what would you
+        /// like to put down"; each of these answers a question about <em>what is already on the
+        /// board</em> — stop that, take that apart, dig that out, cut that down — and each is
+        /// wanted at the moment the player is holding something else, which is exactly when the
+        /// category tier is showing something different and reaching for it would cost two clicks
+        /// and a hunt. Filing them under a category was tidy and wrong in practice (owner,
+        /// 2026-09-17, of Cancel: <i>"would be a good idea to be able to access the cancel button
+        /// on the build sub menu"</i>, and of Deconstruct, having failed to reach it from Orders:
+        /// <i>"could you put deconstruct next to cancel as a button so we can at least deconstruct
+        /// this way"</i>).</para>
         ///
         /// <para><b>Chop and Mine joined them when Orders was dropped</b> (2026-09-17). The
         /// specification takes the Orders category off the palette, and those two were the only
@@ -166,13 +199,17 @@ namespace Odyssey.Hud
         /// reachable by the <c>M</c> and <c>C</c> keys and by nothing a player could see. That is
         /// not a hypothetical failure: it is precisely what had already happened to Cancel, which
         /// <i>"was never missing — every way of finding it was missing"</i>, and which cost a
-        /// playtest to find. They belong here on the same test the other two pass, which is the
-        /// reason this list is allowed to have grown rather than an exception to it: all four are
-        /// verbs applied to what is there, not nouns to place.</para>
+        /// playtest to find.</para>
         ///
-        /// <para>They are in no category at all rather than pinned <i>and</i> listed, because the
-        /// same chip appearing twice in one open panel is a question the player has to stop and
-        /// answer: whether the two do the same thing.</para>
+        /// <para><b>Grow zone joined them on the same test</b> (U49). The interview that asked for
+        /// growing zones wanted them in <i>"menus and toolbars"</i> — both — and the toolbar test
+        /// is the one the other four pass: the moment a player wants a field is while they are
+        /// looking at ground they wish were food, whatever they happen to be holding, and the
+        /// palette's Zones row is shut at exactly that moment. It is the one pinned tool that is
+        /// <i>also</i> filed under a category, which <c>APinnedToolIsNotAlsoFiledUnderACategory</c>
+        /// now permits by name: the old objection — the same chip twice in <b>one open panel</b> —
+        /// does not apply across two surfaces, one of which is always visible and the other
+        /// usually shut.</para>
         ///
         /// <para><b>They left the palette header on 2026-09-17</b> (owner: <i>"the small buttons
         /// on the build menu for Chop Trees, Mine, Deconstruct, Cancel should be a vertical button
@@ -185,11 +222,12 @@ namespace Odyssey.Hud
         ///
         /// <para><b>And that lifted the ceiling.</b> Four was the limit while this was a row in a
         /// header with a switcher and a way out beside it; a column down an otherwise empty
-        /// gutter is bounded by the screen. Adding a fifth order is one entry here and one in
-        /// <see cref="HudTheme.PinnedActionHue"/>, and <see cref="HudLayout.OrdersHeight"/> reads
-        /// the length of this array rather than a number somebody wrote down beside it.</para>
+        /// gutter is bounded by the screen. The fifth arrived without anybody moving a pixel of
+        /// layout — <c>HudLayout.OrdersHeight</c> reads the length of this array, and the strip
+        /// builds one button per entry. Cancel stays last: it is the one a player reaches for
+        /// blind, and a fixed last position is how a hand learns where it is.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, Cancel };
+        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, GrowZone, Cancel };
 
         /// <summary>
         /// The word the armed banner uses for an order: the order's own name, the one the wiki
@@ -237,6 +275,10 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Ladder),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
                 wantsMaterial: true),
+            new PaletteTool(Door,
+                d => d.ArmBuild(BuildingHandle.Door),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Door,
+                wantsMaterial: true),
 
             // The first furniture, and the palette's first single-placement, rotatable thing:
             // one per click, turned with the rotate key while it is armed (design 20 §5).
@@ -248,6 +290,8 @@ namespace Odyssey.Hud
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
             new PaletteTool(Cancel, Toggle(DesignateTool.Cancel), Holding(DesignateTool.Cancel)),
             new PaletteTool(Deconstruct, Toggle(DesignateTool.Deconstruct), Holding(DesignateTool.Deconstruct)),
+            new PaletteTool(GrowZone, Toggle(DesignateTool.GrowZone), Holding(DesignateTool.GrowZone),
+                wantsPlant: true),
         };
 
         /// <summary>

@@ -90,6 +90,9 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
 
+        /// <summary>Tracks loose items falling between layers and provides their drop offset.</summary>
+        public ItemFallingTracker FallingItems { get; } = new ItemFallingTracker();
+
         /// <summary>
         /// Metres beyond which chunks draw no grass. Infinite by default: grass is drawn to the
         /// rim of the board.
@@ -694,6 +697,18 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
+            // Worked soil: the earth of the cell, graded down. A multiply rather than a blend
+            // towards black, because this is a tint on the ground's own texture and the texture
+            // is the point - the field has to read as soil somebody turned over, not as paint
+            // (owner, 2026-09-19: "the dirt tile is black with no texture instead the brown that
+            // was before"). The factor is the old translucent cover's own arithmetic: it sat at
+            // alpha 0.78 over the lit ground, so 22% of the earth came through, and 0.25 lands in
+            // the same place while keeping every bit of the texture's variation instead of
+            // flattening it onto a near-black pedestal.
+            if (TintCode.IsTilled(tintCode))
+                tint = new Color(tint.r * TilledGrade.r, tint.g * TilledGrade.g,
+                    tint.b * TilledGrade.b, tint.a);
+
             // Open to the sky means the depth shade has nothing to say. The shade measures how far
             // you are peering *through* the world, and there is nothing over an outdoor surface —
             // so a lower terrace is not dim ground, it is ground. Without this the meadow came out
@@ -835,7 +850,7 @@ namespace Odyssey.Presentation.Rendering
             Material fallback, ICarriedLoads? carried, float tickAlpha, int movePerTick)
         {
             System.ReadOnlySpan<ThingView> things = snapshot.Things;
-            if (things.Length == 0 && snapshot.PawnCount == 0) return;
+            if (things.Length == 0 && snapshot.PawnCount == 0 && snapshot.FallingCount == 0) return;
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
 
@@ -868,9 +883,15 @@ namespace Odyssey.Presentation.Rendering
                 Vector3 falling = Vector3.zero;
                 if (carried != null
                     && carried.TryGetSettling(things[i].Id.Value, out Vector3 leftHands, out float since))
+                {
                     falling = Vector3.Lerp(
                         leftHands - GroundRelief.Lift(floor), Vector3.zero,
                         CarryHandover.Fallen(since));
+                }
+                else if (FallingItems.TryGetFallingOffset(things[i].Id.Value, out Vector3 worldFallOffset))
+                {
+                    falling = worldFallOffset;
+                }
 
                 // Rubble is several rocks, and how many says how much. See ItemHeap: everything
                 // else on the floor is one prop, and stone drawn that way was a cairn standing in
@@ -902,11 +923,76 @@ namespace Odyssey.Presentation.Rendering
             }
 
             RenderCarriedLoads(snapshot, carried, lowest, highest, tickAlpha, movePerTick);
+            RenderFalling(snapshot, lowest, highest, fallback, tickAlpha);
 
             for (int def = 0; def < _itemCounts.Length; def++)
                 if (_itemCounts[def] > 0)
                     SubmitInstances(_model.Library[_itemModules[def]], _itemPlacements[def],
                         _itemCounts[def], ref _itemMatrices);
+        }
+
+        /// <summary>
+        /// Draw whatever is in the air on its way down (design 23 §6), into the same instanced
+        /// batches as the piles it will join: the thing is its own art at the height
+        /// <see cref="FallArc"/> gives the frame, over the cell the simulation said it lands in.
+        ///
+        /// <para><b>Nothing here is a cell, a save or a hash.</b> The simulation owns the flight
+        /// and publishes it as a <see cref="FallingView"/>; this only decides where along that
+        /// line the frame is, exactly as <see cref="PawnPose"/> does for a colonist between two
+        /// cells. A paused world publishes the same view and the same alpha, so the thing hangs
+        /// where it is.</para>
+        ///
+        /// <para>A flat pad is drawn on the landing cell for the whole flight, in the stand-in
+        /// material: a player who jumped to the event from the Events panel is looking at an
+        /// empty cell for two seconds, and the pad says where to keep looking. It is a cursor,
+        /// not a thing, and it is the first thing to drop if it reads as clutter.</para>
+        /// </summary>
+        void RenderFalling(WorldSnapshot snapshot, int lowest, int highest, Material fallback, float tickAlpha)
+        {
+            System.ReadOnlySpan<FallingView> falling = snapshot.Falling;
+            for (int i = 0; i < falling.Length; i++)
+            {
+                CellRef landing = falling[i].Landing;
+                if (landing.Y < lowest || landing.Y > highest) continue;
+
+                float height = FallArc.HeightAbove(snapshot.Size.SizeY, landing.Y, snapshot.Tick, tickAlpha,
+                    falling[i].LaunchTick, falling[i].LandTick);
+
+                DrawMarker(fallback, landing, new Vector3(1.8f, 0.04f, 1.8f), 0.02f);
+
+                int def = falling[i].ThingDef;
+                ResolvedModule? module = ItemModule(def);
+                if (module == null || module.IsEmpty || !module.UsesArt)
+                {
+                    DrawMarker(fallback, landing, new Vector3(1.2f, 0.8f, 1.2f), 0.4f + height);
+                    continue;
+                }
+
+                Vector3 lift = Vector3.up * height;
+                Vector3 floor = CellMetrics.FloorCentre(landing);
+
+                // A bearing and a heap layout from the launch and the cell rather than from an id:
+                // the thing has no id until it lands, and the pile it becomes will take its own.
+                uint seed = unchecked((uint)(falling[i].LaunchTick * 31 + snapshot.Size.Index(landing)));
+
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                {
+                    int rocks = ItemHeap.Place(falling[i].Stack, seed, floor, heap, _heapPlacements);
+                    for (int rock = 0; rock < rocks; rock++)
+                    {
+                        Matrix4x4 placement = _heapPlacements[rock];
+                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3)) + lift;
+                        placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
+                        AppendItem(def, placement);
+                    }
+                    continue;
+                }
+
+                AppendItem(def, Matrix4x4.TRS(
+                    GroundRelief.Lift(floor) + lift,
+                    Quaternion.Euler(0f, (seed * 137u) % 360u, 0f),
+                    Vector3.one));
+            }
         }
 
         /// <summary>
@@ -1363,13 +1449,45 @@ namespace Odyssey.Presentation.Rendering
         /// thing the player is looking at and an order is a job on a list, and if they look alike
         /// then neither means anything.</para>
         ///
-        /// <para>On top of solid rock and on the floor of anything else, because that is the face
-        /// you see it from: a mine order is read looking down at the stone, and a fell order is
-        /// read on the ground the tree stands in. Inset from the cell edges so a row of marked
-        /// cells reads as a row rather than as one continuous sheet, and flat, so it never
-        /// competes with the thing it is marking.</para>
+        /// <para>On top of whatever is in the cell, because that is the face you see it from: a
+        /// mine order is read looking down at the stone, a deconstruct order on the top of the
+        /// wall or the bed it is taking apart, and a fell order on the ground the tree stands in.
+        /// <see cref="WorldRenderModel.MarkHeight"/> is the one place that decides which — it used
+        /// to be a solid-terrain test here, which is why deconstruct needed a shape of its own
+        /// before it could be seen at all. Inset from the cell edges so a row of marked cells
+        /// reads as a row rather than as one continuous sheet, and flat, so it never competes with
+        /// the thing it is marking.</para>
         /// </summary>
-        public void DrawCellMark(CellRef cell, Color colour)
+        public void DrawCellMark(CellRef cell, Color colour) =>
+            DrawCellMark(cell, colour, inset: 0.22f);
+
+        /// <summary>
+        /// The same floor plate with the inset the caller names. An order's mark sits inset so it
+        /// reads as a mark ON the tile; a growing zone's cover wants the whole tile (owner,
+        /// 2026-09-18: "make the entire tile brown so they can look like one patch") - inset
+        /// plates drew a border of ground between them and a field read as separate squares
+        /// rather than one patch of soil.
+        /// </summary>
+        /// <summary>
+        /// A growing zone's whole-tile cover: <b>the ground's own module, drawn again over
+        /// itself and tinted</b>, lifted a mark's height along the drape.
+        ///
+        /// <para><b>Why the terrain mesh and not a plate.</b> The terrain quad is draped -
+        /// sheared onto the relief field's tangent plane - and rippled inside its own cell,
+        /// and the first cover was a flat plate at the cell centre's height: it sank into the
+        /// ripple's convex corners and floated over the concave ones, so every tile showed
+        /// gaps, thick borders or missing parts depending on the bearing it was seen from
+        /// (owner, 2026-09-19, with the screenshots that prove it). Drawing the same mesh with
+        /// the same drape is flush by construction - identical geometry, one constant offset -
+        /// and uniform from every angle because there is nothing left to disagree with.</para>
+        ///
+        /// <para>Draped on the <i>ground</i> cell's floor so the module's top face lands where
+        /// the terrain's top face is: the cell handed in is the zone's air cell, and the
+        /// terrain that shows through it is the cell below. The sides of the ground box are
+        /// tinted with it, which is right where a plot meets a terrace edge - the soil column
+        /// is the plot - and buried everywhere else.</para>
+        /// </summary>
+        public void DrawCellMark(CellRef cell, Color colour, float inset)
         {
             Material material = BracketMaterial(colour);
             var rp = new RenderParams(material)
@@ -1380,14 +1498,12 @@ namespace Odyssey.Presentation.Rendering
             };
 
             int index = _model.Index(cell.X, cell.Z, cell.Y);
-            bool solid = _model.IsSolid(index);
 
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
-            centre.y += solid ? CellMetrics.SizeY + MarkLift : MarkLift;
+            centre.y += _model.MarkHeight(index) + MarkLift;
 
-            const float Inset = 0.22f;
             var size = new Vector3(
-                CellMetrics.SizeXZ - Inset * 2f, MarkThickness, CellMetrics.SizeXZ - Inset * 2f);
+                CellMetrics.SizeXZ - inset * 2f, MarkThickness, CellMetrics.SizeXZ - inset * 2f);
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));
@@ -1692,6 +1808,124 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
 
+        /// <summary>
+        /// How far worked soil is graded below the earth it is, per channel. See
+        /// <see cref="TintCode.TilledBase"/> for why it is a grade on the ground's own bucket
+        /// rather than a second mesh laid over it.
+        ///
+        /// <para><b>Derived from the cover it replaces, so the field keeps the colour that was
+        /// already agreed</b> (owner, 2026-09-18: "make the entire tile brown so they can look
+        /// like one patch and make it a darker brown"). The cover composited as
+        /// <c>0.78 x (0.06, 0.032, 0.012) + 0.22 x ground</c> - a scale plus a warm pedestal -
+        /// and against a representative lit earth of about (0.55, 0.45, 0.38) that lands on
+        /// (0.168, 0.124, 0.093). These are the per-channel factors that reach the same place by
+        /// multiply alone. Uniform 0.25 was tried first and read grey: the pedestal was carrying
+        /// the warmth, and dropping it took the brown out of the brown.</para>
+        /// </summary>
+        public static readonly Color TilledGrade = new Color(0.305f, 0.276f, 0.245f);
+
+        /// <summary>
+        /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to
+        /// indicate it's sown"). Six tiny flecks at deterministic positions hashed from the cell,
+        /// so they sit still frame to frame and every cell scatters differently; lifted just
+        /// clear of the ground the way a mark is, and cast no shadows — a shadow the size of the
+        /// fleck itself would double it.
+        /// </summary>
+        /// <summary>
+        /// Gather one cell's handful of seed specks. Nothing is submitted here - see
+        /// <see cref="FlushSeedSpecks"/>, which draws the whole frame's worth in one call.
+        /// </summary>
+        public void DrawSeedSpecks(CellRef cell, Color colour, float sinceDrop = -1f)
+        {
+            int index = _model.Index(cell.X, cell.Z, cell.Y);
+            Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
+            centre.y += MarkLift;
+
+            // The drop, when the caller has one running: a handful held at the sower's hand
+            // height for a beat, then each seed falling to its own spot, staggered so they
+            // scatter rather than move as one board (owner, 2026-09-19: "an animation that
+            // starts from a bundle of seeds from a hand and then the seed fall onto their
+            // destinations"). The fall accelerates - a seed is dropped, not lowered - and once
+            // every seed is down the call degenerates to the static handful the sown cell
+            // draws until it sprouts, which is why the landed positions are the same hashed
+            // spots both ways: the handoff from dropping to lying there is invisible by
+            // construction, not by luck.
+            const int Specks = 6;
+            const float Size = 0.045f;
+            const float HandHeight = 0.5f;
+            const float BundleSeconds = 0.25f;
+            const float FallSeconds = 0.35f;
+            const float FallStagger = 0.04f;
+            bool dropping = sinceDrop >= 0f &&
+                sinceDrop < BundleSeconds + FallSeconds + FallStagger * (Specks - 1);
+            Vector3 hand = centre + Vector3.up * HandHeight;
+
+            for (int i = 0; i < Specks; i++)
+            {
+                // A cheap per-cell-per-speck hash: the cell's own index twisted by the speck's,
+                // mapped to the cell's inner square. Deterministic, board-stable, and no two
+                // neighbouring cells repeat their handful.
+                uint h = (uint)(index * 747_796_405u + i * 289_133_645_3u);
+                h = (h ^ (h >> 13)) * 1_274_126_177u;
+                float ox = ((h & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 0.7f);
+                float oz = (((h >> 16) & 0xFFFF) / 65535f - 0.5f) * (CellMetrics.SizeXZ - 0.7f);
+
+                Vector3 at = centre + new Vector3(ox, 0f, oz);
+                if (dropping)
+                {
+                    float into = sinceDrop - BundleSeconds - i * FallStagger;
+                    if (into < 0f) at = hand;
+                    else
+                    {
+                        float t = Mathf.Clamp01(into / FallSeconds);
+                        at = Vector3.Lerp(hand, at, t * t);
+                    }
+                }
+                if (_speckCount == _speckMatrices.Length)
+                    System.Array.Resize(ref _speckMatrices, _speckMatrices.Length * 2);
+                _speckMatrices[_speckCount++] =
+                    Matrix4x4.TRS(at, Quaternion.identity, new Vector3(Size, Size * 0.5f, Size));
+            }
+        }
+
+        /// <summary>
+        /// Draw every seed speck gathered this frame, instanced.
+        ///
+        /// <para><b>Why they are gathered at all.</b> Each sown cell wears six specks and each
+        /// used to be its own <c>Graphics.RenderMesh</c> - six calls and a <c>RenderParams</c>
+        /// per cell, of the same unit cube in the same material. The surround taught the price
+        /// of that: a submission costs about 4.6 us whatever is in it, so a field part-way
+        /// through sowing was paying milliseconds to draw a few hundred cubes. They share one
+        /// mesh and one material by construction - the colour is a single constant - so they are
+        /// one instanced call, or a handful once past <see cref="MaxInstancesPerCall"/>.</para>
+        /// </summary>
+        public void FlushSeedSpecks(Color colour)
+        {
+            if (_speckCount == 0) return;
+
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            int drawn = 0;
+            while (drawn < _speckCount)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, _speckCount - drawn);
+                Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _speckMatrices, n, drawn);
+                drawn += n;
+                DrawCalls++;
+                InstancesDrawn += n;
+            }
+            _speckCount = 0;
+        }
+
+        Matrix4x4[] _speckMatrices = new Matrix4x4[512];
+        int _speckCount;
+
+
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
         const float MarkThickness = 0.04f;
 
@@ -1736,50 +1970,6 @@ namespace Odyssey.Presentation.Rendering
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));
-        }
-
-        /// <summary>
-        /// A whole cell washed in a colour, for an order given about a thing that <b>fills</b> its
-        /// cell — a wall marked for demolition.
-        ///
-        /// <para><b>Why a wash and not the floor plate every other order gets.</b> A mine order and
-        /// a fell order are read looking down at a face that is already there, so
-        /// <see cref="DrawCellMark"/> paints the floor and that is the whole of it. A wall is three
-        /// metres of solid thing standing in the cell, and its floor is <em>inside</em> it: the
-        /// plate is drawn, correctly, exactly where the wall's own panels and core hide it. That is
-        /// not a hypothesis — it is why the owner reported deconstruct as having no marker at all
-        /// (2026-09-17).</para>
-        ///
-        /// <para><b>Proud of the cell rather than inset.</b> <see cref="DrawCellSlab"/> insets by
-        /// 6 cm so a slab does not fight the faces of the rock it is drawn over; this has the
-        /// opposite problem and needs the opposite answer, because anything inside the cell is
-        /// behind an opaque wall. Three centimetres clears the panels and is sub-pixel at the
-        /// nearest the camera comes, so the wall does not visibly grow.</para>
-        ///
-        /// <para><b>Draped, not lifted</b>, per the rule the stepped-wall fault produced: anything
-        /// fixed to the grid is draped and only what moves over it is lifted. A run of walls marked
-        /// together abuts, and a lift would step each wash against its neighbour by the ground's
-        /// slope across a cell exactly as it once stepped the walls themselves.</para>
-        /// </summary>
-        public void DrawCellShade(CellRef cell, Color colour)
-        {
-            Material material = BracketMaterial(colour);
-            var rp = new RenderParams(material)
-            {
-                layer = GameObjectLayer,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
-            };
-
-            const float Outset = 0.03f;
-            var size = new Vector3(
-                CellMetrics.SizeXZ + Outset * 2f,
-                CellMetrics.SizeY + Outset * 2f,
-                CellMetrics.SizeXZ + Outset * 2f);
-
-            Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
-            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
-                GroundRelief.Drape(centre) * Matrix4x4.Scale(size));
         }
 
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour) =>

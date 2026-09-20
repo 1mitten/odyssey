@@ -359,22 +359,44 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The seven Build categories' hues, in palette order.
+        /// The Zones category's olive, named because two things wear it: the category tier below,
+        /// and the growing-zone order wherever the mode colour is asked for
+        /// (<see cref="PinnedActionHue"/>). Mode and category agreeing is the point — the strip
+        /// button, the armed banner and the palette tile all saying the tool's one colour — and
+        /// two places asking for it is exactly why it is not written twice.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>Declared above the array that uses it, and that is load-bearing.</b> Static
+        /// field initialisers run in declaration order, so a hue declared below
+        /// <see cref="BuildCategoryTiers"/> is silently <c>default(HudColour)</c> — black at
+        /// alpha 0 — by the time the array is built. The fast tier's contrast test caught exactly
+        /// that on the day this landed: "Zones, at rest" measuring 1.16:1.</para>
+        /// </remarks>
+        // Earthy brown since 2026-09-18 (owner: the green was hard to see on the surface) —
+        // worked soil, matching the tint the drawn field wears. Was olive 0xa8c06a.
+        public static readonly HudColour ZonesHue = new HudColour(0xc3, 0x98, 0x5c);
+
+        /// <summary>
+        /// The Build categories' hues, in palette order.
         ///
         /// <para><b>This is the one place in the HUD allowed a hue per row</b>, and it is worth
         /// saying why, because <see cref="HudCategory"/> a few lines below exists on exactly the
         /// opposite principle — eight categories sharing five tokens, "because a screen with a
         /// colour per commodity is a screen with no colour code at all". That argument is about
         /// icons scattered across a whole screen, where a hue has to be recognised out of context
-        /// and a large set cannot be. These seven are a closed row of tiles, always drawn together
+        /// and a large set cannot be. These are a closed row of tiles, always drawn together
         /// and always in the same order, and the hue is doing a different job here: it is not
-        /// asking to be recognised in isolation, it is separating seven adjacent things and then
+        /// asking to be recognised in isolation, it is separating adjacent things and then
         /// carrying that separation down into the selected state. The acceptance criterion is
         /// "each is visually distinct with the labels masked", which a shared five-token set
         /// cannot meet by construction.</para>
         ///
-        /// <para>Indexed by position in <c>PaletteTools.Categories</c>, and
-        /// <c>BuildPaletteTests</c> fails the fast tier if the two lengths part company.</para>
+        /// <summary>Indexed by position in <c>PaletteTools.Categories</c>, and
+        /// <c>BuildPaletteTests</c> fails the fast tier if the two lengths part company. The
+        /// eighth row came with the Zones category (U49): olive, because the token that says
+        /// "growing" elsewhere (<see cref="Good"/>) is Security's hue in this row, and two
+        /// adjacent tiles may not share a colour — the olive is what a field reads as when its
+        /// category tile is picked.</para>
         /// </summary>
         public static readonly BuildTier[] BuildCategoryTiers =
         {
@@ -384,6 +406,7 @@ namespace Odyssey.Hud
             new BuildTier(new HudColour(0xe8, 0xd1, 0x5c)), // Power
             new BuildTier(new HudColour(0x7f, 0xc9, 0x8c)), // Security
             new BuildTier(new HudColour(0x6f, 0xd3, 0xe3)), // Floors
+            new BuildTier(ZonesHue),                        // Zones
             new BuildTier(new HudColour(0xb9, 0xa8, 0xe0)), // Recreation
         };
 
@@ -518,31 +541,36 @@ namespace Odyssey.Hud
         public static readonly HudColour HeaderNeutralInk = new HudColour(255, 255, 255, 0.65f);
 
         /// <summary>
-        /// The hue of one pinned action — the four verbs in <see cref="PaletteTools.Pinned"/> —
+        /// The hue of one pinned action — the verbs in <see cref="PaletteTools.Pinned"/> —
         /// or null for every other key.
         ///
         /// <para><b>The hue is the mode, and that is what it is for</b> (owner, 2026-09-17:
         /// <i>"the cancel/deconstruct colours … should also be represented in the dialog … so it
-        /// becomes clearer what mode you are in"</i>). These four are the tools that do something
-        /// irreversible to what is already on the board, and all four are armed from a header
-        /// button that is easy to press on the way to somewhere else. So the colour does not stop
+        /// becomes clearer what mode you are in"</i>). These are the tools that do something
+        /// irreversible to what is already on the board, and all are armed from a strip
+        /// that is easy to press on the way to somewhere else. So the colour does not stop
         /// at the button: while one of them is held, the palette says so in that tool's own
         /// colour, with that tool's own icon, where the breadcrumb would otherwise be. A player
         /// who is about to drag a box over their colony can tell from the panel whether they are
-        /// about to cancel it or take it apart.</para>
+        /// about to cancel it, take it apart or plant it.</para>
         ///
-        /// <para>Four existing signal tokens rather than four new hues. They are already the
-        /// interface's words for "careful", "destructive", "growing" and "information", which is
-        /// close enough to what each tool does that nothing new had to be invented — and the rule
-        /// that the HUD does not grow a colour per thing is the one the category tiers above
-        /// already spend their exception on.</para>
+        /// <para><b>The answer comes from <see cref="OrderColours"/> and not from here</b>, since
+        /// 2026-09-20. It used to be four existing signal tokens written out below — already the
+        /// interface's words for "careful", "destructive", "growing" and "information", and close
+        /// enough to what each tool does that nothing new had to be invented. What that reasoning
+        /// missed is that the chip is not the only place an order is coloured: the cursor and the
+        /// mark left on the board are two more, they lived in another assembly, and two of the
+        /// four disagreed with this list for months. The hue is the mode, so the mode has one
+        /// owner — Mine's is the single hue there that is not a signal token, and
+        /// <see cref="OrderColours.Mine"/> says why it had to stop being <see cref="Info"/>.</para>
         /// </summary>
         public static HudColour? PinnedActionHue(string key) => key switch
         {
-            PaletteTools.Fell => Good,
-            PaletteTools.Mine => Info,
-            PaletteTools.Deconstruct => Warn,
-            PaletteTools.Cancel => Bad,
+            PaletteTools.Fell => OrderColours.Hue(DesignateTool.Fell),
+            PaletteTools.Mine => OrderColours.Hue(DesignateTool.Mine),
+            PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
+            PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),
+            PaletteTools.GrowZone => OrderColours.Hue(DesignateTool.GrowZone),
             _ => null,
         };
 

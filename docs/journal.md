@@ -25,6 +25,66 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-20 — reviewing #119, and the frame it was hiding
+
+The growing branch was reviewed against a `main` that had moved twelve commits past it (events,
+falling items, the baseline audit) and then eleven more (beds, per-order colours, docs). Both
+merges are in this branch; the review's findings and everything below came out of doing them.
+
+**Three faults in the branch, all fixed here.** Neither growing work giver asked
+`ctx.Reachable` — the only two givers in the project that did not — so an unreachable plot won
+the scan on straight-line nearness, the walk failed at once, and the next think picked the same
+cell: **159 failed jobs in 2,000 ticks** for one colonist and one ripe crop over a hole, with no
+other growing work done in any of them. `PlantDef.yields` was declared, `[DefReference]`-checked
+and never read; the harvest spawned carrots whatever was planted. And three separate comments
+plus CLAUDE.md said growing carried no rate curve while `Work_Growing` carried `rateSkill 4` —
+which makes it the first place a skill level does something a player can feel.
+
+**The soil borders, and why they were also the frame budget.** The owner photographed a dark
+line on every interior edge of a field. It was a translucent cover mesh: a 1.01 overlap scale
+blending twice (alpha is not idempotent — 0.78 composites to 0.95, so dirt showing through fell
+from 22% to 5%), and under that, `MarkLift` raising a *box* whose sides stood proud of the
+neighbouring soil. Four contact sheets settled it rather than argument: bug, overlap removed,
+alpha 1.0 (seamless, so the meshes tile with no gap), alpha 0 (seamless, so the ground has no
+seam of its own).
+
+The fix for the look was also the fix for the cost, and that was the surprise. The cover was one
+`Graphics.RenderMesh` per zoned cell per frame — and it incremented no counter, so
+`FrameTimeTests` had never counted one. Counted: a field's draw calls went from a reported 1,782
+to 3,847, the difference being 2,065, the zone-cell count to the unit. Since the fix had made the
+cover provably the ground's own module at the ground's own place, the answer was to stop drawing
+it twice: `TintCode.TilledBase`, a bit on the terrain bucket. 2,065 draws to none.
+
+**Then the surround, where the instinct was wrong and the measurement was not.** The remaining
+meadow cost was 3.65 ms of a 5 ms budget and the trees were all of it — its ground and tufts are
+free to within noise. The obvious read is that 4,169 trees are too many. But dropping the 2,577
+**hill** trees changed nothing at all (5.37 ms against 5.04), while dropping the 1,592 **near**
+trees took it to 2.26. What actually correlated was the batch count: 760 batches 3.5 ms, 438
+batches 2.1 ms — about 4.6 us a batch, per-call overhead rather than trees or fill. A batch key
+carries a spatial sector, and at 80 m the ring outside a 300 m board fell into hundreds of
+near-empty batches. At 400 m the same trees ride in 272, and **the wood is untouched**.
+
+One probe misled badly on the way and is worth recording: `SubmitToGpu = false` made the
+surround look nearly free, which reads as "the CPU loop is fine". It removes the API calls, which
+are exactly where the cost is. A probe that disables the thing you are trying to price is not a
+control.
+
+    meadow 5.04 -> 2.59 ms      field 6.95 -> 4.09 ms      city unchanged
+    field draw calls 3,847 -> 1,300
+
+Seed specks went the same way for the same reason: six submissions per sown cell of one cube in
+one material, now one instanced call. The guard there is at the call level rather than visual —
+an instanced draw through a material that does not support instancing draws *nothing*, the speck
+material is the translucent bracket one, and the contact sheet is too far out to referee it
+(checked: no speck pixels before the change or after).
+
+**Still not done, and costed.** `DrawCellMark`/`Shade`/`Cut` are the same anti-pattern for
+standing orders — one submission per designated cell, and a player marking a wood designates
+hundreds. It is not fixed because the benchmark cannot see it: the meadow case is barren, so it
+has no trees to mark and no designations at all. Doing it honestly means a FrameTime case that
+designates first.
+
+
 ## Entries
 
 
@@ -7353,3 +7413,1179 @@ the verdict.
 `23-head-turning-and-gaze.md` also gained the `CLAUDE.md` pointer it never had — a design document
 with no row in the read-this table is one the next session does not find. `13-gestures.md` and
 `15-skills.md` are still in that state and are not fixed here.
+
+### Falling items and floor-drop motion, 2026-09-20
+
+The owner, on loose items floating when ground or floors beneath them are destroyed: *"logs and items can appear in mid air - if the ground or floor beneath is destroyed, drop the object with a motion on to the floor below if possible? - or whatever you recommend"*.
+
+**The design (`docs/design/26-falling-items.md`, branch `claude/falling-items`).**
+Five questions resolved with the owner before any code was written:
+1. **Simulation relocation is immediate; motion is presentation-only.** In the simulation (`Odyssey.Sim`), as soon as a floor slab is removed (`ConstructionGrid.RemoveSlab`) or a pawn deconstructs a floor (`DeconstructJob`), any items resting on that cell immediately relocate their `item.Cell` to the first solid floor directly below (`Cells.FirstFloorAtOrBelow`). If no floor exists anywhere below (over the bottomless void), the item despawns rather than hangs.
+2. **Deconstruction salvage refunds drop directly to the landing floor.** When a floor slab or fixture is dismantled, salvage refunds spawned by `DeconstructJob` resolve `FirstFloorAtOrBelow` before finding space via `NearestCellWithSpace`, preventing materials from appearing in mid-air above an empty void.
+3. **Pawn drop on deconstruction is distress-free.** A colonist deconstructing the floor beneath her own feet drops to the landing floor without thought (`Falling.NoThought`), matching the existing rule for digging out rock beneath oneself.
+4. **Presentation tracks drops frame-to-frame with gravity acceleration.** `ItemFallingTracker` inspects `WorldSnapshot.Things` each frame. When an item's Y-coordinate drops between frames, an active fall record is registered. Downward offset accelerates quadratically ($t \propto \sqrt{h}$, quadratic easing $y(t) = h \cdot (1 - (t/T)^2)$, durations ~0.4s for 1 storey to ~0.85s for 4 storeys). When $t$ crosses $T$, `ItemLanded` fires, emitting `SoundIds.CarryDrop` at the touchdown coordinates.
+5. **Renderer and Bootstrap integration.** `ChunkRenderer` offsets both `ItemHeap` props and individual commodity props during `RenderThings` by `worldFallOffset`. `OdysseyBootstrap` wires `FallingItems.ItemLanded` to `AudioSystem.PlayAt` and steps the tracker in `RenderWorld`.
+6. **Safety sweep.** In addition to reactive drops on `RemoveSlab` and deconstruction, a safety check `Falling.DropFloatingItems(ctx)` sweeps orphaned floating items during world support consequence resolution, safeguarding against obscure mid-air item bugs.
+
+**The trap:** In `ItemFallingTracker.Advance`, updating `_activeFalls[id] = fall;` inside a `foreach (var kvp in _activeFalls)` loop threw `InvalidOperationException: Collection was modified; enumeration operation may not execute` under Unity's Mono runtime. CoreCLR (.NET 8) in the fast tier had not thrown, and presentation is not tested in the fast tier anyway. Fixed cleanly by snapshotting keys into a reusable allocation-free scratch list `_activeKeys`.
+
+- *Verified:*
+  - Fast tier: **759 Sim + 449 Hud, 0 failed**; both content gates clean.
+  - Unity EditMode: **1,916 total, 1,902 passed, 0 failed** (includes new tests in `ItemFallMotionTests`, `ItemFallingTrackerTests`, `FallingTests`, `FloorsAndCollapseTests`).
+  - Unity PlayMode: **82 total, 77 passed, 0 failed**.
+
+## 2026-09-20 — Events: the incident layer, and the storyteller that is deliberately not there
+
+The owner asked for a world-event system aligned with RimWorld's — cadence types (regular, weekly,
+ad hoc, condition-based; periodic or one-off), positive or negative by storyteller, rewards on
+completion or the event as the reward, shown as an alert and in an activity log — and to start
+with a meal dropping from the sky to be hauled. The result is `docs/design/23-events-and-storyteller.md`
+and the `EV` track. The research is `docs/research/a-11-storyteller-incidents.md`.
+
+**What the research settled.** The reference picks a category, then an incident by weight; its
+storytellers are a difficulty curve plus independent generators on their own clocks; every
+incident is a Def of gates plus a worker split into `CanFireNow` (cheap, side-effect-free) and
+`TryExecute` (does it), so one worker serves the storyteller, a quest and the debug menu. Nothing
+fires on a calendar date, which makes "weekly" the one owner term with no counterpart, and the
+reason is design intent rather than omission: a schedulable event is one the player prepares for
+perfectly. Reward-on-completion is a quest, a wrapper round incident verbs, not an incident.
+
+**Four decisions, the owner's.** The display is a new Events panel under the alerts, not a row in
+the alerts panel (the alert model rebuilds its rows from the frame every quarter second, which is
+right for a condition and would wipe an event on the next refresh — the design catalogue had ruled
+this in advance and was right). Firing is debug-only for now: no storyteller, but the gates are on
+the Def and the ledger keeps the refire memory, so the scheduler reads rather than restructures.
+The landing is anywhere on the board, uniform, which is the reference's own behaviour; I said what
+it costs — most drops land out of sight and an unreachable one lies there — and named the one-line
+knob if it maddens. The ledger lives in the sim now, saved and hashed; the History screen (F9,
+reserved since M1) is the next unit.
+
+**What was built.** `IncidentDef` and `IncidentContent` (a fourth content family, in
+`ContentPack.Register`), `IncidentWorker` discovered by name the way work givers are,
+`SupplyDropWorker`, `Skyfallers` (the flight is simulated: nothing exists until it lands, and a
+mid-air save lands on the promised tick), `IncidentLedger` (append-only, monotonic ids, the tail
+published), `Incidents` with `Attach` and the one door `TryFire`; `IntentKind.InvokeIncident`;
+`CellGrid.SkyLanding`; `BulletinView` and `FallingView` channels; `BulletinModel` and the Events
+panel; `FallArc` and `ChunkRenderer.RenderFalling`; `AudioDirector.StepLandings` for a sound the
+catalogue does not yet hold. The debug row that stood disabled since 2026-09-17 fires it.
+
+**The landing rule is the one that took thought.** `NearestWalkableInColumn` from the top would
+search past a wall to the floor beside its foot and past deep water to the bed beneath it — the
+two answers a drop "through open sky" must refuse — and `FirstFloorAtOrBelow` is happy to stop
+under a ceiling. `SkyLanding` walks down to the first cell that is not open air and lands only if
+that cell can be stood in; a rooftop slab qualifies, a wall, a lake and bare rock do not, and a
+tree's cell does, because a tree blocks nothing and felled wood already lands there. Seven tests
+pin it.
+
+**What the hash saw.** All six golden numbers moved before a single tick ran: two new components
+hash four zero integers. The control is that all three `Generated` values moved together,
+including the barren meadow's, which no gameplay change has ever touched. Re-baked once, with
+the paragraph in `Golden.cs`.
+
+**Two things found on the way.** `AlertModel.IconKeys` said it existed "for the registry test"
+from the day it was written and no such test existed; it does now, beside the incident one. And
+the interface's key table for incidents cannot import the Def, so it is held to the Defs'
+`bulletinKey` values by a test that reads the XML — the `CarryingAspect` bargain, made a second
+time. `ui.bulletin.` joined the enforced namespaces without finding a duplicate literal.
+
+**Owed.** The Unity tiers on this branch, the play day (design 23 §9, §10), the History screen,
+a second incident to turn the debug row into a picker, and the storyteller when the owner wants
+events that arrive unasked. The catalogue row for `odyssey.sound.drop.land` is the owner's, in the
+editor; the director declines it silently until then.
+
+## 2026-09-20 — Events, the first look: four things moved the same day
+
+The owner pressed Play on the supply drop the afternoon it was built, and four things came back.
+None was a fault in the incident layer; all four were the drawing, the sound and the menu around
+it, which is where a first look usually lands.
+
+**The fall was over before it was seen.** Two seconds from six metres above the top of the world,
+gathering speed like a stone — a physically honest arc that entered the frame part-way down and
+landed almost at once. Two changes. The duration is the Def's and is now six seconds (`fallTicks`
+360); the fingerprint moved and was re-baked with the reason. The start height is presentation's:
+`FallArc.DropHeight`, 120 m over the landing floor, which is above the play camera at any zoom
+(32–160 m up, looking down at 48°), so the thing enters from beyond the top of the frame rather
+than popping in. And the curve is a straight line now — a crate under a chute comes down at one
+speed — because the square law that reads as a real fall when the fall is short reads as a thing
+loitering and then dropping when it is six seconds long. `FallArcTests` was rewritten to say
+this: equal steps, the same start over a roof as over the meadow, and a world taller than 120 m
+still starting above its own top. The "second half covers more ground" test went with the arc.
+
+**The Events row moved the depth.** Clicking a row moved the slice to the event's layer, selected
+the cell and jumped the camera. The owner expected the camera to move and nothing else — the cut
+away and the selection are theirs, and a panel that changes them is a panel that surprises. The
+row jumps to the event's column at the active layer now and does nothing else. The cost is a
+rooftop drop looked at from below the roof: the pad's column is where the camera goes, and the
+slice is yours to raise. Design 23 §5 states it.
+
+**Events want a tab of their own.** The debug menu had one flat list with an *Invoke event* row
+at the bottom, and the owner asked for a second tab. `DebugDirector` gained a `Tab` (opens on
+Cheats, because the overlay toggle is the row backtick was bound to for a day) and a `TabChanged`
+event, in Settings' tab idiom so a third tab strip in this shell invents nothing. The Events tab
+is built when the panel opens, from the open colony's `IncidentContent`, one row per Def named
+through `IncidentLabels` and tooltipped by the Def's own `description` — so a second Def appears
+by existing and `HudShell.Debug.cs` never learns its name, which is what design 18 had promised
+the day a picker was wanted. The `ui.debug.invokeevent` key is gone; `ui.debug.tab.cheats` and
+`ui.debug.tab.events` replace it, and `DebugDirector.IconKeys` is now held to the registry by
+`EveryDebugKeyIsARegisteredName`, beside the alert and incident checks.
+
+**The chime snapped off.** "The sound snaps to silence and the music switches back on." Two
+causes, both in `AudioDirector`, neither in the recordings. The duck's release was its attack —
+0.15 s down, 0.15 s back — and a tenth of a second is right for carving a chime's space and wrong
+for handing it back; it is 1.0 s now, and the music swells rather than switches. And the clip
+stopped dead: `StepChimeTails` fades the last 0.4 s of every voice on the Alerts bus, from the
+gain it was played at, so a fader move during the tail is applied on top rather than fought.
+Alerts only, because a chop or a pick is a transient and is meant to stop dead. The busy clock
+already knew where each voice's end was (`_busyUntil` is arithmetic, not `isPlaying`), so the
+tail costs a subtraction per voice per frame and works in edit mode and in a test. Two tests pin
+it, measured at a fifth of a second after the duck ends and part-way into the tail.
+
+**What did not change.** The landing rule, the ledger, the hash, the goldens: none of the four
+touched a tick. The one Def edit moved the content fingerprint and nothing else, which is what a
+fingerprint is for.
+
+**Owed.** The Unity tiers on this round, the second look (design 23 §9: chute or lift, waited for
+or not, the swell back), the History screen, and the storyteller when the owner wants events
+that arrive unasked.
+
+## 2026-09-20 — Events reviewed for the next kind: what a raid costs
+
+The owner called the supply drop good enough for an MVP event system and asked for the PR to
+be reviewed against the events to come — raids, encounters — so that adding one is a matter of
+adding rather than restructuring. The review is design 23 §8, "Adding an incident: the recipe".
+
+**The verdict.** Five edits, every one of them caught by the fast tier if missed: a worker
+that joins by existing, a Def, a line in `Order`, a handle and a label in the same position,
+and a registry key. The Events panel, the chime and the debug tab follow from the key and the
+Def. The seams a storyteller needs — gates on the Def, `LastFiredTick` and `Fires` on the
+ledger, `CanFire` / `TryFire` as the one door, `Points` on the parms, a category enum with the
+threat, arrival and condition bags already named — are all present and unread, which is the
+right state for them.
+
+**One thing changed.** The content loader validated the supply drop's fields — stack range,
+fall time — for every incident, so the first raid Def would have been held to rules about
+falling meals. `IncidentWorker.Validate(def, pawns)` is a virtual hook now, the loader checks
+only what every incident has (a key, a worker, an item the content carries), and
+`SupplyDropWorker` owns its three rules and adds a fourth: a drop that pays out nothing is a
+content error, not a silent no-op. Three tests, one of them a bare worker in the test
+assembly proving a Def with none of the drop's fields loads.
+
+**What was left narrow on purpose**, and written down so nobody reads it as the design: the
+flat `IncidentDef`, which becomes per-worker nested blocks the day a second worker wants
+parameters the first does not (the loader already reads them); `InvokeIncident` carrying the
+Def index only, though the parms take a cell and a budget; and the four-field ledger entry,
+which a raid's outcome or a condition's end will widen with a save-format bump. A condition is
+the one kind of event the layer does not represent at all — a span, not a firing — and is the
+first structural addition the next kind will ask for.
+
+**What a raid needs that events should not provide:** a faction and a hostility model, a
+non-colonist pawn kind, an arrival edge, combat and health. The incident is the thing that
+asks for them at a moment; they are their own units.
+80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
+all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
+render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written
+down rather than smoothed over (a young field, and about one draw call per crop) — §6 and §9 of
+`22-growing.md`. The off-by-one the first field soak hit — designating through the intent bus
+spends a tick draining it — is the same lesson the start-flow unit paid for the other way round:
+a seeded world's clock starts where the seeding left it, not at zero.
+
+### The merge broke the fold's other invariant (2026-09-18, re-review)
+
+The PR's own re-review found the third bug in `GrowingZones`' fold, and the second one the
+fast tier could not see. `MergeInto` appended the absorbed zone's sorted cells onto the
+survivor's sorted cells, and two sorted runs appended are not a sorted list. Which zone
+survives a fold depends on which neighbour the scan meets first — east is first in the array —
+so the absorbed cells can be the *smaller* indices, and everything that reads a zone's record
+assumes ascending: `Cancel`'s `RemoveAt(BinarySearch(index))` answers negatively on the
+unsorted record and throws inside the intent drain, the poisoned-queue cascade again.
+
+The derivation earned its test the honest way round this time: the first reproduction passed,
+because the closed-interval binary probe happened to land on the target for the cancel order
+written. Cancelling the *absorbed* cell first — the search probes two larger values, gives up
+negative — throws. The fix is one `Sort()` after the `AddRange`, with the regression test
+pinning the geometry that reaches it. The hash never noticed any of this: it walks the global
+sorted cell list, not zone records, which is exactly why only a cancel after a fold could.
+
+And `Harvested` now re-asks after its defer, as `Sowed` always had: a crop cancelled between
+the swing that earned the edit and the boundary that lands it yields nothing rather than
+carrots for a field the player erased.
+
+### The debug menu learns to skip the wait (2026-09-18)
+
+The growing zone shipped with a four-day wait nobody can test at the keyboard, and the owner
+asked for the debug rows that skip it. Two, deliberately not one: **Skip one day** spends the
+day's own ticks through the composition root's batch tick — real simulation, hash taken at the
+same boundaries, works while paused, one fifth of a second a press — and **Ripen crops** wraps
+`RipenAll` behind an intent refused as AlreadyInThatState on an empty board, the harvest half
+without the window. What was weighed and rejected on the way: a growth-rate multiplier (new
+hashed or silently unhashed state, either wrong), a fourth speed tier (breaks the frame budget
+for a tester's problem), and ripen alone (never shows the stages moving). The warp is a method
+on the root rather than an intent for the reason the re-entrancy note records: the bus drains
+inside a tick, so a skip through it would ask the world to re-enter its own tick.
+
+### The sower kneels, and the field turns to soil (2026-09-18, owner's first two looks)
+
+Two owner calls on work nobody had played. **The sow must not chop** — the swing every unknown
+job inherits is the axe's, so a sower was felling the ground; and **the green was hard to see on
+the surface**, so the zone and its toolbar colour want earthy brown.
+
+The kneel reuses the pickup rather than inventing a pose: `PawnGesture.Sow` is the lift's own
+solved curve re-timed (`Gesture.Sow`, down quickly, the hold stretched over most of the motion,
+up slowly — the hold *is* the work), and `SowJobDriver` stops reporting a work focus, which is
+the thing that summoned the swing and the tool in the first place. One approximation, accepted
+with the owner's "for now": the gesture runs on its own clock timed against the carrot's price
+at the tuned rate, so a rate change would re-time the kneel by hand. Harvest keeps its swing —
+a cut is a cut, and nothing was asked of it.
+
+The brown is `(0.45, 0.32, 0.17, 0.34)` on the board and `0xc3985c` in the panel, worked soil on
+both surfaces, and the colour-guard test now asserts soil rather than green — both hues recorded
+in 22-growing.md §6, because the brown is a judgement on a colour nobody has played and the
+first playtest may send it back.
+
+### The field gets its ground, and a click gets its answer (2026-09-18)
+
+Two more owner looks at the zone. "No graphical change to the ground" was true and was the
+design's own deferral — the dirt-row pass was a recorded hook — and the farm pack was pointed at
+as the answer. The tilled ground is `SM_Env_Dirt_Rows_01`, one patch per zoned cell, drawn
+through the crop path rather than a terrain write: a `_zoned` mirror merge-walked from the zone
+channel, the mesher emitting the module at the terrain's floor, and `Designate`/`Cancel` marking
+the chunk because the ground under the cell is what changed. Nothing simulated, nothing saved,
+nothing hashed; pack-less keeps grass and tint. The committed catalogue gains its row at the
+next rebuild — until then `Resolve` answers zero and the field keeps its grass, so the change
+cannot half-appear.
+
+And the click: `CellDetail` carries `ZonePlant` and `CropGrowth` now, the contributor answers
+for zones beside beds, and the pane's row reads "growing — carrot, 43% grown" or "awaiting its
+seed". Changing the crop from the pane is recorded as the species-chooser hook it always was:
+one crop exists, and a chooser with one choice is a label wearing a button.
+
+### The carrot's own stages, at their own sizes (2026-09-18)
+
+The owner pointed at the carrot prop's own grow stages — planting, growing, sprouting, popping
+out — and the trio was already wired but twice-shrunk: the S/M/L prefabs are the stages, staged
+by the artist, and the 0.5/0.75/1.0 the rows carried was authored for the Pillow fallbacks but
+scales the real art too (`SafeScale` dresses both paths). One scale throughout now; a pack-less
+checkout loses the fallback's size ladder, the cheaper half of the trade. The catalogue rebuild
+bound all of it — 126 of 143 rows with art, the carrot trio and the dirt rows among them — and
+the worktree's Synty junction is what let it run without touching the licensed files.
+
+### The rows were wrong; the tile is right (2026-09-18)
+
+First look at the tilled ground: the dirt rows read as mess, "all over the place" — each cell's
+patch of sculpted rows fighting its neighbours. The owner named the replacement before naming
+the fault: `SM_Env_Dirt_01`, the square tile that "fits seamless into each tile", and it wants
+colouring brown. The brown comes from the tint table rather than a texture: the tile is drawn
+with the bare-earth terrain tint, the same brown the board's own dirt wears, so a field matches
+the ground it sits on whichever board that is. Unrotated, unscaled, at the floor centre, one per
+cell — the seams between cells are the field.
+
+### The ground is the tile (2026-09-18)
+
+Second look at the dirt: the tile mesh would not sit clean on the cell, and re-clicking read as
+piling more dirt. Both faults were the same fault — a mesh laid over the ground is a thing with
+its own size and its own edges, and the owner named the way out while offering it: "browning/
+dirting the tile up instead". So the field is now the terrain quad itself re-looked: a zoned
+cell's ground draws as bare earth, the same dirt material and tint the board's own earth wears.
+Seamless by construction — one quad per cell, the cell IS the tile — and boolean by
+construction: there is nothing to stack, and an unzoned cell reverts to grass. The mesh route's
+remains are gone whole: emitter, module id, catalogue row (the last is unreachable dead data in
+the committed asset until the next rebuild rewrites it out).
+
+### The brown that did not show, and the pane that did not answer (2026-09-18)
+
+Both of the owner's plays found real faults. The brown did not show because the meadow's ground
+is not drawn by the path the swap sat in: grass is EARTH, and the earth contributor resolves its
+mesh from the grid's own terrain — the swap changed the tint input and the tint table barely
+distinguishes grass from bare earth, so a dirt-tinted grass block read as grass. The earth path
+now resolves by the terrain the cell carries — the drawn terrain — and the tuft scatter gates on
+it too, so a zoned cell draws earth and grows no grass through it.
+
+And the pane was silent over every field for the reason the fixture always knew: a click lands
+on the SOLID ground the field is drawn on, while the zone lives in the air cell above, exactly
+as a tree does. The contributor now asks one cell up when the clicked cell is solid ground —
+the picker's own "block below" rule played from the other side — with a test pinning the ground
+cell's answer and a far cell's silence.
+
+Both were invisible to the fast tier, again: one lived in the terrain contributor chain, the
+other in a query path no fast test drove. The Unity tier caught the rename's leftover within a
+minute of being allowed to run.
+
+### One patch, darker (2026-09-18)
+
+The owner's eye again: the tiles read as separate squares, not one patch. Two causes, one
+commit. The cover plate was INSET — 0.22 m a side, the right inset for an order's mark and the
+wrong one for a field, drawing a border of textured ground between tiles — so DrawCellMark grew
+an inset parameter and the zone passes nought: the whole tile, and neighbouring tiles butt into
+one patch. And the brown went darker and more opaque (0.28, 0.17, 0.07 at 0.62), enough to
+flatten the dirt texture underneath into soil rather than dapple it. The order marks keep their
+inset and their own alpha band; only the field changed.
+
+### Deep soil, seed specks, and the pane that worked (2026-09-18)
+
+Three asks. The brown went much deeper (0.13, 0.075, 0.025 at 0.72) - dark enough to flatten the
+dirt texture into soil. The sown cell now carries six white seed flecks at hashed per-cell
+positions, drawn from the plant channel the crops ride: pale against the dark soil, deterministic
+so they sit still, shadowless so a fleck is not doubled by its own shadow. They are the sowing's
+feedback - a sown tile was a dark square until the sprout's first stage read.
+
+And the pane was right all along. The owner could not find the growing row, and the reproduction
+test - a real QueryCell for the ground a surface click lands on, a real pick, the real panel -
+found the row saying "Carrot - 0% grown" on its first run; only the test's own case-sensitive
+assertion failed. The likely reason a real click shows nothing is that a click landing on a
+colonist picks the colonist (the pick rule an earlier playtest fault fixed), and the sower stands
+exactly where you click right after sowing. The test now pins the row, the crop name and the
+ripeness so the join cannot silently break again.
+
+### The plot grows its yield, in the dark, from the sower's hands (2026-09-18)
+
+Four owner asks, one pass. The carrots are much bigger and sunk a quarter-metre into the soil -
+scale 1.4 with a per-stage sink, so the mature carrot reads as sitting IN the field, to be pulled.
+The plot now draws its actual yield: five plants per sown cell from the first sprout, scattered at
+hashed positions, free by instancing - the render test that pinned "one plant is one instance" now
+pins "one bucket, as many instances as the yield", which is the same argument grown. The seeds
+germinate away - specks draw only on stage-one cells - and they begin while the sower is still
+down: a pawn working a Sow job in a zone draws its handful from the pawn registry, so the seed
+appears under the kneel and not after the stand-up. And the brown went near-black, 0.06 at 0.78 -
+two darkenings in one day, the second asked in the words "much much deeper" and answered at the
+top of the alpha band the colour guard allows.
+
+### Three playtest faults: phantom seeds, the unripe harvest, the stale catalogue (2026-09-18)
+
+Seeds appearing under a walking colonist: the "sowing in progress" specks were gated on the JOB,
+and a sower walks to her plot inside the same job - so every zoned tile she crossed grew a
+handful. The gate is the KNEEL now (the gesture plays only in the work toil), and a cell that
+already stands a plant is excluded, so the seed appears under the kneel and nowhere else.
+
+"Sowing when the harvest has not happened": the pipeline was already right - harvest precedes sow
+at equal priority, by the registry's name sort - and a new test proves it where a playtest can
+meet it: a ripe crop and a fallow cell both waiting, one grower, the ripe one goes first. What the
+owner saw was the third stage's width: the big art arrived at two thirds grown and ripeness is
+one hundred, so for over a day the field stood full of full-size carrots correctly waiting while
+the sowers planted on. The stage bands moved to 45/85, so the big carrot now arrives close enough
+to ripe that what looks pickable nearly is.
+
+And "absolutely no change in the carrots": the catalogue was right on disk and stale in the
+owner's session - her editor held the project while the rebuild was blocked, so she played the
+previous asset. A fresh open has the bigger, sunk, five-to-a-plot carrots.
+
+### A day of play, closed out (2026-09-18, evening)
+
+The first play day on the growing zone: nine looks, six fixes, and every one of them a thing no
+contact sheet had said. The kneel replaced the chop; the green became brown became one whole-tile
+patch of near-black; the ground went mesh, mesh, terrain; the seeds learned to appear under the
+kneel and nowhere else; the big carrot learned to arrive nearly ripe; and the pane learned to say
+how many a plot grows. The catalogue taught its lesson twice - a rebuild wipes the swatch
+classifier's work unless the classifier runs behind it - and the fast tier's blind spot (it
+compiles neither Presentation nor Editor) cost the owner two Safe Mode dialogs before the batch
+compile became the gate it should always have been.
+
+### The stuck batch, the racing runner (2026-09-18, late)
+
+The evening's last two runs collided: a self-hosted CI EditMode and a cancelled local attempt
+both wanted the project, and the CI one died in bee_backend's "more than one copy" - then stayed
+alive as a shell of itself holding the lock, the exact shape lessons.md's first lesson names. The
+stuck process was cleared (a batch shell with no results and no editor behind it), the tiers re-ran
+clean, and the runner will pick up the pushes when it next polls. The lesson's cost this time was
+half an hour of "close the editor" aimed at nobody.
+### The warp hid the harvest, the sink buried the sprouts (2026-09-19)
+
+Two evening plays, two lessons. Skipping a whole day lands where you started, and everything in
+between happened inside the warp - so a field that ripens and is reaped reads as "seeds back down
+before a harvest I never saw". The debug menu gains Skip to morning: the night goes in one press
+and the day is handed back whole, watchable, harvesters and all. And the carrot sink was the
+STAGE's to carry, not the cell's: a 0.15 m sink on a hand-tall stage-one sprout put whole plots
+underground, and five carrots a tile drew as one - young plants sit on the soil now, only the
+mature root insets. The third ask, the small click area, was the pile eating the tile: an item
+lying in a field now carries the field's growing row in its own pane, so the tile answers
+wherever on it the click lands.
+
+### One carrot, three causes (2026-09-19)
+
+The owner's third play day opened with an interview, and the answers split "single carrot is
+always displayed" into three separate truths. The one carrot standing in a ripe tile was the
+biggest find of the branch: PlantView's contract promises a nought-based PlantHandle, the
+contributor was publishing the one-based crop slot, and the render mirror added one of its own -
+the carrot landed on slot two of a one-plant table, CropModule's bounds guard answered nought,
+and a ripe field drew nothing at all. Every render test fed the contract's own bytes and passed;
+APublishedPlantCarriesItsHandleAndNotTheCropSlot now reads the real contributor back. The one
+carrot after harvest was ItemHeap having no carrots row, so a five-stack drew as one prop; the
+recipe's Full is the carrot's own yieldCount, which makes the ramp the identity - five grew,
+five lie there. And the axe on the plot was the harvest driver's work focus, never changed when
+the sower's was; the pull now kneels with the same PawnGesture.Sow the sow uses.
+
+Two smaller settles ride the same day. The seed specks wait out half the kneel - the gate is
+the gesture's own age on the frame clock, a delay that lives on Gesture beside the timing it
+scales with, because nothing in the simulation stores how long a colonist has been kneeling.
+And "carried back like wood" was already true: the yield drops as a loose haulable pile exactly
+as felled wood does, and TheYieldIsHauledToTheStockpileLikeWood pins it rather than leaving the
+owner's word for it. CropCheck photographs the field through the shipped catalogue - stages,
+ripe tile, pile - because every carrot judgement until now came from the owner playing the
+game, and twice what was being looked at was not what the code drew.
+
+### The fourth play day: the seed earns its day (2026-09-19)
+
+The owner asked for the seeds to fall from a bundle in the hand, reported a flicker - appear,
+disappear, appear - and asked that the sprout wait a day. All three were one fault wearing
+three faces: the kneel gesture is sticky by contract, so a kneel nobody cleared leaked through
+the walk to the next plot and the specks gated on it flashed under the sower's feet as she
+crossed fallow tiles; the sprout art arrived at growth nought because stage one began at zero;
+and the drop itself had no motion at all. The drivers now author the gesture's END on the same
+boundary the plant record lands; the first daylight day is stage nought (below 25 per cent,
+32,500 of 130,000 ticks) and draws nothing but the specks; and the specks fall - clustered at
+the hand for a beat, then staggered and accelerating to their hashed spots, timed off the kneel
+age past its threshold so nothing is timed twice. The fourth ask, carrots piled upright, was
+ItemHeap's tip: the carrot row lies down, Place tips each lump ninety degrees before its yaw
+and lifts it half a girth, and the armful inherits the lie. CropCheck's pile shot frames the
+pile alone now - the first framing put a field of upright carrots behind it and the picture
+answered every question about orientation with more of the same shape.
+
+
+### The meadow is pulled off the plot border (2026-09-19)
+
+The owner asked for the grass to come off the plots automatically. The plots' own tufts had
+gone with the tilled-earth swap months of sessions ago; what he was looking at was the
+neighbours' - a grass clump's mesh is nearly two metres across, standing in a ring up to 0.44
+of a cell out, so clumps from unzoned grass reached the better part of a metre over every
+border tile of a field. GroundScatter.PullInFromTilled clamps a clump's offset to where its
+metre of reach stays on grass, asked through the zone mirror at mesh time, and designation and
+cancel now mark the side neighbours' chunks - a border cell's neighbours can live in another
+chunk, and without the mark that chunk would keep its fringe until something else happened to
+re-mesh it. The clamp touches only clumps that would have crossed; the ring everywhere else is
+where it always was, which the scatter stability test still pins.
+
+
+### The cover learns the ground's shape, and the earth finally tills (2026-09-19)
+
+The owner's flush screenshots carried two faults, and the second was hiding under the first.
+The cover itself was a flat plate on draped, rippled ground - it sank into convex corners and
+floated over concave ones, so every tile showed gaps, thick borders or missing parts that
+changed with the bearing. DrawZoneCover now draws the drawn terrain's own module with the same
+drape, lifted a mark's height along the drape's own up: identical geometry, one constant
+offset, flush by construction, judged so in the photo sheet.
+
+And under it: the tilled-earth swap had never fired. A zone is painted on the air the
+colonist stands in, and DrawnTerrain asked the zone at the ground cell itself - always no.
+Every brown tile the owner had ever seen was the translucent cover; the plots' own tufts had
+never left; and the photo sheet had said "carrots growing out of grass" twice before anybody
+believed it. The swap and the tuft pull both ask one layer up now.
+
+The flow asks landed with the same photographs: the yield is laid off the soil (the harvest
+hunts a cell outside every zone before it falls back to the felling argument), nothing is sown
+where a pile still lies, and the judgement call on pile size is twelve drawn and seventy-five
+stacked - the identity to a yield kept, the store square a proper heap.
+
+### One field, a clear floor, and a paid hoe (2026-09-20)
+
+The borderlines on the dirt tiles were each cover lifting along its own drape: neighbouring
+drapes disagree by a few centimetres of slope across a shared edge, and the divergent lifts
+opened a hairline of untinted earth between every pair of tiles - a lighter grid over the
+field, widest at the corners. A shared world-up lift leaves the covers' mutual seams exactly
+the terrain's own, which the ground already draws invisibly; the photo sheet reads one
+continuous field. The clearing ask rode the sow guard already landed: a thing on tilled soil
+blocks its cell, and the haul scan now prefers such a thing over any nearer ordinary pile -
+fifty cells of bias, which is the ordering and not a radius. And the hoe finally pays by
+skill: Work_Growing carries rateSkill with cutting's own shape, the def is the whole seam
+because both drivers have paid at WorkRatePerMille since WS1, and the curve's tuning is left
+to the skills work the owner says is coming.
+
+
+### The second border day and the stone that stayed (2026-09-20)
+
+The grid survived the shared world-up lift, and the reason my sheet had called it fixed was
+the sheet: CropCheck never set the relief amplitude, so its board was flat and a flat board
+cannot show a parting. With the played amplitude the grid reproduced on demand. The cause
+under it: the earth draws a variant clump per cell - a different shape per cell - and the
+cover drew the plain default block; every disagreement between the drawn clump and the lifted
+block showed a sliver of untinted earth. The cover now reads the earth contributor's own
+choices - module, variant, exposure, bearing, drape - and scales a hair in the plane so
+adjacent covers overlap rather than meet; on real relief the field reads as one patch.
+
+And the stone that stayed: the store was full, so the haul scan formed no job at all, and the
+sow guard had blocked the tile behind it - a deadlock where nobody was wrong. A field blocker
+with nowhere to be stored is cleared to the nearest free cell off the zone now, and the store
+can have it back when it has room. The lesson the flat sheet earned went into lessons already:
+an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
+board's amplitude and the blindness is recorded beside it.
+
+
+### The third border day: the light was the border (2026-09-20)
+
+The borders survived the same-mesh cover, and the cause was not geometry at all: the bracket
+material is the lit terrain shader made transparent, and on rolled ground it shades every
+differently-tilted cover differently - per-tile brightness steps that read as borders however
+seamless the shape, unseen under the sheet's flat light and plain under the play sun. The
+cover is opaque unlit now: one colour, every tilt, every light. An unlit flat colour cannot
+shade, cannot seam, and cannot be bloomed into a line. It is opaque, so the tilled earth no
+longer shows through; the field's texture is the seeds, the crops and the soil's own shape.
+
+And the stone that still was not picked up: growing scans at order one and hauling at four, so
+a busy field starves the haul order and its own blocker waits forever - the bias and the
+clear-to-grass fallback were both in place and both idle, because nobody ever reached the
+scan that had them. The sow scan hands out the clearing itself now: when every tile is sown
+or waiting on a thing, the job a sower takes is the haul of that thing. Clearing the dirt is
+the sowing work.
+
+
+### The brown comes back and the yield finds grass (2026-09-20)
+
+The opaque unlit cover killed the borders by killing the light and the texture in one stroke,
+and the owner wanted the brown. The cover is translucent unlit now - the tint's own alpha
+through the straight-alpha recipe - so the tilled earth shows through and the field is brown
+with texture, while staying one flat colour per tint on every tilt and under every light.
+
+And the items that landed on the next dirt tile: the off-zone searches ran out of ring at
+three cells for the harvest yield and six for the clearing, and a field six tiles across has
+nothing but dirt within three of its middle - the fallback then put the pile back on the plot.
+Both searches reach twelve cells now, which covers any field the player has painted.
+## 2026-09-20 — four reports from one play session: beds, loading, and the colour of an order
+
+Four owner reports in one message, on `claude/bed-assign-and-order-colours`. Three turned out to
+share nothing; the two bed reports turned out to share a cause.
+
+### The phantom bed cells, which were two bugs wearing one coat
+
+> *"Some colonists still sleep off the bed … it looks like it's trying to rest them in the first
+> tile in some circumstances where they are hanging off the bed."*
+
+> *"When I assigned a bed to a colonist and they are asleep — I expect them to get up immediately
+> and get into the bed they have been assigned to."*
+
+**The first one nearly cost a session, because reading the code said it was fine.** `SleepPose`
+lays a body from the pillow along the bed's own facing; the arithmetic puts a 1.8 m colonist
+between −1.55 m and +0.26 m of a bed spanning ±2.30 m, which is comfortably on it. `AimSleep` runs
+every frame, so nothing is stale. `GotoCell` requires exact arrival, so a sleeper cannot stop one
+cell short. Every reading said the sleeper was on the bed.
+
+So it was measured instead — three colonists, three built beds, three days, counting the ticks
+each spent asleep on a bed cell and off one. With the fixture the tests use (`scenario.beds = 0`)
+every sleep was on a bed. With the number the **game** actually ships (`ScenarioDef.beds = 5`) one
+colonist spent **all 53,222** of her sleeping ticks off a bed and a second **17,399** of hers, and
+every off-bed cell was **one to three cells from a real bed she never used**.
+
+`ColonyScenario` had been putting five entries into `ColonyItems.Beds` that were *cells and nothing
+else* — no edifice, no record. That was right when it was written: a bed was then a property of a
+cell and there was nothing to build. It became a lie the day beds became furniture, because
+everything a bed now is hangs off the record. The cell cannot be seen. It cannot be **owned**
+(`AssignOwnerAt` refuses a cell with no edifice), so §7 and §8 of `20-beds.md` — the pane, the
+popover, the whole assignment feature — were dead on every bed the colony woke up with. And a
+colonist who "sleeps in it" gets the **ground** pose, flat on the grass along her last yaw, which
+beside a real bed is a colonist hanging off it.
+
+One fix: a starting bed is a real bed, raised through the construction grid, and `Raise` adds the
+head cell to the list itself — one owner for "what counts as a bed". Two things the placement
+needed, both found by tests rather than by thinking:
+
+- **Eight footprints per spot, not four.** A bed is wider than the spot it is given, and the spot
+  can be its head *or* its foot. Four facings left the ruined city three beds short of five,
+  because a storey there is rooms and two spots had no free neighbour in the direction a head
+  needed.
+- **Keep off cells promised to another group.** Every storey is searched up front, so the
+  stockpile's cells are chosen before any bed is raised and adding the bed's far cell to the taken
+  set would be too late. `Storeys.Spoken` lets the bed ask instead. Not cosmetic: a bed claims its
+  cells against items, so a stockpile cell under a bed's foot is a cell nothing can ever be put in.
+  `ForbidIntentTests` caught it, reporting it as "forbidding is broken" — the colony was hauling
+  perfectly and had filled its last three free cells with rations.
+
+**The assignment half** is `JobSystem.GetOutOfTheWrongBed`, and the first draft of it was wrong
+twice in ways worth keeping:
+
+1. **Naming the colonists involved does not work.** The obvious version lists the bed's old owner
+   and its new one. It misses the commonest case there is — a colony short of beds keeps them
+   unowned and shared, so the colonist actually *lying in* the bed when the player gives it away is
+   very often nobody's owner and is in no such list. `ASleeperWhoseBedIsGivenAwayGetsUp` failed on
+   exactly that. Who is affected is a question about where people are sleeping, which the
+   construction grid does not know; it raises a flag and the job system sweeps.
+2. **Acting on the change rather than on the bed loops.** A sleeper claims an unowned bed the
+   moment she arrives, through the same door a player's assignment uses. Waking on the change would
+   get her up, walk her to the bed she is already in, and repeat for ever.
+
+So the rule is *is she asleep somewhere that is not hers?*, and the negative control
+(`ASleeperWhoClaimsTheBedSheIsLyingInIsNotWokenByHerOwnClaim`) is the test that matters. Full
+account in `20-beds.md` §7a.
+
+### Load with nothing to load
+
+> *"I notice when you try a load a game in game and there is none available — you can end up losing
+> your current game as it goes back to the main menu."*
+
+The in-game Load row tears the colony down first, on purpose — the player watches the panel close,
+the world go, the list arrive, which is Quit to main menu followed by Load and was built to look
+like it. It never asked whether the list would have anything on it. It asks now, before anything
+irreversible, and with nothing readable in the folder the colony is untouched and the row says
+**No saved colonies** until the next press.
+
+Recorded as still open: backing out of the load screen *after* going there still loses the colony,
+because the teardown has already happened. Fixing that means showing the browser over a live
+session, and the menu is currently tied to there being no session at all. That is a restructure of
+the start screen's modality rather than a guard, and it wants its own round. `17-start-flow.md` §5b.
+
+### One colour per order, and the question that had to be asked
+
+> *"The deconstruct order when placed puts down an entire square as the blueprint to deconstruct,
+> the placement shouldn't be red … make it mark the tile for deconstruction instead like you would
+> mark in mining. Also match the orders blueprints/placement titles to the color assigned on their
+> toolbar. Clarify this with me."*
+
+Two mappings of tool to colour, in two assemblies, written months apart, disagreeing on two of the
+four tools. Deconstruct was orange on the palette chip and **red** on the board — the interface's
+own colour for *cancel* — so while the player held the deconstruct tool the panel and the cursor
+said different things. A **P1**, and the plainest one in the register.
+
+Nothing caught it because the board's copy lives in `Odyssey.Presentation`, which the fast tier does
+not compile, and the only assertion on it was one of *totality*: every kind maps to something,
+which a wrong colour satisfies perfectly. The mapping is `Odyssey.Hud.OrderColours` now — Unity-free,
+so `OrderColoursTests` runs in the fast tier and asserts that the chip, the drag cursor and the
+board mark are one hue per tool.
+
+**The clarification was needed and the answer was not derivable.** Giving deconstruct the orange
+its chip already had would have put it within a few points of mine's warm amber on the same board.
+Three options were offered with the cost of each stated; the owner chose **the toolbar wins**, so
+mine's board mark becomes its chip's blue and loses the warmth that had been chosen for standing
+out against cool stone. That was a real reason and it lost to a better one. Mine's hue is the one
+value here that is not an existing signal token, because `HudTheme.Info` is within a few points of
+`Accent` — what a pending *build* is marked in — and a colony half dug and half planned would have
+been two blues nobody could separate. Deeper and bluer, on **both** surfaces so the chip and the
+mark still match, and `NoTwoOrdersLookAlikeOnTheBoard` pins the distance so somebody tuning `Info`
+for a tooltip learns in two seconds.
+
+**And the first pick of that blue was wrong in a way the test caught on itself.** `#5fb2d8` looked
+deeper and bluer and measured at *exactly* 60 channel-points from the accent — it passed a
+60-point threshold by sitting on it, for the one pair the threshold existed to police. A blue
+reads as cyan when its green is near its blue, so the separation had to come out of green:
+`#4a90c8`, 144 against the accent's 211, 131 points away. The threshold is 80 now, which is the
+most the existing palette clears (orange against red is the closest pair at 83). A number chosen
+to let the current values through is a number that asserts nothing, and it took measuring all ten
+pairs to notice this one had become that.
+
+**The shape half was simpler than §6a made it.** That section was right that a floor plate under a
+wall is inside the wall, and reached for a different shape — a whole-cell wash. The answer was the
+same shape at the right height, which is what a mine order already does to rock.
+`WorldRenderModel.MarkHeight` is the one rule now: the top of the cell for anything that fills it,
+the top of itself for anything that stands up without filling it (a bed), the floor for everything
+else. Trees stay on the floor deliberately — a fell order is read on the ground the tree stands in.
+`DrawCellShade` is deleted. `16-cancel-and-deconstruct.md` §6b.
+
+### And a control that found a third thing
+
+The owner added, mid-session: *"make sure saved games save orders assigned as well."* Every order
+did round-trip — designation and its progress, blueprint with material and deliveries, bed owner,
+zone, forbidding, work priorities — so the six new tests all passed first time. The **seventh**,
+the control, did not.
+
+`ColonyItems` hashed its things and not its stockpile zones or its bed list, both of which it had
+been *saving* since they existed. That is the worse way round: `WorldRoundTripTests` proves a save
+by comparing hashes, so a zone whose filter failed to round-trip would have come back accepting
+everything and passed. OQ-50's shape exactly, and found the same way — flip one bit of a filter and
+ask whether the number moved. It did not.
+
+Both lists are hashed now. `OrdersSurviveASaveTests.EachOrderMovesTheStateHash` walks all eight
+kinds of player order, and it is worth more than the six round-trips above it: those can only cover
+the orders somebody thought to name.
+
+### The goldens, re-baked twice in one commit
+
+Every `Generated` and `Simulated` on all three cases moved, and it happened in two steps for two
+reasons — the beds becoming records, then the zones entering the hash. Both are the hash **seeing
+more**, not the colony doing anything different, and the evidence for that is specific rather than
+asserted: the placement signature on both maps kept its part count at 34 either side of the bed
+change, so the colony is the same colony with the same things in it and only the beds are
+somewhere else. No generator pass changed.
+
+`ScenarioDefTests.AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid` was re-baked too, and its
+promise is narrower now than when it was written: it promised the storey work moved nothing, and a
+deliberate content change has moved it. Said so in the test rather than quietly replacing the
+number.
+
+### And the bed change found a fourth thing, which is why a write is a probe
+
+The starting beds were the first thing in the project ever to **write to the chunk grid during a
+world build**. Three PlayMode tests threw `IndexOutOfRangeException` out of `ChunkGrid.MarkDirty`
+the moment they did — and the new code was not wrong.
+
+`OdysseyBootstrap.BuildSession` built the chunk grid and the render model from the inspector's
+`new GridSize(sizeX, sizeZ, layers)`, and built the world from `sizeOverride ?? size`, the setup
+page's. A new game on any board but the scene's default therefore had a mirror and a chunk grid of
+one size over a world of another, and every cell index near the far edge fell outside them. A
+plain P1 — one number, two owners — with the extra property that it was **latent behind a write
+nobody had made**. The fast tier could not have seen it at any point: `PawnContext.Chunks` is null
+headless, so `MarkChunksAround` returns on its first line, and 769 Sim tests were green the whole
+time it was live.
+
+Two halves to the fix, because either alone leaves the trap set. The size is decided once, before
+the chunk grid and the mirror are built from it. And `MarkChunksAround` asks the grid it is about
+to write into rather than the one beside it — it had been checking `ctx.Size`, the *cell* grid,
+one line above a write to the *chunk* grid, which is why the guard passed and the array did not.
+
+The lesson is about diagnosis rather than about sizes. A new write into a structure nothing wrote
+to before is a probe: when it fails, suspect the structure's provenance before the write, because
+the write is usually correct and merely first.
+
+### What the tiers said in the end
+
+Fast **769 Sim + 455 Hud**, Long **21**, EditMode **1,931 total, 1,918 passed, 0 failed**,
+PlayMode **82 total, 77 passed, 0 failed**. Both content gates pass unchanged — the one new piece
+of player-facing text on the Load row reuses `ui.start.empty`, which the registry already had.
+
+**PlayMode earned its place in this round.** It is slow enough to be tempting to skip, and it is
+the only tier that caught the board-size fault: the fast tier cannot, because `PawnContext.Chunks`
+is null headless, and EditMode did not, because nothing there builds a session through
+`OdysseyBootstrap`. Three tests failed, all in `StartScreenTests`, all with the same stack, and
+the new code in the stack was not the wrong code.
+
+## 2026-09-20 — The second play day: woken for a bed, and sent to work
+
+The branch's first play day had put the bed rule in front of the owner, and the report back was
+one line: *"the issue here is when I assigned someone else to a bed — everyone just started going
+back to work — the rest of the fixes seemed fine."*
+
+**Reproduced before it was read**, in two tests, because the last three days have taught that
+reading this code says it is correct. The first is the report in its simplest shape: one colonist,
+two beds, asleep in the near one, given the far one after half a night. The second is the colony
+the owner actually played — three colonists, five starting beds, each claimed on the first night —
+with one sleeper's bed given to another at night. Both failed on the same line: the woken colonist
+was on a **work** job the tick after the assignment. The third colonist, whose bed had not
+changed, slept on; so "everyone" was the two people concerned, which in a colony of three it is.
+
+**The cause was the hand-over, not the sweep.** `GetOutOfTheWrongBed` ended the right sleeps and
+then left each colonist to the think tree, and the tree's sleep branch is gated on rest below the
+`seekThreshold` of 280 — the question *should she start sleeping?* A sleeper wakes at 950, so a
+colonist got up at 600 was, by that gate, not tired, and the work branch took her. Every one of
+the five existing tests had assigned the bed within a tick of her lying down, at the rest of 40 the
+helper sets, and so never crossed the 670-point gap between the two thresholds. A test that probes
+a range at one point proves the rule at that point.
+
+**The fix is that an interrupted sleep resumes.** The sweep now runs in two passes — every
+affected sleep ends first, so every claim is released, and then each woken colonist goes straight
+back through `TrySleep`, past the gate, because she was asleep and the only question is where.
+Two passes rather than one because the bed the player just gave B is the bed A is still lying in:
+choose in the same pass and whether B gets her own bed or the nearest spare depends on which of the
+two the colony list holds first, which is the kind of order-dependence that passes every test
+until the day it does not. `TrySleep` became public for it; the scratch list of the woken is
+cleared before and after every use and is neither saved nor hashed.
+
+Fast tier **777 Sim + 455 Hud**, Long **21**. The goldens did not move: no golden run assigns a
+bed, and an arrival claim on one's own bed still falls through the sweep's first case. Unity could
+not be run from this session — the owner's editor is open on this worktree — so the Unity tier
+is the pull request's to prove.
+
+Also this session: `origin/main` had taken the falling-items branch (PR #138), and this branch
+conflicted with it only in the three documents both had appended to. Both journal entries and both
+playtest-queue rows were kept, and the tier line keeps this branch's counts, re-run after the merge.
+
+## 2026-09-20 — The second merge of the day, and no beds at the start
+
+`main` took the events layer (PR #140) between this branch's push and its review, and the pull
+request conflicted again: the two documents both branches append to, and **all six golden hashes**.
+The goldens were baked afresh from the merged code rather than taken from either side, because both
+branches had moved every number for their own reasons — beds and zones entering the hash here, the
+incident layer's state on `main` — and neither side's value was a number the merged code had ever
+produced. `Generated` moved on all three cases because the events layer hashes before the first
+tick, as it already did on `main`.
+
+**And the owner ruled out starting beds:** *"beds should never be given on startup / new game — but
+things seem to work fine."* The five real beds this branch had raised at tick zero were, from the
+player's side, five beds the colony had never had — the phantom cells they replaced were invisible.
+`ScenarioDef.Playtest` now has `beds = 0`; the colonists sleep on the ground and take the thought
+for it until a bed is built, which is what makes a bed the first thing worth building. `Bare`
+keeps its five, so no test, golden or ten-day run changed under it, because none of them
+builds on `Playtest`. Everything §7a says about a starting bed
+being a *real* bed still holds for the scenario that has some.
+
+Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
+
+## 2026-09-20 — Functional doors and room enclosure: sliding leaves, doorway traversal and sealed interiors
+
+Functional, buildable auto-sliding doors and strict room enclosure are in. A doorway connects or seals
+spaces, animates smoothly on pawn passage, and establishes indoor room environments.
+
+**The simulation half: building, traversal, and lifecycle.**
+- **Building handle & content:** `BuildingHandle.Door = 6` (`Count = 7`), registered under
+  `Buildings.xml` and `ConstructionContent.cs` (edifice: `CoreContent.EdificeDoor` (2), cost 5 Wood/Stone,
+  work 135). Buildable through `ui.arch.tool.door` on any standable cell with a floor below.
+- **Traversal & door lifecycle:** `DoorSystem` ticks at order 35 in `TickPhase.Pawns`. When a pawn approaches
+  or occupies a door cell, `DoorSystem` holds the door open. Traversal charges `MoveCost.DoorOpening`
+  (already defined in `NavGrid`) when closed. Once the doorway and approach cells are clear, the door
+  auto-closes after a 30-tick timeout.
+- **Strict room enclosure solver:** `EnclosureGrid` implements a per-layer flood fill bounded horizontally
+  by `EdificeWall`, `EdificeDoor`, or solid rock. Enclosure strictly requires 100% overhead roofs
+  (either solid rock or a built floor slab on layer `y + 1`). Reaching the map edge or exceeding 2,500 cells
+  marks the area outdoors. Dirty tracking wires into wall/door construction, mining, and collapse.
+- **Inspect pane:** `InspectModel` displays `environment: indoors` on cell inspection when `IsIndoors` is true.
+
+**The presentation half: frame, sliding leaf, and audio.**
+- **Frame and leaf split:** The doorway frame (`SM_Bld_Base_Wall_Door_01`) is emitted into chunk batches via
+  `ChunkMesher.EmitDoor`. The sliding leaf (`SM_Prop_Door_01`) is rendered dynamically via `DoorDirector`
+  using `Graphics.RenderMeshInstanced` so chunk batches do not remesh during animation.
+- **Lateral sliding animation:** When pawns approach within 1.6 m or pass through, `DoorDirector` smoothly
+  slides the door leaf laterally into the wall frame pocket over 0.2 s.
+- **Audio:** Transitions trigger `SoundIds.DoorOpen` and `SoundIds.DoorClose` on the world audio bus.
+- **Orientation ownership:** `WorldRenderModel.DoorFacing(x, z, y)` owns doorway orientation across both
+  `ChunkMesher` and `DoorDirector`, ensuring the leaf and frame never diverge.
+
+**The golden master.**
+Ruined city maps stamp `EdificeDoor` edifices. Previously, these edifices never had `NavFlags.Door` registered.
+With `RebuildDoors` active on startup, ruined city doorways now charge opening cost and tick through `DoorSystem`.
+The meadow baseline maps have no doors.
+
+**Verification:**
+Fast tier 822 Sim + 473 Hud; EditMode 2,024 / 2,011 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+
+## 2026-09-20 — Door wall alignment and colonist clearance: flush face placement and tall Base doors
+
+The initial door implementation placed the frame and sliding leaf at `CellMetrics.FloorCentre(x, z, y)`.
+Because walls in Odyssey are placed along cell boundary faces (`CellMetrics.FaceCentre(x, z, y, dir)`),
+doors were recessed 1.25 m into the cell, creating a visible gap and misalignment with adjoining wall
+panels. Furthermore, colonist figures with hats measure between 2.05 m and 2.20 m tall, clipping the
+1.97 m opening of `SM_Bld_Base_Wall_Door_01`.
+
+**Flush wall alignment and orientation:**
+- **Face placement:** `ChunkMesher.EmitDoor` and `DoorDirector` now compute their transform anchors via
+  `CellMetrics.FaceCentre(x, z, y, dir)`. The door frame now sits coplanar with neighbouring wall panels,
+  forming a continuous wall line.
+- **Exterior facade facing:** `WorldRenderModel.DoorFacing(x, z, y)` now evaluates `IsRoofed` on adjacent
+  open sides. When dividing an interior room from an exterior space, the door frame automatically faces
+  the outdoor facade.
+- **Proximity and audio origin:** Pawns triggering door traversal and the positional open/close audio
+  now calculate distance against the face center rather than cell center.
+
+**Colonist clearance and asset consistency:**
+- **Large Base door frame:** Swapped from `SM_Bld_Base_Wall_Door_01` to `SM_Bld_Base_Wall_Door_Large_01`
+  (2.47 m clear opening height), providing ample clearance for all colonists and headgear without clipping.
+- **Matching Base sliding leaf:** Swapped the temporary sci-fi prop door leaf for `SM_Bld_Base_Door_Large_01`
+  (1.13 m wide, 2.47 m high), maintaining aesthetic consistency with the Base wall theme.
+- **Slide distance:** Increased `DoorDirector.SlideDistance` from 1.05 m to 1.15 m to fully clear the
+  wider opening into the wall pocket.
+
+**Verification:**
+Fast tier 822 Sim + 473 Hud; EditMode 2,025 / 2,012 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
+
+## 2026-09-20 — A portrait taken after dark, kept for the session
+
+Owner, from a play-through: *"when generating more colonists — some are not animated and their
+profile picture seems black and they don't play animation."* Two faults, and neither was where the
+first four hypotheses put it.
+
+**What was ruled out, by measurement rather than by reading.** Every one of the sixty-one colonist
+rows has art, three live gait clips, a humanoid rig and a pose clip, and every one of them
+photographs (`CastProbe`, one run each). So the "hole in the catalogue" story — which the code is
+written around and which `LooksFrom` and `ColonistAppearanceBook` both warn about at length — was
+not it. Nor was the pawn: a colony of thirty, five placed and twenty-five through the debug menu's
+own `SpawnPawn` intent, came out with thirty figures and thirty good portraits (`ColonyCastProbe`).
+Several rounds of reading the code produced confident wrong answers before the first thing was
+measured; the standing note about that is earning its keep.
+
+**The picture.** A portrait is rendered once per appearance and cached for the session, and the
+studio is careful that its own light must not escape into the world. The same door swings the other
+way and nobody had looked: the daylight cycle writes `RenderSettings.ambient*`, the fog and the
+skybox, and moves and dims the scene's sun — all global, all read by any camera that renders. So a
+portrait is a photograph of a colonist *at the hour it was taken*. Measured across one day, the
+same colonist ran from a mean luminance of 80 of 255 at noon to **26 at midnight**, and the 26 is
+what gets cached. In a 26 px tile with a white frame, on a dark panel, 26 is a black square. It also
+explains *"some"* with no further mechanism: the starting five are photographed on the first morning
+and a colonist generated after dusk is not.
+
+The studio now takes the environment over for the same synchronous instant it takes its own light.
+Three attempts, because a global can look taken over and not be: writing `ambientMode` and
+`ambientLight` leaves the renderer on the world's stale probe (Unity re-derives it on its own
+schedule, which is what `DaylightDirector.ProbeUpdateHours` is about); `RenderSettings.ambientProbe`
+is honoured **only under `AmbientMode.Custom`**; and the skybox still arrives as the default
+reflection probe, so `reflectionIntensity` has to go too. The spread over the ten hours measured is
+now x1.00. `docs/design/20-avatars.md` §10.7.
+
+**And the cycle had adopted the studio's key light as the sun.** `FindKeyLight` takes the brightest
+directional light in the scene, and from the moment the setup page photographs its first candidate
+the studio's 1.6 key light is one — hidden, unsaved, and switched off except for the instant of a
+shot. That is how the residual variation survived the take-over, and it is why the fix looked
+half-broken for two runs. It needs the scene's own sun to be under 1.6 when a session is built, so
+it has probably not bitten a real game; it is fixed anyway, by skipping lights that carry hide
+flags. §10.8.
+
+**The animation.** Past `MaxFigures` (64) a colonist takes the baked instanced path, which does not
+animate. That is the design. But `Sync` walked the snapshot in order and stopped at the cap, and
+snapshot order is pawn id — so the frozen colonists were a fixed set decided when they were created
+and the camera never changed it, though the cap's own comment says *"a colonist beyond the cap is a
+long way off"*. With eighty-five colonists spread along the board the nearest frozen one stood 134 m
+away while an animated one walked at 179 m. The cap now keeps the nearest, with a quarter's
+stickiness for pawns that already hold a figure so that panning does not swap bodies in and out. It
+does nothing at all under the cap. §11.
+
+Whether the owner's colony had passed 64 is not established — the report says "generating more
+colonists" and not how many — so the picture is the fault that is *proven* to match the words, and
+the cap is a fault proven to produce the symptom.
+
+**Three probes were kept** rather than deleted, because each answered in one run a question that
+reading had got wrong: `CastProbe` (every face's art, gaits, rig and portrait, plus a contact sheet
+of all sixty-one), `ColonyCastProbe` (a growing colony, figure and portrait per pawn, with the
+distances the cap now chooses on), and three PlayMode tests that fail on the old code and pass on
+the new.
+
+Fast tier **806 Sim + 471 Hud**. Unity tier on this branch: EditMode **2,003 total, 1,990 passed,
+0 failed**; PlayMode **85 total, 80 passed, 0 failed** — three more than the 82/77 baseline, which
+is the three tests added here.
+
+**And the cap is a ceiling now**, on the owner reading the above: *"can we make the absolute cap 64
+for safety for now?"* `MaxFigures` clamps to `PawnFigureDirector.FigureCeiling`. It stays settable
+downwards, because `FigureCapTests` runs at eight rather than instantiating sixty-four Synty
+characters to prove a rule about ordering — but a setter that accepted a large number would make
+the ceiling a suggestion. Nothing in the game sets it at all; what the clamp is really guarding
+against is the inspector field somebody adds the next time a crowd looks wrong, when the answer is
+the ordering rather than the count. Moving the ceiling is a frame measurement under the real player
+loop, not an edit. EditMode **2,003 / 1,990**.
+
+## 2026-09-20 — Door blueprint alignment, rotation support, wall jambs, and plaster texture override
+
+Following playtesting with door placement alongside walls, several visual and functional defects were addressed:
+1. The placement blueprint ghost hovered at cell centre in a fixed orientation, failing to reflect the face-placed, rotated door that was ultimately constructed.
+2. Large gaps appeared between adjacent walls and the doorway because `OccludesFace` treated doors as occluding, causing neighbouring walls to omit their side panels facing the doorway and exposing the hollow wall interior.
+3. At corners and T-junctions, the doorway orientation heuristic placed door frames on boundaries shared with solid walls, producing severe z-fighting and texture flicker.
+4. Synty's door prefabs rendered with a contrasting red brick surround arch that clashed with neighbouring plain plaster walls.
+
+**Blueprint alignment and rotation support:**
+- **Rotation enabled:** Added `<rotates>true</rotates>` to `Building_Door` in `Buildings.xml`, `ConstructionContent.cs`, and `BuildShapes.cs`. Players can now rotate the door tool using `R` prior to placement.
+- **Ghost preview fidelity:** Updated `OdysseyBootstrap.DrawThingGhost` for `EdificeDoor` to resolve `DoorFacing(cell.X, cell.Z, cell.Y, facing)` and drape the ghost at `CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir)` with `Directions.Yaw[dir]`. The blueprint preview now snaps to the exact face, orientation, and height of the constructed door.
+
+**Wall jambs and gap elimination:**
+- **Doorway reveals:** Removed `EdificeDoor` from `WorldRenderModel.OccludesFace`. Adjacent wall cells now emit their boundary panels bordering the doorway. These panels serve as the door jambs/reveals, cleanly enclosing the wall core and completely closing the 2.25 m gap into the wall cavity.
+- **Raycast selection:** Updated `SlicePicker.cs` to explicitly select `EdificeDoor` cells during cursor raycasts despite doors no longer occluding faces.
+
+**Orientation and z-fighting resolution:**
+- **Refined orientation heuristic:** Rewrote `WorldRenderModel.DoorFacing(x, z, y, chosen)`:
+  - Along East-West wall runs, the doorway frame aligns along X, opening North-South (facing the unroofed outdoor facade or player's North/South preference).
+  - Along North-South wall runs, the doorway frame aligns along Z, opening East-West (facing the outdoor facade or player's East/West preference).
+  - At corners, T-junctions, and freestanding doors, player rotation is respected (`chosen & 3`), automatically flipping 180° away if facing directly into an immediately adjacent solid wall. This eliminates edge overlap and coplanar z-fighting with adjacent wall panels.
+
+**Plaster material override for doorway surround:**
+- **Consistent wall surfacing:** In `ModuleLibrary.FlattenPrefab`, added an automatic material override for door wall panels. Any submesh assigned a brick material (`Generic_Brick`) is dynamically remapped to the matching plain plaster material (`Generic_Plaster`) present on the same renderer. This guarantees plain wall continuity and persists reliably across git checkouts without relying on ignored Synty prefab modifications.
+
+**Verification:**
+Fast tier 843 Sim + 473 Hud; EditMode 2,028 total, 2,015 passed, 0 failed; PlayMode 85 total, 80 passed, 0 failed. Wiki and registry checks green.
+
+## 2026-09-20 — The sleeper was measured against the floor
+
+Third report of the same symptom, and the first two fixes were both right.
+
+> *"Fix the bug where the colonists seem to sleep off the bed — it should know to always put the
+> head onto the first tile and then the rest of the body goes on the 2nd tile — it looks like the
+> colonists are resting in the centre and hanging off the bed and sometimes even off the bed. It
+> needs to be aware of the position and where to lie — this happens sometimes but often enough so
+> there is a miscalculation here."*
+
+**The sim was measured before anything was read**, because §7a's round had ended in the simulation
+and reading the code has been wrong every time on this project. Three colonists, three
+player-built beds, three days, four seeds: **every sleeping tick on the head cell of a real bed,
+none off one, none even on a foot cell.** So the colonist the owner was looking at was in her bed,
+the pose was being placed from that bed, and the fault was in the arithmetic that placed it — which
+had already been read and pronounced correct twice, once by the session that wrote it and once by
+the session that fixed §7a.
+
+It was correct. It was being handed a body **0.38 m long for a colonist 2.49 m tall**.
+
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9` — a person's hip is a little over half their
+height, so the reciprocal turns the one length the director knows about a character into the length
+of body it has to lay down. And `StandingHipHeight` is
+`animator.GetBoneTransform(HumanBodyBones.Hips).position.y - transform.position.y`, where **the
+Synty humanoid avatar maps `Hips` to a bone literally named `Root` that sits at the model origin**,
+with the real pelvis as its child. Measured, with the graph played and evaluated exactly as
+`PawnFigureDirector.Create` does it:
+
+| | metres above the figure's root |
+|---|---|
+| `Root`, which the avatar calls Hips | −0.010 |
+| `Hips`, its child | 1.211 |
+| `UpperLeg_L` | 1.164 |
+| `Head` | 2.181 |
+| the crown of the drawn body | 2.488 |
+
+Nought, on every one of the sixty-one characters, and a `Mathf.Max(0.2f, …)` turned that into
+twenty centimetres. The root of a lying figure is its feet, so the feet went 0.38 m past the pillow
+and the remaining 2.1 m of colonist extended the other way: measured along the bed, body
+**[−2.57, 0.29]** against a frame of [−1.05, 3.55]. Half of her was past the head of the bed and
+over the floor, what was left on the bed sat around the middle of the first tile, and the second
+tile was empty — which is "resting in the centre and hanging off the bed", and the same words the
+owner had used a day earlier about "trying to rest them in the first tile".
+
+**The lift was wrong by the same factor.** Half a torso's thickness came out as 32 mm, so whatever
+was still over the bed was inside it.
+
+**The test written for exactly this question passed.** `ASleeperLiesWithinTheBedsOwnTwoCells` came
+out of §7a and walked a range of plausible *hip heights*, 0.70 m to 1.30 m, checking the body each
+one implies. Every one fitted. The value the game passed was 0.2 m, which no range starting at
+0.70 m can reach — and the fixture's `const float Hip = 0.95f` is a perfectly reasonable hip for a
+person and was never the number the game used. That is now `P11` in `docs/bug-patterns.md` (it was written as P10 and renumbered on the merge, the growing-zones branch having reached main first with a P10 of its own): **a
+measurement that never measured anything, clamped into plausibility.** Nothing threw, nothing
+logged, no test failed, and the symptom surfaced a long way downstream in the shape of a
+*placement* bug — which is where two rounds of investigation went.
+
+**The fix is to measure the body rather than derive it.** `FigureBuild` bakes the posed mesh and
+takes the sole and the crown — the idiom `MeasureSole` already uses, and for its reason: a bone's
+meaning is a decision somebody made in a modelling package and cannot be assumed, while where the
+drawn vertices are is what the player is looking at. There is no ratio left between the measurement
+and the thing measured, because every ratio here has been wrong once. `SleepPose.BodyLength` guards
+anything outside 0.5 m to 5 m, so the worst a strange rig can now do is draw one character the wrong
+size rather than hang the whole colony off the ends of their beds.
+
+Two details cost time and are written down in `FigureBuild`. `SkinnedMeshRenderer.bounds` is the
+loose precomputed volume — on this cast it runs −0.296 m to 2.618 m on a body that is 0.000 m to
+2.488 m — and a third of a metre of slack at each end is far too much for a body that has to fit a
+bed. And `BakeMesh(mesh, useScale: true)` applies the *renderer's own local* scale, which on these
+prefabs is one, because the figure's 1.4 lives on the root above it: the three plausible
+combinations of bake flag and transform give 2.488 m, 3.483 m and 1.777 m for one figure, and all
+three look like heights.
+
+**And the two lift fractions were retuned against the same measurement.** They were 0.16 and 0.24
+of a hip that was meant to be half a person, which is a human being's proportions; these characters
+are stylised and 0.59 m through the chest on a 2.58 m body. At the human figure the body still sank
+0.13 m into the mattress after the length was fixed, so they are 0.135 and 0.152 of the body's own
+length now — measured, as the clearance printed by `SleepProbe` for each of the four postures.
+
+**What was deliberately not changed.** `StandingHipHeight` still measures the floor. The only thing
+left reading it is the gesture crouch, `min(depth, DeepestCrouch) * StandingHipHeight`, and that is
+tuned against what it actually returns, by photograph, with the stoop and the lift signed off by the
+owner. Correcting it without retuning them deepens every crouch six-fold, which is a visual change
+nobody asked for, and the retune is a contact sheet rather than a test. The field keeps its name and
+gains a comment saying plainly what it is.
+
+**Left measured and unfixed**, in `20-beds.md` §7b: a sleeper lies flat and the bed it lies on is
+sheared. Everything fixed to the grid is draped, so `BedShape.Root` tilts the bed's 4.6 m along the
+ground's tangent plane, while `AimSleep` samples one height at the bed's origin. At the relief's
+steepest — amplitude 2.0 m over a 150 m period, 0.136 rise per metre — that is 0.21 m of
+disagreement at the pillow and 0.09 m the other way at the feet, varying with where the bed stands
+and which way it faces. Second-order beside a body six times too short, and a change to how a
+sleeper is drawn, so it waits for the owner to judge it against the screenshot they now have.
+
+## 2026-09-20 — The sheet, and the two things the entry above left open
+
+**This supersedes the last paragraph of the entry above.** It ends "so it waits for the owner to
+judge it against the screenshot they now have"; they did, the answer was *do both*, and both are
+done. The paragraph stands as written because it is the record of where the work paused and why.
+
+**First the screenshot, which did not exist.** `SleepCheck` puts one colonist per posture into a
+real bed and shoots each side on, along the bed from the foot, and at the board's own 48° pitch. It
+exists because nothing else on the branch answers the question the owner actually has to answer:
+the arithmetic was *correct* throughout the two days the bug existed, so a sheet that photographed
+the body without the bed under it would have looked convincing the whole time. The postures are
+chosen rather than hoped for — a posture is a hash of the pawn id, so a colony of four is four
+draws from a hat of four, and a posture that is wrong would simply not appear.
+
+**It found two of its own faults before it found anything else, and both are the same fault.** The
+warm-up framed on `Vector3.zero`, a corner of the board with nobody in it, so not one figure was
+drawn during it and every picture came out flat yellow — a warm-up that does not include the
+subject warms nothing. And it never switched the relief on, because `GroundRelief.Amplitude` is a
+static that `OdysseyBootstrap.BuildSession` sets and a harness does not: the first run with the
+slope fix in reported a slope of **0.000** at all four beds and proved nothing whatever about the
+tilt. The second is the one worth keeping, because the tool only caught it by printing the number
+it was supposed to be exercising. **An instrument should print the quantity it exists to vary**, or
+it will cheerfully photograph the control case for ever. `docs/lessons.md` already carries the
+general form of this ("an instrument wired to the thing it measures reports a perfect result"); this
+is its opposite number and just as quiet.
+
+**And the beds the scenario places are nearly level** — 0.002 to 0.021 rise per metre on this seed,
+a centimetre to ten across a whole 4.6 m bed. So the tool now searches for the steepest buildable
+footprint near the start and stands a bed on it. The one it finds is 0.084, or 0.39 m end to end,
+which is a tilt a picture can actually show.
+
+**The slope fix itself** is three things, and each is wrong on its own. The feet stand
+`alongSlope × bodyLength` above the head, so the body is *on* the plane; the lying pitch becomes
+`90° + atan(alongSlope)`, so it is *parallel* to it — either alone would pass while the sleeper
+hovered over a bed she matched the angle of, which is why the test asserts both halves; and the
+roll is taken about the body's own long axis, which is now the tilted one and is free, because the
+pitch has just produced it. `SleepPose.Place` takes the plane rather than a point:
+`surfaceY` is the height under the *head*, `alongSlope` its gradient along the bed.
+
+**The arms were the interesting one, because the picture was right and my reading of it was not.**
+The sheet said "back, arms up" still read as arms *out*, near 45° from above — surrendering rather
+than sleeping. The obvious inference is that the arms are flung wide, and it is wrong: measured,
+they were never off the bed at all. The posture spans 1.06 m across a frame 2.00 m wide, which is
+exactly what `"back"` spans. They lay out to the sides instead of over the crown, and **no pitch
+about the lateral axis can bring them in** — every angle in `Posture` moves a limb in the plane
+that runs head to foot, so whatever spread the idle clip already holds is carried round with the
+arm rather than reduced. That is a missing degree of freedom, not a mistuned number, and no amount
+of sweeping the existing angles would have found it; the sweep is what proved it, by coming back
+with a narrowest-point that was still 1.06 m.
+
+So `Posture` gained an abduction, taken about the body's *forward* axis — which on a sleeper on her
+back is the vertical, so it swings the arm in the plane of the mattress. Swept on the real rig,
++15° mirrored is the one place on the arc that costs nothing: both the narrowest the arms get,
+1.06 m down to 0.71 m, and the furthest they reach past the head, 0.71 m to 0.73 m. Nought on every
+other posture, so the three that were measured right are untouched by its existence.
+
+**Where the four finally sit**, along the bed from the head cell's centre, against two cells at
+[−1.25, 3.75] and a frame at [−1.05, 3.55]:
+
+| posture | along | across | clears the mattress |
+|---|---|---|---|
+| back | [−0.29, 2.29] | 1.06 m | +0.01 |
+| back, arms up | [−0.73, 2.27] | 0.71 m | +0.01 |
+| side, curled | [−0.29, 2.01] | 1.99 m | 0.00 |
+| side, loose | [−0.29, 2.25] | 1.68 m | +0.02 |
+
+`side, curled` is 0.04 m wider than the frame on one side — a drawn-up knee just over the rail,
+which is what a knee does. Recorded rather than tuned, because tuning it is a look and the knee is
+not wrong.
+
+**What is left is entirely a look**, and it is the owner's: whether four sleepers read as four
+people asleep, and whether the third of the mattress lying empty past their boots bothers them. The
+bed is 4.6 m and a colonist is 2.5 m; the cell size fixes the first number (ADR 0002) and the rig
+fixes the second, so the only lever is a shorter bed.
+
+## 2026-09-20 — The owner watches the sleepers: a quarter of the colony, and a kickstand
+
+Two reports in one message, and both were sharper than they looked.
+
+> *"There's a pose that shouldn't be a sleep pose — any arms above the head — and I see a pose often
+> with 2 arms/hands above the head when they can be down the side. Also the body isn't quite flush
+> on to the bed surface but the pillow head is placed nicely enough."*
+
+**"Often" was exact, and answering it needed no tuning at all.** A posture is `PostureFor(pawnId)`,
+a hash taken modulo four, so each of the four shapes is *a quarter of every colony, by
+construction*. There is no frequency to reduce and no seed to blame: one shape the owner dislikes
+is one colonist in four, every night, for ever. That is worth saying back before doing anything,
+because the instinct on "I keep seeing X" is to look for a bias, and here the answer was in the
+design and not in the data. The fix could only be to replace the shape.
+
+**Which then needed a field the struct did not have.** The owner chose "another arms-down
+variation, differing in the legs" — and `Hip` and `Knee` drove *both* legs by the same amount, so
+the only leg difference expressible was a symmetric one, which is a beach and not a bed. The arms
+had been per-side since the table was written; the legs never were, and nobody had noticed because
+until this week every sleeper was hanging off the end of the bed anyway. `LeadHip` / `LeadKnee` are
+an extra on the right leg, nought on the three postures that do not ask for them. Swept before
+choosing: the band that raises a knee without driving a heel into the mattress runs from about −50°
+of hip to −20°, and anything at −10° or above with more than 20° of knee puts a foot in the bedding.
+
+**The second report is the one worth keeping, because the measurement said it was already fine.**
+"Not quite flush" — with the head placed nicely, which is the detail that made it findable. So the
+question was which part of the body was off, and the sheet could not answer it: a centimetre of gap
+under a torso is invisible at the play camera among four colonists. What answered it was measuring
+the *trunk* separately from the whole mesh, which nothing had ever done:
+
+| posture | lowest vertex | trunk |
+|---|---|---|
+| back | +0.01 | +0.01 |
+| back, one knee up | +0.01 | +0.01 |
+| **side, curled** | 0.00 | **+0.09** |
+| **side, loose** | +0.02 | **+0.12** |
+
+`Lift` had been tuned until the lowest drawn vertex *anywhere* on the mesh just touched the
+mattress. On a supine sleeper that vertex is the back, and the tuning was right. On a **side**
+sleeper it is a drawn-up knee, which props the whole body up like a kickstand — so half the colony
+rode 9 to 12 cm above its own bedding with one knee resting on it, and the whole-mesh number
+reported 0.00 and 0.02 and looked perfect throughout.
+
+**That is P11's neighbour and it is worth naming as its own thing: an aggregate answers the
+question it aggregates, not the question you asked.** `min` over a whole body is a statement about
+the body's *extremities*. The thing being judged was its trunk. Both numbers are real, both are
+correctly computed, and one of them is not about the subject — which is exactly why nothing failed
+and why it took a person looking at it. `ShoulderPerBody` is 0.109 now, measured against the band
+of baked mesh between the spine and the neck bones, and `SleepProbe` prints both figures side by
+side so the next person can see them disagree.
+
+**The price was chosen rather than discovered:** a drawn-up knee now presses about 0.10 m into a
+0.30 m mattress. A limb sunk a little into bedding is what bedding is for; a torso in mid-air is
+not. If it reads as clipping rather than as compression, the answer is the knee angle and not the
+lift, and that is recorded in `20-beds.md` §7d rather than guessed at.
+
+**And one thing kept deliberately unused.** The abduction angle added an hour earlier to rescue the
+arms-above-head posture now has no caller, because that posture is gone. It stays: it cost a
+measured sweep to establish that no pitch about the lateral axis can bring an arm in towards the
+midline, and the next posture that wants a hand anywhere other than at a side will want it back.
+Deleting it would only mean measuring that again.

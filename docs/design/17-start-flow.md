@@ -232,6 +232,42 @@ and in the fast tier:
   open is a thing the player needs to be told about; silently omitting it is how a player concludes
   their colony is gone.
 
+## 5b. Load in game looks before it throws the colony away (2026-09-20)
+
+> Owner: *"I notice when you try a load a game in game and there is none available — you can end
+> up losing your current game as it goes back to the main menu."*
+
+The in-game **Load** row does three things on purpose: the panel closes, the world goes, the list
+of saves appears. That is Quit to main menu followed by Load, and the player sees each step, which
+is why it was built that way and not as a file dialog over a running colony. What it never did was
+ask whether the list would have anything on it. With an empty Saves folder the player pressed Load,
+watched their colony disappear, and arrived at "No saved colonies" with no way back to it — the row
+asks twice, and both of those clicks are a confirmation of *loading*, not of *discarding*.
+
+**The fix is one question asked before anything irreversible happens.** `HudShell.AnySaveCanBeOpened`
+reads the folder; with nothing in it the colony is untouched and the Load row says **No saved
+colonies** in place of its own name until the next press.
+
+**Readable, not merely present.** A save this build cannot open is listed but cannot be chosen
+(`MenuDirector.ChooseSave` refuses it — §5's rule, so a colony never simply disappears from the
+list). A folder holding only those is a folder with nothing to load, and tearing down for it would
+lose the colony exactly as an empty folder did.
+
+**Why the row says it rather than a dialog.** A modal to report that nothing happened is heavier
+than the thing it is reporting. The mechanism is `HudShell._sessionNotes`, and it is state rather
+than a label written directly, for a reason worth recording: `SettingsDirector.Request` raises
+`RowRequested` and *then* `ExitChanged`, so anything a row handler writes straight on to a label is
+overwritten by `OnExitChanged` one call later. A note is cleared the moment any row is armed, and
+when the panel opens or closes — it answers the press that produced it and should not be sitting
+there next time.
+
+**Still open, and deliberately not fixed here.** Backing out of the load screen *after* choosing to
+go there still leaves the colony gone, because the teardown has already happened by then. Fixing
+that properly means showing the save browser over a live session, and the menu is currently tied to
+there being no session at all (`OnSessionChanged` calls `SetShowing(live == null)`, and
+`ShowSaves` returns early when the menu is not showing). That is a restructure of §4's modality,
+not a guard, and it wants its own round.
+
 ## 5a. The view is saved too
 
 **Added after the owner played it** (2026-09-17): *"it didn't save where the camera was and the

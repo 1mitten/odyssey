@@ -28,6 +28,22 @@ namespace Odyssey.Sim.Contracts
         CancelBuilding,
 
         /// <summary>
+        /// Put a growing-zone cell down: <c>A</c> is a <c>PlantHandle</c>. Its own kind rather
+        /// than a <see cref="Designate"/> with a payload, for the same reason
+        /// <see cref="PlaceBuilding"/> is: a designation is a verb applied to whatever is already
+        /// there, and this founds a thing that was not there — a zone carries its plant with it,
+        /// and the component that owns zones is not the one that owns orders.
+        /// </summary>
+        DesignateZone,
+
+        /// <summary>
+        /// Take a cell back out of its growing zone, crop and all: a crop exists only inside its
+        /// zone, so one intent removes field and planting together
+        /// (docs/design/22-growing.md §4).
+        /// </summary>
+        CancelZone,
+
+        /// <summary>
         /// Give one built bed to one colonist, or take it back: <see cref="Intent.Cell"/> is any
         /// cell of the bed and <c>A</c> the <c>PawnId</c>, or -1 to leave the bed unowned.
         ///
@@ -83,6 +99,30 @@ namespace Odyssey.Sim.Contracts
         /// second way for one to appear.
         /// </summary>
         GiveResource,
+
+        /// <summary>
+        /// Fire the incident whose def index is <c>A</c>, now, whatever its gates say. The debug
+        /// menu's row, and the seam a quest or a scripted beat would use later: the worker behind
+        /// it is the same one a storyteller fires, so a forced event behaves exactly like an
+        /// earned one. <see cref="Intent.Cell"/> and <c>B</c>, <c>C</c> are unused today and
+        /// reserved for a forced landing cell.
+        ///
+        /// <para>Not applied while paused: it spawns things and needs a tick, exactly as
+        /// <see cref="SpawnPawn"/> and <see cref="GiveResource"/> do. Refused as
+        /// <see cref="IntentRejection.NotPermitted"/> when the worker says it cannot fire — for
+        /// the supply drop, when no column on the board can take a landing.</para>
+        /// </summary>
+        InvokeIncident,
+
+        /// <summary>
+        /// Debug-menu-only: bring every standing crop to ripeness at once, daylight window and
+        /// all. <see cref="Intent.Cell"/> and the payloads are unused — the ask is the whole
+        /// field, because the menu is testing the harvest half and the four-day wait is the
+        /// thing being skipped, not the thing being simulated. Refused with
+        /// <see cref="IntentRejection.AlreadyInThatState"/> when nothing stands, so an empty
+        /// board says "nothing to ripen" rather than quietly succeeding.
+        /// </summary>
+        DebugRipen,
     }
 
     /// <summary>
@@ -128,6 +168,11 @@ namespace Odyssey.Sim.Contracts
             // while paused — and a popover you pick a colonist from that leaves the row still
             // reading "nobody" until you press play is the slab fault told again.
             IntentKind.AssignBedOwner => true,
+            // Painting a growing zone is the same act as designating: the player authored it,
+            // nothing needs to run to make it true, and the brush is a thing you drag while
+            // paused. Cancelling it likewise. Both write state the player owns outright.
+            IntentKind.DesignateZone => true,
+            IntentKind.CancelZone => true,
             _ => false,
         };
     }
