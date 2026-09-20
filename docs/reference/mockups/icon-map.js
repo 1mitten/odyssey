@@ -1987,6 +1987,7 @@ window.ICON_GAPS = [
  "ui.bulletin.crash",
  "ui.bulletin.recruited",
  "ui.bulletin.refugee",
+ "ui.bulletin.supplydrop",
  "ui.bulletin.wanderer",
  "ui.command.arrest",
  "ui.command.bury",
