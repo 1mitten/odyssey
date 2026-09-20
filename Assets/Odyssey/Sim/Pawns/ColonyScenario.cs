@@ -776,6 +776,11 @@ namespace Odyssey.Sim.Pawns
                 //
                 // **And it is now drawn**, which nothing about the starting zone ever was. Every
                 // colony ever made has had one and nobody has seen it.
+                // A spot the gate refuses is simply left out, and on the wooded board exactly one
+                // is: cell 180436 of the played golden has a tree standing in it. That cell was
+                // in the zone before this unit — `AddStockpile` asked nothing of a cell — so a
+                // starting item that landed on it counted as "stored" in a place nothing could
+                // ever be stored. It is loose now, which is what it is, and a hauler collects it.
                 int anchor = stockpile[0];
                 for (int i = 0; i < stockpile.Count; i++)
                     pawns.Storage.Designate(

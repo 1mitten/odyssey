@@ -273,6 +273,35 @@ namespace Odyssey.Tests.Sim
         /// tick, exactly as it did on <c>main</c>. The played scenario losing its starting beds
         /// the same session moved <b>nothing</b> here: every case builds on <c>Bare</c>, which
         /// keeps its five.</para>
+        ///
+        /// <para><b>Re-baked a fourth time, 2026-09-20, by storage S1 — and measured rather than
+        /// assumed, which is the whole of the paragraph above about honesty.</b> Two things moved
+        /// the numbers and only one of them moved the colony.</para>
+        ///
+        /// <para>The hash sees a different shape: an item record gained <c>ContainerId</c>, and
+        /// the zones left <c>ColonyItems</c> for <c>StorageZones</c> and
+        /// <c>StorageSettingsTable</c>, which hash cells-with-priority and the filter table rather
+        /// than the old per-pile walk. That alone moves <c>Generated</c> on all three, before a
+        /// tick runs.</para>
+        ///
+        /// <para><b>The measurement.</b> A throwaway probe printed what each colony actually
+        /// <i>does</i> — live things, per-def stacks, the sum of item cells, the loose and stored
+        /// lister counts, the sum of pawn cells, total food and rest, standing orders — on this
+        /// branch and on <c>main</c>, at generation and after the full run. <b>The meadow and the
+        /// ruined city are identical in every one of those numbers, generated and simulated.</b>
+        /// Their hashes moved and their colonies did not.</para>
+        ///
+        /// <para><b>The played board is not, and the difference is one cell.</b> It reads
+        /// <c>loose=18 stored=2</c> where <c>main</c> read <c>loose=17 stored=3</c>. The cause was
+        /// measured, not guessed: of the nine cells the scenario hands the starting zone, cell
+        /// 180436 at (76, 63, L12) is refused by <c>StorageZones.SiteAllows</c> because <b>a tree
+        /// stands in it</b> — walkable, not water, edifice 753. <c>AddStockpile</c> asked nothing
+        /// of a cell, so that cell was in the zone and a starting item that landed on it counted
+        /// as stored in a place nothing could ever be stored. It is loose now, and a hauler
+        /// collects it. Every other number on that board matches <c>main</c> at generation, and
+        /// <c>Simulated</c> follows for the ordinary reason a divergent start diverges further.
+        /// The meadow and the city have no tree in their starting zones, which is exactly why
+        /// they are unchanged.</para>
         /// </remarks>
         public static readonly Case Meadow = new Case
         {
@@ -282,8 +311,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 17179664085597806501UL,
-            Simulated = 10298886025038645198UL,
+            Generated = 11193074622438250286UL,
+            Simulated = 17877280081220781229UL,
         };
 
         /// <summary>
@@ -299,8 +328,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 1431369592896753849UL,
-            Simulated = 1949707350924885619UL,
+            Generated = 772033680031849527UL,
+            Simulated = 6723158666174932263UL,
         };
 
         /// <summary>
@@ -336,8 +365,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 1988660988096176970UL,
-            Simulated = 2409007056224593614UL,
+            Generated = 8106996521925620474UL,
+            Simulated = 2870299173973909006UL,
         };
     }
 }
