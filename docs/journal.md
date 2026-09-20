@@ -8193,6 +8193,66 @@ being a *real* bed still holds for the scenario that has some.
 
 Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 
+
+## 2026-09-20 — VSync, and the six levers that came with it
+
+The owner asked for a VSync option "and what others you recommend which are basic graphics
+settings", with one constraint said twice: use Unity's recommended way, and be performant.
+
+**What the Graphics tab was.** Six rows, all boolean, all about *what the board is made of* —
+shadows, surround, tufts, relief, see-through, cut-away. Nothing at all about *what the frame
+costs*. That is a real gap on a project whose performance target is a 2022 mid-range laptop that
+neither dev machine is, and whose genre leaves the window open for hours.
+
+**What was added, and the order of the argument.** Seven levers: VSync, frame cap, render scale,
+anti-aliasing, shadow distance, display mode, resolution. Render scale is the one that earns its
+place most — it is the only lever that cuts the expensive part while leaving the HUD sharp, because
+UI Toolkit draws after the upscale. Anti-aliasing starts *off*: the board is mostly flat colour and
+MSAA is the dearest thing on the page. No quality preset, because a Low/Medium/High mapping written
+before anything was measured is three numbers nobody checked. The rungs and every rejected
+alternative are `docs/design/27-graphics-settings.md`.
+
+**The shape decision.** The numbers could have followed the shape already in the file: the
+interface scale and the camera speed each arrived with their own `int[]`, property, setter and
+event. By the third that was plainly a copy, and seven more would have been seven owners of one
+rule — snap, write through, raise once. `GraphicsLadder` is that rule's single owner. The HUD's
+three duplicate ladder builders collapsed into `BuildLadderRow` in the same pass, and they had
+already started to drift: one set its rungs in the mono face, one in the reading face, and nothing
+said which was the rule.
+
+**Every rung is an int, and where Unity has a number the rung is that number** — `vSyncCount`,
+`msaaSampleCount`, `FullScreenMode` verbatim — so the presenter casts rather than translates and no
+table can drift from the API it feeds.
+
+**The trap this work exists around.** Three levers live on the URP asset, and a
+`UniversalRenderPipelineAsset` is a ScriptableObject: in the editor the live one *is* the committed
+`Assets/Settings/PC_RPAsset.asset`. Writing `renderScale` on to it would mean pressing a settings
+row showed up in `git status`, and an accidental 70% would ship. The project had already answered
+this exact shape once — `HudShell.EnsurePanelCopy` instantiates the `PanelSettings` and marks the
+copy `HideAndDontSave` — so `DisplaySettingsApplier` does the same for the pipeline. The subtlety
+that is easy to lose: read the **quality level** first and the graphics default second, because
+copying the default while the level held another asset leaves every lever doing nothing *while the
+panel still lights the rung*.
+
+**The one rule that is not a number.** Unity ignores `Application.targetFrameRate` while
+`vSyncCount` is above zero. So `FrameCapIsLive` lives on the director where the fast tier holds it,
+the HUD greys the cap row and says *paced by VSync*, and the applier writes the cap anyway —
+deliberately — so turning VSync off restores the player's own choice without them touching it.
+
+**Performance, since it was asked for twice.** No `Update`, no polling: a settings object that
+reasserted itself every frame would fight anything else writing the same property, and the fault
+would present as *a setting that won't stay changed*. Every rung label is built once as its row is
+constructed (ADR 0003 F1); the handlers only flip a USS class. Boot applies once rather than once
+per stored lever — the applier stays inert until `ApplyAll`, because `UseStore` raises per lever and
+letting those through would rebuild the render targets repeatedly to arrive where one pass puts
+them.
+
+**What is not proven.** Fast tier **806 Sim + 481 Hud**, both content checks green. But the fast
+tier compiles neither Presentation nor Editor, and **there is no Unity in the container this was
+written in**, so the applier, the HUD rows and the whole Presentation half are unproven — that is
+the pull request's to establish. The resolution and display-mode rows cannot be proven by either
+tier in any case: the Game view is not a window the game owns, so they are greyed in the editor and
+
 ## 2026-09-20 — Functional doors and room enclosure: sliding leaves, doorway traversal and sealed interiors
 
 Functional, buildable auto-sliding doors and strict room enclosure are in. A doorway connects or seals
@@ -8360,3 +8420,672 @@ Following playtesting with door placement alongside walls, several visual and fu
 **Verification:**
 Fast tier 843 Sim + 473 Hud; EditMode 2,028 total, 2,015 passed, 0 failed; PlayMode 85 total, 80 passed, 0 failed. Wiki and registry checks green.
 
+## 2026-09-20 — The sleeper was measured against the floor
+
+Third report of the same symptom, and the first two fixes were both right.
+
+> *"Fix the bug where the colonists seem to sleep off the bed — it should know to always put the
+> head onto the first tile and then the rest of the body goes on the 2nd tile — it looks like the
+> colonists are resting in the centre and hanging off the bed and sometimes even off the bed. It
+> needs to be aware of the position and where to lie — this happens sometimes but often enough so
+> there is a miscalculation here."*
+
+**The sim was measured before anything was read**, because §7a's round had ended in the simulation
+and reading the code has been wrong every time on this project. Three colonists, three
+player-built beds, three days, four seeds: **every sleeping tick on the head cell of a real bed,
+none off one, none even on a foot cell.** So the colonist the owner was looking at was in her bed,
+the pose was being placed from that bed, and the fault was in the arithmetic that placed it — which
+had already been read and pronounced correct twice, once by the session that wrote it and once by
+the session that fixed §7a.
+
+It was correct. It was being handed a body **0.38 m long for a colonist 2.49 m tall**.
+
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9` — a person's hip is a little over half their
+height, so the reciprocal turns the one length the director knows about a character into the length
+of body it has to lay down. And `StandingHipHeight` is
+`animator.GetBoneTransform(HumanBodyBones.Hips).position.y - transform.position.y`, where **the
+Synty humanoid avatar maps `Hips` to a bone literally named `Root` that sits at the model origin**,
+with the real pelvis as its child. Measured, with the graph played and evaluated exactly as
+`PawnFigureDirector.Create` does it:
+
+| | metres above the figure's root |
+|---|---|
+| `Root`, which the avatar calls Hips | −0.010 |
+| `Hips`, its child | 1.211 |
+| `UpperLeg_L` | 1.164 |
+| `Head` | 2.181 |
+| the crown of the drawn body | 2.488 |
+
+Nought, on every one of the sixty-one characters, and a `Mathf.Max(0.2f, …)` turned that into
+twenty centimetres. The root of a lying figure is its feet, so the feet went 0.38 m past the pillow
+and the remaining 2.1 m of colonist extended the other way: measured along the bed, body
+**[−2.57, 0.29]** against a frame of [−1.05, 3.55]. Half of her was past the head of the bed and
+over the floor, what was left on the bed sat around the middle of the first tile, and the second
+tile was empty — which is "resting in the centre and hanging off the bed", and the same words the
+owner had used a day earlier about "trying to rest them in the first tile".
+
+**The lift was wrong by the same factor.** Half a torso's thickness came out as 32 mm, so whatever
+was still over the bed was inside it.
+
+**The test written for exactly this question passed.** `ASleeperLiesWithinTheBedsOwnTwoCells` came
+out of §7a and walked a range of plausible *hip heights*, 0.70 m to 1.30 m, checking the body each
+one implies. Every one fitted. The value the game passed was 0.2 m, which no range starting at
+0.70 m can reach — and the fixture's `const float Hip = 0.95f` is a perfectly reasonable hip for a
+person and was never the number the game used. That is now `P11` in `docs/bug-patterns.md` (it was written as P10 and renumbered on the merge, the growing-zones branch having reached main first with a P10 of its own): **a
+measurement that never measured anything, clamped into plausibility.** Nothing threw, nothing
+logged, no test failed, and the symptom surfaced a long way downstream in the shape of a
+*placement* bug — which is where two rounds of investigation went.
+
+**The fix is to measure the body rather than derive it.** `FigureBuild` bakes the posed mesh and
+takes the sole and the crown — the idiom `MeasureSole` already uses, and for its reason: a bone's
+meaning is a decision somebody made in a modelling package and cannot be assumed, while where the
+drawn vertices are is what the player is looking at. There is no ratio left between the measurement
+and the thing measured, because every ratio here has been wrong once. `SleepPose.BodyLength` guards
+anything outside 0.5 m to 5 m, so the worst a strange rig can now do is draw one character the wrong
+size rather than hang the whole colony off the ends of their beds.
+
+Two details cost time and are written down in `FigureBuild`. `SkinnedMeshRenderer.bounds` is the
+loose precomputed volume — on this cast it runs −0.296 m to 2.618 m on a body that is 0.000 m to
+2.488 m — and a third of a metre of slack at each end is far too much for a body that has to fit a
+bed. And `BakeMesh(mesh, useScale: true)` applies the *renderer's own local* scale, which on these
+prefabs is one, because the figure's 1.4 lives on the root above it: the three plausible
+combinations of bake flag and transform give 2.488 m, 3.483 m and 1.777 m for one figure, and all
+three look like heights.
+
+**And the two lift fractions were retuned against the same measurement.** They were 0.16 and 0.24
+of a hip that was meant to be half a person, which is a human being's proportions; these characters
+are stylised and 0.59 m through the chest on a 2.58 m body. At the human figure the body still sank
+0.13 m into the mattress after the length was fixed, so they are 0.135 and 0.152 of the body's own
+length now — measured, as the clearance printed by `SleepProbe` for each of the four postures.
+
+**What was deliberately not changed.** `StandingHipHeight` still measures the floor. The only thing
+left reading it is the gesture crouch, `min(depth, DeepestCrouch) * StandingHipHeight`, and that is
+tuned against what it actually returns, by photograph, with the stoop and the lift signed off by the
+owner. Correcting it without retuning them deepens every crouch six-fold, which is a visual change
+nobody asked for, and the retune is a contact sheet rather than a test. The field keeps its name and
+gains a comment saying plainly what it is.
+
+**Left measured and unfixed**, in `20-beds.md` §7b: a sleeper lies flat and the bed it lies on is
+sheared. Everything fixed to the grid is draped, so `BedShape.Root` tilts the bed's 4.6 m along the
+ground's tangent plane, while `AimSleep` samples one height at the bed's origin. At the relief's
+steepest — amplitude 2.0 m over a 150 m period, 0.136 rise per metre — that is 0.21 m of
+disagreement at the pillow and 0.09 m the other way at the feet, varying with where the bed stands
+and which way it faces. Second-order beside a body six times too short, and a change to how a
+sleeper is drawn, so it waits for the owner to judge it against the screenshot they now have.
+
+## 2026-09-20 — The sheet, and the two things the entry above left open
+
+**This supersedes the last paragraph of the entry above.** It ends "so it waits for the owner to
+judge it against the screenshot they now have"; they did, the answer was *do both*, and both are
+done. The paragraph stands as written because it is the record of where the work paused and why.
+
+**First the screenshot, which did not exist.** `SleepCheck` puts one colonist per posture into a
+real bed and shoots each side on, along the bed from the foot, and at the board's own 48° pitch. It
+exists because nothing else on the branch answers the question the owner actually has to answer:
+the arithmetic was *correct* throughout the two days the bug existed, so a sheet that photographed
+the body without the bed under it would have looked convincing the whole time. The postures are
+chosen rather than hoped for — a posture is a hash of the pawn id, so a colony of four is four
+draws from a hat of four, and a posture that is wrong would simply not appear.
+
+**It found two of its own faults before it found anything else, and both are the same fault.** The
+warm-up framed on `Vector3.zero`, a corner of the board with nobody in it, so not one figure was
+drawn during it and every picture came out flat yellow — a warm-up that does not include the
+subject warms nothing. And it never switched the relief on, because `GroundRelief.Amplitude` is a
+static that `OdysseyBootstrap.BuildSession` sets and a harness does not: the first run with the
+slope fix in reported a slope of **0.000** at all four beds and proved nothing whatever about the
+tilt. The second is the one worth keeping, because the tool only caught it by printing the number
+it was supposed to be exercising. **An instrument should print the quantity it exists to vary**, or
+it will cheerfully photograph the control case for ever. `docs/lessons.md` already carries the
+general form of this ("an instrument wired to the thing it measures reports a perfect result"); this
+is its opposite number and just as quiet.
+
+**And the beds the scenario places are nearly level** — 0.002 to 0.021 rise per metre on this seed,
+a centimetre to ten across a whole 4.6 m bed. So the tool now searches for the steepest buildable
+footprint near the start and stands a bed on it. The one it finds is 0.084, or 0.39 m end to end,
+which is a tilt a picture can actually show.
+
+**The slope fix itself** is three things, and each is wrong on its own. The feet stand
+`alongSlope × bodyLength` above the head, so the body is *on* the plane; the lying pitch becomes
+`90° + atan(alongSlope)`, so it is *parallel* to it — either alone would pass while the sleeper
+hovered over a bed she matched the angle of, which is why the test asserts both halves; and the
+roll is taken about the body's own long axis, which is now the tilted one and is free, because the
+pitch has just produced it. `SleepPose.Place` takes the plane rather than a point:
+`surfaceY` is the height under the *head*, `alongSlope` its gradient along the bed.
+
+**The arms were the interesting one, because the picture was right and my reading of it was not.**
+The sheet said "back, arms up" still read as arms *out*, near 45° from above — surrendering rather
+than sleeping. The obvious inference is that the arms are flung wide, and it is wrong: measured,
+they were never off the bed at all. The posture spans 1.06 m across a frame 2.00 m wide, which is
+exactly what `"back"` spans. They lay out to the sides instead of over the crown, and **no pitch
+about the lateral axis can bring them in** — every angle in `Posture` moves a limb in the plane
+that runs head to foot, so whatever spread the idle clip already holds is carried round with the
+arm rather than reduced. That is a missing degree of freedom, not a mistuned number, and no amount
+of sweeping the existing angles would have found it; the sweep is what proved it, by coming back
+with a narrowest-point that was still 1.06 m.
+
+So `Posture` gained an abduction, taken about the body's *forward* axis — which on a sleeper on her
+back is the vertical, so it swings the arm in the plane of the mattress. Swept on the real rig,
++15° mirrored is the one place on the arc that costs nothing: both the narrowest the arms get,
+1.06 m down to 0.71 m, and the furthest they reach past the head, 0.71 m to 0.73 m. Nought on every
+other posture, so the three that were measured right are untouched by its existence.
+
+**Where the four finally sit**, along the bed from the head cell's centre, against two cells at
+[−1.25, 3.75] and a frame at [−1.05, 3.55]:
+
+| posture | along | across | clears the mattress |
+|---|---|---|---|
+| back | [−0.29, 2.29] | 1.06 m | +0.01 |
+| back, arms up | [−0.73, 2.27] | 0.71 m | +0.01 |
+| side, curled | [−0.29, 2.01] | 1.99 m | 0.00 |
+| side, loose | [−0.29, 2.25] | 1.68 m | +0.02 |
+
+`side, curled` is 0.04 m wider than the frame on one side — a drawn-up knee just over the rail,
+which is what a knee does. Recorded rather than tuned, because tuning it is a look and the knee is
+not wrong.
+
+**What is left is entirely a look**, and it is the owner's: whether four sleepers read as four
+people asleep, and whether the third of the mattress lying empty past their boots bothers them. The
+bed is 4.6 m and a colonist is 2.5 m; the cell size fixes the first number (ADR 0002) and the rig
+fixes the second, so the only lever is a shorter bed.
+
+## 2026-09-20 — The owner watches the sleepers: a quarter of the colony, and a kickstand
+
+Two reports in one message, and both were sharper than they looked.
+
+> *"There's a pose that shouldn't be a sleep pose — any arms above the head — and I see a pose often
+> with 2 arms/hands above the head when they can be down the side. Also the body isn't quite flush
+> on to the bed surface but the pillow head is placed nicely enough."*
+
+**"Often" was exact, and answering it needed no tuning at all.** A posture is `PostureFor(pawnId)`,
+a hash taken modulo four, so each of the four shapes is *a quarter of every colony, by
+construction*. There is no frequency to reduce and no seed to blame: one shape the owner dislikes
+is one colonist in four, every night, for ever. That is worth saying back before doing anything,
+because the instinct on "I keep seeing X" is to look for a bias, and here the answer was in the
+design and not in the data. The fix could only be to replace the shape.
+
+**Which then needed a field the struct did not have.** The owner chose "another arms-down
+variation, differing in the legs" — and `Hip` and `Knee` drove *both* legs by the same amount, so
+the only leg difference expressible was a symmetric one, which is a beach and not a bed. The arms
+had been per-side since the table was written; the legs never were, and nobody had noticed because
+until this week every sleeper was hanging off the end of the bed anyway. `LeadHip` / `LeadKnee` are
+an extra on the right leg, nought on the three postures that do not ask for them. Swept before
+choosing: the band that raises a knee without driving a heel into the mattress runs from about −50°
+of hip to −20°, and anything at −10° or above with more than 20° of knee puts a foot in the bedding.
+
+**The second report is the one worth keeping, because the measurement said it was already fine.**
+"Not quite flush" — with the head placed nicely, which is the detail that made it findable. So the
+question was which part of the body was off, and the sheet could not answer it: a centimetre of gap
+under a torso is invisible at the play camera among four colonists. What answered it was measuring
+the *trunk* separately from the whole mesh, which nothing had ever done:
+
+| posture | lowest vertex | trunk |
+|---|---|---|
+| back | +0.01 | +0.01 |
+| back, one knee up | +0.01 | +0.01 |
+| **side, curled** | 0.00 | **+0.09** |
+| **side, loose** | +0.02 | **+0.12** |
+
+`Lift` had been tuned until the lowest drawn vertex *anywhere* on the mesh just touched the
+mattress. On a supine sleeper that vertex is the back, and the tuning was right. On a **side**
+sleeper it is a drawn-up knee, which props the whole body up like a kickstand — so half the colony
+rode 9 to 12 cm above its own bedding with one knee resting on it, and the whole-mesh number
+reported 0.00 and 0.02 and looked perfect throughout.
+
+**That is P11's neighbour and it is worth naming as its own thing: an aggregate answers the
+question it aggregates, not the question you asked.** `min` over a whole body is a statement about
+the body's *extremities*. The thing being judged was its trunk. Both numbers are real, both are
+correctly computed, and one of them is not about the subject — which is exactly why nothing failed
+and why it took a person looking at it. `ShoulderPerBody` is 0.109 now, measured against the band
+of baked mesh between the spine and the neck bones, and `SleepProbe` prints both figures side by
+side so the next person can see them disagree.
+
+**The price was chosen rather than discovered:** a drawn-up knee now presses about 0.10 m into a
+0.30 m mattress. A limb sunk a little into bedding is what bedding is for; a torso in mid-air is
+not. If it reads as clipping rather than as compression, the answer is the knee angle and not the
+lift, and that is recorded in `20-beds.md` §7d rather than guessed at.
+
+**And one thing kept deliberately unused.** The abduction angle added an hour earlier to rescue the
+arms-above-head posture now has no caller, because that posture is gone. It stays: it cost a
+measured sweep to establish that no pitch about the lateral axis can bring an arm in towards the
+midline, and the next posture that wants a hand anywhere other than at a side will want it back.
+Deleting it would only mean measuring that again.
+## 2026-09-20 — The Work tab, from a supplied mockup
+
+The owner supplied a complete visual specification for the work priority grid — colonists as rows,
+work types as columns, four independent signals in a 34px cell — with one instruction over the top
+of it: *"we should assume to point our own equivalent icons fonts in keeping consistent with our
+design"*. So the work was not to build what the mockup drew; it was to find out which of its
+decisions were ours already, which were arithmetic, and which were another game's furniture.
+
+**Three of its assumptions were already settled here and it did not know.** The panel is
+`10-ui-panel-catalogue.md` §B2, which named the intent it emits — `SetWorkPriority(pawn, workType,
+priority)` — before any of this. The priority model exists: `Pawn.WorkPriorities` is a byte per work
+type, 0 to 4, defaulting to 3, saved and hashed, and `JobSystem` has always scanned one band at a
+time. And the tab has a slot and a key: `ui.tab.work` on F1, carrying the reason *"the work grid
+arrives with M7"*. So nothing was invented; a paragraph was turned into a panel.
+
+**The mockup's thirteen work types are not ours and its hues are a second colour system.**
+`icon-keys.csv` carries twenty-two `ui.work.*` with names, wiki entries and icon-map rows. Four are
+simulated. The `SkillCatalogue` precedent decides it — show the design's list, draw the rest as
+unavailable with the reason — with one thing added that the precedent did not need: **not-built-yet
+is a third state and must not be drawn as incapable.** One says *this colonist cannot*; the other
+says *nobody can yet*. Greying both identically would teach a player that eighteen of their columns
+are a disability. The per-work-type hues were dropped outright: the rule is that category colour
+lives in the icon stroke and comes from `HudTheme.CategoryOf`, and this project spent 2026-09-20
+merging two colour tables that disagreed. Adding a twenty-two-entry third was not on.
+
+**The rotation angle is the part worth keeping and the mockup got the number wrong for us.** Its own
+reasoning is right — a label's horizontal footprint is `width × cos θ` and it must clear the pitch —
+and its −62° projects 36.6px at our 34px pitch, which overlaps. Ours is **−66°**: "Firefighting" at
+Archivo Narrow 13px models 78px, `cos 66° × 78 = 31.7`, with 2.3px of margin. The rise, 71.3px, is
+where the header band's 72 comes from. `WorkGridTests.LabelsClearTheirNeighbours` runs it over the
+real catalogue and a failure prints the shallowest angle the pitch allows, so the next person is
+told what to change rather than that something is wrong. The fault it guards against is nasty in
+the specific way this project keeps meeting: it gets **worse toward the left of the panel**, so it
+is invisible in a screenshot of the right-hand columns and invisible again in a mockup with fewer
+columns than the game.
+
+**And it overturned the catalogue on one point.** §B2 says the column headers are *"work-type icons
+with a tooltip"*. That loses to `09-ui-and-input.md` §7a — the owner's rule of 2026-09-16 that while
+the icons are placeholders a control is named by its full word, never an abbreviation — because
+`ui.work.firefighting` is today *"spray canister, read as an extinguisher"* at **low** confidence.
+Twenty-two low-confidence glyphs, each the only thing naming a column, is a panel nobody can use.
+So the header carries both, and the rotation is what makes room for the label.
+
+**`WorkHandle` had to exist before the panel could emit anything.** Skills reach the interface as
+named pawn aspects and never cross `Sim.Contracts` at all — that is the point of the aspect seam and
+why there is deliberately no `SkillHandle`. A work priority cannot do the same, because it is
+*written* as well as read and an `Intent` carries three integers and no strings. Without an agreed
+index the HUD would have sent its own column number and the simulation would have had to know the
+order of a list that lives in the HUD: the exact coupling the aspect seam exists to prevent,
+arriving through the other door. So `WorkHandle` sits in `Catalogue.cs` beside `JobHandle` and
+`WorkTypeIndex` aliases it, as `JobIndex` already does.
+
+**Capability is built although nothing can answer it with a no.** There are no traits and no health
+model, so every colonist is capable of everything. The channel is published anyway, and the rule
+the mockup asks for by name is kept verbatim and enforced at the model rather than in a stylesheet:
+when `!capable`, the priority and the passion are zero and the glyph is an em-dash. A capability
+expressed as opacity is a capability that leaks — into a tooltip, into a screenshot, into a
+copy-and-paste — and adding the channel later would mean finding every reader that assumed a digit.
+
+Two small consequences fell out of the numbers. **Hauling has a work type and no skill**, because
+`WorkTypes.xml` gives `Work_Haul` no `rateSkill`, so its cells have no border ramp and never a
+flame; a ramp colour invented for hauling would be a lie told in a colour the player has learned to
+trust. And **a missing priority aspect reads as the default, not as never** — a snapshot taken
+before the first publish must not silently un-assign the colony.
+
+Nothing moved a golden: the priorities are hashed but no test changes one, and an aspect is neither
+saved nor hashed. **The Presentation draw is not built.** `HudShell.Work.cs` is the next unit and
+the mockup is its specification; it is last on purpose, because the fast tier compiles neither
+Presentation nor Editor and it is the half that cannot be proven without a Unity run.
+
+**Neither tier was run for this work.** The container has no dotnet SDK and no Unity, and the
+egress policy refuses `builds.dotnet.microsoft.com`, so every C# file here is unproven. Both content
+checks pass, because no content changed — the panel's own chrome words are the open question OQ-W1.
+
+**Correction, same day, before CI ran.** This entry and the design both said the Work tab opens on a
+colony of threes. It does not. `ColonyScenario.AssignTrade` has been dealing the first `miners`
+colonists **Mining 1 / Chopping 3** and everybody else the reverse since the scenario was written,
+and its own comment says exactly why: *"until the player can set priorities from the interface the
+scenario has to do it, exactly as it has to give the first orders."* The claim came from reading
+`Pawn`'s constructor and stopping there — which is the failure `CLAUDE.md` opens by warning about,
+committed in the same session that quotes the warning.
+
+It is a better fact than the one it replaces. **The panel's first screen is a division of labour
+somebody already chose on the player's behalf**, in the two columns a player can actually feel, and
+that is a more interesting thing to hand them than a blank slate. The test that would have caught it
+existed and was pointed at the wrong board: `Bare()` sets `miners = 0`, so a fixture that only ever
+used the bare scenario saw threes and would have taught the next session the same wrong thing.
+There are now two tests — the constructor's default on the bare board, and the played scenario's
+split — and the second names `AssignTrade` so the connection is findable from either end.
+
+**And `AssignTrade` is now on notice**, which is the part worth carrying forward. It exists only
+because nothing could set a priority; this panel is the thing it was waiting for. Removing it is not
+this unit's business — it moves the state hash and changes how every existing colony starts — but
+whoever does should know the panel replaced its reason.
+
+## 2026-09-20 — The Work tab becomes a tab you can open
+
+The owner asked the plainest possible question of the previous entry's work — *"is the tab itself
+functional?"* — and the answer was no. `HudCommands.Order` still carried
+`("ui.tab.work", "F1", "the work grid arrives with M7")`, and a non-empty reason draws the bar item
+`cmd--off` and makes `OnCommand` ignore it. The model, the geometry and the intent were all there
+and nothing could reach any of it.
+
+**The draw is `HudShell.Work.cs`, built the way `HudShell.Debug.cs` builds the debug menu** — a
+`Window`, the settings tab chips for the mode switch, the same close X — so a fourth panel does not
+invent a fourth visual language. The frozen colonist column sits outside the `ScrollView` and the
+twenty-two columns inside it, which is the whole of "the left column stays fixed".
+
+**Two things had to change outside the panel, and both are worth recording.**
+
+**`HudKey` gained its first function key.** It was a closed set that excluded F1–F12 on purpose,
+with the comment *"the function keys the command bar has promised to panels"* — a promise nothing
+had ever kept, because until now every one of those caps was a legend on a control that did nothing.
+F1 is bindable now because F1 has a panel behind it, and the other eight stay out until theirs
+arrive, so an unbindable key is always one with nothing behind it.
+
+**And `HotkeyClashTests` failed correctly, which is the good half of the story.** It asserted that a
+cap naming a key the binding map owns must be Build's, with the comment *"F1 to F9, Esc: keys the
+map will not bind"* — an assumption that was true when written and that this change made stale for
+exactly one key. It is now a table of the commands whose cap is a real binding, checked both ways:
+the map must ship that key to the action the command opens, **and** a command with a working key may
+not be drawn as a dead item. That second half is the fault this session would otherwise have
+shipped — a key that opens something the bar says does not exist yet.
+
+**One bug was caught by re-reading rather than by a compiler**, which is the only reviewer this
+container has: `BuildWorkHeaderExtras` called `OnWorkModeChanged` to light the right chip, and that
+redraws the legend — which `BuildWork` had not created yet. A null on the first frame the HUD is
+built. The chip-setting is its own method now and the build path calls only that.
+
+**The glyph set gained a flame**, its first filled organic shape; everything else in it is a
+chevron, a triangle or a rule. Drawn as a closed polygon on the same 24 grid, with the proportions
+taken off the mockup's clip-path.
+
+**What is deliberately not built: drag-paint** (OQ-W5). Click, right-click and shift-click-column
+are in. A drag needs pointer capture across cells, and it is the one gesture whose absence is felt
+only when setting a whole colony at once — so it waits on a verdict about whether the other three
+are enough, rather than being guessed at.
+
+**Almost every style in the panel is inline rather than in `Hud.uss`**, and that is a deviation
+recorded rather than hidden (§10a). Half of a cell's appearance *is* data — border is skill, ink is
+priority, fill is assignment — so it could never live in a stylesheet, and putting the other half
+there would both split one cell across two files and put the untestable half of this unit in the
+file a parse error takes down wholesale. The colours are still never literals.
+
+Fast tier was green on the model half before any of this (CI, 14:01:43). **The draw is again
+unproven here** — no dotnet SDK, no Unity — so `HudSmokeTests` naming a fourteenth framed region is
+the first thing that will actually exercise it.
+
+## 2026-09-20 — Work and Schedule become one table
+
+The owner supplied a second specification: fold the Schedule tab into the Work tab, one row per
+colonist carrying their whole day — what they do on the left, when on the right, sharing one frozen
+column of names. Schedule leaves the bottom bar and does not go anywhere else.
+
+**The first finding was that the spec's central assumption was false here.** It says "assume the
+priority model and the hour-assignment model already exist". The priority model did, which is what
+made the last pass easy. **The schedule model did not exist at all** — no state on the pawn, no
+Def, no `ui.schedule.*` keys, nothing in the job system. The panel catalogue reserved B3 for M7 and
+it was never built. So this was not a layout change with a data source waiting; it was a mechanic.
+
+**The second finding was that the geometry only works at our pitch.** At the spec's 40px, our
+twenty-two work columns plus twenty-four hours is **2,026px**, wider than the 1920 reference, so it
+could not be drawn without dropping columns or scrolling from the first frame. At our existing 34px
+it is **1,756px** and fits with room. The narrow type we adopted for the rotated labels is what
+makes the combined table possible at all, which was not a thing anybody designed for.
+`HourPitch` is defined *as* `Pitch` rather than as 34, so widening one half cannot silently
+desynchronise the two.
+
+**The load-bearing decision was what to do about the hash.** A schedule that governs behaviour has
+to be in the state hash, and putting it there moves all six golden numbers — which this container
+cannot re-bake, because `ODYSSEY_REGOLDEN=1` needs the dotnet SDK it does not have. Rather than
+guess, the fork went to the owner, who took the staged option.
+
+So: **the schedule is authored, saved (format 7), published hour by hour, editable, drawn — and read
+by no system.** The hour a colonist sleeps is still decided by their rest need. It is therefore
+deliberately *outside* the hash, on exactly the test the saved view passes — *a value no system
+consults cannot affect a tick* — and no golden moved.
+`ScheduleTests.EditingTheDayDoesNotMoveTheStateHash` is the assertion, and it is written so that
+**the day somebody wires the job system to the schedule, that test fails**, which is the signal to
+put it in the hash and re-bake once with a sentence. The panel says the same thing out loud in its
+footnote, because a schedule you can paint that quietly does nothing is the worst available
+outcome; one that says it does nothing *yet* is a staged delivery.
+
+**The default day is a real day, and that was a judgement call worth recording.** Defaulting all
+twenty-four hours to *Anything* would have been the literal truth of a schedule nothing reads — and
+a panel nobody could learn to read, since every row would be one flat grey band. The default is the
+shape the colony will keep when the schedule starts governing, so the picture is not a lie about the
+future, only about the present. OQ-W8 asks whether that is too convincing.
+
+**The HUD got its first categorical colour scale, and the first attempt at it was wrong.** Every
+other colour in this interface is a *signal* — good, bad, warn, accent — carrying meaning by
+intensity, and six nominal categories cannot come out of four signal tokens without two colliding.
+The six blocks were measured against each other rather than eyeballed, because they sit edge to edge
+in an unbroken band, which is a harder test than two chips in a legend. The first pass put
+**Anything 77 channel-points from Sleep** — a flat grey against a dark indigo, which is precisely
+the pair a player has to separate at a glance in a night row. Both moved; the closest pair is now
+**96**, and every block is at least that far from the accent, which is drawn *over* them as the
+now-line.
+
+**Twenty-four aspects a colonist**, not three packed ints. That is eight times what this mechanism
+has been asked for before, and the answer is the one `SkillAspects` already gave at one eighth the
+size: packing saves twenty-one rows and costs the reader a decode it can get wrong. Recorded as the
+first place to look if the scale target ever makes 41 rows a colonist matter.
+
+**One deliberate asymmetry between the halves:** a work cell can be inert — incapable, or a column
+the simulation does not run — and **an hour never can**, because nobody is incapable of a time of
+day. Copying the work half's guard across would have made a colonist who cannot mine also unable to
+be sent to bed, so there is a test named after the sentence.
+
+Three existing tests had to change and all three were right to fail: the save-format assertion
+(6 → 7), the subtitle (it says *what they do, and when* now, because the claim of the combined table
+is that they are one question), and F2 leaving the command bar. Neither tier was run here — still no
+dotnet SDK, still no Unity — so CI is again the first compiler to see any of it.
+
+## 2026-09-20 — Reviewing the Work tab, and the two glyphs that were never there
+
+PR #145 came in conflicting with `main` and unplayed, and its own note says the authoring session
+could run neither tier — no dotnet SDK, no Unity, egress blocked — so CI was the first compiler to
+see any of it. That is exactly the condition under which the faults that survive are the ones no
+compiler and no assertion can see, which is what the review turned out to be about.
+
+The merge was three doc collisions and nothing else: the journal, the playtest queue and CLAUDE.md
+all gained a 2026-09-20 entry on both sides. Both journal entries kept, both playtest rows kept,
+CLAUDE.md's tier line taken from `main` because it is the newer record and carries the runner's
+no-Synty rule. Fast tier green on the merge at 826 + 519 before a single correction, which is a
+fair statement of how little a green fast tier proves about a panel.
+
+**Then the question that found the real thing: are the characters this code writes actually in the
+fonts?** Simple mode drew `"✓"` and `"✕"` into a label. Reading the two `.ttf` files' `cmap`
+tables took about ninety seconds and said no: Archivo Narrow has neither, IBM Plex Mono has only
+the tick. The cell glyph is `numeric: true` so it takes the mono face — every *won't do* cell was
+a blank. The legend takes the UI face — both of its swatches were blanks. **The whole of Simple
+mode, one of the panel's two readings, drew nothing at all**, and every test about it passed,
+because a `Label` whose `text` is `"✓"` has that text in any assertion you can write. The fast
+tier compiles no text engine and the Unity tier asserts no pixels; there is no tier in this project
+that looks at a picture.
+
+The fix is the one the project already makes everywhere else — draw it. `HudGlyphKind.Check` and
+`Cross` on the same 24-unit grid as the chevrons and the play button. The model gained `WorkMark`,
+so the shell is told *which mark* rather than *which character*, and the test asserts the mark.
+
+**But the guard is the part worth keeping.** `HudFontTests` parses both cmaps in the fast tier and
+fails on any non-ASCII character in a HUD literal either face cannot draw — held to *both* faces,
+because a label's face is chosen by its role and roles move. On its first run it failed, and not on
+the Work tab: **the same tick was already on `main`**, in the bed-owner picker from PR #141, where
+`BedPickerMark.ThisBed` is drawn in `HudTextRole.Body`, which is Archivo Narrow, which does not
+have one. The mark that says *this is the bed this colonist owns* has been an empty column since it
+was written, is still on the playtest queue, and would have been reported as "the bed picker does
+not show who owns the bed" by somebody who then went looking in the bed code. Ninety seconds of
+reading a file, against a play session and a wrong-place hunt. `docs/bug-patterns.md` P10.
+
+Five more, none of them subtle once looked for. The panel is absolutely positioned from the left
+edge at a **fixed 1,756px**, so on any window under about 1,780 the schedule half was off the right
+of the screen — not scrolled, *off*, past the scroller that exists for that case; capped at 96% with
+`minWidth: 0` on the scroller, because yoga's automatic content minimum would otherwise have held
+it open and defeated the cap. **Escape did not close it**, against a rule the owner stated in 2026-09-17
+as *"every window can be escaped"* — a rule about windows, which a new window has to join.
+**Opening Build did not close it** although opening it closed Build, and the two dock in the same
+corner; one direction of a two-way rule is the harder half to notice because the natural way to test
+it is the way that works. **`Describe` was wired to nothing** — the sentence naming all four signals,
+written, documented as what a cell says when hovered, asserted by a test, and reachable from no
+tooltip. And **`Attach` did not re-sync the panel**, so a tab left open in one colony stayed on
+screen over the next, which is the one line the debug panel already had beside it.
+
+The seventh is small and is the one I expect to matter longest: `WorkGridLayout.Hours` was the
+literal `24` under a doc comment saying it was `ScheduleHandle.Hours`. That is P1 in its smallest
+form, before it is a bug, and it is now the constant — with `GameClock.HoursPerDay` tied in beside
+it, in the one assembly where all three are in scope.
+
+Three things were checked and deliberately left: the publish grew by 32 aspect rows a colonist and
+that is `SkillAspects`' own shape; `Refresh` allocates a row and two lists a colonist while the
+panel is open, which is not worth pooling objects the tests hold; and there is no vertical scroll,
+which clips at about twenty-four colonists against a colony of three. All three are written into
+`27-work-tab.md` §15h rather than half-fixed.
+
+## 2026-09-20 — The Work tab pages, and the scrollbar it replaces was costing two things
+
+Owner, on the reviewed branch: *"Remove the scroll bars — this isn't a good interface — replace with
+pagination similar to the roster pagination instead and keep a number that makes sense. This way the
+control never needs to resize everything and pagination could be used. Please could you ensure
+performance."*
+
+The scroller was mine, added the same afternoon to stop the panel hanging off the right of a narrow
+window (§15b). It was the wrong shape of answer and the sentence *"the control never needs to
+resize"* is why: a percentage cap makes the panel's width a function of the window, so the same
+panel is a different width on a different screen and which columns you can see depends on how you
+sized the game rather than on anything you chose.
+
+**The second cost is the one no screenshot would have shown.** A scroller clips what it shows; it
+does not decline to build it. Twenty-two columns times every colonist alive were constructed as real
+elements whether or not any of them was on screen — and the rows grew with the colony until they
+clipped, unreachable, at about twenty-four. The panel's cost was a line with no ceiling on it.
+
+**The numbers were the owner's to pick and I asked.** I put the arithmetic up as a table — panel
+width against columns-per-page, and where the four live columns land in each — because that second
+column is the whole trade and it is not obvious: Construction, Mining, Cutting and Hauling sit at
+catalogue positions 9 to 14, so **eight per page gathers every live column on page two and leaves page
+one entirely dead**, while **eleven gives two clean pages and splits the live ones across them**. I
+recommended eight. The owner took eleven, which is the better call on the axis I had under-weighted:
+eight makes three pages of a twenty-two-item list and the first one does nothing at all. Rows: 12.
+The day: never paged, all twenty-four hours on both pages, because a row being one colonist's whole
+day is the entire claim of §12a.
+
+So the panel is **1,383 px plus two, for ever**. Not a maximum, not a percentage — a constant.
+
+**Performance, which was asked for rather than assumed.** A page builds what it shows:
+
+```
+colony  3   477 elements -> 279     colony 25   3,491 -> 1,017
+colony 12 1,710 elements -> 1,017   colony 50   6,916 -> 1,017
+```
+
+The ratio is not the point; **the number stopping** is. Three things came with it and each is
+asserted rather than claimed. Rows are **recycled** now — a pool, so a panel left open allocates
+nothing after its first page, which is ADR 0003's F1. I had explicitly declined to pool at review
+time and wrote down why (§15h); the reason it is right now and was wrong then is that **a bound is
+what makes a pool worth having**. Unbounded it is a list that never shrinks. A **page turn builds
+eleven header boxes and no cells**, because the cells are slots re-aimed at another column rather
+than rebuilt. And the model still reads all twenty-two columns a row — a `WorkCell` is a struct in a
+list that is already the right length — so a cell stays addressable by its catalogue index
+everywhere and paging does not leak past the shell. That last one kept forty existing tests working
+without a line changed.
+
+The gestures are the roster's, down to its stylesheet classes: `‹ 1 / 2 ›` over the columns, `‹ 1 / 3 ›`
+over the names, wheel for the rows and shift-wheel for the columns. A wheel down a list of people
+means down the people. Selecting somebody brings their page up, once, on the frame the selection
+changes — `RosterModel.EnsurePageFor`'s job and its reason.
+
+One thing I had to correct in my own test: I asserted the panel clears a 1366 window and it does
+not, it clears 1440. That is the trade the owner accepted when they took eleven over eight, and the
+test says so now instead of asserting a number I had carried over from the option I recommended.
+
+## 2026-09-20 — Eleven notes on the Work tab, and a border box that put the schedule over the map
+
+The owner read the paged panel and sent eleven things back. Three were faults and the rest were the
+panel being told what it is for, which is the more useful kind of note and the kind only a person at
+the keyboard produces.
+
+**The fault worth writing down is the spill.** *"The scheduler is spilling over into the game play
+area past everything."* I had set the panel's width to the grid's own 1,383 — and `.panel` carries
+`padding: 12px` and a 1px border, and **UI Toolkit's `width` is a border box**, so the content area
+was `1383 − 24 − 2 = 1,357` and the 1,383-wide grid inside it hung 26px out to the right, past the
+panel's frame, over the world. My own arithmetic, three commits old, introduced by the same change
+that was meant to stop the panel hanging off the screen.
+
+**What makes it worth a paragraph is that neither tier could see it.** The fast tier has no layout
+engine; the Unity tier has one and asserts nothing about it. A C# constant and a USS rule can
+disagree indefinitely and nothing in this project notices — which is the same shape as the missing
+font glyphs two days ago, and the same answer: read the other side of the disagreement.
+`ThePanelIsWideEnoughForItsOwnPaddingAndBorder` asserts the content box comes to exactly the grid's
+width, and `PanelOuterWidth` is written as `PanelWidth + 2 * (HudLayout.Pad + HudTheme.BorderWidth)`
+so a change to the padding carries it.
+
+**The sort was the one I asked about**, and the questions were worth asking. "Sort by highest skill"
+has an edge the sentence does not cover: hauling is the one live column with *no skill*, so there is
+no best to sort by. The owner took the fallback to priority. The other thing I asked was what
+*"when you leave the control it resets"* means — the literal reading is the pointer leaving, which
+would drop the sort on the way to almost anything you would do with it; closing the panel was the
+intent. Neither of those is something I would have got right by guessing, and both would have been
+reported back as bugs.
+
+**The implementation detail that matters is stability.** `List.Sort` is not stable, and this panel
+refreshes five times a second for as long as it is open, so a colony where three people share a
+level would have shuffled those three continuously, under the cursor. The roster position is the
+tie-break and eleven consecutive refreshes are asserted not to move anything. The sort also runs
+over the whole colony *before* paging, or page one would hold the best of page one rather than the
+best of the colony — which is the sort of thing that looks right on a colony of three and is wrong
+the moment there are thirteen.
+
+**And one test caught my own bad data**, which is the pleasant kind of failure: I wrote a
+thirty-colonist fixture with levels 0–29, and `ReadCell` clamps a level to 0–20, so everyone above
+twenty tied at twenty and the stable sort ordered them by roster position. The assertion failed on
+the number I had predicted. The fixture was wrong, not the code, and the comment now says why
+twenty-one and not thirty.
+
+The rest, briefly. The key is two keys at fixed widths that line up with the two halves above them,
+divided by the same rule at the same x — 566 is the name column plus a page of columns, which *is*
+the seam. The schedule half's six entries are buttons now: press one to arm it, hours take it
+instead of cycling, press it again to put it down; the cycling gesture is untouched with nothing
+armed, so the palette is an addition rather than a replacement. The icon tiles under the column
+labels are gone and the labels run down into their place, which shortened the band from 104 to 96
+and paid for a 24px title strip — and that strip is what let each control carry its own name or its
+own pager over itself: the column pager moved out of the panel header into the work half, and the
+schedule half got the word *Schedule* in its top left. Simple is the default reading now. The panel
+is nearly opaque, which is the one place a panel does not take the shared fill, because it is the
+largest in the game and the only one whose signal is small coloured cells — the world was coming
+through the schedule bands and moving them.
+
+**Three subtexts were deleted and they were the same mistake three times**: the panel explaining a
+picture that has to explain itself. The one that carried a real fact — nothing obeys the schedule
+yet — still says so in the design document and on the playtest queue, which is where somebody will
+read it once rather than ignore it daily.
+
+## 2026-09-20 — "Is it hooked up?", and the test that failed for the right reason
+
+Owner, before merge: *"can we ensure it's performant - and is it fully functional? as I've only
+tested the menu and not whether it's hooked up"*. A fair question to ask of a panel that had eighty
+tests and not one that watched a colonist.
+
+**Everything written for this panel proved a link in a chain and nothing proved the chain.** The
+panel emits an intent; the intent writes a byte; the byte is saved, hashed and published. All
+tested. Whether the byte changes what anybody *does* was not, and the schedule half is the standing
+proof that a panel can be complete in every one of those senses and govern nothing at all.
+
+My first look was a bad grep. I searched `WorkPriorities` across the simulation, found only the
+scenario writing it, and had the sentence "the priority grid is not hooked up" half-composed —
+which would have been a confident, wrong, alarming answer. The accessor is `WorkPriority` singular,
+`JobSystem.cs:704`, and the scan is exactly what the design claimed: one pass per priority, 1 to 4,
+skipping any giver the colonist holds at another number. **Zero matches none of 1 to 4, so never is
+never offered.** It works.
+
+**Then the behavioural test failed, and it was right to.** I marked a tree, set cutting to *never*,
+ran eight thousand ticks, and she felled it anyway. Rather than reason about why, I printed the job:
+`5`, `Fell`, both before and after the priority changed. She had already taken the job in the tick
+where I designated. `WorkThinkNode` runs when a colonist needs something to do, not while she is
+doing it — so a priority decides the *next* job and not the one in hand.
+
+That is the right behaviour and the reference's, and a colonist who dropped her axe mid-stroke
+every time a number moved would be worse. But it was my test that was wrong, not the code, and the
+distinction only became visible because I measured instead of reasoning. Reordered — priority
+first, then the order — it passes, and the accidental discovery is now its own test with its own
+name, because **it is the first thing a player will notice**: set a column to never and she finishes
+what she is doing.
+
+The other thing worth having is an alarm rather than a sentence. §12d has said since the schedule
+landed that no system reads it; that was prose. `TheScheduleStillGovernsNothing` asserts it — a
+colonist whose twenty-four hours all say *Sleep* fells a tree anyway — and its failure message names
+the three things that owe an update on the day it starts passing for the wrong reason: itself,
+`EditingTheDayDoesNotMoveTheStateHash`, and the goldens.
+
+**On performance, the honest answer was that I had asserted bounds and not milliseconds.** The
+element count is capped and the rows are pooled, both tested, and both are arguments that the cost
+*is a constant* rather than measurements of what the constant is. `WorkTabCostTests` takes the
+measurement the way `HudStressTests` takes its own: the real panel over a real session, shut and
+then open, 180 frames each after 120 of settling, held to a quarter of the dev budget because it is
+one panel and not the interface. It checks the frame cost, the size of the tree that actually got
+built, and that the collector does not run at all while the panel sits open.
+
+It logs its baseline and says to read that first, because the last timing test to fail on this
+machine failed to contention and not to a regression.

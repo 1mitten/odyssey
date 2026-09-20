@@ -270,7 +270,8 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, centre, 12f, 30f, 7f, $"Logs/colour-{name}-close.png");
                     Debug.Log($"[Colour] Logs/colour-{name}.png and -close.png " +
                               $"({figures.Drawn.Count} figures, {materials.MaterialCount} materials, " +
-                              $"thickest sole {figures.MeasuredSoleOffset:0.000} m)");
+                              $"thickest sole {figures.MeasuredSoleOffset:0.000} m, " +
+                              $"tallest figure {figures.MeasuredStandingHeight:0.000} m)");
                 }
             }
             catch (Exception e)

@@ -39,19 +39,19 @@ namespace Odyssey.Sim.Growing
         /// <summary>The plant table, indexed by <see cref="PlantHandle"/>. Resolved once at construction.</summary>
         readonly PlantDef[] _plants;
 
-        /// <summary>The zone each cell belongs to, or -1. Full-size for O(1) answers, as the designation grid's byte array is.</summary>
-        readonly int[] _zoneAt;
+        /// <summary>
+        /// Which cells are zoned and how they are grouped. The <b>container</b> only — the join
+        /// policy is <see cref="Paint"/>'s, below, because a storage zone sits on the same
+        /// container and must not fold (see <see cref="ZoneGrid"/>). Its tag is a
+        /// <c>PlantHandle</c>.
+        /// </summary>
+        readonly ZoneGrid _zones;
 
         /// <summary>The crop standing in each cell as <c>PlantHandle + 1</c>, or 0 for fallow.</summary>
         readonly byte[] _cropAt;
 
         /// <summary>Accumulated growing-window ticks per cell. Meaningless where <see cref="_cropAt"/> is 0.</summary>
         readonly int[] _growthAt;
-
-        readonly List<Zone> _zones = new List<Zone>();
-
-        /// <summary>Every zoned cell, ascending — the walk order for the hash, the save and the snapshot.</summary>
-        readonly List<int> _cells = new List<int>();
 
         /// <summary>Every planted cell, ascending — the growth scan and the planting channel.</summary>
         readonly List<int> _planted = new List<int>();
@@ -68,30 +68,21 @@ namespace Odyssey.Sim.Growing
         /// </summary>
         readonly ChunkGrid? _chunks;
 
-        /// <summary>One contiguous patch of one crop. <see cref="Id"/> is its slot in <see cref="_zones"/> and is kept true by every edit, because <see cref="_zoneAt"/> points at it.</summary>
-        sealed class Zone
-        {
-            public int Id;
-            public byte Plant;
-            public readonly List<int> Cells = new List<int>();
-        }
-
         public GrowingZones(CellGrid grid, PlantDef[] plants, ChunkGrid? chunks = null)
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _plants = plants ?? throw new ArgumentNullException(nameof(plants));
             _chunks = chunks;
             int count = grid.Size.CellCount;
-            _zoneAt = new int[count];
+            _zones = new ZoneGrid(count);
             _cropAt = new byte[count];
             _growthAt = new int[count];
-            Array.Fill(_zoneAt, -1);
         }
 
         public GridSize Size => _grid.Size;
 
         /// <summary>Every zoned cell index, ascending. Stable order is what makes a scan deterministic.</summary>
-        public IReadOnlyList<int> Cells => _cells;
+        public IReadOnlyList<int> Cells => _zones.Cells;
 
         /// <summary>Every planted cell index, ascending — what the growth pass and the sowing scan walk.</summary>
         public IReadOnlyList<int> Planted => _planted;
@@ -101,7 +92,11 @@ namespace Odyssey.Sim.Growing
         public PlantDef Plant(int handle) => _plants[handle];
 
         /// <summary>Which plant the zone covering this cell grows, or -1 if the cell is in no zone.</summary>
-        public int ZonePlantAt(int index) => _zoneAt[index] >= 0 ? _zones[_zoneAt[index]].Plant : -1;
+        public int ZonePlantAt(int index)
+        {
+            int slot = _zones.SlotAt(index);
+            return slot >= 0 ? _zones.TagOf(slot) : -1;
+        }
 
         /// <summary>Is a crop standing in this cell? Not whether it is ripe — that is the growth's question.</summary>
         public bool IsPlanted(int index) => _cropAt[index] != 0;
@@ -173,9 +168,9 @@ namespace Odyssey.Sim.Growing
             if ((uint)plant >= (uint)_plants.Length) return IntentRejection.NotPermitted;
 
             int index = _grid.Index(cell);
-            int existing = _zoneAt[index];
+            int existing = _zones.SlotAt(index);
             if (existing >= 0)
-                return _zones[existing].Plant == plant
+                return _zones.TagOf(existing) == plant
                     ? IntentRejection.AlreadyInThatState
                     : IntentRejection.NotPermitted;
             if (!SiteAllows(index, _plants[plant])) return IntentRejection.NotPermitted;
@@ -194,15 +189,9 @@ namespace Odyssey.Sim.Growing
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
             int index = _grid.Index(cell);
-            int slot = _zoneAt[index];
-            if (slot < 0) return IntentRejection.AlreadyInThatState;
+            if (!_zones.Leave(index)) return IntentRejection.AlreadyInThatState;
 
-            Zone zone = _zones[slot];
-            zone.Cells.RemoveAt(zone.Cells.BinarySearch(index));
-            _cells.RemoveAt(_cells.BinarySearch(index));
-            _zoneAt[index] = -1;
             if (_cropAt[index] != 0) Uproot(index);
-            if (zone.Cells.Count == 0) Dissolve(zone);
             MarkCellAndSides(index);
             return IntentRejection.None;
         }
@@ -226,78 +215,37 @@ namespace Odyssey.Sim.Growing
             if (at.Z + 1 < size.SizeZ) _chunks.MarkDirty(new CellRef(at.X, at.Z + 1, at.Y));
             if (at.Z > 0) _chunks.MarkDirty(new CellRef(at.X, at.Z - 1, at.Y));
         }
-        /// <summary>Join a cell into whatever same-plant ground touches it, or found a zone of its own.</summary>
+        /// <summary>
+        /// Join a cell into whatever same-plant ground touches it, or found a zone of its own.
+        ///
+        /// <para><b>This is the join policy, and it stays here.</b> Eight-neighbour, so a diagonal
+        /// brush stroke is one field and not two, and zones folded together by a stroke across
+        /// their corner dissolve into the survivor — which is sound only because a growing zone is
+        /// identified by its plant and two touching carrot fields are interchangeable. A storage
+        /// zone on the same container must not fold, because it carries a configuration a fold
+        /// would destroy, so the rule belongs to the caller and the bookkeeping belongs to
+        /// <see cref="ZoneGrid"/>.</para>
+        /// </summary>
         void Paint(int index, byte plant)
         {
-            Zone? home = null;
+            int home = -1;
             CellRef at = _grid.Size.FromIndex(index);
             for (int i = 0; i < 8; i++)
             {
                 int x = at.X + NeighbourX[i];
                 int z = at.Z + NeighbourZ[i];
                 if (!_grid.Size.Contains(x, z, at.Y)) continue;
-                int slot = _zoneAt[_grid.Size.Index(x, z, at.Y)];
+                int slot = _zones.SlotAt(_grid.Size.Index(x, z, at.Y));
                 if (slot < 0) continue;
-                Zone zone = _zones[slot];
-                if (zone.Plant != plant) continue;
-                if (home == null) home = zone;
-                else if (zone != home) MergeInto(home, zone);
+                if (_zones.TagOf(slot) != plant) continue;
+                // MergeInto answers with the surviving home slot, which is not always the one it
+                // was given: dissolving a slot moves the last one into the gap, and the last one
+                // can be home.
+                home = home < 0 ? slot : _zones.MergeInto(home, slot);
             }
 
-            if (home == null)
-            {
-                home = new Zone { Id = _zones.Count, Plant = plant };
-                _zones.Add(home);
-            }
-
-            home.Cells.Insert(~home.Cells.BinarySearch(index), index);
-            _cells.Insert(~_cells.BinarySearch(index), index);
-            _zoneAt[index] = home.Id;
-        }
-
-        /// <summary>Fold the other zone into the survivor and take it off the list.</summary>
-        void MergeInto(Zone home, Zone other)
-        {
-            home.Cells.AddRange(other.Cells);
-            // Two sorted runs appended are not one sorted list, and everything that reads a
-            // zone's cells — the binary searches in Cancel and in the next Paint's insert —
-            // assumes ascending. Which zone survives the fold depends on which neighbour the
-            // scan meets first, so the absorbed cells can be the smaller indices; unsorted,
-            // a later cancel's search answers negatively and RemoveAt throws inside the
-            // intent drain. Found by re-review the day the branch opened its PR, the same
-            // week Dissolve's shift-remove was: the fold is where both invariants broke.
-            home.Cells.Sort();
-            Dissolve(other);
-            // The absorbed cells point at the slot their old zone died in, and the stroke that
-            // caused the merge is still reading neighbours — one of them could sit in an
-            // absorbed cell and resolve to whichever zone now holds the slot. Point them at the
-            // survivor now; every later read in this stroke sees a live answer.
-            for (int i = 0; i < other.Cells.Count; i++) _zoneAt[other.Cells[i]] = home.Id;
-        }
-
-        /// <summary>
-        /// Take a zone off the list. The last zone moves into the vacated slot, and every cell
-        /// it owns moves with it — a slot that <see cref="_zoneAt"/> still points at must hold
-        /// the same zone, or a cancel a field away would eat the wrong one.
-        /// </summary>
-        void Dissolve(Zone zone)
-        {
-            // A swap, not a shift: List.RemoveAt would move every later zone down one and
-            // leave all but the first of them wearing a stale Id, with their cells pointing
-            // at slots that no longer hold them — a field painted over water fragments into
-            // several zones, one stroke folds them, and the next designate on a folded cell
-            // reads past the end of the list. Found by the PlayMode field benchmark (U50);
-            // the fast tier had never dissolved a zone that was not near the end.
-            int slot = zone.Id;
-            int last = _zones.Count - 1;
-            if (slot != last)
-            {
-                Zone moved = _zones[last];
-                _zones[slot] = moved;
-                moved.Id = slot;
-                for (int i = 0; i < moved.Cells.Count; i++) _zoneAt[moved.Cells[i]] = slot;
-            }
-            _zones.RemoveAt(last);
+            if (home < 0) home = _zones.Found(plant);
+            _zones.Join(home, index);
         }
 
         // ---- sowing and growth ------------------------------------------------------------------
@@ -315,11 +263,11 @@ namespace Odyssey.Sim.Growing
         /// </summary>
         public void Sow(int index)
         {
-            int slot = _zoneAt[index];
+            int slot = _zones.SlotAt(index);
             if (slot < 0) throw new ArgumentException($"cell {index} is in no growing zone.", nameof(index));
             if (_cropAt[index] != 0) throw new ArgumentException($"cell {index} already holds a crop.", nameof(index));
 
-            _cropAt[index] = (byte)(_zones[slot].Plant + 1);
+            _cropAt[index] = (byte)(_zones.TagOf(slot) + 1);
             _growthAt[index] = 0;
             _planted.Insert(~_planted.BinarySearch(index), index);
             _chunks?.MarkDirty(_grid.Size.FromIndex(index));
@@ -411,10 +359,11 @@ namespace Odyssey.Sim.Growing
             // Cells with their crop and counter. The zone structure is deliberately not hashed:
             // which patch a cell belongs to is a function of which cells exist with which plant,
             // so hashing the cells hashes everything two machines could disagree about.
-            hash.Add(_cells.Count);
-            for (int i = 0; i < _cells.Count; i++)
+            IReadOnlyList<int> cells = _zones.Cells;
+            hash.Add(cells.Count);
+            for (int i = 0; i < cells.Count; i++)
             {
-                int index = _cells[i];
+                int index = cells[i];
                 hash.Add(index);
                 hash.Add(_cropAt[index]);
                 hash.Add(_growthAt[index]);
@@ -430,12 +379,12 @@ namespace Odyssey.Sim.Growing
             writer.Write(_zones.Count);
             for (int i = 0; i < _zones.Count; i++)
             {
-                Zone zone = _zones[i];
-                writer.Write(zone.Plant);
-                writer.Write(zone.Cells.Count);
-                for (int j = 0; j < zone.Cells.Count; j++)
+                IReadOnlyList<int> zoneCells = _zones.CellsOf(i);
+                writer.Write((byte)_zones.TagOf(i));
+                writer.Write(zoneCells.Count);
+                for (int j = 0; j < zoneCells.Count; j++)
                 {
-                    int index = zone.Cells[j];
+                    int index = zoneCells[j];
                     writer.Write(index);
                     // -1 is fallow, so a painted-but-unseeded cell survives the round trip as
                     // itself and not as a crop at tick zero.
@@ -446,12 +395,9 @@ namespace Odyssey.Sim.Growing
 
         public void Load(SaveReader reader)
         {
-            foreach (Zone zone in _zones) zone.Cells.Clear();
             _zones.Clear();
-            Array.Fill(_zoneAt, -1);
             Array.Clear(_cropAt, 0, _cropAt.Length);
             Array.Clear(_growthAt, 0, _growthAt.Length);
-            _cells.Clear();
             _planted.Clear();
 
             int zoneCount = reader.ReadInt();
@@ -463,19 +409,16 @@ namespace Odyssey.Sim.Growing
                 // skipped, but its cells are still consumed: the reader is sequential, and a
                 // skipped section that left its bytes unread would corrupt every section after.
                 bool known = (uint)plant < (uint)_plants.Length;
-                var zone = known ? new Zone { Id = _zones.Count, Plant = plant } : null;
-                if (zone != null) _zones.Add(zone);
+                int slot = known ? _zones.Found(plant) : -1;
                 for (int i = 0; i < cellCount; i++)
                 {
                     int index = reader.ReadInt();
                     int growth = reader.ReadInt();
-                    if (zone == null) continue;
-                    if ((uint)index >= (uint)_zoneAt.Length) continue;
-                    if (_zoneAt[index] >= 0) continue; // a zone a field away must not be eaten by a corrupt overlap
+                    if (slot < 0) continue;
+                    if ((uint)index >= (uint)_cropAt.Length) continue;
+                    if (_zones.SlotAt(index) >= 0) continue; // a zone a field away must not be eaten by a corrupt overlap
 
-                    _zoneAt[index] = zone.Id;
-                    zone.Cells.Add(index);
-                    _cells.Add(index);
+                    _zones.Append(slot, index);
                     if (growth >= 0)
                     {
                         _cropAt[index] = (byte)(plant + 1);
@@ -488,9 +431,8 @@ namespace Odyssey.Sim.Growing
             // Zones arrive in record order; every scan in this class and both published channels
             // want ascending cells, so order is restored once here rather than maintained by
             // every writer.
-            _cells.Sort();
+            _zones.RestoreOrder();
             _planted.Sort();
-            foreach (Zone zone in _zones) zone.Cells.Sort();
         }
 
         // ---- ISnapshotContributor: zones and crops, sparse, anywhere in the world ----------------
@@ -504,10 +446,11 @@ namespace Odyssey.Sim.Growing
         /// </summary>
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
-            for (int i = 0; i < _cells.Count; i++)
+            IReadOnlyList<int> cells = _zones.Cells;
+            for (int i = 0; i < cells.Count; i++)
             {
-                int index = _cells[i];
-                writer.AddZone(new ZoneView(index, _zones[_zoneAt[index]].Plant));
+                int index = cells[i];
+                writer.AddZone(new ZoneView(index, (byte)_zones.TagOf(_zones.SlotAt(index))));
             }
 
             for (int i = 0; i < _planted.Count; i++)
