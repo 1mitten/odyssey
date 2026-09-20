@@ -7679,39 +7679,57 @@ with nowhere to be stored is cleared to the nearest free cell off the zone now, 
 can have it back when it has room. The lesson the flat sheet earned went into lessons already:
 an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
 board's amplitude and the blindness is recorded beside it.
-## 2026-09-20 — Skills: the audit found more than the feature did (SK1–SK5)
+## 2026-09-20 — Skills made visible, and a session that checked its base once (SK2–SK5)
 
 The ask was to "enable skills for chopping, mining and plants/gardening", add a bar in the colonist
-card that fills as the work is done, and raise a positive notification on a level-up. The first hour
-went on establishing that **most of it already existed**, and that is the part worth recording,
-because three separate status claims were stale at once:
+card that fills as the work is done, and raise a positive notification on a level-up. Almost none of
+that was missing: chopping and mining had driven work speed since WS2, gardening was built and open
+as PR #119, and passion was rolled, multiplied and drawn as pips already. What was missing was a way
+to see any of it, and one bug.
 
-- `CLAUDE.md`'s known gap said *"a skill level buys nothing a player can feel — no rate reads it"*.
-  WS2 had landed; cutting, mining and construction all had curves and the accumulator read them.
-- `15-skills.md` §1 said three simulated skills. There were five.
-- `SkillCatalogue` greyed out **Construction** as "nothing is built yet" and **Growing** as "nothing
-  is planted yet". Construction had been fully simulated since U26 and growing since U47. The one
-  screen whose job is telling a player what a colonist can do was denying half of what she does.
+**The lesson is not about skills. It is that this session checked `main` and #119's head once, at
+the start, and never again across several hours — and was wrong three times because of it.**
 
-That last one is the real lesson: **a row's liveness is not documentation, it is a claim about the
-simulation, and nothing was checking it.** Two features had shipped past it without anybody noticing,
-including growing, which added the skill and the jobs in the same branch and left the row dead.
+**One: it claimed a finding the audit had already made.** `CLAUDE.md`'s gap said *"a skill level buys
+nothing a player can feel"*, this session reported it as stale, and it was — but the baseline audit
+had caught it on 2026-09-19 and already struck it through on `main`, deliberately kept as the worked
+example of exactly this failure. The branch was based on a head predating that, so it read a stale
+copy of the file whose own warning is *"check the code before you trust any status line"* and then
+did not check the code. The line caught its second session and is annotated to say so.
 
-CLAUDE.md's own warning — *"check the code before you trust any status line"* — paid for itself
-before a line was written, and it should be read as applying to the design documents too.
+**Two: it wrote a unit that already existed.** `SK1` was to give `Work_Growing` a rate curve. While
+it was being written, `claude/growing-zones` added the identical curve — same `rateSkill`, same base
+and slope, the same re-baked fingerprint, because it is byte-for-byte the same content change. A test
+over there carries the giveaway: *"another agent is addressing skills"*. Both sessions read the same
+"no curve yet" note and neither looked at the other's branch again. `SK1` was dropped on merge; there
+is no `SK1`, and the curve is #119's.
 
-**Gardening was already built.** PR #119 ships the whole growing system and was open and mergeable,
-waiting on a playtest. The one gap was that `Work_Growing` carried no `rateSkill`, so a master grower
-sowed at a novice's speed and the Growing skill bought nothing — exactly the complaint that had won
-Chopping its own row two days earlier. It takes cutting's curve verbatim, because they are the two
-plant work types and the design had felling training Growing outright until 2026-09-18; a difference
-between them would be a claim needing a measurement, and there is none.
+**Three: it worked around a bug that was already fixed.** `build_wiki.py` used a Python 3.12-only
+f-string, the container's `python3` is 3.11, so this session ran the gate under `python3.13`. `main`
+had repaired that line the day before, in the same audit commit.
 
-**The prediction that was wrong, and the measurement that corrected it.** The plan said SK1 would move
-the growing goldens. It moved none. The golden worlds are bare seeds with no zone painted on them, so
-no sow or harvest job is ever created and the curve is never consulted. That got written into the
-fingerprint's comment as a fact with its reason, replacing the sentence claiming three hashes had
-moved — a comment asserting a measurement nobody took is worse than no comment.
+**The rule worth writing down: re-check the base branch before claiming a finding, not only before
+starting work.** All three failures share one cause and one cheap fix, and a session that runs for
+hours against a moving `main` needs the check more than once.
+
+**What this work did find, and it is unrecorded anywhere else:** `SkillCatalogue` greyed out
+**Construction** as "nothing is built yet" and **Growing** as "nothing is planted yet". Construction
+had been simulated since U26 and growing since U47. The one screen whose job is telling a player what
+a colonist can do was denying half of what she does — so **a row's liveness is not documentation, it
+is a claim about the simulation, and nothing was checking it.** Two features shipped past it,
+including growing, which added the skill and the jobs in one branch and left its own row dead.
+
+CLAUDE.md's warning — *"check the code before you trust any status line"* — applies to the design
+documents too, and to the branch you are sitting on.
+
+**One measurement survived being wrong about everything else, and it is worth keeping.** The plan
+said the growing curve would move the growing goldens. It moved none — the golden worlds are bare
+seeds with no zone painted on them, so no sow or harvest job is ever created and the curve is never
+consulted. #119 had changed that fingerprint without recording the move at all, leaving its previous
+note reading *"Work_Growing carries no curve yet"* directly above a def that had one, so this
+branch's paragraph stays as the record of that move — re-attributed, and with the measurement kept.
+A comment asserting a measurement nobody took is worse than no comment; so is a value nobody
+explained.
 
 **A level-up needs nothing from the simulation, and that is the nicest thing here.** Every colonist's
 level in every skill is already published every frame, not just the selected one. So a rise is found
@@ -7774,8 +7792,14 @@ from the colonist's own seed, already drawn as pips — so the bar's fill takes 
 passion and `LearningFactorPerMille()` stays the empty seam it has always been.
 
 **The container could not run Unity, and said so rather than guessing.** The .NET SDK went in from
-Ubuntu's own repositories (the Microsoft download host is blocked by the egress policy) and the wiki
-tooling runs under `python3.13`, which was already installed although `python3` points at 3.11. So the
-fast tier and both content gates are real evidence here: 791 Sim, 475 Hud, 23 Long, all green. The
-Presentation and PlayMode assemblies are compiled by none of it, so the bar and the toast stack are
-**unproven** until the Unity tier runs on the owner's machine.
+Ubuntu's own repositories, the Microsoft download host being blocked by the egress policy — worth
+knowing, because `main`'s own fast-tier line already recorded "dotnet 8.0.131 in the remote
+container", so a previous session had solved the same problem and this one rediscovered it. The wiki
+gate was run under `python3.13`, which was unnecessary: `main` had already fixed the 3.12-only
+f-string, and after merging, both gates run on plain `python3`.
+
+So the fast tier and both content gates are real evidence here: 791 Sim, 475 Hud, 23 Long, all green.
+The Presentation and PlayMode assemblies are compiled by none of it, so the bar and the toast stack
+are **unproven** until the Unity tier runs on the owner's machine. One Unity-tier failure was found by
+reading rather than running — `HudSmokeTests` asserts the exact set of framed panels the shell builds,
+and would have rejected the new `toasts` one.

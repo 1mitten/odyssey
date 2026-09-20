@@ -105,11 +105,17 @@ the one clock that will not wait), `Skill_Growing`, `Job_Sow` and `Job_Harvest`
 plant, the driver reading `sowWorkTicks` or `harvestWorkTicks` from the zone's `PlantDef` as it
 swings. Skill and experience ride the def defaults.
 
-**Growing carried no rate curve until 2026-09-20, and now it does** (`SK1`). The original note read:
+**Growing carried no rate curve until 2026-09-19, and now it does.** The original note read:
 *"with no `rateSkill` on `Work_Growing` that rate is the flat tuned speed, so a skill still buys
 nothing at the hoe"* — true, and it made Growing the one live skill with no consequence, which is
-precisely the complaint that won Chopping its own row (`15-skills.md`). The curve is now
-`rateSkill` 4, base 600, slope 100.
+precisely the complaint that won Chopping its own row (`15-skills.md`). The curve is
+`rateSkill` 4, base 600, slope 100, added by this branch's own *"the hoe pays by skill"*.
+
+**It was written twice, and that is worth recording.** The skills branch derived the identical
+curve the next day and called it `SK1`, because both sessions read the same "no curve yet" note and
+neither re-checked the other's head. Two agents, one unit, byte-for-byte the same content change and
+the same re-baked fingerprint. The duplicate was dropped on merge; the lesson is in
+`docs/journal.md` under 2026-09-20.
 
 **It is cutting's curve, exactly, and that is the decision.** They are the two plant work types, and
 the design had felling training Growing outright until 2026-09-18 (`15-skills.md` §6.2) — so a

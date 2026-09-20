@@ -2208,3 +2208,36 @@ a duration identical to the last run's, down to the seventh decimal.
 - **Only one Unity may hold a project.** A background `test playmode` and a foreground `build` in
   the same worktree are mutually exclusive, and the second one loses silently if you are not
   reading its output.
+
+## Re-check the base branch before claiming a finding, not only before starting
+
+A session on 2026-09-20 read `main` and its own base branch once, at the start, then worked for
+several hours. It was wrong three times for that one reason:
+
+- It reported a stale `CLAUDE.md` known gap as its own finding. The baseline audit had caught it the
+  previous day and already struck it through on `main` — where the line is deliberately **kept**
+  struck through as the worked example of that exact failure.
+- It wrote a whole unit that already existed. A parallel agent added the identical growing rate
+  curve on the branch this one was based on — same def values, same re-baked content fingerprint,
+  because it was byte-for-byte the same change. A test on that branch even said *"another agent is
+  addressing skills"*. Neither session looked at the other's head again after starting.
+- It worked around a bug that was already fixed, running the wiki gate under `python3.13` because
+  `build_wiki.py` had a 3.12-only f-string. `main` had repaired that line the day before.
+
+**The cost is not the wasted work, it is the false record.** Two design documents and a journal
+entry claimed credit for somebody else's change and had to be corrected, and a commit message
+asserted three goldens had moved when none had.
+
+**The checks, and they are seconds each:**
+
+- `git fetch origin main <your-base>` and re-read the diff **before writing a finding down**, not
+  just before starting. A claim that something is stale, missing or broken is a claim about a branch
+  at a moment, and both move.
+- Before adding a Def value or a table row, grep the base branch for it. An identical change on
+  another branch is far likelier than it sounds when several agents run at once.
+- Before working around tooling that fails, check whether the base fixed it. A workaround that
+  outlives its bug is a second mechanism nobody knows to delete.
+
+**And the reverse holds when several agents run in parallel**, which this project does: assume
+somebody else may be in the same file, and prefer a unit that is defensibly yours — a bug nothing
+else is looking at — over one any concurrent session would reach for from the same stale note.

@@ -290,10 +290,10 @@ concluded — from the icon sheet, of all things — that **hauling is a work ty
 Two lines of reasoning arriving at the same place is the strongest evidence in this document, and
 it means this work neither needs nor blocks the skill-table reshuffle that §6 leaves open.
 
-**Growing arrived on 2026-09-20 (`SK1`) and took cutting's row verbatim**, which is why the two
-lines are identical. It is the "plant-work curve" `22-growing.md` §5 named as pending: growing shipped
-with `Work_Growing` carrying no `rateSkill` at all, so a master grower sowed at exactly a novice's
-speed and the whole Growing skill bought nothing. The reasoning for copying rather than inventing is
+**Growing arrived on 2026-09-19 with the growing work itself and took cutting's row verbatim**,
+which is why the two lines are identical. It is the "plant-work curve" `22-growing.md` §5 named as
+pending: growing shipped with `Work_Growing` carrying no `rateSkill` at all, so a master grower
+sowed at exactly a novice's speed and the whole Growing skill bought nothing. The reasoning for copying rather than inventing is
 that **they are the two plant work types**, and the design had felling training Growing outright until
 2026-09-18 (`15-skills.md` §6.2) — so a difference between them is not a default, it is a claim, and
 there is no measurement to support one. It scales the labour of sowing and reaping only; a plant's

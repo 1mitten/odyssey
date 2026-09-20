@@ -230,23 +230,35 @@ says "trained by felling, which is plant work" — precisely so it can be object
 
 ---
 
-## 8. The bar, the toast, and two rows that had been lying (SK1–SK5, 2026-09-20)
+## 8. The bar, the toast, and two rows that had been lying (SK2–SK5, 2026-09-20)
 
 **What the owner asked for.** *"Enable skills for chopping, mining and plants/gardening"*, plus a bar
 in the colonist card that fills as the work is done, a level-up that increments and raises a positive
 notification, and consideration of *"traits or 1/2 stars"*.
 
-**Most of it already existed, and the status lines said otherwise.** The audit is worth recording
-because three separate claims were stale at once:
+**Almost none of that turned out to be missing**, and working out what actually was took longer than
+building it. Chopping and mining were fully simulated and had driven work speed since WS2; gardening
+was built and open as PR #119; passion was rolled, multiplied and drawn as pips already. What was
+missing was a way to *see* any of it, and one bug.
 
-| Claim | Truth on the day |
-|---|---|
-| `CLAUDE.md`: *"a skill level buys nothing a player can feel — no rate reads it"* | WS2 had landed. Cutting, mining and construction all had curves and the accumulator read them. |
-| §1 above: three simulated skills | **Five**: hauling, cutting, mining, construction, growing. |
-| `SkillCatalogue`: construction *"nothing is built yet"*, growing *"nothing is planted yet"* | **Both false.** Construction since U26, growing since U47. |
+**There is no `SK1`.** It was to be the growing rate curve, and #119 added the identical curve a day
+earlier — same `rateSkill`, same base, same slope, same re-baked fingerprint, because it is the same
+content change. Two agents wrote one unit because both read the same "no curve yet" note and neither
+re-checked the other's branch. The duplicate was dropped on merge and the curve is #119's.
 
-So the work was not building a skill system. It was closing the last gap in the simulation and making
-what was already being earned visible while it is earned.
+**Of three "stale claims" this work reported, only one was its own finding:**
+
+| Claim | Truth | Who found it |
+|---|---|---|
+| `CLAUDE.md`: *"a skill level buys nothing a player can feel"* | Stale since WS2/WS3 | **The baseline audit, 2026-09-19** — already struck through on `main` a day before this work read it as live. Not a finding here. |
+| §1 above: three simulated skills | **Five**: hauling, cutting, mining, construction, growing | Correct, but it followed from reading `Skills.xml`, which anybody would |
+| `SkillCatalogue`: construction *"nothing is built yet"*, growing *"nothing is planted yet"* | **Both false.** Construction since U26, growing since U47 | **This work.** Unrecorded on `main` or on #119. |
+
+**So the one real finding is the third**, and it is the interesting one anyway: a row's liveness is a
+*claim about the simulation*, nothing was checking it, and two features shipped past it — including
+growing, which added the skill and the jobs in one branch and left its own row dead.
+
+The rest of the work is making what was already earned visible while it is earned.
 
 ### 8a. Two reversals, stated rather than slipped in
 
