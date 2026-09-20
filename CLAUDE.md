@@ -360,6 +360,10 @@ invisible where the game is played.
 - **Before diagnosing anything build-shaped, `git diff HEAD -- ProjectSettings/ Assets/Settings/`.**
   An uncommitted flip of URP's `m_StripUnusedVariants` to `0` once took one shader pass from 64
   variants to 884,736 and the build from 12 seconds to an estimated day and a half.
+- **Run the Long tier before merging:** `scripts/test-fast.sh --filter TestCategory=Long` (23
+  tests, ~20 s). **The default fast tier excludes it**, so three green tiers can sit on top of a
+  Long tier nobody ran — which is how PR #145 merged clean and turned `main` red on a wall-clock
+  gate. `docs/lessons.md`.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
   `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
