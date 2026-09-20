@@ -10,19 +10,20 @@ A world is a plain C# object graph plus a set of flat arrays, built by a composi
 
 ## 2. Assemblies
 
+As built (the decided names and what became of them are in the note below):
+
 ```
 Odyssey.Sim              no UnityEngine   the simulation
 Odyssey.Sim.Contracts    no UnityEngine   views, handles, intents, reason codes — the seam
-Odyssey.Ui.Core          no UnityEngine   UI directors, headless-testable
-Odyssey.Ui.Unity         UnityEngine      UI Toolkit bindings, overlay meshing
-Odyssey.Presentation     UnityEngine      world rendering, camera, cut-away
+Odyssey.Hud              no UnityEngine   UI directors, headless-testable
+Odyssey.Presentation     UnityEngine      world rendering, camera, cut-away, the UI Toolkit shell (Presentation/Ui)
 Odyssey.Editor           UnityEngine      editor tooling (SyntyInventory, SyntyImport, scene generators)
-Odyssey.Tests.Sim / Odyssey.Tests.Ui (EditMode) / Odyssey.Tests.Play (PlayMode)
+Odyssey.Tests.Sim / Hud / Presentation (EditMode) and Odyssey.Tests.PlayMode (PlayMode)
 ```
 
-Dependency direction, enforced rather than encouraged: `Ui.Unity → Ui.Core → Sim.Contracts ← Sim`. **`Ui.Core` never references `Sim`.**
+Dependency direction, enforced rather than encouraged: `Presentation → Hud → Sim.Contracts ← Sim`. **`Hud` never references `Sim`.**
 
-**Names as built (noted 2026-09-19 by the baseline audit):** `Odyssey.Ui.Core` became `Odyssey.Hud`, and `Odyssey.Ui.Unity` never became an assembly of its own — the UI Toolkit shell lives in `Odyssey.Presentation/Ui`. The rule above is what matters and it holds: `Odyssey.Hud` references only `Sim.Contracts`, `Odyssey.Presentation` references `Hud`, `Sim` and `Sim.Contracts`, and the asmdefs enforce it.
+**Names as built (noted 2026-09-19 by the baseline audit):** `Odyssey.Ui.Core` became `Odyssey.Hud`, and `Odyssey.Ui.Unity` never became an assembly of its own — the UI Toolkit shell lives in `Odyssey.Presentation/Ui`. The test assemblies kept the real area names (`…Tests.Hud`, `…Tests.Presentation`, `…Tests.PlayMode`), and `Odyssey.Editor` lives at `Assets/Editor/Odyssey/`. The rule above is what matters and it holds: `Odyssey.Hud` references only `Sim.Contracts`, `Odyssey.Presentation` references `Hud`, `Sim` and `Sim.Contracts`, and the asmdefs enforce it.
 
 Unit U01 of the slice plan asserts the UnityEngine-free property with a reflection test over `Sim` and `Sim.Contracts`. That test is the reason this project can run simulation tests under a plain dotnet SDK with no editor, and it is the property ECS would have made impossible.
 
@@ -53,7 +54,7 @@ This exists because the alternative was what the project actually had for a whil
 
 | | Subsystem | Director |
 |---|---|---|
-| Lives in | `Odyssey.Sim` | `Odyssey.Ui.Core` |
+| Lives in | `Odyssey.Sim` | `Odyssey.Hud` |
 | Runs | inside a tick, in a fixed phase | per frame, or on an event |
 | May mutate the world | yes, that is its job | **never** |
 | Reads | the world directly | the published snapshot only |
