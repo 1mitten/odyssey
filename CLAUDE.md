@@ -156,6 +156,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. The card is identity alone — name, age, occupation — at 76 px, which is the face plus its padding on both sides, and **a card is now asserted to clear its own avatar by that padding**; the skills live in the detail pane beside it, two columns and a heading. |
 | **TS** terrace steps | **In review — PR #126**, branch `claude/terrace-foot-guard`. Nothing generates at the foot of a step any more (`TerraceFoot`, a sim-side copy of the bank rule checked cell-by-cell against `BankLayout`), and crossing one is priced and drawn against the path it is *drawn* along rather than against a flat cell: the foot cell is a **slope** costing what the hop out of it costs, `PawnPose.StepPace` spends each step's time where its climbing is, and a climbing figure is drawn on the ramp surface itself. Came out of four owner reports in two days; the arithmetic and every rejected alternative are in `docs/design/22-terrace-steps.md` §4b–4c. Three faults older than the work fell out of it: a 1.51 m teleport climbing a sheer face, its 657 mm mirror on a sheer drop, and a two-frame hitch at the start of every step costing more than a flat cell. |
 | **WS** rates | **`WS1`–`WS3` in** (`WS1`–`WS4` renumbered from `U42`–`U45`, which were taken): the per-mille seam, work speed from the skill curve with the stroke clock scaled by it, and innate pace with starvation on both rates and collapse at zero rest. `WS4` running is **held** — do not invent an urgency model. Save format 6. **Reviewed and fixed 2026-09-18** (`docs/journal.md`): `ToilProgress` counts milliwork in **every** driver including the rate-free ones, or one saved and hashed field carries two units; the four accumulators are hashed **whole**, not divided back; `starvationPerInterval` was four times faster than its own comment (the needs cadence is 400 intervals a day, not 200); `RollSeed` is a property whose setter drops the cached pace; and arrival beats collapse, so a colonist cannot go down on her own bed and be told she slept on the ground. All three goldens re-baked — **measured** to be the hash seeing more rather than the colony doing anything different. |
+| **SK** skills made visible | **Built, untested at the keyboard; branch `claude/skills-system-design-k3ufis`, on top of PR #119.** `SK1` gave `Work_Growing` cutting's rate curve, which was the last live skill buying nothing. `SK2` publishes a per-mille progress-to-next-level aspect, derived where the ladder lives so the interface needs no copy of the tuning table. `SK3` draws it as an absolutely positioned 3 px underline on the four live rows — out of flow, so the fixed-height colonist pane does not grow and no layout test moves — tinted by passion, which is the ×0.35/×1.0/×1.5 it is filling at. `SK4` is a **toast** stack (design 09 §2.3's own word), under the alerts: a level-up is detected wholly on the presentation side by comparing a level that is already published for every colonist every frame, so **no event, no saved field and no hash**. `SK5` fixed a real bug — `SkillCatalogue` greyed out **Construction and Growing** long after both began training. **Traits are out of scope**; `LearningFactorPerMille()` stays the empty seam. `docs/design/15-skills.md` §8. |
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 | **CL** the carried load | **Built, played once, three faults fixed; PR #129 ready to merge** (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
 
@@ -193,6 +194,8 @@ this file.
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
 | Picking up, carrying, putting down, the armful | `docs/design/24-carrying.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
+| Skills, the experience bar, passion, the level-up toast | `docs/design/15-skills.md` §8 |
+| Growing zones, sowing, harvest | `docs/design/22-growing.md` |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
 | The build cursor and its drag gesture | `docs/design/19-build-cursor.md` |
 | The white selection cursor sitting flush | `docs/design/23-flush-selection-cursor.md` |
@@ -288,7 +291,9 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **741 Sim + 445 Hud**; Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~30 s, no Unity): **791 Sim + 475 Hud**; Long tier **23**
+  (measured 2026-09-20 on `claude/skills-system-design-k3ufis`, which sits on PR #119, so it
+  counts growing's tests too).
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-19 on the
@@ -336,6 +341,21 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 "futile searches for unreachable targets" explanation was **falsified by its own follow-up**.
 
 ### Waiting on the owner
+
+- **Nobody has seen the experience bar or heard a level-up** (2026-09-20, `docs/design/15-skills.md`
+  §8). The bar is computed to creep about **1.5 px a second** at level 0 with a minor passion, and a
+  level lands after roughly two and a half minutes of solid work; by level 9→10 it is a pixel every
+  seven seconds. Open questions a still cannot answer: whether that reads as progress or as a static
+  line, whether the passion tint carries the four-fold spread between no passion and a burning one,
+  whether a 3 px underline on four of fourteen rows reads as "four skills you have" or as a broken
+  grid, and whether the toast reads as good news at `alert-normal` — a chime chosen because it is what
+  `Notice` already maps to, not because anybody judged it against a level-up. **The per-stroke pip was
+  deliberately not built**: the bar's continuous movement is what the request was about, and a flash
+  timed to the drawn stroke would couple the pane to the world's stroke clock for a decoration. If the
+  bar reads as static, that pip is the first thing to try.
+  **None of the presentation code has been compiled** — the fast tier builds neither Presentation nor
+  PlayMode and the container has no Unity, so `scripts/unity.sh test editmode` is the first thing that
+  will say whether any of it works.
 
 - **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
   `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three
@@ -479,8 +499,10 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   the ramp, but a body lying down is not: sleep on the ground at the foot of a step and the façade
   hides you. §4 of that document holds the two candidate fixes and why neither was guessed at — both
   move the state hash. An item dropped in one has the same problem and is unreported.
-- **A skill level buys nothing a player can feel** — experience is complete and no rate reads it.
-  That is the whole of WS.
+- **`Skill_Hauling` accrues experience with nowhere to show it.** Hauling is a work type and not a
+  skill by decision (`15-skills.md` §6.2, and the reference agrees), so it has no `ui.skill.*` row and
+  no rate curve — but `Job_Haul` still trains it. Deleting it is a Defs change, a `SkillIndex` change,
+  a save-format change and a hash change. The other four skills all read and all show.
 - **Nothing tests that a click reaches the game.** A PlayMode test cannot press a button (input
   update type `Editor`, so `wasPressedThisFrame` never fires); `FloorToolClickTests` and
   `InputHarnessTests` carry ignored tests. Un-ignore them together the day the harness can. This is

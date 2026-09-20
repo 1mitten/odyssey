@@ -227,3 +227,161 @@ says "trained by felling, which is plant work" — precisely so it can be object
   `IconArt` loads from `Assets/Art/Ui/Resources/odyssey/icons`. Anything it had ever exported
   would have drawn the placeholder square, silently, because a key with no art is not an error
   and is not logged.
+
+---
+
+## 8. The bar, the toast, and two rows that had been lying (SK1–SK5, 2026-09-20)
+
+**What the owner asked for.** *"Enable skills for chopping, mining and plants/gardening"*, plus a bar
+in the colonist card that fills as the work is done, a level-up that increments and raises a positive
+notification, and consideration of *"traits or 1/2 stars"*.
+
+**Most of it already existed, and the status lines said otherwise.** The audit is worth recording
+because three separate claims were stale at once:
+
+| Claim | Truth on the day |
+|---|---|
+| `CLAUDE.md`: *"a skill level buys nothing a player can feel — no rate reads it"* | WS2 had landed. Cutting, mining and construction all had curves and the accumulator read them. |
+| §1 above: three simulated skills | **Five**: hauling, cutting, mining, construction, growing. |
+| `SkillCatalogue`: construction *"nothing is built yet"*, growing *"nothing is planted yet"* | **Both false.** Construction since U26, growing since U47. |
+
+So the work was not building a skill system. It was closing the last gap in the simulation and making
+what was already being earned visible while it is earned.
+
+### 8a. Two reversals, stated rather than slipped in
+
+**§6.3 is reversed.** It chose *"a row is an icon, a name, a level and a passion mark. No progress
+bar: thirteen bars is a lot of furniture."* The objection was sound and the answer is to narrow it,
+not to overrule it: **the bar is on live rows only, so there are four, not fourteen.** The greyed rows
+keep a name and a reason and draw no bar at all.
+
+**§6.2's leftover is gone.** It had `Skill_Cutting` feeding `ui.skill.growing` — already undone on
+2026-09-18 when Chopping got its own row, and now growing has its own simulation too, so nothing
+borrows anything.
+
+### 8b. Experience per tick, not per hit — and why that is what the owner asked for
+
+The owner asked for experience *"with every hit… depending on the success of that hit"*.
+`17-rates-and-stats.md` §3e refuses per-strike mechanics outright — *"mining as rock hit points… a
+second mechanism with its own state, save and hash"* — so this could not be taken literally without
+overturning a recorded decision.
+
+It did not need to be. **Experience already accrues every tick of work** (`Job.Work` →
+`Pawn.GainExperience`, 110 per tick per `Jobs.xml`), which is *finer* than per hit, not coarser. What
+was missing was any way to see it. So the bar is the answer to the request and the arithmetic keeps
+one owner.
+
+**The bar does move, and this was computed before it was built** rather than hoped for. At 60 ticks a
+second a working colonist earns 6,600 experience a second before passion:
+
+| Passion | Per second | Level 0 → 1 (1,000 points) | Bar |
+|---|---|---|---|
+| None ×0.35 | 2,310 | ~7 min of solid work | 0.23 %/s |
+| Minor ×1.0 | 6,600 | ~2.5 min | 0.66 %/s |
+| Major ×1.5 | 9,900 | ~1.7 min | 0.99 %/s |
+
+About **1.5 px a second** on a 231 px bar at level 0, three times that at speed 3. By level 9→10 the
+span is ten times larger and it is a pixel every seven seconds — correct, and the reason the toast
+matters more than the bar at high levels. It also confirms the soft cap's tuning: 4,000,000 a day is
+reached after ~10 minutes of work against a 16.7-minute day, the two-thirds relationship `Jobs.xml`
+claims.
+
+**The per-stroke pip is not built.** The plan had a flash on the bar timed to each drawn stroke. It
+wants the pane coupled to the world's stroke clock for a decoration over a bar that is already
+correct, and the bar's continuous movement is what the request was actually about. Left out; the
+playtest can say whether anything is missing.
+
+### 8c. Passion, and no traits
+
+**Passion is the "1/2 stars", and it was already built** — three tiers rolled deterministically from
+the colonist's own `RollSeed`, multiplying experience by ×0.35 / ×1.0 / ×1.5, and already drawn as one
+or two pips on the row. Nothing was needed but to use it: **the bar's fill takes its colour from the
+passion**, so a burning skill both fills faster and looks different doing it. A four-fold spread is
+otherwise invisible in something moving at 1.5 px a second.
+
+**Traits are out of scope and the seam stays empty.** `Pawn.LearningFactorPerMille()` returns 1,000
+and is the hook a trait would arrive through. Building one means new Defs, a save bump, a hash move
+and fresh rolls that shift every existing colonist — real work, and none of it needed to answer the
+question the owner asked.
+
+### 8d. A level-up needs nothing from the simulation, and that is the interesting part
+
+The level of every skill of **every** colonist is already published every frame — not just the
+selected one (`PawnRegistry`). So a level-up is detected on the presentation side by comparing against
+what was last seen. No event, no flag, no queue, no saved field, no hash movement.
+
+**Why polling cannot miss one.** `PawnGesture` needs a sticky flag *and* a serial because a gesture is
+an *instant*: a reader that blinks between two frames misses it for ever. A level is a *standing
+value* — whatever happened in between, the next read still says what the level is now. The worst a
+slow poll can do is see two levels as one rise, and `SkillLevelWatch` reports *the level reached*
+rather than the number of steps taken precisely so that case needs no handling. It runs on the Mid
+bucket at 4 Hz beside the alerts, so a toast can be up to 250 ms late, which nobody can perceive.
+
+Three rules, each a test: **first sight of a colonist is silent** (or everybody announces her starting
+roll on every load — the gesture serial's own rule); **a fall through decay is silent** and becomes the
+new mark; **a colonist off the frame is forgotten**, so a dead one cannot leave an entry for a later
+pawn to be measured against.
+
+### 8e. A toast, not an alert and not a bulletin
+
+The notification is a **transient toast** — design 09 §2.3's own word, used there for a rejected
+intent that *"surfaces as a transient toast rather than a bulletin"*. The channel was named in the
+design and never built; this builds it, and rejections (today only counted into a log) are its obvious
+second customer.
+
+Three channels, and 09 §3.1 already insists the first two stay apart because *"merging them produces
+a system that is wrong for both"*:
+
+| | What it is | Life |
+|---|---|---|
+| **Alert** | a *condition* — a job the player has not done | re-evaluated every refresh, clears itself |
+| **Bulletin** | an *event worth keeping* — an arrival, a death, a raid | until dismissed by hand, then archived |
+| **Toast** | an *event worth mentioning* | six seconds, cannot be dismissed |
+
+**Why a level-up is a toast.** Frequency decides it. A bulletin is a card that waits to be cleared,
+which is right for the fifteen things `ui.bulletin.*` names — all of them a handful of times in a
+colony's life. A level lands every couple of minutes per colonist at low levels, so as a bulletin it
+would be a stack cleared as a chore, and the chore would teach the player to clear the raid warning
+beside it without reading it.
+
+It is not an alert severity either: `AlertModel` exists to recompute standing conditions with a latch
+per condition, and a level-up has nothing to latch on and nothing in a later frame to recompute from.
+
+**`AlertSeverity` gains no fourth "good" value.** `AlertChime.ForSeverity` already maps `Notice` to
+`alert-normal`, so the chime needed no new audio code at all — and the channel is what makes a toast
+good news, not its severity. The sound reads the model's row count and fires once per refresh however
+many rows arrived, because **the audio must never detect a level-up itself**: `AlertChimeWatch`'s own
+remarks record what a second copy of a model's rule cost last time, when its private starvation
+threshold drifted and the chime fired at a hundredth of the intended level.
+
+Capped at four rows, oldest dropped, newest at the bottom. The one thing a passing toast must never do
+is bury a starving colonist in the panel above it.
+
+### 8f. Where it is drawn, and the trick that made it free
+
+**The bar is an absolutely positioned 3 px underline.** `.skill` is 19 px and `HudLayout.SkillRow`
+says so; the colonist pane is one fixed height across every tab *deliberately*, so that changing tab
+does not move its top edge under the pointer. A bar in the flow would have grown all seven rows and
+undone exactly that. Out of flow it costs the row nothing — no layout constant, no overlap case and no
+coverage figure moves. **This is also what makes "live rows only" safe**: uneven row heights were the
+one thing that would have forced a bar onto all fourteen.
+
+**It is the one field on the row not guarded against change.** Everything else is written only when it
+changes, because a level moves about once in a working day. The pane refreshes at 15 Hz and the bar
+wants every one of them. Only the width is written, so a selected colonist still builds no string and
+allocates nothing.
+
+**The setup page gets no bar.** It is the same builder, behind a flag: a candidate has not started
+working, so a part-filled bar there would report progress nobody has made.
+
+The toast stack takes the alerts' column and width, below them — panel A6 already puts the bulletin
+stack *"right edge, below the alerts"*. No header, because a heading earns its place over a standing
+list somebody returns to and here would be the tallest thing in the stack for most of its life.
+
+### 8g. Correct §1 and §6 when reading them
+
+§1's table says three simulated skills and §6's open item says `Skill_Hauling` should go. The first is
+out of date (five). The second still stands: hauling has no `ui.skill.*` row, trains from `Job_Haul`,
+and has no rate curve by design — so it accrues experience with nowhere to show it and nothing to
+spend it on. Deleting it is still a Defs change, a `SkillIndex` change, a save-format change and a
+hash change, and is still not done.

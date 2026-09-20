@@ -103,11 +103,29 @@ The intents, one per gesture:
 the one clock that will not wait), `Skill_Growing`, `Job_Sow` and `Job_Harvest`
 (driver ids 10 and 11). Neither JobDef carries `workTicks`: like mining, the work is priced per
 plant, the driver reading `sowWorkTicks` or `harvestWorkTicks` from the zone's `PlantDef` as it
-swings. Skill and experience ride the def defaults. **Growing carries no rate curve** (2026-09-18,
-recorded at the rates merge): every driver now pays work at the pawn's own rate —
-`Pawn.WorkRatePerMille(WorkType)`, banked as milliwork per WS1's one-unit rule — and with no
-`rateSkill` on `Work_Growing` that rate is the flat tuned speed, so a skill still buys nothing at
-the hoe. §3a of `17-rates-and-stats.md` is where the plant-work curve lands.
+swings. Skill and experience ride the def defaults.
+
+**Growing carried no rate curve until 2026-09-20, and now it does** (`SK1`). The original note read:
+*"with no `rateSkill` on `Work_Growing` that rate is the flat tuned speed, so a skill still buys
+nothing at the hoe"* — true, and it made Growing the one live skill with no consequence, which is
+precisely the complaint that won Chopping its own row (`15-skills.md`). The curve is now
+`rateSkill` 4, base 600, slope 100.
+
+**It is cutting's curve, exactly, and that is the decision.** They are the two plant work types, and
+the design had felling training Growing outright until 2026-09-18 (`15-skills.md` §6.2) — so a
+difference between them is not the default, it is a claim, and it would need a justification and a
+measurement. There is neither. A novice breaks ground at ×0.60 and a master at ×2.60.
+
+**It does not touch the season.** The curve scales the *labour* of sowing and reaping; time-to-ripe
+is the plant's own `growTicks` and nothing here reads it. So a skilled grower works a field faster
+without hurrying the crop, and the four-days-to-first-food guess §9 leaves open is unaffected by
+this number — `growTicks` is still its only knob.
+
+**No golden moved**, which was measured rather than assumed. A rate change to a work type normally
+moves every Simulated hash; this moved none, because the golden worlds are bare seeds with no zone
+painted on them, so no sow or harvest job is ever created and the curve is never consulted. The
+field soak does exercise it and asserts the loop's behaviour rather than a hash. The day a golden
+window includes a zone, this will move a hash and that will be correct.
 
 Both drivers are `FellJobDriver`'s shape with one simplification: **the colonist stands in the
 cell, not beside it.** A crop is ground, not an edifice — it blocks nothing, so the stand-beside

@@ -7498,3 +7498,103 @@ The flow asks landed with the same photographs: the yield is laid off the soil (
 hunts a cell outside every zone before it falls back to the felling argument), nothing is sown
 where a pile still lies, and the judgement call on pile size is twelve drawn and seventy-five
 stacked - the identity to a yield kept, the store square a proper heap.
+## 2026-09-20 — Skills: the audit found more than the feature did (SK1–SK5)
+
+The ask was to "enable skills for chopping, mining and plants/gardening", add a bar in the colonist
+card that fills as the work is done, and raise a positive notification on a level-up. The first hour
+went on establishing that **most of it already existed**, and that is the part worth recording,
+because three separate status claims were stale at once:
+
+- `CLAUDE.md`'s known gap said *"a skill level buys nothing a player can feel — no rate reads it"*.
+  WS2 had landed; cutting, mining and construction all had curves and the accumulator read them.
+- `15-skills.md` §1 said three simulated skills. There were five.
+- `SkillCatalogue` greyed out **Construction** as "nothing is built yet" and **Growing** as "nothing
+  is planted yet". Construction had been fully simulated since U26 and growing since U47. The one
+  screen whose job is telling a player what a colonist can do was denying half of what she does.
+
+That last one is the real lesson: **a row's liveness is not documentation, it is a claim about the
+simulation, and nothing was checking it.** Two features had shipped past it without anybody noticing,
+including growing, which added the skill and the jobs in the same branch and left the row dead.
+
+CLAUDE.md's own warning — *"check the code before you trust any status line"* — paid for itself
+before a line was written, and it should be read as applying to the design documents too.
+
+**Gardening was already built.** PR #119 ships the whole growing system and was open and mergeable,
+waiting on a playtest. The one gap was that `Work_Growing` carried no `rateSkill`, so a master grower
+sowed at a novice's speed and the Growing skill bought nothing — exactly the complaint that had won
+Chopping its own row two days earlier. It takes cutting's curve verbatim, because they are the two
+plant work types and the design had felling training Growing outright until 2026-09-18; a difference
+between them would be a claim needing a measurement, and there is none.
+
+**The prediction that was wrong, and the measurement that corrected it.** The plan said SK1 would move
+the growing goldens. It moved none. The golden worlds are bare seeds with no zone painted on them, so
+no sow or harvest job is ever created and the curve is never consulted. That got written into the
+fingerprint's comment as a fact with its reason, replacing the sentence claiming three hashes had
+moved — a comment asserting a measurement nobody took is worse than no comment.
+
+**A level-up needs nothing from the simulation, and that is the nicest thing here.** Every colonist's
+level in every skill is already published every frame, not just the selected one. So a rise is found
+by comparing against what was last seen: no event, no flag, no serial, no saved field, no hash. The
+reason it cannot be missed is worth keeping straight — `PawnGesture` needs a sticky flag *and* a serial
+because a gesture is an *instant* a poll can sit between, whereas a level is a *standing value*, so the
+next read always says what it is now. The worst a 4 Hz poll can do is see two levels as one rise, and
+the watch reports the level *reached* rather than the number of steps so that case needs no handling.
+
+**The notification is a toast, and the design had already named it.** Looking for somewhere to put it
+turned up `ui.bulletin.*` — fifteen keys, a registry, and panel A6 in the catalogue, "right edge, below
+the alerts". Nearly right, but a bulletin is *kept until dismissed*, and a level lands every couple of
+minutes per colonist, so it would become a stack cleared as a chore — and the chore would teach the
+player to clear the raid warning beside it without reading it. **Frequency decides the channel.** Then
+09 §2.3 turned out to use the exact word for the third thing: a rejected intent *"surfaces as a
+transient toast rather than a bulletin"*. The channel was named in the design and never built. So this
+builds it rather than inventing `ui.message.*`, and rejections — today only counted into a log — are
+its obvious second customer.
+
+`AlertSeverity` gained no fourth "good" value: `AlertChime.ForSeverity` already maps `Notice` to
+`alert-normal`, so the chime needed no new audio code, and **the channel is what makes a toast good
+news, not its severity**. The sound reads the model's row count rather than detecting a level-up
+itself, because `AlertChimeWatch`'s own remarks record what a second copy of a model's rule cost the
+last time: its private starvation threshold drifted and the chime fired at a hundredth of the intended
+level, which is to say never.
+
+**The bar cost the layout nothing, and the trick is worth stealing again.** It is an absolutely
+positioned 3 px underline. `.skill` is 19 px, `HudLayout.SkillRow` says so, and the colonist pane is
+one fixed height across every tab on purpose so changing tab does not move its top edge. In the flow a
+bar would have grown all seven rows and undone that. Out of flow, no layout constant, overlap case or
+coverage figure moves — **and that is also what made "live rows only" safe**, since uneven row heights
+were the one thing that would have forced a bar onto all fourteen.
+
+It is the one field on the row deliberately *not* guarded against change: everything else writes only
+when it changes because a level moves once in a working day, and the bar wants all fifteen refreshes a
+second. Only the width is written, so nothing allocates.
+
+**Two numbers computed before building rather than hoped for.** At 60 ticks a second a working colonist
+earns 6,600 experience a second before passion, so level 0→1 is about 2.5 minutes of solid work at a
+minor passion and the bar creeps about 1.5 px a second. Had that come out at a hundredth of the figure
+the bar would not have been worth drawing. The same arithmetic confirmed the daily soft cap's tuning:
+4,000,000 is reached after ~10 minutes against a 16.7-minute day, the two-thirds relationship
+`Jobs.xml` claims for it.
+
+The second was an overflow. `ProgressPerMille` divides into the ladder, and the top of the ladder is
+265,000,000; a thousand times that is eight times an `int`. In int arithmetic it reads correctly at low
+levels and returns nonsense at high ones, which is the worst shape a bug can have, and it is the one
+thing in the unit with a test written specifically against it.
+
+**Two recorded decisions reversed, both on purpose.** §6.3 chose no progress bar, *"thirteen bars is a
+lot of furniture"* — narrowed rather than overruled: four bars, not fourteen. And §3e of the rates
+document refuses per-strike mechanics, so the owner's "experience with every hit" was met by the thing
+already true — experience accrues every *tick*, finer than per hit — with the bar supplying the only
+part that was missing, which was being able to see it.
+
+**Left undone on purpose:** the per-stroke pip. It would couple the inspect pane to the world's stroke
+clock for a decoration over a bar that is already correct, and the continuous movement is what the
+request was about. Also unbuilt: traits. Passion turned out to be the "1/2 stars" — three tiers, rolled
+from the colonist's own seed, already drawn as pips — so the bar's fill takes its colour from the
+passion and `LearningFactorPerMille()` stays the empty seam it has always been.
+
+**The container could not run Unity, and said so rather than guessing.** The .NET SDK went in from
+Ubuntu's own repositories (the Microsoft download host is blocked by the egress policy) and the wiki
+tooling runs under `python3.13`, which was already installed although `python3` points at 3.11. So the
+fast tier and both content gates are real evidence here: 791 Sim, 475 Hud, 23 Long, all green. The
+Presentation and PlayMode assemblies are compiled by none of it, so the bar and the toast stack are
+**unproven** until the Unity tier runs on the owner's machine.
