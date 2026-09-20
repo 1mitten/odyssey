@@ -29,6 +29,15 @@ Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
 
 A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
 
+**Editing any `.cs` while a batch run is in flight makes its result meaningless, and the run still
+says "passed"** (2026-09-20, two wasted runs). Unity refreshes the asset database once at startup
+and compiles from what it found; a file saved after that point is simply not in the run. The exit
+code is zero, `TestResults/EditMode.xml` is written, the numbers look plausible, and they are the
+numbers for the code as it was several minutes ago. There is nothing in the output to say so. Queue
+edits until the run reports, or accept that the run proves nothing and do it again — which is what
+happened here, twice, because a probe result arriving mid-run is exactly when there is something
+worth changing.
+
 **A first batch run in a fresh worktree is slow, and it is the Synty import.** About seven minutes before a single test executes, with `Library/` growing past 4 GB. `du -sh Library` rising means it is working; an empty `TestResults/` on its own means nothing yet.
 
 **Adding an assembly definition silently removes implicit package references.** Scripts under `Assets/Editor/` compile into `Assembly-CSharp-Editor`, which auto-references most packages. The moment an `.asmdef` covers them, every reference must be explicit. Adding `Odyssey.Editor.asmdef` broke `SyntyImport` because it uses URP types. Symptom: `CS0234: The type or namespace name X does not exist in the namespace Y`. Fix: add the package assemblies (`Unity.RenderPipelines.Core.Editor` and friends) to the asmdef `references`.
