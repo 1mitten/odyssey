@@ -478,7 +478,7 @@ namespace Odyssey.Tests.Hud
             Writes++;
         }
 
-        public string? ReadString(string key) => _words.TryGetValue(key, out string value) ? value : null;
+        public string? ReadString(string key) => _words.TryGetValue(key, out string? value) ? value : null;
 
         public void WriteString(string key, string value)
         {
@@ -495,6 +495,205 @@ namespace Odyssey.Tests.Hud
 
     public class SettingsDirectorTests
     {
+        /// <summary>
+        /// Every ladder's default is one of its own rungs.
+        ///
+        /// <para>Written as a loop over the enum rather than six assertions, so a ladder added
+        /// without a default cannot pass. A default off the ladder would open the panel with
+        /// nothing lit and the first click would look like a jump.</para>
+        /// </summary>
+        [Test]
+        public void EveryLadderRestsOnARungItOffers()
+        {
+            var settings = new SettingsDirector();
+            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders)
+            {
+                int[] rungs = SettingsDirector.RungsOf(ladder);
+                Assert.That(rungs, Is.Not.Empty, $"{ladder} offers nothing");
+                Assert.That(rungs, Contains.Item(SettingsDirector.DefaultOf(ladder)),
+                    $"{ladder}'s default is not one of its rungs");
+                Assert.That(settings.Value(ladder), Is.EqualTo(SettingsDirector.DefaultOf(ladder)),
+                    $"{ladder} did not start where DefaultOf says");
+                Assert.That(SettingsDirector.KeyOf(ladder), Does.StartWith("ui.settings."),
+                    $"{ladder} is not named in the registry namespace");
+
+                foreach (int rung in rungs)
+                    Assert.That(SettingsDirector.RungLabel(ladder, rung), Is.Not.Empty,
+                        $"{ladder}'s {rung} rung has nothing written on it");
+            }
+        }
+
+        /// <summary>A value from an older build, whose ladder had different rungs, snaps to the
+        /// nearest one this build offers rather than leaving the panel showing a number none of
+        /// its own buttons can reproduce.</summary>
+        [Test]
+        public void AStrayValueSnapsToTheNearestRung()
+        {
+            var settings = new SettingsDirector();
+
+            settings.SetValue(GraphicsLadder.FrameCap, 55);
+            Assert.That(settings.Value(GraphicsLadder.FrameCap), Is.EqualTo(60));
+
+            settings.SetValue(GraphicsLadder.RenderScale, 200);
+            Assert.That(settings.Value(GraphicsLadder.RenderScale), Is.EqualTo(100));
+
+            settings.SetValue(GraphicsLadder.AntiAliasing, 3);
+            Assert.That(settings.Value(GraphicsLadder.AntiAliasing), Is.EqualTo(2).Or.EqualTo(4));
+        }
+
+        /// <summary>A ladder writes through when it moves, says nothing when it does not, and a
+        /// fresh director reads the machine back.</summary>
+        [Test]
+        public void ALadderIsKeptOnTheMachineAndReadBack()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            settings.UseStore(store);
+
+            var moved = new System.Collections.Generic.List<GraphicsLadder>();
+            settings.LadderChanged += moved.Add;
+
+            settings.SetValue(GraphicsLadder.VSync, 0);
+            Assert.That(store.ReadInt(SettingsDirector.KeyOf(GraphicsLadder.VSync)), Is.EqualTo(0));
+            Assert.That(moved, Is.EqualTo(new[] { GraphicsLadder.VSync }));
+
+            settings.SetValue(GraphicsLadder.VSync, 0);
+            Assert.That(moved, Has.Count.EqualTo(1), "a rung that did not move announced itself");
+
+            var restarted = new SettingsDirector();
+            restarted.UseStore(store);
+            Assert.That(restarted.Value(GraphicsLadder.VSync), Is.EqualTo(0));
+        }
+
+        /// <summary>A seed describes the machine without writing it back, and a stored preference
+        /// is laid over it — the bargain every other seed here makes.</summary>
+        [Test]
+        public void TheStoreBeatsTheSeedAndTheSeedBeatsNothing()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+
+            settings.SeedValue(GraphicsLadder.ShadowDistance, 120);
+            Assert.That(settings.Value(GraphicsLadder.ShadowDistance), Is.EqualTo(120));
+            Assert.That(store.Writes, Is.Zero, "seeding wrote to the machine");
+
+            store.Preset(SettingsDirector.KeyOf(GraphicsLadder.ShadowDistance), 30);
+            settings.UseStore(store);
+            Assert.That(settings.Value(GraphicsLadder.ShadowDistance), Is.EqualTo(30));
+
+            Assert.That(settings.Value(GraphicsLadder.RenderScale), Is.EqualTo(100),
+                "a ladder the machine has never been told should keep its default");
+        }
+
+        /// <summary>
+        /// The cap is dead behind VSync, and the panel is the thing that has to know.
+        ///
+        /// <para>Unity ignores <c>Application.targetFrameRate</c> whenever <c>vSyncCount</c> is
+        /// above zero. The rule lives on the director so this tier can hold it.</para>
+        /// </summary>
+        [Test]
+        public void TheFrameCapIsOnlyLiveWithVSyncOff()
+        {
+            var settings = new SettingsDirector();
+
+            settings.SetValue(GraphicsLadder.VSync, 1);
+            Assert.That(settings.FrameCapIsLive, Is.False);
+
+            settings.SetValue(GraphicsLadder.VSync, 2);
+            Assert.That(settings.FrameCapIsLive, Is.False, "half rate is still VSync pacing the frame");
+
+            settings.SetValue(GraphicsLadder.VSync, 0);
+            Assert.That(settings.FrameCapIsLive, Is.True);
+        }
+
+        /// <summary>Only the levers that resize a render target say they cost a hitch.</summary>
+        [Test]
+        public void OnlyTheBufferLeversAdmitToAHitch()
+        {
+            Assert.That(SettingsDirector.CostsAHitch(GraphicsLadder.RenderScale), Is.True);
+            Assert.That(SettingsDirector.CostsAHitch(GraphicsLadder.AntiAliasing), Is.True);
+            Assert.That(SettingsDirector.CostsAHitch(GraphicsLadder.VSync), Is.False);
+            Assert.That(SettingsDirector.CostsAHitch(GraphicsLadder.FrameCap), Is.False);
+        }
+
+        /// <summary>The screen's sizes arrive de-duplicated by area and largest first, because
+        /// <c>Screen.resolutions</c> reports one entry per refresh rate.</summary>
+        [Test]
+        public void TheResolutionLadderDropsTheRepeatsOneRefreshRateAtATime()
+        {
+            var settings = new SettingsDirector();
+            settings.SeedResolutions(new[]
+            {
+                new SettingsDirector.Mode(1920, 1080),
+                new SettingsDirector.Mode(1920, 1080),
+                new SettingsDirector.Mode(1280, 720),
+                new SettingsDirector.Mode(2560, 1440),
+                new SettingsDirector.Mode(0, 0),
+            });
+
+            Assert.That(settings.Resolutions.Count, Is.EqualTo(3));
+            Assert.That(settings.Resolutions[0], Is.EqualTo(new SettingsDirector.Mode(2560, 1440)));
+            Assert.That(settings.Resolutions[2], Is.EqualTo(new SettingsDirector.Mode(1280, 720)));
+        }
+
+        /// <summary>
+        /// A stored size this machine no longer offers resolves to the nearest by pixel count.
+        ///
+        /// <para>Unplugging a second monitor must not leave the row blank and the button dead:
+        /// the commonest way a preference like this goes wrong is the one where nothing happens
+        /// and nothing says why.</para>
+        /// </summary>
+        [Test]
+        public void AResolutionThisScreenNoLongerOffersFallsToTheNearest()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            settings.SeedResolutions(new[]
+            {
+                new SettingsDirector.Mode(2560, 1440),
+                new SettingsDirector.Mode(1920, 1080),
+                new SettingsDirector.Mode(1280, 720),
+            });
+            store.Preset(SettingsDirector.ResolutionKey, "3840x2160");
+            settings.UseStore(store);
+
+            Assert.That(settings.Resolution, Is.EqualTo(new SettingsDirector.Mode(2560, 1440)));
+            Assert.That(store.ReadString(SettingsDirector.ResolutionKey), Is.EqualTo("2560x1440"),
+                "the fallback should be written back, not re-resolved every launch");
+        }
+
+        /// <summary>An unreadable preference is no answer, which is not the same as a wrong one:
+        /// the game keeps the window it opened at rather than throwing.</summary>
+        [Test]
+        public void AnUnreadableResolutionLeavesTheWindowAlone()
+        {
+            Assert.That(SettingsDirector.ParseMode(null), Is.Null);
+            Assert.That(SettingsDirector.ParseMode(""), Is.Null);
+            Assert.That(SettingsDirector.ParseMode("1920"), Is.Null);
+            Assert.That(SettingsDirector.ParseMode("1920x"), Is.Null);
+            Assert.That(SettingsDirector.ParseMode("widexhigh"), Is.Null);
+            Assert.That(SettingsDirector.ParseMode("1920x1080"),
+                Is.EqualTo(new SettingsDirector.Mode(1920, 1080)));
+
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            store.Preset(SettingsDirector.ResolutionKey, "nonsense");
+            settings.SeedResolution(new SettingsDirector.Mode(1600, 900));
+            Assert.DoesNotThrow(() => settings.UseStore(store));
+            Assert.That(settings.Resolution, Is.EqualTo(new SettingsDirector.Mode(1600, 900)));
+        }
+
+        /// <summary>Nothing seeded means nothing offered, and asking for a size must still not
+        /// throw — a Linux session can report a very short list, or none.</summary>
+        [Test]
+        public void AnEmptyResolutionListIsSurvivable()
+        {
+            var settings = new SettingsDirector();
+            Assert.That(settings.Resolutions, Is.Empty);
+            Assert.DoesNotThrow(() => settings.SetResolution(new SettingsDirector.Mode(1920, 1080)));
+            Assert.That(settings.Resolution, Is.EqualTo(new SettingsDirector.Mode(1920, 1080)));
+        }
+
         [Test]
         public void ThePanelIsShutUntilAskedForAndAnnouncesEachChange()
         {

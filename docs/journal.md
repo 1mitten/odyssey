@@ -8193,6 +8193,66 @@ being a *real* bed still holds for the scenario that has some.
 
 Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 
+
+## 2026-09-20 — VSync, and the six levers that came with it
+
+The owner asked for a VSync option "and what others you recommend which are basic graphics
+settings", with one constraint said twice: use Unity's recommended way, and be performant.
+
+**What the Graphics tab was.** Six rows, all boolean, all about *what the board is made of* —
+shadows, surround, tufts, relief, see-through, cut-away. Nothing at all about *what the frame
+costs*. That is a real gap on a project whose performance target is a 2022 mid-range laptop that
+neither dev machine is, and whose genre leaves the window open for hours.
+
+**What was added, and the order of the argument.** Seven levers: VSync, frame cap, render scale,
+anti-aliasing, shadow distance, display mode, resolution. Render scale is the one that earns its
+place most — it is the only lever that cuts the expensive part while leaving the HUD sharp, because
+UI Toolkit draws after the upscale. Anti-aliasing starts *off*: the board is mostly flat colour and
+MSAA is the dearest thing on the page. No quality preset, because a Low/Medium/High mapping written
+before anything was measured is three numbers nobody checked. The rungs and every rejected
+alternative are `docs/design/27-graphics-settings.md`.
+
+**The shape decision.** The numbers could have followed the shape already in the file: the
+interface scale and the camera speed each arrived with their own `int[]`, property, setter and
+event. By the third that was plainly a copy, and seven more would have been seven owners of one
+rule — snap, write through, raise once. `GraphicsLadder` is that rule's single owner. The HUD's
+three duplicate ladder builders collapsed into `BuildLadderRow` in the same pass, and they had
+already started to drift: one set its rungs in the mono face, one in the reading face, and nothing
+said which was the rule.
+
+**Every rung is an int, and where Unity has a number the rung is that number** — `vSyncCount`,
+`msaaSampleCount`, `FullScreenMode` verbatim — so the presenter casts rather than translates and no
+table can drift from the API it feeds.
+
+**The trap this work exists around.** Three levers live on the URP asset, and a
+`UniversalRenderPipelineAsset` is a ScriptableObject: in the editor the live one *is* the committed
+`Assets/Settings/PC_RPAsset.asset`. Writing `renderScale` on to it would mean pressing a settings
+row showed up in `git status`, and an accidental 70% would ship. The project had already answered
+this exact shape once — `HudShell.EnsurePanelCopy` instantiates the `PanelSettings` and marks the
+copy `HideAndDontSave` — so `DisplaySettingsApplier` does the same for the pipeline. The subtlety
+that is easy to lose: read the **quality level** first and the graphics default second, because
+copying the default while the level held another asset leaves every lever doing nothing *while the
+panel still lights the rung*.
+
+**The one rule that is not a number.** Unity ignores `Application.targetFrameRate` while
+`vSyncCount` is above zero. So `FrameCapIsLive` lives on the director where the fast tier holds it,
+the HUD greys the cap row and says *paced by VSync*, and the applier writes the cap anyway —
+deliberately — so turning VSync off restores the player's own choice without them touching it.
+
+**Performance, since it was asked for twice.** No `Update`, no polling: a settings object that
+reasserted itself every frame would fight anything else writing the same property, and the fault
+would present as *a setting that won't stay changed*. Every rung label is built once as its row is
+constructed (ADR 0003 F1); the handlers only flip a USS class. Boot applies once rather than once
+per stored lever — the applier stays inert until `ApplyAll`, because `UseStore` raises per lever and
+letting those through would rebuild the render targets repeatedly to arrive where one pass puts
+them.
+
+**What is not proven.** Fast tier **806 Sim + 481 Hud**, both content checks green. But the fast
+tier compiles neither Presentation nor Editor, and **there is no Unity in the container this was
+written in**, so the applier, the HUD rows and the whole Presentation half are unproven — that is
+the pull request's to establish. The resolution and display-mode rows cannot be proven by either
+tier in any case: the Game view is not a window the game owns, so they are greyed in the editor and
+
 ## 2026-09-20 — Functional doors and room enclosure: sliding leaves, doorway traversal and sealed interiors
 
 Functional, buildable auto-sliding doors and strict room enclosure are in. A doorway connects or seals

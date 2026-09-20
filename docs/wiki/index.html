@@ -152,7 +152,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#colonists">Colonists<b>36</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>38</b></a></li>
-<li><a href="#world">World and interface<b>82</b></a></li>
+<li><a href="#world">World and interface<b>91</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>673</b><i>named entries</i></div>
+<div class="stat"><b>682</b><i>named entries</i></div>
 <div class="stat"><b>269</b><i>with icon art</i></div>
-<div class="stat m"><b>404</b><i>no art yet</i></div>
+<div class="stat m"><b>413</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2383,7 +2383,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">82 entries</em></h2>
+<h2>World and interface <em class="count">91 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2868,6 +2868,60 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.display" data-hay="display ui.settings.display how the frame is paced and how large it is drawn " data-gap="1">
+<div class="nm">Display<span class="k">ui.settings.display</span></div>
+<div class="dsc">How the frame is paced and how large it is drawn</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.detail" data-hay="detail ui.settings.detail what the board is drawn with. none of it reaches the simulation " data-gap="1">
+<div class="nm">Detail<span class="k">ui.settings.detail</span></div>
+<div class="dsc">What the board is drawn with. None of it reaches the simulation</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.vsync" data-hay="vsync ui.settings.vsync match the screen's refresh rate. stops tearing, and paces the frame " data-gap="1">
+<div class="nm">VSync<span class="k">ui.settings.vsync</span></div>
+<div class="dsc">Match the screen's refresh rate. Stops tearing, and paces the frame</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.framecap" data-hay="frame rate cap ui.settings.framecap the ceiling on frames a second. a rate the machine can hold beats a higher one that swings " data-gap="1">
+<div class="nm">Frame rate cap<span class="k">ui.settings.framecap</span></div>
+<div class="dsc">The ceiling on frames a second. A rate the machine can hold beats a higher one that swings</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.renderscale" data-hay="render scale ui.settings.renderscale how large the world is drawn before it is scaled to the window. the interface stays sharp " data-gap="1">
+<div class="nm">Render scale<span class="k">ui.settings.renderscale</span></div>
+<div class="dsc">How large the world is drawn before it is scaled to the window. The interface stays sharp</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.antialias" data-hay="anti-aliasing ui.settings.antialias smooth the stepped edges of the board. the most expensive thing on this page " data-gap="1">
+<div class="nm">Anti-aliasing<span class="k">ui.settings.antialias</span></div>
+<div class="dsc">Smooth the stepped edges of the board. The most expensive thing on this page</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.shadowdist" data-hay="shadow distance ui.settings.shadowdist how far from the camera shadows are still drawn " data-gap="1">
+<div class="nm">Shadow distance<span class="k">ui.settings.shadowdist</span></div>
+<div class="dsc">How far from the camera shadows are still drawn</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.displaymode" data-hay="display mode ui.settings.displaymode fullscreen, borderless or a window " data-gap="1">
+<div class="nm">Display mode<span class="k">ui.settings.displaymode</span></div>
+<div class="dsc">Fullscreen, borderless or a window</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.resolution" data-hay="resolution ui.settings.resolution how many pixels the game is drawn at. only a built game can change it " data-gap="1">
+<div class="nm">Resolution<span class="k">ui.settings.resolution</span></div>
+<div class="dsc">How many pixels the game is drawn at. Only a built game can change it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.settings.exit" data-hay="exit game ui.settings.exit leave the game. the row asks twice, because leaving is not undoable " data-gap="1">
 <div class="nm">Exit game<span class="k">ui.settings.exit</span></div>
 <div class="dsc">Leave the game. The row asks twice, because leaving is not undoable</div>
@@ -3093,7 +3147,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 673, "gaps": 404};</script>
+<script>window.WIKI={"total": 682, "gaps": 413};</script>
 <script>
 (function(){
   var D = window.WIKI;

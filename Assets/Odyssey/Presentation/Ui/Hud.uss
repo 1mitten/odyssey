@@ -1662,7 +1662,9 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 300px;
+    width: 860px;
+    max-width: 94%;
+    max-height: 90%;
 }
 
 /* The debug menu (backtick). Centred exactly like Settings and mutually exclusive with it
@@ -1681,6 +1683,26 @@
     height: 26px;
     border-bottom-width: 1px;
     border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+.settings__scroll {
+    max-height: 480px;
+    min-height: 0;
+    flex-shrink: 1;
+}
+
+.settings__columns {
+    flex-direction: row;
+}
+
+.settings__column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 14px;
+}
+
+.settings__column:last-child {
+    margin-right: 0;
 }
 
 .settings__body { margin-top: 9px; }
@@ -1781,6 +1803,10 @@
     margin: 9px 0 4px 0;
 }
 
+.settings__column > .settings__section:first-child {
+    margin-top: 0;
+}
+
 .settings__row {
     flex-direction: row;
     align-items: center;
@@ -1814,6 +1840,46 @@
     border-color: #6fd3e3;
 }
 
+/* The resolution dropdown selector: single control replacing the rank of buttons */
+.settings__dropdown {
+    width: 130px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+}
+
+.settings__dropdown .unity-base-popup-field__input {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    padding: 0 6px;
+    height: 24px;
+}
+
+.settings__dropdown:hover .unity-base-popup-field__input {
+    border-color: #6fd3e3;
+}
+
+.settings__dropdown .unity-base-popup-field__text {
+    color: rgba(255, 255, 255, 0.82);
+    -unity-text-align: middle-center;
+    margin: 0;
+    padding: 0;
+}
+
+.settings__dropdown .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: rgba(255, 255, 255, 0.66);
+    align-self: center;
+    width: 10px;
+    height: 6px;
+    margin-left: 4px;
+}
+
+.settings__dropdown:hover .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: #6fd3e3;
+}
+
 .settings__note {
     color: rgba(255, 255, 255, 0.50);
     white-space: normal;
@@ -1844,6 +1910,25 @@
 
 /* The reset row under the binding list, set apart from the list it undoes. */
 .settings__reset { margin-top: 9px; }
+
+/* The session rows grid, below every tab: 2 columns across, separated by a hairline */
+.settings__session-grid {
+    flex-direction: row;
+    margin-top: 9px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 6px;
+}
+
+.settings__session-col {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 14px;
+}
+
+.settings__session-col:last-child {
+    margin-right: 0;
+}
 
 /* The way out, below every tab: separated by a hairline, because it is not a setting and
    should not read as one. Armed, it says what it is waiting for and the accent says it means

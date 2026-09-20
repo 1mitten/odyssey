@@ -238,6 +238,23 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
         readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
+
+        /// <summary>One rank of rung labels per number ladder, so a value that moves lights its
+        /// own rung and nothing else is touched.</summary>
+        readonly Dictionary<GraphicsLadder, Dictionary<int, Label>> _ladderRungs = new();
+
+        /// <summary>Each ladder's row and rank, kept so the frame cap can be greyed behind VSync
+        /// and the two display rows can be greyed in the editor.</summary>
+        readonly Dictionary<GraphicsLadder, LadderView> _ladderViews = new();
+
+        /// <summary>The resolution dropdown selector. Built once the machine's sizes are known.
+        /// See <c>BuildResolutionRow</c>.</summary>
+        DropdownField? _resolutionDropdown;
+        VisualElement? _resolutionRow;
+
+        /// <summary>Where the resolution dropdown row goes once the machine's sizes are known. See
+        /// <c>BuildResolutionRow</c>.</summary>
+        VisualElement _resolutionSlot = null!;
         readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
 
@@ -598,6 +615,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Slice.LayerChanged += OnLayerChanged;
             _directors.Settings.Changed += OnSettingsChanged;
             _directors.Settings.OptionChanged += OnSettingChanged;
+            _directors.Settings.LadderChanged += OnLadderChanged;
+            _directors.Settings.ResolutionChanged += OnResolutionChanged;
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
@@ -631,6 +650,12 @@ namespace Odyssey.Presentation.Ui
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
+
+            // The machine's own sizes are only knowable now, so the resolution rank is built
+            // here rather than with the rest of the panel.
+            BuildResolutionRow();
+            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders) OnLadderChanged(ladder);
+            OnResolutionChanged();
             RefreshKeyCaps();
             OnDebugChanged();
 
@@ -647,6 +672,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Slice.LayerChanged -= OnLayerChanged;
             _directors.Settings.Changed -= OnSettingsChanged;
             _directors.Settings.OptionChanged -= OnSettingChanged;
+            _directors.Settings.LadderChanged -= OnLadderChanged;
+            _directors.Settings.ResolutionChanged -= OnResolutionChanged;
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;

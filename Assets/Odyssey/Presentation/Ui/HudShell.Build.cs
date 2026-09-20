@@ -457,13 +457,7 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < PaletteTools.Categories.Length; i++)
                 cats.Add(CategoryTile(i, "bp__bar-cat"));
 
-            var hint = HudText.Make("icon tiles name themselves on hover", HudTextRole.Meta,
-                ussClass: "bp__bar-hint");
-            hint.pickingMode = PickingMode.Ignore;
-            var hintSpacer = new VisualElement { pickingMode = PickingMode.Ignore };
-            hintSpacer.style.flexGrow = 1;
-            cats.Add(hintSpacer);
-            cats.Add(hint);
+
             _buildBody.Add(cats);
 
             var content = new VisualElement();

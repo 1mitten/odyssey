@@ -38,6 +38,10 @@ namespace Odyssey.Presentation.Bootstrap
         Ui.HudShell? _shell;
         SettingsDirector? _director;
 
+        /// <summary>The display levers and the pipeline copy they write through. Owned here
+        /// because this is what has an <c>OnDestroy</c> to give the copy back in.</summary>
+        DisplaySettingsApplier? _display;
+
         // What "on" means for the two levers that carry an amount rather than a state. Captured
         // from the scene at startup so that turning grass back on restores the density this board
         // was built with, not a number invented here.
@@ -213,6 +217,10 @@ namespace Odyssey.Presentation.Bootstrap
                     && _bootstrap.cameraRig.slice.suppressActiveCeiling);
             }
 
+            // The display levers, and the pipeline copy they write through. Built before the
+            // store is read so its seeds describe the machine, and applied once afterwards.
+            _display = new DisplaySettingsApplier(director);
+
             director.OptionChanged += Apply;
             director.UiScaleChanged += ApplyScale;
             director.CameraSpeedChanged += ApplyCameraSpeed;
@@ -255,6 +263,10 @@ namespace Odyssey.Presentation.Bootstrap
             // in above — but the developer preference may have just been applied to the
             // director, so the screen catches up here.
             ApplyDeveloperOverlay();
+
+            // Once, after the seeds and any stored preference have both landed: applying on the
+            // way in as well would cost a second render-target rebuild to reach the same place.
+            _display.ApplyAll();
         }
 
         void OnDestroy()
@@ -266,6 +278,12 @@ namespace Odyssey.Presentation.Bootstrap
             _director.DeveloperOverlayChanged -= ApplyDeveloperOverlay;
             _director.BusDbChanged -= ApplyBusDb;
             _director.ExitRequested -= Quit;
+
+            // Hands the committed pipeline asset back and destroys our copy of it. Skipping this
+            // leaks one asset per play session until the next domain reload.
+            _display?.Dispose();
+            _display = null;
+
             if (_bootstrap != null && _bootstrap.Directors != null)
                 _bootstrap.Directors.Overlays.Changed -= SyncDeveloperOverlay;
         }
