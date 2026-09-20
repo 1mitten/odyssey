@@ -888,6 +888,12 @@ namespace Odyssey.Presentation.Ui
             // two the Escape they are about to press belongs to.
             if (open) ToggleMenu(false);
 
+            // And the Work tab, which docks in this same bottom-left corner. OnWorkChanged has
+            // closed the palette since the tab was written; this is the other direction, which it
+            // did not have — press B with Work open and the two drew over each other, in the one
+            // corner where the rule is already stated twice.
+            if (open) _directors?.Work.SetOpen(false);
+
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 
             // Opening Build puts away whatever was being inspected (owner, 2026-09-17: "if the

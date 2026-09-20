@@ -729,6 +729,40 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// Every window can be escaped (owner, 2026-09-17) — and the Work tab could not.
+        ///
+        /// <para>It shipped with an X and F1 and no place in this order, so a player who opened it
+        /// and reached for Escape got the settings panel over the top of it. The rule is about
+        /// windows, not about the windows that existed the day it was written, which is why the
+        /// last line here asserts the whole ladder rather than only the new rung.</para>
+        /// </summary>
+        [Test]
+        public void EscapeClosesTheWorkTabToo()
+        {
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, paletteOpen: false, menuOpen: false, workOpen: true),
+                Is.EqualTo(EscapeAction.CloseWork));
+
+            // It sits below everything raised over it and above the settings panel it would
+            // otherwise be buried by.
+            Assert.That(settings.Escape(true, false, false, workOpen: true),
+                Is.EqualTo(EscapeAction.DisarmTool));
+            Assert.That(settings.Escape(false, false, menuOpen: true, workOpen: true),
+                Is.EqualTo(EscapeAction.CloseMenu));
+            Assert.That(settings.Escape(false, paletteOpen: true, menuOpen: false, workOpen: true),
+                Is.EqualTo(EscapeAction.ClosePalette));
+
+            settings.SetOpen(true);
+            Assert.That(settings.Escape(false, false, false, workOpen: true),
+                Is.EqualTo(EscapeAction.CloseWork),
+                "the tab the player is looking at unwinds before the panel behind it");
+
+            // And the three-argument overload every existing caller uses still means what it did.
+            Assert.That(settings.Escape(false, false, false), Is.EqualTo(EscapeAction.ClosePanel));
+        }
+
+        /// <summary>
         /// Every option starts as <see cref="SettingsDirector.DefaultOn"/> says, and the panel
         /// knows which ones cost a remesh to change.
         ///

@@ -568,6 +568,7 @@ namespace Odyssey.Presentation.Ui
             BuildPalette();
             BuildSettings();
             BuildDebug();
+            BuildWork();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
             // above. Built whether or not a session exists, because the state it belongs to is the
@@ -626,6 +627,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.RowRequested += OnSessionRow;
             _directors.Debug.Changed += OnDebugChanged;
             _directors.Debug.TabChanged += OnDebugTabChanged;
+            _directors.Work.Changed += OnWorkChanged;
+            _directors.Work.ModeChanged += OnWorkModeChanged;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
@@ -655,6 +658,11 @@ namespace Odyssey.Presentation.Ui
             OnResolutionChanged();
             RefreshKeyCaps();
             OnDebugChanged();
+
+            // And the Work tab, on the same terms: a new session's WorkDirector is closed, and
+            // without this the panel a player left open in the last colony stays on the screen
+            // over the next one, drawing the last colony's rows.
+            OnWorkChanged();
         }
 
         void Detach()
@@ -676,6 +684,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Debug.Changed -= OnDebugChanged;
             _directors.Debug.TabChanged -= OnDebugTabChanged;
+            _directors.Work.Changed -= OnWorkChanged;
+            _directors.Work.ModeChanged -= OnWorkModeChanged;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
@@ -788,6 +798,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshBulletins();
                 RefreshSpeed();
                 RefreshBuildPalette();
+                RefreshWork();
             }
             if (_slow >= SlowBucketSeconds)
             {

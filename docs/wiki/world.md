@@ -74,7 +74,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 |---|---|---|---|---|
 | **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | sheet 06 (action tiles), high | M1 |
 | **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), high | M1 |
-| **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), high | M1 |
+| **Schedule** | `ui.tab.schedule` | Folded into Work: one table says who does what, and when | sheet 06 (action tiles), high | M1 |
 | **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |
 | **Colonists** | `ui.tab.colonists` | Everyone, at a glance | sheet 06 (action tiles), high | M1 |
 | **Animals** | `ui.tab.animals` | Tame beasts and their training | sheet 06 (action tiles), high | M1 |
