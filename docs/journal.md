@@ -7498,3 +7498,17 @@ The flow asks landed with the same photographs: the yield is laid off the soil (
 hunts a cell outside every zone before it falls back to the felling argument), nothing is sown
 where a pile still lies, and the judgement call on pile size is twelve drawn and seventy-five
 stacked - the identity to a yield kept, the store square a proper heap.
+
+### One field, a clear floor, and a paid hoe (2026-09-20)
+
+The borderlines on the dirt tiles were each cover lifting along its own drape: neighbouring
+drapes disagree by a few centimetres of slope across a shared edge, and the divergent lifts
+opened a hairline of untinted earth between every pair of tiles - a lighter grid over the
+field, widest at the corners. A shared world-up lift leaves the covers' mutual seams exactly
+the terrain's own, which the ground already draws invisibly; the photo sheet reads one
+continuous field. The clearing ask rode the sow guard already landed: a thing on tilled soil
+blocks its cell, and the haul scan now prefers such a thing over any nearer ordinary pile -
+fifty cells of bias, which is the ordering and not a radius. And the hoe finally pays by
+skill: Work_Growing carries rateSkill with cutting's own shape, the def is the whole seam
+because both drivers have paid at WorkRatePerMille since WS1, and the curve's tuning is left
+to the skills work the owner says is coming.

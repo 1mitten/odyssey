@@ -312,6 +312,28 @@ matter what"*):**
   five lie there — then holds at twelve so a store square is a proper heap without every
   extra carrot redrawing it; the stack limit rises to 75, the same as wood and stone, and
   `ItemHeap.Most` rises with it so rubble's full stacks grow the same way.
+- **The covers lift along the world's up, and the borders died** (owner, 2026-09-20: *"remove
+  the borderlines from the dirt tiles so the grow areas would appear as one"*). Each cover
+  had lifted along its own drape direction; two neighbours' drapes disagree by a few
+  centimetres of slope across a shared edge, and the divergent lifts opened a hairline of
+  untinted earth between every pair of tiles — a lighter grid over the whole field, widest
+  where four cells met. A shared world-up lift leaves the covers' mutual seams exactly the
+  terrain's own, which the ground already draws invisibly (each box's tinted side wall fills
+  its step); the photo sheet reads one continuous field, no grid, no corner marks.
+- **A thing on tilled soil is the field's blocker and is hauled first** (owner, 2026-09-20:
+  *"all items should be removed by colonists first from the dirt before sowing to an
+  appropriate place"*). The sowing scan already refuses a cell that carries a thing; now the
+  haul scan prefers a thing standing on a zoned cell over every ordinary pile however near
+  (`ClearanceBias`, fifty cells — the ordering, not the radius). The flow reads: drop,
+  clear, sow.
+- **The skill buys speed at the hoe** (owner, 2026-09-20: *"make sure the speed of the
+  sowing and harvesting is determined by the relevant skill — another agent is addressing
+  skills"*, so the seam is the whole change). `Work_Growing` carries `rateSkill` =
+  `Skill_Growing` with cutting's own shape — a novice at six tenths of the tuned speed, a
+  level a tenth more, the tuned speed at level four — and both drivers already paid at
+  `WorkRatePerMille` (WS1's one-unit rule), so the def is the entire edit. The curve's own
+  tuning (17-rates-and-stats §3a) belongs to the skills work when it lands; nothing here
+  decides it.
 - **The meadow is pulled off the plot's border** (owner, 2026-09-19: *"remove the grass
   graphics from the garden plots automatically … it makes it jarring to see with the grass
   graphics still appearing on the plots"*). A zoned cell's own tufts already died with the
