@@ -146,3 +146,16 @@ And two questions no measurement answers, both recorded in CLAUDE.md:
 - whether −18 LUFS is right in a quiet room, against an ambience bed and against the work sounds;
 - whether `alert-raid` at 9.54 s and `alert-joined` at 5.77 s are too long to be alerts rather than
   cutscene stings. The bake deliberately did not shorten them.
+
+## The end of a chime (2026-09-20)
+
+On the first look at the supply drop the owner heard the happy chime end as the sound snapping to
+silence and the music switching back on. Two causes, both in `AudioDirector`, neither in the
+recordings. The duck came back at the rate it went down — 0.15 s, right for carving the chime's
+space and wrong for handing it back — so the music reappeared as a switch; it now has two rates,
+`DuckAttackSeconds` 0.15 and `DuckReleaseSeconds` 1.0, and a second's swell reads as the room
+settling. And the clip itself stopped dead at its end: `StepChimeTails` fades the last
+`ChimeTailSeconds` (0.4 s) of every voice on the Alerts bus, from the gain it was played at so a
+fader move during the tail is applied on top rather than fought. Alerts only — a chop or a pick is
+a transient and is meant to stop dead. `TheMusicSwellsBackAfterAChimeRatherThanSwitchingOn` and
+`AChimeFadesOutOverItsTailInsteadOfCuttingOff` pin both.

@@ -7412,3 +7412,58 @@ time. `ui.bulletin.` joined the enforced namespaces without finding a duplicate 
 a second incident to turn the debug row into a picker, and the storyteller when the owner wants
 events that arrive unasked. The catalogue row for `odyssey.sound.drop.land` is the owner's, in the
 editor; the director declines it silently until then.
+
+## 2026-09-20 — Events, the first look: four things moved the same day
+
+The owner pressed Play on the supply drop the afternoon it was built, and four things came back.
+None was a fault in the incident layer; all four were the drawing, the sound and the menu around
+it, which is where a first look usually lands.
+
+**The fall was over before it was seen.** Two seconds from six metres above the top of the world,
+gathering speed like a stone — a physically honest arc that entered the frame part-way down and
+landed almost at once. Two changes. The duration is the Def's and is now six seconds (`fallTicks`
+360); the fingerprint moved and was re-baked with the reason. The start height is presentation's:
+`FallArc.DropHeight`, 120 m over the landing floor, which is above the play camera at any zoom
+(32–160 m up, looking down at 48°), so the thing enters from beyond the top of the frame rather
+than popping in. And the curve is a straight line now — a crate under a chute comes down at one
+speed — because the square law that reads as a real fall when the fall is short reads as a thing
+loitering and then dropping when it is six seconds long. `FallArcTests` was rewritten to say
+this: equal steps, the same start over a roof as over the meadow, and a world taller than 120 m
+still starting above its own top. The "second half covers more ground" test went with the arc.
+
+**The Events row moved the depth.** Clicking a row moved the slice to the event's layer, selected
+the cell and jumped the camera. The owner expected the camera to move and nothing else — the cut
+away and the selection are theirs, and a panel that changes them is a panel that surprises. The
+row jumps to the event's column at the active layer now and does nothing else. The cost is a
+rooftop drop looked at from below the roof: the pad's column is where the camera goes, and the
+slice is yours to raise. Design 23 §5 states it.
+
+**Events want a tab of their own.** The debug menu had one flat list with an *Invoke event* row
+at the bottom, and the owner asked for a second tab. `DebugDirector` gained a `Tab` (opens on
+Cheats, because the overlay toggle is the row backtick was bound to for a day) and a `TabChanged`
+event, in Settings' tab idiom so a third tab strip in this shell invents nothing. The Events tab
+is built when the panel opens, from the open colony's `IncidentContent`, one row per Def named
+through `IncidentLabels` and tooltipped by the Def's own `description` — so a second Def appears
+by existing and `HudShell.Debug.cs` never learns its name, which is what design 18 had promised
+the day a picker was wanted. The `ui.debug.invokeevent` key is gone; `ui.debug.tab.cheats` and
+`ui.debug.tab.events` replace it, and `DebugDirector.IconKeys` is now held to the registry by
+`EveryDebugKeyIsARegisteredName`, beside the alert and incident checks.
+
+**The chime snapped off.** "The sound snaps to silence and the music switches back on." Two
+causes, both in `AudioDirector`, neither in the recordings. The duck's release was its attack —
+0.15 s down, 0.15 s back — and a tenth of a second is right for carving a chime's space and wrong
+for handing it back; it is 1.0 s now, and the music swells rather than switches. And the clip
+stopped dead: `StepChimeTails` fades the last 0.4 s of every voice on the Alerts bus, from the
+gain it was played at, so a fader move during the tail is applied on top rather than fought.
+Alerts only, because a chop or a pick is a transient and is meant to stop dead. The busy clock
+already knew where each voice's end was (`_busyUntil` is arithmetic, not `isPlaying`), so the
+tail costs a subtraction per voice per frame and works in edit mode and in a test. Two tests pin
+it, measured at a fifth of a second after the duck ends and part-way into the tail.
+
+**What did not change.** The landing rule, the ledger, the hash, the goldens: none of the four
+touched a tick. The one Def edit moved the content fingerprint and nothing else, which is what a
+fingerprint is for.
+
+**Owed.** The Unity tiers on this round, the second look (design 23 §9: chute or lift, waited for
+or not, the swell back), the History screen, and the storyteller when the owner wants events
+that arrive unasked.

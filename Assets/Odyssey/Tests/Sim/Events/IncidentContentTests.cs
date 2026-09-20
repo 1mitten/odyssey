@@ -16,10 +16,14 @@ namespace Odyssey.Tests.Sim.Events
     public class IncidentContentTests
     {
         // The pinned shape of Assets/Odyssey/Defs/Core/Events/Incidents.xml. Baked 2026-09-20 with
-        // the one incident, the supply drop: ten to twenty meals, two seconds in the air, first
-        // day quiet, two days between refires. The gates are read by nothing yet and are pinned
-        // anyway, so the day a storyteller reads them it reads the numbers that were written.
-        const ulong ContentFingerprint = 5331327847375047284UL;
+        // the one incident, the supply drop: ten to twenty meals, first day quiet, two days
+        // between refires. The gates are read by nothing yet and are pinned anyway, so the day a
+        // storyteller reads them it reads the numbers that were written.
+        //
+        // Moved the same day, after the first look: fallTicks 120 to 360, because two seconds
+        // landed almost before it had been seen falling, and a description, which is the debug
+        // menu's Events tab tooltip.
+        const ulong ContentFingerprint = 18026134764698235758UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

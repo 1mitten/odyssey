@@ -523,6 +523,53 @@ namespace Odyssey.Tests.Presentation
                 "and came back once the alert had passed");
         }
 
+        /// <summary>
+        /// The music comes back over a second, not a tenth of one (owner, 2026-09-20: the sound
+        /// snapped to silence). Measured a fifth of a second after the duck ends: still well
+        /// under full, and full a second and a half later.
+        /// </summary>
+        [Test]
+        public void TheMusicSwellsBackAfterAChimeRatherThanSwitchingOn()
+        {
+            using var audio = Make();
+            Advance(audio, 3f, tick: DayTick);
+            float before = audio.MusicVolume;
+            Assume.That(before, Is.GreaterThan(0.4f));
+
+            audio.PlayAlert(SoundIds.AlertNegative);
+            Advance(audio, AudioDirector.DuckSeconds + 0.2f, tick: DayTick);
+            Assert.That(audio.MusicVolume, Is.LessThan(before * 0.85f),
+                "a fifth of a second after the duck ended the music was already back: that is the switch");
+
+            Advance(audio, 1.5f, tick: DayTick);
+            Assert.That(audio.MusicVolume, Is.GreaterThan(before * 0.95f));
+        }
+
+        /// <summary>The chime's own tail fades rather than stopping dead.</summary>
+        [Test]
+        public void AChimeFadesOutOverItsTailInsteadOfCuttingOff()
+        {
+            using var audio = Make();
+            Advance(audio, 1f, tick: DayTick);
+
+            audio.PlayAlert(SoundIds.AlertNegative);
+            AudioSource? voice = VoicePlaying(_chime);
+            Assert.That(voice, Is.Not.Null, "the chime must be on a voice");
+            float full = voice!.volume;
+            Assume.That(full, Is.GreaterThan(0f));
+
+            // The test chime is half a second long; the tail is the last 0.4 s of it.
+            audio.Sync(0.05f, Frame(DayTick), Vector3.zero, Vector3.zero, 0);
+            Assert.That(voice.volume, Is.EqualTo(full).Within(1e-4f), "before the tail, untouched");
+
+            audio.Sync(0.25f, Frame(DayTick), Vector3.zero, Vector3.zero, 0);
+            float mid = voice.volume;
+            Assert.That(mid, Is.LessThan(full * 0.7f).And.GreaterThan(0f), "part way into the tail, partly faded");
+
+            audio.Sync(0.15f, Frame(DayTick), Vector3.zero, Vector3.zero, 0);
+            Assert.That(voice.volume, Is.LessThan(mid), "and lower still towards the end");
+        }
+
         /// <summary>Terrain with one circular pond, grass elsewhere.</summary>
         sealed class WaterAt : ITerrainLookup
         {

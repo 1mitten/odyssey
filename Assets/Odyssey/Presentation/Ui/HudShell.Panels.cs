@@ -1077,16 +1077,17 @@ namespace Odyssey.Presentation.Ui
                 Root = row, Icon = icon, Title = title, Stamp = stamp, Dismiss = dismiss,
             };
 
-            // An event always has a place: the row is a way of getting there. The slice moves to
-            // the event's layer first, so a drop on a rooftop is not looked for underground.
+            // An event always has a place: the row is a way of getting the camera over it, and
+            // nothing more (owner, 2026-09-20). It used to move the slice to the event's layer
+            // and select the cell as well, and the owner did not expect the depth to change:
+            // the jump lands at the layer the player is already looking at, and what is cut
+            // away or selected is left as they had it.
             row.RegisterCallback<PointerDownEvent>(evt =>
             {
                 if (evt.button != 0) return;
-                var world = _boot?.World;
-                if (world == null) return;
-                _directors?.Slice.SetLayer(view.TargetCell.Y);
-                _directors?.Selection.Pick(view.TargetCell, PawnId.None, world.Views.Current);
-                _directors?.Camera.JumpTo(view.TargetCell);
+                if (_directors == null || _boot?.World == null) return;
+                _directors.Camera.JumpTo(
+                    new CellRef(view.TargetCell.X, view.TargetCell.Z, _directors.Slice.ActiveLayer));
             });
 
             dismiss.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());

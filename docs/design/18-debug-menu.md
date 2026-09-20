@@ -21,12 +21,28 @@ because the two cannot be open together.
 
 ## What is on it
 
+Two tabs since 2026-09-20 (owner: events want a tab of their own), in Settings' tab idiom.
+`DebugDirector.Tab` holds which is showing and opens on Cheats, because the overlay toggle is the
+row backtick was bound to for a day.
+
+**Cheats:**
+
 | Row | What it does | Backed by |
 |---|---|---|
 | Developer overlay | Toggles the frame-time/draw-call readout, drawn at `fontSize` 56 (roughly six times the original default) and anchored to the bottom of the screen rather than the top-left, so it clears the HUD's top-left ledger regardless of size | `SettingsDirector.DeveloperOverlay` (unchanged; only the row moved) |
 | Spawn colonist | Adds one colonist near the camera, with no scenario and no starting kit | `IntentKind.SpawnPawn` → `PawnRegistry.HandleSpawnPawn` |
 | Give wood / Give stone / Give food | Adds 50 units of the resource near the camera | `IntentKind.GiveResource` → `ColonyItems.HandleGiveResource` |
-| Invoke event | Fires the supply drop (`docs/design/23-events-and-storyteller.md`): a stack of meals falls from the sky somewhere on the board, an Events row appears, and the colony hauls it. Lands on the next tick, so unpause to see it | `IntentKind.InvokeIncident` → `Incidents.HandleInvoke` → `SupplyDropWorker` |
+
+**Events:** one row per incident Def the open colony's content declares, named by its
+`bulletinKey` through `IncidentLabels` and tooltipped by the Def's own `description`. The rows are
+built when the panel opens, from the colony that is open, and rebuilt only when the content is a
+different object — a new colony — so a second Def appears by existing and this file never learns
+its name. Each fires through `IntentKind.InvokeIncident` → `Incidents.HandleInvoke` → the Def's
+worker, ignoring the gates on purpose (design 23 §3). Today that is one row:
+
+| Row | What it does | Backed by |
+|---|---|---|
+| Supply drop | A stack of meals falls from the sky somewhere on the board, an Events row appears, and the colony hauls it. Lands on the next tick, so unpause to see it | `SupplyDropWorker` |
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)
 
@@ -58,11 +74,11 @@ registered in `ColonyComposition.AddColony`, the fourth and fifth intent handler
 
 ## What is deliberately not on it
 
-**An event picker.** "Invoke event" fires the one incident there is. It stood disabled from
-2026-09-17 to 2026-09-20 because there was no event system for it to fire, and building one as a
-side effect of wanting a test button was the wrong order; the event system is design 23 and the
-row now goes through the same door a storyteller will. When there is a second incident the row
-becomes a picker. It ignores the Def's gates on purpose — a debug row exists to make the thing
+**A hand-written event list.** The Events tab is the content's, not this file's. The single
+*Invoke event* row that preceded it stood disabled from 2026-09-17 to 2026-09-20 because there
+was no event system for it to fire, and building one as a side effect of wanting a test button was
+the wrong order; the event system is design 23 and every row goes through the same door a
+storyteller will. A row ignores the Def's gates on purpose — a debug row exists to make the thing
 happen — and honours only the worker's own "can this fire at all" answer, so a board with nowhere
 to land a drop refuses with `NotPermitted` rather than pretending.
 
@@ -91,9 +107,12 @@ usable at the keyboard. On next Play:
 4. Hold the spawn row down for twenty colonists and watch the console. One refusal should print
    one line saying `1 x`; a four-figure count means the rejection list has stopped being cleared
    again.
-5. Click "Invoke event", unpause. Confirm an Events panel appears under the alerts with a "Supply
-   drop" row, that clicking the row jumps the camera to a cell with a pad on it, and that a
-   ration pack comes down on to it within two seconds (`23-events-and-storyteller.md` §10).
+5. Click the Events tab, then "Supply drop", unpause. Confirm an Events panel appears under the
+   alerts with a "Supply drop" row, that clicking the row jumps the camera to a cell with a pad
+   on it without moving the slice, and that a ration pack comes down on to it from above the top
+   of the frame over six seconds (`23-events-and-storyteller.md` §10).
+   Confirm the Cheats tab still holds the overlay toggle and the four grants, and that the tab
+   you left the panel on is the one it reopens to.
 6. Open Settings while the debug menu is open, and vice versa. Confirm each closes the other rather
    than stacking.
 7. Judge whether the debug menu wants to look different from Settings at all — right now it is

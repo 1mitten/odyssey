@@ -606,6 +606,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ExitChanged += OnExitChanged;
             _directors.Settings.RowRequested += OnSessionRow;
             _directors.Debug.Changed += OnDebugChanged;
+            _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
@@ -647,6 +648,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ExitChanged -= OnExitChanged;
             _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Debug.Changed -= OnDebugChanged;
+            _directors.Debug.TabChanged -= OnDebugTabChanged;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;

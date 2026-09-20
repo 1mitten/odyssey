@@ -43,6 +43,13 @@ namespace Odyssey.Tests.Hud
         /// written, and no such test did until the events work (2026-09-20).
         /// </summary>
         [Test]
+        public void EveryDebugKeyIsARegisteredName()
+        {
+            foreach (string key in DebugDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
         public void EveryAlertKeyIsARegisteredName()
         {
             foreach (string key in AlertModel.IconKeys)

@@ -9,21 +9,35 @@ namespace Odyssey.Presentation.Rendering
     /// as a <see cref="Sim.Contracts.FallingView"/>; this is the whole of what presentation adds,
     /// which is a height for the frame in hand.
     ///
-    /// <para><b>From above the top of the world, accelerating.</b> The thing enters above the
-    /// highest layer whatever layer it lands on, so a drop on to a rooftop and a drop on to the
-    /// meadow both come out of the sky rather than out of a ceiling. The height falls as the
-    /// square of the progress: a real fall gathers speed, and a thing sliding down at one rate
-    /// reads as a lift, not a drop. Nothing here is a cell, a save or a hash — it is the same
-    /// facade over discrete ticks that <see cref="PawnPose"/> is for a walking colonist.</para>
+    /// <para><b>From above the camera, at one speed.</b> The first cut fell from just above the
+    /// top layer in two seconds, gathering speed like a dropped stone, and the owner saw it land
+    /// almost before it had been seen falling (2026-09-20). It now starts
+    /// <see cref="DropHeight"/> above its landing floor — above the play camera at any zoom, so
+    /// it is always seen arriving — and comes down at a constant rate, the way a crate under a
+    /// chute does. The duration is the Def's (<c>fallTicks</c>); the height is this constant,
+    /// because nothing in the simulation cares how high the drawing starts and a number only
+    /// presentation reads belongs in presentation. Nothing here is a cell, a save or a hash — it
+    /// is the same facade over discrete ticks that <see cref="PawnPose"/> is for a walking
+    /// colonist.</para>
     /// </summary>
     public static class FallArc
     {
-        /// <summary>Metres above the top layer's floor that the fall starts from.</summary>
+        /// <summary>
+        /// Metres above the landing floor the fall starts from. The play camera sits 32–160 m up
+        /// and looks down at 48°, so a thing 120 m over its target enters from beyond the top of
+        /// the frame at every zoom rather than popping into view part-way down.
+        /// </summary>
+        public const float DropHeight = 120f;
+
+        /// <summary>Metres above the top layer's floor the fall starts from on a world taller than <see cref="DropHeight"/>.</summary>
         public const float Clearance = 6f;
 
-        /// <summary>The height above the landing floor at which the fall begins.</summary>
+        /// <summary>
+        /// The height above the landing floor at which the fall begins: <see cref="DropHeight"/>,
+        /// or above the top of the world if the world is taller than that.
+        /// </summary>
         public static float StartHeight(int worldLayers, int landingLayer) =>
-            Mathf.Max(0, worldLayers - landingLayer) * CellMetrics.SizeY + Clearance;
+            Mathf.Max(DropHeight, Mathf.Max(0, worldLayers - landingLayer) * CellMetrics.SizeY + Clearance);
 
         /// <summary>
         /// How far through the fall the frame is, 0 at launch and 1 at landing, clamped. The
@@ -37,12 +51,9 @@ namespace Odyssey.Presentation.Rendering
             return Mathf.Clamp01(elapsed / (landTick - launchTick));
         }
 
-        /// <summary>The height at a given progress: the whole start height at 0, nothing at 1.</summary>
-        public static float HeightAt(float startHeight, float progress)
-        {
-            float p = Mathf.Clamp01(progress);
-            return startHeight * (1f - p * p);
-        }
+        /// <summary>The height at a given progress: the whole start height at 0, nothing at 1, and a straight line between.</summary>
+        public static float HeightAt(float startHeight, float progress) =>
+            startHeight * (1f - Mathf.Clamp01(progress));
 
         public static float HeightAbove(int worldLayers, int landingLayer, int tick, float tickAlpha,
             int launchTick, int landTick) =>

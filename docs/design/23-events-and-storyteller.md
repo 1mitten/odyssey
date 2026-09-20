@@ -101,9 +101,13 @@ a load shows the tail as history again.
 
 **The row.** Icon by key, the incident's name in bold in the favourability's ink (Good green, Bad
 red, Neutral accent), the stamp in dim ink — "Day 3 · 14h", the day as the clock counts it — and a
-dismiss cross. Clicking the row moves the slice to the event's layer, picks the cell and jumps
-the camera: a drop on a rooftop is not looked for underground. Six rows at most; older ones fall
-off the panel and stay in the ledger. The panel is hidden when empty, exactly as the alerts panel
+dismiss cross. Clicking the row jumps the camera over the event's column at the layer the player
+is already looking at, and does nothing else. It used to move the slice to the event's layer and
+select the cell as well, and on the first look the owner did not expect the depth to change
+(2026-09-20): a jump is a way of getting there, and what is cut away or selected is left as they
+had it. The cost is stated: a drop on a rooftop viewed from below the roof is found by the pad's
+column, not by the slice moving for you. Six rows at most; older ones fall off the panel and
+stay in the ledger. The panel is hidden when empty, exactly as the alerts panel
 is, so a colony nothing has happened to pays nothing against the coverage ceiling.
 
 **The chime rides the row**, as an alert's does: `AlertHappy` for a gift, `AlertNegative` for a
@@ -123,7 +127,7 @@ tick spawns the item through `NearestCellWithSpace` like every other arrival. Th
 exist until then: nothing can haul, eat, count or reserve it in flight, and a save taken mid-air
 lands it on the tick an unsaved run would have (`SkyfallerRoundTripTests`). A load that finds no
 room within three cells when it comes down is lost and counted; the cell had room at launch, so
-this is the corner where a hauler set something down there during the two seconds.
+this is the corner where a hauler set something down there during the six seconds.
 
 **The landing rule** is `CellGrid.SkyLanding(x, z)`: walk down from the top of the world to the
 first cell that is not open air — has a floor, is solid, holds an edifice, or is deep water —
@@ -147,10 +151,15 @@ stockpile can be reached from. If that proves maddening the knob is one line in
 keyed on the seed alone every drop in a world would land on the same cell with the same stack.
 Both salts are SHA-256 round constants, the sixth and seventh outside the spent xxHash family.
 
-**The drawn half** is `FallArc`: the thing starts `(layers − landing) × 3 m + 6 m` above its
-landing floor — above the top of the world whatever it lands on, so a rooftop drop and a meadow
-drop both come out of the sky — and its height falls as the square of the progress, because a
-fall gathers speed and a thing sliding down at one rate reads as a lift. `ChunkRenderer` draws it
+**The drawn half** is `FallArc`: the thing starts `FallArc.DropHeight` (120 m) above its
+landing floor — above the play camera at any zoom, which sits 32–160 m up and looks down at 48°,
+so a drop enters from beyond the top of the frame rather than popping into view part-way down —
+and comes down at one speed, the way a crate under a chute does. On a world taller than 120 m
+it starts 6 m above the top layer instead. The first cut started just above the top of the
+world and fell in two seconds gathering speed like a stone, and the owner saw it land almost
+before it had been seen falling (2026-09-20); the duration is now six seconds (`fallTicks` 360,
+the Def's) and the height is presentation's, because nothing in the simulation cares how high
+the drawing starts. `ChunkRenderer` draws it
 into the same instanced batch as the pile it will join, at the frame's own alpha, so a paused
 world holds it still. A flat pad is drawn on the landing cell for the whole flight so a player
 who jumped to the event has something to look at; it is a cursor, not a thing, and the first
@@ -179,33 +188,48 @@ values moved together, including the barren meadow's, which no gameplay change h
 | Conditions (timed, map-wide, no entities) | a second worker family; the ledger already records them |
 | Quests (reward on completion) | a wrapper that calls incident workers; not an incident |
 | The History screen (F9, B16) | reads the ledger; needs a paged channel and a virtualised list |
-| A second event | a Def, a worker, a row in `IncidentContent.Order`, `IncidentHandle` and `IncidentLabels.Keys`, and a registry key. The debug row becomes a picker |
+| A second event | a Def, a worker, a row in `IncidentContent.Order`, `IncidentHandle` and `IncidentLabels.Keys`, and a registry key. The debug menu's Events tab lists it by existing |
 | A pod that opens, debris to haul | a second skyfaller kind; the meals fall bare by owner choice |
 | Landing reachability | one line in the worker, if "anywhere" proves maddening |
 
 ## 9. Invited tuning and open questions
 
-Nobody has pressed Play on any of this. The numbers below were chosen, not measured.
+**The first look was 2026-09-20**, the day it was built, and moved four things. The fall was too
+quick to be seen (two seconds from just above the world, gathering speed) and is now six seconds
+at one speed from 120 m, above the camera at any zoom. The Events row's jump moved the slice and
+the selection as well as the camera, and the owner did not expect the depth to change; it moves
+the camera only now. The debug menu grew a second tab, *Events*, one row per incident Def, built
+from the open colony's content so a second Def appears by existing; the *Invoke event* row and
+its key are gone. And the chime's end read as the sound snapping to silence and the music
+switching back on: the music now swells back over a second instead of the duck's 0.15 s attack,
+and the last 0.4 s of an alert voice fades rather than stopping dead (`AudioDirector`,
+`docs/design/24-alert-sounds.md`). The reasoning is in `docs/journal.md` under the date.
 
-- **Two seconds** in the air. Long enough to be seen, short enough not to be waited for; both are
-  guesses.
+What remains chosen rather than measured:
+
+- **Six seconds** in the air, from 120 m at one speed. Seen now; whether it is waited for is the
+  next question, and whether one speed reads as a chute or as a lift.
 - **Ten to twenty meals**: a little under to a full stack, so a drop is one haul.
 - **The pad** on the landing cell: a cursor drawn in the stand-in material. Helps or clutters.
-- **"Anywhere"**: whether finding a drop through the Events row is a pleasure or a chore.
-- **The chime**: `AlertHappy` for a gift; whether it reads as good news or as an alarm.
+- **"Anywhere"**: whether finding a drop through the Events row is a pleasure or a chore, now
+  that the row no longer changes the slice for you.
+- **The chime**: `AlertHappy` for a gift; whether it reads as good news or as an alarm, and
+  whether a second's swell back is the room settling or the music being slow.
 - **Six rows** on the panel; whether the panel wants to be shorter, or to collapse to a count.
 
 ## 10. By-hand test procedure
 
-1. Press backtick, click *Invoke event*, unpause. An Events panel appears under the alerts
-   (or under the clock) with one row, "Supply drop · Day 1 · 12h" in green, and the happy chime
-   sounds once.
-2. Click the row. The slice moves to the landing layer and the camera jumps to a cell with a flat
-   pad on it. Within two seconds a ration pack comes down on to the pad and the pad goes.
+1. Press backtick, click the *Events* tab, click *Supply drop*, unpause. An Events panel
+   appears under the alerts (or under the clock) with one row, "Supply drop · Day 1 · 12h" in
+   green, and the happy chime sounds once; the music dips under it and swells back over about a
+   second rather than switching on.
+2. Click the row. The camera jumps to the column, the slice stays where it was and nothing is
+   selected. Look for a flat pad; the pack comes in from above the top of the frame and takes
+   six seconds at one speed to reach it, and the pad goes when it lands.
 3. Wait. A colonist walks out, picks the pack up and carries it to the stockpile. If nobody
    comes, the landing is somewhere no stockpile can be reached from — the "anywhere" case.
-4. Click *Invoke event* while paused. Nothing happens until you unpause, and then everything
+4. Click *Supply drop* while paused. Nothing happens until you unpause, and then everything
    above does; the tooltip says so.
-5. Invoke, then save within the two seconds. Load. The pack still comes down, on the same cell.
+5. Invoke, then save within the six seconds. Load. The pack still comes down, on the same cell.
 6. Dismiss the row with its cross; invoke again; the new row arrives and the old does not return.
    Load a save with events in it: the rows are there, and nothing chimes.
