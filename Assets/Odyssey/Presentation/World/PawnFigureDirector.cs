@@ -42,13 +42,40 @@ namespace Odyssey.Presentation.World
     public sealed partial class PawnFigureDirector : IDisposable, ICarriedLoads
     {
         /// <summary>
+        /// The hard ceiling on live figures. **Nothing may raise the cap above this**
+        /// (owner, 2026-09-20: *"make the absolute cap 64 for safety for now"*).
+        ///
+        /// <para>A figure is a whole Synty character with its own <c>PlayableGraph</c>, and
+        /// sixty-four of them is already well above the audit's scale target of fifty colonists.
+        /// What this forbids is somebody raising the cap because a crowd looked wrong — the
+        /// answer to a crowd that looks wrong is <see cref="ChooseTheNearest"/>, which decides
+        /// *which* sixty-four, and a measurement if the ceiling itself is ever to move.</para>
+        ///
+        /// <para>The word for now is the owner's and it is the right word: this is a safety rail
+        /// on an unmeasured number, not a finding. Moving it means measuring the frame under the
+        /// real player loop at the new count, not editing this line.</para>
+        /// </summary>
+        public const int FigureCeiling = 64;
+
+        /// <summary>
         /// How many pawns may have a live figure at once.
         ///
         /// A cap rather than a promise: past it, pawns keep the baked instanced form, which costs
-        /// what a wall costs. The number is deliberately generous for the slice — the colony is
-        /// five — and exists so that a later crowd degrades in quality rather than in frame rate.
+        /// what a wall costs. Past it, which colonists keep a figure is decided by distance from
+        /// the camera rather than by pawn id — see <see cref="ChooseTheNearest"/>.
+        ///
+        /// <para><b>Clamped rather than trusted.</b> It is settable so that a harness can ask for
+        /// a small crowd cheaply, and a setter that silently accepted a large one would make
+        /// <see cref="FigureCeiling"/> a suggestion. Below zero is zero, which draws the whole
+        /// colony as baked stand-ins and is a legal thing to ask for.</para>
         /// </summary>
-        public int MaxFigures { get; set; } = 64;
+        public int MaxFigures
+        {
+            get => _maxFigures;
+            set => _maxFigures = value < 0 ? 0 : value > FigureCeiling ? FigureCeiling : value;
+        }
+
+        int _maxFigures = FigureCeiling;
 
         /// <summary>
         /// How fast a figure turns to face where it is going, in degrees per second.

@@ -535,9 +535,20 @@ farthest away, and the overlap in the second row is the stickiness below rather 
   panning across a crowd swaps figures in and out at the boundary every few frames, and a re-leased
   figure begins its gait and its gesture memory again — colonists twitching in the middle distance.
 
-**The cap itself was not raised.** 64 is already above the audit's scale target of 50 and a figure
-is a whole Synty character with a `PlayableGraph`; moving it is a measurement, not an edit, and
-there is nothing yet asking for it.
+**The cap itself was not raised, and now it cannot be.** Owner, on reading the above:
+*"can we make the absolute cap 64 for safety for now?"* — so `MaxFigures` is clamped to
+`PawnFigureDirector.FigureCeiling`, which is 64. It stays settable, because a harness wants a
+small crowd cheaply and `FigureCapTests` runs at eight rather than instantiating sixty-four Synty
+characters to prove a rule about ordering; a setter that also accepted a large number would make
+the ceiling a suggestion, and "absolute" is not one. Below zero is zero, which draws the whole
+colony as baked stand-ins and is a legal thing to ask for.
+
+64 is already above the audit's scale target of 50 and a figure is a whole Synty character with a
+`PlayableGraph`. **The word *for now* is the owner's and it is the right word**: this is a safety
+rail on an unmeasured number, not a finding. Moving it means measuring the frame under the real
+player loop at the new count — `FrameTimeTests` and `RenderBench` are where that would be done —
+not editing the constant. `FigureCeilingTests` fails if anything raises it, including a future
+inspector field on the bootstrap, which is the likeliest way it would otherwise happen.
 
 ---
 

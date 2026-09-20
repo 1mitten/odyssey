@@ -7837,6 +7837,15 @@ of all sixty-one), `ColonyCastProbe` (a growing colony, figure and portrait per 
 distances the cap now chooses on), and three PlayMode tests that fail on the old code and pass on
 the new.
 
-Fast tier **806 Sim + 471 Hud**. Unity tier on this branch: EditMode **2,000 total, 1,987 passed,
+Fast tier **806 Sim + 471 Hud**. Unity tier on this branch: EditMode **2,003 total, 1,990 passed,
 0 failed**; PlayMode **85 total, 80 passed, 0 failed** — three more than the 82/77 baseline, which
 is the three tests added here.
+
+**And the cap is a ceiling now**, on the owner reading the above: *"can we make the absolute cap 64
+for safety for now?"* `MaxFigures` clamps to `PawnFigureDirector.FigureCeiling`. It stays settable
+downwards, because `FigureCapTests` runs at eight rather than instantiating sixty-four Synty
+characters to prove a rule about ordering — but a setter that accepted a large number would make
+the ceiling a suggestion. Nothing in the game sets it at all; what the clamp is really guarding
+against is the inspector field somebody adds the next time a crowd looks wrong, when the answer is
+the ordering rather than the count. Moving the ceiling is a frame measurement under the real player
+loop, not an edit. EditMode **2,003 / 1,990**.

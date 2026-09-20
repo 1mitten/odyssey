@@ -279,9 +279,12 @@ invisible where the game is played.
   §10.7, and **measure the take-over rather than reading it**: three versions of that fix looked
   right and were not.
 - **A budget applied in arrival order is a budget on identity.** `PawnFigureDirector.MaxFigures`
-  caps live animated colonists at 64 and its own comment says the rest are "a long way off";
-  nothing sorted, so the frozen ones were the highest pawn ids wherever the camera was. It keeps
-  the nearest now, and does nothing at all under the cap. §11 of the same document.
+  caps live animated colonists and its own comment says the rest are "a long way off"; nothing
+  sorted, so the frozen ones were the highest pawn ids wherever the camera was. It keeps the
+  nearest now, and does nothing at all under the cap. **64 is a hard ceiling**
+  (`PawnFigureDirector.FigureCeiling`, owner 2026-09-20): the setter clamps, `FigureCeilingTests`
+  fails on anything that raises it, and moving it is a frame measurement rather than an edit.
+  §11 of the same document.
 - **Content is written once.** The XML under `Assets/Odyssey/Defs/Core` is the only copy of the pawn
   tuning and the world tables. Callers go through `ContentPack.Pawns()` and `WorldContent.Table`.
 - **Content values are pinned by fingerprints, and they earn their keep.** Editing rock's
@@ -323,7 +326,7 @@ invisible where the game is played.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
-  `claude/colonist-figures-and-portraits`: EditMode **2,000 total, 1,987 passed, 0 failed**;
+  `claude/colonist-figures-and-portraits`: EditMode **2,003 total, 1,990 passed, 0 failed**;
   PlayMode **85 total, 80 passed, 0 failed** (the three new ones are the portrait-lighting and
   figure-cap guards). The remainder are `[Explicit]` or ignored. The run before it, the same day
   on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
