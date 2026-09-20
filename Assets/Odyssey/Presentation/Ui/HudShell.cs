@@ -633,6 +633,11 @@ namespace Odyssey.Presentation.Ui
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
             RefreshKeyCaps();
             OnDebugChanged();
+
+            // And the Work tab, on the same terms: a new session's WorkDirector is closed, and
+            // without this the panel a player left open in the last colony stays on the screen
+            // over the next one, drawing the last colony's rows.
+            OnWorkChanged();
         }
 
         void Detach()

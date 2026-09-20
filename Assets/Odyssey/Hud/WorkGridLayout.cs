@@ -76,6 +76,13 @@ namespace Odyssey.Hud
         /// <summary>The icon tile at the foot of the band, the same square as a cell.</summary>
         public const int IconTile = Cell;
 
+        /// <summary>
+        /// Simple mode's tick and cross, drawn rather than typed. Half the cell, so the mark sits
+        /// inside the 28px box with the same air a digit has around it and still clears the
+        /// passion flames in the top right corner.
+        /// </summary>
+        public const int MarkSize = 14;
+
         /// <summary>The whole header band: <see cref="LabelBand"/> + <see cref="LabelGap"/> + tile.</summary>
         public const int HeaderBand = LabelBand + LabelGap + IconTile;
 
@@ -150,8 +157,12 @@ namespace Odyssey.Hud
         /// </summary>
         public const int HourPitch = Pitch;
 
-        /// <summary>Hours in the day, which is <see cref="ScheduleHandle.Hours"/>.</summary>
-        public const int Hours = 24;
+        /// <summary>
+        /// Hours in the day, <b>defined as</b> <see cref="ScheduleHandle.Hours"/> rather than as
+        /// 24. The doc said it was that number and the code said 24, which is two owners for one
+        /// fact — the pattern this project has met four times (docs/bug-patterns.md).
+        /// </summary>
+        public const int Hours = ScheduleHandle.Hours;
 
         /// <summary>
         /// The heavier rule between the work half and the schedule half. Two halves of one row
@@ -193,5 +204,23 @@ namespace Odyssey.Hud
 
         /// <summary>How tall it is for a given number of rows, grid only — no header, no legend.</summary>
         public static int GridHeightFor(int rows) => HeaderBand + rows * RowHeight;
+
+        /// <summary>
+        /// The most of the screen's width the panel may take, as a percentage.
+        ///
+        /// <para><b>The combined width is what the table wants, not what it gets.</b> 1,756px fits
+        /// a 1,920 reference and nothing narrower, and the panel is pinned to the left edge — so
+        /// without a cap the schedule half simply hangs off the right of a smaller window, out of
+        /// reach of the scroller that is sitting inside the panel for exactly this case. Ninety-six
+        /// leaves the panel's own frame clear of the right edge at every size.</para>
+        /// </summary>
+        public const int MaxWidthPercent = 96;
+
+        /// <summary>
+        /// Whether the whole table fits a screen of this width without scrolling, which is the
+        /// question <see cref="MaxWidthPercent"/> exists to answer no to sometimes.
+        /// </summary>
+        public static bool FitsScreen(int columns, int screenWidth) =>
+            CombinedWidthFor(columns) <= screenWidth * MaxWidthPercent / 100;
     }
 }

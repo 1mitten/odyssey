@@ -227,8 +227,12 @@ namespace Odyssey.Sim.Saving
         /// <para>2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony
         /// name and day — after the world scalars it always carried.</para>
         ///
-        /// <para>Version 1, 2, 3, 4 and 5 files all still load; <see cref="ReadHeader"/> is the one
-        /// place that knows which versions wrote what.</para>
+        /// <para><b>Every version from 1 to 6 still loads</b>, and this sentence has said "1 to
+        /// 5" through two bumps because it names the numbers rather than the current one. Each
+        /// field added since is read behind a <c>FormatVersion >=</c> guard in its own component,
+        /// and an older file takes that field's default; <see cref="ReadHeader"/> is the one place
+        /// that knows which versions wrote what about the header itself. A save newer than this
+        /// build is refused outright rather than read hopefully.</para>
         /// </summary>
         public const int CurrentFormatVersion = 7;
 

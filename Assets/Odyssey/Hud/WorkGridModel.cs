@@ -4,6 +4,29 @@ using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
+    /// <summary>
+    /// Simple mode's answer for one cell: a tick, a cross, or neither.
+    ///
+    /// <para><b>A value and not a character, because the character was a blank.</b> The two were
+    /// U+2713 and U+2715 written into the cell's label until the two font files this HUD ships
+    /// were read: Archivo Narrow's cmap has neither and IBM Plex Mono has only the tick, so the
+    /// legend drew two empty boxes and every "won't do" cell drew one. Neither tier could see it —
+    /// the fast tier has no text engine and the Unity tier asserts no pixels — so the mark is a
+    /// decision here and a drawn shape in the shell, and <c>HudFontTests</c> now fails the fast
+    /// tier on any HUD literal carrying a character the fonts cannot draw.</para>
+    /// </summary>
+    public enum WorkMark
+    {
+        /// <summary>Detailed mode, an unbuilt column or an incapable cell. The label speaks.</summary>
+        None,
+
+        /// <summary>This colonist will take this work.</summary>
+        Will,
+
+        /// <summary>This colonist is set to never take it.</summary>
+        Wont,
+    }
+
     /// <summary>Whether the grid shows the four priorities or a yes and a no.</summary>
     public enum WorkGridMode
     {
@@ -70,8 +93,25 @@ namespace Odyssey.Hud
         {
             if (!Built) return string.Empty;
             if (!Capable) return "—";
-            if (mode == WorkGridMode.Simple) return Priority > 0 ? "✓" : "✕";
+
+            // Simple mode's answer is a drawn shape rather than a character — see
+            // <see cref="Mark"/> — so the label has nothing to say in it.
+            if (mode == WorkGridMode.Simple) return string.Empty;
             return Priority > 0 ? Priority.ToString() : string.Empty;
+        }
+
+        /// <summary>
+        /// The tick or the cross this cell draws, or <see cref="WorkMark.None"/> when the label
+        /// carries the reading instead.
+        ///
+        /// <para>The unbuilt and incapable cases answer <see cref="WorkMark.None"/> without
+        /// consulting the mode, on the same rule <see cref="Glyph"/> follows: a mode switch may
+        /// move a reading and may never move a state.</para>
+        /// </summary>
+        public WorkMark Mark(WorkGridMode mode)
+        {
+            if (mode != WorkGridMode.Simple || !Built || !Capable) return WorkMark.None;
+            return Priority > 0 ? WorkMark.Will : WorkMark.Wont;
         }
     }
 

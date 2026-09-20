@@ -72,6 +72,15 @@ namespace Odyssey.Presentation.Ui
         {
             public VisualElement Box = null!;
             public Label Glyph = null!;
+
+            /// <summary>
+            /// Simple mode's tick or cross, <b>drawn rather than typed</b>: neither font this HUD
+            /// ships has U+2715 and only one has U+2713, so a label was two blanks (design 27
+            /// §6.5). Held beside the label rather than replacing it, because Detailed's digit and
+            /// the incapable em-dash are text and should stay text.
+            /// </summary>
+            public VisualElement Mark = null!;
+
             public VisualElement Flames = null!;
             public int Column;
         }
@@ -92,6 +101,14 @@ namespace Odyssey.Presentation.Ui
             _workPanel.style.bottom = HudCommands.ItemHeight + HudCommands.BarPad * 2;
             _workPanel.style.width = WorkGridLayout.CombinedWidthFor(WorkGridModel.Columns.Count) + 2;
             _workPanel.style.maxHeight = Length.Percent(80);
+
+            // **The width above is a want, and this is what makes it one.** The combined table is
+            // 1,756px and the reference screen is 1,920 — but the panel is absolutely positioned
+            // from the left edge, so on any window narrower than about 1,780 a fixed width does
+            // not shrink it, it hangs the schedule half off the right of the screen where nothing
+            // can reach it. The cap hands the overflow to the horizontal scroller that is already
+            // inside, which is the whole reason that scroller exists.
+            _workPanel.style.maxWidth = Length.Percent(WorkGridLayout.MaxWidthPercent);
 
             BuildWorkHeaderExtras();
 
@@ -120,6 +137,12 @@ namespace Odyssey.Presentation.Ui
 
             var scroller = new ScrollView(ScrollViewMode.Horizontal);
             scroller.style.flexGrow = 1;
+
+            // Yoga gives a flex item an automatic minimum of its content, which would hold the
+            // scroller open at the full 1,756px and defeat the cap above. Zero lets it be squeezed
+            // and scroll, which is the behaviour the cap is asking for.
+            scroller.style.minWidth = 0;
+            scroller.style.flexShrink = 1;
 
             // Both halves ride one scroller, so the day never slides out from under the work
             // columns. The frozen name column is outside it and stays put for both.
@@ -420,7 +443,10 @@ namespace Odyssey.Presentation.Ui
                 if (_boot != null) view.Avatar.SetPortrait(_boot.Portraits.For(frame, row.Id));
 
                 for (int c = 0; c < view.Boxes.Count && c < row.Cells.Count; c++)
-                    PaintWorkCell(view.Boxes[c], row.Cells[c]);
+                {
+                    PaintWorkCell(view.Boxes[c], row.Cells[c], _work.Describe(r, c));
+                    PaintWorkMark(view.Boxes[c], row.Cells[c]);
+                }
 
                 for (int h = 0; h < view.Blocks.Count && h < row.Hours.Count; h++)
                     view.Blocks[h].style.backgroundColor =
@@ -521,6 +547,22 @@ namespace Odyssey.Presentation.Ui
             Label glyph = HudText.Make(string.Empty, HudTextRole.Name, numeric: true);
             box.Add(glyph);
 
+            // Pinned to all four edges rather than left to find its own place: an absolutely
+            // positioned child with every offset auto lands on its static position, which is where
+            // the label already is, and the mark would sit beside the digit's box instead of over
+            // the cell. Filled and centred, it is the cell.
+            var mark = new VisualElement();
+            mark.style.position = Position.Absolute;
+            mark.style.top = 0;
+            mark.style.left = 0;
+            mark.style.right = 0;
+            mark.style.bottom = 0;
+            mark.style.alignItems = Align.Center;
+            mark.style.justifyContent = Justify.Center;
+            mark.pickingMode = PickingMode.Ignore;
+            mark.style.display = DisplayStyle.None;
+            box.Add(mark);
+
             var flames = new VisualElement();
             flames.style.position = Position.Absolute;
             flames.style.top = 1;
@@ -529,7 +571,10 @@ namespace Odyssey.Presentation.Ui
             flames.pickingMode = PickingMode.Ignore;
             box.Add(flames);
 
-            var cellView = new WorkCellView { Box = box, Glyph = glyph, Flames = flames, Column = column };
+            var cellView = new WorkCellView
+            {
+                Box = box, Glyph = glyph, Mark = mark, Flames = flames, Column = column,
+            };
             view.Boxes.Add(cellView);
 
             int capturedRow = rowIndex;
@@ -545,10 +590,16 @@ namespace Odyssey.Presentation.Ui
         /// — an incapable cell arrives with no priority and no passion to hide, which is design 27
         /// §6.1's rule and the reason it is enforced there rather than here.
         /// </summary>
-        void PaintWorkCell(WorkCellView view, in WorkCell cell)
+        void PaintWorkCell(WorkCellView view, in WorkCell cell, string description)
         {
             HudText.Set(view.Glyph, cell.Glyph(_work.Mode), HudTextRole.Name);
             view.Flames.Clear();
+
+            // The four signals in words. WorkGridModel.Describe has said this sentence since the
+            // model was written and nothing asked it for it: the border is a skill band, the ink
+            // is a priority and the flames are a passion, and none of the three is labelled
+            // anywhere but the legend at the foot of the panel.
+            view.Box.tooltip = description;
 
             if (!cell.Built)
             {
@@ -575,11 +626,32 @@ namespace Odyssey.Presentation.Ui
                 ramped ? WorkBands.BorderWidth : WorkBands.NoSkillBorderWidth,
                 HudTokens.Convert(WorkBands.ColourOf(cell.Band)));
 
-            view.Glyph.style.color = _work.Mode == WorkGridMode.Simple
-                ? HudTokens.Convert(cell.Priority > WorkGridModel.Never ? WorkBands.WillDo : WorkBands.WontDo)
-                : HudTokens.Convert(WorkBands.InkOf(cell.Priority));
+            view.Glyph.style.color = HudTokens.Convert(WorkBands.InkOf(cell.Priority));
 
             for (int f = 0; f < cell.Passion; f++) view.Flames.Add(WorkFlame());
+        }
+
+        /// <summary>
+        /// Simple mode's tick or cross, or nothing at all in Detailed.
+        ///
+        /// <para>Rebuilt rather than recoloured because a <see cref="HudGlyph"/> carries its
+        /// colour into a generated mesh; two elements kept and swapped would be the same
+        /// allocation with a second thing to keep in step. Only cells that draw one pay for it,
+        /// and only while Simple is the mode.</para>
+        /// </summary>
+        void PaintWorkMark(WorkCellView view, in WorkCell cell)
+        {
+            view.Mark.Clear();
+
+            // Which mark, if any, is the model's decision — the shell only knows how to draw one.
+            WorkMark mark = cell.Mark(_work.Mode);
+            view.Mark.style.display = mark == WorkMark.None ? DisplayStyle.None : DisplayStyle.Flex;
+            if (mark == WorkMark.None) return;
+
+            bool will = mark == WorkMark.Will;
+            view.Mark.Add(new HudGlyph(will ? HudGlyphKind.Check : HudGlyphKind.Cross,
+                WorkGridLayout.MarkSize,
+                HudTokens.Convert(will ? WorkBands.WillDo : WorkBands.WontDo)));
         }
 
         /// <summary>A passion flame: two of them means the job is loved, one that it is liked.
@@ -670,8 +742,8 @@ namespace Odyssey.Presentation.Ui
             }
             else
             {
-                AddLegendGlyph("✓", WorkBands.WillDo, "will do");
-                AddLegendGlyph("✕", WorkBands.WontDo, "won't do");
+                AddLegendGlyph(HudGlyphKind.Check, WorkBands.WillDo, "will do");
+                AddLegendGlyph(HudGlyphKind.Cross, WorkBands.WontDo, "won't do");
             }
 
             AddLegendFlames(1, "interested");
@@ -725,15 +797,12 @@ namespace Odyssey.Presentation.Ui
             group.Add(HudText.Make(text, HudTextRole.Meta));
         }
 
-        void AddLegendGlyph(string glyph, HudColour ink, string text)
+        void AddLegendGlyph(HudGlyphKind kind, HudColour ink, string text)
         {
             VisualElement group = LegendGroup();
-            Label label = HudText.Make(glyph, HudTextRole.Body);
-            label.style.width = 15;
-            label.style.marginRight = 6;
-            label.style.color = HudTokens.Convert(ink);
-            label.style.unityTextAlign = TextAnchor.MiddleCenter;
-            group.Add(label);
+            var mark = new HudGlyph(kind, WorkGridLayout.MarkSize, HudTokens.Convert(ink));
+            mark.style.marginRight = 6;
+            group.Add(mark);
             group.Add(HudText.Make(text, HudTextRole.Meta));
         }
 

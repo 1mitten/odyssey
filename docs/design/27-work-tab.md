@@ -83,6 +83,9 @@ section divider   1px HudTheme.PanelBorder      (#ffffff21)
 - **940 wide** against the 1920 reference is 49% of the screen, docked bottom-left above the command
   bar. It never scrolls horizontally at the reference size — the horizontal scroll the mockup
   designs for is the 1280 case and the day the work list grows past twenty-two.
+  **This is the work half alone and it is no longer what the panel is**: §12 folded the day in
+  beside it and §12b has the combined 1,756. The 1280 case §12b calls hypothetical is not — see
+  §15b, which is what makes the panel narrower than the table it holds.
 
 ## 4. The column headers: twenty-two, rotated, labelled
 
@@ -518,3 +521,94 @@ guard across would have made a colonist who cannot mine also unable to be sent t
   If the answer is no, the live-four switch from the mockup is the cheapest lever.
 - **OQ-W8 — does the default day mislead while nothing obeys it?** The footnote says the schedule
   is not followed yet, but a legible day is a more convincing lie than a grey one.
+
+## 15. What the review found, 2026-09-20
+
+The branch was reviewed on a worktree before its first play. Seven corrections; five of them are
+faults a playtest would have reported, one is a fault that was already on `main`, and one is a rule
+this panel was breaking without knowing there was a rule.
+
+### 15a. Simple mode drew nothing at all
+
+**The single worst thing in the branch, and no test could see it.** The tick and the cross were the
+characters U+2713 and U+2715 in a `Label`. Archivo Narrow has neither in its `cmap` and IBM Plex
+Mono has only the tick, so the legend drew two blanks and every *won't do* cell drew one. The whole
+of Simple mode was empty boxes.
+
+They are drawn now — `HudGlyphKind.Check` and `HudGlyphKind.Cross`, on the same 24-unit grid as
+every other chrome icon, which is what this project does with icons anyway and should have been the
+first answer. `WorkCell.Mark(mode)` is the model's decision and `WorkMark` is its name, so the
+shell is told *which* mark rather than *which character*, and the tests assert the mark.
+
+**The guard matters more than the fix.** `HudFontTests.EveryCharacterTheHudWritesExistsInBothFonts`
+reads both `.ttf` cmap tables in the **fast tier** and fails on any non-ASCII character in a HUD
+string literal that either face cannot draw. On its first run it found the same character already
+shipped on `main`, in the bed-owner picker (`HudShell.Inspect.cs`, PR #141): the mark that says
+*this is her bed* has been an empty column since it was written and had never been played. That one
+is drawn now too. `docs/bug-patterns.md` P10.
+
+### 15b. The panel hung off the right of any screen narrower than about 1,780
+
+`CombinedWidthFor(22)` is 1,756 and the panel is **absolutely positioned from the left edge**, so
+the width was not a request the layout could refuse — below roughly 1,780 the schedule half was
+simply past the right of the window, out of reach of the horizontal scroller sitting inside the
+panel for exactly this case. `MaxWidthPercent` (96) caps it and hands the overflow to that
+scroller, which needed `minWidth: 0` to be squeezable at all: yoga gives a flex item an automatic
+minimum of its content, which would have held it open at the full width and defeated the cap.
+
+`WorkGridTests.TheTableFitsTheReferenceScreenAndNotASmallerOne` pins both halves of the fact — it
+fits 1920, it does not fit 1600 — so the day somebody widens the pitch, the failing test says which
+of the two it broke.
+
+### 15c. Escape did not close it
+
+*"Every window can be escaped"* (owner, 2026-09-17) is a rule about windows, not about the windows
+that existed the day it was written, and the Work tab had joined the game without joining the rule:
+an X and F1 shut it and nothing else, and Escape reached past it to open the settings panel over
+the top of it. `EscapeAction.CloseWork` is now a rung on the ladder, between the palette and the
+settings panel. `DirectorTests.EscapeClosesTheWorkTabToo`.
+
+### 15d. Build and Work drew over each other
+
+`OnWorkChanged` closed the Build palette when the tab opened; nothing closed the tab when the
+palette opened, and the two dock in the same bottom-left corner. One direction of a two-way rule is
+the harder half to notice, because the way you naturally test it is the way that works.
+`SetBuildPalette` now puts the tab away, beside the line that already puts the Menu away for the
+same reason.
+
+### 15e. A colonist's row said nothing when you pointed at it
+
+`WorkGridModel.Describe` — the sentence naming all four signals in words — was written, documented
+as *"the sentence a cell says when hovered"*, asserted by a test, and **wired to nothing**. Only
+the column headers had a tooltip. The border's skill band, the ink's priority and the flames' two
+states were nameable nowhere but the legend. `PaintWorkCell` now sets it on every cell.
+
+### 15f. The panel outlived its session
+
+`HudShell.Attach` re-syncs the debug panel against the new session's director and did not re-sync
+this one, so a tab left open in one colony stayed on the screen over the next, drawing the previous
+colony's rows. One line, the same line the debug panel already had.
+
+### 15g. The day had two owners
+
+`WorkGridLayout.Hours` was the literal `24` under a doc comment saying it was
+`ScheduleHandle.Hours`. That is P1 — one rule, two owners — in its smallest possible form, and the
+form it always takes before it is a bug. It is now defined as that constant, and
+`TheDayIsTwentyFourHoursInOnlyOnePlace` joins the third holder of the number, `GameClock`, to the
+other two: this is the assembly where all three are in scope, so this is where they are tied.
+
+### 15h. What was checked and left alone
+
+- **The aspect publish grew by 32 rows a colonist** — eight for work, twenty-four for the day, on
+  top of the twenty-seven skills already there. It is the shape `SkillAspects` settled and the
+  buffer is reused; it is recorded here so that the next person to measure the publish knows the
+  number tripled on this branch and why.
+- **`WorkGridModel.Refresh` allocates a row and two lists a colonist per refresh** while the panel
+  is open. The class comment's claim about not allocating is about the *visual elements*, which are
+  genuinely only rebuilt when the roster changes. At a mid-bucket cadence and a colony of ten this
+  is not worth the risk of pooling objects the tests hold references to; it is written down rather
+  than changed.
+- **The grid has no vertical scroll.** `maxHeight` is 80% and rows are 30px, so about twenty-four
+  colonists fit before the last row is clipped with no way to reach it. Not fixed: the colony is
+  three, and the fix is a scroller whose interaction with the frozen name column is a decision
+  rather than a line.

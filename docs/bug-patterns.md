@@ -179,11 +179,67 @@ used at one fixed shape — pad to it — or not be shared.
 **And treat a Unity warning in a render path as a bug report.** This one named the property, both
 sizes and the exact line, and it had been printing for as long as the feature existed.
 
+### P10 — The asset cannot draw the thing the code asked for, and nothing says so
+
+A string literal, a shader keyword, a sprite name or a font glyph is *valid code* that names
+something the shipped asset does not contain. Nothing throws. The renderer draws its fallback — a
+blank, a magenta quad, a box — and every test passes, because a test asserts the value that was
+asked for and not the picture that came back.
+
+**The tell is that the thing is missing rather than wrong.** A colour that is off is a colour
+somebody chose; a glyph that is simply absent is nobody's decision, and it only shows up in a
+screenshot taken by a person who happens to be looking at that state. The Work tab's Simple mode
+had this in its purest form: `"✓"` and `"✕"` in two labels, Archivo Narrow with neither in
+its cmap and IBM Plex Mono with only the first, so a legend drew two blanks and every "won't do"
+cell drew one. The same fault was already sitting in the bed-owner picker on `main` and had never
+been played.
+
+**Neither tier can see it and that is structural, not an oversight.** The fast tier has no text
+engine at all; the Unity tier runs one and asserts no pixels. So this class has to be caught by
+**reading the asset**, which is cheap: `HudFontTests` parses both `.ttf` cmaps and fails on any
+non-ASCII character in a HUD literal that either font cannot draw. It found the second instance on
+its first run.
+
+**Ask it of anything the code names by string and the pack has to supply**: a glyph, a shader, a
+sprite key, an audio clip, an animation state. If the name is a literal and the asset is a file,
+something should read the file. The project already does this for icons (ADR 0007's validator) and
+for Defs (the content fingerprints); a font is the same question with a different file format.
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — Two glyphs the fonts do not have, in two panels, neither ever drawn (P10)
+
+Not reported. Found while reviewing PR #145 by asking a question no test asks: *are the characters
+this code writes actually in the font that draws them?*
+
+The Work tab's Simple mode drew its two readings as the characters U+2713 CHECK MARK and U+2715
+MULTIPLICATION X, in a `Label`. **Archivo Narrow's cmap contains neither and IBM Plex Mono contains
+only the tick.** The cell glyph takes the mono face (it is `numeric: true`, for the digit beside
+it), so every *won't do* cell drew a blank; the legend takes the UI face, so both of its swatches
+drew blanks. The whole of Simple mode was two empty columns of boxes.
+
+**And the same character was already on `main`**, in the bed-owner picker `HudShell.Inspect.cs`
+shipped by PR #141 — `BedPickerMark.ThisBed` is a tick in `HudTextRole.Body`, which is Archivo
+Narrow, which does not have one. The mark that says *this is the bed this colonist owns* has been an
+empty column since it was written, and that panel is still on the playtest queue unplayed.
+
+**Why every test passed.** The fast tier compiles no text engine; the Unity tier compiles one and
+asserts no pixels; the PlayMode smoke test counts framed regions. A `Label` whose `text` is `"✓"`
+has that text in every assertion anybody could write about it. The picture is the only place the
+fault exists and nothing in either tier looks at a picture.
+
+**Stopped by** two things. The shapes are now drawn — `HudGlyphKind.Check` and `HudGlyphKind.Cross`
+on the same 24-unit grid as every other chrome icon, which is what this project does with icons
+anyway — and `HudFontTests.EveryCharacterTheHudWritesExistsInBothFonts` reads both `.ttf` files'
+`cmap` tables and fails the **fast tier** on any non-ASCII character in a string literal under
+`Odyssey.Hud` or `Odyssey.Presentation` that either face cannot draw. It is held to *both* faces
+rather than the one that happens to draw it today, because a label's face is picked by its role and
+roles move. Every other character the HUD uses — `· × – — • … ›` — is in both, so the rule costs
+nothing to hold. The test found the bed-picker instance on its first run.
 
 ### 2026-09-20 — Woken for a bed, and sent to work instead
 

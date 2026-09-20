@@ -255,7 +255,10 @@ namespace Odyssey.Tests.Hud
             WorkCell cell = model.Rows[0].Cells[Mining];
 
             Assert.That(cell.Glyph(WorkGridMode.Detailed), Is.EqualTo("2"));
-            Assert.That(cell.Glyph(WorkGridMode.Simple), Is.EqualTo("✓"));
+            Assert.That(cell.Glyph(WorkGridMode.Simple), Is.Empty,
+                "Simple's answer is a drawn mark, so the label must not also carry one");
+            Assert.That(cell.Mark(WorkGridMode.Simple), Is.EqualTo(WorkMark.Will));
+            Assert.That(cell.Mark(WorkGridMode.Detailed), Is.EqualTo(WorkMark.None));
 
             // The three signals the mode must not touch.
             Assert.That(cell.Band, Is.EqualTo(ProficiencyBand.Skilled));
@@ -270,7 +273,8 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(cell.Capable, Is.True);
             Assert.That(cell.Glyph(WorkGridMode.Detailed), Is.Empty);
-            Assert.That(cell.Glyph(WorkGridMode.Simple), Is.EqualTo("✕"));
+            Assert.That(cell.Glyph(WorkGridMode.Simple), Is.Empty);
+            Assert.That(cell.Mark(WorkGridMode.Simple), Is.EqualTo(WorkMark.Wont));
             Assert.That(cell.Band, Is.EqualTo(ProficiencyBand.Master),
                 "Blank is a priority, not an absence of a colonist.");
         }
@@ -366,6 +370,54 @@ namespace Odyssey.Tests.Hud
             Assert.That(Model(Frame()).Subtitle(), Is.EqualTo("2 colonists · what they do, and when"));
             Assert.That(Model(Frame()).Subtitle(nowHour: 13),
                 Is.EqualTo("2 colonists · what they do, and when · 13h"));
+        }
+
+        /// <summary>
+        /// The day has one owner and it is <see cref="ScheduleHandle.Hours"/>.
+        ///
+        /// <para>The layout's own doc said so while the code said 24, which is the shape of fault
+        /// this project keeps meeting: one rule, two owners, and a disagreement that fails
+        /// silently because nothing ever asks the two the same question.</para>
+        /// </summary>
+        [Test]
+        public void TheDayIsTwentyFourHoursInOnlyOnePlace()
+        {
+            Assert.That(WorkGridLayout.Hours, Is.EqualTo(ScheduleHandle.Hours));
+            Assert.That(WorkGridLayout.ScheduleWidth,
+                Is.EqualTo(ScheduleHandle.Hours * WorkGridLayout.HourPitch));
+
+            // And the clock's day, which is the third holder of this number and the only one that
+            // can move it: the now-line is placed by GameClock.HourOfDay and lands on a column
+            // this layout drew. ScheduleTests says the same thing from the simulation side and
+            // has to assert the literal, because that assembly cannot see GameClock at all — this
+            // is the assembly where the two are both in scope, so this is where they are joined.
+            Assert.That(GameClock.HoursPerDay, Is.EqualTo(ScheduleHandle.Hours));
+            Assert.That(GameClock.HourOfDay(GameClock.TicksPerDay - 1),
+                Is.EqualTo(WorkGridLayout.Hours - 1),
+                "the last tick of the day must land on the last column the schedule half draws");
+        }
+
+        /// <summary>
+        /// The combined table wants more width than a small screen has, and the panel has to
+        /// answer that by scrolling rather than by hanging off the edge.
+        ///
+        /// <para>The panel is pinned to the left edge and absolutely positioned, so a fixed width
+        /// wider than the window does not shrink it — it puts the schedule half past the right of
+        /// the screen where no scroller can reach it. This pins the two facts the cap rests on:
+        /// the table fits the 1,920 reference, and it does not fit a 1,600 one, which is why
+        /// <see cref="WorkGridLayout.MaxWidthPercent"/> is not decoration.</para>
+        /// </summary>
+        [Test]
+        public void TheTableFitsTheReferenceScreenAndNotASmallerOne()
+        {
+            int columns = WorkCatalogue.All.Count;
+
+            Assert.That(WorkGridLayout.CombinedWidthFor(columns), Is.LessThanOrEqualTo(1920),
+                "the whole point of the 34px pitch is that 22 work types and a day fit at 1920");
+            Assert.That(WorkGridLayout.FitsScreen(columns, 1920), Is.True);
+            Assert.That(WorkGridLayout.FitsScreen(columns, 1600), Is.False,
+                "if this ever passes the cap has stopped earning its keep and the scroller with it");
+            Assert.That(WorkGridLayout.MaxWidthPercent, Is.InRange(50, 100));
         }
     }
 }

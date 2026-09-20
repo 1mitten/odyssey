@@ -45,6 +45,15 @@ namespace Odyssey.Hud
         /// <summary>Close the Build palette, which is the one panel that opens over the board.</summary>
         ClosePalette,
 
+        /// <summary>
+        /// Close the Work tab, which is the other one. Added when F1 became real (design 27): it
+        /// is the same kind of thing as the palette — a panel the player raised from the command
+        /// bar a moment ago, docked in the same bottom-left corner — and "every window can be
+        /// escaped" (owner, 2026-09-17) is a rule a new window has to join rather than a rule
+        /// about the windows that existed when it was made.
+        /// </summary>
+        CloseWork,
+
         /// <summary>Close the Menu popover.</summary>
         CloseMenu,
 
@@ -772,11 +781,24 @@ namespace Odyssey.Hud
         /// anything can observe, and the menu is tested first only because it is the newer of the
         /// two.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen)
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen: false);
+
+        /// <summary>
+        /// The same rule with the Work tab in it as well.
+        ///
+        /// <para>The Work tab sits beside the Build palette rather than above or below it, for the
+        /// reason the menu and the palette sit together: the shell closes each of the two when the
+        /// other opens — they dock in the same corner — so their relative order is not a decision
+        /// anything can observe. It is tested after the palette only because it is the newer of
+        /// the two.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
             if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
+            if (workOpen) return EscapeAction.CloseWork;
             return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
         }
     }

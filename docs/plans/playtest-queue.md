@@ -50,6 +50,21 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   with a *Live 4* switch the real one does not have — if the four-column view is the one you want to
   stay in, that switch is the panel's real default.
 
+  **Reviewed and corrected before this first play** (`27-work-tab.md` §15). Seven things moved, and
+  two of them change what there is to look at: **Simple mode drew nothing at all** — its tick and
+  cross were characters neither shipped font has a glyph for, so the whole mode was empty boxes and
+  no test could see it — and the panel is no longer a fixed 1,756px that hangs off the right of any
+  window narrower than about 1,780. Escape closes the tab now, opening Build puts it away, and every
+  cell has a tooltip naming its four signals in words. **So Simple mode is worth a look on its own
+  terms**: it has never been seen by anybody.
+
+- **The bed-owner picker's tick has never been drawn** (already on `main`, PR #141,
+  `docs/design/20-beds.md`). Found by the font test written for the Work tab: the mark that says
+  *this is the bed this colonist owns* is a U+2713 in Archivo Narrow, which has no such glyph, so
+  that column has been blank since the picker was written. It is a drawn tick now. When you play the
+  bed-assignment row that is already on this list, **check the list actually marks the current owner**
+  — a wrong answer looks like every name in the popover reading the same.
+
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
   its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm

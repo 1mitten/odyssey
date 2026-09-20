@@ -8063,3 +8063,63 @@ Three existing tests had to change and all three were right to fail: the save-fo
 (6 → 7), the subtitle (it says *what they do, and when* now, because the claim of the combined table
 is that they are one question), and F2 leaving the command bar. Neither tier was run here — still no
 dotnet SDK, still no Unity — so CI is again the first compiler to see any of it.
+## 2026-09-20 — Reviewing the Work tab, and the two glyphs that were never there
+
+PR #145 came in conflicting with `main` and unplayed, and its own note says the authoring session
+could run neither tier — no dotnet SDK, no Unity, egress blocked — so CI was the first compiler to
+see any of it. That is exactly the condition under which the faults that survive are the ones no
+compiler and no assertion can see, which is what the review turned out to be about.
+
+The merge was three doc collisions and nothing else: the journal, the playtest queue and CLAUDE.md
+all gained a 2026-09-20 entry on both sides. Both journal entries kept, both playtest rows kept,
+CLAUDE.md's tier line taken from `main` because it is the newer record and carries the runner's
+no-Synty rule. Fast tier green on the merge at 826 + 519 before a single correction, which is a
+fair statement of how little a green fast tier proves about a panel.
+
+**Then the question that found the real thing: are the characters this code writes actually in the
+fonts?** Simple mode drew `"✓"` and `"✕"` into a label. Reading the two `.ttf` files' `cmap`
+tables took about ninety seconds and said no: Archivo Narrow has neither, IBM Plex Mono has only
+the tick. The cell glyph is `numeric: true` so it takes the mono face — every *won't do* cell was
+a blank. The legend takes the UI face — both of its swatches were blanks. **The whole of Simple
+mode, one of the panel's two readings, drew nothing at all**, and every test about it passed,
+because a `Label` whose `text` is `"✓"` has that text in any assertion you can write. The fast
+tier compiles no text engine and the Unity tier asserts no pixels; there is no tier in this project
+that looks at a picture.
+
+The fix is the one the project already makes everywhere else — draw it. `HudGlyphKind.Check` and
+`Cross` on the same 24-unit grid as the chevrons and the play button. The model gained `WorkMark`,
+so the shell is told *which mark* rather than *which character*, and the test asserts the mark.
+
+**But the guard is the part worth keeping.** `HudFontTests` parses both cmaps in the fast tier and
+fails on any non-ASCII character in a HUD literal either face cannot draw — held to *both* faces,
+because a label's face is chosen by its role and roles move. On its first run it failed, and not on
+the Work tab: **the same tick was already on `main`**, in the bed-owner picker from PR #141, where
+`BedPickerMark.ThisBed` is drawn in `HudTextRole.Body`, which is Archivo Narrow, which does not
+have one. The mark that says *this is the bed this colonist owns* has been an empty column since it
+was written, is still on the playtest queue, and would have been reported as "the bed picker does
+not show who owns the bed" by somebody who then went looking in the bed code. Ninety seconds of
+reading a file, against a play session and a wrong-place hunt. `docs/bug-patterns.md` P10.
+
+Five more, none of them subtle once looked for. The panel is absolutely positioned from the left
+edge at a **fixed 1,756px**, so on any window under about 1,780 the schedule half was off the right
+of the screen — not scrolled, *off*, past the scroller that exists for that case; capped at 96% with
+`minWidth: 0` on the scroller, because yoga's automatic content minimum would otherwise have held
+it open and defeated the cap. **Escape did not close it**, against a rule the owner stated in 2026-09-17
+as *"every window can be escaped"* — a rule about windows, which a new window has to join.
+**Opening Build did not close it** although opening it closed Build, and the two dock in the same
+corner; one direction of a two-way rule is the harder half to notice because the natural way to test
+it is the way that works. **`Describe` was wired to nothing** — the sentence naming all four signals,
+written, documented as what a cell says when hovered, asserted by a test, and reachable from no
+tooltip. And **`Attach` did not re-sync the panel**, so a tab left open in one colony stayed on
+screen over the next, which is the one line the debug panel already had beside it.
+
+The seventh is small and is the one I expect to matter longest: `WorkGridLayout.Hours` was the
+literal `24` under a doc comment saying it was `ScheduleHandle.Hours`. That is P1 in its smallest
+form, before it is a bug, and it is now the constant — with `GameClock.HoursPerDay` tied in beside
+it, in the one assembly where all three are in scope.
+
+Three things were checked and deliberately left: the publish grew by 32 aspect rows a colonist and
+that is `SkillAspects`' own shape; `Refresh` allocates a row and two lists a colonist while the
+panel is open, which is not worth pooling objects the tests hold; and there is no vertical scroll,
+which clips at about twenty-four colonists against a colony of three. All three are written into
+`27-work-tab.md` §15h rather than half-fixed.

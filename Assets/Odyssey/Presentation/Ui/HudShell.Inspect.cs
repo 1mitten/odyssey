@@ -793,6 +793,14 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         enum BedPickerMark { None, ThisBed, AnotherBed }
 
+        /// <summary>
+        /// The drawn tick, and <b>exactly the 14px <c>.bedowner__mark</c> column</b>, because a
+        /// HudGlyph writes its own width inline and an inline width beats the stylesheet's. A
+        /// smaller number here would draw a smaller tick and start the name two pixels to the
+        /// left of every other row's, which is the one thing that column exists to prevent.
+        /// </summary>
+        const int BedPickerMarkSize = 14;
+
         VisualElement BedPickerRow(string label, int pawnId, BedPickerMark mark)
         {
             var row = new VisualElement();
@@ -800,10 +808,30 @@ namespace Odyssey.Presentation.Ui
 
             // The mark sits in its own fixed-width column rather than in front of the name, so
             // every name in the list starts at the same x and the column can be read down.
-            var flag = HudText.Make(
-                mark switch { BedPickerMark.ThisBed => "✓", BedPickerMark.AnotherBed => "•", _ => string.Empty },
-                HudTextRole.Body, ussClass: "bedowner__mark");
-            if (mark == BedPickerMark.ThisBed) flag.AddToClassList("bedowner__mark--this");
+            //
+            // The tick is drawn and the dot is typed, and that asymmetry is measured rather than
+            // stylistic: Archivo Narrow's cmap has U+2022 and does not have U+2713, so this row's
+            // "this bed" mark has been an empty column since it was written. Found by
+            // HudFontTests, which reads both .ttf files, after the same fault turned up in the
+            // Work tab's Simple mode. Neither tier could see it — the fast tier has no text
+            // engine and the Unity tier asserts no pixels.
+            VisualElement flag;
+            if (mark == BedPickerMark.ThisBed)
+            {
+                var tick = new HudGlyph(HudGlyphKind.Check, BedPickerMarkSize,
+                    HudTokens.Convert(HudTheme.TextPrimary));
+                tick.AddToClassList("bedowner__mark");
+
+                // Not bedowner__mark--this: that rule is a text colour and a drawn glyph takes
+                // its colour as a tint. The tint above is what that rule was asking for.
+                flag = tick;
+            }
+            else
+            {
+                flag = HudText.Make(
+                    mark == BedPickerMark.AnotherBed ? "•" : string.Empty,
+                    HudTextRole.Body, ussClass: "bedowner__mark");
+            }
             row.Add(flag);
 
             row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
