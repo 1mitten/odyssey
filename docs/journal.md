@@ -7531,3 +7531,21 @@ with nowhere to be stored is cleared to the nearest free cell off the zone now, 
 can have it back when it has room. The lesson the flat sheet earned went into lessons already:
 an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
 board's amplitude and the blindness is recorded beside it.
+
+
+### The third border day: the light was the border (2026-09-20)
+
+The borders survived the same-mesh cover, and the cause was not geometry at all: the bracket
+material is the lit terrain shader made transparent, and on rolled ground it shades every
+differently-tilted cover differently - per-tile brightness steps that read as borders however
+seamless the shape, unseen under the sheet's flat light and plain under the play sun. The
+cover is opaque unlit now: one colour, every tilt, every light. An unlit flat colour cannot
+shade, cannot seam, and cannot be bloomed into a line. It is opaque, so the tilled earth no
+longer shows through; the field's texture is the seeds, the crops and the soil's own shape.
+
+And the stone that still was not picked up: growing scans at order one and hauling at four, so
+a busy field starves the haul order and its own blocker waits forever - the bias and the
+clear-to-grass fallback were both in place and both idle, because nobody ever reached the
+scan that had them. The sow scan hands out the clearing itself now: when every tile is sown
+or waiting on a thing, the job a sower takes is the haul of that thing. Clearing the dirt is
+the sowing work.

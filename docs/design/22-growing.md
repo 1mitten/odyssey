@@ -312,6 +312,22 @@ matter what"*):**
   five lie there — then holds at twelve so a store square is a proper heap without every
   extra carrot redrawing it; the stack limit rises to 75, the same as wood and stone, and
   `ItemHeap.Most` rises with it so rubble's full stacks grow the same way.
+- **The cover is opaque, flat and UNLIT** (owner, 2026-09-20: *"still borders on the tiles"*
+  — after two geometric fixes). The bracket material is the lit terrain shader made
+  transparent, and on rolled ground it shaded every differently-tilted cover differently:
+  per-tile brightness steps that read as borders however seamless the geometry, invisible in
+  a flat-lit sheet and plain under the play sun. The cover now clones URP's Unlit
+  (`MaterialCache.UnlitBase`): one colour, every tilt, every light. It is opaque — the
+  tilled earth beneath no longer shows through, and the field's texture is the seeds, the
+  crops and the soil's own shape. An unlit flat colour cannot shade, cannot seam, and
+  cannot be bloomed into a line; there is nothing left in the material to disagree with.
+- **The sower clears her own field's blockers** (owner, 2026-09-20: *"the items were not
+  picked up and removed from the dirt/garden tile"*). Growing scans at order one and hauling
+  at four, so a busy field — endless sowing and reaping — starves the haul order, and the
+  stone on its own tile waits forever even with the store empty and the bias in place. When
+  the sow scan finds every tile sown or waiting on a thing, it hands out the haul of the
+  blocker itself: clearing the dirt IS the sowing work, not something that happens to
+  precede it.
 - **The cover is the drawn ground's own mesh, variant and bearing, plus a hair of overlap**
   (owner, 2026-09-20, on the second round of screenshots: the grid survived the shared lift).
   Two faults were stacked: the earth resolves a **variant clump per cell** (and a face cut
