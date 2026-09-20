@@ -333,27 +333,36 @@ namespace Odyssey.Presentation.Ui
             }
             _settingsPanel.Add(tabs);
 
-            BuildInterfaceSection();
-            BuildGraphicsSection();
-            BuildAudioSection();
-            BuildKeysSection();
+            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.AddToClassList("settings__scroll");
+            scroll.AddToClassList("build__scroll");
 
-            // The way out, pinned under the tabs rather than living in one of them: it is not a
-            // setting, and the game menu it will one day belong to (B18) does not exist yet.
-            // Two clicks, because nothing is saved and a settings panel is a place a player
-            // reaches past for the close button.
-            // Every session row, from the one table the start screen also builds from
-            // (SessionCommands). Four of them since U38: Save, Load, Quit to main menu, and the
-            // exit row that has been here since this panel had a way out at all. The hairline that
-            // sets them apart from the settings above belongs to the first of them, not to the
-            // exit row it used to belong to.
-            bool first = true;
+            BuildInterfaceSection(scroll);
+            BuildGraphicsSection(scroll);
+            BuildAudioSection(scroll);
+            BuildKeysSection(scroll);
+            _settingsPanel.Add(scroll);
+
+            // The session rows across a 2-column grid at the bottom, so they take half the vertical
+            // space and never push the panel off-screen.
+            var sessionGrid = new VisualElement();
+            sessionGrid.AddToClassList("settings__session-grid");
+            var leftCol = new VisualElement();
+            leftCol.AddToClassList("settings__session-col");
+            var rightCol = new VisualElement();
+            rightCol.AddToClassList("settings__session-col");
+            sessionGrid.Add(leftCol);
+            sessionGrid.Add(rightCol);
+
             foreach (SessionCommand command in SessionCommands.For(SessionContext.InGame))
             {
-                VisualElement row = SessionRow(command, separated: first);
-                first = false;
-                _settingsPanel.Add(row);
+                VisualElement row = SessionRow(command, separated: false);
+                if (command.Key == SessionCommands.QuitToMenuKey || command.Key == SessionCommands.QuitKey)
+                    rightCol.Add(row);
+                else
+                    leftCol.Add(row);
             }
+            _settingsPanel.Add(sessionGrid);
 
             // The director opens on Interface, and the shell may never attach to a director at all
             // in a harness that builds no world. Showing every section at once is not a state
@@ -373,14 +382,24 @@ namespace Odyssey.Presentation.Ui
         /// type is easier to read and hides more of the board, which is the whole of the decision
         /// the player is making.</para>
         /// </summary>
-        void BuildInterfaceSection()
+        void BuildInterfaceSection(VisualElement parent)
         {
             _interfaceSection = new VisualElement();
             _interfaceSection.AddToClassList("settings__body");
 
+            var columns = new VisualElement();
+            columns.AddToClassList("settings__columns");
+
+            var leftCol = new VisualElement();
+            leftCol.AddToClassList("settings__column");
+            var rightCol = new VisualElement();
+            rightCol.AddToClassList("settings__column");
+            columns.Add(leftCol);
+            columns.Add(rightCol);
+
             // A percentage is a figure, so it is set in the mono face like every other figure on
             // this screen.
-            BuildLadderRow(_interfaceSection, SettingsDirector.UiScaleKey,
+            BuildLadderRow(leftCol, SettingsDirector.UiScaleKey,
                 SettingsDirector.UiScales,
                 percent => percent + "%",
                 percent => percent == 100
@@ -391,9 +410,11 @@ namespace Odyssey.Presentation.Ui
                 percent => _directors?.Settings.SetUiScale(percent),
                 _scaleRungs);
 
-            BuildCameraSpeedRow();
-            BuildLayoutRow();
-            _settingsPanel.Add(_interfaceSection);
+            BuildCameraSpeedRow(rightCol);
+            BuildLayoutRow(rightCol);
+
+            _interfaceSection.Add(columns);
+            parent.Add(_interfaceSection);
         }
 
         /// <summary>
@@ -401,10 +422,10 @@ namespace Odyssey.Presentation.Ui
         /// it was tuned at. The same ladder idiom as the interface scale, for the same
         /// reason — a handful of honest answers rather than a knob.
         /// </summary>
-        void BuildCameraSpeedRow()
+        void BuildCameraSpeedRow(VisualElement parent)
         {
             // A multiplier is a figure, so: mono, like every other figure on this screen.
-            BuildLadderRow(_interfaceSection, SettingsDirector.CamSpeedKey,
+            BuildLadderRow(parent, SettingsDirector.CamSpeedKey,
                 SettingsDirector.CameraSpeeds,
                 percent => $"{percent / 100f:0.#}×",
                 percent => percent == 100
@@ -431,11 +452,11 @@ namespace Odyssey.Presentation.Ui
         /// handful of honest answers rather than a control that hides two of the three until it is
         /// opened.</para>
         /// </summary>
-        void BuildLayoutRow()
+        void BuildLayoutRow(VisualElement parent)
         {
             // A name, not a figure, so this is the one ladder on the panel set in the reading
             // face rather than the mono one.
-            BuildLadderRow(_interfaceSection, SettingsDirector.BuildLayoutKey,
+            BuildLadderRow(parent, SettingsDirector.BuildLayoutKey,
                 BuildPaletteModel.Layouts,
                 BuildPaletteModel.LayoutName,
                 layout => layout switch
@@ -545,12 +566,22 @@ namespace Odyssey.Presentation.Ui
         /// player with a stuttering frame came here to find. The heading is
         /// <c>.settings__section</c>, the class the Keys tab already groups with.</para>
         /// </summary>
-        void BuildGraphicsSection()
+        void BuildGraphicsSection(VisualElement parent)
         {
             _graphicsSection = new VisualElement();
             _graphicsSection.AddToClassList("settings__body");
 
-            _graphicsSection.Add(HudText.Make(Registry.Label(SettingsDirector.DisplayGroupKey),
+            var columns = new VisualElement();
+            columns.AddToClassList("settings__columns");
+
+            var leftCol = new VisualElement();
+            leftCol.AddToClassList("settings__column");
+            var rightCol = new VisualElement();
+            rightCol.AddToClassList("settings__column");
+            columns.Add(leftCol);
+            columns.Add(rightCol);
+
+            leftCol.Add(HudText.Make(Registry.Label(SettingsDirector.DisplayGroupKey),
                 HudTextRole.Meta, ussClass: "settings__section"));
 
             foreach (GraphicsLadder ladder in SettingsDirector.AllLadders)
@@ -558,7 +589,7 @@ namespace Odyssey.Presentation.Ui
                 var rungs = new Dictionary<int, Label>();
                 GraphicsLadder captured = ladder;
                 _ladderRungs[ladder] = rungs;
-                _ladderViews[ladder] = BuildLadderRow(_graphicsSection,
+                _ladderViews[ladder] = BuildLadderRow(leftCol,
                     SettingsDirector.KeyOf(ladder),
                     SettingsDirector.RungsOf(ladder),
                     rung => SettingsDirector.RungLabel(captured, rung),
@@ -578,14 +609,11 @@ namespace Odyssey.Presentation.Ui
                 mode.SetLive(false);
             }
 
-            // The resolution's rungs are the machine's, and the machine is not known yet: this
-            // panel is built when the shell is, and the directors attach afterwards. So the rank
-            // gets a place in the Display group now and its contents when there is something to
-            // put in it.
+            // The resolution's dropdown row is built once the machine's sizes are known.
             _resolutionSlot = new VisualElement();
-            _graphicsSection.Add(_resolutionSlot);
+            leftCol.Add(_resolutionSlot);
 
-            _graphicsSection.Add(HudText.Make(Registry.Label(SettingsDirector.DetailGroupKey),
+            rightCol.Add(HudText.Make(Registry.Label(SettingsDirector.DetailGroupKey),
                 HudTextRole.Meta, ussClass: "settings__section"));
 
             foreach (GraphicsOption option in SettingsDirector.All)
@@ -611,10 +639,11 @@ namespace Odyssey.Presentation.Ui
                 GraphicsOption captured = option;
                 row.RegisterCallback<ClickEvent>(_ => _directors?.Settings.Toggle(captured));
                 _settingRows[option] = row;
-                _graphicsSection.Add(row);
+                rightCol.Add(row);
             }
 
-            _settingsPanel.Add(_graphicsSection);
+            _graphicsSection.Add(columns);
+            parent.Add(_graphicsSection);
         }
 
         /// <summary>
@@ -631,34 +660,75 @@ namespace Odyssey.Presentation.Ui
                 : "Takes effect on the next frame";
 
         /// <summary>
-        /// The resolution rank.
+        /// The resolution dropdown row.
         ///
-        /// <para><b>Built after the director has been seeded</b>, because its rungs are the
+        /// <para><b>Built after the director has been seeded</b>, because its choices are the
         /// machine's: <c>Screen.resolutions</c>, de-duplicated by area. An unseeded list draws no
-        /// rank at all rather than an empty one.</para>
+        /// row at all rather than an empty one.</para>
         ///
-        /// <para><b>Inert in the editor</b>, with the two other display rows, because
+        /// <para><b>Inert in the editor</b>, with the display mode row, because
         /// <c>Screen.SetResolution</c> does not mean anything against the Game view and a control
         /// that silently does nothing is worse than one that says it cannot.</para>
         /// </summary>
         void BuildResolutionRow()
         {
-            if (_resolutionRungs.Count > 0) return;
+            if (_resolutionDropdown != null) return;
 
             IReadOnlyList<SettingsDirector.Mode> modes =
                 _directors?.Settings.Resolutions ?? Array.Empty<SettingsDirector.Mode>();
+            if (modes.Count == 0 && _directors != null && _directors.Settings.Resolution.Width > 0)
+                modes = new[] { _directors.Settings.Resolution };
             if (modes.Count == 0) return;
 
-            _resolutionView = BuildLadderRow(_resolutionSlot, SettingsDirector.ResolutionKey,
-                modes,
-                mode => mode.Width + "\u00d7" + mode.Height,
-                mode => $"Draw the game at {mode.Width} by {mode.Height}",
-                mode => _directors?.Settings.SetResolution(mode),
-                _resolutionRungs,
-                numeric: true,
-                rowTooltip: OnlyInAPlayer);
+            _resolutionSlot.Clear();
 
-            _resolutionView.SetLive(!Application.isEditor);
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            string key = SettingsDirector.ResolutionKey;
+            var icon = new IconBadge(key, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+
+            var choices = new List<string>(modes.Count);
+            var modeMap = new Dictionary<string, SettingsDirector.Mode>(modes.Count);
+            for (int i = 0; i < modes.Count; i++)
+            {
+                string text = modes[i].Width + "\u00d7" + modes[i].Height;
+                choices.Add(text);
+                modeMap[text] = modes[i];
+            }
+
+            SettingsDirector.Mode current = _directors?.Settings.Resolution ?? default;
+            string initial = current.Width > 0 ? (current.Width + "\u00d7" + current.Height) : (choices.Count > 0 ? choices[0] : "");
+
+            var dropdown = new DropdownField(choices, initial);
+            dropdown.AddToClassList("settings__dropdown");
+            if (dropdown.labelElement != null) dropdown.labelElement.style.display = DisplayStyle.None;
+            var textElem = dropdown.Q<TextElement>(className: "unity-base-popup-field__text");
+            if (textElem != null) HudText.Apply(textElem, HudTextRole.Body, numeric: true);
+
+            dropdown.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue != null && modeMap.TryGetValue(evt.newValue, out SettingsDirector.Mode picked))
+                    _directors?.Settings.SetResolution(picked);
+            });
+
+            if (Application.isEditor)
+            {
+                row.tooltip = OnlyInAPlayer;
+                row.AddToClassList("settings__row--off");
+                dropdown.SetEnabled(false);
+            }
+            else
+            {
+                row.tooltip = "Resolution the game runs at";
+            }
+
+            row.Add(dropdown);
+            _resolutionRow = row;
+            _resolutionDropdown = dropdown;
+            _resolutionSlot.Add(row);
         }
 
         /// <summary>Said on the two rows the editor cannot answer. The Game view is not a window
@@ -685,13 +755,27 @@ namespace Odyssey.Presentation.Ui
         /// no reason to re-derive — the Build palette's scroller already showed the way
         /// in.</para>
         /// </summary>
-        void BuildAudioSection()
+        void BuildAudioSection(VisualElement parent)
         {
             _audioSection = new VisualElement();
             _audioSection.AddToClassList("settings__body");
 
+            var columns = new VisualElement();
+            columns.AddToClassList("settings__columns");
+
+            var leftCol = new VisualElement();
+            leftCol.AddToClassList("settings__column");
+            var rightCol = new VisualElement();
+            rightCol.AddToClassList("settings__column");
+            columns.Add(leftCol);
+            columns.Add(rightCol);
+
             foreach (SettingsBus bus in SettingsDirector.Buses)
             {
+                VisualElement targetCol =
+                    (bus == SettingsBus.Master || bus == SettingsBus.Music || bus == SettingsBus.Ambience)
+                        ? leftCol : rightCol;
+
                 string key = SettingsDirector.VolumeKey(bus);
                 var row = new VisualElement();
                 row.AddToClassList("settings__row");
@@ -704,7 +788,7 @@ namespace Odyssey.Presentation.Ui
                 Label value = HudText.Make(VolumeText(SettingsDirector.UnityDb), HudTextRole.Body,
                     numeric: true, ussClass: "settings__value");
                 row.Add(value);
-                _audioSection.Add(row);
+                targetCol.Add(row);
 
                 var fader = new Slider(-1f, 1f, SliderDirection.Horizontal);
                 fader.AddToClassList("settings__fader");
@@ -728,12 +812,13 @@ namespace Odyssey.Presentation.Ui
                     if (_directors != null && _directors.Settings.BusDb(capturedBus) != db)
                         _directors.Settings.SetBusDb(capturedBus, db);
                 });
-                _audioSection.Add(fader);
+                targetCol.Add(fader);
 
                 _busFaders[bus] = new FaderView { Fader = fader, Value = value };
             }
 
-            _settingsPanel.Add(_audioSection);
+            _audioSection.Add(columns);
+            parent.Add(_audioSection);
         }
 
         /// <summary>What one fader's readout says. Mute is a word because silence is not a
@@ -783,14 +868,25 @@ namespace Odyssey.Presentation.Ui
         /// per row. Click a cap to change it; the next key pressed is offered to that slot,
         /// and Escape backs out of the wait without unwinding anything under it.
         /// </summary>
-        void BuildKeysSection()
+        void BuildKeysSection(VisualElement parent)
         {
             _keysSection = new VisualElement();
             _keysSection.AddToClassList("settings__body");
 
+            var columns = new VisualElement();
+            columns.AddToClassList("settings__columns");
+
+            var leftCol = new VisualElement();
+            leftCol.AddToClassList("settings__column");
+            var rightCol = new VisualElement();
+            rightCol.AddToClassList("settings__column");
+            columns.Add(leftCol);
+            columns.Add(rightCol);
+
             foreach ((string header, HotkeyAction[] actions) in KeyGroups)
             {
-                _keysSection.Add(HudText.Make(header, HudTextRole.Meta, ussClass: "settings__section"));
+                VisualElement targetCol = (header == "Camera" || header == "Time") ? leftCol : rightCol;
+                targetCol.Add(HudText.Make(header, HudTextRole.Meta, ussClass: "settings__section"));
 
                 foreach (HotkeyAction action in actions)
                 {
@@ -815,7 +911,7 @@ namespace Odyssey.Presentation.Ui
                     }
 
                     _keyRows[action] = view;
-                    _keysSection.Add(row);
+                    targetCol.Add(row);
                 }
             }
 
@@ -823,9 +919,10 @@ namespace Odyssey.Presentation.Ui
                 ussClass: "rung settings__reset");
             reset.tooltip = "Every action goes back to the key it shipped with";
             reset.RegisterCallback<ClickEvent>(_ => _directors?.Hotkeys.ResetKeys());
-            _keysSection.Add(reset);
+            rightCol.Add(reset);
 
-            _settingsPanel.Add(_keysSection);
+            _keysSection.Add(columns);
+            parent.Add(_keysSection);
         }
 
         /// <summary>
@@ -886,6 +983,11 @@ namespace Odyssey.Presentation.Ui
                 entry.Value.EnableInClassList("tab--on", on);
                 entry.Value.EnableInClassList("tab--off", !on);
             }
+            if (tab == SettingsTab.Graphics && _resolutionDropdown == null)
+            {
+                BuildResolutionRow();
+                OnResolutionChanged();
+            }
             _interfaceSection.style.display =
                 tab == SettingsTab.Interface ? DisplayStyle.Flex : DisplayStyle.None;
             _graphicsSection.style.display =
@@ -941,7 +1043,10 @@ namespace Odyssey.Presentation.Ui
         void OnResolutionChanged()
         {
             if (_directors == null) return;
-            LightRung(_resolutionRungs, _directors.Settings.Resolution);
+            if (_resolutionDropdown == null) BuildResolutionRow();
+            SettingsDirector.Mode res = _directors.Settings.Resolution;
+            if (res.Width > 0 && _resolutionDropdown != null)
+                _resolutionDropdown.SetValueWithoutNotify(res.Width + "\u00d7" + res.Height);
         }
 
         void OnBuildLayoutChanged(BuildPaletteLayout layout) => LightRung(_layoutRungs, layout);
@@ -1133,6 +1238,11 @@ namespace Odyssey.Presentation.Ui
             {
                 ToggleMenu(false);
                 _directors?.Debug.SetOpen(false);
+                if (_resolutionDropdown == null)
+                {
+                    BuildResolutionRow();
+                    OnResolutionChanged();
+                }
             }
         }
 

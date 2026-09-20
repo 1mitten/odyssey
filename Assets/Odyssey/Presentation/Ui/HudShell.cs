@@ -247,13 +247,12 @@ namespace Odyssey.Presentation.Ui
         /// and the two display rows can be greyed in the editor.</summary>
         readonly Dictionary<GraphicsLadder, LadderView> _ladderViews = new();
 
-        /// <summary>The resolution's own rank. It is not a <see cref="GraphicsLadder"/> because
-        /// its rungs are the machine's rather than ours.</summary>
-        readonly Dictionary<SettingsDirector.Mode, Label> _resolutionRungs = new();
+        /// <summary>The resolution dropdown selector. Built once the machine's sizes are known.
+        /// See <c>BuildResolutionRow</c>.</summary>
+        DropdownField? _resolutionDropdown;
+        VisualElement? _resolutionRow;
 
-        LadderView _resolutionView;
-
-        /// <summary>Where the resolution rank goes once the machine's sizes are known. See
+        /// <summary>Where the resolution dropdown row goes once the machine's sizes are known. See
         /// <c>BuildResolutionRow</c>.</summary>
         VisualElement _resolutionSlot = null!;
         readonly Dictionary<SettingsBus, FaderView> _busFaders = new();

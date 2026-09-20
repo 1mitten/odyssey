@@ -135,6 +135,13 @@ namespace Odyssey.Presentation.Bootstrap
         static IEnumerable<SettingsDirector.Mode> OfferedModes()
         {
             Resolution[] offered = Screen.resolutions;
+            if (offered == null || offered.Length == 0)
+            {
+                if (Screen.width > 0 && Screen.height > 0)
+                    yield return new SettingsDirector.Mode(Screen.width, Screen.height);
+                yield break;
+            }
+
             for (int i = 0; i < offered.Length; i++)
                 yield return new SettingsDirector.Mode(offered[i].width, offered[i].height);
         }
