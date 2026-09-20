@@ -689,11 +689,11 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The size control cycles rather than navigating: three sizes, one press each, and it
+        /// The size control cycles rather than navigating: one press each, and it
         /// comes back round rather than stopping at the end.
         /// </summary>
         [Test]
-        public void TheSizeCyclesThroughAllThreeAndWraps()
+        public void TheSizeCyclesThroughEveryBoardAndWraps()
         {
             MenuDirector menu = WithColonists(1u);
             var seen = new List<int>();

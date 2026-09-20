@@ -303,6 +303,7 @@ namespace Odyssey.Hud
             { "ui.newgame.reroll", "Reroll" },
             { "ui.newgame.seed", "Seed" },
             { "ui.newgame.size", "Board size" },
+            { "ui.newgame.size.huge", "Huge" },
             { "ui.newgame.size.large", "Large" },
             { "ui.newgame.size.small", "Small" },
             { "ui.newgame.size.standard", "Standard" },

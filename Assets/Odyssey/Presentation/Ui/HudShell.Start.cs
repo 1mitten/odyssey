@@ -318,7 +318,7 @@ namespace Odyssey.Presentation.Ui
             reroll.AddToClassList("setup__inline");
             board.Add(reroll);
 
-            // One control that cycles rather than three rows: there are three sizes and a player
+            // One control that cycles rather than a row each: there are few sizes and a player
             // picking one is cycling, not navigating.
             var size = new VisualElement();
             size.AddToClassList("setup__size");

@@ -503,6 +503,7 @@ ui.newgame.size,Board size,ui.newgame,MS,"How much ground the colony has to grow
 ui.newgame.size.small,Small,ui.newgame,MS,"80 x 80. Close quarters"
 ui.newgame.size.standard,Standard,ui.newgame,MS,"120 x 120. The board every measurement was taken on"
 ui.newgame.size.large,Large,ui.newgame,MS,"180 x 180, and deeper. Room to spread out"
+ui.newgame.size.huge,Huge,ui.newgame,MS,"240 x 240. Twice the ground of the standard board"
 ui.newgame.title,New game,ui.newgame,MS,"The board and the people, before anything is built"
 ui.newgame.skills,Skills,ui.newgame,MS,"What this candidate can already do, and what they care about"
 ui.newgame.traits,Traits,ui.newgame,MS,"What this candidate is like. Empty until traits exist"
