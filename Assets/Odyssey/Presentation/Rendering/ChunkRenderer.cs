@@ -1569,6 +1569,13 @@ namespace Odyssey.Presentation.Rendering
             var parts = _model.Library[module].Parts;
             for (int p = 0; p < parts.Length; p++)
                 Graphics.RenderMesh(in rp, parts[p].Mesh, parts[p].Submesh, at * parts[p].Local);
+
+            // Counted, because it was not and the instrument therefore under-reported a field by
+            // its entire cover pass: FrameTimeTests prints DrawCalls, a 2,000-cell field adds
+            // 2,000-odd submissions here, and the printed figure moved by fifty. A pass the
+            // budget cannot see is a pass nobody optimises.
+            DrawCalls += parts.Length;
+            InstancesDrawn += parts.Length;
         }
         public void DrawCellMark(CellRef cell, Color colour, float inset)
         {
