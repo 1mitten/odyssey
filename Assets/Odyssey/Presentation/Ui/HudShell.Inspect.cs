@@ -543,9 +543,9 @@ namespace Odyssey.Presentation.Ui
 
                 var grid = new VisualElement();
                 grid.AddToClassList("needs");
-                _needs.Add(Need(grid, "Food", "ui.need.food"));
-                _needs.Add(Need(grid, "Rest", "ui.need.rest"));
-                _needs.Add(Need(grid, "Mood", "ui.need.mood"));
+                _needs.Add(Need(grid, "ui.need.food"));
+                _needs.Add(Need(grid, "ui.need.rest"));
+                _needs.Add(Need(grid, "ui.need.mood"));
                 _needRows = (_needs.Count + 1) / 2;
                 _needsGrid = grid;
                 tabBody.Add(grid);
@@ -842,8 +842,17 @@ namespace Odyssey.Presentation.Ui
             return button;
         }
 
-        static NeedView Need(VisualElement grid, string name, string iconKey)
+        /// <summary>
+        /// One need row. The name comes from the registry rather than from the caller, which is
+        /// what stops the screen and the wiki disagreeing: the three literals that used to be
+        /// passed in here were fine until storage added <c>ui.res.category.food</c>, at which
+        /// point "Food" was a registry name written in C# and
+        /// <c>RegistryTests.NoPlayerFacingNameIsWrittenInCSharp</c> said so. The answer to that
+        /// test is never to reword the literal.
+        /// </summary>
+        static NeedView Need(VisualElement grid, string iconKey)
         {
+            string name = Registry.Label(iconKey);
             var view = new NeedView();
 
             view.Root = new VisualElement();

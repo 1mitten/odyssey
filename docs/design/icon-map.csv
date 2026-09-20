@@ -398,3 +398,16 @@ ui.terrain.water.deep,-,,,"flat dark water, no bed visible",-,gap
 ui.terrain.rock,-,,,"a face of natural stone",-,gap
 ui.terrain.subsoil,-,,,"a tile of dug earth",-,gap
 ui.terrain.bedrock,-,,,"a tile of dark, banded stone",-,gap
+ui.storage.priority.last,,,,,,unmapped
+ui.storage.priority.low,,,,,,unmapped
+ui.storage.priority.normal,,,,,,unmapped
+ui.storage.priority.preferred,,,,,,unmapped
+ui.storage.priority.urgent,,,,,,unmapped
+ui.storage.preset.everything,,,,,,unmapped
+ui.storage.preset.nothing,,,,,,unmapped
+ui.res.category.food,,,,,,unmapped
+ui.res.category.medicine,,,,,,unmapped
+ui.res.category.materials,,,,,,unmapped
+ui.res.category.books,,,,,,unmapped
+ui.res.category.items,,,,,,unmapped
+ui.res.category.weapons,,,,,,unmapped

@@ -60,6 +60,24 @@ namespace Odyssey.Hud
         /// over a stream is refused cell by cell and silently.</para>
         /// </summary>
         GrowZone = 6,
+
+        /// <summary>
+        /// Set ground aside for things to be put down on. Every cell of the box joins one zone,
+        /// and that zone accepts everything until the player narrows it.
+        ///
+        /// <para><b>One tool, and the zone it makes is a dumping zone</b> (owner, 2026-09-20:
+        /// <i>"make a stockpile a default dumping zone, anything goes but you can then choose"</i>).
+        /// The palette's Zones category has carried a second <c>ui.arch.tool.dumping</c> chip since
+        /// before either existed; it is gone from the strip, because under that decision it would
+        /// arm a tool that makes exactly what this one makes. The key stays in the registry for a
+        /// real dumping zone later — one that also takes rubble, never re-stows out and sits at
+        /// Last.</para>
+        ///
+        /// <para>Unlike <see cref="GrowZone"/> it carries no rider: what a store accepts is
+        /// decided after it exists, in its own panel, because a filter is seven rows and a tool
+        /// cannot hold one.</para>
+        /// </summary>
+        Stockpile = 7,
     }
 
     /// <summary>
@@ -505,6 +523,8 @@ namespace Odyssey.Hud
             {
                 CoveredInto(cells);
             }
+
+            LastAnchor = _anchor;
             Abandon();
             return cells;
         }
@@ -533,6 +553,24 @@ namespace Odyssey.Hud
 
         /// <summary>Nothing under the pointer, or nothing that should be shown.</summary>
         public void HoverNowhere() => Hover = null;
+
+        /// <summary>
+        /// The cell the last committed gesture was <b>begun</b> on — where the player pressed.
+        ///
+        /// <para><b>Not a corner of the box</b>, and that is the whole reason it exists. The
+        /// committed cells come back in grid order from <see cref="CoveredInto"/>, so the first of
+        /// them is the box's minimum corner, and that is the <i>head</i> rather than the anchor
+        /// whenever the drag ran up or left. The storage tool needs the cell that was pressed,
+        /// because a drag begun inside a store extends <i>that</i> store — and answering that with
+        /// a corner would make which zone you extend depend on which direction you happened to
+        /// drag in.</para>
+        ///
+        /// <para>Written by <see cref="Commit"/> before the box is thrown away, because
+        /// <see cref="Abandon"/> clears the anchor and a caller reading it afterwards would get a
+        /// default <see cref="CellRef"/> — which is cell (0, 0, 0), a real cell, and therefore a
+        /// bug that looks like "my drag joined a zone in the corner of the map".</para>
+        /// </summary>
+        public CellRef LastAnchor { get; private set; }
 
         /// <summary>Throw the box away — the escape key, a layer change, a tool change.</summary>
         public void Abandon()
