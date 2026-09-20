@@ -239,7 +239,60 @@ drag, the colony's haul, the save, and the same colony read back.
   "Food" in `HudShell.Inspect.cs`, the moment `ui.res.category.food` existed; the answer was to
   take the name from the registry, which the need rows should have been doing anyway.
 
-## 9. What S1 does not do
+## 9. The zone as an object — decided 2026-09-20, not yet built
+
+The owner used the first build and asked for stockpiles to be *"treated as groups of tiles so you
+don't have to click on individual tiles to change something"*, for the priority and the item types
+to sit under *"their own distinct headers"*, and for a searchable, scrollable, categorised item
+list — all of it *"more RimWorld"*.
+
+**The first of those is already true and that is the finding.** A zone is one settings record shared
+by every cell: changing the priority on any tile changes the zone, and `StorageZoneTests`
+`ThePriorityAndFilterIntentsNameACellAndNotAZone` sets it on one cell and reads it back on another.
+What is missing is that nothing *says* so. You click a tile, the pane is titled by the tile, the
+panel hangs off a tile row, and two touching zones wash the same colour so you cannot see which one
+you are editing. **It behaves like a group and reads like a tile**, and the fix is selection rather
+than storage.
+
+Four answers, taken 2026-09-20:
+
+| # | Decision |
+|---|---|
+| 33 | **Clicking a store selects the zone**, not the tile. The pane titles it, the zone's cells brighten so its extent is visible, and the tile's own facts move to a second tab. |
+| 34 | **The settings live in a tab of the inspect pane**, not in a popover: *Priority*, then *Accepts* with Allow all / Clear all, then the list. A popover is right for picking one of five colonists and wrong for twenty rows and a scrollbar. |
+| 35 | **The list is categories that expand to items** — six tri-state category rows, an arrow to open one, individual commodities inside. This **overturns decisions 21 and 31**, which deferred the tree because four of six categories are empty; the reason to have it is structural and the owner has said so. |
+| 36 | **The priority ladder stays at five.** Re-asked against the reference's six and re-confirmed: Last, Low, Normal, Preferred, Urgent. |
+
+### 9a. The units that follow, in order
+
+**SZ1 — the zone is what you select.** `InspectSubject` gains a fifth value; the picker resolves a
+click inside a store to the zone; the pane titles it (`Store — 24 tiles`) with the tile's facts on a
+second tab.
+
+**The selected zone's cells brighten, and the cost of that is the interesting part.** The obvious
+implementation — outline the zone — is a draw per cell, which is `docs/bug-patterns.md` P10 at about
+4.6 µs a submission and is exactly the fault the growing zone's cover was deleted for. The answer is
+the mechanism §6 already uses: **one more tint level on a surface that is being drawn anyway**, so a
+selected zone costs one extra bucket and no extra draws. The price moves to a **re-mesh of the
+zone's chunks when the selection changes** — which is a click, at human rate, bounded by the zone —
+and that is the number to measure before SZ1 is called done.
+
+**SZ2 — the Storage tab.** The pane's tab machinery exists and only colonists use it, so the work is
+making a non-colonist subject carry tabs, plus the headers and the two buttons.
+
+**SZ3 — the tree, the scroll and the search.** Expandable categories over a scroll view.
+`StorageSettingsModel.CategoryRow` already carries the three-way state, so the model barely moves;
+this is layout. **Search is built and hidden until the list is longer than the panel** — over seven
+commodities a search field is furniture, and a control that appears when it starts earning its place
+explains itself.
+
+**SZ4 — rename, and copy.** A named zone needs a string in a snapshot view, which nothing carries
+today, so it is a deliberate contract change rather than a smuggled field. **Copy and Link are two
+verbs, not one**: Copy duplicates the values into another zone, Link points both at one settings
+record — which is S2's storage group, already the reason settings are a handle (§4). Copy is S; Link
+folds into S2.
+
+## 10. What S1 does not do
 
 - **No panel yet.** The four intents exist, are applied while paused and are tested, and
   `StorageSettingsModel` is the whole control — the rungs, the two presets, the six category rows,
