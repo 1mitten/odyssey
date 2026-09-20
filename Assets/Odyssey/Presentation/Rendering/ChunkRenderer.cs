@@ -1415,10 +1415,15 @@ namespace Odyssey.Presentation.Rendering
             };
 
             // The same drape the terrain below was placed with, at that cell's floor, and then
-            // lifted along the drape's own up: over a slope the lift stays perpendicular to
-            // the tilt rather than shearing the cover off its tile's uphill edge.
-            Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y - 1));
-            at *= Matrix4x4.Translate(Vector3.up * MarkLift);
+            // lifted along the WORLD up - not the drape's own. Two neighbours' drapes disagree
+            // by a few centimetres of slope across a shared edge, and lifting each along its own
+            // tilt opened a hairline of untinted earth between every pair of tiles: a lighter
+            // grid ruled over the whole field, widest where four cells met (owner, 2026-09-19:
+            // "remove the borderlines ... so the grow areas would appear as one"). A shared
+            // world-up lift leaves the covers' mutual seams exactly the terrain's own, which
+            // the ground already draws invisibly - each box's tinted side wall fills its step.
+            Matrix4x4 at = Matrix4x4.Translate(Vector3.up * MarkLift) *
+                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y - 1));
 
             var parts = _model.Library[module].Parts;
             for (int p = 0; p < parts.Length; p++)
