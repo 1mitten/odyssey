@@ -14,7 +14,23 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
+**The rule is already breached, on the day it was written.** There are 28 open rows. That is the
+finding, not an oversight — the ceiling is where the list should be, not where it is, and the first
+sessions after this one take verdicts and fixes rather than features until it comes down. A rule
+that is quietly wrong on arrival is a rule the next session learns to ignore.
+
 ## Open
+
+- **Nobody has given a verdict on the growing zone** (`claude/growing-zones`, **PR #119, still
+  open**, `docs/design/22-growing.md`). `U46`–`U50`: the carrot crop, the paint-a-zone tool in the
+  palette and the orders strip, and sow → daylight-window growth → harvest → auto re-sow. It has had
+  **one play day already** — nine looks, six fixes: the sower kneels rather than chops, the zone is a
+  near-black whole-tile cover, the ground is the terrain itself re-looked as earth, seeds speckle only
+  under the kneel, the big carrot stage arrives at 85% so what looks pickable nearly is, and the pane
+  reads `Carrot × 5 — N% grown`. The debug menu's **Skip one day** and **Ripen crops** rows are the way
+  to see a harvest without the four-day wait. Open questions a picture cannot answer: whether four
+  calendar days to a harvest reads as slow, and whether the interim green tint reads as "growing here"
+  or as a texture fault (`22-growing.md` §9). **This row blocks a merge**, which is why it is first.
 
 - **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
   `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three
@@ -148,6 +164,24 @@ feature, unless the owner says otherwise.
   `D:\code\odyssey-audio`, a worktree on a merged branch; the main checkout junctions to it. See
   `docs/lessons.md` — do not prune a worktree without checking.
 
+
+## Not yet listed
+
+The list was moved out of `CLAUDE.md` verbatim, so it inherited that file's gaps as well as its
+rows. Five changes merged on 2026-09-18 and 2026-09-19 have no row here and at least four of them
+are things only a person at the keyboard can judge. **The session that next touches one of these
+writes its row from the PR's own handover** rather than inventing the questions:
+
+| Merged | What | Why it probably wants a row |
+|---|---|---|
+| PR #134 | soft crowd avoidance and sub-tile lateral steering (`docs/design/25-pawn-steering.md`) | whether a colonist stepping aside reads as courtesy or as drift |
+| PR #132 | eight-directional diagonal movement and strict corner rules | whether diagonals read as natural or as sliding |
+| PR #128 | procedural head turning and gaze (`docs/design/23-head-turning-and-gaze.md`) | whether the gaze reads as attention or as a twitch |
+| PR #127 | the flush selection cursor (`docs/design/23-flush-selection-cursor.md`) | whether it sits flush on every surface it was fixed for |
+| PR #123 | the sight fade leaving water, banks and marsh whole | whether the exemptions read as deliberate |
+
+PR #130/#131 (the player build) is deliberately not in that table: a build that runs is proven by
+the smoke run, not by a look.
 
 ## Judged
 

@@ -7289,3 +7289,47 @@ listers it might justify are not designed until it has run.
   content gates clean after the f-string fix; `git diff HEAD -- ProjectSettings/ Assets/Settings/`
   empty. The Unity tier was not run here (no editor) — the last recorded run is 2026-09-19's
   1,872 / 82.
+
+### Reviewed the same day, and six things it had missed
+
+The audit was read back against the repository before it merged, which is the check its own §9
+invites. Every load-bearing number held: the fast tier is **753 Sim + 449 Hud** exactly, both
+content gates pass with the f-string fix, `OdysseyBootstrap` is 2,408 lines, `ChunkRenderer`
+1,848, `HudLayout` 1,713, `ConstructionGrid` 1,650, `NavGraph` 1,517 with the three global passes
+at 902/964/1003 where §0 says they are, `Odyssey.Sim.asmdef` does carry `noEngineReferences: true`,
+the manifest has no Burst, Collections or Mathematics, there is no `.editorconfig` or
+`Directory.Build.props` anywhere, `GridMirrorContributor`'s own doc comment says the renderer does
+not read the slice channel, and no district id is saved or hashed — which is the claim **HT1**
+rests on. The playtest queue is a byte-for-byte move of the 130 lines it replaced.
+
+What it missed, all of it the same fault it was written to catch — a status line outliving what it
+described:
+
+- **Two track rows were stale.** TS said "in review — PR #126" (merged 2026-09-18) and CL said
+  "PR #129 ready to merge" (merged 2026-09-19). The audit corrected two stale lines and walked past
+  these.
+- **The Unity tier line was two runs behind**: 1,857/1,843 was the alert-chimes run, while the
+  journal's last entry against `main`'s tip records **1,872/1,858**. The audit's own §4f and §9
+  carried the older number while the journal entry it shipped beside them carried the newer one.
+- **The read-this table had the ladder line twice**, with two different descriptions of the same
+  document. Now one row, the longer one.
+- **Growing zones (PR #119) was nowhere.** The track table, the read-this table and the waiting
+  list had no row for it, on `main` or on this branch — the text existed only as an uncommitted
+  edit to `CLAUDE.md` in the Windows checkout, so the restructure would have buried it. It is now
+  a track row, a read-this row and the first row of the playtest queue, which is where it belongs:
+  it is the one row that blocks a merge.
+- **The queue inherited `CLAUDE.md`'s gaps.** Five changes merged on 18–19 September have no row —
+  pawn avoidance, diagonal movement, head turning, the flush cursor, the sight-fade exemptions —
+  and four of them are looks. A *Not yet listed* table names them so the next session writes each
+  row from the PR's own handover.
+- **The ten-row rule was breached on the day it was written**, at 28 open rows. Left in place and
+  said out loud, because the ceiling is the target; a rule quietly wrong on arrival is one the next
+  session learns to ignore.
+
+Small corrections beside those: `Assets/Editor/Odyssey` is 47 files, not 48; the unused-package
+count is eighteen (ten packages, eight modules) rather than fifteen; `docs/setup/local-dev.md` §1
+already states the Python floor, so HT2 owes only the `python3 --version` check; and the plan has
+**nine** units, HT9 being a gap inherited rather than a finding made.
+
+- *Verified:* fast tier on this branch, Windows, dotnet 8.0.425 — **753 Sim + 449 Hud, 0 failed**;
+  both content gates clean. No Unity run: the numbers above are the journal's, not a fresh tier.
