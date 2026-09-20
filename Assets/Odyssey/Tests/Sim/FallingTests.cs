@@ -5,6 +5,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
@@ -203,6 +204,93 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(items.MoveTo(item, 100), Is.SameAs(item));
             Assert.That(items.ItemAt(100)!.Stack, Is.EqualTo(8), "the stack merged with itself");
+        }
+
+        [Test]
+        public void NearestCellWithSpaceOnFloorlessCellDropsToFirstFloorBelow()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int surface = Size.Index(start.X, start.Z, start.Y);
+            Assume.That(colony.Grid.HasFloor(surface), Is.True);
+
+            // An open air cell two layers above the ground
+            int airCell = surface + Size.LayerStride * 2;
+            Assume.That(colony.Grid.HasFloor(airCell), Is.False);
+
+            int result = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, airCell, ItemIndex.Wood, 10, maxRadius: 3);
+
+            Assert.That(result, Is.GreaterThanOrEqualTo(0));
+            Assert.That(colony.Grid.HasFloor(result), Is.True, "the result must have a floor");
+            Assert.That(Size.FromIndex(result).Y, Is.EqualTo(start.Y),
+                "the search dropped to the ground surface layer");
+        }
+
+        [Test]
+        public void DropFloatingItemsSweepDropsOrphanedItemsToFloorBelow()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int surface = -1;
+            for (int dz = -3; dz <= 3 && surface < 0; dz++)
+            for (int dx = -3; dx <= 3 && surface < 0; dx++)
+            {
+                if (!Size.Contains(start.X + dx, start.Z + dz, start.Y)) continue;
+                int c = Size.Index(start.X + dx, start.Z + dz, start.Y);
+                if (colony.Grid.IsWalkable(c) && colony.Pawns.Items.ItemAt(c) == null)
+                    surface = c;
+            }
+            Assume.That(surface, Is.GreaterThanOrEqualTo(0));
+            int below = surface - Size.LayerStride;
+            Assume.That(colony.Grid.HasFloor(surface), Is.True);
+
+            // Spawn wood on the empty surface
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, surface, 10);
+            Assume.That(colony.Pawns.Items.ItemAt(surface), Is.Not.Null);
+
+            // Artificially remove the floor under the wood without firing an event
+            colony.Grid.Terrain[below] = NaturalContent.TerrainAir;
+            colony.Grid.Flags[below] &= ~CellFlags.SolidTerrain;
+            colony.Grid.Floor[surface] = CoreContent.SlabNone;
+            Assume.That(colony.Grid.HasFloor(surface), Is.False, "the wood is now floating in mid-air");
+
+            // Run the safety sweep
+            int dropped = Falling.DropFloatingItems(colony.Pawns);
+            Assert.That(dropped, Is.GreaterThanOrEqualTo(1), "the sweep caught the floating item");
+
+            Assert.That(colony.Pawns.Items.ItemAt(surface), Is.Null, "the wood is no longer at the floorless cell");
+
+            int landing = colony.Grid.FirstFloorAtOrBelow(surface);
+            var landed = colony.Pawns.Items.ItemAt(landing);
+            Assert.That(landed, Is.Not.Null);
+            Assert.That(colony.Grid.HasFloor(landed!.Cell), Is.True, "the landed item now has a floor");
+        }
+
+        [Test]
+        public void FallingItemWithNoFloorAnywhereBelowDespawns()
+        {
+            ColonyWorld colony = Board();
+            // A column where layer 0 has no floor
+            int bottomCell = Size.Index(5, 5, 0);
+            colony.Grid.Terrain[bottomCell] = NaturalContent.TerrainAir;
+            colony.Grid.Flags[bottomCell] &= ~CellFlags.SolidTerrain;
+            colony.Grid.Floor[bottomCell] = CoreContent.SlabNone;
+            Assume.That(colony.Grid.HasFloor(bottomCell), Is.False);
+
+            int airCell = bottomCell + Size.LayerStride;
+            colony.Grid.Terrain[airCell] = NaturalContent.TerrainAir;
+            colony.Grid.Flags[airCell] &= ~CellFlags.SolidTerrain;
+            colony.Grid.Floor[airCell] = CoreContent.SlabNone;
+
+            ThingId id = colony.Pawns.Items.Spawn(ItemIndex.Wood, airCell, 5);
+            var item = colony.Pawns.Items.Get(id)!;
+            Assume.That(item.Despawned, Is.False);
+
+            Falling.ItemsOutOf(colony.Pawns, airCell);
+
+            Assert.That(item.Despawned, Is.True,
+                "an item over a bottomless void despawns rather than hanging in mid-air");
         }
 
 
