@@ -325,6 +325,65 @@ namespace Odyssey.Tests.Sim
             Assert.That(woodWent, Is.False,
                 "the nearer ordinary pile went first: the field is still waiting on its blocker");
         }
+        [Test]
+        public void AFieldBlockerIsClearedToTheGrassWhenNoStoreWillTakeIt()
+        {
+            // The owner's stall (2026-09-20): stone on the dirt, and nothing happened. The
+            // stockpile was full, the haul scan could not form a job, and the sow guard had
+            // blocked the tile - a deadlock in which every party was behaving. A thing on
+            // tilled soil that no store will take goes to the nearest free cell off the zone
+            // instead, and the field can be sown behind it.
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            CellRef plot = colony.Start;
+            Sow(colony, plot);
+
+            // Fill every stockpile cell to its limit, so no destination exists for anything.
+            var pile = colony.Pawns.Items.Stockpiles[0];
+            int wood = ItemIndex.Wood;
+            int limit = colony.Pawns.Content.Items[wood].stackLimit;
+            for (int i = 0; i < pile.Cells.Length; i++)
+            {
+                if (colony.Pawns.Items.ItemAt(pile.Cells[i]) != null) continue;
+                colony.Pawns.Items.Spawn(wood, pile.Cells[i], limit);
+            }
+
+            // And stand the blocker on a second, sown tile of the field.
+            CellRef beside = default; bool found = false;
+            foreach (var step in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                var cand = new CellRef(plot.X + step.Item1, plot.Z + step.Item2, plot.Y);
+                if (colony.Pawns.Items.ItemAt(Size.Index(cand)) != null) continue;
+                if (zones.Designate(cand, PlantHandle.Carrot) != IntentRejection.None) continue;
+                beside = cand; found = true; break;
+            }
+            Assume.That(found, Is.True, "no free, zone-able cell beside the start");
+            zones.Sow(Size.Index(beside));
+            colony.Pawns.Items.Spawn(ItemIndex.Stone, Size.Index(beside), 50);
+
+            bool cleared = false, stillOnTheField = true;
+            for (int tick = 0; tick < 20_000 && !cleared; tick++)
+            {
+                colony.World.Tick();
+                cleared = colony.Pawns.Items.ItemAt(Size.Index(beside)) == null;
+                if (cleared)
+                    stillOnTheField = zones.ZonePlantAt(LastStoneCell(colony)) >= 0;
+            }
+
+            Assert.That(cleared, Is.True,
+                "the stone on the tilled soil was never taken off it, store or no store");
+            Assert.That(stillOnTheField, Is.False,
+                "the stone was set down on the field it was clearing");
+        }
+
+        static int LastStoneCell(ColonyWorld colony)
+        {
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned && items[i].DefIndex == ItemIndex.Stone && items[i].Cell >= 0)
+                    return items[i].Cell;
+            return -1;
+        }
         static int CarrotsOnTheGround(ColonyWorld colony)
         {
             int total = 0;

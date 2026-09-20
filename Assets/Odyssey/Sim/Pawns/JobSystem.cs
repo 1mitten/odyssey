@@ -729,6 +729,18 @@ namespace Odyssey.Sim.Pawns
                 if (!ctx.Reachable(pawn, item.Cell, Mode)) continue;
 
                 int dest = BestStorageCell(pawn, ctx, item, restow ? StoredPriority(ctx, item) : int.MinValue);
+
+                // A thing on tilled soil that no stockpile will take still has to come off the
+                // dirt - the sowing of its cell is waiting on it, and a full store is not a
+                // reason for a field to stand idle (owner, 2026-09-20: "the colonists didn't
+                // remove the stone from the dirt tile and didn't bother sowing and nothing
+                // happened"). It goes to the nearest free cell outside every zone, and becomes
+                // an ordinary pile there: the stockpile's business again once it has room.
+                if (dest < 0 && !restow && ctx.Growing != null &&
+                    ctx.Growing.ZonePlantAt(item.Cell) >= 0)
+                    dest = ctx.Items.NearestCellWithSpace(
+                        ctx.Cells, item.Cell, item.DefIndex, item.Stack, maxRadius: 6,
+                        accept: c => ctx.Growing!.ZonePlantAt(c) < 0);
                 if (dest < 0) continue;
 
                 bestDistance = distance;
