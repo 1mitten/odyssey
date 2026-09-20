@@ -214,7 +214,7 @@ def build_markdown(entries, by_ns, nouns, names):
             row = group[i:i + 4]
             cells = []
             for n in row:
-                cells += [f"**{n["name"]}**", genders.get(n["gender"], n["gender"])]
+                cells += [f"**{n['name']}**", genders.get(n["gender"], n["gender"])]
             cells += ["", ""] * (4 - len(row))
             L.append("| " + " | ".join(cells) + " |")
         L.append("")

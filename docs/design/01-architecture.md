@@ -22,6 +22,8 @@ Odyssey.Tests.Sim / Odyssey.Tests.Ui (EditMode) / Odyssey.Tests.Play (PlayMode)
 
 Dependency direction, enforced rather than encouraged: `Ui.Unity → Ui.Core → Sim.Contracts ← Sim`. **`Ui.Core` never references `Sim`.**
 
+**Names as built (noted 2026-09-19 by the baseline audit):** `Odyssey.Ui.Core` became `Odyssey.Hud`, and `Odyssey.Ui.Unity` never became an assembly of its own — the UI Toolkit shell lives in `Odyssey.Presentation/Ui`. The rule above is what matters and it holds: `Odyssey.Hud` references only `Sim.Contracts`, `Odyssey.Presentation` references `Hud`, `Sim` and `Sim.Contracts`, and the asmdefs enforce it.
+
 Unit U01 of the slice plan asserts the UnityEngine-free property with a reflection test over `Sim` and `Sim.Contracts`. That test is the reason this project can run simulation tests under a plain dotnet SDK with no editor, and it is the property ECS would have made impossible.
 
 ## 3. The tick
