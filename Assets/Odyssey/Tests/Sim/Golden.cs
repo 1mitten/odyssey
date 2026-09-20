@@ -206,6 +206,29 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        ///
+        /// <remarks>
+        /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
+        /// scenario's starting beds stopped being bare cells in the sleep chooser's list and
+        /// became real two-cell beds raised through the construction grid
+        /// (<c>ColonyScenario.RaiseAStartingBed</c> holds the measurement that forced it). A bed
+        /// record is in the edifice list, which is hashed, so a colony that has five of them
+        /// hashes differently from one that has none — and it does so <b>before a single tick
+        /// runs</b>, which is why <c>Generated</c> moved on all three and is the evidence that
+        /// this is the change and not a simulation system drifting underneath it. <c>Simulated</c>
+        /// followed for the ordinary reason a divergent start diverges further: the colonists now
+        /// sleep in beds they previously walked past, so their nights are spent in different
+        /// cells.
+        /// <para>No generator pass changed. The board is identical; what stands on it is not.</para>
+        /// <para><b>And a second reason in the same commit, which is why the numbers here are not
+        /// the ones the bed change alone produced.</b> <c>ColonyItems</c> hashed its things and
+        /// not its stockpile zones or its bed list, both of which it had been saving since they
+        /// existed — found by <c>OrdersSurviveASaveTests.EachOrderMovesTheStateHash</c>, which
+        /// flips one bit of a zone's filter and asks whether the world noticed. It did not. Both
+        /// are in the hash now, so every colony with a starting stockpile hashes differently
+        /// again; the colony is not doing anything new, the hash is seeing more of it. That
+        /// distinction is the whole of whether a re-bake is honest.</para>
+        /// </remarks>
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -214,8 +237,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7415324713255390796UL,
-            Simulated = 11878595623063687696UL,
+            Generated = 15721581818529621809UL,
+            Simulated = 6540063495833481032UL,
         };
 
         /// <summary>
@@ -231,8 +254,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 4458515928023308940UL,
-            Simulated = 14541313576350770742UL,
+            Generated = 17205523407833078228UL,
+            Simulated = 13091739187043166010UL,
         };
 
         /// <summary>
@@ -268,8 +291,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 13030130651254543899UL,
-            Simulated = 10223758098092909442UL,
+            Generated = 7416457840173175292UL,
+            Simulated = 228442719616695994UL,
         };
     }
 }

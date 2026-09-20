@@ -1,9 +1,11 @@
 #nullable enable
 using System.Collections.Generic;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Pawns
@@ -452,6 +454,81 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
+        /// <summary>
+        /// Stand a real bed at a starting spot, in whichever of the four facings the cell beside
+        /// it will take. False when none of them will, and the colony simply starts one bed short.
+        ///
+        /// <para><b>It used to be <c>Items.AddBed(spot)</c> and nothing else</b>, which put a
+        /// <i>cell</i> in the sleep chooser's list with no bed standing in it. That was right when
+        /// it was written — a bed was a property of a cell and there was nothing to build — and it
+        /// became a bug the day beds became furniture, because everything a bed now is hangs off
+        /// the record rather than the cell: it cannot be seen (nothing is drawn there), it cannot
+        /// be owned (<c>AssignOwnerAt</c> refuses a cell with no edifice in it), it cannot be
+        /// taken apart, and — the one the owner photographed — a colonist who sleeps in it is laid
+        /// out by the <i>ground</i> pose, flat on the grass at whatever angle she last faced.
+        /// Beside a real bed that reads as a colonist hanging half off it (owner, 2026-09-20).</para>
+        ///
+        /// <para><b>Measured before it was changed.</b> Three colonists, three built beds, three
+        /// days: with the scenario's five phantom cells in the list, one colonist spent every one
+        /// of her 53,222 sleeping ticks off a bed and a second spent 17,399 of hers off one, all
+        /// within three cells of a real bed she never used. With the phantom cells gone, all three
+        /// slept on a bed for every tick. <c>BedTests.EveryCellTheSleepChooserKnowsHasABedInIt</c> holds it.</para>
+        ///
+        /// <para>Normal quality, deliberately: a qualityless bed cell restored 100 per cent and so
+        /// does a Normal bed, so the colony wakes up exactly as rested as it always did. And
+        /// <c>Raise</c> puts the head cell in the chooser's list itself, which is why this method
+        /// does not — one owner for "what counts as a bed", which is the whole of the fix.</para>
+        /// </summary>
+        static bool RaiseAStartingBed(
+            PawnContext pawns, CellGrid grid, int head, System.Func<int, bool> spoken)
+        {
+            ConstructionGrid? sites = pawns.Construction;
+            if (sites == null) return false;
+
+            // **Eight footprints, not four.** The spot can be the head of the bed or its foot,
+            // and both put the bed on the storey the scenario named. Four was measurably not
+            // enough: on the ruined city, where a storey is rooms rather than open ground, two of
+            // five spots had no free neighbour in the direction a head would need and the colony
+            // started three beds short.
+            //
+            // Four, because a facing is two bits — `EdificeFootprint.SecondCell` masks it to
+            // exactly that. `Directions` itself is Presentation's and this assembly has no
+            // UnityEngine in it by design.
+            //
+            // **Two passes over the eight.** The first skips any footprint whose far cell is a
+            // spot another group has been promised — see <c>Storeys.Spoken</c> for why a bed
+            // standing on the stockpile is worse than a bed one cell further along. The second
+            // takes what is left, because a bed on a crowded storey is still better than no bed.
+            GridSize size = grid.Size;
+            for (int pass = 0; pass < 2; pass++)
+            for (int facing = 0; facing < 4; facing++)
+            for (int asFoot = 0; asFoot < 2; asFoot++)
+            {
+                // Laying the bed the other way round is the same footprint approached from the
+                // far end: the head goes one cell back along the facing, which is the cell whose
+                // second cell is the spot. `SecondCell` of the opposite facing is that cell.
+                int at = asFoot == 0
+                    ? head
+                    : EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, (facing + 2) & 3, size);
+                if (at < 0) continue;
+
+                int far = EdificeFootprint.SecondCell(at, CoreContent.EdificeBed, facing, size);
+                if (pass == 0 && (far < 0 || spoken(far))) continue;
+
+                // Place answers for both cells — a two-cell order whose far half is refused is
+                // refused whole — so trying it is the cheapest way to ask, and the only way that
+                // cannot disagree with what the player's own order would have been told.
+                if (sites.Place(size.FromIndex(at), BuildingHandle.Bed, StuffHandle.Wood, facing)
+                    != IntentRejection.None)
+                    continue;
+
+                sites.Raise(pawns, at, (byte)QualityHandle.Normal);
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>The storey the colonists themselves wake up on: the one the generator chose.</summary>
         const int ColonistStorey = 0;
 
@@ -548,6 +625,22 @@ namespace Odyssey.Sim.Pawns
 
             public List<int> On(int offset) =>
                 spots.TryGetValue(offset, out List<int>? list) ? list : new List<int>();
+
+            /// <summary>
+            /// Has this cell been handed to a storey group — any of them, on any floor?
+            ///
+            /// <para><b>Asked by the bed, and by nothing else</b>, because the bed is the one
+            /// thing the scenario places that is wider than the spot it was given. Every group is
+            /// searched up front, so by the time a bed is raised the stockpile's cells are already
+            /// chosen and adding the bed's far cell to <see cref="taken"/> would be too late to
+            /// matter. Asking instead lets the bed pick a footprint that stays off them — which is
+            /// not a nicety: a bed claims its cells against items, so a stockpile cell under a
+            /// bed's foot is a stockpile cell nothing can ever be put in, and the colony's hauling
+            /// quietly stalls two crates short. Measured by
+            /// <c>ForbidIntentTests.AForbiddenThingIsNotHauledUntilAllowed</c>, which is what
+            /// caught it.</para>
+            /// </summary>
+            public bool Spoken(int cell) => taken.Contains(cell);
 
             /// <summary>
             /// A cell no earlier storey has claimed — and, off the colonists' own storey, one
@@ -648,13 +741,16 @@ namespace Odyssey.Sim.Pawns
             placedMaterials += PlacePiles(pawns, storeys, scenario.mealLayerOffset,
                 ItemIndex.Wood, scenario.woodPiles, scenario.woodPerPile);
 
+            // Until a spot works or the storey runs out, rather than one attempt per bed: a bed
+            // wants two cells and a spot is one, so a spot whose neighbours are all walls buys
+            // nothing and the colony should try the next one rather than start a bed short. The
+            // storey search hands out spares for exactly this.
             int placedBeds = 0;
-            for (int i = 0; i < scenario.beds; i++)
+            while (placedBeds < scenario.beds)
             {
                 int spot = storeys.Next(scenario.bedLayerOffset);
                 if (spot < 0) break;
-                pawns.Items.AddBed(spot);
-                placedBeds++;
+                if (RaiseAStartingBed(pawns, grid, spot, storeys.Spoken)) placedBeds++;
             }
 
             var stockpile = new List<int>(scenario.stockpileCells);

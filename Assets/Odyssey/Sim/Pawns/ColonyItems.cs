@@ -167,8 +167,13 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Take a bed cell out of the list — the other half of <see cref="AddBed"/>, which until a
-        /// bed could be built had no caller: a deconstructed bed must stop being slept in, and the
-        /// scenario's own cells are never removed.
+        /// bed could be built had no caller: a deconstructed bed must stop being slept in.
+        ///
+        /// <para>Every cell in this list is now the head cell of a real bed, and
+        /// <c>ConstructionGrid</c> is the only thing that adds to or removes from it. The scenario
+        /// used to add five bare cells of its own, which is the bug
+        /// <c>ColonyScenario.RaiseAStartingBed</c> records: a cell in this list with nothing
+        /// standing in it cannot be seen, owned or lain on properly.</para>
         /// </summary>
         public void RemoveBed(int cell)
         {
@@ -417,6 +422,22 @@ namespace Odyssey.Sim.Pawns
             if (at >= 0) lister.RemoveAt(at);
         }
 
+        /// <summary>
+        /// Everything here that is authored: the things, the zones and the beds.
+        ///
+        /// <para><b>The zones and the bed list were missing until 2026-09-20</b>, and they had
+        /// been <i>saved</i> since they existed — which is the worst of the two ways round. Save
+        /// and hash are meant to cover the same set: <c>WorldRoundTripTests</c> proves a save by
+        /// comparing hashes, so a zone that failed to round-trip would have come back accepting
+        /// everything, hashed identically, and passed. Measured rather than reasoned:
+        /// <c>OrdersSurviveASaveTests.EachOrderMovesTheStateHash</c> flips one filter bit and
+        /// asks, and it is the control that found this. Exactly the shape of OQ-50, in which the
+        /// whole cell grid sat outside the hash for a year.</para>
+        ///
+        /// <para>The derived halves stay out, as they must: <c>_itemAtCell</c>, <c>_loose</c>,
+        /// <c>_stored</c> and <c>_stockpileAtCell</c> are all rebuilt from the three lists below,
+        /// and hashing a rebuilt index would only ever restate what it was rebuilt from.</para>
+        /// </summary>
         public void ContributeTo(ref StateHash hash)
         {
             hash.Add(_items.Count);
@@ -431,6 +452,27 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(item.CarriedBy);
                 hash.Add(item.Despawned);
             }
+
+            // A zone is an order about where things go, and its filter is the half of it that is
+            // not a position — so it is the half a round trip is most likely to drop and the one
+            // nothing would have noticed.
+            hash.Add(_stockpiles.Count);
+            for (int s = 0; s < _stockpiles.Count; s++)
+            {
+                Stockpile pile = _stockpiles[s];
+                hash.Add(pile.Priority);
+                hash.Add(pile.Cells.Length);
+                for (int c = 0; c < pile.Cells.Length; c++) hash.Add(pile.Cells[c]);
+                hash.Add(pile.Allow.Length);
+                for (int a = 0; a < pile.Allow.Length; a++) hash.Add(pile.Allow[a]);
+            }
+
+            // And which cells the sleep chooser will look at. Derived from the edifice list in
+            // every colony built today — `ConstructionGrid.Raise` is the only thing that adds to
+            // it — but it is a list this class saves, and saved state that is not derived from
+            // something already hashed belongs in the hash (OQ-50).
+            hash.Add(_beds.Count);
+            for (int b = 0; b < _beds.Count; b++) hash.Add(_beds[b]);
         }
 
         // ---- saving ----------------------------------------------------------------------

@@ -185,8 +185,68 @@ namespace Odyssey.Sim.Pawns
         public void Tick(SimWorld world)
         {
             _ctx.Sync(world);
+            GetOutOfTheWrongBed();
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++) TickPawn(pawns[i], world.CurrentTick);
+        }
+
+        /// <summary>
+        /// A colonist asleep somewhere that is no longer hers gets up now, rather than in the
+        /// morning.
+        ///
+        /// <para><b>The owner's ask, 2026-09-20:</b> <i>"when I assigned a bed to a colonist and
+        /// they are asleep - I expect them to get up immediately and get into the bed they have
+        /// been assigned to"</i>. Before this the assignment landed on the record and nothing read
+        /// it again until the next time she looked for somewhere to sleep, so a bed given to a
+        /// sleeping colonist did nothing anybody could see until the following night.</para>
+        ///
+        /// <para><b>Three cases, and the middle one is the whole reason this is a sweep rather
+        /// than a note naming who changed.</b> For each colonist on a sleep job:</para>
+        /// <list type="bullet">
+        /// <item>she is in <i>her own</i> bed — left alone, whatever changed. This is not a
+        /// nicety: a sleeper claims an unowned bed the moment she arrives in it
+        /// (<c>ConstructionGrid.TryClaimForSleeper</c>), and that claim raises the same flag a
+        /// player's assignment does, so waking on the assignment alone would get her up, send her
+        /// to walk to the bed she is already in, and do it again for ever.</item>
+        /// <item>she has a bed of her own <i>somewhere else</i> — up she gets, and the tree sends
+        /// her to it, because an own bed wins outright in <c>TrySleep</c>. This covers the
+        /// colonist asleep on the ground as well as the one in a borrowed bed.</item>
+        /// <item>she has no bed and is lying in one that now belongs to somebody — up, because it
+        /// is not hers to be in. A colony short of beds keeps them unowned and shared, so this is
+        /// very often the colonist the player just took a bed away from, and she is in no list of
+        /// owners because she never was one.</item>
+        /// </list>
+        ///
+        /// <para>Anything else — asleep in an unowned bed, or on the ground with no bed to go to —
+        /// is left where it is. The job ends as a failure, which is what releases the bed she was
+        /// holding, and the tree is consulted in the same tick a job ends, so she is walking
+        /// before the player's hand has left the mouse.</para>
+        ///
+        /// <para>Every sleeper is examined rather than a named few, once, on the same tick the
+        /// assignment arrived — intents drain at step 1 and this runs at step 4. An assignment is
+        /// a player's click; the sweep costs one pass over the colony and a bed lookup each, and
+        /// it cannot be wrong about who was left out.</para>
+        /// </summary>
+        void GetOutOfTheWrongBed()
+        {
+            Construction.ConstructionGrid? sites = _ctx.Construction;
+            if (sites == null || !sites.BedOwnershipChanged) return;
+            sites.ClearBedOwnershipChanged();
+
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn pawn = pawns[i];
+                if (pawn.CurrentJob == null) continue;
+                if (_ctx.Content.Jobs[pawn.CurrentJob.DefIndex].driver != JobIndex.Sleep) continue;
+
+                int owner = sites.BedOwnerAt(pawn.CurrentJob.TargetCell);
+                if (owner == pawn.Id.Value) continue;
+
+                if (owner == 0 && !sites.PawnOwnsABed(pawn.Id.Value)) continue;
+
+                EndJob(pawn, JobStatus.Failed);
+            }
         }
 
         void TickPawn(Pawn pawn, int tick)

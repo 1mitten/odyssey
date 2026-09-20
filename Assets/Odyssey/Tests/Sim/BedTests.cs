@@ -951,6 +951,265 @@ namespace Odyssey.Tests.Sim
                 "and so does the tier the finisher rolled");
         }
 
+        // ---- a bed cell is a cell with a bed in it -------------------------------------------
+
+        /// <summary>A colony with the scenario's own starting beds, which <see cref="Fresh"/> turns off.</summary>
+        static ColonyWorld WithStartingBeds(int colonists = 3)
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = colonists;
+            scenario.beds = colonists;
+            return ColonyWorld.Build(Size, Seed, scenario);
+        }
+
+        /// <summary>
+        /// <b>Every cell the sleep chooser knows about has a bed standing in it.</b>
+        ///
+        /// <para>This is the invariant the owner's report came down to (2026-09-20: <i>"some
+        /// colonists still sleep off the bed … it looks like it's trying to rest them in the
+        /// first tile"</i>). The scenario used to put five bare cells into
+        /// <c>ColonyItems.Beds</c> — right when a bed was a property of a cell, and a lie the day
+        /// beds became furniture. A phantom cell cannot be seen, cannot be owned and cannot be
+        /// lain on: presentation asks <c>WorldRenderModel.BedHeadAt</c> which bed a sleeper is in,
+        /// gets nothing, and falls back to the ground pose — a colonist flat on the grass at
+        /// whatever angle she last faced, which beside a real bed reads as hanging half off
+        /// it.</para>
+        ///
+        /// <para><b>Measured:</b> three colonists, three built beds, three days. With the phantom
+        /// cells in the list one colonist spent all 53,222 of her sleeping ticks off a bed and a
+        /// second 17,399 of hers, every one of them within three cells of a bed she never used.
+        /// Without them, all three slept on a bed for every tick.</para>
+        /// </summary>
+        [Test]
+        public void EveryCellTheSleepChooserKnowsHasABedInIt()
+        {
+            ColonyWorld colony = WithStartingBeds();
+            Assume.That(colony.Pawns.Items.Beds.Count, Is.GreaterThan(0), "the scenario placed no beds at all");
+
+            foreach (int cell in colony.Pawns.Items.Beds)
+            {
+                int handle = colony.Grid.Edifice[cell];
+                Assert.That(handle, Is.GreaterThanOrEqualTo(0), $"cell {cell} is in the bed list with nothing in it");
+                Assert.That(colony.Construction.Edifices.Records[handle].Def,
+                    Is.EqualTo(CoreContent.EdificeBed), $"cell {cell} is in the bed list and holds something else");
+            }
+        }
+
+        /// <summary>
+        /// And the consequence a player actually sees: a starting bed can be given to somebody.
+        /// A bare cell could not — <c>AssignOwnerAt</c> refuses a cell with no edifice in it — so
+        /// the whole ownership feature was dead on every bed the colony woke up with.
+        /// </summary>
+        [Test]
+        public void AStartingBedCanBeOwnedLikeAnyOther()
+        {
+            ColonyWorld colony = WithStartingBeds();
+            Assume.That(colony.Pawns.Items.Beds.Count, Is.GreaterThan(0));
+
+            int bed = colony.Pawns.Items.Beds[0];
+            var pawn = colony.Pawns.Pawns.All[0];
+            Assert.That(Assign(colony, bed, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.BedOwnerAt(bed), Is.EqualTo(pawn.Id.Value));
+        }
+
+        /// <summary>
+        /// <b>And nobody sleeps off one.</b> The end-to-end form of the two above: a colony with
+        /// the beds it starts with, run until everybody has slept, and every sleeper on a bed.
+        /// </summary>
+        [Test]
+        public void NobodySleepsBesideABed()
+        {
+            ColonyWorld colony = WithStartingBeds();
+
+            var bedCells = new System.Collections.Generic.HashSet<int>();
+            foreach (int head in colony.Pawns.Items.Beds)
+            {
+                bedCells.Add(head);
+                byte facing = colony.Construction.Edifices.Records[colony.Grid.Edifice[head]].Facing;
+                int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, facing, Size);
+                if (foot >= 0) bedCells.Add(foot);
+            }
+
+            foreach (var colonist in colony.Pawns.Pawns.All) colonist.Needs[NeedIndex.Rest] = 40;
+
+            var slept = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < 20_000 && slept.Count < colony.Pawns.Pawns.All.Count; i++)
+            {
+                colony.World.Tick();
+                foreach (var colonist in colony.Pawns.Pawns.All)
+                {
+                    if (!colonist.Asleep) continue;
+                    slept.Add(colonist.Id.Value);
+                    Assert.That(bedCells, Does.Contain(colonist.Cell),
+                        $"colonist {colonist.Id.Value} is asleep at {colonist.Cell}, which is no bed's cell");
+                }
+            }
+
+            Assert.That(slept.Count, Is.EqualTo(colony.Pawns.Pawns.All.Count), "somebody never slept");
+        }
+
+        // ---- a bed given to a sleeper ---------------------------------------------------------
+
+        /// <summary>Tick until this colonist is asleep, or fail saying she never was.</summary>
+        static void SleepNow(ColonyWorld colony, Pawn pawn, int budget = 6_000)
+        {
+            pawn.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < budget && !pawn.Asleep; i++) colony.World.Tick();
+            Assume.That(pawn.Asleep, Is.True, "she never got to sleep");
+        }
+
+        /// <summary>
+        /// <b>A bed given to a sleeping colonist gets her out of the one she is in</b> (owner,
+        /// 2026-09-20: <i>"when I assigned a bed to a colonist and they are asleep - I expect them
+        /// to get up immediately and get into the bed they have been assigned to"</i>).
+        ///
+        /// <para>Immediately is the word under test. The assignment used to land on the record and
+        /// be read again only the next time she looked for somewhere to sleep, so the player saw
+        /// nothing until the following night. She is up within the tick the intent drains in —
+        /// intents are step 1 of the tick and the pawn phase is step 4 — and in the new bed once
+        /// she has walked to it.</para>
+        /// </summary>
+        [Test]
+        public void ABedGivenToASleepingColonistGetsHerUpAndIntoIt()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+
+            int near = OpenFootprint(colony, out int nearFoot);
+            Assume.That(near, Is.GreaterThanOrEqualTo(0));
+            int far = AnotherOpenFootprint(colony, near, nearFoot, out _);
+            Assume.That(far, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, near);
+            RaiseABed(colony, far);
+
+            SleepNow(colony, pawn);
+            Assume.That(pawn.Cell, Is.EqualTo(near), "she took the near bed, which is the premise");
+
+            Assert.That(Assign(colony, far, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(pawn.Asleep, Is.False, "she is still asleep in a bed that is not hers");
+
+            for (int i = 0; i < 6_000 && !(pawn.Asleep && pawn.Cell == far); i++) colony.World.Tick();
+            Assert.That(pawn.Cell, Is.EqualTo(far), "she never walked to the bed she was given");
+            Assert.That(pawn.Asleep, Is.True, "she got there and did not lie down");
+        }
+
+        /// <summary>
+        /// And the other half: the colonist whose bed has just been given away gets up too. Left
+        /// alone she would sleep out the night in a bed the player has just promised somebody
+        /// else, and the new owner would find it occupied.
+        /// </summary>
+        [Test]
+        public void ASleeperWhoseBedIsGivenAwayGetsUp()
+        {
+            ColonyWorld colony = Fresh();
+            var sleeper = colony.Pawns.Pawns.All[0];
+            var other = colony.Pawns.Pawns.All[1];
+
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+
+            SleepNow(colony, sleeper);
+            Assume.That(sleeper.Cell, Is.EqualTo(head));
+
+            Assert.That(Assign(colony, head, other.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(sleeper.Asleep, Is.False, "she is still in a bed that is now somebody else's");
+        }
+
+        /// <summary>
+        /// <b>The negative control, and it is the one that matters.</b> A colonist who lies down
+        /// in an unowned bed claims it on arrival, and that claim goes through the very same door
+        /// a player's assignment does. Acting on the assignment alone would wake her the instant
+        /// she fell asleep, send her to walk to the bed she is already in, and do it again for
+        /// ever. So the rule is about the bed and not about the assignment: she is asleep in her
+        /// own bed, and nothing happens.
+        /// </summary>
+        [Test]
+        public void ASleeperWhoClaimsTheBedSheIsLyingInIsNotWokenByHerOwnClaim()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+
+            SleepNow(colony, pawn);
+            Assume.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(pawn.Id.Value),
+                "she claimed it on arrival, which is the premise");
+
+            // Long enough that a wake-walk-claim loop would show as a colonist who is not asleep.
+            for (int i = 0; i < 2_000; i++) colony.World.Tick();
+            Assert.That(pawn.Asleep, Is.True, "her own claim woke her up");
+            Assert.That(pawn.Cell, Is.EqualTo(head));
+        }
+
+        /// <summary>
+        /// Giving a colonist the bed she is already asleep in leaves her asleep in it — the same
+        /// rule from the player's side, and the one a player will hit by accident when they
+        /// confirm an arrangement the colony had already made for itself.
+        ///
+        /// <para>Three colonists and one bed, because that is the shape in which a sleeper does
+        /// <i>not</i> already own what she is lying in: claiming takes a bed out of the shared
+        /// pool for good, so it is refused while anybody else would be left with none
+        /// (<see cref="TooFewBedsToGoRoundAreLeftInTheSharedPool"/>). Assigning her that bed is
+        /// therefore a real change of owner reaching a real sleeper — which is exactly the
+        /// situation the naive version of this rule woke her out of.</para>
+        /// </summary>
+        [Test]
+        public void GivingAColonistTheBedSheIsAlreadyAsleepInLeavesHerAsleep()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+
+            SleepNow(colony, pawn);
+            Assume.That(pawn.Cell, Is.EqualTo(head), "she is in the bed, which is the premise");
+            Assume.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(0),
+                "and it is nobody's, because one bed between three stays in the shared pool");
+
+            Assert.That(Assign(colony, head, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(pawn.Asleep, Is.True, "she was woken out of the bed she was just given");
+            Assert.That(pawn.Cell, Is.EqualTo(head));
+
+            for (int i = 0; i < 500; i++) colony.World.Tick();
+            Assert.That(pawn.Asleep, Is.True, "and she stayed in it");
+        }
+
+        /// <summary>
+        /// <b>A colonist asleep on the ground gets up for a bed she is given</b> — the case that
+        /// caught the first draft of this rule out. She owns no bed, so nothing about the bed she
+        /// is "in" has changed; what changed is that she now has one to go to, and the mud is not
+        /// somewhere to stay out of politeness.
+        /// </summary>
+        [Test]
+        public void AColonistAsleepOnTheGroundGetsUpForABedSheIsGiven()
+        {
+            ColonyWorld colony = Fresh();
+            var sleeper = colony.Pawns.Pawns.All[0];
+            var owner = colony.Pawns.Pawns.All[1];
+
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+            Assume.That(Assign(colony, head, owner.Id.Value), Is.EqualTo(IntentRejection.None),
+                "the one bed belongs to somebody else, so the sleeper has nowhere to go");
+
+            SleepNow(colony, sleeper);
+            Assume.That(sleeper.Cell, Is.Not.EqualTo(head), "she is on the ground, which is the premise");
+
+            // Take it off its owner and give it to her. Both halves reach the sweep: he is not
+            // asleep, she is, and she is not in it.
+            Assert.That(Assign(colony, head, sleeper.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(sleeper.Asleep, Is.False, "she slept on in the mud beside a bed of her own");
+
+            for (int i = 0; i < 6_000 && !(sleeper.Asleep && sleeper.Cell == head); i++)
+                colony.World.Tick();
+            Assert.That(sleeper.Cell, Is.EqualTo(head), "she never walked to it");
+            Assert.That(sleeper.Asleep, Is.True);
+        }
+
         /// <summary>
         /// **A two-cell thing may not be ordered into anything standing in its far cell**, for
         /// every facing, and this is the test that says so out loud.
