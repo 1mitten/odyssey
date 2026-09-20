@@ -2257,3 +2257,34 @@ a duration identical to the last run's, down to the seventh decimal.
 - **Only one Unity may hold a project.** A background `test playmode` and a foreground `build` in
   the same worktree are mutually exclusive, and the second one loses silently if you are not
   reading its output.
+
+## A pack-dependent test must ask whether the art resolved, not whether there is a catalogue
+
+**Cost: one red build on the self-hosted runner, 2026-09-20, on a branch whose tests were green
+here.** Both new portrait tests failed there and nowhere else.
+
+`Assets/Synty` is gitignored, so the runner's checkout has none of it. `ModuleCatalogue.asset` is
+**committed**, and its prefab fields are GUID references into that folder — so on the runner the
+asset loads perfectly and every single reference comes back null. A test that guards with
+
+```csharp
+if (boot.moduleCatalogue == null) Assert.Ignore(...);      // wrong
+```
+
+therefore answers *"yes, carry on"* on exactly the machine that cannot draw a colonist, and then
+fails on the first `Assert.That(portrait, Is.Not.Null)`. Ask instead whether anything resolved:
+
+```csharp
+if (!boot.Portraits.Available) Assert.Ignore(...);         // portraits
+if (!boot.Figures!.Enabled) Assert.Ignore(...);            // live animated figures
+```
+
+Both of those exist for this reason and `PortraitStudio.Available`'s own doc comment already
+records the runner finding it once. Reading that comment is not the same as heeding it.
+
+**Two consequences worth knowing before you compare two test runs.** The runner's PlayMode count is
+legitimately lower than this machine's — same commit, 85/80/0 here and 85/75/0 with ten ignored
+there — so a smaller *passed* number is not a regression. And `TestResults/PlayMode.xml` under
+`D:\actions-runner\_work\odyssey\odyssey` is overwritten by the next job, so copy it before
+diagnosing rather than after.
+

@@ -272,6 +272,20 @@ invisible where the game is played.
   the simulation put something where this is drawn?* If it can, the rule needs a sim-side copy —
   `TerraceFoot`, checked cell-by-cell against `BankLayout` — and the guard goes where the thing is
   placed. `docs/design/22-terrace-steps.md`.
+- **A render that is kept is a render of everything that was true at that instant.** A portrait is
+  taken once per appearance and cached for the session, and the daylight cycle writes the *global*
+  ambient, fog, sky and sun — so until 2026-09-20 a colonist photographed after dusk kept a black
+  card for ever. `PortraitStudio` now owns the whole environment for the synchronous instant of its
+  render and hands it back. Anything else one-shot and cached owes the same. `docs/design/20-avatars.md`
+  §10.7, and **measure the take-over rather than reading it**: three versions of that fix looked
+  right and were not.
+- **A budget applied in arrival order is a budget on identity.** `PawnFigureDirector.MaxFigures`
+  caps live animated colonists and its own comment says the rest are "a long way off"; nothing
+  sorted, so the frozen ones were the highest pawn ids wherever the camera was. It keeps the
+  nearest now, and does nothing at all under the cap. **64 is a hard ceiling**
+  (`PawnFigureDirector.FigureCeiling`, owner 2026-09-20): the setter clamps, `FigureCeilingTests`
+  fails on anything that raises it, and moving it is a frame measurement rather than an edit.
+  §11 of the same document.
 - **Content is written once.** The XML under `Assets/Odyssey/Defs/Core` is the only copy of the pawn
   tuning and the world tables. Callers go through `ContentPack.Pawns()` and `WorldContent.Table`.
 - **Content values are pinned by fingerprints, and they earn their keep.** Editing rock's
@@ -312,11 +326,19 @@ invisible where the game is played.
 - **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **806 Sim + 471 Hud** (2026-09-20, the bed and order-colour branch with events and falling items merged); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
-  branch (`claude/events-system`, after the first-look fixes, the falling-items merge and the extensibility review): EditMode **1,968 total, 1,954 passed, 0 failed**; PlayMode **82 total,
-  77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
-  The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, since merged),
-  was EditMode 1,916 / 1,902 and PlayMode 82 / 77.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
+  `claude/colonist-figures-and-portraits`: EditMode **2,003 total, 1,990 passed, 0 failed**;
+  PlayMode **85 total, 80 passed, 0 failed** (the three new ones are the portrait-lighting and
+  figure-cap guards). The remainder are `[Explicit]` or ignored. The run before it, the same day
+  on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
+- **The runner has no `Assets/Synty`, so its PlayMode count is lower than this machine's and that
+  is correct.** Everything that needs a colonist's art ignores itself there — on 2026-09-20 the
+  same commit was 85/80/0 here and 85/75/0 with ten ignored on the runner. **A test that needs the
+  packs must ask whether the art *resolved*, never whether there is a catalogue**: the catalogue is
+  committed and its prefab references point into the gitignored folder, so it loads perfectly with
+  every reference null on exactly the machine that can draw nobody. `PortraitStudio.Available` and
+  `PawnFigureDirector.Enabled` are the two right questions; a `moduleCatalogue == null` check is
+  the wrong one and has now turned the runner red twice.
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a

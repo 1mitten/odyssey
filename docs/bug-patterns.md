@@ -1289,3 +1289,62 @@ board: 3,172 frames of 59,000 moved a colonist backwards along her own step, up 
 - **Bisect before believing the last diagnosis.** The obvious reading was that the previous fix had
   not gone far enough. Running the same measurement with the steering switched off gave numbers
   identical to the frame, which said in one run that this was a different fault.
+
+## A cached picture of a moving world (2026-09-20)
+
+Owner: *"when generating more colonists — some ... their profile picture seems black."*
+
+`PortraitStudio` renders a colonist once and keeps the texture for the session. It is careful that
+its own key light must not escape into the world, and never asked the reverse question. The daylight
+cycle writes the **global** ambient, fog, skybox and sun, so the portrait camera read whatever hour
+it happened to fire on: the same colonist measured 80 of 255 at noon and 26 at midnight, and 26 is a
+black square in a 26 px tile. Cached, so it never recovers.
+
+- **The pattern:** *a render that is kept is a render of everything that was true at that instant.*
+  Anything one-shot and cached — a portrait, a baked mesh, a thumbnail — has to own every global it
+  reads, not merely the ones it set. Ask of any such render: **what in this picture is a fact about
+  the subject, and what is a fact about when it was taken?**
+- **It is the mirror of a rule the file already had.** Design 20 §10.3 reasons carefully that the
+  studio's light must not reach the world. The same sentence, read backwards, is the bug.
+- **"Some" is the signature.** A cached derivation that depends on an unnoticed input fails for
+  exactly the subset created while that input was wrong — which reads as randomness and is not.
+- **A global can look taken over and not be.** Three versions of the fix measured as working and
+  were not: `ambientMode`/`ambientLight` leave the renderer on a stale probe,
+  `RenderSettings.ambientProbe` is honoured only under `AmbientMode.Custom`, and the skybox still
+  arrives as the default reflection probe. **Measure the take-over, do not read it** — a spread
+  across the day is one number and it said no three times.
+- **The check:** `PortraitLightingTests` photographs one fixed appearance at ten hours of one day
+  and fails if the brightest is more than 3% over the darkest; a companion asserts the studio hands
+  the environment back. Both fail on the old code.
+
+## One rule with two owners, again: the brightest light in the scene (2026-09-20)
+
+`OdysseyBootstrap.FindKeyLight` means "the scene's own sun" and says so in a comment. What it does
+is take the brightest directional light in the scene — and `PortraitStudio` puts one there, hidden
+and switched off, the first time the setup page photographs a candidate. Adopt it and the world
+loses its sun while every portrait is lit by a light the clock is quietly retuning.
+
+- **The pattern:** a finder whose comment states an intent its predicate does not. The predicate is
+  the rule; the comment is a wish. It is this file's recurring *one rule with two owners* in a new
+  coat: here the two owners are a comment and a `foreach`.
+- **What made it invisible:** it only fires when the scene's own sun is dimmer than 1.6 at the
+  moment a session is built, and the play scene bakes its sun at midday.
+- **The check:** the predicate now skips lights on objects with hide flags, and the studio
+  re-asserts its own light's aim, colour and intensity on every shot — so neither half can be
+  quietly retuned by the other again.
+
+## A cap with no order is a cap on identity (2026-09-20)
+
+Past `PawnFigureDirector.MaxFigures` a colonist is drawn as a baked mesh and does not animate, which
+is deliberate and documented as *"a colonist beyond the cap is a long way off"*. Nothing sorted. The
+loop walked the snapshot and stopped, and snapshot order is pawn id — so the colonists that lost
+their animation were fixed at creation and the camera never changed it. Eighty-five colonists: the
+nearest frozen one at 134 m, an animated one at 179 m.
+
+- **The pattern:** a budget applied in arrival order rather than in the order the budget's own
+  justification names. The comment said "a long way off"; nothing made distance the criterion.
+- **Where to look for more:** anything that truncates a list to a budget. If the doc comment gives a
+  reason ("far", "old", "least important"), the code has to sort by it or the reason is fiction.
+- **The check:** `FigureCapTests` spawns twenty colonists along a line in a *scrambled* order, so id
+  order and distance order disagree; the old code fails it. Scrambling is the whole test — spawn
+  them nearest-first and taking the first N by id passes without sorting anything.
