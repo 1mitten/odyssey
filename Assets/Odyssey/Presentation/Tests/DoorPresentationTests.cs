@@ -56,6 +56,33 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void ADoorRespectsPlayerFacingAtEndOrCorner()
+        {
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(2, 3, 1, CoreContent.EdificeWall)
+                .Edifice(3, 3, 1, CoreContent.EdificeDoor, blocking: false)
+                .Publish();
+
+            int facing = world.Model.DoorFacing(3, 3, 1, Directions.South);
+            Assert.That(facing, Is.EqualTo(Directions.South),
+                "doorway at end of wall should face in the direction chosen by the player (South)");
+        }
+
+        [Test]
+        public void ADoorDoesNotFaceIntoAdjacentWall()
+        {
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(2, 3, 1, CoreContent.EdificeWall)
+                .Edifice(3, 3, 1, CoreContent.EdificeDoor, blocking: false)
+                .Publish();
+
+            // West is occupied by an occluding wall at (2, 3).
+            int facing = world.Model.DoorFacing(3, 3, 1, Directions.West);
+            Assert.That(facing, Is.Not.EqualTo(Directions.West),
+                "doorway should not face directly into an adjacent solid wall");
+        }
+
+        [Test]
         public void ADoorLeafStartsClosed()
         {
             var world = new RenderTestWorld(8, 8, 3)
@@ -159,5 +186,26 @@ namespace Odyssey.Tests.Presentation
             Assert.That(module.IsEmpty, Is.False, "fallback wall panel must not be empty");
             Assert.That(module.Parts.Length, Is.GreaterThan(0), "fallback must contain at least one part");
         }
+
+#if UNITY_EDITOR
+        [Test]
+        public void DoorFrameDoesNotUseBrickMaterial()
+        {
+            var catalogue = UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            if (catalogue == null) return;
+
+            var library = new ModuleLibrary(catalogue);
+            int door = library.Resolve(ModuleIds.Door, ModuleShape.WallPanel);
+            ResolvedModule module = library[door];
+            if (!module.UsesArt) return;
+
+            foreach (var part in module.Parts)
+            {
+                Assert.That(part.Material.name, Does.Not.Contain("Brick"),
+                    $"Door module part should not use brick material, but has {part.Material.name}");
+            }
+        }
+#endif
     }
 }

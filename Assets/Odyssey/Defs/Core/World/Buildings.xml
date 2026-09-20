@@ -198,6 +198,7 @@
     <label>door</label>
     <edifice>2</edifice>
     <blocking>false</blocking>
+    <rotates>true</rotates>
     <costCount>5</costCount>
     <workToBuild>135</workToBuild>
     <minSkill>0</minSkill>

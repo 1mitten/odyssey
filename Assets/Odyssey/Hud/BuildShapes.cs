@@ -34,7 +34,7 @@ namespace Odyssey.Hud
         /// test still green. <c>BuildShapesAgreeWithTheDefs</c> now walks both tables rather than
         /// spot-checking two rows, which is what would have caught it.</para>
         /// </summary>
-        public static readonly bool[] Rotates = { false, false, false, false, true, true, false };
+        public static readonly bool[] Rotates = { false, false, false, false, true, true, true };
 
         public static int CellsOf(int building) =>
             (uint)building < (uint)Cells.Length ? Cells[building] : 1;

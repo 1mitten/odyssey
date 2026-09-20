@@ -7843,3 +7843,31 @@ panels. Furthermore, colonist figures with hats measure between 2.05 m and 2.20 
 **Verification:**
 Fast tier 822 Sim + 473 Hud; EditMode 2,025 / 2,012 / 0; PlayMode 82 / 77 / 0. Wiki and registry checks green.
 
+## 2026-09-20 — Door blueprint alignment, rotation support, wall jambs, and plaster texture override
+
+Following playtesting with door placement alongside walls, several visual and functional defects were addressed:
+1. The placement blueprint ghost hovered at cell centre in a fixed orientation, failing to reflect the face-placed, rotated door that was ultimately constructed.
+2. Large gaps appeared between adjacent walls and the doorway because `OccludesFace` treated doors as occluding, causing neighbouring walls to omit their side panels facing the doorway and exposing the hollow wall interior.
+3. At corners and T-junctions, the doorway orientation heuristic placed door frames on boundaries shared with solid walls, producing severe z-fighting and texture flicker.
+4. Synty's door prefabs rendered with a contrasting red brick surround arch that clashed with neighbouring plain plaster walls.
+
+**Blueprint alignment and rotation support:**
+- **Rotation enabled:** Added `<rotates>true</rotates>` to `Building_Door` in `Buildings.xml`, `ConstructionContent.cs`, and `BuildShapes.cs`. Players can now rotate the door tool using `R` prior to placement.
+- **Ghost preview fidelity:** Updated `OdysseyBootstrap.DrawThingGhost` for `EdificeDoor` to resolve `DoorFacing(cell.X, cell.Z, cell.Y, facing)` and drape the ghost at `CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir)` with `Directions.Yaw[dir]`. The blueprint preview now snaps to the exact face, orientation, and height of the constructed door.
+
+**Wall jambs and gap elimination:**
+- **Doorway reveals:** Removed `EdificeDoor` from `WorldRenderModel.OccludesFace`. Adjacent wall cells now emit their boundary panels bordering the doorway. These panels serve as the door jambs/reveals, cleanly enclosing the wall core and completely closing the 2.25 m gap into the wall cavity.
+- **Raycast selection:** Updated `SlicePicker.cs` to explicitly select `EdificeDoor` cells during cursor raycasts despite doors no longer occluding faces.
+
+**Orientation and z-fighting resolution:**
+- **Refined orientation heuristic:** Rewrote `WorldRenderModel.DoorFacing(x, z, y, chosen)`:
+  - Along East-West wall runs, the doorway frame aligns along X, opening North-South (facing the unroofed outdoor facade or player's North/South preference).
+  - Along North-South wall runs, the doorway frame aligns along Z, opening East-West (facing the outdoor facade or player's East/West preference).
+  - At corners, T-junctions, and freestanding doors, player rotation is respected (`chosen & 3`), automatically flipping 180° away if facing directly into an immediately adjacent solid wall. This eliminates edge overlap and coplanar z-fighting with adjacent wall panels.
+
+**Plaster material override for doorway surround:**
+- **Consistent wall surfacing:** In `ModuleLibrary.FlattenPrefab`, added an automatic material override for door wall panels. Any submesh assigned a brick material (`Generic_Brick`) is dynamically remapped to the matching plain plaster material (`Generic_Plaster`) present on the same renderer. This guarantees plain wall continuity and persists reliably across git checkouts without relying on ignored Synty prefab modifications.
+
+**Verification:**
+Fast tier 843 Sim + 473 Hud; EditMode 2,028 total, 2,015 passed, 0 failed; PlayMode 82 total, 77 passed, 0 failed. Wiki and registry checks green.
+

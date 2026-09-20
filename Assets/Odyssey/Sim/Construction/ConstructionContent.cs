@@ -433,7 +433,7 @@ namespace Odyssey.Sim.Construction
                 new BuildingDef
                 {
                     defName = "Building_Door", label = "door", edifice = CoreContent.EdificeDoor,
-                    blocking = false, costCount = 5, workToBuild = 135, minSkill = 0,
+                    blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
                     iconKey = "ui.arch.tool.door",
                 },
             };
