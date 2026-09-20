@@ -310,6 +310,7 @@ ui.bulletin.wanderer,Wanderer,ui.bulletin,M2,Someone wants to join
 ui.bulletin.refugee,Refugee,ui.bulletin,M2,Someone is asking for shelter
 ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached itself to us
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
+ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
 ui.weather.clear,Clear,ui.weather,M1,Open sky
 ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
@@ -446,7 +447,8 @@ ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario 
 ui.debug.givewood,Give wood,ui.debug,M3,"Adds 50 wood near the camera"
 ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
 ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
-ui.debug.invokeevent,Invoke event,ui.debug,M3,"No repeatable event system exists yet"
+ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
+ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
 ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
 ui.settings.volume.master,Master volume,ui.settings,M3,"Everything at once"
 ui.settings.volume.music,Music volume,ui.settings,M3,"What plays under the game"

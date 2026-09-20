@@ -83,6 +83,20 @@ namespace Odyssey.Sim.Contracts
         /// second way for one to appear.
         /// </summary>
         GiveResource,
+
+        /// <summary>
+        /// Fire the incident whose def index is <c>A</c>, now, whatever its gates say. The debug
+        /// menu's row, and the seam a quest or a scripted beat would use later: the worker behind
+        /// it is the same one a storyteller fires, so a forced event behaves exactly like an
+        /// earned one. <see cref="Intent.Cell"/> and <c>B</c>, <c>C</c> are unused today and
+        /// reserved for a forced landing cell.
+        ///
+        /// <para>Not applied while paused: it spawns things and needs a tick, exactly as
+        /// <see cref="SpawnPawn"/> and <see cref="GiveResource"/> do. Refused as
+        /// <see cref="IntentRejection.NotPermitted"/> when the worker says it cannot fire — for
+        /// the supply drop, when no column on the board can take a landing.</para>
+        /// </summary>
+        InvokeIncident,
     }
 
     /// <summary>

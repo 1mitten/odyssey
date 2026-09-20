@@ -47,6 +47,20 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// See <see cref="JobHandle"/>: incident def indices, as <see cref="BulletinView"/> and
+    /// <see cref="Intent"/> carry them. The order is <c>IncidentContent.Order</c> in the
+    /// simulation and <c>IncidentLabels.Keys</c> in the interface, and a test on each side holds
+    /// its list to this count.
+    /// </summary>
+    public static class IncidentHandle
+    {
+        /// <summary>A stack of meals falling out of the sky on to whatever is under it.</summary>
+        public const int SupplyDrop = 0;
+
+        public const int Count = 1;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: terrain kinds, as <see cref="CellDetail"/> carries them.
     ///
     /// <para>The order is <c>WorldContent.TerrainOrder</c> — the one list that decides which name

@@ -838,7 +838,7 @@ namespace Odyssey.Presentation.Rendering
             Material fallback, ICarriedLoads? carried, float tickAlpha, int movePerTick)
         {
             System.ReadOnlySpan<ThingView> things = snapshot.Things;
-            if (things.Length == 0 && snapshot.PawnCount == 0) return;
+            if (things.Length == 0 && snapshot.PawnCount == 0 && snapshot.FallingCount == 0) return;
             EnsureItemModules();
             System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
 
@@ -911,11 +911,76 @@ namespace Odyssey.Presentation.Rendering
             }
 
             RenderCarriedLoads(snapshot, carried, lowest, highest, tickAlpha, movePerTick);
+            RenderFalling(snapshot, lowest, highest, fallback, tickAlpha);
 
             for (int def = 0; def < _itemCounts.Length; def++)
                 if (_itemCounts[def] > 0)
                     SubmitInstances(_model.Library[_itemModules[def]], _itemPlacements[def],
                         _itemCounts[def], ref _itemMatrices);
+        }
+
+        /// <summary>
+        /// Draw whatever is in the air on its way down (design 23 §6), into the same instanced
+        /// batches as the piles it will join: the thing is its own art at the height
+        /// <see cref="FallArc"/> gives the frame, over the cell the simulation said it lands in.
+        ///
+        /// <para><b>Nothing here is a cell, a save or a hash.</b> The simulation owns the flight
+        /// and publishes it as a <see cref="FallingView"/>; this only decides where along that
+        /// line the frame is, exactly as <see cref="PawnPose"/> does for a colonist between two
+        /// cells. A paused world publishes the same view and the same alpha, so the thing hangs
+        /// where it is.</para>
+        ///
+        /// <para>A flat pad is drawn on the landing cell for the whole flight, in the stand-in
+        /// material: a player who jumped to the event from the Events panel is looking at an
+        /// empty cell for two seconds, and the pad says where to keep looking. It is a cursor,
+        /// not a thing, and it is the first thing to drop if it reads as clutter.</para>
+        /// </summary>
+        void RenderFalling(WorldSnapshot snapshot, int lowest, int highest, Material fallback, float tickAlpha)
+        {
+            System.ReadOnlySpan<FallingView> falling = snapshot.Falling;
+            for (int i = 0; i < falling.Length; i++)
+            {
+                CellRef landing = falling[i].Landing;
+                if (landing.Y < lowest || landing.Y > highest) continue;
+
+                float height = FallArc.HeightAbove(snapshot.Size.SizeY, landing.Y, snapshot.Tick, tickAlpha,
+                    falling[i].LaunchTick, falling[i].LandTick);
+
+                DrawMarker(fallback, landing, new Vector3(1.8f, 0.04f, 1.8f), 0.02f);
+
+                int def = falling[i].ThingDef;
+                ResolvedModule? module = ItemModule(def);
+                if (module == null || module.IsEmpty || !module.UsesArt)
+                {
+                    DrawMarker(fallback, landing, new Vector3(1.2f, 0.8f, 1.2f), 0.4f + height);
+                    continue;
+                }
+
+                Vector3 lift = Vector3.up * height;
+                Vector3 floor = CellMetrics.FloorCentre(landing);
+
+                // A bearing and a heap layout from the launch and the cell rather than from an id:
+                // the thing has no id until it lands, and the pile it becomes will take its own.
+                uint seed = unchecked((uint)(falling[i].LaunchTick * 31 + snapshot.Size.Index(landing)));
+
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                {
+                    int rocks = ItemHeap.Place(falling[i].Stack, seed, floor, heap, _heapPlacements);
+                    for (int rock = 0; rock < rocks; rock++)
+                    {
+                        Matrix4x4 placement = _heapPlacements[rock];
+                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3)) + lift;
+                        placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
+                        AppendItem(def, placement);
+                    }
+                    continue;
+                }
+
+                AppendItem(def, Matrix4x4.TRS(
+                    GroundRelief.Lift(floor) + lift,
+                    Quaternion.Euler(0f, (seed * 137u) % 360u, 0f),
+                    Vector3.one));
+            }
         }
 
         /// <summary>
