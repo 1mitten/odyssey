@@ -9361,3 +9361,54 @@ it is what failed. `docs/lessons.md` has the rule: **check the total went up by 
 - *Not verified here:* **no Unity tier ran** — this container has neither Unity nor Windows. U44 is
   entirely simulation-side, so unlike RF1b the fast tier does compile and run all of it; what is
   owed is the authoritative run, and a first look at a stair, which nobody has ever had.
+
+### Reviewing PR #143, and the handle two branches both wanted, 2026-09-20
+
+RF1 and U44 were written against a `main` that moved a long way underneath them — growing zones, the
+zone container, the Work tab, the sleep pose, graphics settings, the mark pass and **doors**. The
+branch had been sitting conflicted, and a conflicted pull request reports *no checks at all* rather
+than failing ones, so **two units described everywhere as green had never had a single CI run.**
+`docs/lessons.md` already records that trap; this is the first time it hid something.
+
+**The handle.** The door took `BuildingHandle` 6; RF1 had given the pillar the same number.
+Handle order is the save contract and positions are append-only, so the later branch moves — Door 6,
+Pillar 7, Stair 8, Count 9 — which is exactly the argument `BuildingHandle.Bed`'s own comment makes
+about the bed moving for the floor, the deck plate and the ladder. It is safe only because no save
+with a pillar or a stair in it has ever left this branch, and that clause is the whole of why it is
+safe; the day one has, the answer is a migration rather than a renumber.
+
+**Three faults the merge itself produced**, none of them anybody's mistake and all of them the same
+shape — a test whose premise `main` had quietly changed. `RoofsTests` builds its hall centred on
+`colony.Start`, and *"A starting bed is a real bed"* made the scenario's bed an edifice standing in
+the wall line, so the first wall of every hall was refused. `AToolWhoseThingDoesNotExistYetArmsNothing`
+used the **stair** as its negative control, and U44 built one. And the building table's fingerprint
+moved because the table gained a row. **The first was worth a probe rather than a guess**: five
+tests failed with *"the order for 18342 was refused"*, which reads like a placement regression, and
+the cell's `Edifice` was 0 rather than -1 — a record, not a rule.
+
+**Then CI found the thing no tier here could.** RF1 added a Pillar chip to the palette — key, label,
+`PaletteTool`, `BuildingDef` — and no shape in `PaletteGlyphs`, so it drew the placeholder square
+the specification forbids. Fast tier green, Long tier green, both content gates green, EditMode
+2,251 with nothing failed; the palette is only ever assembled in PlayMode. The stair *did* have a
+shape, because its chip had been drawn disabled long before it was buildable. **The tool invented
+whole is the one that arrives without a picture.** `docs/bug-patterns.md` has the row.
+
+**And the licensed art was destroyed mid-session, which was not this branch's doing.**
+`D:\code\odyssey-audio` held the only real copy of the packs and every other checkout junctioned
+through it; the worktree was removed and all sixteen went dark at once, including an open editor's.
+`docs/lessons.md` had named that exact branch as *"the profile of a branch somebody tidies up
+without thinking"* and asked for the arrangement to be inverted. It is inverted now: the real
+directory is `D:\code\odyssey\Assets\Synty` with no chain, recovered intact from the recycle bin,
+which — contrary to what that section used to say — does keep a copy when a whole worktree is
+deleted rather than deleted *through* a link. The tell that it had happened was narrow: three extra
+**Ignored** cases in `FigureBuildTests` and an unchanged EditMode total. Compare the skipped count,
+not the failure count.
+
+**Two small things in the code itself.** `IsLadder` had lost its doc comment to two helpers inserted
+between the summary and the method, and `RefreshStair` used a derived cell as an index into
+`_edifices` without checking the grid held anything there — unreachable today, but it runs across a
+seven-cell fan-out after every structure change, and a comparison turns "impossible" into "no
+connector". `ConstructionContent.EdificeForCell` was declared and never called, with a comment
+claiming two call sites; removed, which is the same finding PR #119's review made about
+`PlantDef.yields`.
+
