@@ -2344,3 +2344,32 @@ previous run and is only overwritten when the new one finishes, so a result read
 *old* result, with no warning. The tell there was a mean time identical to four decimal places
 across two runs; timing numbers do not repeat. Wait on the file being newer than the run you
 started, not on it existing.
+
+## The Long tier is not in the fast tier, and it holds the wall-clock gates
+
+`scripts/test-fast.sh` **excludes `TestCategory=Long` by default** — that is the whole reason the
+default tier stays worth running — so a green `test-fast.sh`, a green EditMode run and a green
+PlayMode run can all sit on top of a Long tier nobody has run. CI runs it; you probably have not.
+
+```
+scripts/test-fast.sh --filter TestCategory=Long     # 23 tests, ~20 s
+```
+
+**Run it before merging anything, because it is where the timing gates live.** On 2026-09-20 PR
+#145 merged with three green tiers and turned `main` red on the Long tier
+(`PublishingCostsWhatTheOrdersCostRatherThanWhatTheLayerCosts`, 0.0368 ms against a 0.030 gate) — on
+a change that touched no designation code, and whose own PR run had passed on the same content
+minutes earlier.
+
+**A wall-clock threshold on the GitHub-hosted runner is a guard and a recurring false alarm.** That
+gate has now stopped the queue twice, once at 0.012 and once at 0.030, both times on unrelated
+changes, both times because the shared Linux runner was slower than any reading the number was
+calibrated against. Its own remarks say to check whether the figure is nearer the noise or nearer
+the bug before touching it, and both times it was the noise.
+
+**The tell is the same one the PlayMode timing tests have**: ask what else was running. On a cloud
+runner you cannot, so the substitute is the spread of honest readings, which that test now records
+in full. **The real fix for this class is to assert the shape of a cost rather than its size** —
+the defect it guards made publishing scale with the area of the layer, so the same measurement on
+two board sizes differs by four with the bug and by nothing without it, and a ratio does not care
+how fast the machine is. Recorded in the test rather than done on a red `main`.
