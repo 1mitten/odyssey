@@ -797,10 +797,10 @@ namespace Odyssey.Presentation.Ui
 
         // ---- the store's settings: what goes in, and how much it matters ----------------------
 
-        VisualElement? _storePanel;
-        VisualElement? _storeRows;
-        VisualElement? _storeAnchor;
-        readonly StorageSettingsModel _store = new StorageSettingsModel();
+        VisualElement? _storagePanel;
+        VisualElement? _storageRows;
+        VisualElement? _storageAnchor;
+        readonly StorageSettingsModel _storageSettings = new StorageSettingsModel();
 
         /// <summary>
         /// Raise the store's settings over the storage row, or put it down if it is already up.
@@ -823,24 +823,24 @@ namespace Odyssey.Presentation.Ui
             var storage = _boot?.Colony?.Pawns.Storage;
             if (world == null || storage == null) return;
 
-            if (_storePanel == null)
+            if (_storagePanel == null)
             {
-                _storePanel = Popover("storage", "What goes in here", CloseStoragePanel, "bedowner");
-                _storeRows = new VisualElement();
-                _storeRows.AddToClassList("bedowner__rows");
-                _storePanel.Add(_storeRows);
-                _hud.Add(_storePanel);
-                _storePanel.RegisterCallback<GeometryChangedEvent>(_ => PlaceStoragePanel());
+                _storagePanel = Popover("storage", "What goes in here", CloseStoragePanel, "bedowner");
+                _storageRows = new VisualElement();
+                _storageRows.AddToClassList("bedowner__rows");
+                _storagePanel.Add(_storageRows);
+                _hud.Add(_storagePanel);
+                _storagePanel.RegisterCallback<GeometryChangedEvent>(_ => PlaceStoragePanel());
             }
 
-            if (_storePanel.style.display == DisplayStyle.Flex)
+            if (_storagePanel.style.display == DisplayStyle.Flex)
             {
                 CloseStoragePanel();
                 return;
             }
 
-            _storeAnchor = anchor;
-            _storePanel.style.display = DisplayStyle.Flex;
+            _storageAnchor = anchor;
+            _storagePanel.style.display = DisplayStyle.Flex;
             FillStoragePanel();
             PlaceStoragePanel();
         }
@@ -849,7 +849,7 @@ namespace Odyssey.Presentation.Ui
         void FillStoragePanel()
         {
             var storage = _boot?.Colony?.Pawns.Storage;
-            if (_storeRows == null || storage == null) return;
+            if (_storageRows == null || storage == null) return;
 
             int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
             int slot = storage.ZoneAt(storage.StoreCellOf(cell));
@@ -860,29 +860,27 @@ namespace Odyssey.Presentation.Ui
             var keys = new List<string>(content.Items.Length);
             for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
 
-            _store.Show(cell, hasStore: true, settings.Priority, storage.CellsOf(slot).Count, keys,
+            _storageSettings.Show(cell, hasStore: true, settings.Priority, storage.CellsOf(slot).Count, keys,
                 accepts: settings.Accepts, categoryOf: i => (int)content.Items[i].category);
 
-            _storeRows.Clear();
+            _storageRows.Clear();
 
             // The ladder first: it is the thing that decides where the next armful goes, and the
             // thing a player changes most.
-            var rungs = new VisualElement();
-            rungs.AddToClassList("bedowner__rows");
             for (int i = 0; i < StorageSettingsModel.PriorityKeys.Length; i++)
             {
                 int rung = i;
-                _storeRows.Add(StoreRow(Registry.Label(StorageSettingsModel.PriorityKeys[i]),
-                    rung == _store.Priority ? BedPickerMark.ThisBed : BedPickerMark.None,
-                    () => { if (_store.PressPriority(rung, out var c)) Send(IntentKind.SetStoragePriority, c); }));
+                _storageRows.Add(StorageSettingsRow(Registry.Label(StorageSettingsModel.PriorityKeys[i]),
+                    rung == _storageSettings.Priority ? BedPickerMark.ThisBed : BedPickerMark.None,
+                    () => { if (_storageSettings.PressPriority(rung, out var c)) SendStorageCommand(IntentKind.SetStoragePriority, c); }));
             }
 
             for (int i = 0; i < StorageSettingsModel.PresetKeys.Length; i++)
             {
                 int preset = i;
-                _storeRows.Add(StoreRow(Registry.Label(StorageSettingsModel.PresetKeys[i]),
+                _storageRows.Add(StorageSettingsRow(Registry.Label(StorageSettingsModel.PresetKeys[i]),
                     BedPickerMark.None,
-                    () => { if (_store.PressPreset(preset, out var c)) Send(IntentKind.SetStorageFilter, c); }));
+                    () => { if (_storageSettings.PressPreset(preset, out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
             }
 
             // Then one row per commodity. The category rows the model already builds are not drawn
@@ -890,12 +888,12 @@ namespace Odyssey.Presentation.Ui
             // compresses nothing (docs/plans/storage.md decisions 21 and 31). The model carries
             // their three-way state, so the tree is a layout change when the table is long enough
             // to need it.
-            foreach (StorageSettingsModel.DefRow row in _store.Defs)
+            foreach (StorageSettingsModel.DefRow row in _storageSettings.Defs)
             {
                 int def = row.DefIndex;
-                _storeRows.Add(StoreRow(Registry.Label(row.Key),
+                _storageRows.Add(StorageSettingsRow(Registry.Label(row.Key),
                     row.Accepted ? BedPickerMark.ThisBed : BedPickerMark.None,
-                    () => { if (_store.PressDef(def, out var c)) Send(IntentKind.SetStorageFilter, c); }));
+                    () => { if (_storageSettings.PressDef(def, out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
             }
         }
 
@@ -904,7 +902,7 @@ namespace Odyssey.Presentation.Ui
         /// the rows — the simulation applies a storage intent while paused, so the answer is
         /// already true by the time the next frame draws.
         /// </summary>
-        void Send(IntentKind kind, StorageSettingsModel.Command command)
+        void SendStorageCommand(IntentKind kind, StorageSettingsModel.Command command)
         {
             var world = _boot?.World;
             if (world == null) return;
@@ -912,7 +910,7 @@ namespace Odyssey.Presentation.Ui
             FillStoragePanel();
         }
 
-        VisualElement StoreRow(string label, BedPickerMark mark, Action press)
+        VisualElement StorageSettingsRow(string label, BedPickerMark mark, Action press)
         {
             var row = new VisualElement();
             row.AddToClassList("bedowner__row");
@@ -928,14 +926,14 @@ namespace Odyssey.Presentation.Ui
 
         void PlaceStoragePanel()
         {
-            if (_storePanel == null || _storeAnchor == null) return;
-            if (_storePanel.style.display.value != DisplayStyle.Flex) return;
-            PlacePopover(_storePanel, _storeAnchor, onTheBar: false);
+            if (_storagePanel == null || _storageAnchor == null) return;
+            if (_storagePanel.style.display.value != DisplayStyle.Flex) return;
+            PlacePopover(_storagePanel, _storageAnchor, onTheBar: false);
         }
 
         void CloseStoragePanel()
         {
-            if (_storePanel != null) _storePanel.style.display = DisplayStyle.None;
+            if (_storagePanel != null) _storagePanel.style.display = DisplayStyle.None;
         }
 
         /// <summary>
