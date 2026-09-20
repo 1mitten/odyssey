@@ -74,10 +74,13 @@ namespace Odyssey.Tests.PlayMode
                 // command bar, built and hidden at startup exactly as "settings" and "debug" are.
                 // "bulletins" is the Events panel (design 23, 2026-09-20): under the alerts in
                 // their column, hidden until something has happened, a framed region all the same.
+                // "almanac-panel" is the reference browser (2026-09-20): full-bleed over the dark
+                // wash, built and hidden at startup exactly as "settings" and "debug" are, and a
+                // framed region whatever the colony is doing.
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "bulletins", "rail", "orders", "inspect", "build", "menu",
-                    "settings", "debug", "work", "start", "saveprompt",
+                    "settings", "debug", "work", "start", "saveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);
