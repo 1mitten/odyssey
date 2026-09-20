@@ -378,34 +378,18 @@ namespace Odyssey.Presentation.Ui
             _interfaceSection = new VisualElement();
             _interfaceSection.AddToClassList("settings__body");
 
-            var row = new VisualElement();
-            row.AddToClassList("settings__row");
-            row.AddToClassList("settings__row--static");
-            var icon = new IconBadge(SettingsDirector.UiScaleKey, IconBadge.RowSize);
-            icon.Inherit(HudTokens.TextMeta);
-            row.Add(icon);
-            row.Add(HudText.Make(Registry.Label(SettingsDirector.UiScaleKey), HudTextRole.Row,
-                ussClass: "settings__label"));
-            _interfaceSection.Add(row);
-
-            var ladder = new VisualElement();
-            ladder.AddToClassList("settings__ladder");
-            foreach (int percent in SettingsDirector.UiScales)
-            {
-                // A percentage is a figure, so it is set in the mono face like every other figure
-                // on this screen.
-                Label rung = HudText.Make(percent + "%", HudTextRole.Body, numeric: true, "rung");
-                rung.tooltip = percent == 100
+            // A percentage is a figure, so it is set in the mono face like every other figure on
+            // this screen.
+            BuildLadderRow(_interfaceSection, SettingsDirector.UiScaleKey,
+                SettingsDirector.UiScales,
+                percent => percent + "%",
+                percent => percent == 100
                     ? "The size the interface is designed at"
                     : percent < 100
                         ? "Smaller type, less of the board hidden"
-                        : "Larger type, more of the board hidden";
-                int captured = percent;
-                rung.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetUiScale(captured));
-                _scaleRungs[percent] = rung;
-                ladder.Add(rung);
-            }
-            _interfaceSection.Add(ladder);
+                        : "Larger type, more of the board hidden",
+                percent => _directors?.Settings.SetUiScale(percent),
+                _scaleRungs);
 
             BuildCameraSpeedRow();
             BuildLayoutRow();
@@ -419,34 +403,17 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void BuildCameraSpeedRow()
         {
-            var row = new VisualElement();
-            row.AddToClassList("settings__row");
-            row.AddToClassList("settings__row--static");
-            var icon = new IconBadge(SettingsDirector.CamSpeedKey, IconBadge.RowSize);
-            icon.Inherit(HudTokens.TextMeta);
-            row.Add(icon);
-            row.Add(HudText.Make(Registry.Label(SettingsDirector.CamSpeedKey), HudTextRole.Row,
-                ussClass: "settings__label"));
-            _interfaceSection.Add(row);
-
-            var ladder = new VisualElement();
-            ladder.AddToClassList("settings__ladder");
-            foreach (int percent in SettingsDirector.CameraSpeeds)
-            {
-                // A multiplier is a figure, so: mono, like every other figure on this screen.
-                Label rung = HudText.Make($"{percent / 100f:0.#}×", HudTextRole.Body,
-                    numeric: true, "rung");
-                rung.tooltip = percent == 100
+            // A multiplier is a figure, so: mono, like every other figure on this screen.
+            BuildLadderRow(_interfaceSection, SettingsDirector.CamSpeedKey,
+                SettingsDirector.CameraSpeeds,
+                percent => $"{percent / 100f:0.#}×",
+                percent => percent == 100
                     ? "The speed the camera was tuned at"
                     : percent < 100
                         ? "Slower, for fine placement"
-                        : "Faster, for crossing the map";
-                int captured = percent;
-                rung.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetCameraSpeed(captured));
-                _cameraRungs[percent] = rung;
-                ladder.Add(rung);
-            }
-            _interfaceSection.Add(ladder);
+                        : "Faster, for crossing the map",
+                percent => _directors?.Settings.SetCameraSpeed(percent),
+                _cameraRungs);
         }
 
         /// <summary>
@@ -466,44 +433,160 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void BuildLayoutRow()
         {
-            var row = new VisualElement();
-            row.AddToClassList("settings__row");
-            row.AddToClassList("settings__row--static");
-            var icon = new IconBadge(SettingsDirector.BuildLayoutKey, IconBadge.RowSize);
-            icon.Inherit(HudTokens.TextMeta);
-            row.Add(icon);
-            row.Add(HudText.Make(Registry.Label(SettingsDirector.BuildLayoutKey), HudTextRole.Row,
-                ussClass: "settings__label"));
-            _interfaceSection.Add(row);
-
-            var ladder = new VisualElement();
-            ladder.AddToClassList("settings__ladder");
-            foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
-            {
-                // A name, not a figure, so this is the one ladder on the panel set in the reading
-                // face rather than the mono one.
-                Label rung = HudText.Make(BuildPaletteModel.LayoutName(layout), HudTextRole.Body,
-                    ussClass: "rung");
-                rung.tooltip = layout switch
+            // A name, not a figure, so this is the one ladder on the panel set in the reading
+            // face rather than the mono one.
+            BuildLadderRow(_interfaceSection, SettingsDirector.BuildLayoutKey,
+                BuildPaletteModel.Layouts,
+                BuildPaletteModel.LayoutName,
+                layout => layout switch
                 {
                     BuildPaletteLayout.Rows => "Bands across the screen. The default",
                     BuildPaletteLayout.Rail => "Categories down a rail. Its height never changes",
                     BuildPaletteLayout.Bar => "Two dense rows of icons. The least of the board hidden",
                     _ => string.Empty,
-                };
-                BuildPaletteLayout chosen = layout;
-                rung.RegisterCallback<ClickEvent>(_ =>
-                    _directors?.Settings.SetBuildPaletteLayout(chosen));
-                _layoutRungs[layout] = rung;
-                ladder.Add(rung);
-            }
-            _interfaceSection.Add(ladder);
+                },
+                layout => _directors?.Settings.SetBuildPaletteLayout(layout),
+                _layoutRungs,
+                numeric: false);
         }
 
+        /// <summary>
+        /// One labelled row with a rank of answers under it — the panel's one multiple-choice
+        /// idiom, in one place.
+        ///
+        /// <para><b>There were three copies of this before the graphics ladders arrived</b>: the
+        /// interface scale, the camera speed and the Build-palette layout each built the same row
+        /// and the same rank with their own loop. Seven would have been seven, and they had
+        /// already begun to differ — one set its rungs in the mono face, one in the reading face,
+        /// and nothing said which was the rule. The face is now the caller's single
+        /// <paramref name="numeric"/> flag and everything else is shared.</para>
+        ///
+        /// <para><b>Every rung's text is built here, once, as the row is constructed.</b> ADR
+        /// 0003's flip condition F1 — asserted by <c>HudStressTests</c> — is that the HUD
+        /// allocates nothing per frame in steady state, and <c>ToString</c>, interpolation and
+        /// <c>+</c> all allocate. The change handlers that follow only flip a USS class on a
+        /// label that already exists, so throwing one of these levers costs nothing after the
+        /// frame it is thrown on.</para>
+        /// </summary>
+        /// <param name="numeric">Whether the rungs are figures, and so set in the mono face. A
+        /// name — "Borderless", "Rail" — is set in the reading face instead.</param>
+        LadderView BuildLadderRow<T>(VisualElement parent, string key, IReadOnlyList<T> rungs,
+            Func<T, string> labelOf, Func<T, string> tooltipOf, Action<T> onPick,
+            IDictionary<T, Label> into, bool numeric = true, string? rowTooltip = null)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            row.AddToClassList("settings__row--static");
+            var icon = new IconBadge(key, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+            if (rowTooltip != null) row.tooltip = rowTooltip;
+            parent.Add(row);
+
+            var ladder = new VisualElement();
+            ladder.AddToClassList("settings__ladder");
+            foreach (T value in rungs)
+            {
+                Label rung = numeric
+                    ? HudText.Make(labelOf(value), HudTextRole.Body, numeric: true, "rung")
+                    : HudText.Make(labelOf(value), HudTextRole.Body, ussClass: "rung");
+                rung.tooltip = tooltipOf(value);
+                T captured = value;
+                rung.RegisterCallback<ClickEvent>(_ => onPick(captured));
+                into[value] = rung;
+                ladder.Add(rung);
+            }
+
+            parent.Add(ladder);
+            return new LadderView(row, ladder);
+        }
+
+        /// <summary>A ladder's two pieces, kept so a rule that makes one of them inert — the
+        /// frame cap behind VSync, the display rows in the editor — can reach both.</summary>
+        readonly struct LadderView
+        {
+            public LadderView(VisualElement row, VisualElement rungs)
+            {
+                Row = row;
+                Rungs = rungs;
+            }
+
+            public VisualElement Row { get; }
+
+            public VisualElement Rungs { get; }
+
+            /// <summary>Grey the row and its answers together, in the look the panel already uses
+            /// for a control that cannot be pressed (<c>.settings__row--off</c>).</summary>
+            public void SetLive(bool live)
+            {
+                Row.EnableInClassList("settings__row--off", !live);
+                Rungs.EnableInClassList("settings__row--off", !live);
+                Rungs.SetEnabled(live);
+            }
+        }
+
+        /// <summary>Light the rung that is standing, and put the rest out. The whole of what a
+        /// ladder does when its value moves — no text is built, so nothing allocates.</summary>
+        static void LightRung<T>(IDictionary<T, Label> rungs, T standing)
+        {
+            foreach (var entry in rungs)
+                entry.Value.EnableInClassList("rung--on",
+                    EqualityComparer<T>.Default.Equals(entry.Key, standing));
+        }
+
+        /// <summary>
+        /// The Graphics tab, in two groups.
+        ///
+        /// <para><b>Display</b> is what the frame costs — how it is paced, how large it is drawn,
+        /// what it is drawn with. <b>Detail</b> is the six older toggles, which are what the
+        /// board is made of. They were one undifferentiated column until the display levers
+        /// arrived, and mixing "grass tufts" with "VSync" in one list would have buried the row a
+        /// player with a stuttering frame came here to find. The heading is
+        /// <c>.settings__section</c>, the class the Keys tab already groups with.</para>
+        /// </summary>
         void BuildGraphicsSection()
         {
             _graphicsSection = new VisualElement();
             _graphicsSection.AddToClassList("settings__body");
+
+            _graphicsSection.Add(HudText.Make(Registry.Label(SettingsDirector.DisplayGroupKey),
+                HudTextRole.Meta, ussClass: "settings__section"));
+
+            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders)
+            {
+                var rungs = new Dictionary<int, Label>();
+                GraphicsLadder captured = ladder;
+                _ladderRungs[ladder] = rungs;
+                _ladderViews[ladder] = BuildLadderRow(_graphicsSection,
+                    SettingsDirector.KeyOf(ladder),
+                    SettingsDirector.RungsOf(ladder),
+                    rung => SettingsDirector.RungLabel(captured, rung),
+                    rung => SettingsDirector.RungTooltip(captured, rung),
+                    rung => _directors?.Settings.SetValue(captured, rung),
+                    rungs,
+                    numeric: true,
+                    rowTooltip: RowCostOf(ladder));
+            }
+
+            // The display mode is the editor's other blind spot, for the same reason the
+            // resolution is: the Game view is not a window the game owns.
+            if (Application.isEditor &&
+                _ladderViews.TryGetValue(GraphicsLadder.DisplayMode, out LadderView mode))
+            {
+                mode.Row.tooltip = OnlyInAPlayer;
+                mode.SetLive(false);
+            }
+
+            // The resolution's rungs are the machine's, and the machine is not known yet: this
+            // panel is built when the shell is, and the directors attach afterwards. So the rank
+            // gets a place in the Display group now and its contents when there is something to
+            // put in it.
+            _resolutionSlot = new VisualElement();
+            _graphicsSection.Add(_resolutionSlot);
+
+            _graphicsSection.Add(HudText.Make(Registry.Label(SettingsDirector.DetailGroupKey),
+                HudTextRole.Meta, ussClass: "settings__section"));
 
             foreach (GraphicsOption option in SettingsDirector.All)
             {
@@ -533,6 +616,55 @@ namespace Odyssey.Presentation.Ui
 
             _settingsPanel.Add(_graphicsSection);
         }
+
+        /// <summary>
+        /// What a row costs, said on hover rather than on the row.
+        ///
+        /// <para>The same bargain the toggles already strike with <c>NeedsRedraw</c>: it is a
+        /// fact about what the lever costs, not about what it does, so it belongs in the tooltip.
+        /// Render scale and anti-aliasing throw the frame buffers away and build new ones, which
+        /// is a visible hitch on the frame they change and nothing afterwards.</para>
+        /// </summary>
+        static string RowCostOf(GraphicsLadder ladder) =>
+            SettingsDirector.CostsAHitch(ladder)
+                ? "Rebuilds the frame buffers when it changes, once"
+                : "Takes effect on the next frame";
+
+        /// <summary>
+        /// The resolution rank.
+        ///
+        /// <para><b>Built after the director has been seeded</b>, because its rungs are the
+        /// machine's: <c>Screen.resolutions</c>, de-duplicated by area. An unseeded list draws no
+        /// rank at all rather than an empty one.</para>
+        ///
+        /// <para><b>Inert in the editor</b>, with the two other display rows, because
+        /// <c>Screen.SetResolution</c> does not mean anything against the Game view and a control
+        /// that silently does nothing is worse than one that says it cannot.</para>
+        /// </summary>
+        void BuildResolutionRow()
+        {
+            if (_resolutionRungs.Count > 0) return;
+
+            IReadOnlyList<SettingsDirector.Mode> modes =
+                _directors?.Settings.Resolutions ?? Array.Empty<SettingsDirector.Mode>();
+            if (modes.Count == 0) return;
+
+            _resolutionView = BuildLadderRow(_resolutionSlot, SettingsDirector.ResolutionKey,
+                modes,
+                mode => mode.Width + "\u00d7" + mode.Height,
+                mode => $"Draw the game at {mode.Width} by {mode.Height}",
+                mode => _directors?.Settings.SetResolution(mode),
+                _resolutionRungs,
+                numeric: true,
+                rowTooltip: OnlyInAPlayer);
+
+            _resolutionView.SetLive(!Application.isEditor);
+        }
+
+        /// <summary>Said on the two rows the editor cannot answer. The Game view is not a window
+        /// the game owns, so neither the size nor the mode means anything until the player build
+        /// runs.</summary>
+        const string OnlyInAPlayer = "Only a built game can change this. The editor ignores it";
 
         /// <summary>
         /// The Audio section: one fader per bus, with the dB it rests at said beside it.
@@ -766,22 +898,53 @@ namespace Odyssey.Presentation.Ui
 
         void OnUiScaleChanged(int percent)
         {
-            foreach (var entry in _scaleRungs)
-                entry.Value.EnableInClassList("rung--on", entry.Key == percent);
+            LightRung(_scaleRungs, percent);
             ApplyUiScale(percent);
         }
 
-        void OnCameraSpeedChanged(int percent)
+        void OnCameraSpeedChanged(int percent) => LightRung(_cameraRungs, percent);
+
+        /// <summary>
+        /// A number ladder moved: light its rung, and re-answer the one question a ladder can ask
+        /// of another.
+        ///
+        /// <para>No text is built here — every rung's label was composed once, as the row was
+        /// constructed — so a lever costs nothing after the frame it is thrown on (ADR 0003, F1).</para>
+        /// </summary>
+        void OnLadderChanged(GraphicsLadder ladder)
         {
-            foreach (var entry in _cameraRungs)
-                entry.Value.EnableInClassList("rung--on", entry.Key == percent);
+            if (_directors == null) return;
+            if (_ladderRungs.TryGetValue(ladder, out Dictionary<int, Label>? rungs))
+                LightRung(rungs, _directors.Settings.Value(ladder));
+
+            if (ladder == GraphicsLadder.VSync) RefreshFrameCapRow();
         }
 
-        void OnBuildLayoutChanged(BuildPaletteLayout layout)
+        /// <summary>
+        /// The frame cap is dead behind VSync, and the panel says so rather than letting a player
+        /// set 144 and get 60.
+        ///
+        /// <para>Unity ignores <c>Application.targetFrameRate</c> whenever <c>vSyncCount</c> is
+        /// above zero. The rule itself is <c>SettingsDirector.FrameCapIsLive</c>, where the fast
+        /// tier can hold it; this is only the greying.</para>
+        /// </summary>
+        void RefreshFrameCapRow()
         {
-            foreach (var entry in _layoutRungs)
-                entry.Value.EnableInClassList("rung--on", entry.Key == layout);
+            if (_directors == null) return;
+            if (!_ladderViews.TryGetValue(GraphicsLadder.FrameCap, out LadderView cap)) return;
+
+            bool live = _directors.Settings.FrameCapIsLive;
+            cap.SetLive(live);
+            cap.Row.tooltip = live ? RowCostOf(GraphicsLadder.FrameCap) : "Paced by VSync";
         }
+
+        void OnResolutionChanged()
+        {
+            if (_directors == null) return;
+            LightRung(_resolutionRungs, _directors.Settings.Resolution);
+        }
+
+        void OnBuildLayoutChanged(BuildPaletteLayout layout) => LightRung(_layoutRungs, layout);
 
         void OnBusDbChanged(SettingsBus bus)
         {
