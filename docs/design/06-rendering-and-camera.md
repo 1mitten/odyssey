@@ -1175,6 +1175,32 @@ because the benchmark cannot see it: the meadow case is `barren`, so it has noth
 It needs a `FrameTimeTests` case that designates first, and then the same gather-and-flush the
 specks now use, bucketed by mark colour.
 
+### What has NOT been measured, which is most of the question
+
+Every number above is **640 x 480 on an RTX 5070 Ti**. The stated target is a 2022 mid-range
+laptop at a real resolution. So these findings are sound about *what this renderer does wrong*
+and close to worthless as a prediction of what it will cost a player.
+
+- **Play resolution.** 640 x 480 is 307k pixels. That is precisely why "a submission costs
+  4.6 us and fill costs nothing" was the right diagnosis *there* — and it is the reason the
+  conclusion may not transfer. 1080p is 6.75x the pixels; the alpha-tested foliage that covers
+  the horizon is exactly the kind of geometry whose cost is invisible at 640 x 480 and dominant
+  at 1080p. An attempt to measure it in batch (2026-09-20) failed and is worth recording so
+  nobody repeats it: the batch game view ignores `-screen-width`, and forcing a camera
+  `targetTexture` instead costs so much itself that the control case went from 2.0 ms to 16 ms.
+  The measurement has to come from the on-screen readout in a real Play session.
+- **Target hardware.** Per-draw overhead is largely CPU and driver, so a weaker CPU makes the
+  batching work matter *more*; fill makes a weaker GPU matter more at the same time. The two
+  pull in opposite directions and neither has been measured.
+- **Colony scale.** The frame cases run the scenario's own small colony. Pawns, items, buildings
+  and standing orders all add per-frame work, and the order marks add it per designated cell
+  (see above).
+- **A long session.** 180 frames is a snapshot. Nothing here says what an hour of play does.
+
+The cheapest way to turn all four into knowledge is the developer overlay in a real Play session
+at the owner's resolution. Until then the honest statement is: the faults that were found are
+fixed and guarded, and the budget is unverified on the hardware it was written for.
+
 ### And the budget is not enforced
 
 `FrameTimeTests` asserts only that a frame is under a 30 Hz tick. The 5 ms budget lives in the
