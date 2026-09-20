@@ -582,7 +582,7 @@ sunk a little into bedding is what bedding is for; a torso in mid-air is not.
 **And the measurement is the lesson.** The whole-mesh number said 0.00 and 0.02 — a centimetre out,
 apparently perfect — for the two postures that were 9 and 12 cm wrong. A summary statistic over a
 whole body answers a question about the body's *extremities*, and the thing being judged was its
-trunk. `docs/bug-patterns.md` P10 is the neighbouring failure: a number in range, measuring the
+trunk. `docs/bug-patterns.md` P11 is the neighbouring failure: a number in range, measuring the
 wrong thing, with nothing to say so.
 
 ## 8. The pane and the popover

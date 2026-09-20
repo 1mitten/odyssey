@@ -30,7 +30,7 @@ namespace Odyssey.Presentation.Ui
 
         // ---------------------------------------------------------------- Build palette
         //
-        // Thirty-seven more, drawn for the same reason the eleven above are and under the same
+        // Forty-two more, drawn for the same reason the eleven above are and under the same
         // rule: the palette's specification asks for "1.8px-stroke line art on a 24px grid,
         // single colour inheriting the label colour" and forbids the placeholder square anywhere
         // in the panel, and there is no sheet in the ADR 0007 pipeline that covers a single one
@@ -46,6 +46,7 @@ namespace Odyssey.Presentation.Ui
         CategoryPower,
         CategorySecurity,
         CategoryFloors,
+        CategoryZones,
         CategoryRecreation,
 
         ToolWall,
@@ -80,6 +81,10 @@ namespace Odyssey.Presentation.Ui
         ToolMine,
         ToolDeconstruct,
         ToolCancel,
+        ToolGrowZone,
+        ToolStockpile,
+        ToolDumping,
+        PlantCarrot,
 
         LayoutRows,
         LayoutRail,

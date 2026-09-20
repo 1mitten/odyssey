@@ -628,5 +628,47 @@ namespace Odyssey.Tests.Hud
             Assert.That(ledger.Rows.Find(r => r.Name == "Alloy").Real, Is.False);
             Assert.That(ledger.Rows.Find(r => r.Name == "Alloy").Quantity, Is.Zero);
         }
+
+        /// <summary>
+        /// The field crop is counted, and it is counted wherever it lies.
+        ///
+        /// <para>It was not, until 2026-09-20, and the gap was reported as a bug in the
+        /// simulation: a harvest left a pile, somebody hauled it to the store or ate it, and no
+        /// readout anywhere showed a carrot afterwards — which from the keyboard is
+        /// indistinguishable from the crop vanishing (owner: *"they seemed to disappear now"*).
+        /// The crop was never lost; the ten-day field soak accounts for all 580 of them. There
+        /// was simply nowhere on screen for the player to see one, which for a food crop is
+        /// the same fault wearing a different coat.</para>
+        /// </summary>
+        [Test]
+        public void TheFieldCropIsCountedWhereverItLies()
+        {
+            var snapshot = Frame.Write();
+            // One pile still out in the field, one already carried into the store. Both are the
+            // colony's carrots and the ledger is the colony's count, not the storeroom's.
+            snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(1, 1, 1), ItemHandle.Carrots, 0, stack: 5));
+            snapshot.AddThing(new ThingView(new ThingId(2), new CellRef(9, 9, 1), ItemHandle.Carrots, 0, stack: 15));
+
+            var ledger = new LedgerModel();
+            ledger.Refresh(snapshot);
+
+            var carrots = ledger.Rows.Find(r => r.IconKey == "ui.res.carrots");
+            Assert.That(carrots, Is.Not.Null, "a harvested crop the player cannot see counted has, to them, vanished");
+            Assert.That(carrots.Real, Is.True, "carrots exist in the game, so the row is not a planned one");
+            Assert.That(carrots.Quantity, Is.EqualTo(20), "both piles are the colony's carrots");
+        }
+
+        /// <summary>An empty larder still shows the row, so the player can see it is empty
+        /// rather than wonder whether the game has forgotten the crop.</summary>
+        [Test]
+        public void TheCropRowStandsEvenWithNoCarrotsInIt()
+        {
+            var ledger = new LedgerModel();
+            ledger.Refresh(Frame.Write());
+
+            var carrots = ledger.Rows.Find(r => r.IconKey == "ui.res.carrots");
+            Assert.That(carrots, Is.Not.Null);
+            Assert.That(carrots.Quantity, Is.Zero);
+        }
     }
 }

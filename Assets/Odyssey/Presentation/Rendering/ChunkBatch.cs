@@ -133,6 +133,34 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int WholeBase = 16384;
 
+        /// <summary>
+        /// Bit 15 marks a terrain code as <b>tilled</b>: worked soil inside a growing zone, which
+        /// is the ordinary earth of its cell graded darker.
+        ///
+        /// <para><b>This replaces a whole draw pass.</b> A zone used to be drawn as a second copy
+        /// of the ground module laid over the first, tinted and translucent, one
+        /// <c>Graphics.RenderMesh</c> per zoned cell per frame - 2,065 draw calls on the
+        /// benchmark's field, and 3.67 ms of a 5 ms budget, against 0.17 ms for the same field
+        /// with the pass switched off. It was also the only thing in the feature that stood
+        /// outside the instanced-chunk architecture, and it paid the neighbour scan, the variant
+        /// lookup, the module lookup and a four-stage matrix compose every frame for ground that
+        /// changes when a player paints it and at no other time.</para>
+        ///
+        /// <para>Saying it with a bit instead is the same argument foliage, water, daylight and
+        /// linen already make here: the bucket key is the whole of a bucket's material identity,
+        /// and "this ground is worked" is exactly that kind of fact. The per-cell work moves to
+        /// the re-mesh, where <see cref="Odyssey.Sim.Growing.GrowingZones"/> already marks the
+        /// chunk on every designate, cancel, sow and uproot; the field inherits frustum culling,
+        /// slice culling and instancing for nothing.</para>
+        ///
+        /// <para>It costs no extra bucket worth counting, for the reason <see cref="WholeBase"/>
+        /// gives: a zoned cell's ground is already swapped to earth by <c>DrawnTerrain</c>, so it
+        /// had its own terrain tint before this bit existed. A chunk holding a field pays one
+        /// bucket for the tilled earth and one for the untilled, where it used to pay one draw
+        /// per cell.</para>
+        /// </summary>
+        public const int TilledBase = 32768;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>
@@ -165,6 +193,12 @@ namespace Odyssey.Presentation.Rendering
         public static int Whole(int code) => code | WholeBase;
 
         public static bool IsTerrain(int code) => (code & TerrainBase) != 0;
+
+        /// <summary>Is this bucket worked soil, and so graded darker than the earth it is?</summary>
+        public static bool IsTilled(int code) => (code & TilledBase) != 0;
+
+        /// <summary>The same code, marked as worked soil.</summary>
+        public static int Tilled(int code) => code | TilledBase;
 
         public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
 

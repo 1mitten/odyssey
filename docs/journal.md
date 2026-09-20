@@ -25,6 +25,66 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-20 — reviewing #119, and the frame it was hiding
+
+The growing branch was reviewed against a `main` that had moved twelve commits past it (events,
+falling items, the baseline audit) and then eleven more (beds, per-order colours, docs). Both
+merges are in this branch; the review's findings and everything below came out of doing them.
+
+**Three faults in the branch, all fixed here.** Neither growing work giver asked
+`ctx.Reachable` — the only two givers in the project that did not — so an unreachable plot won
+the scan on straight-line nearness, the walk failed at once, and the next think picked the same
+cell: **159 failed jobs in 2,000 ticks** for one colonist and one ripe crop over a hole, with no
+other growing work done in any of them. `PlantDef.yields` was declared, `[DefReference]`-checked
+and never read; the harvest spawned carrots whatever was planted. And three separate comments
+plus CLAUDE.md said growing carried no rate curve while `Work_Growing` carried `rateSkill 4` —
+which makes it the first place a skill level does something a player can feel.
+
+**The soil borders, and why they were also the frame budget.** The owner photographed a dark
+line on every interior edge of a field. It was a translucent cover mesh: a 1.01 overlap scale
+blending twice (alpha is not idempotent — 0.78 composites to 0.95, so dirt showing through fell
+from 22% to 5%), and under that, `MarkLift` raising a *box* whose sides stood proud of the
+neighbouring soil. Four contact sheets settled it rather than argument: bug, overlap removed,
+alpha 1.0 (seamless, so the meshes tile with no gap), alpha 0 (seamless, so the ground has no
+seam of its own).
+
+The fix for the look was also the fix for the cost, and that was the surprise. The cover was one
+`Graphics.RenderMesh` per zoned cell per frame — and it incremented no counter, so
+`FrameTimeTests` had never counted one. Counted: a field's draw calls went from a reported 1,782
+to 3,847, the difference being 2,065, the zone-cell count to the unit. Since the fix had made the
+cover provably the ground's own module at the ground's own place, the answer was to stop drawing
+it twice: `TintCode.TilledBase`, a bit on the terrain bucket. 2,065 draws to none.
+
+**Then the surround, where the instinct was wrong and the measurement was not.** The remaining
+meadow cost was 3.65 ms of a 5 ms budget and the trees were all of it — its ground and tufts are
+free to within noise. The obvious read is that 4,169 trees are too many. But dropping the 2,577
+**hill** trees changed nothing at all (5.37 ms against 5.04), while dropping the 1,592 **near**
+trees took it to 2.26. What actually correlated was the batch count: 760 batches 3.5 ms, 438
+batches 2.1 ms — about 4.6 us a batch, per-call overhead rather than trees or fill. A batch key
+carries a spatial sector, and at 80 m the ring outside a 300 m board fell into hundreds of
+near-empty batches. At 400 m the same trees ride in 272, and **the wood is untouched**.
+
+One probe misled badly on the way and is worth recording: `SubmitToGpu = false` made the
+surround look nearly free, which reads as "the CPU loop is fine". It removes the API calls, which
+are exactly where the cost is. A probe that disables the thing you are trying to price is not a
+control.
+
+    meadow 5.04 -> 2.59 ms      field 6.95 -> 4.09 ms      city unchanged
+    field draw calls 3,847 -> 1,300
+
+Seed specks went the same way for the same reason: six submissions per sown cell of one cube in
+one material, now one instanced call. The guard there is at the call level rather than visual —
+an instanced draw through a material that does not support instancing draws *nothing*, the speck
+material is the translucent bracket one, and the contact sheet is too far out to referee it
+(checked: no speck pixels before the change or after).
+
+**Still not done, and costed.** `DrawCellMark`/`Shade`/`Cut` are the same anti-pattern for
+standing orders — one submission per designated cell, and a player marking a wood designates
+hundreds. It is not fixed because the benchmark cannot see it: the meadow case is barren, so it
+has no trees to mark and no designations at all. Doing it honestly means a FrameTime case that
+designates first.
+
+
 ## Entries
 
 
@@ -7521,6 +7581,362 @@ first structural addition the next kind will ask for.
 **What a raid needs that events should not provide:** a faction and a hostility model, a
 non-colonist pawn kind, an arrival edge, combat and health. The incident is the thing that
 asks for them at a moment; they are their own units.
+80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
+all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
+render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written
+down rather than smoothed over (a young field, and about one draw call per crop) — §6 and §9 of
+`22-growing.md`. The off-by-one the first field soak hit — designating through the intent bus
+spends a tick draining it — is the same lesson the start-flow unit paid for the other way round:
+a seeded world's clock starts where the seeding left it, not at zero.
+
+### The merge broke the fold's other invariant (2026-09-18, re-review)
+
+The PR's own re-review found the third bug in `GrowingZones`' fold, and the second one the
+fast tier could not see. `MergeInto` appended the absorbed zone's sorted cells onto the
+survivor's sorted cells, and two sorted runs appended are not a sorted list. Which zone
+survives a fold depends on which neighbour the scan meets first — east is first in the array —
+so the absorbed cells can be the *smaller* indices, and everything that reads a zone's record
+assumes ascending: `Cancel`'s `RemoveAt(BinarySearch(index))` answers negatively on the
+unsorted record and throws inside the intent drain, the poisoned-queue cascade again.
+
+The derivation earned its test the honest way round this time: the first reproduction passed,
+because the closed-interval binary probe happened to land on the target for the cancel order
+written. Cancelling the *absorbed* cell first — the search probes two larger values, gives up
+negative — throws. The fix is one `Sort()` after the `AddRange`, with the regression test
+pinning the geometry that reaches it. The hash never noticed any of this: it walks the global
+sorted cell list, not zone records, which is exactly why only a cancel after a fold could.
+
+And `Harvested` now re-asks after its defer, as `Sowed` always had: a crop cancelled between
+the swing that earned the edit and the boundary that lands it yields nothing rather than
+carrots for a field the player erased.
+
+### The debug menu learns to skip the wait (2026-09-18)
+
+The growing zone shipped with a four-day wait nobody can test at the keyboard, and the owner
+asked for the debug rows that skip it. Two, deliberately not one: **Skip one day** spends the
+day's own ticks through the composition root's batch tick — real simulation, hash taken at the
+same boundaries, works while paused, one fifth of a second a press — and **Ripen crops** wraps
+`RipenAll` behind an intent refused as AlreadyInThatState on an empty board, the harvest half
+without the window. What was weighed and rejected on the way: a growth-rate multiplier (new
+hashed or silently unhashed state, either wrong), a fourth speed tier (breaks the frame budget
+for a tester's problem), and ripen alone (never shows the stages moving). The warp is a method
+on the root rather than an intent for the reason the re-entrancy note records: the bus drains
+inside a tick, so a skip through it would ask the world to re-enter its own tick.
+
+### The sower kneels, and the field turns to soil (2026-09-18, owner's first two looks)
+
+Two owner calls on work nobody had played. **The sow must not chop** — the swing every unknown
+job inherits is the axe's, so a sower was felling the ground; and **the green was hard to see on
+the surface**, so the zone and its toolbar colour want earthy brown.
+
+The kneel reuses the pickup rather than inventing a pose: `PawnGesture.Sow` is the lift's own
+solved curve re-timed (`Gesture.Sow`, down quickly, the hold stretched over most of the motion,
+up slowly — the hold *is* the work), and `SowJobDriver` stops reporting a work focus, which is
+the thing that summoned the swing and the tool in the first place. One approximation, accepted
+with the owner's "for now": the gesture runs on its own clock timed against the carrot's price
+at the tuned rate, so a rate change would re-time the kneel by hand. Harvest keeps its swing —
+a cut is a cut, and nothing was asked of it.
+
+The brown is `(0.45, 0.32, 0.17, 0.34)` on the board and `0xc3985c` in the panel, worked soil on
+both surfaces, and the colour-guard test now asserts soil rather than green — both hues recorded
+in 22-growing.md §6, because the brown is a judgement on a colour nobody has played and the
+first playtest may send it back.
+
+### The field gets its ground, and a click gets its answer (2026-09-18)
+
+Two more owner looks at the zone. "No graphical change to the ground" was true and was the
+design's own deferral — the dirt-row pass was a recorded hook — and the farm pack was pointed at
+as the answer. The tilled ground is `SM_Env_Dirt_Rows_01`, one patch per zoned cell, drawn
+through the crop path rather than a terrain write: a `_zoned` mirror merge-walked from the zone
+channel, the mesher emitting the module at the terrain's floor, and `Designate`/`Cancel` marking
+the chunk because the ground under the cell is what changed. Nothing simulated, nothing saved,
+nothing hashed; pack-less keeps grass and tint. The committed catalogue gains its row at the
+next rebuild — until then `Resolve` answers zero and the field keeps its grass, so the change
+cannot half-appear.
+
+And the click: `CellDetail` carries `ZonePlant` and `CropGrowth` now, the contributor answers
+for zones beside beds, and the pane's row reads "growing — carrot, 43% grown" or "awaiting its
+seed". Changing the crop from the pane is recorded as the species-chooser hook it always was:
+one crop exists, and a chooser with one choice is a label wearing a button.
+
+### The carrot's own stages, at their own sizes (2026-09-18)
+
+The owner pointed at the carrot prop's own grow stages — planting, growing, sprouting, popping
+out — and the trio was already wired but twice-shrunk: the S/M/L prefabs are the stages, staged
+by the artist, and the 0.5/0.75/1.0 the rows carried was authored for the Pillow fallbacks but
+scales the real art too (`SafeScale` dresses both paths). One scale throughout now; a pack-less
+checkout loses the fallback's size ladder, the cheaper half of the trade. The catalogue rebuild
+bound all of it — 126 of 143 rows with art, the carrot trio and the dirt rows among them — and
+the worktree's Synty junction is what let it run without touching the licensed files.
+
+### The rows were wrong; the tile is right (2026-09-18)
+
+First look at the tilled ground: the dirt rows read as mess, "all over the place" — each cell's
+patch of sculpted rows fighting its neighbours. The owner named the replacement before naming
+the fault: `SM_Env_Dirt_01`, the square tile that "fits seamless into each tile", and it wants
+colouring brown. The brown comes from the tint table rather than a texture: the tile is drawn
+with the bare-earth terrain tint, the same brown the board's own dirt wears, so a field matches
+the ground it sits on whichever board that is. Unrotated, unscaled, at the floor centre, one per
+cell — the seams between cells are the field.
+
+### The ground is the tile (2026-09-18)
+
+Second look at the dirt: the tile mesh would not sit clean on the cell, and re-clicking read as
+piling more dirt. Both faults were the same fault — a mesh laid over the ground is a thing with
+its own size and its own edges, and the owner named the way out while offering it: "browning/
+dirting the tile up instead". So the field is now the terrain quad itself re-looked: a zoned
+cell's ground draws as bare earth, the same dirt material and tint the board's own earth wears.
+Seamless by construction — one quad per cell, the cell IS the tile — and boolean by
+construction: there is nothing to stack, and an unzoned cell reverts to grass. The mesh route's
+remains are gone whole: emitter, module id, catalogue row (the last is unreachable dead data in
+the committed asset until the next rebuild rewrites it out).
+
+### The brown that did not show, and the pane that did not answer (2026-09-18)
+
+Both of the owner's plays found real faults. The brown did not show because the meadow's ground
+is not drawn by the path the swap sat in: grass is EARTH, and the earth contributor resolves its
+mesh from the grid's own terrain — the swap changed the tint input and the tint table barely
+distinguishes grass from bare earth, so a dirt-tinted grass block read as grass. The earth path
+now resolves by the terrain the cell carries — the drawn terrain — and the tuft scatter gates on
+it too, so a zoned cell draws earth and grows no grass through it.
+
+And the pane was silent over every field for the reason the fixture always knew: a click lands
+on the SOLID ground the field is drawn on, while the zone lives in the air cell above, exactly
+as a tree does. The contributor now asks one cell up when the clicked cell is solid ground —
+the picker's own "block below" rule played from the other side — with a test pinning the ground
+cell's answer and a far cell's silence.
+
+Both were invisible to the fast tier, again: one lived in the terrain contributor chain, the
+other in a query path no fast test drove. The Unity tier caught the rename's leftover within a
+minute of being allowed to run.
+
+### One patch, darker (2026-09-18)
+
+The owner's eye again: the tiles read as separate squares, not one patch. Two causes, one
+commit. The cover plate was INSET — 0.22 m a side, the right inset for an order's mark and the
+wrong one for a field, drawing a border of textured ground between tiles — so DrawCellMark grew
+an inset parameter and the zone passes nought: the whole tile, and neighbouring tiles butt into
+one patch. And the brown went darker and more opaque (0.28, 0.17, 0.07 at 0.62), enough to
+flatten the dirt texture underneath into soil rather than dapple it. The order marks keep their
+inset and their own alpha band; only the field changed.
+
+### Deep soil, seed specks, and the pane that worked (2026-09-18)
+
+Three asks. The brown went much deeper (0.13, 0.075, 0.025 at 0.72) - dark enough to flatten the
+dirt texture into soil. The sown cell now carries six white seed flecks at hashed per-cell
+positions, drawn from the plant channel the crops ride: pale against the dark soil, deterministic
+so they sit still, shadowless so a fleck is not doubled by its own shadow. They are the sowing's
+feedback - a sown tile was a dark square until the sprout's first stage read.
+
+And the pane was right all along. The owner could not find the growing row, and the reproduction
+test - a real QueryCell for the ground a surface click lands on, a real pick, the real panel -
+found the row saying "Carrot - 0% grown" on its first run; only the test's own case-sensitive
+assertion failed. The likely reason a real click shows nothing is that a click landing on a
+colonist picks the colonist (the pick rule an earlier playtest fault fixed), and the sower stands
+exactly where you click right after sowing. The test now pins the row, the crop name and the
+ripeness so the join cannot silently break again.
+
+### The plot grows its yield, in the dark, from the sower's hands (2026-09-18)
+
+Four owner asks, one pass. The carrots are much bigger and sunk a quarter-metre into the soil -
+scale 1.4 with a per-stage sink, so the mature carrot reads as sitting IN the field, to be pulled.
+The plot now draws its actual yield: five plants per sown cell from the first sprout, scattered at
+hashed positions, free by instancing - the render test that pinned "one plant is one instance" now
+pins "one bucket, as many instances as the yield", which is the same argument grown. The seeds
+germinate away - specks draw only on stage-one cells - and they begin while the sower is still
+down: a pawn working a Sow job in a zone draws its handful from the pawn registry, so the seed
+appears under the kneel and not after the stand-up. And the brown went near-black, 0.06 at 0.78 -
+two darkenings in one day, the second asked in the words "much much deeper" and answered at the
+top of the alpha band the colour guard allows.
+
+### Three playtest faults: phantom seeds, the unripe harvest, the stale catalogue (2026-09-18)
+
+Seeds appearing under a walking colonist: the "sowing in progress" specks were gated on the JOB,
+and a sower walks to her plot inside the same job - so every zoned tile she crossed grew a
+handful. The gate is the KNEEL now (the gesture plays only in the work toil), and a cell that
+already stands a plant is excluded, so the seed appears under the kneel and nowhere else.
+
+"Sowing when the harvest has not happened": the pipeline was already right - harvest precedes sow
+at equal priority, by the registry's name sort - and a new test proves it where a playtest can
+meet it: a ripe crop and a fallow cell both waiting, one grower, the ripe one goes first. What the
+owner saw was the third stage's width: the big art arrived at two thirds grown and ripeness is
+one hundred, so for over a day the field stood full of full-size carrots correctly waiting while
+the sowers planted on. The stage bands moved to 45/85, so the big carrot now arrives close enough
+to ripe that what looks pickable nearly is.
+
+And "absolutely no change in the carrots": the catalogue was right on disk and stale in the
+owner's session - her editor held the project while the rebuild was blocked, so she played the
+previous asset. A fresh open has the bigger, sunk, five-to-a-plot carrots.
+
+### A day of play, closed out (2026-09-18, evening)
+
+The first play day on the growing zone: nine looks, six fixes, and every one of them a thing no
+contact sheet had said. The kneel replaced the chop; the green became brown became one whole-tile
+patch of near-black; the ground went mesh, mesh, terrain; the seeds learned to appear under the
+kneel and nowhere else; the big carrot learned to arrive nearly ripe; and the pane learned to say
+how many a plot grows. The catalogue taught its lesson twice - a rebuild wipes the swatch
+classifier's work unless the classifier runs behind it - and the fast tier's blind spot (it
+compiles neither Presentation nor Editor) cost the owner two Safe Mode dialogs before the batch
+compile became the gate it should always have been.
+
+### The stuck batch, the racing runner (2026-09-18, late)
+
+The evening's last two runs collided: a self-hosted CI EditMode and a cancelled local attempt
+both wanted the project, and the CI one died in bee_backend's "more than one copy" - then stayed
+alive as a shell of itself holding the lock, the exact shape lessons.md's first lesson names. The
+stuck process was cleared (a batch shell with no results and no editor behind it), the tiers re-ran
+clean, and the runner will pick up the pushes when it next polls. The lesson's cost this time was
+half an hour of "close the editor" aimed at nobody.
+### The warp hid the harvest, the sink buried the sprouts (2026-09-19)
+
+Two evening plays, two lessons. Skipping a whole day lands where you started, and everything in
+between happened inside the warp - so a field that ripens and is reaped reads as "seeds back down
+before a harvest I never saw". The debug menu gains Skip to morning: the night goes in one press
+and the day is handed back whole, watchable, harvesters and all. And the carrot sink was the
+STAGE's to carry, not the cell's: a 0.15 m sink on a hand-tall stage-one sprout put whole plots
+underground, and five carrots a tile drew as one - young plants sit on the soil now, only the
+mature root insets. The third ask, the small click area, was the pile eating the tile: an item
+lying in a field now carries the field's growing row in its own pane, so the tile answers
+wherever on it the click lands.
+
+### One carrot, three causes (2026-09-19)
+
+The owner's third play day opened with an interview, and the answers split "single carrot is
+always displayed" into three separate truths. The one carrot standing in a ripe tile was the
+biggest find of the branch: PlantView's contract promises a nought-based PlantHandle, the
+contributor was publishing the one-based crop slot, and the render mirror added one of its own -
+the carrot landed on slot two of a one-plant table, CropModule's bounds guard answered nought,
+and a ripe field drew nothing at all. Every render test fed the contract's own bytes and passed;
+APublishedPlantCarriesItsHandleAndNotTheCropSlot now reads the real contributor back. The one
+carrot after harvest was ItemHeap having no carrots row, so a five-stack drew as one prop; the
+recipe's Full is the carrot's own yieldCount, which makes the ramp the identity - five grew,
+five lie there. And the axe on the plot was the harvest driver's work focus, never changed when
+the sower's was; the pull now kneels with the same PawnGesture.Sow the sow uses.
+
+Two smaller settles ride the same day. The seed specks wait out half the kneel - the gate is
+the gesture's own age on the frame clock, a delay that lives on Gesture beside the timing it
+scales with, because nothing in the simulation stores how long a colonist has been kneeling.
+And "carried back like wood" was already true: the yield drops as a loose haulable pile exactly
+as felled wood does, and TheYieldIsHauledToTheStockpileLikeWood pins it rather than leaving the
+owner's word for it. CropCheck photographs the field through the shipped catalogue - stages,
+ripe tile, pile - because every carrot judgement until now came from the owner playing the
+game, and twice what was being looked at was not what the code drew.
+
+### The fourth play day: the seed earns its day (2026-09-19)
+
+The owner asked for the seeds to fall from a bundle in the hand, reported a flicker - appear,
+disappear, appear - and asked that the sprout wait a day. All three were one fault wearing
+three faces: the kneel gesture is sticky by contract, so a kneel nobody cleared leaked through
+the walk to the next plot and the specks gated on it flashed under the sower's feet as she
+crossed fallow tiles; the sprout art arrived at growth nought because stage one began at zero;
+and the drop itself had no motion at all. The drivers now author the gesture's END on the same
+boundary the plant record lands; the first daylight day is stage nought (below 25 per cent,
+32,500 of 130,000 ticks) and draws nothing but the specks; and the specks fall - clustered at
+the hand for a beat, then staggered and accelerating to their hashed spots, timed off the kneel
+age past its threshold so nothing is timed twice. The fourth ask, carrots piled upright, was
+ItemHeap's tip: the carrot row lies down, Place tips each lump ninety degrees before its yaw
+and lifts it half a girth, and the armful inherits the lie. CropCheck's pile shot frames the
+pile alone now - the first framing put a field of upright carrots behind it and the picture
+answered every question about orientation with more of the same shape.
+
+
+### The meadow is pulled off the plot border (2026-09-19)
+
+The owner asked for the grass to come off the plots automatically. The plots' own tufts had
+gone with the tilled-earth swap months of sessions ago; what he was looking at was the
+neighbours' - a grass clump's mesh is nearly two metres across, standing in a ring up to 0.44
+of a cell out, so clumps from unzoned grass reached the better part of a metre over every
+border tile of a field. GroundScatter.PullInFromTilled clamps a clump's offset to where its
+metre of reach stays on grass, asked through the zone mirror at mesh time, and designation and
+cancel now mark the side neighbours' chunks - a border cell's neighbours can live in another
+chunk, and without the mark that chunk would keep its fringe until something else happened to
+re-mesh it. The clamp touches only clumps that would have crossed; the ring everywhere else is
+where it always was, which the scatter stability test still pins.
+
+
+### The cover learns the ground's shape, and the earth finally tills (2026-09-19)
+
+The owner's flush screenshots carried two faults, and the second was hiding under the first.
+The cover itself was a flat plate on draped, rippled ground - it sank into convex corners and
+floated over concave ones, so every tile showed gaps, thick borders or missing parts that
+changed with the bearing. DrawZoneCover now draws the drawn terrain's own module with the same
+drape, lifted a mark's height along the drape's own up: identical geometry, one constant
+offset, flush by construction, judged so in the photo sheet.
+
+And under it: the tilled-earth swap had never fired. A zone is painted on the air the
+colonist stands in, and DrawnTerrain asked the zone at the ground cell itself - always no.
+Every brown tile the owner had ever seen was the translucent cover; the plots' own tufts had
+never left; and the photo sheet had said "carrots growing out of grass" twice before anybody
+believed it. The swap and the tuft pull both ask one layer up now.
+
+The flow asks landed with the same photographs: the yield is laid off the soil (the harvest
+hunts a cell outside every zone before it falls back to the felling argument), nothing is sown
+where a pile still lies, and the judgement call on pile size is twelve drawn and seventy-five
+stacked - the identity to a yield kept, the store square a proper heap.
+
+### One field, a clear floor, and a paid hoe (2026-09-20)
+
+The borderlines on the dirt tiles were each cover lifting along its own drape: neighbouring
+drapes disagree by a few centimetres of slope across a shared edge, and the divergent lifts
+opened a hairline of untinted earth between every pair of tiles - a lighter grid over the
+field, widest at the corners. A shared world-up lift leaves the covers' mutual seams exactly
+the terrain's own, which the ground already draws invisibly; the photo sheet reads one
+continuous field. The clearing ask rode the sow guard already landed: a thing on tilled soil
+blocks its cell, and the haul scan now prefers such a thing over any nearer ordinary pile -
+fifty cells of bias, which is the ordering and not a radius. And the hoe finally pays by
+skill: Work_Growing carries rateSkill with cutting's own shape, the def is the whole seam
+because both drivers have paid at WorkRatePerMille since WS1, and the curve's tuning is left
+to the skills work the owner says is coming.
+
+
+### The second border day and the stone that stayed (2026-09-20)
+
+The grid survived the shared world-up lift, and the reason my sheet had called it fixed was
+the sheet: CropCheck never set the relief amplitude, so its board was flat and a flat board
+cannot show a parting. With the played amplitude the grid reproduced on demand. The cause
+under it: the earth draws a variant clump per cell - a different shape per cell - and the
+cover drew the plain default block; every disagreement between the drawn clump and the lifted
+block showed a sliver of untinted earth. The cover now reads the earth contributor's own
+choices - module, variant, exposure, bearing, drape - and scales a hair in the plane so
+adjacent covers overlap rather than meet; on real relief the field reads as one patch.
+
+And the stone that stayed: the store was full, so the haul scan formed no job at all, and the
+sow guard had blocked the tile behind it - a deadlock where nobody was wrong. A field blocker
+with nowhere to be stored is cleared to the nearest free cell off the zone now, and the store
+can have it back when it has room. The lesson the flat sheet earned went into lessons already:
+an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
+board's amplitude and the blindness is recorded beside it.
+
+
+### The third border day: the light was the border (2026-09-20)
+
+The borders survived the same-mesh cover, and the cause was not geometry at all: the bracket
+material is the lit terrain shader made transparent, and on rolled ground it shades every
+differently-tilted cover differently - per-tile brightness steps that read as borders however
+seamless the shape, unseen under the sheet's flat light and plain under the play sun. The
+cover is opaque unlit now: one colour, every tilt, every light. An unlit flat colour cannot
+shade, cannot seam, and cannot be bloomed into a line. It is opaque, so the tilled earth no
+longer shows through; the field's texture is the seeds, the crops and the soil's own shape.
+
+And the stone that still was not picked up: growing scans at order one and hauling at four, so
+a busy field starves the haul order and its own blocker waits forever - the bias and the
+clear-to-grass fallback were both in place and both idle, because nobody ever reached the
+scan that had them. The sow scan hands out the clearing itself now: when every tile is sown
+or waiting on a thing, the job a sower takes is the haul of that thing. Clearing the dirt is
+the sowing work.
+
+
+### The brown comes back and the yield finds grass (2026-09-20)
+
+The opaque unlit cover killed the borders by killing the light and the texture in one stroke,
+and the owner wanted the brown. The cover is translucent unlit now - the tint's own alpha
+through the straight-alpha recipe - so the tilled earth shows through and the field is brown
+with texture, while staying one flat colour per tint on every tilt and under every light.
+
+And the items that landed on the next dirt tile: the off-zone searches ran out of ring at
+three cells for the harvest yield and six for the clearing, and a field six tiles across has
+nothing but dirt within three of its middle - the fallback then put the pile back on the plot.
+Both searches reach twelve cells now, which covers any field the player has painted.
 ## 2026-09-20 — four reports from one play session: beds, loading, and the colour of an order
 
 Four owner reports in one message, on `claude/bed-assign-and-order-colours`. Three turned out to
@@ -7995,7 +8411,7 @@ was still over the bed was inside it.
 out of §7a and walked a range of plausible *hip heights*, 0.70 m to 1.30 m, checking the body each
 one implies. Every one fitted. The value the game passed was 0.2 m, which no range starting at
 0.70 m can reach — and the fixture's `const float Hip = 0.95f` is a perfectly reasonable hip for a
-person and was never the number the game used. That is now `P10` in `docs/bug-patterns.md`: **a
+person and was never the number the game used. That is now `P11` in `docs/bug-patterns.md` (it was written as P10 and renumbered on the merge, the growing-zones branch having reached main first with a P10 of its own): **a
 measurement that never measured anything, clamped into plausibility.** Nothing threw, nothing
 logged, no test failed, and the symptom surfaced a long way downstream in the shape of a
 *placement* bug — which is where two rounds of investigation went.
@@ -8155,7 +8571,7 @@ sleeper it is a drawn-up knee, which props the whole body up like a kickstand �
 rode 9 to 12 cm above its own bedding with one knee resting on it, and the whole-mesh number
 reported 0.00 and 0.02 and looked perfect throughout.
 
-**That is P10's neighbour and it is worth naming as its own thing: an aggregate answers the
+**That is P11's neighbour and it is worth naming as its own thing: an aggregate answers the
 question it aggregates, not the question you asked.** `min` over a whole body is a statement about
 the body's *extremities*. The thing being judged was its trunk. Both numbers are real, both are
 correctly computed, and one of them is not about the subject — which is exactly why nothing failed

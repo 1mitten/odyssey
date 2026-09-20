@@ -28,6 +28,7 @@ namespace Odyssey.Hud
         public static readonly string[] Keys =
         {
             "ui.res.meal", "ui.res.scrap", "ui.res.wood", "ui.res.stone", "ui.res.ironore", "ui.res.coal",
+            "ui.res.carrots",
         };
 
         public static string IconKey(int def) =>

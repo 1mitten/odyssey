@@ -1122,6 +1122,91 @@ have left the bones unwritten, and the work pose is laid over what the graph wri
 the same way, at `simulationSpeed` zero, since they are simulated in world space by Unity and know
 nothing about the tick.
 
+## 6c. What the frame costs, and the one number that explains it
+
+Measured 2026-09-20 on the played meadow, an RTX 5070 Ti at 640 x 480, under the real player loop
+(`FrameTimeTests`; never an editor render loop — see `docs/lessons.md`).
+
+### The number
+
+**A draw submission costs about 4.6 us whatever is in it.** That is the single most useful figure
+for this renderer. It is not triangles and at this resolution it is not fill: three passes were
+submitting once per cell, and all three were expensive for that reason alone and for no other.
+
+    meadow 5.04 -> 2.59 ms      field (2,065 zone cells) 6.95 -> 4.09 ms
+    field draw calls 3,847 -> 1,300
+
+### Where it went
+
+| Pass | Was | Now |
+|---|---|---|
+| Growing-zone cover | one `RenderMesh` per zoned cell per frame — 2,065 calls, 3.67 ms | a bit on the terrain bucket's tint, no draws at all (§22-growing 6a) |
+| The surround wood | 760 instanced batches, 3.65 ms | 272 batches, same 4,169 trees |
+| Seed specks | six `RenderMesh` per sown cell | one `RenderMeshInstanced` a frame |
+
+**The surround is the instructive one, because the obvious answer was wrong.** Dropping all 2,577
+hill trees changed nothing (5.37 ms against 5.04); dropping the 1,592 near trees took the meadow
+to 2.26. But the cost tracked the *batch* count, not the tree count — 760 batches 3.5 ms, 438
+batches 2.1 ms. A batch key carries a spatial sector, and at 80 m the ring outside a 300 m board
+fell into hundreds of near-empty batches. Coarsening the sector to 400 m rides the same trees in
+272 batches and the wood is untouched. Thinning was measured too — 30 per cent took 1,592 trees to
+435 and saved 1.5 ms — and is strictly worse: it costs the look and buys less.
+
+The trade in that: a coarser sector is a looser `worldBounds`, so less of the wood frustum-culls.
+Measured, that is the right way round — the draw the culling saves is cheaper than the per-batch
+cost of being able to save it. `TerrainSkirt.TreeSectorMetres` is the number to turn if a weaker
+machine ever reverses it, and `NearWoodDensityPercent` is the second.
+
+### The rule this leaves
+
+**Anything fixed to the grid belongs in the chunk mesher, not in a per-frame draw.** A bucket is
+one instanced call of one (module, part, tint) in one chunk, and it inherits frustum culling,
+slice culling and the dirty-chunk rebuild for nothing — so the per-cell work happens when the
+world changes rather than sixty times a second. The crop was always drawn this way and was always
+free; the zone cover was not, and was the whole cost of a field.
+`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` is the guard: it fails the moment a
+zone costs draws in proportion to its cells.
+
+### Still outstanding
+
+`ChunkRenderer.DrawCellMark` / `DrawCellShade` / `DrawCellCut` draw standing orders **one
+submission per designated cell**, and a player marking a wood designates hundreds. Unfixed
+because the benchmark cannot see it: the meadow case is `barren`, so it has nothing to designate.
+It needs a `FrameTimeTests` case that designates first, and then the same gather-and-flush the
+specks now use, bucketed by mark colour.
+
+### What has NOT been measured, which is most of the question
+
+Every number above is **640 x 480 on an RTX 5070 Ti**. The stated target is a 2022 mid-range
+laptop at a real resolution. So these findings are sound about *what this renderer does wrong*
+and close to worthless as a prediction of what it will cost a player.
+
+- **Play resolution.** 640 x 480 is 307k pixels. That is precisely why "a submission costs
+  4.6 us and fill costs nothing" was the right diagnosis *there* — and it is the reason the
+  conclusion may not transfer. 1080p is 6.75x the pixels; the alpha-tested foliage that covers
+  the horizon is exactly the kind of geometry whose cost is invisible at 640 x 480 and dominant
+  at 1080p. An attempt to measure it in batch (2026-09-20) failed and is worth recording so
+  nobody repeats it: the batch game view ignores `-screen-width`, and forcing a camera
+  `targetTexture` instead costs so much itself that the control case went from 2.0 ms to 16 ms.
+  The measurement has to come from the on-screen readout in a real Play session.
+- **Target hardware.** Per-draw overhead is largely CPU and driver, so a weaker CPU makes the
+  batching work matter *more*; fill makes a weaker GPU matter more at the same time. The two
+  pull in opposite directions and neither has been measured.
+- **Colony scale.** The frame cases run the scenario's own small colony. Pawns, items, buildings
+  and standing orders all add per-frame work, and the order marks add it per designated cell
+  (see above).
+- **A long session.** 180 frames is a snapshot. Nothing here says what an hour of play does.
+
+The cheapest way to turn all four into knowledge is the developer overlay in a real Play session
+at the owner's resolution. Until then the honest statement is: the faults that were found are
+fixed and guarded, and the budget is unverified on the hardware it was written for.
+
+### And the budget is not enforced
+
+`FrameTimeTests` asserts only that a frame is under a 30 Hz tick. The 5 ms budget lives in the
+documents, so **a green PlayMode run says nothing about it** — read the printed numbers, not the
+pass. That has always been true and is not a growing-zones matter.
+
 ## 7. Presentation is a reader
 
 The rule that keeps this document honest, and the one that the architecture benchmark treats as a judged phase: **presentation never reads simulation objects and never mutates them.** It reads the immutable snapshot published by the simulation at tick end, keyed by stable handles, and it sends player actions back as intents on a queue consumed at a tick boundary (`docs/design/ui-plan-reconciliation.md`).
