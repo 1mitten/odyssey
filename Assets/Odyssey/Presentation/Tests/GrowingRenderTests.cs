@@ -214,5 +214,77 @@ namespace Odyssey.Tests.Presentation
             mesher.Mesh(batch, layer * chunksPerLayer);
             return batch;
         }
+
+        /// <summary>
+        /// The zone cover must sit on the ground it covers and be exactly as wide as it - the
+        /// ground's own placement plus a pure vertical lift, and nothing else.
+        ///
+        /// <para>This pins a real regression rather than a preference. The cover carried a 1.01
+        /// scale in the plane so that adjacent covers overlapped instead of meeting, which is
+        /// sound for an opaque overlay and wrong for this one: the cover is translucent so the
+        /// tilled earth reads through it, and alpha blending is not idempotent. At the tint's
+        /// alpha of 0.78 a doubly-covered band composites to 1-(1-0.78)^2 = 0.95 - the dirt
+        /// showing through drops from 22% to 5% - so a field drew a darker brown line on every
+        /// interior edge and none on its outside edge (owner, 2026-09-20, with the screenshot).
+        /// Any scale in the plane brings it straight back, which is why this asserts the basis
+        /// columns and not merely the width.</para>
+        /// </summary>
+        [Test]
+        public void AZoneCoverSitsExactlyOnTheGroundItCovers()
+        {
+            const int X = 3, Z = 5, GroundY = 1;
+
+            foreach (float yaw in new[] { 0f, 90f, 180f, 270f })
+            {
+                // What the earth contributor itself lays the ground module down with.
+                Matrix4x4 ground =
+                    GroundRelief.Drape(CellMetrics.FloorCentre(X, Z, GroundY)) *
+                    Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f));
+                Matrix4x4 cover = ChunkRenderer.ZoneCoverPlacement(X, Z, GroundY, yaw);
+
+                // The three basis columns carry rotation, shear and scale. Equal columns mean
+                // the cover is the same shape, the same size and the same tilt as the ground -
+                // so two adjacent covers tile exactly as the two ground modules do, and the
+                // ground tiles without a seam.
+                for (int c = 0; c < 3; c++)
+                    Assert.That((Vector3)cover.GetColumn(c),
+                        Is.EqualTo((Vector3)ground.GetColumn(c)).Using(Vectors),
+                        $"yaw {yaw}: basis column {c} differs, so the cover is not the ground's own footprint");
+
+                // And it sits exactly where the ground sits - coplanar, not lifted. A lift
+                // raises a box, its four sides then stand proud of the neighbouring soil by the
+                // lift, and a translucent strip blended twice is the border itself. Same mesh,
+                // same matrix, so the depths match to the bit and LEqual does the rest.
+                Vector3 offset = (Vector3)cover.GetColumn(3) - (Vector3)ground.GetColumn(3);
+                Assert.That(offset.magnitude, Is.EqualTo(0f).Within(1e-5f),
+                    $"yaw {yaw}: the cover is offset from the ground it covers, and any offset "
+                        + "at all puts its sides above the soil beside it");
+            }
+        }
+
+        /// <summary>Two covers a cell apart are a tile apart and no closer - the other half of
+        /// "no overlap", stated where a reader looking for it would look.</summary>
+        [Test]
+        public void TwoNeighbouringCoversAreExactlyOneTileApart()
+        {
+            Matrix4x4 here = ChunkRenderer.ZoneCoverPlacement(3, 5, 1, 0f);
+            Matrix4x4 next = ChunkRenderer.ZoneCoverPlacement(4, 5, 1, 0f);
+
+            Vector3 step = (Vector3)next.GetColumn(3) - (Vector3)here.GetColumn(3);
+            Assert.That(step.x, Is.EqualTo(CellMetrics.SizeXZ).Within(1e-4f),
+                "adjacent covers must step one whole tile: closer is an overlap, and a "
+                    + "translucent overlap composites twice and draws a border");
+            Assert.That(step.z, Is.EqualTo(0f).Within(1e-4f));
+        }
+
+        static readonly VectorComparer Vectors = new VectorComparer();
+
+        /// <summary>Component-wise, because a basis column is a direction and a length at once.</summary>
+        sealed class VectorComparer : IEqualityComparer<Vector3>
+        {
+            public bool Equals(Vector3 a, Vector3 b) => (a - b).sqrMagnitude < 1e-8f;
+            public int GetHashCode(Vector3 v) => 0;
+        }
+
     }
 }

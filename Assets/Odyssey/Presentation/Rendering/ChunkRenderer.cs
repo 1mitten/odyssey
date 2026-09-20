@@ -1472,6 +1472,35 @@ namespace Odyssey.Presentation.Rendering
         /// tinted with it, which is right where a plot meets a terrace edge - the soil column
         /// is the plot - and buried everywhere else.</para>
         /// </summary>
+        /// <summary>
+        /// Where a zone cover's module goes: <b>the ground's own placement and a pure vertical
+        /// lift, and nothing else</b> - draped at the ground cell's floor, turned to the bearing
+        /// the earth contributor chose, raised clear of the face it is laid on. The lift is along
+        /// the world up and shared, so neighbouring covers part by exactly the terrain's own step
+        /// and their tinted sides fill it.
+        ///
+        /// <para><b>Exactly one tile in the plane, and it has to stay that way.</b> This used to
+        /// carry a 1.01 scale so that adjacent covers overlapped rather than met, on the reasoning
+        /// that "an overlap of the same tint is invisible by construction". That is true of an
+        /// opaque overlay and false of this one. The cover is deliberately translucent so the
+        /// tilled earth shows through it, and alpha blending is not idempotent: at the tint's own
+        /// alpha of 0.78 a band covered twice composites to 1-(1-0.78)^2 = 0.95, so the dirt
+        /// showing through fell from 22% to 5%. That is a darker brown line on every INTERIOR
+        /// edge of a field and none at all on its outside edge - which is the exact shape the
+        /// owner photographed (2026-09-20: "remove the borders from dirt/soil tiles").
+        ///
+        /// <para>The sliver the overlap was guarding against had a different cause and was
+        /// already fixed above: the first cover drew the plain default block instead of the drawn
+        /// variant clump, and it was the mismatched SHAPE that parted. Same module, same variant,
+        /// same drape means the same footprint as the ground itself, and the ground tiles without
+        /// a seam - so there is nothing left for an overlap to close, and any overlap at all draws
+        /// a border. Pinned by <c>AZoneCoverSitsExactlyOnTheGroundItCovers</c>.</para>
+        /// </summary>
+        public static Matrix4x4 ZoneCoverPlacement(int x, int z, int groundY, float yaw) =>
+            Matrix4x4.Translate(Vector3.up * CoverLift) *
+            GroundRelief.Drape(CellMetrics.FloorCentre(x, z, groundY)) *
+            Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f));
+
         public void DrawZoneCover(CellRef cell, Color colour)
         {
             // The cover must be THE MESH THE GROUND DRAWS, not a stand-in: the earth resolves
@@ -1535,16 +1564,7 @@ namespace Odyssey.Presentation.Rendering
                 receiveShadows = false,
             };
 
-            // The earth's own placement - drape at the ground cell's floor, turned to the
-            // bearing the contributor chose - lifted along the WORLD up (a shared lift, so
-            // neighbouring covers part by exactly the terrain's own step and their tinted
-            // sides fill it), and scaled a hair in the plane so adjacent covers OVERLAP rather
-            // than meet: a meeting edge is the one place a sliver can still open, and an
-            // overlap of the same tint is invisible by construction.
-            Matrix4x4 at = Matrix4x4.Translate(Vector3.up * MarkLift) *
-                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y - 1)) *
-                Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)) *
-                Matrix4x4.Scale(new Vector3(CoverOverlap, 1f, CoverOverlap));
+            Matrix4x4 at = ZoneCoverPlacement(cell.X, cell.Z, cell.Y - 1, yaw);
 
             var parts = _model.Library[module].Parts;
             for (int p = 0; p < parts.Length; p++)
@@ -1872,10 +1892,25 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
 
-        /// <summary>How much a zone cover scales past its own tile in the plane, so adjacent
-        /// covers overlap instead of meeting: 2.5 cm a side, invisible as an overlap of one
-        /// colour and the end of every seam a meeting edge could open.</summary>
-        const float CoverOverlap = 1.01f;
+        /// <summary>
+        /// <b>Nought, and that is the fix.</b> A cover is the ground's own module drawn again over
+        /// itself, so any lift at all raises a BOX: its four vertical sides then stand proud of the
+        /// neighbouring soil by exactly the lift, and because the cover is translucent those
+        /// protruding strips blend a second time over the tile beside them - a dark line on every
+        /// interior edge of a field and none on its outside edge (owner, 2026-09-20: "remove the
+        /// borders from dirt/soil tiles"). At 5 cm, which is <see cref="MarkLift"/>, that is the
+        /// line in the screenshot; at 4 mm it is a dotted hairline; at nought it is gone.
+        ///
+        /// <para><b>Why coplanar does not z-fight here, when <see cref="MarkLift"/> exists
+        /// precisely because it would.</b> A mark is a different primitive laid ON a face and has
+        /// to clear it. This is the same mesh, at the same drape, under the same matrix, so its
+        /// depth is the ground's depth to the bit and the default LEqual test passes everywhere the
+        /// ground is visible - and fails, correctly, for every buried face. Measured on the crop
+        /// sheet at nought: no seam, no speckle, the earth's texture still reading through. If this
+        /// ever has to become non-zero, the sides have to stop being drawn first.</para>
+        /// </summary>
+        const float CoverLift = 0f;
+
         /// <summary>
         /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to
         /// indicate it's sown"). Six tiny flecks at deterministic positions hashed from the cell,
