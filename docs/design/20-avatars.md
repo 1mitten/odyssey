@@ -432,6 +432,126 @@ The drawn avatar stays, as the fallback with no licensed packs, and `AvatarGlyph
 them by the idiom `IconBadge` already uses: a portrait present suppresses the paint, absent paints
 the figure. So a clone without `Assets/Synty` is still correct, and none of §4 is wasted.
 
+### 10.7 A portrait was lit by the clock, and then kept (owner, 2026-09-20)
+
+**The owner's report: *"when generating more colonists, some are not animated and their profile
+picture seems black."*** The picture half is this section; the animation half is §11.
+
+A portrait is rendered once per appearance and cached for the session — that is §10.2's whole
+performance argument and it is right. What nobody had noticed is what it makes of §10.3's bargain.
+That paragraph is careful that the studio's own light must not reach the world, and the same door
+swings the other way: **the daylight cycle writes global state**, and every camera in the process
+reads it. `DaylightDirector.ApplyHour` sets `RenderSettings.ambientSkyColor`, `ambientEquatorColor`,
+`ambientGroundColor`, the fog and the skybox, and moves and dims the scene's own sun. So a portrait
+is a photograph of a colonist *at the hour it was taken*, and then that hour is frozen on their card
+until the session ends.
+
+**Measured, in a live frame loop, on the code as it shipped:** one colonist, photographed at each
+hour of one day (`PortraitLightingTests`).
+
+| Hour | 12 | 15 | 18 | 20 | 21 | 22 | 0 | 3 | 6 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Mean luminance of the lit pixels, of 255 | 80.6 | 76.2 | 71.4 | 50.6 | 36.0 | 26.3 | 26.3 | 26.3 | 26.3 | 54.6 |
+
+**3.1× darker at midnight than at noon.** At 26 of 255, inside a 26 px tile on a dark panel with a
+white frame around it, that is a black square with a person's name under it — which is exactly what
+the report says. And it explains *"some"* without any further mechanism: the starting five are
+photographed when the roster first draws, on the first morning; a colonist generated after dusk is
+photographed in the dark, and keeps it.
+
+**The fix is the one §10.3 already chose, applied to the rest of the room.** The studio takes the
+global environment over for the same synchronous instant it takes its own light, and hands it
+straight back: a fixed ambient probe, no fog, no skybox reflection, and every other directional
+light switched off. Afterwards the portrait is the same picture at every hour — measured spread
+×1.00 over the ten hours above.
+
+**Three things were wrong before it worked, and each is worth keeping written down**, because all
+three are the same shape: a global that looks like it has been taken over and has not.
+
+1. **Writing `ambientMode` and `ambientLight` is not writing the ambient.** Unity re-derives the
+   ambient probe from those on its own schedule — `DaylightDirector.ProbeUpdateHours` exists
+   precisely because `DynamicGI.UpdateEnvironment` is too dear to call often — so the render used
+   the world's stale probe and the portrait still tracked the clock. `RenderSettings.ambientProbe`
+   is a direct write and takes effect on the next draw, **but only under `AmbientMode.Custom`**;
+   under the `Trilight` the daylight cycle sets, the write is thrown away in silence.
+2. **A flat ambient is not the whole of the sky's reach.** The default reflection probe is the
+   skybox and the skybox is the time of day, so `reflectionIntensity` has to go to nought too.
+3. **`FindObjectsByType` does not find every light.** It skips hidden objects, and a light that
+   lights the subject counts however it was made. `Resources.FindObjectsOfTypeAll`, filtered to
+   lights that are in a scene and active, does.
+
+### 10.8 And the daylight cycle had adopted the studio's own key light
+
+Found while measuring §10.7, and a separate fault. `OdysseyBootstrap.FindKeyLight` takes *the
+brightest directional light in the scene* — and from the moment the setup page photographs its
+first candidate, the portrait studio's key light is one: intensity 1.6, on a hidden, unsaved object,
+switched off except for the instant a portrait is taken.
+
+Hand that to `DaylightDirector` and two things go wrong at once. **The world loses its sun**, because
+the light it is now driving is disabled almost all of the time. And **every portrait is lit by a
+light the clock has been recolouring and dimming behind the studio's back** — which is why the
+brightness still tracked the time of day after §10.7's take-over was in place, and is how this was
+noticed at all.
+
+It needs the play scene's own sun to be dimmer than 1.6 at the moment a session is built, so it has
+probably not bitten a real game yet; the scene bakes its sun at midday. `FindKeyLight` now skips
+lights on objects with hide flags — "the scene's own sun" is what the comment there always claimed
+it meant — and the studio re-asserts its light's aim, colour and intensity on every shot, which is
+three writes per portrait and the end of ever wondering again.
+
+---
+
+## 11. The figure cap took the first sixty-four, not the nearest sixty-four
+
+The other half of the 2026-09-20 report. Past `PawnFigureDirector.MaxFigures` (64) a colonist is
+drawn by the baked instanced path, which `ModuleLibrary.CollectSkinned` is explicit about: *"a baked
+figure does not animate; it glides."* That is the design, it is the right design, and it is not in
+question. **Which** colonists it happens to was.
+
+`Sync` walked the snapshot in order and stopped at the cap. Snapshot order is pawn id, so the
+colonists that lost their animation were a fixed set decided when they were created, and moving the
+camera never changed it. `MaxFigures`'s own doc comment says *"a colonist beyond the cap is a long
+way off"* — nothing made that true.
+
+**Measured** with eighty-five colonists spread along the board (`ColonyCastProbe`, camera at one
+end):
+
+| | nearest colonist left unanimated | farthest colonist animated |
+|---|---|---|
+| Before | 134.2 m | 178.7 m |
+| After | 142.7 m | 164.0 m |
+
+Before, the twenty-one frozen were ids 65–85 whatever the camera did. After, they are the twenty-one
+farthest away, and the overlap in the second row is the stickiness below rather than a miss.
+
+**Three decisions inside it.**
+
+- **It does nothing under the cap**, which is every colony anybody has played: one comparison and
+  no sort. The cost only exists at a scale nothing else here is tuned for either.
+- **Cell centres, not drawn positions.** A drawn position costs a `PawnPose.Of` per pawn and would
+  not change the answer — the two differ by less than a cell, and the question is which colonists
+  are across the map.
+- **A pawn that already holds a figure counts as a quarter nearer than it is.** Without that,
+  panning across a crowd swaps figures in and out at the boundary every few frames, and a re-leased
+  figure begins its gait and its gesture memory again — colonists twitching in the middle distance.
+
+**The cap itself was not raised, and now it cannot be.** Owner, on reading the above:
+*"can we make the absolute cap 64 for safety for now?"* — so `MaxFigures` is clamped to
+`PawnFigureDirector.FigureCeiling`, which is 64. It stays settable, because a harness wants a
+small crowd cheaply and `FigureCapTests` runs at eight rather than instantiating sixty-four Synty
+characters to prove a rule about ordering; a setter that also accepted a large number would make
+the ceiling a suggestion, and "absolute" is not one. Below zero is zero, which draws the whole
+colony as baked stand-ins and is a legal thing to ask for.
+
+64 is already above the audit's scale target of 50 and a figure is a whole Synty character with a
+`PlayableGraph`. **The word *for now* is the owner's and it is the right word**: this is a safety
+rail on an unmeasured number, not a finding. Moving it means measuring the frame under the real
+player loop at the new count — `FrameTimeTests` and `RenderBench` are where that would be done —
+not editing the constant. `FigureCeilingTests` fails if anything raises it, including a future
+inspector field on the bootstrap, which is the likeliest way it would otherwise happen.
+
+---
+
 ---
 
 ## 9. Deliberately not in this unit

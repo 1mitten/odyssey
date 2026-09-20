@@ -30,7 +30,13 @@ namespace Odyssey.Tests.Sim
         {
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = 1;
-            scenario.beds = 1;
+
+            // **No bed, and that is load-bearing.** AHall is centred on `colony.Start`, and since
+            // a starting bed became a real edifice (main, 2026-09-20) the scenario's bed stands
+            // two cells out from the start — inside the wall line of a six-wide hall, where it
+            // refuses the wall order for `Edifice[index] >= 0`. Nothing here sleeps; the bed was
+            // only ever scenario boilerplate.
+            scenario.beds = 0;
             scenario.startingFellRadius = 0;
             return ColonyWorld.Build(Size, 1u, scenario, barren: true, wooded: false);
         }

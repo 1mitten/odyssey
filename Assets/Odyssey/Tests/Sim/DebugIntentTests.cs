@@ -1,9 +1,9 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Growing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
-
 namespace Odyssey.Tests.Sim
 {
     /// <summary>The debug menu's two intents: spawn a colonist, and grant a resource.</summary>
@@ -132,6 +132,26 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.World.Intents.Rejected[1].Reason, Is.EqualTo(IntentRejection.NotPermitted));
         }
 
+        /// <summary>
+        /// The row that used to be inert (design 18): it fires the one incident there is, and a
+        /// def index the content does not have is refused as out of bounds rather than as
+        /// anything that sounds like the world's fault.
+        /// </summary>
+        [Test]
+        public void InvokeIncidentFiresTheSupplyDropAndRefusesABadIndex()
+        {
+            ColonyWorld colony = ColonyWorld.Build(Tall, seed: 8u, Colony(1));
+
+            colony.World.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, IncidentHandle.SupplyDrop));
+            colony.World.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, 999));
+            colony.World.Tick();
+
+            Assert.That(colony.World.Intents.Rejected, Has.Count.EqualTo(1));
+            Assert.That(colony.World.Intents.Rejected[0].Reason, Is.EqualTo(IntentRejection.OutOfBounds));
+            Assert.That(colony.Incidents.Skyfallers.InFlight, Has.Count.EqualTo(1));
+            Assert.That(colony.Incidents.Ledger.Count, Is.EqualTo(1));
+        }
+
         static int WoodOnBoard(ColonyWorld colony)
         {
             int total = 0;
@@ -139,6 +159,32 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < items.Count; i++)
                 if (!items[i].Despawned && items[i].DefIndex == ItemIndex.Wood) total += items[i].Stack;
             return total;
+        }
+        [Test]
+        public void RipenBringsEveryStandingCropToRipeAndSaysSoWhenNothingStands()
+        {
+            ColonyWorld colony = ColonyWorld.Build(Size, seed: 6u, Colony(1));
+            var zones = colony.Growing!;
+            CellRef at = new CellRef(colony.Start.X, colony.Start.Z, colony.Start.Y);
+
+            // Nothing stands yet: the row must be refused for the reason it gives, not succeed
+            // quietly, or a tester on an empty board cannot tell a no-op from a bug.
+            colony.World.Intents.Submit(new Intent(IntentKind.DebugRipen, at));
+            colony.World.Tick();
+            Assert.That(colony.World.Intents.Rejected[0].Reason,
+                Is.EqualTo(IntentRejection.AlreadyInThatState));
+
+            // A painted, sown cell, then the ripen: the same end state the growth system would
+            // have reached — ripeness — without the four days of daylight windows.
+            Assert.That(zones.Designate(at, PlantHandle.Carrot), Is.EqualTo(IntentRejection.None));
+            int index = Size.Index(at);
+            zones.Sow(index);
+            colony.World.Intents.Submit(new Intent(IntentKind.DebugRipen, at));
+            colony.World.Tick();
+            Assert.That(colony.World.Intents.Rejected, Has.Count.EqualTo(1),
+                "the empty-board refusal above is still the only rejection: the ripen itself landed");
+            Assert.That(zones.IsRipe(index),
+                "the debug ripen writes the growth system's own end state");
         }
     }
 }

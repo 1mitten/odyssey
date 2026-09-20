@@ -12,6 +12,12 @@
 /[Rr]ecordings/
 /[Tt]estResults/
 
+# The scratch scene a PlayMode run creates and normally deletes on its way out. A run that is
+# cancelled, or that Unity is killed out of, leaves one behind — and an untracked file in Assets/
+# is exactly the kind of thing a `git add -A` sweeps into a commit (2026-09-20).
+/Assets/InitTestScene*.unity
+/Assets/InitTestScene*.unity.meta
+
 # Addressables / streaming build output
 /Assets/AddressableAssetsData/*/*.bin*
 /Assets/StreamingAssets/aa.meta

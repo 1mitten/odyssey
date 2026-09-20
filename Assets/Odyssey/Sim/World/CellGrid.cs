@@ -194,6 +194,39 @@ namespace Odyssey.Sim.World
         }
 
         /// <summary>
+        /// Where something falling out of the sky over this column comes to rest, or -1 if it
+        /// would not: the topmost cell that is not open air, if that cell can be stood in.
+        ///
+        /// <para>The first event lands things "through open sky" (design 23 §6), and this is the
+        /// one rule that decides what that means. Walking down from the top of the world, the
+        /// first cell met that has a floor, is solid, holds an edifice or is impassable water is
+        /// where the fall stops. A rooftop slab is such a cell and is walkable, so a drop lands
+        /// on the roof and never in the room under it. A wall's own cell, a tree's, deep water
+        /// and bare rock are met first and are not walkable, so the column is refused rather
+        /// than the load being put somewhere the rule did not say.</para>
+        ///
+        /// <para>Not <see cref="NearestWalkableInColumn"/> from the top, which would search
+        /// <em>past</em> a wall to the floor beside its foot and past deep water to the bed under
+        /// it — the two answers this exists to refuse. And not <see cref="FirstFloorAtOrBelow"/>,
+        /// which is where a thing already inside the world goes when its floor is taken away and
+        /// is happy to stop under a ceiling.</para>
+        /// </summary>
+        public int SkyLanding(int x, int z)
+        {
+            if (x < 0 || x >= Size.SizeX || z < 0 || z >= Size.SizeZ) return -1;
+
+            for (int y = Size.SizeY - 1; y >= 0; y--)
+            {
+                int index = Size.Index(x, z, y);
+                bool air = !HasFloor(index) && !IsSolidTerrain(index) && Edifice[index] < 0 &&
+                           !IsImpassableTerrain(index);
+                if (air) continue;
+                return IsWalkable(index) ? index : -1;
+            }
+            return -1;
+        }
+
+        /// <summary>
         /// Folds the grid into the world state hash. Only authoritative fields contribute:
         /// support is derived and is rebuilt on load, so hashing it would make a save/load
         /// round trip appear to diverge for no reason. Reachability is not on the grid at all:

@@ -55,6 +55,22 @@ namespace Odyssey.Presentation.Audio
         /// <summary>The linear gain the music ducks to. Half-ish, not a dip to nothing.</summary>
         public const float DuckGain = 0.45f;
 
+        /// <summary>How fast the music steps out of a chime's way: fast enough to carve its space.</summary>
+        public const float DuckAttackSeconds = 0.15f;
+
+        /// <summary>
+        /// How long the music takes to come back afterwards. It used to return at the attack's
+        /// rate, which the owner heard as the sound snapping to silence and the music switching
+        /// back on (2026-09-20); a second's swell reads as the room settling rather than a switch.
+        /// </summary>
+        public const float DuckReleaseSeconds = 1.0f;
+
+        /// <summary>
+        /// The last part of an alert chime is faded out rather than left to stop dead, over this
+        /// many seconds. Alerts only: a chop or a pick is a transient and is meant to stop dead.
+        /// </summary>
+        public const float ChimeTailSeconds = 0.4f;
+
         /// <summary>
         /// The bed level under which the loop is stopped rather than played quietly. A thousandth
         /// of full is some sixty dB down: inaudible under anything, and the exponential approach
@@ -69,6 +85,8 @@ namespace Odyssey.Presentation.Audio
         readonly AudioSource[] _voices = new AudioSource[VoiceCount];
         readonly double[] _busyUntil = new double[VoiceCount];
         readonly int[] _voicePriority = new int[VoiceCount];
+        readonly float[] _voiceGain = new float[VoiceCount];
+        readonly SoundBus[] _voiceBus = new SoundBus[VoiceCount];
         /// <summary>
         /// The catalogue's sounds by id, built once.
         ///
@@ -276,9 +294,39 @@ namespace Odyssey.Presentation.Audio
             _listener = listener;
 
             StepDuck(deltaTime);
+            StepChimeTails();
             StepAmbience(deltaTime, focus, activeLayer);
             StepPhaseLoops(deltaTime, frame.Tick, activeLayer);
+            StepLandings(frame);
 
+        }
+
+        // ---- things landing (design 23 §6) ---------------------------------------------------
+
+        readonly List<(CellRef cell, int landTick)> _airborne = new();
+        readonly List<(CellRef cell, int landTick)> _airborneNow = new();
+
+        /// <summary>
+        /// A thing that was in the air last frame and is not this frame has landed, and lands
+        /// audibly where the simulation said it would. The frame's tick must have reached the
+        /// promised landing tick: a load that vanishes any other way — a fresh world, a save
+        /// loaded over this one — did not hit anything.
+        /// </summary>
+        void StepLandings(WorldSnapshot frame)
+        {
+            _airborneNow.Clear();
+            var falling = frame.Falling;
+            for (int i = 0; i < falling.Length; i++) _airborneNow.Add((falling[i].Landing, falling[i].LandTick));
+
+            for (int i = 0; i < _airborne.Count; i++)
+            {
+                (CellRef cell, int landTick) was = _airborne[i];
+                if (_airborneNow.Contains(was) || frame.Tick < was.landTick) continue;
+                PlayOneShot(SoundIds.DropLand, CellMetrics.FloorCentre(cell: was.cell));
+            }
+
+            _airborne.Clear();
+            _airborne.AddRange(_airborneNow);
         }
 
         /// <summary>
@@ -338,6 +386,8 @@ namespace Odyssey.Presentation.Audio
             voice.clip = clip;
             voice.pitch = pitch;
             voice.volume = gain;
+            _voiceGain[index] = gain;
+            _voiceBus[index] = def.Bus;
             voice.spatialBlend = def.SpatialBlend;
             voice.minDistance = def.MinDistance;
             voice.maxDistance = def.MaxDistance;
@@ -348,7 +398,7 @@ namespace Odyssey.Presentation.Audio
 
             // Busy by arithmetic and not by isPlaying: the bookkeeping stays true in edit mode,
             // where nothing plays, and in a test, which steps the clock by hand.
-            _busyUntil[index] = _time + clip.length / pitch + 0.05d;
+            _busyUntil[index] = _time + clip.length / pitch + BusyPadSeconds;
             _voicePriority[index] = def.Priority;
             _lastPlayed[def] = _time;
             OneShotsPlayed++;
@@ -395,9 +445,31 @@ namespace Odyssey.Presentation.Audio
         {
             if (_duckRemaining > 0f) _duckRemaining -= deltaTime;
             float target = _duckRemaining > 0f ? DuckGain : 1f;
-            // Fast enough that a chime carves its space, slow enough not to pump.
-            _duckGain = Mathf.MoveTowards(_duckGain, target, deltaTime / 0.15f);
+            // Down fast, so a chime carves its space; back up slowly, so the room settles
+            // rather than switches. The two rates are the constants' own comments.
+            float seconds = target < _duckGain ? DuckAttackSeconds : DuckReleaseSeconds;
+            _duckGain = Mathf.MoveTowards(_duckGain, target, deltaTime / seconds);
         }
+
+        /// <summary>
+        /// Fade the last <see cref="ChimeTailSeconds"/> of every alert voice, so a chime ends
+        /// as a decay and not as a cut. The end is the voice's own bookkeeping — the clip's
+        /// length at its pitch — and the gain it fades from is the one it was played at, so a
+        /// fader move during the tail is applied on top rather than fought.
+        /// </summary>
+        void StepChimeTails()
+        {
+            for (int i = 0; i < VoiceCount; i++)
+            {
+                if (_voiceBus[i] != SoundBus.Alerts || _busyUntil[i] <= _time) continue;
+                double remaining = _busyUntil[i] - BusyPadSeconds - _time;
+                if (remaining >= ChimeTailSeconds) continue;
+                _voices[i].volume = _voiceGain[i] * Mathf.Clamp01((float)(remaining / ChimeTailSeconds));
+            }
+        }
+
+        /// <summary>The slack past a clip's end that a voice stays booked for.</summary>
+        const double BusyPadSeconds = 0.05d;
 
         void StepAmbience(float deltaTime, Vector3 focus, int activeLayer)
         {

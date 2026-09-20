@@ -176,5 +176,36 @@ namespace Odyssey.Tests.Sim
             ColonyWorld colony = Build();
             Assert.That(Hash(colony), Is.EqualTo(Hash(colony)));
         }
+
+        // ---- the events (design 23) ---------------------------------------------------------
+
+        /// <summary>
+        /// A thing in the air is state the world owns: two worlds that differ only in what is
+        /// about to land are two different worlds, and a save that lost the flight would resume
+        /// with the load gone.
+        /// </summary>
+        [Test]
+        public void AThingInTheAirMovesTheHash()
+        {
+            ColonyWorld colony = Build();
+            ulong before = Hash(colony);
+
+            colony.Incidents.Skyfallers.Launch(
+                IncidentHandle.SupplyDrop, ItemIndex.Meal, 12, SomeSolidCell(colony.Grid), 0, 120);
+
+            Assert.That(Hash(colony), Is.Not.EqualTo(before));
+        }
+
+        /// <summary>History is state: the ledger is what a refire gate will read.</summary>
+        [Test]
+        public void ALedgerEntryMovesTheHash()
+        {
+            ColonyWorld colony = Build();
+            ulong before = Hash(colony);
+
+            colony.Incidents.Ledger.Record(IncidentHandle.SupplyDrop, SomeSolidCell(colony.Grid), 0);
+
+            Assert.That(Hash(colony), Is.Not.EqualTo(before));
+        }
     }
 }

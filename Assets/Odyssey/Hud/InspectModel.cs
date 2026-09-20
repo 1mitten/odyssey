@@ -307,6 +307,7 @@ namespace Odyssey.Hud
             if (Subject == InspectSubject.Item)
             {
                 bool found = false;
+                ThingView atThing = default;
                 var things = snapshot.Things;
                 for (int i = 0; i < things.Length; i++)
                 {
@@ -326,10 +327,29 @@ namespace Odyssey.Hud
                     ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
                     SetPosition(thing.Cell);
                     Layer = thing.Cell.Y;
+                    atThing = thing;
                     found = true;
                     break;
                 }
                 if (!found) Subtitle = "item · no longer present";
+
+                // A pile lying in a field carries the field's answer (owner, 2026-09-19: the
+                // click area that mattered was the tile, and the pile ate it - the only clear
+                // ground to click was between the plants). The query the picker asked was for
+                // this very cell, so its detail is already in the frame.
+                CellRows.Clear();
+                if (found && snapshot.TryGetCellDetail(
+                        snapshot.Size.Index(atThing.Cell), out CellDetail under))
+                {
+                    if (under.ZonePlant != byte.MaxValue)
+                    {
+                        string plant = Registry.Label(BuildLabels.PlantKey(under.ZonePlant));
+                        string howMany = under.ZoneYield > 1 ? plant + " × " + under.ZoneYield : plant;
+                        Row(0, "growing", under.CropGrowth == ushort.MaxValue
+                            ? howMany + " — awaiting its seed"
+                            : howMany + " — " + under.CropGrowth / 10 + "% grown");
+                    }
+                }
                 return;
             }
 
@@ -536,6 +556,10 @@ namespace Odyssey.Hud
         int _cellRowsOrderPercent;
         int _cellRowsQuality;
         int _cellRowsOwner;
+        int _cellRowsZonePlant;
+        int _cellRowsZoneYield;
+        int _cellRowsCropGrowth;
+        bool _cellRowsIndoors;
 
         /// <summary>
         /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
@@ -593,7 +617,11 @@ namespace Odyssey.Hud
                 && _cellRowsOrderKind == (ordered ? kind : 0)
                 && _cellRowsOrderPercent == (ordered ? orderPercent : 0)
                 && _cellRowsQuality == detail.EdificeQuality
-                && _cellRowsOwner == detail.EdificeOwner) return;
+                && _cellRowsOwner == detail.EdificeOwner
+                && _cellRowsZonePlant == detail.ZonePlant
+                && _cellRowsCropGrowth == detail.CropGrowth
+                && _cellRowsZoneYield == detail.ZoneYield
+                && _cellRowsIndoors == detail.IsIndoors) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -605,6 +633,10 @@ namespace Odyssey.Hud
             _cellRowsOrderPercent = ordered ? orderPercent : 0;
             _cellRowsQuality = detail.EdificeQuality;
             _cellRowsOwner = detail.EdificeOwner;
+            _cellRowsZonePlant = detail.ZonePlant;
+            _cellRowsCropGrowth = detail.CropGrowth;
+            _cellRowsZoneYield = detail.ZoneYield;
+            _cellRowsIndoors = detail.IsIndoors;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -633,6 +665,23 @@ namespace Odyssey.Hud
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
             }
+
+            // A field's own answer, beside the ground's (owner, 2026-09-18 - clicking a growing
+            // zone should say what is growing there). What the zone grows and how far the
+            // standing crop has come; the changing percentage is why the pane is worth holding
+            // open over a field. Changing the crop from here is deliberately not offered: one
+            // crop exists, and the species chooser is the inspect pane's recorded hook for the
+            // day a second crop gives it something to choose (design 22 §8).
+            if (detail.ZonePlant != byte.MaxValue)
+            {
+                string plant = Registry.Label(BuildLabels.PlantKey(detail.ZonePlant));
+                string howMany = detail.ZoneYield > 1 ? plant + " × " + detail.ZoneYield : plant;
+                Row(n++, "growing", detail.CropGrowth == ushort.MaxValue
+                    ? howMany + " — awaiting its seed"
+                    : howMany + " — " + detail.CropGrowth / 10 + "% grown");
+            }
+            if (detail.IsIndoors)
+                Row(n++, "environment", "indoors");
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"

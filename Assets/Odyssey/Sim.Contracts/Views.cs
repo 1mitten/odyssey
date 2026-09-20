@@ -29,6 +29,15 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Setting something down.</summary>
         Stow = 2,
+
+        /// <summary>
+        /// Kneeling at a plot to work seed into it (owner, 2026-09-18: the sow must not chop).
+        /// The pickup's own pose and curve, re-timed: down quickly, a long hold at the soil —
+        /// the hold is the work — and up slowly. Reused rather than new because a sower kneels
+        /// exactly where a lifter stooops, against ground the relief has tilted, and the solved
+        /// pose is already correct on all sixty-one rigs.
+        /// </summary>
+        Sow = 3,
     }
 
     /// <summary>
@@ -304,6 +313,90 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One entry of the incident ledger: an event that happened, published so the interface can
+    /// say so. The Events panel and, later, the History screen read these (design 23 §5).
+    ///
+    /// <para><b>The id is the edge.</b> A one-tick "something happened" flag would be missed by a
+    /// panel that refreshes four times a second while the world ticks sixty (see
+    /// <see cref="PawnView.GestureSerial"/> for the general rule). Ids are monotonic — the ledger
+    /// only ever appends — so a reader keeps the highest it has seen and treats anything above it
+    /// as new. The simulation publishes the ledger's tail, <see cref="PublishedTail"/> entries at
+    /// most, so a frame is bounded whatever the colony's history; the whole ledger is the
+    /// archive's business and arrives by another channel when that panel exists.</para>
+    ///
+    /// <para><b>Not state.</b> A row here is a report of state the ledger owns, saved and hashed
+    /// there; this struct is neither, exactly as <see cref="PawnAspect"/> is neither.</para>
+    /// </summary>
+    public readonly struct BulletinView
+    {
+        /// <summary>How many of the newest entries a frame carries.</summary>
+        public const int PublishedTail = 16;
+
+        /// <summary>The ledger's own number for this entry, from 1, never reused.</summary>
+        public readonly int Id;
+
+        /// <summary>Which incident, as an <see cref="IncidentHandle"/> value.</summary>
+        public readonly int IncidentDef;
+
+        /// <summary>Where it happened — the cell to jump the camera to.</summary>
+        public readonly CellRef Cell;
+
+        /// <summary>When it happened, in ticks, for the row's own timestamp.</summary>
+        public readonly int Tick;
+
+        /// <summary>
+        /// Whether it was a gift, a blow or neither: 0 neutral, 1 good, 2 bad, the values of the
+        /// simulation's own favourability enum. Carried as a number so this assembly does not
+        /// learn the enum — it drives the row's ink and its chime and nothing else.
+        /// </summary>
+        public readonly int Favourability;
+
+        public BulletinView(int id, int incidentDef, CellRef cell, int tick, int favourability = 0)
+        {
+            Id = id;
+            IncidentDef = incidentDef;
+            Cell = cell;
+            Tick = tick;
+            Favourability = favourability;
+        }
+    }
+
+    /// <summary>
+    /// Something in the air on its way down: a skyfaller (design 23 §6). The simulation owns the
+    /// flight — when it was launched, when it lands, where — and presentation only draws where
+    /// along that line the current frame falls, exactly as it draws a pawn between two cells.
+    ///
+    /// <para>The thing does not exist as a <see cref="ThingView"/> until it lands, so nothing can
+    /// haul, eat or count it in flight, and a save taken mid-air lands it on the same tick it
+    /// would have landed anyway.</para>
+    /// </summary>
+    public readonly struct FallingView
+    {
+        /// <summary>What is falling, as an <see cref="ItemHandle"/> value.</summary>
+        public readonly int ThingDef;
+
+        public readonly int Stack;
+
+        /// <summary>The cell it will land in — the topmost walkable cell of its column.</summary>
+        public readonly CellRef Landing;
+
+        /// <summary>The tick it was launched on, from which the descent is measured.</summary>
+        public readonly int LaunchTick;
+
+        /// <summary>The tick it lands on and becomes a thing.</summary>
+        public readonly int LandTick;
+
+        public FallingView(int thingDef, int stack, CellRef landing, int launchTick, int landTick)
+        {
+            ThingDef = thingDef;
+            Stack = stack;
+            Landing = landing;
+            LaunchTick = launchTick;
+            LandTick = landTick;
+        }
+    }
+
+    /// <summary>
     /// One number a feature has published about one pawn, under a name it chose itself.
     ///
     /// <para><b>What this is for.</b> <see cref="PawnView"/> is a struct every consumer reads, in
@@ -484,6 +577,67 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One cell of a growing zone, planted or waiting for its seed.
+    ///
+    /// <para>Sparse and whole-world, exactly as <see cref="OrderView"/> is and for the same
+    /// reason: zones are tens to thousands of cells on a board of millions, and a zone on layer
+    /// three must draw when layer three is the slice. The overlay this feeds is a tint, not
+    /// geometry; what stands planted in the cell rides <see cref="PlantView"/>, which is a
+    /// different row because a crop can be asked about without its zone and a zone cell exists
+    /// before anything is in it.</para>
+    /// </summary>
+    public readonly struct ZoneView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What the zone grows here, as a <see cref="PlantHandle"/> value.</summary>
+        public readonly byte Plant;
+
+        public ZoneView(int cellIndex, byte plant)
+        {
+            CellIndex = cellIndex;
+            Plant = plant;
+        }
+    }
+
+    /// <summary>
+    /// One standing crop: a planted cell, what grows there, and how far it has got.
+    ///
+    /// <para><b>Quantised growth, and it is not <see cref="SiteView"/>'s argument repeated.</b>
+    /// A site is asked questions in a pane; a crop is only ever <i>looked</i> at, and what reads
+    /// is whether the row is sprouting, half-grown or ripe — which is <see cref="Stage"/>, a
+    /// bucket with three answers. The growth byte rides along so a later progress ring needs no
+    /// contract change, quantised like <see cref="OrderView.Progress"/> because a picture is
+    /// what it is for; the tick-true counter stays in the simulation, where the arithmetic is
+    /// done.</para>
+    /// </summary>
+    public readonly struct PlantView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What is growing, as a <see cref="PlantHandle"/> value.</summary>
+        public readonly byte Plant;
+
+        /// <summary>The drawn stage, 0–3: sown-not-sprouted
+        /// (the seed day — specks and no plant), sprout, half-grown, mature. Harvestability is
+        /// not this — it is the simulation's own rule, and the giver, not the picture, decides.</summary>
+        public readonly byte Stage;
+
+        /// <summary>How far through growing, 0–255 quantised.</summary>
+        public readonly byte Growth;
+
+        public PlantView(int cellIndex, byte plant, byte stage, byte growth)
+        {
+            CellIndex = cellIndex;
+            Plant = plant;
+            Stage = stage;
+            Growth = growth;
+        }
+    }
+
+    /// <summary>
     /// The answer to "what is this cell": one row, published for the one cell the interface has
     /// asked about and for no other.
     ///
@@ -549,8 +703,35 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int EdificeOwner;
 
+        /// <summary>
+        /// What this cell's growing zone grows, as a <c>PlantHandle</c>, or 255 where the cell is
+        /// in no zone. Sparse like the bed's fields: most cells answer nothing, and the pane says
+        /// nothing for them.
+        /// </summary>
+        public readonly byte ZonePlant;
+
+        /// <summary>
+        /// How far the crop standing here has grown, in thousandths of ripeness — or
+        /// <c>ushort.MaxValue</c> where the zone's cell is still waiting for its seed. Read as
+        /// "43% grown" beside the plant's name; the changing number is why the pane is worth
+        /// holding open over a field.
+        /// </summary>
+        public readonly ushort CropGrowth;
+
+        /// <summary>
+        /// How many plants a sown cell of this zone's crop stands — the yield the plot will give
+        /// (owner, 2026-09-18: the pane should say how many carrots are growing in the plot, so
+        /// tile and pane cannot disagree about it). 0 where there is no zone.
+        /// </summary>
+        public readonly byte ZoneYield;
+
+        /// <summary>Whether this cell is inside an enclosed, roofed room.</summary>
+        public readonly bool IsIndoors;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
-            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0)
+            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
+            byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
+            bool isIndoors = false)
         {
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -561,6 +742,10 @@ namespace Odyssey.Sim.Contracts
             WorkToClear = workToClear;
             EdificeQuality = edificeQuality;
             EdificeOwner = edificeOwner;
+            ZonePlant = zonePlant;
+            CropGrowth = cropGrowth;
+            ZoneYield = zoneYield;
+            IsIndoors = isIndoors;
         }
     }
 
@@ -579,9 +764,13 @@ namespace Odyssey.Sim.Contracts
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
         SiteView[] _sites = Array.Empty<SiteView>();
+        ZoneView[] _zones = Array.Empty<ZoneView>();
+        PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
         CellDetail[] _cellDetails = Array.Empty<CellDetail>();
+        BulletinView[] _bulletins = Array.Empty<BulletinView>();
+        FallingView[] _falling = Array.Empty<FallingView>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -634,11 +823,32 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many building sites <see cref="Sites"/> holds.</summary>
         public int SiteCount { get; private set; }
 
+        /// <summary>How many growing-zone cells the world holds, anywhere in it.</summary>
+        public int ZoneCount { get; private set; }
+
+        /// <summary>How many planted cells are standing.</summary>
+        public int PlantCount { get; private set; }
+
         /// <summary>How many aspects every feature published this frame, over all pawns.</summary>
         public int AspectCount { get; private set; }
 
         /// <summary>How many cells the interface asked about this frame. Zero or one today.</summary>
         public int CellDetailCount { get; private set; }
+
+        /// <summary>How many ledger entries this frame carries: the newest, up to <see cref="BulletinView.PublishedTail"/>.</summary>
+        public int BulletinCount { get; private set; }
+
+        /// <summary>How many things are in the air right now. Nearly always zero.</summary>
+        public int FallingCount { get; private set; }
+
+        /// <summary>
+        /// The newest incidents, oldest first, so a reader walking forward meets ids in ascending
+        /// order. See <see cref="BulletinView"/> for the edge rule.
+        /// </summary>
+        public ReadOnlySpan<BulletinView> Bulletins => new ReadOnlySpan<BulletinView>(_bulletins, 0, BulletinCount);
+
+        /// <summary>Everything in the air, in launch order. See <see cref="FallingView"/>.</summary>
+        public ReadOnlySpan<FallingView> Falling => new ReadOnlySpan<FallingView>(_falling, 0, FallingCount);
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -658,6 +868,15 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
         public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
+
+        /// <summary>
+        /// Every growing-zone cell in the world, in cell-index order. Empty when the world has no
+        /// zones. See <see cref="ZoneView"/>.
+        /// </summary>
+        public ReadOnlySpan<ZoneView> Zones => new ReadOnlySpan<ZoneView>(_zones, 0, ZoneCount);
+
+        /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
+        public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
 
         /// <summary>
         /// Everything features published about pawns this frame, in the order they published it.
@@ -743,9 +962,25 @@ namespace Odyssey.Sim.Contracts
             SliceCellCount = 0;
             OrderCount = 0;
             SiteCount = 0;
+            ZoneCount = 0;
+            PlantCount = 0;
 
             AspectCount = 0;
             CellDetailCount = 0;
+            BulletinCount = 0;
+            FallingCount = 0;
+        }
+
+        internal void AddBulletin(in BulletinView view)
+        {
+            Grow(ref _bulletins, BulletinCount + 1);
+            _bulletins[BulletinCount++] = view;
+        }
+
+        internal void AddFalling(in FallingView view)
+        {
+            Grow(ref _falling, FallingCount + 1);
+            _falling[FallingCount++] = view;
         }
 
         internal void AddPawn(in PawnView view)
@@ -777,6 +1012,18 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _sites, SiteCount + 1);
             _sites[SiteCount++] = view;
+        }
+
+        internal void AddZone(in ZoneView view)
+        {
+            Grow(ref _zones, ZoneCount + 1);
+            _zones[ZoneCount++] = view;
+        }
+
+        internal void AddPlant(in PlantView view)
+        {
+            Grow(ref _plants, PlantCount + 1);
+            _plants[PlantCount++] = view;
         }
 
         internal void AddPawnAspect(in PawnAspect aspect)

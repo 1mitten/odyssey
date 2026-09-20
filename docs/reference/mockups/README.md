@@ -10,6 +10,7 @@ another game, no Synty content appears in any of them, and every name is ours.
 
 | File | Supplied | Status | What it shows |
 |---|---|---|---|
+| `work-v1.html` | 2026-09-20 | **current** | The Work tab, B2. The owner's supplied mockup re-pointed at our tokens: all twenty-two `ui.work.*` columns with the simulation's four live and eighteen drawn as not-built, rotated labels at the angle the pitch actually demands, the five-step skill border, passion flames, and a working Simple / Detailed switch. Decisions in `docs/design/27-work-tab.md` |
 | `hud-v2.html` | 2026-09-15 | **current** | The layer HUD. All six above-slice visibility modes from ADR 0006 plus the depth cap and the below-slice treatment, six named presets, live tuning sliders, and every icon slot driven by the real icon mapping with a coverage read-out |
 | `hud-v1.html` | 2026-09-15 | historical | The complete HUD and every panel from `docs/design/10-ui-panel-catalogue.md`, with a working layer slice, the four icon debug modes, and per-region architecture annotations |
 | `icon-map.js` | generated | — | Written by `tools/icons/icons.py emit-web` from `docs/design/icon-map.csv`. Do not edit |

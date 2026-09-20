@@ -53,6 +53,28 @@ namespace Odyssey.Presentation.Audio
         public const string CarryDrop = SoundPrefix + "carry.drop";
 
         /// <summary>
+        /// A sliding door opening. <b>Named, and in no catalogue yet</b>:
+        /// the director declines a sound it has no clip for, so this plays the day the owner adds
+        /// the row and not before.
+        /// </summary>
+        public const string DoorOpen = SoundPrefix + "door.open";
+
+        /// <summary>
+        /// A sliding door closing. <b>Named, and in no catalogue yet</b>:
+        /// the director declines a sound it has no clip for, so this plays the day the owner adds
+        /// the row and not before.
+        /// </summary>
+        public const string DoorClose = SoundPrefix + "door.close";
+
+        /// <summary>
+        /// A supply drop hitting the ground (design 23 §6). <b>Named, and in no catalogue yet</b>:
+        /// the director declines a sound it has no clip for, so this plays the day the owner adds
+        /// the row and not before. Raised by <see cref="AudioDirector"/> itself, from the
+        /// published frame, on the first frame a thing that was in the air is not.
+        /// </summary>
+        public const string DropLand = SoundPrefix + "drop.land";
+
+        /// <summary>
         /// The neutral chime: something has happened that is worth a glance and is nobody's
         /// emergency. What an <see cref="Hud.AlertSeverity.Notice"/> row sounds like.
         /// </summary>

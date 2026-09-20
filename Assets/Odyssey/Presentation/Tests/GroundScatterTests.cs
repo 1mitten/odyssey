@@ -163,6 +163,57 @@ namespace Odyssey.Tests.Presentation
         {
             Assert.That(GroundScatter.VariantFor(5, 9, 2, 1), Is.Zero);
         }
+
+        [Test]
+        public void AClumpIsPulledOffATilledNeighbourAndOffNothingElse()
+        {
+            // A clump stands in a ring of its own cell but its mesh reaches a metre past it, and
+            // the tile beside a growing zone is tilled ground - before this pull every border
+            // tile of a plot wore a fringe of meadow lying over it (owner, 2026-09-19).
+            float limit = (CellMetrics.SizeXZ * 0.5f - GroundScatter.ClumpReach) / CellMetrics.SizeXZ;
+
+            // Pulled in from the one tilled side...
+            float x = 0.44f, z = 0.1f;
+            GroundScatter.PullInFromTilled(ref x, ref z,
+                tilledXPlus: true, tilledXMinus: false, tilledZPlus: false, tilledZMinus: false);
+            Assert.That(x, Is.EqualTo(limit).Within(1e-5f),
+                "a clump reaching over a tilled tile is still standing at the ring's rim");
+            Assert.That(z, Is.EqualTo(0.1f), "the other axis is nobody's business");
+
+            // ...and not from the far side, which reaches nothing.
+            x = 0.44f; z = 0.1f;
+            GroundScatter.PullInFromTilled(ref x, ref z,
+                tilledXPlus: false, tilledXMinus: true, tilledZPlus: false, tilledZMinus: false);
+            Assert.That(x, Is.EqualTo(0.44f),
+                "a clump on the far side of its cell reaches no tilled tile and must not move");
+
+            // Ringed on all four, there is still a strip of grass to stand in.
+            x = 0.44f; z = -0.44f;
+            GroundScatter.PullInFromTilled(ref x, ref z,
+                tilledXPlus: true, tilledXMinus: true, tilledZPlus: true, tilledZMinus: true);
+            Assert.That(Mathf.Abs(x), Is.LessThanOrEqualTo(limit + 1e-5f));
+            Assert.That(Mathf.Abs(z), Is.LessThanOrEqualTo(limit + 1e-5f));
+
+            // And with no tilled neighbour at all, the ring is where it always was.
+            x = 0.44f; z = -0.44f;
+            GroundScatter.PullInFromTilled(ref x, ref z,
+                tilledXPlus: false, tilledXMinus: false, tilledZPlus: false, tilledZMinus: false);
+            Assert.That(x, Is.EqualTo(0.44f));
+            Assert.That(z, Is.EqualTo(-0.44f));
+        }
+
+        [Test]
+        public void APulledClumpStaysInsideItsOwnCell()
+        {
+            // The limit keeps the clump's REACH off the neighbour, and must also keep the clump
+            // itself inside its own tile - the ring exists to hide the grid, and a clump
+            // outside its cell advertises it.
+            float limit = (CellMetrics.SizeXZ * 0.5f - GroundScatter.ClumpReach) / CellMetrics.SizeXZ;
+            Assert.That(limit, Is.GreaterThan(0f),
+                "a cell 2.5 m wide cannot host a clump that reaches a metre: the limit went negative");
+            Assert.That(limit, Is.LessThan(GroundScatter.OuterRadius),
+                "the pull would never move a rim clump, and the border fringe would remain");
+        }
     }
 
 }

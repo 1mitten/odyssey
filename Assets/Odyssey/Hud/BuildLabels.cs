@@ -23,13 +23,13 @@ namespace Odyssey.Hud
     {
         /// <summary>
         /// Parallel to <see cref="BuildingHandle"/>: None, Wall, Floor, DeckPlate, Ladder, Bed,
-        /// Pillar, Stair.
+        /// Door, Pillar, Stair.
         /// </summary>
         public static readonly string[] BuildingKeys =
         {
             "", "ui.arch.tool.wall", "ui.arch.tool.roof", "ui.arch.tool.deckplate",
-            "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.pillar",
-            "ui.arch.tool.stair",
+            "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.door",
+            "ui.arch.tool.pillar", "ui.arch.tool.stair",
         };
 
         /// <summary>
@@ -47,11 +47,23 @@ namespace Odyssey.Hud
             "", "", "", "", "ui.res.wood", "ui.res.stone",
         };
 
+        /// <summary>
+        /// Parallel to <see cref="PlantHandle"/>: Carrot, the first crop and for now the only one.
+        /// The picker walks <c>PaletteTools.Plants</c>; a second crop is one key here.
+        /// </summary>
+        public static readonly string[] PlantKeys =
+        {
+            "ui.terrain.carrot",
+        };
+
         public static string BuildingKey(int building) =>
             building > 0 && building < BuildingKeys.Length ? BuildingKeys[building] : string.Empty;
 
         public static string StuffKey(int stuff) =>
             stuff > 0 && stuff < StuffKeys.Length ? StuffKeys[stuff] : string.Empty;
+
+        public static string PlantKey(int plant) =>
+            plant >= 0 && plant < PlantKeys.Length ? PlantKeys[plant] : string.Empty;
 
         /// <summary>The thing's name, or an empty string where there is nothing to name.</summary>
         public static string Building(int building)

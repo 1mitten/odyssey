@@ -468,6 +468,38 @@ namespace Odyssey.Tests.Hud
         }
     }
 
+    /// <summary>The debug menu's two tabs (owner, 2026-09-20), driven the way Settings' are.</summary>
+    public class DebugTabTests
+    {
+        [Test]
+        public void ItOpensOnCheats()
+        {
+            Assert.That(new DebugDirector().Tab, Is.EqualTo(DebugTab.Cheats));
+        }
+
+        [Test]
+        public void ChangingTabAnnouncesItselfOnceAndOnlyWhenItChanges()
+        {
+            var debug = new DebugDirector();
+            var seen = new List<DebugTab>();
+            debug.TabChanged += seen.Add;
+
+            debug.SetTab(DebugTab.Events);
+            debug.SetTab(DebugTab.Events);
+            debug.SetTab(DebugTab.Cheats);
+
+            Assert.That(seen, Is.EqualTo(new[] { DebugTab.Events, DebugTab.Cheats }));
+        }
+
+        [Test]
+        public void EveryTabHasAKeyOfItsOwn()
+        {
+            Assert.That(DebugDirector.TabKey(DebugTab.Cheats), Is.Not.EqualTo(DebugDirector.TabKey(DebugTab.Events)));
+            Assert.That(DebugDirector.IconKeys, Does.Contain(DebugDirector.TabKey(DebugTab.Cheats)));
+            Assert.That(DebugDirector.IconKeys, Does.Contain(DebugDirector.TabKey(DebugTab.Events)));
+        }
+    }
+
     /// <summary>
     /// Escape unwinds in one order, decided in one place: the tool in the hand first, then the
     /// panel opened over the board, then the menu.

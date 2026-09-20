@@ -86,6 +86,8 @@ namespace Odyssey.Sim.Pawns
             MoodTarget = content.Kind.startingMood;
             WorkPriorities = new byte[WorkTypeIndex.Count];
             for (int i = 0; i < WorkPriorities.Length; i++) WorkPriorities[i] = 3;
+            ScheduleHours = new byte[ScheduleHandle.Hours];
+            for (int h = 0; h < ScheduleHours.Length; h++) ScheduleHours[h] = DefaultScheduleAt(h);
             Skills = new int[SkillIndex.Count];
             Passions = new byte[SkillIndex.Count];
             SkillGainedToday = new int[SkillIndex.Count];
@@ -173,6 +175,42 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Player priority per work type: 0 disabled, 1 highest, 4 lowest.</summary>
         public byte[] WorkPriorities { get; }
+
+        /// <summary>
+        /// What this colonist is told to be doing in each of the day's twenty-four hours, as a
+        /// <see cref="ScheduleHandle"/> per hour (design 27 §12).
+        ///
+        /// <para><b>Saved, published and editable — and read by nothing.</b> The hour a colonist
+        /// sleeps is still decided by their rest need. That is why this is deliberately absent
+        /// from <see cref="ContributeTo"/>: a value no system consults cannot affect a tick, which
+        /// is the same test the saved view passes, and hashing it now would move six golden
+        /// numbers for a change that alters no behaviour. It enters the hash in the unit that
+        /// makes the job system obey it, and the goldens move once, with a sentence.</para>
+        /// </summary>
+        public byte[] ScheduleHours { get; }
+
+        /// <summary>
+        /// The day a colonist arrives on: asleep through the small hours, a slow start, work
+        /// through the middle of the day, and an evening off.
+        ///
+        /// <para><b>It is drawn but not obeyed, so today it is only legible.</b> A colony of
+        /// twenty-four identical grey <i>Anything</i> bars would have been the honest picture of a
+        /// schedule nothing reads, and also a panel nobody could learn to read. This is the shape
+        /// the colony will keep when the schedule starts governing, so the picture is not a lie
+        /// about the future — only about the present, which the panel says out loud.</para>
+        /// </summary>
+        public static byte DefaultScheduleAt(int hour) =>
+            hour < 6 ? (byte)ScheduleHandle.Sleep
+            : hour < 9 ? (byte)ScheduleHandle.Anything
+            : hour < 18 ? (byte)ScheduleHandle.Work
+            : hour < 22 ? (byte)ScheduleHandle.Recreation
+            : (byte)ScheduleHandle.Sleep;
+
+        /// <summary>This colonist's block for one hour, or <c>Anything</c> out of range.</summary>
+        public virtual int ScheduleAt(int hour) =>
+            hour < 0 || hour >= ScheduleHours.Length
+                ? ScheduleHandle.Anything
+                : ScheduleHours[hour];
 
         public List<Memory> Memories { get; } = new List<Memory>();
 

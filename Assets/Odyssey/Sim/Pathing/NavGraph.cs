@@ -1202,6 +1202,8 @@ namespace Odyssey.Sim.Pathing
         public void SetDoorOpen(int cell, bool open)
         {
             if ((Grid.Flags[cell] & NavFlags.Door) == 0) return;
+            bool isAlreadyOpen = (Grid.Flags[cell] & NavFlags.DoorOpen) != 0;
+            if (isAlreadyOpen == open) return;
             if (open) Grid.Flags[cell] |= NavFlags.DoorOpen;
             else Grid.Flags[cell] &= ~NavFlags.DoorOpen;
             MarkDirty(cell);

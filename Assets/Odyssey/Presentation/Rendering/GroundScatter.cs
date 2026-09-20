@@ -91,6 +91,34 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>How far out it may stand. Short of the edge, so a tuft does not straddle the grid.</summary>
         public const float OuterRadius = 0.44f;
 
+        /// <summary>
+        /// Half the widest clump mesh, in metres: a clump nearly two metres across overhangs
+        /// the cell it is placed in by this much, which is the whole of the growing zone's
+        /// border problem - a tilled tile beside grass kept a fringe of meadow lying over it
+        /// (owner, 2026-09-19: "remove the grass graphics from the garden plots ... it makes
+        /// it jarring to see").
+        /// </summary>
+        public const float ClumpReach = 1.0f;
+
+        /// <summary>
+        /// Pull a clump's offset in from any side whose neighbour is tilled, so its mesh stays
+        /// on the grass it belongs to. The offset arrives as a fraction of the cell and leaves
+        /// the same way; the limit is how far out a clump may sit before its reach crosses the
+        /// tile line, and a cell ringed on all four sides still has the centre strip to stand
+        /// in - a cell is 2.5 m and the clump reaches 1.0, so 0.5 m of grass remains.
+        /// </summary>
+        public static void PullInFromTilled(
+            ref float offsetX, ref float offsetZ,
+            bool tilledXPlus, bool tilledXMinus, bool tilledZPlus, bool tilledZMinus)
+        {
+            float limit = (CellMetrics.SizeXZ * 0.5f - ClumpReach) / CellMetrics.SizeXZ;
+            if (limit < 0f) limit = 0f;
+            if (tilledXPlus) offsetX = Mathf.Min(offsetX, limit);
+            if (tilledXMinus) offsetX = Mathf.Max(offsetX, -limit);
+            if (tilledZPlus) offsetZ = Mathf.Min(offsetZ, limit);
+            if (tilledZMinus) offsetZ = Mathf.Max(offsetZ, -limit);
+        }
+
         /// <summary>Which of the available tuft meshes this one is.</summary>
         public static int VariantFor(int x, int z, int slot, int variants)
         {

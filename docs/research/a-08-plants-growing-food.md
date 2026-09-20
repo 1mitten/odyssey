@@ -4,7 +4,8 @@
 
 How do RimWorld's plants, growing zones and food economy work — growth by light, temperature and fertility; sowing and harvest work; nutrition, hunger and spoilage; hydroponics — and, for the two numbers the code needs now, **what should a felled tree yield and how long should felling take** (today `Job_Fell.workTicks = 600` and `WoodPerTree = 20`, both marked ASSUMED in `Assets/Odyssey/Sim/Pawns/PawnContent.cs`), and **what does a ten-day run's food economy need at minimum** (the scenario starts with 240 meals and nothing in the slice makes food, OQ-39)? Clean-room: mechanics, numbers and design intent from the public wiki, paraphrased; no Def XML, no decompiled source, no names or flavour text.
 
-Cap for this row: 15 page reads or 12 searches. Used: 15 reads (two of them 404s), 1 search.
+Cap for this row: 15 page reads or 12 searches. Used: 15 reads (two of them 404s), 1 search;
++1 read 2026-09-18 (the Growing page, for the zone-loop follow-up at the foot of this file).
 
 ## Findings
 
@@ -160,3 +161,66 @@ The recommendations are ours, derived from the numbers above and the code in `Pa
 - The raw-food mood penalty's magnitude.
 - What RimWorld's standard start scenario gives as food (**ASSUMED**: a small number of packaged survival meals per colonist, which is why the ration-pack class is the right analogue); not fetched within the cap.
 - The tick cadence on which growth and rot are applied (the wiki gives per-day rates only; `a-15` covers the buckets).
+
+## Follow-up, 2026-09-18 — the zone loop (the Growing page)
+
+Read for the growing-zone unit (U46–U50), the first consumer of this file's growth model; the
+loop is the part the growth formula does not cover. One further page read; the cap line above
+is updated.
+
+### Findings
+
+- **A zone is painted, not built.** Placed from the Architect's zone menu straight onto the
+  ground: no construction, no work, no skill, no cost, minimum size 1 × 1. Siting rule: fertile,
+  **unroofed** terrain — not sand, mud, ice, natural stone, water or constructed floors.
+- **The loop is continuous.** Growers sow, the crop grows, it is harvested, and the cell is
+  sown again with no order from anybody — no watering, no fertilising. Re-sowing is not a job
+  the player maintains; it is what a zone *is*.
+- **Sowing happens only inside the local growing period** (a latitude/biome seasonal window,
+  shown in the zone's inspect pane), and growth needs **>51% light**, so nothing grows at night
+  or under a roof. Outside 0–58 °C growth stalls and plants die. **Fertility speeds growth and
+  never changes yield**, and each species refuses ground below its minimum fertility.
+- **Clearing is folded into growing, not ordered.** Colonists clear stone chunks (carrying them
+  to the zone edge) and remove non-designated vegetation without anybody placing chop or cut
+  orders first.
+- **Changing the crop mid-cycle leaves the standing crop alone.** A sowing order already in
+  flight keeps the plant it was issued with; the new species is sown only once the current crop
+  has been harvested. With both sowing and cutting allowed, the zone instead cuts the old plants
+  and re-sows at once.
+- **The allow-sow / allow-cut toggles make a second tool of the same zone:** cutting allowed
+  with sowing forbidden turns it into an auto-harvest area for wild plants and mature trees;
+  cutting forbidden makes it leave neighbouring plants and trees standing. Planted trees want a
+  one-tile radius clear even across zone boundaries.
+- **Wild plants are first-class zone content:** the cut-only zone harvests them at maturity,
+  and animals graze most crops from about 66% maturity — waiting for full maturity yields more
+  nutrition than grazing takes.
+- **Risks the page authors around the loop:** blight spreads within a four-tile radius (hence
+  gaps between fields); crops are the first thing raiders ignite (clear flammables two tiles
+  out); a sowing made too late in the season never reaches the ~66% maturity a harvest needs.
+  Rule of thumb: **10+ tiles of food crop per colonist** in a year-round biome.
+- **UI:** selecting a zone opens an inspect pane — species chooser, rename, the allow-sow and
+  allow-cut toggles, plant count and age, the local growing period. Hovering an empty cell shows
+  terrain and fertility %; double-clicking an empty zone cell highlights every zone on screen
+  for bulk toggling.
+
+### What the unit takes, and what it leaves
+
+Takes: the painted continuous zone; clearing folded into sow work; the light floor as a
+time-of-day window (v1 has no light model, so the clock stands in and a roofed cell is refused
+at designation rather than grown badly); the minimum-fertility siting gate; the mid-cycle rule
+in the only form one crop can express it — a zone keeps its plant until its cells are empty.
+
+Leaves, as hooks: seasons (the growing period), light as a computed value, fertility as a
+*growth multiplier* (v1 uses it as a gate only), the cut-only toggle and wild harvesting,
+blight, fire, grazing, lifespan, and the zone inspect pane — the plant is chosen in the build
+palette this unit, and the pane arrives when a second crop makes it earn its place.
+
+### Sources
+
+- https://rimworldwiki.com/wiki/Growing
+
+### Confidence
+
+High — a single page read and every claim above is the page's own. The one inference is the
+take/leave mapping, which is a design decision rather than a finding; the reasoning lives in
+`docs/design/22-growing.md`.

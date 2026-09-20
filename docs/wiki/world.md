@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-81 entries, 56 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+91 entries, 66 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -21,6 +21,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
 | **Conifer** | `ui.terrain.tree.conifer` | An evergreen of the meadow. Chopped for wood | no art | M3 |
 | **Broadleaf** | `ui.terrain.tree.broadleaf` | A broad-crowned tree of the meadow. Chopped for wood | no art | M3 |
+| **Carrot** | `ui.terrain.carrot` | A root vegetable of the meadow. Grown in zones, cut at full growth | no art | M3 |
 
 ## Weather
 
@@ -73,7 +74,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 |---|---|---|---|---|
 | **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | sheet 06 (action tiles), high | M1 |
 | **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), high | M1 |
-| **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), high | M1 |
+| **Schedule** | `ui.tab.schedule` | Folded into Work: one table says who does what, and when | sheet 06 (action tiles), high | M1 |
 | **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |
 | **Colonists** | `ui.tab.colonists` | Everyone, at a glance | sheet 06 (action tiles), high | M1 |
 | **Animals** | `ui.tab.animals` | Tame beasts and their training | sheet 06 (action tiles), high | M1 |
@@ -113,6 +114,15 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
 | **Build palette layout** | `ui.settings.buildlayout` | Which of the three shapes the Build palette takes: rows, rail or bar | no art | M3 |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
+| **Display** | `ui.settings.display` | How the frame is paced and how large it is drawn | no art | M3 |
+| **Detail** | `ui.settings.detail` | What the board is drawn with. None of it reaches the simulation | no art | M3 |
+| **VSync** | `ui.settings.vsync` | Match the screen's refresh rate. Stops tearing, and paces the frame | no art | M3 |
+| **Frame rate cap** | `ui.settings.framecap` | The ceiling on frames a second. A rate the machine can hold beats a higher one that swings | no art | M3 |
+| **Render scale** | `ui.settings.renderscale` | How large the world is drawn before it is scaled to the window. The interface stays sharp | no art | M3 |
+| **Anti-aliasing** | `ui.settings.antialias` | Smooth the stepped edges of the board. The most expensive thing on this page | no art | M3 |
+| **Shadow distance** | `ui.settings.shadowdist` | How far from the camera shadows are still drawn | no art | M3 |
+| **Display mode** | `ui.settings.displaymode` | Fullscreen, borderless or a window | no art | M3 |
+| **Resolution** | `ui.settings.resolution` | How many pixels the game is drawn at. Only a built game can change it | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
 | **Master volume** | `ui.settings.volume.master` | Everything at once | no art | M3 |
 | **Music volume** | `ui.settings.volume.music` | What plays under the game | no art | M3 |

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The events the world can have happen to it (docs/design/23-events-and-storyteller.md). Each
+  names a worker in the simulation assembly and carries the gates a storyteller will read; today
+  the only thing that fires one is the debug menu's Events tab, which ignores the gates by design.
+  The description is that tab's tooltip.
+-->
+<Defs>
+
+  <!--
+    A stack of meals falls out of the sky on to whatever is under it: the reference's cargo pod,
+    with the meals falling bare rather than in a pod (owner, 2026-09-20). The event is the reward.
+
+    Ten to twenty is a little under to a full stack (Item_Meal stacks to 20), so a drop is one
+    haul and never a pile that needs two trips. fallTicks 360 is six seconds at 60 ticks a second:
+    it was 120 and the owner saw it land almost before it had been seen falling. The height it
+    starts from is presentation's (FallArc.DropHeight). earliestDay 1 keeps the first day quiet
+    and minRefireDays 2 keeps drops from bunching; neither is read until a storyteller exists, and
+    both are invited tuning when one does.
+  -->
+  <IncidentDef>
+    <defName>Incident_SupplyDrop</defName>
+    <label>supply drop</label>
+    <description>Drops a stack of meals from the sky somewhere on the board. Lands on the next tick, so unpause to see it</description>
+    <bulletinKey>ui.bulletin.supplydrop</bulletinKey>
+    <favourability>Good</favourability>
+    <category>Misc</category>
+    <worker>SupplyDrop</worker>
+    <earliestDay>1</earliestDay>
+    <minRefireDays>2</minRefireDays>
+    <weight>100</weight>
+    <minColonists>1</minColonists>
+    <maxFires>0</maxFires>
+    <item>Item_Meal</item>
+    <stackMin>10</stackMin>
+    <stackMax>20</stackMax>
+    <fallTicks>360</fallTicks>
+  </IncidentDef>
+
+</Defs>

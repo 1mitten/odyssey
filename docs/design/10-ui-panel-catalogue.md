@@ -205,6 +205,11 @@ Never colour alone. This costs nothing now and is expensive to retrofit.
 **Why separate from alerts.** An alert is a condition with a lifetime that can clear itself. A
 bulletin is an event, immutable once raised. Merging them produces a system wrong for both.
 
+**Built 2026-09-20** as the Events panel (`docs/design/23-events-and-storyteller.md` §5): the
+sim's incident ledger publishes its newest sixteen entries, `BulletinModel` raises each id once
+and keeps six rows until dismissed, the row jumps slice and camera to the event's cell, and the
+chime picks by favourability. There is no event ring; the ledger's monotonic id is the edge.
+
 ## A7 Build toolbar and palette
 
 **Renamed from Architect by the owner, 2026-09-16**, and moved out of the left column onto the
@@ -609,6 +614,10 @@ Every bulletin ever raised, searchable and filterable by category and date. Read
 `BulletinArchive` — subscription-scoped and potentially ten thousand rows, so strictly
 virtualised. Emits `CameraJumpTo`, `SetSliceLayer`. Icons: shares A6's. Milestone M2 for the
 list, M7 for search and filtering.
+
+**The store exists since 2026-09-20** — `IncidentLedger`, saved and hashed, every entry kept —
+and this panel is the next unit of the events line (`23-events-and-storyteller.md` §5). It needs
+a paged or whole-ledger channel; the frame carries only the tail.
 
 **The virtualisation test case.** `Archive_With10kBulletins_RealisesUnder40Rows` is the assertion
 that proves the list strategy across the whole interface.

@@ -65,6 +65,7 @@ namespace Odyssey.Presentation.Ui
         readonly LayerRulerModel _ruler = new LayerRulerModel();
         readonly LedgerModel _ledger = new LedgerModel();
         readonly AlertModel _alerts = new AlertModel();
+        readonly BulletinModel _bulletins = new BulletinModel();
 
         /// <summary>Which alert rows have already chimed. Beside the model rather than in
         /// the audio director because the panel is what knows an alert has appeared.</summary>
@@ -156,6 +157,12 @@ namespace Odyssey.Presentation.Ui
         VisualElement _alertRows = null!;
         readonly List<AlertRowView> _alertViews = new List<AlertRowView>();
 
+        // ---- events (A6)
+        VisualElement _bulletinsPanel = null!;
+        VisualElement _bulletinRows = null!;
+        readonly List<BulletinRowView> _bulletinViews = new List<BulletinRowView>();
+        int _bulletinsDrawn = -1;
+
         // ---- depth rail (A11)
         VisualElement _railCells = null!;
         Label _railHint = null!;
@@ -231,6 +238,23 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
         readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
+
+        /// <summary>One rank of rung labels per number ladder, so a value that moves lights its
+        /// own rung and nothing else is touched.</summary>
+        readonly Dictionary<GraphicsLadder, Dictionary<int, Label>> _ladderRungs = new();
+
+        /// <summary>Each ladder's row and rank, kept so the frame cap can be greyed behind VSync
+        /// and the two display rows can be greyed in the editor.</summary>
+        readonly Dictionary<GraphicsLadder, LadderView> _ladderViews = new();
+
+        /// <summary>The resolution dropdown selector. Built once the machine's sizes are known.
+        /// See <c>BuildResolutionRow</c>.</summary>
+        DropdownField? _resolutionDropdown;
+        VisualElement? _resolutionRow;
+
+        /// <summary>Where the resolution dropdown row goes once the machine's sizes are known. See
+        /// <c>BuildResolutionRow</c>.</summary>
+        VisualElement _resolutionSlot = null!;
         readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
 
@@ -365,6 +389,17 @@ namespace Odyssey.Presentation.Ui
             public PawnId TargetPawn;
             public CellRef? TargetCell;
             public string? LastLead;
+        }
+
+        class BulletinRowView
+        {
+            public VisualElement Root = null!;
+            public IconBadge Icon = null!;
+            public Label Title = null!;
+            public Label Stamp = null!;
+            public VisualElement Dismiss = null!;
+            public int Id;
+            public CellRef TargetCell;
         }
 
         class RailCellView
@@ -533,6 +568,7 @@ namespace Odyssey.Presentation.Ui
             BuildPalette();
             BuildSettings();
             BuildDebug();
+            BuildWork();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
             // above. Built whether or not a session exists, because the state it belongs to is the
@@ -579,6 +615,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Slice.LayerChanged += OnLayerChanged;
             _directors.Settings.Changed += OnSettingsChanged;
             _directors.Settings.OptionChanged += OnSettingChanged;
+            _directors.Settings.LadderChanged += OnLadderChanged;
+            _directors.Settings.ResolutionChanged += OnResolutionChanged;
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
@@ -588,6 +626,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ExitChanged += OnExitChanged;
             _directors.Settings.RowRequested += OnSessionRow;
             _directors.Debug.Changed += OnDebugChanged;
+            _directors.Debug.TabChanged += OnDebugTabChanged;
+            _directors.Work.Changed += OnWorkChanged;
+            _directors.Work.ModeChanged += OnWorkModeChanged;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
@@ -609,8 +650,19 @@ namespace Odyssey.Presentation.Ui
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
+
+            // The machine's own sizes are only knowable now, so the resolution rank is built
+            // here rather than with the rest of the panel.
+            BuildResolutionRow();
+            foreach (GraphicsLadder ladder in SettingsDirector.AllLadders) OnLadderChanged(ladder);
+            OnResolutionChanged();
             RefreshKeyCaps();
             OnDebugChanged();
+
+            // And the Work tab, on the same terms: a new session's WorkDirector is closed, and
+            // without this the panel a player left open in the last colony stays on the screen
+            // over the next one, drawing the last colony's rows.
+            OnWorkChanged();
         }
 
         void Detach()
@@ -620,6 +672,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Slice.LayerChanged -= OnLayerChanged;
             _directors.Settings.Changed -= OnSettingsChanged;
             _directors.Settings.OptionChanged -= OnSettingChanged;
+            _directors.Settings.LadderChanged -= OnLadderChanged;
+            _directors.Settings.ResolutionChanged -= OnResolutionChanged;
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
@@ -629,6 +683,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ExitChanged -= OnExitChanged;
             _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Debug.Changed -= OnDebugChanged;
+            _directors.Debug.TabChanged -= OnDebugTabChanged;
+            _directors.Work.Changed -= OnWorkChanged;
+            _directors.Work.ModeChanged -= OnWorkModeChanged;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
@@ -738,8 +795,10 @@ namespace Odyssey.Presentation.Ui
                 _mid = 0f;
                 RefreshStores();
                 RefreshAlerts();
+                RefreshBulletins();
                 RefreshSpeed();
                 RefreshBuildPalette();
+                RefreshWork();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -770,6 +829,7 @@ namespace Odyssey.Presentation.Ui
             RefreshInspect();
             RefreshStores();
             RefreshAlerts();
+            RefreshBulletins();
             RefreshSpeed();
             RefreshClock();
             RefreshRail();

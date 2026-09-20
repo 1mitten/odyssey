@@ -21,6 +21,10 @@ namespace Odyssey.Hud
         /// <summary>Whether the debug menu is open. Session state — see the class doc.</summary>
         public DebugDirector Debug { get; } = new DebugDirector();
 
+        /// <summary>Whether the Work tab is open, and how it reads (design 27). Session state,
+        /// for the reason <see cref="Debug"/> is.</summary>
+        public WorkDirector Work { get; } = new WorkDirector();
+
         /// <summary>
         /// The settings panel's levers — and <b>handed in rather than made here since U38</b>,
         /// because they are not session state.

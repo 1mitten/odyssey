@@ -18,6 +18,28 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **A batch command cannot share a project with an open editor.** Same symptom, different cause. The wrapper now distinguishes the two: a live Unity process means "close the editor", no live process means the lock is stale and it is removed automatically.
 
+**Cancelling the wrapper does not cancel Unity, and the next run then reports the wrong thing** (2026-09-20, ten minutes). Stopping a backgrounded `scripts/unity.sh test playmode` kills the shell; the `Unity.exe` it launched goes on holding `Temp/UnityLockfile`, so the next two commands came back with *"this project is locked and a Unity process is running. Close the editor"* — which is true, accurate, and about a process that is not an editor and is nobody's but yours. Before concluding anything, list them with the project path and the batch flag:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
+  Select-Object ProcessId, CreationDate,
+    @{n='Proj';e={ if ($_.CommandLine -match '-projectpath\s+(\S+)') { $Matches[1] } }},
+    @{n='Batch';e={ $_.CommandLine -match '-batchmode' }}
+```
+
+A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
+
+**Editing any `.cs` while a batch run is in flight makes its result meaningless, and the run still
+says "passed"** (2026-09-20, two wasted runs). Unity refreshes the asset database once at startup
+and compiles from what it found; a file saved after that point is simply not in the run. The exit
+code is zero, `TestResults/EditMode.xml` is written, the numbers look plausible, and they are the
+numbers for the code as it was several minutes ago. There is nothing in the output to say so. Queue
+edits until the run reports, or accept that the run proves nothing and do it again — which is what
+happened here, twice, because a probe result arriving mid-run is exactly when there is something
+worth changing.
+
+**A first batch run in a fresh worktree is slow, and it is the Synty import.** About seven minutes before a single test executes, with `Library/` growing past 4 GB. `du -sh Library` rising means it is working; an empty `TestResults/` on its own means nothing yet.
+
 **Adding an assembly definition silently removes implicit package references.** Scripts under `Assets/Editor/` compile into `Assembly-CSharp-Editor`, which auto-references most packages. The moment an `.asmdef` covers them, every reference must be explicit. Adding `Odyssey.Editor.asmdef` broke `SyntyImport` because it uses URP types. Symptom: `CS0234: The type or namespace name X does not exist in the namespace Y`. Fix: add the package assemblies (`Unity.RenderPipelines.Core.Editor` and friends) to the asmdef `references`.
 
 **`AssetDatabase.ImportPackage(path, interactive: false)` only *queues* the import under `-executeMethod`.** The editor can exit having imported nothing, and the run reports success. `SyntyImport.cs` calls the editor's synchronous internal import instead. If that ever disappears, fall back to one `-importPackage` invocation per package.
@@ -223,6 +245,21 @@ which answers what the geometry is doing regardless of whether anything is being
 reading through that gives −1.500 m and 0.000 m as it should. When an A/B harness reports that its
 two conditions agree exactly, suspect the instrument before believing the result — a real
 no-difference is noisy, and an exact one usually means the two sides are the same code.
+
+**And its opposite number: an instrument should print the quantity it exists to vary** (2026-09-20,
+`SleepCheck`). A sheet built to show a sleeper lying along a *sloping* bed ran with
+`GroundRelief.Amplitude` at nought — it is a static that `OdysseyBootstrap.BuildSession` sets and a
+harness does not — so it photographed four beds on dead level ground and every picture looked
+correct, because on level ground the old code and the new one agree exactly. Nothing failed and
+nothing was proved. The only reason it was caught is that the tool printed the slope at each bed
+beside the file name, and the number was `0.000` four times.
+
+The same run then showed the second half of it: with the relief on, the beds the scenario places
+sat at 0.002 to 0.021 rise per metre — a centimetre to ten across a whole 4.6 m bed — which is *on*
+but nowhere near enough to see. A harness for a condition has to go looking for the condition;
+`SleepCheck` now searches for the steepest buildable footprint near the start and stands a bed on
+it. **Before believing a contact sheet, ask what it printed for the thing it was sweeping.** If it
+did not print one, it is a photograph of the control case.
 
 The other half of the same lesson: **measure everyone, not the subject.** The sheet framed one
 colonist, and a second in the corner of a wide shot still looked sunk. A figure inside a ramp and a
@@ -589,6 +626,59 @@ is a real shader because the pack's meshes are not readable and their normals ca
 load. Two things that *were* wrong and are fixed on the same day, and would have muddied the
 test if left: one of the three clumps was a flat olive-brown patch, and the sky's underside was a
 dark grey that showed as a band between the board's rim and the horizon.
+
+**A probe that disables the thing you are pricing will lie to you.** `TerrainSkirt` has a
+`SubmitToGpu` flag; switching it off left the whole submit loop running — the batch walk, the
+`RenderParams` construction — and made the surround look nearly free, which reads as "the CPU
+side is fine, it must be the GPU". It is not: the flag skips the `Graphics.RenderMeshInstanced`
+calls, and those calls *are* the cost. An hour went the wrong way on that. A control must remove
+the **suspect** and keep everything else, not remove the measurement.
+
+**A frame number is only comparable with one measured in the same session.** Reviewing on a
+freshly imported `Library`, PlayMode reported the meadow at 4.94 ms against the ~0.99 ms then on
+record — which reads as a five-fold regression from the branch under review. The control settled
+it in one run: `origin/main` alone, same worktree, same warm Library, measured the *same* meadow
+at 5.90 ms. The whole machine was running about five times slow. Never compare a `FrameTimeTests`
+number with a recorded one across sessions; check out the base branch in the same worktree and
+re-run. **Use the city case as the canary** — it shares no content with the meadow or the field,
+so when it drifts from ~2.0 ms the session is noisy and nothing measured in it is worth quoting.
+Within one session, the *difference* between two cases cancels the noise; the absolutes do not.
+
+**Count the pass, or the budget cannot see it.** `DrawZoneCover` submitted once per zoned cell
+per frame and incremented no counter, so `FrameTimeTests` printed a field's draw calls with the
+entire pass missing — 1,782 reported where 3,847 were issued. It was 3.67 ms of a 5 ms budget and
+nothing in the instrument could have pointed at it. Any new draw path increments `DrawCalls` and
+`InstancesDrawn` in the same commit that adds it.
+
+**The useful constant for this renderer: a submission costs about 4.6 us whatever is in it.**
+Measured three ways round on the surround (760 batches 3.5 ms, 438 batches 2.1 ms, 272 batches
+after the fix) and it explains every rendering cost found so far. At 640 x 480 there are not
+enough pixels for fill to explain anything, so when a pass is slow, count its submissions first.
+
+**This machine runs more than one Unity at a time, so a benchmark needs its control inside the
+run.** On 2026-09-20 the city canary read 4.01, 2.86, 2.71 and 2.46 ms across four runs of an
+afternoon against its 2.01 ms record, because a sibling checkout was running its own PlayMode
+suite, then a player build, then an editor import. The same batched pass measured 1.57, 0.81 and
+0.19 ms on that noise alone. Before quoting a frame number, `Get-CimInstance Win32_Process
+-Filter "Name='Unity.exe'"` and read the `-projectPath` of each — and prefer a case that times
+the same world twice with the suspect switched over between, which cancels the machine entirely.
+`FrameTimeTests.TheMarkPassCostsWhatItSubmits` is the pattern: bare, per-cell, instanced, one
+world, seconds apart.
+
+**A frame case must put its subject inside the band the pass draws, and say that it did.** The
+first order case designated 901 cells, had them accepted, published and counted, and measured
+4.85 ms against a bare 4.86 — because `DrawStandingOrders` filters to the drawn slice and every
+one of the 901 was outside it. A benchmark that can measure nothing and still print a number is
+worse than one that fails. `ChunkRenderer.CellPlatesDrawn` is on every `[FrameTime]` line for
+that reason and the case asserts it is not zero.
+
+**And the tick wants its own instrument.** `TickBenchmarkTests` uses a structured world with no
+zone in it, so growing's additions to the tick went unpriced until `FieldTickBenchmarkTests` was
+written for it. A benchmark measures the world it builds; a feature that does not appear in that
+world is not covered however green the suite looks. The finding it produced is worth carrying:
+with **no colonists alive at all**, a 2,015-cell field still cost 0.035 ms a tick, because the
+snapshot republished every zoned cell every tick. Measure with the actors removed — what is left
+is what the data structure costs by existing.
 
 ## Compiling the game code while the editor holds the project
 
@@ -2084,6 +2174,76 @@ through a shell heredoc into a Python one-liner and the backslash was eaten some
 the "fix" wrote the NUL straight back and the file still had one. Concatenating `bytes([92])` and
 `b"0"` is ugly and cannot be misread by anything in between.
 
+
+## An empty guid in a committed .meta fails Unity one file away from the truth
+
+The first Unity editmode run on the growing branch failed with `CS0246: 'SowJobDriver' could not
+be found` in `PawnRegistry.cs` — pointing at the file that *references* the missing type, while
+the file that *declares* it sat in the same folder, correct namespace, correct classes, and was
+not mentioned anywhere in the log. The cause: five `.meta` files written by script across four
+earlier commits carried `guid: ` — empty. Unity cannot give an asset an identity without a guid,
+and its import failure surfaces as a compile error about the referencing file, never about the
+meta.
+
+Two things made it cheap to walk past. The fast tier is green without ever reading a `.meta`, so
+"tests pass" said nothing about asset identity; and the error text named the wrong file, so the
+first instinct was to check `using` directives. The audit that finds it is one line: every file
+added under `Assets/` must have a `.meta` whose `guid:` line is non-empty — and the audit must
+run on the branch, because nothing else ever reads those bytes. Generated metas need a real
+`uuid4().hex`, not the template with the value left blank.
+
+*(Also worth its sentence: `git diff main -- Assets/` from a worktree lists files main has and
+the worktree does not, so a naive "missing meta" audit reports phantom files. Test the `.cs`
+exists before blaming its `.meta`.)*
+## A bounds guard turned a contract mismatch into silence, and hand-built test data kept it invisible
+
+**2026-09-19, the growing branch's "one carrot" mystery.** `PlantView.Plant`'s contract promises a
+nought-based `PlantHandle`; the contributor published the one-based crop slot instead, and the
+render mirror added one of its own on arrival. The carrot therefore asked for slot two of a
+one-plant table - where `CropModule`'s bounds guard, written to keep a future def count mismatch
+from crashing the renderer, quietly answered nought, and a ripe field drew nothing at all. No
+error, no log, no missing art: a guard meant to fail safe failed silent, and the fault surfaced
+as the owner's word "one carrot" three sessions later.
+
+The reason every test was green is the part worth keeping: the render tests hand-built their
+`PlantView`s from the contract's convention, so the bytes the tests fed and the bytes the game
+fed were different numbers meaning the same plant. **Pin the contributor, not the consumer's
+interpretation of it** - a test that reads the real snapshot back
+(`APublishedPlantCarriesItsHandleAndNotTheCropSlot`) is the only kind that can see a convention
+gap, and it costs five lines.
+
+And when a view field has a "nought means none" encoding beside it, write the publish site and
+the read site in the same sentence and check them against each other; the off-by-one that cost
+three sessions lives exactly in the space between two people each being locally correct.
+## A sticky view field leaks its last value into the next toil - whoever gates on it must author its end
+
+**2026-09-19, the seed-speck flicker.** `PawnView.Gesture` is deliberately sticky: a flag set
+for one tick would be missed between frames at speed three, so it stands until the next
+gesture. That contract is right, and it has a cost nobody had paid yet: a sow kneel nobody
+cleared carried `Sow` through the whole walk to the next plot, and the seed specks - gated on
+the gesture, with an age tracker that already read "old" - flashed under the sower's feet on
+every fallow tile she crossed. The owner watched seeds "appear immediately ... then
+disappear - then it appears again" for two sessions before it was read as one fault.
+
+The rule: **a momentary state that is sticky for the frame rate's sake must be un-stuck by
+the same code that sticks it.** The drivers now clear the gesture on the boundary the work
+completes (and on displacement), so the value's lifetime is the toil's lifetime. If you are
+about to gate a drawing on a sticky field, first ask who ends it - and if the answer is
+"nobody", that is the bug, found in advance.
+## An instrument that cannot reproduce the fault cannot certify its fix
+
+**2026-09-20, the zone-cover grid, twice.** The photo sheet said "no seams" while the owner's
+screenshots showed a grid, and the sheet was right about what it photographed: `CropCheck`
+never set `GroundRelief.Amplitude`, so its board was dead flat, and the seams were a question
+about neighbouring drapes disagreeing - a flat board has no disagreement to show. The fix
+looked verified for a day while the fault stood.
+
+The rule: **before a photo answers a question, check it can ask it.** A harness that
+reproduces the played board's relief, lighting and packs is the only one whose "looks right"
+means anything; the cheapest check is to reproduce a KNOWN fault in it first - the grid was
+reproduced the moment the amplitude was set, and the fix was then verified against the real
+thing rather than against nothing. CropCheck now sets the played amplitude and restores it in
+its finally, and the blindness is recorded beside the shot that suffered from it.
 ## A Unity build rewrites settings assets it was never asked to touch
 
 **2026-09-19, the first player build this project had ever run.** `scripts/unity.sh build`
@@ -2192,3 +2352,94 @@ one test that caught it, `EveryModeMayUseAStair`, was the only one with no `Assu
 - This is the same family as the three silent failures on the click-reaches-the-game line
   (`CLAUDE.md`, known gaps) and as `OQ-40`'s vacuously passing PlayMode tests: **a test that does
   not run is indistinguishable from a test that passes, unless something is counting.**
+## A pack-dependent test must ask whether the art resolved, not whether there is a catalogue
+
+**Cost: one red build on the self-hosted runner, 2026-09-20, on a branch whose tests were green
+here.** Both new portrait tests failed there and nowhere else.
+
+`Assets/Synty` is gitignored, so the runner's checkout has none of it. `ModuleCatalogue.asset` is
+**committed**, and its prefab fields are GUID references into that folder — so on the runner the
+asset loads perfectly and every single reference comes back null. A test that guards with
+
+```csharp
+if (boot.moduleCatalogue == null) Assert.Ignore(...);      // wrong
+```
+
+therefore answers *"yes, carry on"* on exactly the machine that cannot draw a colonist, and then
+fails on the first `Assert.That(portrait, Is.Not.Null)`. Ask instead whether anything resolved:
+
+```csharp
+if (!boot.Portraits.Available) Assert.Ignore(...);         // portraits
+if (!boot.Figures!.Enabled) Assert.Ignore(...);            // live animated figures
+```
+
+Both of those exist for this reason and `PortraitStudio.Available`'s own doc comment already
+records the runner finding it once. Reading that comment is not the same as heeding it.
+
+**Two consequences worth knowing before you compare two test runs.** The runner's PlayMode count is
+legitimately lower than this machine's — same commit, 85/80/0 here and 85/75/0 with ten ignored
+there — so a smaller *passed* number is not a regression. And `TestResults/PlayMode.xml` under
+`D:\actions-runner\_work\odyssey\odyssey` is overwritten by the next job, so copy it before
+diagnosing rather than after.
+
+## A timing test run beside another Unity batch run fails, and the baseline is the tell
+
+`HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on 2026-09-20 at
+**3.770 ms against a 1.167 ms budget** — a flip condition of ADR 0003, which is the sort of number
+that stops a review. It passed on the same commit twenty minutes later at **0.603 ms**. Nothing
+changed but the machine: the first run had two *other* `unity.sh` batch runs going on two other
+worktrees, and this box runs one CPU.
+
+**Read the baseline before reading the verdict.** The test logs
+`[R1] baseline, the shipped HUD alone` and everything else is quoted *over* it, so the baseline is a
+free measurement of how busy the machine was:
+
+```
+contended   baseline 2.096 ms   dense case 3.770 ms   FAIL
+quiet       baseline 0.824 ms   dense case 0.603 ms   pass
+```
+
+A baseline that has moved 2.5× is not a regression in the thing under test. **A real regression
+moves the difference and leaves the baseline alone**, which is the whole reason the test subtracts
+one from the other — and it is also why the subtraction does not save you here: contention scales
+both terms and it does not scale them equally.
+
+**So before running `unity.sh test playmode`, look.** `Get-CimInstance Win32_Process -Filter
+"Name='Unity.exe'"` and read the `-projectPath` of each: the owner's editor, another agent's
+worktree, an import worker. EditMode is safe to run alongside anything — it asserts logic, not
+milliseconds. PlayMode carries the timing tests and wants the machine to itself.
+
+**And check the file is the run you think it is.** `TestResults/PlayMode.xml` is left behind by the
+previous run and is only overwritten when the new one finishes, so a result read too early is the
+*old* result, with no warning. The tell there was a mean time identical to four decimal places
+across two runs; timing numbers do not repeat. Wait on the file being newer than the run you
+started, not on it existing.
+
+## The Long tier is not in the fast tier, and it holds the wall-clock gates
+
+`scripts/test-fast.sh` **excludes `TestCategory=Long` by default** — that is the whole reason the
+default tier stays worth running — so a green `test-fast.sh`, a green EditMode run and a green
+PlayMode run can all sit on top of a Long tier nobody has run. CI runs it; you probably have not.
+
+```
+scripts/test-fast.sh --filter TestCategory=Long     # 23 tests, ~20 s
+```
+
+**Run it before merging anything, because it is where the timing gates live.** On 2026-09-20 PR
+#145 merged with three green tiers and turned `main` red on the Long tier
+(`PublishingCostsWhatTheOrdersCostRatherThanWhatTheLayerCosts`, 0.0368 ms against a 0.030 gate) — on
+a change that touched no designation code, and whose own PR run had passed on the same content
+minutes earlier.
+
+**A wall-clock threshold on the GitHub-hosted runner is a guard and a recurring false alarm.** That
+gate has now stopped the queue twice, once at 0.012 and once at 0.030, both times on unrelated
+changes, both times because the shared Linux runner was slower than any reading the number was
+calibrated against. Its own remarks say to check whether the figure is nearer the noise or nearer
+the bug before touching it, and both times it was the noise.
+
+**The tell is the same one the PlayMode timing tests have**: ask what else was running. On a cloud
+runner you cannot, so the substitute is the spread of honest readings, which that test now records
+in full. **The real fix for this class is to assert the shape of a cost rather than its size** —
+the defect it guards made publishing scale with the area of the layer, so the same measurement on
+two board sizes differs by four with the bug and by nothing without it, and a ratio does not care
+how fast the machine is. Recorded in the test rather than done on a red `main`.

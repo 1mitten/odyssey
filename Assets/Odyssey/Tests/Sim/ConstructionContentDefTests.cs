@@ -56,17 +56,27 @@ namespace Odyssey.Tests.Sim
         // wrong side of its cell — a free-standing one had nowhere to take a facing from and fell
         // back to north, which the player could neither predict nor change. A ladder fixed to a
         // wall still hugs it; the rotation only decides where there is nothing to hug.
-        // RF1 appended Building_Pillar at handle 6 - a column in one cell, blocking, 3 stuff and
-        // 90 ticks, whose only job is to hold up the slab above it. Appended, as every handle
-        // since the bed has been. It needed no change to the support solver at all: IsGrounded
-        // already ends at `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as
-        // long as the solver has run and there was simply nothing that could build one.
-        // U44 appended Building_Stair at handle 7 - two adjacent cells on ONE layer, rotatable,
+        // 2026-09-20: Appended Building_Door at handle 6 — edifice 2 (CoreContent.EdificeDoor),
+        // passable (blocking false), 5 stuff and 135 ticks matching a wall. Gained `rotates`
+        // so doors can be oriented by the player before placement and at wall corners/reveals.
+        //
+        // RF1 appended Building_Pillar at handle 7 - a column in one cell, blocking, 3 stuff and
+        // 90 ticks, whose only job is to hold up the slab above it. It needed no change to the
+        // support solver at all: IsGrounded already ends at `Edifice[below] >= 0`, so a pillar has
+        // grounded the slab over it for as long as the solver has run and there was simply nothing
+        // that could build one.
+        //
+        // U44 appended Building_Stair at handle 8 - two adjacent cells on ONE layer, rotatable,
         // blocking false, 6 stuff and 150 ticks, and the first and only buildable to finish as TWO
         // edifice values (`secondEdifice`): EdificeStairLower at the head and EdificeStairUpper at
         // the far cell, which is exactly what worldgen has always stamped. The new field is on
         // every row, so the whole table's fingerprint moves and not only the stair's.
-        const ulong BuildingFingerprint = 8816546351831793275UL;
+        //
+        // Seven and eight, not six and seven: the door reached main first and took 6, so this
+        // branch moved down by one when it merged. Handle order is the save contract and positions
+        // are append-only; it is safe only because no save with a pillar or a stair in it has ever
+        // left this branch.
+        const ulong BuildingFingerprint = 2044564326777250333UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

@@ -46,6 +46,9 @@ namespace Odyssey.Hud
         ColonistStrip,
         Clock,
         Alerts,
+
+        /// <summary>The Events panel (A6): incidents that happened, under the alerts in the same column.</summary>
+        Bulletins,
         DepthRail,
         OrdersStrip,
         Inspect,
@@ -97,8 +100,15 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly int CellRows;
 
+        /// <summary>
+        /// Rows of the Events panel: incidents that happened and are not yet dismissed. Zero hides
+        /// the panel outright, exactly as <see cref="Alerts"/> does, so a colony nothing has
+        /// happened to pays nothing for the region.
+        /// </summary>
+        public readonly int Bulletins;
+
         public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
-                          int skillRows = 0, int cellRows = 0)
+                          int skillRows = 0, int cellRows = 0, int bulletins = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
@@ -107,6 +117,7 @@ namespace Odyssey.Hud
             NeedRows = Math.Max(0, needRows);
             SkillRows = Math.Max(0, skillRows);
             CellRows = Math.Max(0, cellRows);
+            Bulletins = Math.Max(0, bulletins);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -430,6 +441,14 @@ namespace Odyssey.Hud
 
         /// <summary>The alerts panel's own label row and the gap under it.</summary>
         public const int AlertHeaderBlock = HeaderHeight + HeaderGap;
+
+        /// <summary>
+        /// One row of the Events panel: the same line of body text an alert is, because the two
+        /// panels share a column and a row idiom, and two heights would be two things to drift.
+        /// </summary>
+        public const int BulletinHeight = AlertHeight;
+
+        public const int BulletinGap = AlertGap;
 
         // ------------------------------------------------------------------ depth rail
 
@@ -1249,6 +1268,14 @@ namespace Odyssey.Hud
                 ? default
                 : new HudRect(clockX, Edge + ClockHeight + Gap, ClockWidth, AlertsHeight(content.Alerts));
 
+            // ---- events, under the alerts in the same column, or under the clock when there are
+            // none, because the column is a flex column and a hidden panel takes no room in it.
+            float bulletinsTop = Edge + ClockHeight + Gap
+                                 + (content.Alerts > 0 ? AlertsHeight(content.Alerts) + Gap : 0f);
+            boxes[HudRegion.Bulletins] = content.Bulletins <= 0
+                ? default
+                : new HudRect(clockX, bulletinsTop, ClockWidth, BulletinsHeight(content.Bulletins));
+
             // ---- colonist strip, centred in what is left between the two top corners
             int cards = VisibleCards(width, height, content.Colonists);
             if (cards <= 0) boxes[HudRegion.ColonistStrip] = default;
@@ -1312,6 +1339,11 @@ namespace Odyssey.Hud
         public static float AlertsHeight(int alerts) =>
             alerts <= 0 ? 0f : Frame + Pad + AlertHeaderBlock + alerts * AlertHeight +
                                (alerts - 1) * AlertGap + Pad;
+
+        /// <summary>The Events panel is built exactly as the alerts panel is, so it is as tall.</summary>
+        public static float BulletinsHeight(int bulletins) =>
+            bulletins <= 0 ? 0f : Frame + Pad + AlertHeaderBlock + bulletins * BulletinHeight +
+                                  (bulletins - 1) * BulletinGap + Pad;
 
         /// <summary>
         /// The rail's chrome: everything that is not a cell.

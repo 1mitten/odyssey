@@ -94,6 +94,30 @@ namespace Odyssey.Tests.Hud
                     "other rather than leaving it unchecked.");
         }
 
+        /// <summary>
+        /// The commands whose cap is a <em>real binding</em> rather than a legend on a control
+        /// that does not exist yet.
+        ///
+        /// <para><b>This was "Build, and only Build" until design 27.</b> The Work tab put a panel
+        /// behind F1, so the binding map binds a function key for the first time and the old
+        /// blanket "F1 to F9 are keys the map will not bind" stopped being true of one of them.
+        /// The table is the honest form of that rule and it is what the remaining eight rows join
+        /// as their panels arrive — each one turning a legend into a binding, and each one having
+        /// to say so here.</para>
+        /// </summary>
+        static readonly (string CommandKey, HotkeyAction Action)[] BoundCommands =
+        {
+            (HudCommands.BuildKey, HotkeyAction.BuildPalette),
+            (HudCommands.WorkKey, HotkeyAction.WorkTab),
+        };
+
+        static HotkeyAction? BoundActionFor(string commandKey)
+        {
+            foreach ((string key, HotkeyAction action) in BoundCommands)
+                if (key == commandKey) return action;
+            return null;
+        }
+
         [Test]
         public void NoCommandCapNamesAKeyAnActionDefaultsTo()
         {
@@ -101,29 +125,38 @@ namespace Odyssey.Tests.Hud
             foreach (HudCommand command in HudCommands.All)
             {
                 HotkeyAction? owner = DefaultOwnerOfCap(hotkeys, command.Hotkey);
-                if (owner == null) continue;   // F1 to F9, Esc: keys the map will not bind
+                if (owner == null) continue;   // Esc and the unbound function keys
 
-                Assert.That(owner, Is.EqualTo(HotkeyAction.BuildPalette),
+                HotkeyAction? mine = BoundActionFor(command.Key);
+                Assert.That(mine, Is.Not.Null,
                     $"the command bar offers {command.Hotkey} for '{command.Label}', and the " +
-                    "binding map ships it to another action. Two things on one key is a binding " +
+                    "binding map ships that key to an action. Two things on one key is a binding " +
                     "the player cannot use and a bug that presents as one of them intermittently " +
-                    "not working.");
-                Assert.That(command.Key, Is.EqualTo(HudCommands.BuildKey),
-                    "Build is the one command whose cap is a binding, so its cap and its action " +
-                    "cannot be strangers");
+                    "not working. If this command's cap has become a real binding, say so in " +
+                    "BoundCommands.");
+                Assert.That(owner, Is.EqualTo(mine),
+                    $"'{command.Label}' caps {command.Hotkey}, but the map ships that key to " +
+                    $"{owner} rather than to the action this command opens.");
             }
         }
 
         [Test]
-        public void TheBuildCapSaysTheKeyTheBindingMapShips()
+        public void ACapThatIsARealBindingSaysTheKeyTheBindingMapShips()
         {
             var hotkeys = new HotkeyDirector();
             foreach (HudCommand command in HudCommands.All)
-                if (command.Key == HudCommands.BuildKey)
-                    Assert.That(command.Hotkey,
-                        Is.EqualTo(HotkeyDirector.Display(hotkeys.Key(HotkeyAction.BuildPalette, 0))),
-                        "the Build cap is a legend of a real binding; if the default moves, the " +
-                        "cap moves with it or it is a lie on the bar");
+            {
+                HotkeyAction? action = BoundActionFor(command.Key);
+                if (action == null) continue;
+
+                Assert.That(command.Hotkey,
+                    Is.EqualTo(HotkeyDirector.Display(hotkeys.Key(action.Value, 0))),
+                    $"'{command.Label}' caps a real binding; if the default moves, the cap moves " +
+                    "with it or it is a lie on the bar");
+                Assert.That(command.Live, Is.True,
+                    $"'{command.Label}' has a working key but is drawn as a dead item, so the " +
+                    "key opens something the bar says does not exist yet");
+            }
         }
 
         [Test]

@@ -160,7 +160,43 @@ namespace Odyssey.Tests.Sim
     /// guard on tree placement can reach neither — measured by running the whole table and reading
     /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
     /// else moving would have meant something had come along uninvited.</para>
-    /// </summary>
+    ///
+    /// <para><b>Moved an eleventh time the same day, when the growing branch met main a second
+    /// time, and the meadow is the control again.</b> Main had re-baked for the terrace guard and
+    /// the hop’s price; the growing side had re-baked for the zones and the growing work. Each
+    /// side’s numbers are true only of its own code, so neither side’s table survives and the
+    /// merged values below are the merged run’s. Read the shape: <b>the barren meadow did not
+    /// move at all from the growing side’s values</b> — both of main’s changes are step-priced,
+    /// <c>MakeBarren</c> has no step to guard or hop, so its board and its walks are byte-for-byte
+    /// what the growing side measured. The wooded board’s <see cref="Generated"/> is this
+    /// merge’s own — the terrace guard’s few dozen fewer trees plus growing’s counted fields,
+    /// each of which alone had already moved one parent — and its <see cref="Simulated"/> adds
+    /// the hop’s price to the growing side’s walks. The ruined city’s <see cref="Generated"/>
+    /// stayed on the growing side’s value because its generator has no <c>TreePass</c>, while its
+    /// <see cref="Simulated"/> moved for the hop alone, which is exactly what the tenth entry
+    /// predicts for it.</para>
+    /// <para><b>Moved a twelfth time the same day, by main's own carry sounds and the title
+    /// screen's bed (PR #133), and only the simulation moved.</b> All three
+    /// <see cref="Case.Simulated"/> values are this merge's own measurement — the growing
+    /// side's walks and #133's sounds in one run, neither parent's. And <b>every
+    /// <see cref="Case.Generated"/> value landed on the growing side's own numbers to the
+    /// digit</b>, which is the cleanest signature this file has ever shown: PR #133 touched no
+    /// board, so the union's generated worlds are byte-for-byte the ones the eleventh entry
+    /// below measured. The merge that sat between — main's #129 and #130 — moved nothing here
+    /// at all, carried items and player shaders being hash-silent, which is why it has no
+    /// entry of its own.</para>
+    ///
+    /// <para><b>Moved an eleventh time, 2026-09-20, by the events (design 23), all six numbers,
+    /// and for the dullest of reasons: the hash sees more.</b> Two new components joined every
+    /// colony — the incident ledger and the things in the air — and both hash their state before
+    /// the first tick runs, which on a fresh board is four integers all reading zero. So every
+    /// <c>Generated</c> value moved without a generator pass or a placement changing, and every
+    /// <c>Simulated</c> value inherited it. Nothing in a tick draws a number or moves a thing
+    /// unless an incident is fired, and none is fired without the debug menu's intent, so the
+    /// colonies did nothing different — the round trips, the headless runs and the soak all
+    /// agree with themselves as before. The control this time is the shape of the failure:
+    /// all three <c>Generated</c> values moved together, including the barren meadow's, which
+    /// no gameplay change has ever touched.</para>    /// </summary>
     public static class Golden
     {
         /// <summary>One world, pinned: how to build it, how long to run it, and what it came to.</summary>
@@ -206,6 +242,38 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        ///
+        /// <remarks>
+        /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
+        /// scenario's starting beds stopped being bare cells in the sleep chooser's list and
+        /// became real two-cell beds raised through the construction grid
+        /// (<c>ColonyScenario.RaiseAStartingBed</c> holds the measurement that forced it). A bed
+        /// record is in the edifice list, which is hashed, so a colony that has five of them
+        /// hashes differently from one that has none — and it does so <b>before a single tick
+        /// runs</b>, which is why <c>Generated</c> moved on all three and is the evidence that
+        /// this is the change and not a simulation system drifting underneath it. <c>Simulated</c>
+        /// followed for the ordinary reason a divergent start diverges further: the colonists now
+        /// sleep in beds they previously walked past, so their nights are spent in different
+        /// cells.
+        /// <para>No generator pass changed. The board is identical; what stands on it is not.</para>
+        /// <para><b>And a second reason in the same commit, which is why the numbers here are not
+        /// the ones the bed change alone produced.</b> <c>ColonyItems</c> hashed its things and
+        /// not its stockpile zones or its bed list, both of which it had been saving since they
+        /// existed — found by <c>OrdersSurviveASaveTests.EachOrderMovesTheStateHash</c>, which
+        /// flips one bit of a zone's filter and asks whether the world noticed. It did not. Both
+        /// are in the hash now, so every colony with a starting stockpile hashes differently
+        /// again; the colony is not doing anything new, the hash is seeing more of it. That
+        /// distinction is the whole of whether a re-bake is honest.</para>
+        /// <para><b>Re-baked a third time the same day, on the merge with the events layer</b>
+        /// (PR #140). Both branches had moved every number here for their own reasons — beds and
+        /// zones on this side, the incident layer's hashed state on <c>main</c>'s — so the merge
+        /// conflicted on all six and neither side's value was right for the merged code. Baked
+        /// afresh from the merge, as the 2026-09-18 entry below says a golden conflict must be.
+        /// <c>Generated</c> moved on all three because the events layer hashes before the first
+        /// tick, exactly as it did on <c>main</c>. The played scenario losing its starting beds
+        /// the same session moved <b>nothing</b> here: every case builds on <c>Bare</c>, which
+        /// keeps its five.</para>
+        /// </remarks>
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -214,8 +282,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7415324713255390796UL,
-            Simulated = 11878595623063687696UL,
+            Generated = 17179664085597806501UL,
+            Simulated = 10298886025038645198UL,
         };
 
         /// <summary>
@@ -231,8 +299,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 4458515928023308940UL,
-            Simulated = 14541313576350770742UL,
+            Generated = 1431369592896753849UL,
+            Simulated = 1949707350924885619UL,
         };
 
         /// <summary>
@@ -253,12 +321,12 @@ namespace Odyssey.Tests.Sim
         /// ladders inside the window; on the rates trajectory, with every work and move rate
         /// shifted, none does. The ladder code is present in the merge — checked, not assumed.</para>
         ///
-        /// <para><b>Simulated re-baked 2026-09-18</b> for the ladder shaft rule, and the failure
-        /// named its own cause: the board generated identically and only the run diverged. A ladder
-        /// used to need a slab <i>directly above</i> it to register a connector at all, so every
-        /// ladder the city stamps under an open cell was dead; now a landing beside the top counts
-        /// too, and the colony reaches places it could not. Generated is untouched, which is the
-        /// evidence that no generator pass changed.</para>
+        /// <para><b>Simulated re-baked 2026-09-20</b> for functional doors and the auto-closing
+        /// <see cref="DoorSystem"/>: ruined city templates stamp <see cref="CoreContent.EdificeDoor"/>,
+        /// which now rebuilds <see cref="Pathing.NavFlags.Door"/> on the nav graph via
+        /// <see cref="Construction.ConstructionGrid.RebuildDoors"/> and ticks through the door system,
+        /// charging opening movement cost and managing auto-close timeouts during traversal.
+        /// Generated is untouched, confirming worldgen is unchanged.</para>
         /// </summary>
         public static readonly Case City = new Case
         {
@@ -268,8 +336,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 13030130651254543899UL,
-            Simulated = 10223758098092909442UL,
+            Generated = 1988660988096176970UL,
+            Simulated = 2409007056224593614UL,
         };
     }
 }

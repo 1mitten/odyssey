@@ -28,7 +28,95 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Take one of our own buildings apart, for half of what it cost.</summary>
         public const int Deconstruct = 9;
 
-        public const int Count = 10;
+        /// <summary>Break the ground of an unplanted zone cell and put a seed in it.</summary>
+        public const int Sow = 10;
+
+        /// <summary>Cut a ripe crop and gather what it yields.</summary>
+        public const int Harvest = 11;
+
+        public const int Count = 12;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: plant species, as the zone and plant channels carry them.
+    /// <para>Like every table here it is append-only: a zone record stores its plant as one of
+    /// these numbers, so the order a save depends on never shifts.</para>
+    /// </summary>
+    public static class PlantHandle
+    {
+        public const int Carrot = 0;
+        public const int Count = 1;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: work-type indices, as <see cref="IntentKind.SetWorkPriority"/>
+    /// carries them.
+    ///
+    /// <para><b>Why this had to exist before the Work tab could emit anything.</b> Skills reach
+    /// the interface as named pawn aspects and never cross this assembly at all, which is the
+    /// point of that mechanism and is why <c>SkillIndex</c> is deliberately <i>not</i> mirrored
+    /// here. A work priority cannot do the same: it is <em>written</em> as well as read, and an
+    /// <see cref="Intent"/> carries three integers and no strings. Without an agreed index the
+    /// interface would have to send its own column number and the simulation would have to know
+    /// the order of a list that lives in the HUD — which is the coupling the aspect seam was built
+    /// to avoid, arriving through the other door.</para>
+    ///
+    /// <para>The simulation's <c>WorkTypeIndex</c> aliases these, exactly as <c>JobIndex</c>
+    /// aliases <see cref="JobHandle"/>, so there is one order and it is written down here.</para>
+    /// </summary>
+    public static class WorkHandle
+    {
+        public const int Haul = 0;
+        public const int Cutting = 1;
+        public const int Mining = 2;
+
+        /// <summary>Carrying material to a building site, and working at one. Both.</summary>
+        public const int Construction = 3;
+
+        /// <summary>
+        /// Breaking ground in a growing zone and cutting what ripens there — one work type for
+        /// both ends of the crop. Arrived with the growing zones on 2026-09-20 and took the next
+        /// number; the Work tab drew it as <i>not built yet</i> until that landed.
+        /// </summary>
+        public const int Growing = 4;
+
+        public const int Count = 5;
+
+        /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
+        public const int None = -1;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: what a colonist is told to be doing in one hour of the day, as
+    /// <see cref="IntentKind.SetScheduleBlock"/> carries it.
+    ///
+    /// <para><b>Six, and <see cref="Anything"/> is the one that means "no instruction".</b> It is
+    /// deliberately index 0 so that a zeroed array is a colonist nobody has scheduled, and so that
+    /// the day the job system reads this, an unscheduled hour behaves exactly as today.</para>
+    ///
+    /// <para><b>Nothing reads these yet</b> (design 27 §12). The schedule is authored, saved,
+    /// published and editable; the hour a colonist sleeps is still decided by their rest need. The
+    /// unit that makes the job system obey this is the one that puts the schedule into the state
+    /// hash and re-bakes the goldens.</para>
+    /// </summary>
+    public static class ScheduleHandle
+    {
+        /// <summary>No instruction. Work, rest or idle as needs dictate — today's behaviour.</summary>
+        public const int Anything = 0;
+
+        public const int Work = 1;
+        public const int Sleep = 2;
+        public const int Recreation = 3;
+        public const int Eat = 4;
+
+        /// <summary>Quiet hours. Named now because the grid draws six colours; what it will mean
+        /// is not this unit's business.</summary>
+        public const int Meditate = 5;
+
+        public const int Count = 6;
+
+        /// <summary>Hours in a scheduled day, which is the clock's own <c>HoursPerDay</c>.</summary>
+        public const int Hours = 24;
     }
 
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
@@ -43,7 +131,29 @@ namespace Odyssey.Sim.Contracts
 
         public const int IronOre = 4;
         public const int Coal = 5;
-        public const int Count = 6;
+
+        /// <summary>
+        /// The first raw food. Eaten straight from the field or the pile — the eater scans for
+        /// nutrition and does not care that it is not a meal (docs/design/22-growing.md §5).
+        /// Six, not two: the item table grew five commodities before the carrot existed, and
+        /// handle order is the save contract.
+        /// </summary>
+        public const int Carrots = 6;
+        public const int Count = 7;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: incident def indices, as <see cref="BulletinView"/> and
+    /// <see cref="Intent"/> carry them. The order is <c>IncidentContent.Order</c> in the
+    /// simulation and <c>IncidentLabels.Keys</c> in the interface, and a test on each side holds
+    /// its list to this count.
+    /// </summary>
+    public static class IncidentHandle
+    {
+        /// <summary>A stack of meals falling out of the sky on to whatever is under it.</summary>
+        public const int SupplyDrop = 0;
+
+        public const int Count = 1;
     }
 
     /// <summary>
@@ -158,6 +268,7 @@ namespace Odyssey.Sim.Contracts
         /// with a bed in it has ever left this branch.</para>
         /// </summary>
         public const int Bed = 5;
+        public const int Door = 6;
 
         /// <summary>
         /// A support pillar: a column in one cell whose only job is to hold up the slab above it
@@ -170,9 +281,11 @@ namespace Odyssey.Sim.Contracts
         ///
         /// <para>Appended, as every handle before it was. Handle order is the save contract and a
         /// value inserted in the middle would compile silently and mean something else in every
-        /// save already written.</para>
+        /// save already written. <b>Seven, not six:</b> the door reached main first and took 6,
+        /// so this branch moved down by one, exactly as the bed did before it. Safe only because
+        /// no save with a pillar or a stair in it has ever left this branch.</para>
         /// </summary>
-        public const int Pillar = 6;
+        public const int Pillar = 7;
 
         /// <summary>
         /// A stair: two adjacent cells on one layer, rising 1.5 m each, joining the layer above
@@ -188,9 +301,9 @@ namespace Odyssey.Sim.Contracts
         /// which is exactly what worldgen stamps, so a stair a colonist built and a stair the
         /// generator stamped are the same thing to the mesher, the labels and the graph.</para>
         /// </summary>
-        public const int Stair = 7;
+        public const int Stair = 8;
 
-        public const int Count = 8;
+        public const int Count = 9;
     }
 
     /// <summary>

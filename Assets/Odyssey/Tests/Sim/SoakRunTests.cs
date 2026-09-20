@@ -63,13 +63,39 @@ namespace Odyssey.Tests.Sim
         [TestCase(3u)]
         public void TenDays(uint seed) => Soak(seed, ticks: 10 * Day, budgetSeconds: 0);
 
+        /// <summary>
+        /// The ten-day gate again, with a field painted beside the start: OQ-39's pantry gets
+        /// its first producer, and this is where "the crop feeds the colony" stops being a
+        /// two-colonist, four-day test and becomes ten days of sowing, hauling and eating
+        /// alongside everything else a colony does.
+        ///
+        /// <para>The field is eight by eight off the start cell — eleven-odd cells a head, the
+        /// fat side of the ~7 the arithmetic in <c>22-growing.md</c> argues for. What the run
+        /// asserts is the loop, not a ledger: something was sown, something ripened and was
+        /// cut, and the zone still holds planted cells at the end, because a field that ends
+        /// fallow has stopped feeding anybody.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void TenDaysOnAField()
+            => Soak(seed: 1u, ticks: 10 * Day, budgetSeconds: 0,
+                    seedWorld: PaintField, afterRun: TheFieldFedTheColony);
+
         // ------------------------------------------------------------------ the run
 
-        static void Soak(uint seed, int ticks, int budgetSeconds)
+        static void Soak(uint seed, int ticks, int budgetSeconds,
+                         Action<ColonyWorld>? seedWorld = null,
+                         Action<ColonyWorld>? afterRun = null)
         {
             ColonyWorld colony = ColonyWorld.Build(PlaySize, seed, ScenarioDef.Bare());
             int pawnCount = colony.Pawns.Pawns.Count;
             Assert.That(pawnCount, Is.EqualTo(5), colony.Placement.ToString());
+
+            seedWorld?.Invoke(colony);
+
+            // A seeded world has already spent ticks — the field run designates through the
+            // intent bus, which drains on the tick boundary. The gate is on the ticks soaked,
+            // not on the clock having started at zero.
+            int startTick = colony.World.CurrentTick;
 
             var zeroStreak = new int[pawnCount * NeedIndex.Count];
             var worstStreak = new int[NeedIndex.Count];
@@ -95,7 +121,7 @@ namespace Odyssey.Tests.Sim
 
             Report(colony, seed, ticks, chunkMs, worstStreak, total.Elapsed.TotalSeconds);
 
-            Assert.That(colony.World.CurrentTick, Is.EqualTo(ticks));
+            Assert.That(colony.World.CurrentTick, Is.EqualTo(ticks + startTick));
             Assert.That(colony.Pawns.Pawns.Count, Is.EqualTo(pawnCount), "a colonist left the registry");
             Assert.That(colony.World.Views.Current.PawnCount, Is.EqualTo(pawnCount),
                 "a colonist vanished from the published snapshot");
@@ -108,10 +134,43 @@ namespace Odyssey.Tests.Sim
             AssertCompleted(colony, JobIndex.Sleep, "sleep");
 
             AssertReservationsAgree(colony, ticks, seed);
+            afterRun?.Invoke(colony);
 
             if (budgetSeconds > 0)
                 Assert.That(total.Elapsed.TotalSeconds, Is.LessThan(budgetSeconds),
                     $"the soak took {total.Elapsed.TotalSeconds:F0} s, over its {budgetSeconds} s budget");
+        }
+
+        /// <summary>
+        /// An eight-by-eight field off the start cell. The scenario's beds and stockpiles share
+        /// the same ground and a cell under one is refused, so the claim is that most of the
+        /// block took, not all of it — a tighter floor would be asserting the placement table
+        /// rather than the field.
+        /// </summary>
+        static void PaintField(ColonyWorld colony)
+        {
+            CellRef start = colony.Start;
+            for (int dx = 0; dx < 8; dx++)
+            for (int dz = 0; dz < 8; dz++)
+                colony.World.Intents.Submit(new Intent(
+                    IntentKind.DesignateZone,
+                    new CellRef(start.X + dx, start.Z + dz, start.Y), PlantHandle.Carrot + 1));
+            colony.World.Tick();
+
+            Assert.That(colony.Growing!.Cells.Count, Is.GreaterThanOrEqualTo(48),
+                $"only {colony.Growing.Cells.Count} of the 64 field cells were accepted, so " +
+                "the ground by the start is less sowable than this run assumes");
+        }
+
+        /// <summary>The loop, at the end of ten days: sown, cut, and still in the ground.</summary>
+        static void TheFieldFedTheColony(ColonyWorld colony)
+        {
+            Assert.That(colony.Jobs.CompletedOf(JobIndex.Sow), Is.GreaterThan(0),
+                "not one sowing completed in the whole run, so the field fed nobody");
+            Assert.That(colony.Jobs.CompletedOf(JobIndex.Harvest), Is.GreaterThan(0),
+                "not one harvest completed, so the crop never came round");
+            Assert.That(colony.Growing!.Planted.Count, Is.GreaterThan(0),
+                "the field ended the run with nothing in the ground — the loop has stopped");
         }
 
         static void SampleNeeds(ColonyWorld colony, int step, int[] zeroStreak, int[] worstStreak,
@@ -150,6 +209,22 @@ namespace Odyssey.Tests.Sim
                 meals += item.Stack;
             }
             return meals;
+        }
+
+        /// <summary>Carrots left on the map, the same count the meals line is: what the field
+        /// has put there minus what the colony has eaten and what a hauler has not yet put
+        /// down. Zero on a run with no field, which is why it prints rather than asserts.</summary>
+        static int CarrotsLeft(ColonyWorld colony)
+        {
+            int carrots = 0;
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.Despawned || item.DefIndex != ItemIndex.Carrots) continue;
+                carrots += item.Stack;
+            }
+            return carrots;
         }
 
         /// <summary>
@@ -192,7 +267,9 @@ namespace Odyssey.Tests.Sim
                 $"eat {colony.Jobs.CompletedOf(JobIndex.Eat)}, " +
                 $"sleep {colony.Jobs.CompletedOf(JobIndex.Sleep)}, " +
                 $"wander {colony.Jobs.CompletedOf(JobIndex.Wander)}, " +
-                $"wait {colony.Jobs.CompletedOf(JobIndex.Wait)}");
+                $"wait {colony.Jobs.CompletedOf(JobIndex.Wait)}; " +
+                $"sow {colony.Jobs.CompletedOf(JobIndex.Sow)}, " +
+                $"harvest {colony.Jobs.CompletedOf(JobIndex.Harvest)}");
             TestContext.WriteLine(
                 $"  jobs failed — haul {colony.Jobs.FailedOf(JobIndex.Haul)}, " +
                 $"eat {colony.Jobs.FailedOf(JobIndex.Eat)}, " +
@@ -204,6 +281,9 @@ namespace Odyssey.Tests.Sim
             TestContext.WriteLine(
                 $"  meals left {MealsLeft(colony)} of the {colony.Placement.Meals * colony.Scenario.mealsPerPile} placed — " +
                 "nothing in the slice makes more (OQ-39), so the pantry is sized for the run");
+            TestContext.WriteLine(
+                $"  carrots on the map {CarrotsLeft(colony)}, still in the ground " +
+                $"{colony.Growing!.Planted.Count} of {colony.Growing.Cells.Count} zone cells");
             TestContext.WriteLine($"  final hash {colony.World.ComputeStateHash().Value:x16}");
         }
     }

@@ -160,9 +160,10 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void AToolWhoseThingDoesNotExistYetArmsNothing()
         {
-            Assert.That(PaletteTools.TryGet("ui.arch.tool.door", out _), Is.False,
-                "doors cannot be built yet, so the door chip must be drawn disabled");
-            Assert.That(PaletteTools.TryGet("ui.arch.tool.stockpile", out _), Is.False);
+            // The stair was this control until U44 built one; the stockpile is the one left
+            // that is drawn and not live.
+            Assert.That(PaletteTools.TryGet("ui.arch.tool.stockpile", out _), Is.False,
+                "stockpiles cannot be painted yet, so the stockpile chip must be drawn disabled");
             Assert.That(PaletteTools.TryGet("not.a.key.at.all", out _), Is.False);
         }
 
@@ -188,30 +189,56 @@ namespace Odyssey.Tests.Hud
         /// doing.
         ///
         /// <para><b>The ceiling moved from three to four on 2026-09-17</b>, when the Orders
-        /// category was dropped and its two live tools were pinned rather than lost. Four is where
-        /// it stops: the palette header has room for four 26 px buttons beside the layout switcher
-        /// and the way out, and a fifth would start pushing one of those off a 1280-wide screen —
-        /// which is a limit the geometry imposes rather than one this test invented, and is why
-        /// the number is written here as well as argued for in <c>PaletteTools.Pinned</c>.</para>
+        /// category was dropped and its two live tools were pinned rather than lost. <b>And from
+        /// four to five on 2026-09-18</b>, when the growing zone joined the strip (U49) — the
+        /// second lift for the reason the first gave: the strip is a column down an empty
+        /// gutter, bounded by the screen, not a row in a header with a switcher beside it, and
+        /// <c>HudLayout.OrdersHeight</c> reads this array's length, so the layout moved itself.
+        /// What the ceiling still guards is the drift that matters: a strip grown into a second
+        /// palette, where the player has to read rather than aim. Five verbs, each with its own
+        /// colour and glyph, is still a list you aim at; a sixth should be argued for here
+        /// rather than slipped into <c>PaletteTools.Pinned</c>.</para>
         /// </summary>
         [Test]
         public void ThePinnedRowStaysShort()
         {
-            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(4));
+            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(5));
         }
 
         /// <summary>
-        /// And it is in no category, so it is drawn once. The same chip in two places in one open
-        /// panel is a question the player has to stop and answer — whether the two do the same
-        /// thing — and the answer is never worth the pause.
+        /// A pinned tool is filed under no category, so it is drawn once — <b>with the one
+        /// exception this test holds honestly rather than waves through</b>.
+        ///
+        /// <para>The objection the test began with was the same chip twice in <b>one open
+        /// panel</b>: a player who sees Cancel in the strip and again in a category has to stop
+        /// and answer whether the two do the same thing. The growing zone (U49) is pinned
+        /// <i>and</i> filed under Zones, and that is different in exactly the terms the rule is
+        /// written in: the strip and the palette are two surfaces, one always visible and one
+        /// usually shut, and the interview that asked for growing zones asked for it in
+        /// <i>"menus and toolbars"</i> — both. What this test still forbids is a second pinned
+        /// tool appearing inside the palette too, and it names its one exception rather than
+        /// silently allowing whatever arrives next.</para>
         /// </summary>
         [Test]
         public void APinnedToolIsNotAlsoFiledUnderACategory()
         {
             foreach (string pinned in PaletteTools.Pinned)
+            {
+                bool alsoFiled = false;
                 foreach (var (key, tools) in PaletteTools.Categories)
-                    Assert.That(tools, Does.Not.Contain(pinned),
-                        $"{pinned} is pinned and also listed under {Registry.Label(key)}, so it draws twice");
+                {
+                    if (Array.IndexOf(tools, pinned) < 0) continue;
+                    Assert.That(pinned, Is.EqualTo(PaletteTools.GrowZone),
+                        $"{pinned} is pinned and also listed under {Registry.Label(key)}, so it " +
+                        "draws twice in one open panel");
+                    alsoFiled = true;
+                }
+
+                if (pinned == PaletteTools.GrowZone)
+                    Assert.That(alsoFiled, Is.True,
+                        "the growing zone's palette row is half of what the exception allows — if " +
+                        "it left the Zones category, the exception is dead weight and goes with it");
+            }
         }
 
         /// <summary>
@@ -311,7 +338,7 @@ namespace Odyssey.Tests.Hud
             string[] built =
             {
                 PaletteTools.Wall, PaletteTools.Slab, PaletteTools.Paving, PaletteTools.Ladder,
-                PaletteTools.Bed, PaletteTools.Pillar, PaletteTools.Stair,
+                PaletteTools.Bed, PaletteTools.Door, PaletteTools.Pillar, PaletteTools.Stair,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),
