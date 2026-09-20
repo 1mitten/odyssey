@@ -516,3 +516,44 @@ rather than on every passion change, because unlike a need it never changes.
 six and a half above and below inside the 19 px row, centred by `.skill`'s existing
 `align-items: center`. The row did not grow and must not: the test asserts the bar stays shorter
 than its row, which is the surviving half of the constraint §8 was protecting.
+
+### 8j. The level reads in amber in the toast (owner, 2026-09-21)
+
+> *"make a small change to the notification to make the value of level (IE the number) a yellow
+> tinted colour for effect so you can see the value clear in the notification."*
+
+The toast said *"James has reached Mining 5"* in one colour, and the number — the only part of the
+sentence a player is actually reading for — had no more weight than the word "has". The level is
+drawn in `HudTokens.Warn` (#e8b55c) now, the same amber as the passion pips.
+
+**The line is split, not marked up, and that is the decision worth keeping.** The obvious
+implementation is a rich-text `<color>` tag inside the one label: less code, one element instead of
+three. It was rejected on **how it fails**. If rich text is ever off on that label the player reads
+the tag itself, and *nothing in either tier could catch that* — the fast tier has no text engine and
+the Unity tier asserts no pixels. This project has already shipped two silent text faults for
+exactly that reason (`docs/bug-patterns.md` P10: the Work tab's tick and cross, and the bed picker's
+tick, the second of which reached `main` and was never drawn). A split is plain strings the fast
+tier can assert on, and its worst failure is a number in the wrong colour rather than markup on
+screen.
+
+**Which piece is emphasised is decided in the model**, because only the code doing the substitution
+knows where in the registry's sentence the number landed. `{level}` is deliberately left standing
+through the `{name}` and `{skill}` replacements and split on afterwards. Substituting it first and
+searching for the digits later would find the wrong "5" the day a colonist is called Level5 or a
+skill is renamed — and reword the CSV line to put the level first and this still works, because the
+view never parses anything.
+
+**The pieces are asserted to still be the line.** Three strings where there was one is three chances
+for the sentence to come apart — a dropped space, a piece written twice, a piece left over from the
+row before — and none of those would throw or fail any other test in the file, because every other
+test reads `ToastRow.Lead`, which is built from the pieces and would stay correct while what the
+player reads went wrong. `TheLineComesInThreePiecesThatStillMakeTheLine` asserts the identity
+directly, and was confirmed to fail on a model that stopped building `Lead` from the pieces.
+
+**The split is optional for future callers.** The stack's obvious second customer is the rejection
+notice design 09 §2.3 named, which has no number to colour; a row raised without pieces is all one
+piece and draws correctly without knowing the split exists.
+
+**Only the first piece shrinks.** The number is the thing the owner asked to be able to see, so it
+is the last thing dropped if a long name ever crowds the row: *"Constance has reach… 7"* is the
+right failure and *"Constance has reached Construc"* is the wrong one.

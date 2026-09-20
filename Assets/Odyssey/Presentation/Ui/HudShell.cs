@@ -421,7 +421,16 @@ namespace Odyssey.Presentation.Ui
         {
             public VisualElement Root = null!;
             public HudGlyph Icon = null!;
+
+            /// <summary>
+            /// The line in three labels rather than one, so the level reads in its own colour
+            /// (owner, 2026-09-21). The model decides which piece is which; these just draw what
+            /// they are given, which is why there is no parsing on this side.
+            /// </summary>
             public Label Lead = null!;
+
+            public Label Emphasis = null!;
+            public Label Trail = null!;
             public PawnId TargetPawn;
 
             /// <summary>

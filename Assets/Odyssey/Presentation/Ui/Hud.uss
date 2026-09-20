@@ -554,11 +554,36 @@
     flex-shrink: 0;
 }
 
+/* The line is three labels, not one: the words before the level, the level, and anything after it
+   (owner, 2026-09-21 - the number reads in its own colour). They sit flush against each other, so
+   the spaces between the words are the registry sentence's own and none of these may add margin.
+
+   Only the FIRST one shrinks. The number is the thing the owner asked to be able to see, so it is
+   the last thing that may be dropped if a long name ever crowds the row - "Constance has reached
+   Construction 7" truncating to "Constance has reach... 7" is the right failure, and
+   "Constance has reached Construc" is the wrong one. */
 .toast__lead {
     color: #eef3f6;
     white-space: nowrap;
     overflow: hidden;
+    flex-shrink: 1;
+    margin: 0;
+}
+
+/* Colour is set from code (HudTokens.Warn) so this and the passion pip cannot drift apart - the
+   declaration here is a placeholder and is never seen, as .skill__fill's is. */
+.toast__level {
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.toast__trail {
+    color: #eef3f6;
+    white-space: nowrap;
+    flex-shrink: 0;
     flex-grow: 1;
+    margin: 0;
 }
 
 .alert__dismiss {

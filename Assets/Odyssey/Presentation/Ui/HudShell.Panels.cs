@@ -967,7 +967,20 @@ namespace Odyssey.Presentation.Ui
 
                 view.Icon.Kind = HudGlyphKind.Info;
                 view.Icon.Tint = HudTokens.Accent;
-                HudText.Set(view.Lead, model.Lead, HudTextRole.Body);
+
+                // Three labels, in the model's own order. The middle one carries the level and is
+                // already tinted, so nothing here decides a colour per row.
+                HudText.Set(view.Lead, model.LeadBefore, HudTextRole.Body);
+                HudText.Set(view.Emphasis, model.Emphasis, HudTextRole.Body);
+                HudText.Set(view.Trail, model.LeadAfter, HudTextRole.Body);
+
+                // An empty piece is taken out of the row rather than left as a zero-width label,
+                // so no stray spacing can creep in around it. The trail is empty for the sentence
+                // the registry ships, which puts the level last.
+                view.Emphasis.style.display =
+                    model.Emphasis.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                view.Trail.style.display =
+                    model.LeadAfter.Length == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             }
         }
 
@@ -979,13 +992,24 @@ namespace Odyssey.Presentation.Ui
             var icon = new HudGlyph(HudGlyphKind.Info, IconBadge.BarSize, HudTokens.Accent);
             icon.AddToClassList("toast__icon");
 
+            // The line in three pieces: the words before the level, the level, and anything the
+            // registry's sentence puts after it. Only the middle one is coloured, and it is
+            // coloured once here rather than per refresh because it never changes.
             Label lead = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__lead");
+            Label emphasis = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__level");
+            Label trail = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "toast__trail");
+            emphasis.style.color = HudTokens.Warn;
 
             row.Add(icon);
             row.Add(lead);
+            row.Add(emphasis);
+            row.Add(trail);
             _toastRows.Add(row);
 
-            var view = new ToastRowView { Root = row, Icon = icon, Lead = lead };
+            var view = new ToastRowView
+            {
+                Root = row, Icon = icon, Lead = lead, Emphasis = emphasis, Trail = trail,
+            };
 
             // Clicking selects the colonist it is about, the way an alert row does. There is no
             // dismiss control: the row is already leaving, and a control that raced a six-second

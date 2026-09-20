@@ -9195,6 +9195,40 @@ built, and that the collector does not run at all while the panel sits open.
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
 
+## 2026-09-21 — The toast's level goes amber, and why it is a split and not a tag
+
+The owner, after the bar: *"make a small change to the notification to make the value of level (IE
+the number) a yellow tinted colour for effect so you can see the value clear."* Small, and the
+implementation choice inside it is not.
+
+**Rich text was the obvious answer and was rejected on how it fails.** A `<color>` tag inside the
+one label is less code and one element instead of three. But if rich text is ever off on that label
+the player reads the tag itself, and **neither tier can see that** — the fast tier has no text
+engine and the Unity tier asserts no pixels. That is the exact shape of `docs/bug-patterns.md` P10,
+which this project has now met twice, once shipping to `main` undrawn. A split into three plain
+strings is assertable in the fast tier, and its worst failure is a number in the wrong colour.
+
+**The split happens in the model, before `{level}` is substituted.** Replace it first and find the
+digits afterwards and you find the wrong "5" the day a colonist is called Level5. Splitting on the
+placeholder means the view never parses anything and a reworded CSV line still works.
+
+**And the identity is asserted, because it is the one thing the rest of the tests cannot see.**
+Every other test in `ToastTests` reads `ToastRow.Lead`, which is built from the pieces — so a
+dropped space or a duplicated piece would leave `Lead` correct while the three labels on screen went
+wrong. `TheLineComesInThreePiecesThatStillMakeTheLine` asserts the concatenation directly, and was
+confirmed to fail by making the model pass the unsplit string as `Lead`.
+
+**The merge with main that came with it produced the one conflict where taking a side is always
+wrong.** Both branches had moved the content fingerprint — this one when `Work_Growing` gained a
+curve, main when `ItemDef` gained a category — so neither number was the merged one. I wrote the
+comment saying a fresh value had been measured *before* running it. Re-measuring returned main's
+value unchanged, because this branch's remaining Def edits are XML **comments**, and a comment is
+never loaded so it is never hashed. The comment is corrected in place with the rule beside it. The
+lesson is the ordinary one and it keeps recurring: write the claim after the measurement, not
+before.
+
+Fast tier 914 Sim + 608 Hud, EditMode **2,298 / 2,278 / 0**, PlayMode **91 / 86 / 0**.
+
 ## 2026-09-21 — The experience bar's first look: an underline becomes a column
 
 The owner played PR #139 and asked for three things: the bar between the label and the value, the

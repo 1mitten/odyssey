@@ -12,8 +12,35 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the kind of toast, for the words and later the art.</summary>
         public readonly string Key;
 
-        /// <summary>The whole line, already built.</summary>
+        /// <summary>The whole line, already built and in plain words.</summary>
         public readonly string Lead;
+
+        /// <summary>
+        /// The same line in three pieces, so the view can draw the middle one differently
+        /// (owner, 2026-09-21: <i>"make the value of level (IE the number) a yellow tinted colour
+        /// for effect so you can see the value clear"</i>).
+        ///
+        /// <para><b>Split here rather than marked up here.</b> The alternative was a rich-text
+        /// <c>&lt;color&gt;</c> tag inside <see cref="Lead"/>, which is less code and one label
+        /// instead of three. It was rejected because of how it fails: if rich text is ever off on
+        /// that label the player reads the tag itself, and <i>nothing in either tier could catch
+        /// that</i> — the fast tier has no text engine and the Unity tier asserts no pixels. This
+        /// project has shipped two silent text faults already for exactly that reason
+        /// (<c>docs/bug-patterns.md</c> P10). A split is plain strings the fast tier can assert on,
+        /// and its worst failure is a number in the wrong colour rather than markup on screen.</para>
+        ///
+        /// <para><b>Which piece is emphasised is decided here, not in the view</b>, because only
+        /// the code doing the substitution knows where in the registry's sentence the number
+        /// landed. Reword the line in <c>icon-keys.csv</c> to put the level first and this still
+        /// works; the view never parses anything.</para>
+        /// </summary>
+        public readonly string LeadBefore;
+
+        /// <summary>The piece drawn in the accent colour: the level reached.</summary>
+        public readonly string Emphasis;
+
+        /// <summary>Whatever the registry's sentence puts after the level. Usually empty.</summary>
+        public readonly string LeadAfter;
 
         /// <summary>The colonist it is about, so clicking the row can select her.</summary>
         public readonly PawnId Pawn;
@@ -32,7 +59,8 @@ namespace Odyssey.Hud
         public readonly int Serial;
 
         public ToastRow(string key, string lead, PawnId pawn, double raised,
-                          AlertSeverity severity, int serial)
+                          AlertSeverity severity, int serial,
+                          string? leadBefore = null, string emphasis = "", string leadAfter = "")
         {
             Key = key;
             Lead = lead;
@@ -40,6 +68,13 @@ namespace Odyssey.Hud
             Raised = raised;
             Severity = severity;
             Serial = serial;
+
+            // A row raised without pieces is all one piece, so a caller that has nothing to
+            // emphasise - every future customer of this stack that is not a level-up - gets a row
+            // that draws correctly without knowing the split exists.
+            LeadBefore = leadBefore ?? lead;
+            Emphasis = emphasis;
+            LeadAfter = leadAfter;
         }
     }
 
@@ -95,6 +130,13 @@ namespace Odyssey.Hud
         /// <summary>The key a skill level-up is raised under.</summary>
         public const string LevelUpKey = "ui.toast.skillup";
 
+        /// <summary>
+        /// The placeholder in that key's registry line that the level is substituted for, and the
+        /// point the line is split at so the number can be drawn in its own colour. Named because
+        /// two places have to agree on it: the CSV writes it and <see cref="Refresh"/> finds it.
+        /// </summary>
+        public const string LevelPlaceholder = "{level}";
+
         /// <summary>Every key this stack can put on screen, for the registry test.</summary>
         public static readonly string[] IconKeys = { LevelUpKey };
 
@@ -141,13 +183,29 @@ namespace Odyssey.Hud
                 // The words are the registry's, with the two things that vary put into it. A
                 // literal here would be the one RegistryTests forbids, and the wiki and the screen
                 // would disagree the first time somebody corrected either copy.
-                string lead = Registry.Label(LevelUpKey)
+                //
+                // {level} is left standing through those two replacements and split on afterwards,
+                // so the view is handed the sentence in three pieces and can draw the number in its
+                // own colour without parsing anything. Substituting it here and searching for the
+                // digits later would find the wrong "5" the day a colonist is called Level5 or a
+                // skill is renamed.
+                string filled = Registry.Label(LevelUpKey)
                     .Replace("{name}", who)
-                    .Replace("{skill}", skill)
-                    .Replace("{level}", up.Level.ToString());
+                    .Replace("{skill}", skill);
 
-                Raise(new ToastRow(LevelUpKey, lead, up.Pawn, seconds,
-                    AlertSeverity.Notice, ++_serial));
+                string number = up.Level.ToString();
+                int at = filled.IndexOf(LevelPlaceholder, System.StringComparison.Ordinal);
+
+                // A registry line somebody has trimmed {level} out of still says something true;
+                // it simply has no number to emphasise. Better than throwing at a player.
+                string before = at < 0 ? filled : filled.Substring(0, at);
+                string emphasis = at < 0 ? string.Empty : number;
+                string after = at < 0
+                    ? string.Empty
+                    : filled.Substring(at + LevelPlaceholder.Length);
+
+                Raise(new ToastRow(LevelUpKey, before + emphasis + after, up.Pawn, seconds,
+                    AlertSeverity.Notice, ++_serial, before, emphasis, after));
             }
         }
 

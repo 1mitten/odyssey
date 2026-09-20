@@ -258,6 +258,69 @@ namespace Odyssey.Tests.Hud
             Assert.That(row.Lead, Does.Not.Contain("{"), "a placeholder reached the screen");
         }
 
+        /// <summary>
+        /// The line comes in three pieces so the view can draw the level in its own colour (owner,
+        /// 2026-09-21), and the pieces must still be the line.
+        ///
+        /// <para><b>This is the assertion that makes the split safe to have made at all.</b> Three
+        /// strings where there was one is three chances for the sentence to come apart - a dropped
+        /// space, a piece written twice, a piece left behind from the row before. None of those
+        /// would throw and none would fail any other test here, because every other test reads
+        /// <see cref="ToastRow.Lead"/>, which is built from the pieces and would stay correct while
+        /// what the player reads went wrong. So the identity is asserted directly: the three
+        /// concatenate to the whole line, in that order, with nothing added and nothing lost.</para>
+        ///
+        /// <para>The emphasised piece is the level and only the level. A view that coloured a
+        /// piece containing the skill name as well would put half the sentence in amber, which is
+        /// the opposite of "so you can see the value clear".</para>
+        /// </summary>
+        [Test]
+        public void TheLineComesInThreePiecesThatStillMakeTheLine()
+        {
+            var toasts = new ToastModel();
+            var pawn = new PawnId(1);
+
+            var before = Frame();
+            Level(before, pawn, "mining", 4);
+            toasts.Refresh(before, seconds: 0.0);
+
+            var after = Frame(tick: 1);
+            Level(after, pawn, "mining", 5);
+            toasts.Refresh(after, seconds: 1.0);
+
+            ToastRow row = toasts.Rows[0];
+
+            Assert.That(row.LeadBefore + row.Emphasis + row.LeadAfter, Is.EqualTo(row.Lead),
+                "the three pieces are not the line the rest of this file reads");
+
+            Assert.That(row.Emphasis, Is.EqualTo("5"),
+                "the emphasised piece is the level and nothing else");
+            Assert.That(row.LeadBefore, Does.Not.Contain("5"),
+                "the level has been left in the plain piece as well as the coloured one");
+            Assert.That(row.LeadBefore, Does.Contain("Mining"),
+                "the skill belongs in the plain piece, not the amber one");
+            Assert.That(row.Lead, Does.Not.Contain(ToastModel.LevelPlaceholder),
+                "the placeholder survived the split");
+        }
+
+        /// <summary>
+        /// A row raised by anything that is not a level-up draws as one plain piece. The stack's
+        /// obvious second customer is the rejection notice design 09 §2.3 named, and it has no
+        /// number to colour - so the split has to be optional rather than something every future
+        /// caller has to know about.
+        /// </summary>
+        [Test]
+        public void ARowWithNothingToEmphasiseIsAllOnePiece()
+        {
+            var row = new ToastRow("ui.toast.skillup", "nothing to see", new PawnId(1),
+                raised: 0.0, AlertSeverity.Notice, serial: 1);
+
+            Assert.That(row.LeadBefore, Is.EqualTo("nothing to see"));
+            Assert.That(row.Emphasis, Is.Empty);
+            Assert.That(row.LeadAfter, Is.Empty);
+            Assert.That(row.LeadBefore + row.Emphasis + row.LeadAfter, Is.EqualTo(row.Lead));
+        }
+
         [Test]
         public void AToastExpiresOnItsOwnAndCannotBeDismissed()
         {

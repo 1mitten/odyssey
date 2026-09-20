@@ -214,6 +214,13 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   calendar days to a harvest reads as slow, and whether the interim green tint reads as "growing here"
   or as a texture fault (`22-growing.md` §9). **This row blocks a merge**, which is why it is first.
 
+- **The toast's level number is amber now** (owner, 2026-09-21, `15-skills.md` §8j). The line is
+  three labels rather than one — the words, the level in `HudTokens.Warn`, and anything after it —
+  split in the model on the `{level}` placeholder so the view parses nothing. Deliberately **not** a
+  rich-text tag: if rich text were ever off the player would read the tag itself and neither tier
+  could catch it (P10). **Look for:** the number standing out at a glance without the line reading
+  as two colours fighting; a wrong answer is the amber looking like a warning rather than emphasis.
+
 - **The experience bar has had its first look and three changes** (owner, 2026-09-21: *"it works
   great but some visual change"*). The bar moved out of the row's bottom edge and **into** the row,
   between the label and the value; it is the needs' **green** now rather than tinted by passion; and

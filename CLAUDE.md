@@ -167,7 +167,10 @@ bottom, it is the needs' **green** (`HudTokens.Good`) rather than tinted by pass
 **6 px with 8 either side** rather than 3. **No layout constant moved** — the row is still 19 px and
 the pane one height — but the row has a **width budget** now that the bar is in the flow, and
 `HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the name column to 95 px so widening the bar
-cannot silently clip *Construction*. |
+cannot silently clip *Construction*. **The toast's level went amber the same day** (§8j): the line
+is three labels split in the model on the `{level}` placeholder rather than one label carrying a
+rich-text tag, because a tag that stopped being interpreted would put markup on screen and **neither
+tier can see that** — P10 again. |
 | **EV** events | **Merged 2026-09-20 (PR #140)** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
 | **ST** storage | **S0 merged (PR #151); S1 built, in review.** `ZoneGrid` is the zone container, extracted out of `GrowingZones` behaviour-preserving with every golden identical. S1 is the stockpile tool, the zone painted by a drag, the wash it wears on ground *and* on a built floor for no extra draw calls, a settings table zones point at by id, banded destination search, and save format **6 → 7**. **The anchor decides and two zones never merge** — a storage zone carries a filter that a fold would silently destroy, which is where it parts company with growing zones (`docs/design/26-storage.md` §2). **The panel is not built**: the four intents and the whole of `StorageSettingsModel` are in and tested, but nothing raises it yet, so a painted zone accepts everything at Normal. Goldens re-baked and **measured** — meadow and city identical in every economy number, the played board differing by one cell because a tree stands in the starting zone (§7). |
 | **HT** hardening | **Audited 2026-09-19; audit and plan merged as PR #136. Nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
@@ -370,13 +373,13 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **898 Sim + 586 Hud** (2026-09-21,
-  PR #139 merged with main); Long tier **23**. `main`'s own tip is 892 + 562.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **914 Sim + 608 Hud** (2026-09-21,
+  PR #139 merged with a main carrying the almanac and storage zones); Long tier **23**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
-  PR #139 merged with main, after the experience bar's first look: EditMode **2,258 total,
-  2,240 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the first attempt and that was the
+  PR #139 merged with main, after the experience bar's first look and the toast's amber level:
+  EditMode **2,298 total, 2,278 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the first attempt and that was the
   machine, not the branch**: `Assets/Synty` had gone missing, so the two `PortraitLightingTests`,
   the two `AvatarSheetTests` and `FigureCapTests` each ignored itself and said so in its skip
   reason. Re-run with the art restored it is 86, matching `main` exactly. **Read the skip reasons
