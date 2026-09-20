@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Growing;
+using System.Collections.Generic;
 using Odyssey.Sim.Pawns;
 
 namespace Odyssey.Tests.Sim
@@ -339,14 +340,15 @@ namespace Odyssey.Tests.Sim
             CellRef plot = colony.Start;
             Sow(colony, plot);
 
-            // Fill every stockpile cell to its limit, so no destination exists for anything.
-            var pile = colony.Pawns.Items.Stockpiles[0];
+            // Fill every storage cell to its limit, so no destination exists for anything.
+            var storage = colony.Pawns.Storage!;
             int wood = ItemIndex.Wood;
             int limit = colony.Pawns.Content.Items[wood].stackLimit;
-            for (int i = 0; i < pile.Cells.Length; i++)
+            var storageCells = new List<int>(storage.Cells);
+            for (int i = 0; i < storageCells.Count; i++)
             {
-                if (colony.Pawns.Items.ItemAt(pile.Cells[i]) != null) continue;
-                colony.Pawns.Items.Spawn(wood, pile.Cells[i], limit);
+                if (colony.Pawns.Items.ItemAt(storageCells[i]) != null) continue;
+                colony.Pawns.Items.Spawn(wood, storageCells[i], limit);
             }
 
             // And stand the blocker on a second, sown tile of the field.

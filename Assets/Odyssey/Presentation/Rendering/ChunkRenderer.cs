@@ -721,6 +721,23 @@ namespace Odyssey.Presentation.Rendering
                 tint = new Color(tint.r * TilledGrade.r, tint.g * TilledGrade.g,
                     tint.b * TilledGrade.b, tint.a);
 
+            // A store's ground: the surface it already is, washed towards the store's own hue.
+            // A lerp rather than the multiply above, and the difference is the difference between
+            // the two features. Tilled earth IS a different material — a field is soil somebody
+            // turned over, and a multiply says "this ground, darker". A store changes nothing
+            // about the ground: the stone is still stone and the planks are still planks under
+            // however many crates, so the wash has to sit *over* the surface and leave it
+            // recognisable. Kept light for the same reason the hue is desaturated: a mine order is
+            // worked off and a field becomes a crop, but a warehouse floor is a warehouse floor
+            // for the rest of the colony's life, and a heavy wash over fifty cells for a hundred
+            // hours is a screen the player stops seeing past.
+            if (TintCode.IsStored(tintCode))
+                tint = new Color(
+                    tint.r + (StoredGrade.r - tint.r) * StoredWash,
+                    tint.g + (StoredGrade.g - tint.g) * StoredWash,
+                    tint.b + (StoredGrade.b - tint.b) * StoredWash,
+                    tint.a);
+
             // Open to the sky means the depth shade has nothing to say. The shade measures how far
             // you are peering *through* the world, and there is nothing over an outdoor surface —
             // so a lower terrace is not dim ground, it is ground. Without this the meadow came out
@@ -1828,6 +1845,31 @@ namespace Odyssey.Presentation.Rendering
         /// the warmth, and dropping it took the brown out of the brown.</para>
         /// </summary>
         public static readonly Color TilledGrade = new Color(0.305f, 0.276f, 0.245f);
+
+        /// <summary>
+        /// The colour a store's ground is washed towards — <c>OrderColours.StoreHue</c>, the same
+        /// blue-grey the chip, the drag cursor and the armed banner wear.
+        ///
+        /// <para><b>The order's colour and the result's are the same one here, and that is not an
+        /// oversight.</b> A growing zone is deliberately the other way round: its chip is the
+        /// Zones brown and its committed ground is <see cref="TilledGrade"/>, because a painted
+        /// field turns into worked soil and the soil is the result rather than the order — exactly
+        /// as a built wall is not the blue of its blueprint. A store has no result: the ground
+        /// under a warehouse is the ground it always was, and the wash <i>is</i> the standing
+        /// order, still in force, for as long as the zone exists.</para>
+        ///
+        /// <para>Written as the same three bytes <c>OrderColours.StoreHue</c> carries rather than
+        /// reached for across the assembly boundary: <c>Odyssey.Hud</c> has no Unity types and
+        /// this file has nothing else. <c>OrderColoursTests</c> holds the pair together.</para>
+        /// </summary>
+        public static readonly Color StoredGrade = new Color(0x7f / 255f, 0x96 / 255f, 0xa8 / 255f);
+
+        /// <summary>
+        /// How far a store's ground is pulled towards <see cref="StoredGrade"/>. A third: enough
+        /// that the edge of a zone is unmistakable at the play camera, little enough that a stone
+        /// floor still reads as stone and a wooden one as wood.
+        /// </summary>
+        public const float StoredWash = 0.33f;
 
         /// <summary>
         /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to

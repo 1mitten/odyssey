@@ -149,13 +149,41 @@ namespace Odyssey.Tests.Sim
         /// one to the game: an order arrives, somebody works, and the save has to carry the result.
         /// </para>
         /// </summary>
-        static void GiveTheOrdersAPlayerWould(ColonyWorld colony) =>
+        static void GiveTheOrdersAPlayerWould(ColonyWorld colony)
+        {
             ColonyScenario.GiveStartingOrders(colony.Designations, colony.Outcome.StartCell,
                 new ScenarioDef
                 {
                     defName = "Scenario_Playtest", label = "playtest",
                     startingFellRadius = 10, startingMineRadius = 30, startingMineOutcrops = 3,
                 });
+
+            // **And a place to put it all**, since 2026-09-20: a colony no longer arrives with a
+            // store, so drawing one is now among the orders a player gives on their first morning
+            // — the third of them, and the one without which nothing is ever hauled.
+            //
+            // Through the intent the tool sends, anchored on its own first cell, which makes this
+            // the one test in the suite that exercises a painted store end to end: the player's
+            // drag, the colony's haul, the save, and the same colony read back.
+            GridSize size = colony.Grid.Size;
+            CellRef start = colony.Outcome.StartCell;
+            int anchor = -1;
+            for (int dz = 0; dz < 3; dz++)
+            for (int dx = 0; dx < 3; dx++)
+            {
+                int x = start.X + 3 + dx, z = start.Z + 3 + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+                int cell = size.Index(x, z, start.Y);
+                if (anchor < 0) anchor = cell;
+                colony.World.Intents.Submit(new Intent(
+                    IntentKind.DesignateStorage, size.FromIndex(cell), anchor,
+                    Odyssey.Sim.Storage.StoragePreset.Everything));
+            }
+
+            // Submitted and not drained here: the run's own first tick drains them, and ticking
+            // to check would spend a tick the round trip counts. `AssertTheColonyDidRealWork`
+            // asks afterwards, where the answer is worth more anyway.
+        }
 
         /// <summary>
         /// Without this the round trip could hold over a world nothing had happened to, and would
@@ -171,6 +199,12 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Jobs.CompletedOf(JobIndex.Fell), Is.GreaterThan(0), "no tree was felled");
             Assert.That(colony.Jobs.CompletedOf(JobIndex.Mine), Is.GreaterThan(0), "no cell was mined");
             Assert.That(colony.Jobs.CompletedOf(JobIndex.Haul), Is.GreaterThan(0), "nothing was hauled");
+
+            // And the store the player drew, which is what made the hauling possible: a colony no
+            // longer starts with one, so a refused drag would show up above as "nothing was
+            // hauled" and send the next reader looking at the haul giver.
+            Assert.That(colony.Pawns.Storage!.ZoneCount, Is.GreaterThan(0),
+                "the store the player drew was refused, so there was nowhere to haul anything to");
         }
 
         /// <summary>

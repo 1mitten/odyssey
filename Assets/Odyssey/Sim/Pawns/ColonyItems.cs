@@ -23,20 +23,47 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Pawn id value of the carrier, or 0.</summary>
         public int CarriedBy;
 
+        /// <summary>
+        /// The container holding this thing, or 0 for none — the third answer to "where is it",
+        /// beside a cell and a pair of hands.
+        ///
+        /// <para><b>Written by nothing yet, and here on purpose.</b> Storage units are S2 and the
+        /// ground is strictly one stack per cell until they land (docs/plans/storage.md §1); what
+        /// this field buys today is that the item record's byte layout changes <b>once</b>, in the
+        /// same save version that moves the zones out of this section, rather than twice. A save
+        /// written now reads back 0 for every item, which is exactly what it means.</para>
+        /// </summary>
+        public int ContainerId;
+
         public bool Despawned;
     }
 
     /// <summary>
-    /// A set of cells on <b>exactly one layer</b> sharing a storage setting.
+    /// Whether a cell is inside a storage zone — the one question <see cref="ColonyItems"/> asks
+    /// of the zones, and the reason it does not hold them.
     ///
-    /// Per-layer is the answer layer question 6 settled on: contiguity across a stairwell is
-    /// meaningless and capacity belongs to a floor rather than to a volume. The "one warehouse
-    /// across three floors" case comes back later as a storage group — several per-layer zones
-    /// sharing one settings record — which is geometry per layer and configuration grouped.
+    /// <para>An interface rather than a reference to <c>StorageZones</c> because the dependency
+    /// only runs one way in meaning: the zones know about the things (they re-bucket them), and
+    /// the things need one boolean. A colony with no zones at all — a test fixture, a bare board —
+    /// leaves it null and everything is loose, which is the truth.</para>
     /// </summary>
-    public sealed class Stockpile
+    public interface IZoneMembership
     {
-        public Stockpile(int priority, int[] cells, bool[] allow)
+        bool IsStorage(int cell);
+    }
+
+    /// <summary>
+    /// A storage zone as a save written before <c>StorageZones</c> existed described it: one
+    /// priority, one filter, one set of cells, and no notion of a settings record.
+    ///
+    /// <para><b>Read by nothing but the v6 migration.</b> It is not a live type — the living one
+    /// is <c>Odyssey.Sim.Storage.StorageZones</c> — and it is here rather than there because this
+    /// is the section whose bytes it is: the reader is sequential, so the old records have to be
+    /// consumed by whoever is reading the items section, and handed on afterwards.</para>
+    /// </summary>
+    public sealed class LegacyStockpile
+    {
+        public LegacyStockpile(int priority, int[] cells, bool[] allow)
         {
             Priority = priority;
             Cells = cells;
@@ -44,16 +71,9 @@ namespace Odyssey.Sim.Pawns
             System.Array.Sort(Cells);
         }
 
-        /// <summary>Higher wins. Priority orders the destination, never the haul queue.</summary>
-        public int Priority;
-
-        /// <summary>Ascending cell index, so scans are ordered without sorting at tick time.</summary>
+        public readonly int Priority;
         public readonly int[] Cells;
-
-        /// <summary>The filter, by item def index. Shared in shape with bill ingredients later.</summary>
         public readonly bool[] Allow;
-
-        public bool Accepts(int defIndex) => defIndex >= 0 && defIndex < Allow.Length && Allow[defIndex];
     }
 
     /// <summary>
@@ -71,9 +91,17 @@ namespace Odyssey.Sim.Pawns
         readonly Dictionary<int, int> _itemAtCell = new Dictionary<int, int>();
         readonly List<int> _loose = new List<int>();
         readonly List<int> _stored = new List<int>();
-        readonly List<Stockpile> _stockpiles = new List<Stockpile>();
-        readonly Dictionary<int, int> _stockpileAtCell = new Dictionary<int, int>();
         readonly List<int> _beds = new List<int>();
+
+        /// <summary>
+        /// Zones read out of a v6 save, waiting for <c>ColonyWorld.RebuildDerived</c> to hand them
+        /// to <c>StorageZones</c>. Empty at every other moment of a world's life.
+        ///
+        /// <para><b>Stashed rather than applied</b>, because section load order is the order of the
+        /// components list and this section has no business depending on it. Draining afterwards is
+        /// the one arrangement that works whichever way round the two sections are written.</para>
+        /// </summary>
+        public List<LegacyStockpile> PendingLegacyZones { get; } = new List<LegacyStockpile>();
 
         int _nextId = 1;
 
@@ -99,7 +127,28 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public IReadOnlyList<int> StoredItems => _stored;
 
-        public IReadOnlyList<Stockpile> Stockpiles => _stockpiles;
+        /// <summary>
+        /// Which cells are storage, or null where the colony has no zones at all. Set by the
+        /// composition root; see <see cref="IZoneMembership"/> for why it is an interface.
+        /// </summary>
+        public IZoneMembership? Membership { get; set; }
+
+        /// <summary>
+        /// Move whatever lies in this cell to the lister its zone membership now says it belongs
+        /// on. Called by the zones on every join and every leave.
+        ///
+        /// <para><b>The half that never existed.</b> <c>AddStockpile</c> moved an item from loose
+        /// to stored when a zone was created over it, and there was no way at all to take a cell
+        /// out of a zone — so a stored thing could never become loose again, and the first thing
+        /// that could shrink a zone would have left its contents invisible to the haul scan for
+        /// ever.</para>
+        /// </summary>
+        public void Rebucket(int cell)
+        {
+            if (!_itemAtCell.TryGetValue(cell, out int item)) return;
+            Unlist(item);
+            Enlist(cell, item);
+        }
 
         /// <summary>Bed cells, ascending.</summary>
         public IReadOnlyList<int> Beds => _beds;
@@ -142,23 +191,6 @@ namespace Odyssey.Sim.Pawns
             return item.Id;
         }
 
-        public void AddStockpile(Stockpile stockpile)
-        {
-            int index = _stockpiles.Count;
-            _stockpiles.Add(stockpile);
-            for (int i = 0; i < stockpile.Cells.Length; i++)
-            {
-                _stockpileAtCell[stockpile.Cells[i]] = index;
-
-                // Anything already lying in the new zone stops being loose and becomes stored.
-                if (_itemAtCell.TryGetValue(stockpile.Cells[i], out int item))
-                {
-                    RemoveFrom(_loose, item);
-                    InsertInto(_stored, item);
-                }
-            }
-        }
-
         public void AddBed(int cell)
         {
             int at = _beds.BinarySearch(cell);
@@ -181,10 +213,8 @@ namespace Odyssey.Sim.Pawns
             if (at >= 0) _beds.RemoveAt(at);
         }
 
-        public bool IsStockpileCell(int cell) => _stockpileAtCell.ContainsKey(cell);
-
-        public Stockpile? StockpileAt(int cell) =>
-            _stockpileAtCell.TryGetValue(cell, out int index) ? _stockpiles[index] : null;
+        /// <summary>Is this cell inside a storage zone? False everywhere when the colony has none.</summary>
+        public bool IsStockpileCell(int cell) => Membership != null && Membership.IsStorage(cell);
 
         public void PickUp(ColonyItem item, PawnId carrier)
         {
@@ -458,22 +488,15 @@ namespace Odyssey.Sim.Pawns
                 hash.Add(item.Stack);
                 hash.Add(item.Forbidden);
                 hash.Add(item.CarriedBy);
+                hash.Add(item.ContainerId);
                 hash.Add(item.Despawned);
             }
 
-            // A zone is an order about where things go, and its filter is the half of it that is
-            // not a position — so it is the half a round trip is most likely to drop and the one
-            // nothing would have noticed.
-            hash.Add(_stockpiles.Count);
-            for (int s = 0; s < _stockpiles.Count; s++)
-            {
-                Stockpile pile = _stockpiles[s];
-                hash.Add(pile.Priority);
-                hash.Add(pile.Cells.Length);
-                for (int c = 0; c < pile.Cells.Length; c++) hash.Add(pile.Cells[c]);
-                hash.Add(pile.Allow.Length);
-                for (int a = 0; a < pile.Allow.Length; a++) hash.Add(pile.Allow[a]);
-            }
+            // The zones left this class in S1 and are hashed by `StorageZones` — cells with the
+            // priority of the zone they are in — and their filters by `StorageSettingsTable`. The
+            // pairing the note below records still holds; it is kept by two components now
+            // instead of one, and `OrdersSurviveASaveTests.EachOrderMovesTheStateHash` is still
+            // the control that would notice if either stopped.
 
             // And which cells the sleep chooser will look at. Derived from the edifice list in
             // every colony built today — `ConstructionGrid.Raise` is the only thing that adds to
@@ -503,19 +526,12 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(item.Stack);
                 writer.Write(item.Forbidden);
                 writer.Write(item.CarriedBy);
+                writer.Write(item.ContainerId);
                 writer.Write(item.Despawned);
             }
 
-            writer.Write(_stockpiles.Count);
-            for (int s = 0; s < _stockpiles.Count; s++)
-            {
-                var pile = _stockpiles[s];
-                writer.Write(pile.Priority);
-                writer.Write(pile.Cells.Length);
-                for (int c = 0; c < pile.Cells.Length; c++) writer.Write(pile.Cells[c]);
-                writer.Write(pile.Allow.Length);
-                for (int a = 0; a < pile.Allow.Length; a++) writer.Write(pile.Allow[a]);
-            }
+            // Format 8: the zones are gone from this section and live in `odyssey.storage.zones`.
+            // Nothing is written in their place — a reader at 7 or later simply does not look.
 
             writer.Write(_beds.Count);
             for (int b = 0; b < _beds.Count; b++) writer.Write(_beds[b]);
@@ -527,9 +543,13 @@ namespace Odyssey.Sim.Pawns
             _itemAtCell.Clear();
             _loose.Clear();
             _stored.Clear();
-            _stockpiles.Clear();
-            _stockpileAtCell.Clear();
             _beds.Clear();
+            PendingLegacyZones.Clear();
+
+            // Version 8 gave an item a container and took the zones out of this section. An older
+            // file has neither: every item reads back ContainerId 0, which is "on the ground or in
+            // a pair of hands" and is what every item in such a world was.
+            bool containers = reader.FormatVersion >= 8;
 
             _nextId = reader.ReadInt();
             int itemCount = reader.ReadInt();
@@ -543,37 +563,48 @@ namespace Odyssey.Sim.Pawns
                     Stack = reader.ReadInt(),
                     Forbidden = reader.ReadBool(),
                     CarriedBy = reader.ReadInt(),
-                    Despawned = reader.ReadBool(),
                 };
+                if (containers) item.ContainerId = reader.ReadInt();
+                item.Despawned = reader.ReadBool();
                 _items.Add(item);
             }
 
-            int pileCount = reader.ReadInt();
-            for (int s = 0; s < pileCount; s++)
+            if (!containers)
             {
-                int priority = reader.ReadInt();
-                var cells = new int[reader.ReadInt()];
-                for (int c = 0; c < cells.Length; c++) cells[c] = reader.ReadInt();
-                var allow = new bool[reader.ReadInt()];
-                for (int a = 0; a < allow.Length; a++) allow[a] = reader.ReadBool();
-
-                int index = _stockpiles.Count;
-                _stockpiles.Add(new Stockpile(priority, cells, allow));
-                for (int c = 0; c < cells.Length; c++) _stockpileAtCell[cells[c]] = index;
+                // The old zone records. They have to be read whether or not anything wants them,
+                // because the reader is sequential; they are stashed rather than applied, because
+                // the component that owns zones now is a different section and load order is not
+                // this section's business. `ColonyWorld.RebuildDerived` drains them.
+                int pileCount = reader.ReadInt();
+                for (int s = 0; s < pileCount; s++)
+                {
+                    int priority = reader.ReadInt();
+                    var cells = new int[reader.ReadInt()];
+                    for (int c = 0; c < cells.Length; c++) cells[c] = reader.ReadInt();
+                    var allow = new bool[reader.ReadInt()];
+                    for (int a = 0; a < allow.Length; a++) allow[a] = reader.ReadBool();
+                    PendingLegacyZones.Add(new LegacyStockpile(priority, cells, allow));
+                }
             }
 
             int bedCount = reader.ReadInt();
             for (int b = 0; b < bedCount; b++) _beds.Add(reader.ReadInt());
 
-            // Re-derive the cell index and both listers in id order, which is ascending by
+            // Re-derive the cell index and the listers in id order, which is ascending by
             // construction, so the appends leave the lists sorted without a search.
+            //
+            // **Everything lands loose, and is re-bucketed afterwards.** Zones are a different
+            // save section now, so asking `IsStockpileCell` here would answer against whatever the
+            // zones happened to hold at this point in the load — which depends on the order of the
+            // components list, and a lister that is right only when two sections are written in
+            // one particular order is a bug waiting for the next appended section.
+            // `StorageZones.RebucketAll`, through `ColonyWorld.RebuildDerived`, is what sorts them.
             for (int i = 0; i < _items.Count; i++)
             {
                 var item = _items[i];
                 if (item.Despawned || item.Cell < 0) continue;
                 _itemAtCell[item.Cell] = i;
-                if (IsStockpileCell(item.Cell)) _stored.Add(i);
-                else _loose.Add(i);
+                _loose.Add(i);
             }
         }
     }

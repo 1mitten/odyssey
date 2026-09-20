@@ -398,3 +398,16 @@ ui.terrain.water.deep,-,,,"flat dark water, no bed visible",-,gap
 ui.terrain.rock,-,,,"a face of natural stone",-,gap
 ui.terrain.subsoil,-,,,"a tile of dug earth",-,gap
 ui.terrain.bedrock,-,,,"a tile of dark, banded stone",-,gap
+ui.storage.priority.last,-,,,"a single chevron pointing down, the bottom rung of a ladder",-,gap
+ui.storage.priority.low,-,,,"a chevron pointing down above a short level bar",-,gap
+ui.storage.priority.normal,-,,,"a level bar, pointing neither up nor down",-,gap
+ui.storage.priority.preferred,-,,,"a chevron pointing up above a short level bar",-,gap
+ui.storage.priority.urgent,-,,,"two stacked chevrons pointing up",-,gap
+ui.storage.preset.everything,-,,,"an open crate with every slot filled",-,gap
+ui.storage.preset.nothing,-,,,"an open crate, empty, slots showing",-,gap
+ui.res.category.food,-,,,"a ration tin beside a carrot top",-,gap
+ui.res.category.medicine,-,,,"a rolled bandage and a small vial",-,gap
+ui.res.category.materials,-,,,"a plank laid across a cut stone block",-,gap
+ui.res.category.books,-,,,"a closed book seen spine-on",-,gap
+ui.res.category.items,-,,,"a slung pack with a buckled strap",-,gap
+ui.res.category.weapons,-,,,"a knife crossed over a rifle barrel",-,gap

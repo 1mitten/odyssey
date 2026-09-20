@@ -117,6 +117,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Growing.GrowingZones? Growing { get; set; }
 
+        /// <summary>
+        /// Where the colony puts things down, or null in a world that has none — a bare test
+        /// fixture, or a board before the composition root has wired one. Every read here is
+        /// null-guarded for that reason and not out of habit: the haul giver answers "no
+        /// destination" rather than throwing, which is what a colony with no zones actually means.
+        /// </summary>
+        public Storage.StorageZones? Storage { get; set; }
+
 
         /// <summary>
         /// "This cell is in no growing zone" as a delegate that already exists.

@@ -1157,6 +1157,12 @@ namespace Odyssey.Presentation.Bootstrap
             _model.UpdateZones(_world.Views.Current.Zones);
             MarkSection(FrameSection.Mirror);
 
+            // And the storage mirror, third and for the same reason: the chunk a store's drag
+            // marked dirty is rebuilt below, and a mesher that had not yet heard about the zone
+            // would bake the ground untinted and only wash it on the *next* thing that dirtied
+            // that chunk — which might be never.
+            _model.UpdateStorage(_world.Views.Current.Stores);
+
             if (_renderer != null)
             {
                 _renderer.FallingItems.UpdateSnapshot(_world.Views.Current);

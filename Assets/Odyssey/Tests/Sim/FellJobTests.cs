@@ -22,6 +22,10 @@ namespace Odyssey.Tests.Sim
             scenario.colonists = 3;
             scenario.beds = 3;
             scenario.startingFellRadius = fellRadius;
+            // A colony no longer starts with a store (owner, 2026-09-20), and half this file's
+            // subject is where the wood goes — so the fixture asks for the nine cells the
+            // scenario used to ship, and every test here measures what it always measured.
+            scenario.stockpileCells = 9;
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
         }
 

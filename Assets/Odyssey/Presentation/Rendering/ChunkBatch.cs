@@ -161,6 +161,36 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int TilledBase = 32768;
 
+        /// <summary>
+        /// Bit 16 marks a surface as <b>stored</b>: it is inside a storage zone, and the ground —
+        /// or the slab — it already draws is washed towards the store's blue-grey.
+        ///
+        /// <para><b>The same trick as <see cref="TilledBase"/>, and it has to be applied in two
+        /// places rather than one.</b> A growing zone is legal only on open fertile soil, so the
+        /// terrain quad is always the thing being drawn under it; a storage zone's commonest home
+        /// is a wooden floor inside a building, where there is no terrain quad at all and the
+        /// slab is what the player sees. So the bit is set on the terrain emit <em>and</em> on the
+        /// floor emit, and <c>ChunkRenderer</c> grades whichever arrives.</para>
+        ///
+        /// <para><b>And it grades rather than swapping.</b> Tilled soil swaps the terrain itself —
+        /// <c>DrawnTerrain</c> answers bare earth for a zoned cell, because a field is soil
+        /// somebody turned over. A store changes nothing about what the ground <i>is</i>: the
+        /// stone stays stone and the planks stay planks, with a wash over them saying the colony
+        /// has claimed the spot.</para>
+        ///
+        /// <para>The cost is buckets, not draws: a chunk holding a warehouse pays one extra bucket
+        /// per surface material it covers, and no per-cell submission at all. That is the whole
+        /// reason the drawing is a bit and not an overlay — <c>docs/bug-patterns.md</c> P10, the
+        /// pass that draws once per cell, at about 4.6 µs a submission.</para>
+        /// </summary>
+        public const int StoredBase = 65536;
+
+        /// <summary>Is this bucket inside a storage zone, and so washed towards the store's hue?</summary>
+        public static bool IsStored(int code) => (code & StoredBase) != 0;
+
+        /// <summary>The same code, marked as a store's ground.</summary>
+        public static int Stored(int code) => code | StoredBase;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>
