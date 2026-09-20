@@ -205,6 +205,20 @@ same trap: they are there so that a missing rig does not crash, and they double 
 rig that is present and being read wrongly. Where the fallback has to exist, it should be a value a
 test can recognise as the fallback — and a test should assert that the real thing is not it.
 
+**Its second face: an aggregate answers the question it aggregates, not the one you asked** (added
+2026-09-20). Here the measurement was real and correctly computed, and still about the wrong thing.
+`SleepPose.Lift` was tuned until the lowest drawn vertex *anywhere* on a sleeping colonist just
+touched the mattress. On a supine sleeper that vertex is her back and the tuning was right. On a
+**side** sleeper it is a drawn-up knee, which props the body up like a kickstand — so half the
+colony lay 9 to 12 cm above its own bedding while the number reported 0.00 and 0.02 and looked
+perfect. A `min` over a whole body is a statement about that body's *extremities*; the thing being
+judged was its trunk.
+
+**Ask what the aggregate is over, and whether the subject is the whole of it.** Where it is not,
+measure the part in question — `SleepProbe` now prints the trunk's clearance beside the whole
+mesh's, so the next person to look can watch the two disagree. This is the harder half of the
+pattern, because there is no clamp and no zero to notice: both numbers are true.
+
 **And prefer the thing the player sees to the thing the rigger named.** A bone's meaning is a
 decision somebody made in a modelling package and cannot be assumed; where the drawn vertices are is
 not. `MeasureSole` already knew this — it bakes the posed mesh rather than believing the root is the
@@ -215,6 +229,26 @@ sole — and the fix was to ask the same question the same way.
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — Half the colony slept on one knee, and the number said nought (P10)
+
+Owner, watching the sleepers after the length fix landed: *"the body isn't quite flush on to the bed
+surface but the pillow head is placed nicely enough."*
+
+`SleepPose.Lift` had been tuned until the lowest drawn vertex anywhere on the mesh just touched the
+mattress — measured, 0.00 m and +0.02 m on the two side postures, which is a centimetre and reads
+as correct. Measuring the **trunk** alone, the band of baked mesh between the spine and the neck,
+gave **+0.09 m and +0.12 m**: on a side sleeper the lowest vertex is a drawn-up knee, and seating
+it props the whole body up like a kickstand. The two supine postures were genuinely flush and
+always had been, which is why the fault survived a contact sheet — half the pictures were right.
+
+**The shape: a true number about the wrong part of the subject.** Unlike the rest of P10 there is
+no clamp and no missing measurement to find; both figures are real and correctly computed, and the
+aggregate simply answers a question about extremities when the question was about a trunk.
+
+**Stopped by** `ShoulderPerBody` 0.152 → 0.109, set against the trunk, and by `SleepProbe` printing
+both clearances side by side so the disagreement is visible rather than inferred. The deliberate
+price is a knee pressed about 0.10 m into a 0.30 m mattress. `docs/design/20-beds.md` §7d.
 
 ### 2026-09-20 — A colonist was laid down a sixth of her own length (P5, P10)
 

@@ -8017,3 +8017,65 @@ not wrong.
 people asleep, and whether the third of the mattress lying empty past their boots bothers them. The
 bed is 4.6 m and a colonist is 2.5 m; the cell size fixes the first number (ADR 0002) and the rig
 fixes the second, so the only lever is a shorter bed.
+
+## 2026-09-20 — The owner watches the sleepers: a quarter of the colony, and a kickstand
+
+Two reports in one message, and both were sharper than they looked.
+
+> *"There's a pose that shouldn't be a sleep pose — any arms above the head — and I see a pose often
+> with 2 arms/hands above the head when they can be down the side. Also the body isn't quite flush
+> on to the bed surface but the pillow head is placed nicely enough."*
+
+**"Often" was exact, and answering it needed no tuning at all.** A posture is `PostureFor(pawnId)`,
+a hash taken modulo four, so each of the four shapes is *a quarter of every colony, by
+construction*. There is no frequency to reduce and no seed to blame: one shape the owner dislikes
+is one colonist in four, every night, for ever. That is worth saying back before doing anything,
+because the instinct on "I keep seeing X" is to look for a bias, and here the answer was in the
+design and not in the data. The fix could only be to replace the shape.
+
+**Which then needed a field the struct did not have.** The owner chose "another arms-down
+variation, differing in the legs" — and `Hip` and `Knee` drove *both* legs by the same amount, so
+the only leg difference expressible was a symmetric one, which is a beach and not a bed. The arms
+had been per-side since the table was written; the legs never were, and nobody had noticed because
+until this week every sleeper was hanging off the end of the bed anyway. `LeadHip` / `LeadKnee` are
+an extra on the right leg, nought on the three postures that do not ask for them. Swept before
+choosing: the band that raises a knee without driving a heel into the mattress runs from about −50°
+of hip to −20°, and anything at −10° or above with more than 20° of knee puts a foot in the bedding.
+
+**The second report is the one worth keeping, because the measurement said it was already fine.**
+"Not quite flush" — with the head placed nicely, which is the detail that made it findable. So the
+question was which part of the body was off, and the sheet could not answer it: a centimetre of gap
+under a torso is invisible at the play camera among four colonists. What answered it was measuring
+the *trunk* separately from the whole mesh, which nothing had ever done:
+
+| posture | lowest vertex | trunk |
+|---|---|---|
+| back | +0.01 | +0.01 |
+| back, one knee up | +0.01 | +0.01 |
+| **side, curled** | 0.00 | **+0.09** |
+| **side, loose** | +0.02 | **+0.12** |
+
+`Lift` had been tuned until the lowest drawn vertex *anywhere* on the mesh just touched the
+mattress. On a supine sleeper that vertex is the back, and the tuning was right. On a **side**
+sleeper it is a drawn-up knee, which props the whole body up like a kickstand — so half the colony
+rode 9 to 12 cm above its own bedding with one knee resting on it, and the whole-mesh number
+reported 0.00 and 0.02 and looked perfect throughout.
+
+**That is P10's neighbour and it is worth naming as its own thing: an aggregate answers the
+question it aggregates, not the question you asked.** `min` over a whole body is a statement about
+the body's *extremities*. The thing being judged was its trunk. Both numbers are real, both are
+correctly computed, and one of them is not about the subject — which is exactly why nothing failed
+and why it took a person looking at it. `ShoulderPerBody` is 0.109 now, measured against the band
+of baked mesh between the spine and the neck bones, and `SleepProbe` prints both figures side by
+side so the next person can see them disagree.
+
+**The price was chosen rather than discovered:** a drawn-up knee now presses about 0.10 m into a
+0.30 m mattress. A limb sunk a little into bedding is what bedding is for; a torso in mid-air is
+not. If it reads as clipping rather than as compression, the answer is the knee angle and not the
+lift, and that is recorded in `20-beds.md` §7d rather than guessed at.
+
+**And one thing kept deliberately unused.** The abduction angle added an hour earlier to rescue the
+arms-above-head posture now has no caller, because that posture is gone. It stays: it cost a
+measured sweep to establish that no pitch about the lateral axis can bring an arm in towards the
+midline, and the next posture that wants a hand anywhere other than at a side will want it back.
+Deleting it would only mean measuring that again.
