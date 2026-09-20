@@ -64,6 +64,33 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// <b>Every skill the simulation trains is written out here, and the list is the tripwire.</b>
+        ///
+        /// <para>This is the test the growing branch would have failed. <c>SkillCatalogue</c>, over
+        /// in <c>Odyssey.Hud</c>, decides whether a skill's row on the colonist pane is live or
+        /// greyed out with an excuse beside it, and that decision is a claim about <i>this</i>
+        /// assembly. Construction was greyed out from U26 to 2026-09-20 and Growing from U47,
+        /// because adding a skill here touched nothing that would notice.</para>
+        ///
+        /// <para>The two halves cannot reference each other — that is the point of
+        /// <see cref="PawnAspect"/> — so the guard is a pair of pins facing each other across the
+        /// name. This one fails the moment the simulation grows a skill; its message says where to
+        /// go. <c>Odyssey.Tests.Hud.SkillCatalogueTests</c> is the other half.</para>
+        /// </summary>
+        [Test]
+        public void EverySkillTheSimulationTrainsIsNamedHere()
+        {
+            Assert.That(SkillIndex.Names, Is.EqualTo(new[]
+                {
+                    "hauling", "cutting", "mining", "construction", "growing",
+                }),
+                "the simulation's skills have changed. A skill that trains is a skill the " +
+                "colonist pane must stop calling unavailable: add or remove the matching live " +
+                "row in Odyssey.Hud.SkillCatalogue.All and update SkillCatalogueTests, which " +
+                "pins the other end of this contract. Do not simply re-bake this list.");
+        }
+
+        /// <summary>
         /// A colonist's skills are on the published frame, under those names, with the level
         /// derived rather than left for the reader to work out — the ladder that derives it is
         /// simulation content and is not published.

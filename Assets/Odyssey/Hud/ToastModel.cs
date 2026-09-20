@@ -174,11 +174,21 @@ namespace Odyssey.Hud
             }
         }
 
-        /// <summary>Forget everything, for a world going away.</summary>
+        /// <summary>
+        /// Forget everything, for a world going away.
+        ///
+        /// <para><b>The watch is cleared too, and that is the point of this method.</b> The rows
+        /// would drain by themselves in six seconds; the levels the watch is holding would not,
+        /// because nothing steps it between two colonies. A colonist in the next one carries the
+        /// same <c>PawnId</c> as somebody in the last, so a kept mark makes a stranger's starting
+        /// roll read as a rise she just earned.</para>
+        /// </summary>
         public void Clear()
         {
             Rows.Clear();
+            _levels.Clear();
             Added = 0;
+            LoudestAdded = AlertSeverity.Notice;
         }
     }
 }

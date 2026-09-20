@@ -129,6 +129,19 @@ namespace Odyssey.Hud
             for (int i = 0; i < gone.Count; i++) _seen.Remove(gone[i]);
         }
 
+        /// <summary>
+        /// Forget every colonist, for a colony that has gone away.
+        ///
+        /// <para><b>A session boundary is the one thing <see cref="Forget"/> cannot cover.</b> It
+        /// drops whoever is missing from the frame it was just given, and between two colonies
+        /// there is no frame at all — the interface is on the main menu and nothing is stepped. So
+        /// the marks survive into the next colony, where <see cref="PawnId"/> 1 is a different
+        /// person: load a save whose first colonist mines better than the last one's and she
+        /// announces a level she has always had, which is the exact bug the first-sight rule
+        /// exists to prevent, arriving by the one door that rule does not watch.</para>
+        /// </summary>
+        public void Clear() => _seen.Clear();
+
         static long Slot(PawnId pawn, int skill) => ((long)pawn.Value << 8) | (uint)skill;
 
         static int PawnOf(long slot) => (int)(slot >> 8);

@@ -21,9 +21,12 @@ namespace Odyssey.Hud
     /// where sowing and harvest both train it. Both rows still said "nothing is built yet" and
     /// "nothing is planted yet", so the one screen that tells a player what a colonist can do was
     /// denying two of the four things she actually does. <b>A row's liveness is not documentation,
-    /// it is a claim about the simulation, and nothing was checking it</b> — which is why
-    /// <c>SkillCatalogueTests</c> now asserts the live set against the published aspect names
-    /// rather than against a list written here.</para>
+    /// it is a claim about the simulation, and nothing was checking it</b> — so two tests now
+    /// do, one on each side of a seam neither can cross. <c>SkillCatalogueTests</c> pins the live
+    /// rows and the aspect names they mint; <c>SkillTests.EverySkillTheSimulationTrainsIsNamedHere</c>
+    /// pins <c>SkillIndex.Names</c>. Adding a skill to the simulation fails the second, whose
+    /// message sends the author to the first, which is the path the growing branch walked straight
+    /// past.</para>
     ///
     /// <para><b>Where the simulation's three go.</b> <c>Skill_Mining</c> is <c>ui.skill.mining</c>
     /// and needs no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
@@ -100,7 +103,7 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The thirteen, in <c>icon-keys.csv</c> order — which is roughly the order the systems
+        /// The fourteen, in <c>icon-keys.csv</c> order — which is roughly the order the systems
         /// are planned in rather than alphabetical, so the live ones cluster at the top as the
         /// game fills out.
         /// </summary>
@@ -128,13 +131,15 @@ namespace Odyssey.Hud
         static Entry[]? _alphabetical;
 
         /// <summary>
-        /// The thirteen in the order a player reads them: <b>alphabetical by the word on screen</b>
+        /// The fourteen in the order a player reads them: <b>alphabetical by the word on screen</b>
         /// (owner, 2026-09-17).
         ///
         /// <para><b>By the label, not the key or the internal name.</b> A player scanning for
-        /// "Construction" is scanning the column they are reading, and three of these keys do not
-        /// spell their own label — <c>ui.skill.growing</c> is trained by cutting, and the key is
-        /// the one thing on the row nobody sees.</para>
+        /// "Construction" is scanning the column they are reading, and <c>ui.skill.cutting</c>
+        /// does not spell its own label — it reads <b>Chopping</b>, and the key is the one thing
+        /// on the row nobody sees. (It used to be worse: the key was borrowed from Growing until
+        /// 2026-09-18, so a colonist who spent a day with an axe levelled up a skill called
+        /// Growing.)</para>
         ///
         /// <para><see cref="All"/> keeps its planning order, because that is what the file is a
         /// record of and other readers depend on it. This is the presentation order, and it is

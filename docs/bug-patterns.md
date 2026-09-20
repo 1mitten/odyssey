@@ -1087,3 +1087,33 @@ board: 3,172 frames of 59,000 moved a colonist backwards along her own step, up 
 - **Bisect before believing the last diagnosis.** The obvious reading was that the previous fix had
   not gone far enough. Running the same measurement with the steering switched off gave numbers
   identical to the frame, which said in one run that this was a different fault.
+
+
+## A housekeeping rule that only runs while there is something to keep house over
+
+**2026-09-20, found in review of the skills work (SK4), before a player saw it.** The level-up toast
+is detected entirely on the presentation side: `SkillLevelWatch` remembers the last level it saw for
+each colonist and each skill, and reports a rise. It guards the two ways a remembered mark goes
+wrong, and both have tests — **the first sight of a colonist is silent**, so nobody announces her
+starting roll, and **a colonist missing from the frame is forgotten**, so a dead one leaves no mark
+for a later pawn to inherit.
+
+The second guard runs inside `Step`, over the frame it has just been given. **Between two colonies
+there is no frame**: the interface is on the main menu, nothing is published and nothing is stepped.
+So the marks from the last colony survive into the next one, where `PawnId` 1 is a different person
+— and if she is the better miner she announces, on her first frame, a level she was rolled with.
+
+- **The pattern:** a cleanup that is driven by the same pump as the work. It is correct for every
+  case *inside* a session and silent about the boundary between two, because at the boundary the
+  pump is stopped. Ask of any per-frame housekeeping: *what runs it when there are no frames?*
+- **The tell is a `Clear` nobody calls.** `ToastModel.Clear` existed, was unreferenced, and cleared
+  the rows but not the watch — which is the wrong half: the rows expire on a six-second timer
+  anyway, the marks never do. An unreferenced teardown method is a design that expected a boundary
+  and then did not wire one.
+- **The fix goes where the session boundary already is**, not into the watch. `HudShell.OnSessionChanged`
+  is the one place that already takes the in-game interface away with its colony; the clear is one
+  line below it, so the next thing with session state to drop has an obvious home.
+- **The check:** `ToastModelTests.AColonyGoingAwayTakesItsLevelMarksWithIt` — first sight silent,
+  clear, then a *higher* level on the same `PawnId` must say nothing, and the rise after that must
+  still be reported once. Confirmed to fail on the right assertion with the clear commented out,
+  because a test written after a fix is worth nothing until it has seen the bug.

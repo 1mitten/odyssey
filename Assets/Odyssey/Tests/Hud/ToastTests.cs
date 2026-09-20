@@ -356,5 +356,50 @@ namespace Odyssey.Tests.Hud
             foreach (string key in ToastModel.IconKeys)
                 Assert.That(Registry.Label(key), Is.Not.Empty, $"{key} has no registry name");
         }
+
+        /// <summary>
+        /// <b>A colony going away takes its marks with it</b>, which is the one case the watch's
+        /// own housekeeping cannot reach.
+        ///
+        /// <para><see cref="SkillLevelWatch"/> forgets a colonist who is missing from the frame it
+        /// is given, and between two colonies it is given no frame at all — the interface is on
+        /// the main menu and nothing is stepped. The next colony then hands it a
+        /// <see cref="PawnId"/> 1 who is a different person, and if she happens to be the better
+        /// miner she announces a level she arrived with. The first-sight rule is what stops that
+        /// everywhere else; this is the door it does not watch, and <c>HudShell</c> closes it on
+        /// every session change.</para>
+        /// </summary>
+        [Test]
+        public void AColonyGoingAwayTakesItsLevelMarksWithIt()
+        {
+            var toasts = new ToastModel();
+            var pawn = new PawnId(1);
+
+            var old = Frame();
+            Level(old, pawn, "mining", 4);
+            toasts.Refresh(old, seconds: 0.0);
+            Assert.That(toasts.Rows, Is.Empty, "the first sight of a colonist says nothing");
+
+            // The colony ends. The rows would have drained on their own; the mark would not.
+            toasts.Clear();
+            Assert.That(toasts.Added, Is.Zero, "a cleared stack still claims to have added a row");
+
+            // A new colony, whose first colonist is the better miner. She is a stranger.
+            var fresh = Frame(tick: 1);
+            Level(fresh, pawn, "mining", 9);
+            toasts.Refresh(fresh, seconds: 1.0);
+
+            Assert.That(toasts.Rows, Is.Empty,
+                "a new colony's first colonist announced a level she was rolled with");
+
+            // And she is being watched from where she actually stands, not from the last
+            // colony's mark: the next real rise is hers and is reported once.
+            var later = Frame(tick: 2);
+            Level(later, pawn, "mining", 10);
+            toasts.Refresh(later, seconds: 2.0);
+
+            Assert.That(toasts.Rows.Count, Is.EqualTo(1), "the new colonist's own rise was missed");
+            Assert.That(toasts.Rows[0].Lead, Does.Contain("10"));
+        }
     }
 }

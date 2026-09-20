@@ -89,8 +89,11 @@
     else - WorkRatePerMille has carried the curve for every work type since WS2, and growing was
     the one def without a rateSkill. Cutting's own numbers, read as a judgement: a novice runs
     at six tenths of the tuned speed and each level buys a tenth more, so the tuned speed sits
-    around level four where the starting rolls put a colonist who has hoed a season. The skill
-    curve itself (17-rates-and-stats 3a) belongs to the skills work when it lands.
+    around level four where the starting rolls put a colonist who has hoed a season.
+
+    The curve machinery itself (17-rates-and-stats 3a) has been here since WS2; this def was the
+    last work type without a rateSkill, so there was nothing left to land. The skills work that
+    followed (SK2-SK5, design 15 section 8) drew the result rather than changing it.
   -->
   <WorkTypeDef>
     <defName>Work_Growing</defName>

@@ -390,6 +390,34 @@ The toast stack takes the alerts' column and width, below them — panel A6 alre
 stack *"right edge, below the alerts"*. No header, because a heading earns its place over a standing
 list somebody returns to and here would be the tallest thing in the stack for most of its life.
 
+### 8f-bis. What the review found (2026-09-20)
+
+Reviewed on `claude/skills-review` after the base branch was merged up. Three things:
+
+**A colony going away left its level marks behind, and the next one inherited them.**
+`SkillLevelWatch` forgets a colonist who is missing from the frame it is given — and between two
+colonies it is given no frame at all, because the interface is on the main menu and nothing is
+stepped. The next colony then hands it a `PawnId` 1 who is a different person, and if she happens
+to be the better miner she announces a level she was rolled with. That is the exact failure the
+first-sight rule exists to stop, arriving by the one door the rule does not watch. `ToastModel.Clear`
+now clears the watch as well as the rows — the rows would have drained by themselves in six
+seconds; the marks would not — and `HudShell.OnSessionChanged` calls it, beside the line that
+already takes the in-game interface away with its colony. `Clear` existed and nothing had ever
+called it.
+
+**The guard §8 claims for row liveness did not exist.** `SkillCatalogue`'s own remarks said
+`SkillCatalogueTests` asserted the live set; there was no such file, and the assembly seam means
+there cannot be one that reads the simulation directly. It is a pair of pins facing each other
+across the aspect name instead: `SkillTests.EverySkillTheSimulationTrainsIsNamedHere` pins
+`SkillIndex.Names` and fails the moment a skill is added, with a message sending the author to
+`SkillCatalogueTests`, which pins what the catalogue then says about it. Without both halves, the
+bug this work is proudest of finding could recur on the next skill.
+
+**Three stale comments.** The catalogue still said "the thirteen" twice (there are fourteen) and
+still said `ui.skill.growing` was trained by cutting, undone on 2026-09-18 and again here;
+`WorkTypes.xml` still said the growing curve "belongs to the skills work when it lands", which it
+did not — #119 landed it.
+
 ### 8g. Correct §1 and §6 when reading them
 
 §1's table says three simulated skills and §6's open item says `Skill_Hauling` should go. The first is

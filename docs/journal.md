@@ -7833,3 +7833,49 @@ The Presentation and PlayMode assemblies are compiled by none of it, so the bar 
 are **unproven** until the Unity tier runs on the owner's machine. One Unity-tier failure was found by
 reading rather than running — `HudSmokeTests` asserts the exact set of framed panels the shell builds,
 and would have rejected the new `toasts` one.
+
+
+### Reviewing the skills work on the owner's machine (2026-09-20)
+
+Picked up on `claude/skills-review`, a worktree of #139 with the base branch merged up — #119 had
+moved five commits since the fork, and the only collision was two sessions appending to the end of
+this file on the same day.
+
+**The first job of the review was the thing the PR itself said was unproven.** Its description leads
+with "no presentation code in this PR has been compiled", and that is where the risk was: the fast
+tier builds neither `Odyssey.Presentation` nor the PlayMode assembly, so the bar, the toast row and
+the click handler had never been through a compiler. Running the Unity tier was therefore the review,
+not a formality after it.
+
+**One real fault, and it is the shape this project keeps meeting: a rule with a door nobody was
+watching.** `SkillLevelWatch` is careful about the two ways a mark can go wrong — the first sight of
+a colonist is silent, and a colonist missing from the frame is forgotten — and both have tests. But
+`Forget` can only drop who is missing from a frame it has been *given*, and **between two colonies
+there is no frame at all**: the interface is on the main menu and nothing steps. So the marks survive
+into the next colony, where `PawnId` 1 is a different person. Load a save whose first colonist mines
+better than the last one's and she announces a level she was rolled with — the exact failure the
+first-sight rule exists to prevent, arriving by the one door that rule does not watch. `ToastModel`
+already had a `Clear`; nothing had ever called it, and it cleared the rows but not the watch. It
+clears both now, and `HudShell.OnSessionChanged` calls it, one line below where the in-game interface
+already goes away with its colony. Verified by breaking it: with `_levels.Clear()` commented out the
+new test fails on the right assertion.
+
+**And a guard that was described but not written.** `SkillCatalogue`'s remarks said
+`SkillCatalogueTests` "now asserts the live set against the published aspect names" — there was no
+such file, and the assembly seam means there cannot be one that reads the simulation directly. That
+matters more than a wrong cross-reference: the bug this work is proudest of finding is *a row's
+liveness is a claim about the simulation and nothing was checking it*, and nothing still was. It is
+two pins facing each other across the aspect name now, one on each side of the seam:
+`SkillTests.EverySkillTheSimulationTrainsIsNamedHere` pins `SkillIndex.Names` and fails the moment a
+skill is added, with a message sending the author to `SkillCatalogueTests`, which pins the live rows,
+their empty excuses and the four keys each mints. Adding a skill and forgetting the row — which is
+precisely what the growing branch did — now fails a test that says so.
+
+Three stale comments fell out of the same read: the catalogue still said "the thirteen" twice against
+fourteen entries and still said `ui.skill.growing` was trained by cutting, and `WorkTypes.xml` still
+said the growing curve "belongs to the skills work when it lands" when #119 had landed it. Small, but
+this is the file that told two sessions the curve was missing.
+
+**Nothing moved a golden and nothing moved the fingerprint.** The XML edit is a comment, the tests are
+tests, and the one behaviour change is presentation state cleared at a session boundary. Long tier 23,
+green, on the merged branch.
