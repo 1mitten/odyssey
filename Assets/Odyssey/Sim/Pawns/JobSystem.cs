@@ -850,6 +850,12 @@ namespace Odyssey.Sim.Pawns
         public override int WorkType => WorkTypeIndex.Haul;
 
         /// <summary>
+        /// How far away an ordinary pile may be and still lose to a thing standing on tilled
+        /// soil: fifty cells, which on these boards is "anywhere" - the point is the ordering,
+        /// not the radius.
+        /// </summary>
+        const int ClearanceBias = 50;
+        /// <summary>
         /// A hauler with its arms full is not a colonist: the mode is fixed for the whole job,
         /// and the scan tests reachability in the <em>same</em> mode the job will walk in. A scan
         /// that tested a laxer mode would hand out jobs that fail on their first step.
@@ -878,10 +884,31 @@ namespace Odyssey.Sim.Pawns
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, item.Cell);
+
+                // A thing standing on tilled soil is in the way of the field (owner,
+                // 2026-09-19: "all items should be removed by colonists first from the dirt
+                // before sowing to an appropriate place"): the sowing scan will not touch its
+                // cell while it lies there, so it outranks every ordinary pile however near -
+                // the field cannot wait on a nearer rock.
+                if (ctx.Growing != null && ctx.Growing.ZonePlantAt(item.Cell) >= 0)
+                    distance -= ClearanceBias;
+
                 if (distance >= bestDistance) continue;
                 if (!ctx.Reachable(pawn, item.Cell, Mode)) continue;
 
                 int dest = BestStorageCell(pawn, ctx, item, restow ? StoredPriority(ctx, item) : int.MinValue);
+
+                // A thing on tilled soil that no stockpile will take still has to come off the
+                // dirt - the sowing of its cell is waiting on it, and a full store is not a
+                // reason for a field to stand idle (owner, 2026-09-20: "the colonists didn't
+                // remove the stone from the dirt tile and didn't bother sowing and nothing
+                // happened"). It goes to the nearest free cell outside every zone, and becomes
+                // an ordinary pile there: the stockpile's business again once it has room.
+                if (dest < 0 && !restow && ctx.Growing != null &&
+                    ctx.Growing.ZonePlantAt(item.Cell) >= 0)
+                    dest = ctx.Items.NearestCellWithSpace(
+                        ctx.Cells, item.Cell, item.DefIndex, item.Stack, maxRadius: 12,
+                        accept: ctx.NotZoned);
                 if (dest < 0) continue;
 
                 bestDistance = distance;

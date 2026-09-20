@@ -81,6 +81,14 @@ namespace Odyssey.Tests.Sim
         // taken from a freshly loaded pack after the write-through in ConstructionTests' first
         // version had been found and removed: a fingerprint of a polluted database is the wrong
         // number to pin, and it is not the number a clean load produces.
+        // Moved a sixth time, 2026-09-18, by the growing zones: Item_Carrots joins the item
+        // table (nutrition 180, stackLimit 40) as the yield of Plant_Carrot. One new commodity
+        // at the end of the handle order, nothing existing moved.
+        // Moved a seventh time, 2026-09-18, by the growing jobs (U47): Job_Sow and Job_Harvest at
+        // drivers 10 and 11, Work_Growing at scan order 1 (cutting, mining and hauling each
+        // shifted one rank to keep every pair distinct), and Skill_Growing — which is why the
+        // meadow golden moved with it: every pawn's priority and skill arrays are one slot
+        // longer, and the pawn hash walks both.
         //
         // Moved a sixth time, 2026-09-18, by WS2's curve: the three skilled work types gained the
         // four rate integers each — rateSkill, workRateBasePerMille, workRateSlopePerLevel and
@@ -100,7 +108,13 @@ namespace Odyssey.Tests.Sim
         // the bar by hand, and TheBarFillsAtTheCadenceItsCommentClaims is the test that now
         // holds the arithmetic and the tick path together. No golden moved, because no golden
         // window lets a need reach zero.
-        const ulong ContentFingerprint = 17402318122187830516UL;
+        //
+        // Moved a ninth time, 2026-09-18, by the merge of the growing and rates branches: both
+        // had moved the fingerprint that day, so neither parent's value described the union.
+        // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
+        // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 4333104343083629863UL;
+
 
         [Test]
         public void TheContentIsStillWhatItWas()

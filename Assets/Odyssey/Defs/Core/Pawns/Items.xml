@@ -60,4 +60,18 @@
     <stackLimit>75</stackLimit>
   </ItemDef>
 
+  <!--
+    The first raw food (docs/design/22-growing.md §2). 180 units: five carrots are 900, one
+    sowing's yield is one meal-equivalent, and a colonist burning 1,600 a day is fed by about
+    seven field tiles. Eaten straight, like a ration pack - the eater scans for nutrition and
+    does not care that nothing cooked it. Stacks to 40, so one harvest fits beside any stack
+    already in the cell and a hauler clears a tile in one trip.
+  -->
+  <ItemDef>
+    <defName>Item_Carrots</defName>
+    <label>carrots</label>
+    <nutrition>180</nutrition>
+    <stackLimit>75</stackLimit>
+  </ItemDef>
+
 </Defs>

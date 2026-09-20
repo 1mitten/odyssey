@@ -36,6 +36,7 @@ namespace Odyssey.Tests.Presentation
             Assert.That(ItemHeap.IsHeap(ItemIndex.Stone), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.IronOre), Is.True);
             Assert.That(ItemHeap.IsHeap(ItemIndex.Coal), Is.True);
+            Assert.That(ItemHeap.IsHeap(ItemIndex.Carrots), Is.True);
         }
 
         [Test]
@@ -173,6 +174,60 @@ namespace Odyssey.Tests.Presentation
             ItemHeap.Recipe stone = StoneRecipe();
             var cramped = new Matrix4x4[2];
             Assert.That(ItemHeap.Place(stone.Full, 3u, Vector3.zero, stone, cramped), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void AFreshCarrotHarvestDrawsItsOwnCount()
+        {
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Carrots, out ItemHeap.Recipe carrot), Is.True,
+                "carrots are a heap - nothing contains a pulled harvest, and one prop where five "
+                + "came out is the fault the owner watched (2026-09-19)");
+
+            // Five plants stood on the plot, five carrots lie on the ground: the pile's count
+            // says out loud what the plot just said. Up to a yield the ramp is the identity,
+            // which is what a Full set to the yield count buys.
+            Assert.That(ItemHeap.RockCount(1, carrot), Is.EqualTo(1));
+            Assert.That(ItemHeap.RockCount(3, carrot), Is.EqualTo(3));
+            Assert.That(ItemHeap.RockCount(5, carrot), Is.EqualTo(5),
+                "a five-carrot harvest drew some other number of carrots");
+
+            // And past it the cap holds, exactly as stone's does.
+            int full = ItemHeap.RockCount(40, carrot);
+            Assert.That(full, Is.EqualTo(carrot.Biggest));
+            Assert.That(full, Is.LessThanOrEqualTo(ItemHeap.Most));
+        }
+
+        [Test]
+        public void ACarrotPileLiesOnTheFloorAndNotStuckInIt()
+        {
+            // The carrot's own art stands base-down, which is right while it grows and wrong
+            // on a heap: a pile of carrots planted upright in the tile is a nursery bed, not a
+            // harvest (owner, 2026-09-19). The lie is read off the placement's own rotation -
+            // the mesh's up axis must come back near horizontal, whatever the yaw said.
+            Assert.That(ItemHeap.TryRecipe(ItemIndex.Carrots, out ItemHeap.Recipe carrot), Is.True);
+            var placements = new Matrix4x4[ItemHeap.Most];
+            var floor = new Vector3(12.5f, 9f, 40f);
+
+            int carrots = ItemHeap.Place(5, 7u, floor, carrot, placements);
+            for (int i = 0; i < carrots; i++)
+            {
+                Vector3 up = placements[i].rotation * Vector3.up;
+                Assert.That(Mathf.Abs(up.y), Is.LessThan(0.1f),
+                    "carrot " + i + " still points its top at the sky - it is planted, not piled");
+                Assert.That(((Vector3)placements[i].GetColumn(3)).y,
+                    Is.EqualTo(floor.y + ItemHeap.LyingLift).Within(1e-4f),
+                    "carrot " + i + " is not resting on the floor");
+            }
+
+            // And stone, which never lay down, still stands: the tip is a per-row answer.
+            ItemHeap.Recipe stone = StoneRecipe();
+            int rocks = ItemHeap.Place(5, 7u, floor, stone, placements);
+            for (int i = 0; i < rocks; i++)
+            {
+                Vector3 up = placements[i].rotation * Vector3.up;
+                Assert.That(up.y, Is.GreaterThan(0.9f),
+                    "a boulder was tipped over by a recipe that never asked to lie");
+            }
         }
 
         [Test]

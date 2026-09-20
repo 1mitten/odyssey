@@ -158,6 +158,76 @@ namespace Odyssey.Tests.Hud
                 Assert.That(cell.Y, Is.EqualTo(3), $"{cell} left the anchor's layer");
         }
 
+        // ---------------------------------------------------------------- the growing zone
+
+        /// <summary>
+        /// <b>A zone is ordered in the air above the soil, not on the soil.</b>
+        ///
+        /// <para>The pointer names a surface because a surface is all it can name; a growing
+        /// zone's cell is not the soil but the cell the sower stands in, one above it, where the
+        /// crop grows — the simulation reads fertility from below and refuses a cell that cannot
+        /// be stood in. So the zone tool lifts every cell it is given by one, unconditionally,
+        /// and this is the test that keeps the +1 from being tidied away as an off-by-one.</para>
+        /// </summary>
+        [Test]
+        public void AZoneIsOrderedOneAboveTheSurfaceItIsPaintedOn()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.GrowZone };
+            director.Begin(At(4, 4, y: 2));
+            director.DragTo(At(6, 5, y: 2));
+
+            IReadOnlyList<CellRef> cells = director.Commit();
+            Assert.That(cells, Has.Count.EqualTo(6));
+            foreach (CellRef cell in cells)
+                Assert.That(cell.Y, Is.EqualTo(3),
+                    $"{cell} is on the soil's own layer, where nothing can be stood or sown");
+        }
+
+        /// <summary>
+        /// The lift is the zone tool's own and does not leak: the same click under any other tool
+        /// aims where the pointer said. The zone branch reads the tool in hand, so arming it is
+        /// what turns the correction on, and nothing else has to know.
+        /// </summary>
+        [Test]
+        public void TheZoneLiftBelongsToTheZoneToolAlone()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+            director.Begin(At(4, 4, y: 2));
+            IReadOnlyList<CellRef> mine = director.Commit();
+
+            var zones = new DesignateDirector { Tool = DesignateTool.GrowZone };
+            zones.Begin(At(4, 4, y: 2));
+            IReadOnlyList<CellRef> zone = zones.Commit();
+
+            Assert.That(mine[0].Y, Is.EqualTo(2));
+            Assert.That(zone[0].Y, Is.EqualTo(3));
+        }
+
+        /// <summary>
+        /// The zone carries a crop, chosen without arming anything — the same bargain the
+        /// material tier makes. Carrot is the crop the director already holds, so the change
+        /// event cannot be driven until a second crop exists; what is pinned today is the
+        /// contract that matters before then: a repeat of the held crop says nothing, and
+        /// choosing never puts a tool in the player's hand.
+        /// </summary>
+        [Test]
+        public void ChoosingACropArmsNothingAndARepeatSaysNothing()
+        {
+            var director = new DesignateDirector();
+            Assert.That(director.Plant, Is.EqualTo(PlantHandle.Carrot),
+                "the first crop should be in hand without anybody choosing it");
+
+            int announced = -1;
+            director.PlantChanged += plant => announced = plant;
+
+            director.ChoosePlant(PlantHandle.Carrot);
+
+            Assert.That(announced, Is.LessThan(0),
+                "a repeat of the crop already held announced itself");
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.None),
+                "choosing what to plant put a tool in the player's hand");
+        }
+
         /// <summary>
         /// <b>One click places one cell and closes the run.</b> (Owner, 2026-09-17: *"it should
         /// just place the ladder with a click, no need to do many"*.)
