@@ -267,6 +267,16 @@ namespace Odyssey.Presentation.Ui
             if (_inspect.IsStore && _cellRowsGrid != null)
                 _cellRowsGrid.style.display = tile ? DisplayStyle.Flex : DisplayStyle.None;
 
+            for (int i = 0; i < _storageTabUnderlines.Count && i < _inspect.Tabs.Count; i++)
+            {
+                bool live = i == _inspect.ActiveTab;
+                _storageTabUnderlines[i].style.display = live ? DisplayStyle.Flex : DisplayStyle.None;
+                if (i < _tabChips.Count)
+                    _tabChips[i].style.color = live
+                        ? HudTokens.Convert(HudTheme.Accent)
+                        : new Color(1f, 1f, 1f, 0.55f);
+            }
+
             for (int i = 0; i < _tabChips.Count && i < _inspect.Tabs.Count; i++)
             {
                 bool on = _inspect.Tabs[i].Enabled && i == _inspect.ActiveTab;
@@ -390,8 +400,12 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>The line beside the name: what it is, which layer.</summary>
-        string MetaLine() => _inspect.Layer >= 0
-            ? $"{_inspect.Subtitle} · L{_inspect.Layer}"
+        string MetaLine() =>
+            // A store says what it is, how big it is and where — "zone · 24 cells · L11" — because
+            // its name is an ordinal and the extent is the only other thing that tells two of them
+            // apart until stores can be named.
+            _inspect.IsStore ? StorageSettingsModel.Extent(_inspect.StoreCells, _inspect.Layer)
+            : _inspect.Layer >= 0 ? $"{_inspect.Subtitle} · L{_inspect.Layer}"
             : _inspect.Subtitle;
 
         string Coordinates()
@@ -488,8 +502,26 @@ namespace Odyssey.Presentation.Ui
             _inspectAvatar.Inherit(HudTokens.TextPrimary);
             _inspectFace = new AvatarGlyph(HudLayout.Avatar);
             _inspectFace.AddToClassList("inspect__face");
-            header.Add(_inspectAvatar);
-            header.Add(_inspectFace);
+
+            // A store gets a swatch rather than a badge: a hollow square in the zone's own colour,
+            // which is the thing the board is tinted with. An icon would have to be the stockpile
+            // key, and a placeholder square in the corner of the pane says less than a colour that
+            // matches what the player is looking at.
+            if (_inspect.IsStore)
+            {
+                var swatch = new VisualElement();
+                swatch.style.width = 28;
+                swatch.style.height = 28;
+                swatch.style.flexShrink = 0;
+                swatch.style.backgroundColor = new Color(0.30f, 0.44f, 0.50f, 0.35f);
+                SetBorder(swatch, HudTokens.Convert(OrderColours.StoreHue), 1);
+                header.Add(swatch);
+            }
+            else
+            {
+                header.Add(_inspectAvatar);
+                header.Add(_inspectFace);
+            }
 
             var titles = new VisualElement();
             titles.AddToClassList("inspect__titles");
@@ -508,6 +540,19 @@ namespace Odyssey.Presentation.Ui
 
             var actions = new VisualElement();
             actions.AddToClassList("inspect__actions");
+
+            // A store's two: rename, and put the pane down. Rename is drawn and disabled — the
+            // affordance is in the design and the string it would write has nowhere to live yet
+            // (no snapshot view carries one), and a button that says what is coming is better
+            // than a gap that says nothing. It says so on hover rather than doing nothing.
+            if (_inspect.IsStore)
+            {
+                actions.Add(StorageHeaderButton(HudGlyphKind.Placeholder,
+                    "Rename — arrives with named stores", null));
+                actions.Add(StorageHeaderButton(HudGlyphKind.Close, "Close",
+                    () => _directors?.Selection.Clear()));
+            }
+
             if (_inspect.Subject == InspectSubject.Colonist)
                 foreach (InspectCommand command in _inspect.Commands)
                 {
@@ -587,21 +632,47 @@ namespace Odyssey.Presentation.Ui
             // ---- a store: the tab strip, then the settings and the tile's facts in one box
             if (_inspect.IsStore)
             {
+                // The strip is built here rather than shared with the colonist's, because a store's
+                // active tab is an underline and a colonist's is the `tab--on` pill the stylesheet
+                // draws. Two surfaces, two answers, and the one that is laid out inline is the one
+                // that cannot inherit a position it did not ask for.
                 var strip = new VisualElement();
-                strip.AddToClassList("inspect__tabs");
+                strip.style.flexDirection = FlexDirection.Row;
+                strip.style.paddingLeft = 14;
+                strip.style.paddingRight = 14;
+                strip.style.borderBottomWidth = 1;
+                strip.style.borderBottomColor = new Color(1f, 1f, 1f, 0.20f);
+                _storageTabUnderlines.Clear();
+
                 for (int i = 0; i < _inspect.Tabs.Count; i++)
                 {
                     InspectTab tab = _inspect.Tabs[i];
-                    Label chip = HudText.Make(tab.Name, HudTextRole.Body, ussClass: "tab");
-                    chip.tooltip = tab.Name;
                     int index = i;
-                    chip.RegisterCallback<PointerDownEvent>(_ =>
+
+                    var column = new VisualElement();
+                    column.style.marginRight = 22;
+
+                    Label chip = HudText.Make(tab.Name, HudTextRole.Body);
+                    chip.style.paddingTop = 8;
+                    chip.style.paddingBottom = 7;
+                    column.Add(chip);
+
+                    // A 3 px rule under the live tab, not a filled pill: the pane is dark and a
+                    // pill reads as a button that has been pressed rather than as a place you are.
+                    var underline = new VisualElement();
+                    underline.style.height = 3;
+                    underline.style.backgroundColor = HudTokens.Convert(HudTheme.Accent);
+                    column.Add(underline);
+
+                    column.RegisterCallback<PointerDownEvent>(_ =>
                     {
                         _inspect.ShowTab(index);
                         ShowActiveTab();
                     });
+
                     _tabChips.Add(chip);
-                    strip.Add(chip);
+                    _storageTabUnderlines.Add(underline);
+                    strip.Add(column);
                 }
 
                 _inspectBody.Add(strip);
@@ -848,20 +919,40 @@ namespace Odyssey.Presentation.Ui
         }
 
         // ---- the store's settings: what goes in, and how much it matters ----------------------
+        //
+        // **Laid out inline, borrowing no class from anywhere else in the pane**, and that is a
+        // correction rather than a style. The first version reused `bedowner__row` from the
+        // colonist picker and `inspect__rowname` / `inspect__rowvalue` from the tile readout, and
+        // those two carry a two-column geometry of their own — a fixed-width name against a
+        // right-aligned value. Put a section header, two text buttons and a five-button ladder
+        // through them and the text lands on top of itself (owner, 2026-09-21: "the text was
+        // overlapping and all over the place in game"). Nothing here inherits a position it did
+        // not ask for.
 
+        readonly List<VisualElement> _storageTabUnderlines = new List<VisualElement>();
         VisualElement? _storagePane;
         VisualElement? _storageRows;
+        VisualElement? _storageRungs;
+        VisualElement? _storagePresets;
         TextField? _storageSearch;
-        Label? _storageFooter;
+        Label? _storageRungName;
+        Label? _storageStatus;
+        Label? _storageAllow;
+        Label? _storageClear;
         readonly StorageSettingsModel _storageSettings = new StorageSettingsModel();
 
+        const int StorageRowHeight = 32;
+        const int StorageCommodityRowHeight = 28;
+        const int StorageBox = 16;
+        const int StorageCaretColumn = 12;
+        const int StorageGlyph = 18;
+        const int StorageIndent = 38;
+        const int StorageListHeight = 320;
+
         /// <summary>
-        /// The store's settings, as a tab of the inspect pane.
-        ///
-        /// <para><b>A pane and not a popover since 2026-09-21.</b> The popover was right for "pick
-        /// one of five colonists" and wrong for a priority ladder, two buttons, six categories and
-        /// a scrolling list — and hanging it off a tile row is what made a zone's settings read as
-        /// a tile's, which is the report that started this.</para>
+        /// The store's settings, as a tab of the inspect pane: a priority ladder, the two header
+        /// buttons, the preset chips, a search that appears when it has something to do, and the
+        /// list itself — which is the only part that scrolls.
         ///
         /// <para><b>Every press is an intent about a cell.</b> The pane never writes to the world:
         /// it names the cell it is describing and the simulation resolves it to whatever store
@@ -872,67 +963,129 @@ namespace Odyssey.Presentation.Ui
         void BuildStoragePane()
         {
             _storagePane = new VisualElement();
-            _storagePane.AddToClassList("inspect__tabbody");
+            _storagePane.style.flexDirection = FlexDirection.Column;
 
-            // Priority first: it is what decides where the next armful goes, and the thing a player
-            // changes most. Its own header, because the brief asks for headers and because the two
-            // blocks answer different questions.
-            _storagePane.Add(SectionLabel("Priority"));
+            // ---- priority: the section label, and the rung it is on, on one line
+            VisualElement priorityHeader = StorageHeaderRow();
+            priorityHeader.Add(StorageSectionLabel("Priority"));
+            _storageRungName = HudText.Make(string.Empty, HudTextRole.Body);
+            _storageRungName.style.unityTextAlign = TextAnchor.MiddleRight;
+            _storageRungName.style.flexGrow = 1;
+            priorityHeader.Add(_storageRungName);
+            _storagePane.Add(priorityHeader);
 
+            // Five buttons across, not five rows down: the ladder is one thing with five places on
+            // it, and a column of rows reads as five separate switches.
             _storageRungs = new VisualElement();
-            _storageRungs.AddToClassList("inspect__rows");
+            _storageRungs.style.flexDirection = FlexDirection.Row;
+            _storageRungs.style.paddingLeft = 14;
+            _storageRungs.style.paddingRight = 14;
+            _storageRungs.style.paddingBottom = 10;
             _storagePane.Add(_storageRungs);
 
-            // The Accepts header carries Allow all and Clear all, right-aligned. They sit here
-            // rather than in the list because the list scrolls and they must not scroll away.
-            var accepts = new VisualElement();
-            accepts.AddToClassList("inspect__row");
-            accepts.Add(SectionLabel("Accepts"));
+            _storagePane.Add(StorageDivider(0.14f));
 
-            _storageAllow = HudText.Make("Allow all", HudTextRole.Body, ussClass: "inspect__rowvalue");
-            _storageAllow.RegisterCallback<ClickEvent>(_ =>
+            // ---- accepts: the section label, and the two buttons that act on the whole list
+            VisualElement acceptsHeader = StorageHeaderRow();
+            acceptsHeader.Add(StorageSectionLabel("Accepts"));
+
+            var buttons = new VisualElement();
+            buttons.style.flexDirection = FlexDirection.Row;
+            buttons.style.flexGrow = 1;
+            buttons.style.justifyContent = Justify.FlexEnd;
+
+            _storageAllow = StorageTextButton("Allow all", () =>
             {
                 if (_storageSettings.PressAllowAll(out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c);
             });
-            _storageClear = HudText.Make("Clear all", HudTextRole.Body, ussClass: "inspect__rowvalue");
-            _storageClear.RegisterCallback<ClickEvent>(_ =>
+            _storageClear = StorageTextButton("Clear all", () =>
             {
                 if (_storageSettings.PressClearAll(out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c);
             });
-            accepts.Add(_storageAllow);
-            accepts.Add(_storageClear);
-            _storagePane.Add(accepts);
+            _storageClear.style.marginLeft = 14;
+            buttons.Add(_storageAllow);
+            buttons.Add(_storageClear);
+            acceptsHeader.Add(buttons);
+            _storagePane.Add(acceptsHeader);
+
+            // ---- the preset chips, and the line that says how much of the list is showing
+            var presetRow = new VisualElement();
+            presetRow.style.flexDirection = FlexDirection.Row;
+            presetRow.style.alignItems = Align.Center;
+            presetRow.style.paddingLeft = 14;
+            presetRow.style.paddingRight = 14;
+            presetRow.style.paddingBottom = 8;
+
+            _storagePresets = new VisualElement();
+            _storagePresets.style.flexDirection = FlexDirection.Row;
+            presetRow.Add(_storagePresets);
+
+            _storageStatus = HudText.Make(string.Empty, HudTextRole.Meta);
+            _storageStatus.style.flexGrow = 1;
+            _storageStatus.style.unityTextAlign = TextAnchor.MiddleRight;
+            presetRow.Add(_storageStatus);
+            _storagePane.Add(presetRow);
 
             // The search field exists only above the threshold, and the model decides that from
             // the data — so it turns itself on as commodities land, with no toggle to find.
             _storageSearch = new TextField();
-            _storageSearch.AddToClassList("inspect__search");
+            _storageSearch.style.marginLeft = 14;
+            _storageSearch.style.marginRight = 14;
+            _storageSearch.style.marginBottom = 8;
+            _storageSearch.style.height = 30;
             _storageSearch.RegisterValueChangedCallback(e =>
             {
                 if (_storageSettings.SetSearch(e.newValue)) FillStoragePanel();
             });
             _storagePane.Add(_storageSearch);
 
-            // Only the list scrolls. Priority, the two buttons and the search stay put, which is
-            // the brief's rule and the reason they are outside this.
+            // Only the list scrolls. Priority, the buttons, the chips and the search stay put.
             var scroll = new ScrollView(ScrollViewMode.Vertical);
-            scroll.AddToClassList("inspect__list");
+            scroll.style.height = StorageListHeight;
+            scroll.style.flexShrink = 0;
             _storageRows = scroll.contentContainer;
             _storagePane.Add(scroll);
-
-            _storageFooter = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__reason");
-            _storagePane.Add(_storageFooter);
 
             _inspectBody.Add(_storagePane);
             FillStoragePanel();
         }
 
-        VisualElement? _storageRungs;
-        Label? _storageAllow;
-        Label? _storageClear;
+        /// <summary>A section header: 13 px of padding, and whatever the caller puts on the line.</summary>
+        static VisualElement StorageHeaderRow()
+        {
+            var row = new VisualElement();
+            row.style.flexDirection = FlexDirection.Row;
+            row.style.alignItems = Align.Center;
+            row.style.paddingLeft = 14;
+            row.style.paddingRight = 14;
+            row.style.paddingTop = 13;
+            row.style.paddingBottom = 9;
+            return row;
+        }
 
-        static Label SectionLabel(string text) =>
-            HudText.Make(text.ToUpperInvariant(), HudTextRole.Meta, ussClass: "inspect__rowname");
+        static Label StorageSectionLabel(string text)
+        {
+            Label label = HudText.Make(text.ToUpperInvariant(), HudTextRole.Meta);
+            label.style.letterSpacing = 2;
+            return label;
+        }
+
+        static VisualElement StorageDivider(float alpha)
+        {
+            var line = new VisualElement();
+            line.style.height = 1;
+            line.style.flexShrink = 0;
+            line.style.backgroundColor = new Color(1f, 1f, 1f, alpha);
+            return line;
+        }
+
+        Label StorageTextButton(string text, Action press)
+        {
+            Label label = HudText.Make(text, HudTextRole.Body);
+            label.style.color = HudTokens.Convert(HudTheme.Accent);
+            label.RegisterCallback<ClickEvent>(_ => press());
+            return label;
+        }
 
         /// <summary>Build the rows from the store under the pane. Called on build and after every press.</summary>
         void FillStoragePanel()
@@ -950,10 +1103,10 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
 
             _storageSettings.Show(cell, slot, hasStore: true, settings.Priority,
-                storage.CellsOf(slot).Count, StorageTitle(slot),
+                storage.CellsOf(slot).Count, _inspect.Title,
                 keys, settings.Accepts, i => (int)content.Items[i].category, Registry.Label);
 
-            // The rungs, each in its own hue so the ladder reads without reading the words.
+            // ---- the ladder
             if (_storageRungs != null)
             {
                 _storageRungs.Clear();
@@ -961,10 +1114,10 @@ namespace Odyssey.Presentation.Ui
                 {
                     int rung = i;
                     bool held = rung == _storageSettings.Priority;
-                    _storageRungs.Add(StorageSettingsRow(
-                        Registry.Label(StorageSettingsModel.PriorityKeys[i]),
-                        held ? StorageSettingsModel.CategoryOn : StorageSettingsModel.CategoryOff,
-                        HudTheme.StoragePriorityHue(rung), indent: 0, caret: StorageCaret.None,
+                    HudColour hue = HudTheme.StoragePriorityHue(rung);
+                    _storageRungs.Add(StorageRungButton(
+                        Registry.Label(StorageSettingsModel.PriorityKeys[i]), hue, held,
+                        last: i == StorageSettingsModel.PriorityKeys.Length - 1,
                         press: () =>
                         {
                             if (_storageSettings.PressPriority(rung, out var c))
@@ -973,64 +1126,83 @@ namespace Odyssey.Presentation.Ui
                 }
             }
 
+            if (_storageRungName != null)
+            {
+                HudText.Set(_storageRungName,
+                    Registry.Label(StorageSettingsModel.PriorityKeys[_storageSettings.Priority]),
+                    HudTextRole.Body);
+                _storageRungName.style.color =
+                    HudTokens.Convert(HudTheme.StoragePriorityHue(_storageSettings.Priority));
+            }
+
+            // ---- the preset chips
+            if (_storagePresets != null)
+            {
+                _storagePresets.Clear();
+                for (int i = 0; i < StorageSettingsModel.PresetKeys.Length; i++)
+                {
+                    int preset = i;
+                    _storagePresets.Add(StorageChip(
+                        Registry.Label(StorageSettingsModel.PresetKeys[i]),
+                        last: i == StorageSettingsModel.PresetKeys.Length - 1,
+                        press: () =>
+                        {
+                            // Everything and Nothing are the same two actions as the header
+                            // buttons, and the design kept both — so they go through the same two
+                            // calls rather than a third path that could drift from them.
+                            bool sent = preset == 0
+                                ? _storageSettings.PressAllowAll(out _presetCommand)
+                                : _storageSettings.PressClearAll(out _presetCommand);
+                            if (sent) SendStorageCommand(IntentKind.SetStorageFilter, _presetCommand);
+                        }));
+                }
+            }
+
             if (_storageClear != null)
                 _storageClear.style.color = HudTokens.Convert(
                     _storageSettings.ClearAllEnabled ? HudTheme.Accent : HudTheme.TextFaint);
-            if (_storageAllow != null)
-                _storageAllow.style.color = HudTokens.Convert(HudTheme.Accent);
 
-            // The search field exists only above the threshold, and the model decides that.
+            if (_storageStatus != null)
+                HudText.Set(_storageStatus, _storageSettings.StatusText, HudTextRole.Meta);
+
             if (_storageSearch != null)
                 _storageSearch.style.display = _storageSettings.ShowSearch
                     ? DisplayStyle.Flex : DisplayStyle.None;
 
-            if (_storageFooter != null)
-            {
-                _storageFooter.style.display = _storageSettings.ShowFooter
-                    ? DisplayStyle.Flex : DisplayStyle.None;
-                if (_storageSettings.ShowFooter)
-                    HudText.Set(_storageFooter, _storageSettings.FooterText, HudTextRole.Meta);
-            }
-
+            // ---- the list
             _storageRows.Clear();
 
-            // A search that matches nothing keeps the list's height so the pane does not jump as
-            // you type, and says what was typed rather than "no results".
+            // A store that takes nothing is a legal state, so this is a warning and not an error:
+            // it says what will happen and what to press, above the rows that caused it.
+            if (_storageSettings.NothingAccepted)
+            {
+                _storageRows.Add(StorageNote(StorageSettingsModel.NothingAcceptedLead, HudTheme.Warn));
+                _storageRows.Add(StorageNote(StorageSettingsModel.NothingAcceptedHint, HudTheme.TextMeta));
+            }
+
+            // A search that matches nothing says what was typed rather than "no results", and the
+            // list keeps its height so the pane does not jump as you type.
             if (_storageSettings.Searching && _storageSettings.Rows.Count == 0)
             {
-                _storageRows.Add(StorageSettingsRow(_storageSettings.NoMatchesLead,
-                    StorageSettingsModel.CategoryOff, HudTheme.TextMeta, 0, StorageCaret.None, null));
-                _storageRows.Add(StorageSettingsRow(_storageSettings.NoMatchesHint,
-                    StorageSettingsModel.CategoryOff, HudTheme.TextFaint, 0, StorageCaret.None, null));
+                _storageRows.Add(StorageNote(_storageSettings.NoMatchesLead, HudTheme.TextMeta));
+                _storageRows.Add(StorageNote(_storageSettings.NoMatchesHint, HudTheme.TextFaint));
                 return;
             }
 
-            // Then the list the model built: six categories in registry order, each expanding to
-            // its commodities in alphabetical order. An empty category keeps its row and its live
-            // box and grows no caret.
             foreach (StorageSettingsModel.Row row in _storageSettings.Rows)
             {
                 StorageSettingsModel.Row captured = row;
                 if (row.Kind == StorageSettingsModel.RowKind.Commodity)
                 {
-                    _storageRows.Add(StorageSettingsRow(row.Label, row.State, HudTheme.TextPrimary,
-                        indent: 22, caret: StorageCaret.None,
-                        press: () =>
-                        {
-                            if (_storageSettings.PressDef(captured.DefIndex, out var c))
-                                SendStorageCommand(IntentKind.SetStorageFilter, c);
-                        }));
+                    _storageRows.Add(StorageCommodityRow(row, () =>
+                    {
+                        if (_storageSettings.PressDef(captured.DefIndex, out var c))
+                            SendStorageCommand(IntentKind.SetStorageFilter, c);
+                    }));
                     continue;
                 }
 
-                string label = row.State == StorageSettingsModel.CategoryMixed
-                    ? $"{row.Label}   {row.Accepted} of {row.Members}"
-                    : row.Label;
-
-                _storageRows.Add(StorageSettingsRow(label, row.State,
-                    HudTheme.ItemCategoryHue(row.Category), indent: 0,
-                    caret: row.IsEmpty ? StorageCaret.None
-                        : row.Expanded ? StorageCaret.Open : StorageCaret.Closed,
+                _storageRows.Add(StorageCategoryRow(row,
                     press: () =>
                     {
                         var commands = new List<StorageSettingsModel.Command>();
@@ -1043,50 +1215,252 @@ namespace Odyssey.Presentation.Ui
                         if (_storageSettings.ToggleExpanded(captured.Category)) FillStoragePanel();
                     }));
             }
+        }
 
-            // A store that takes nothing is a legal state, so this is a warning and not an error —
-            // it says what will happen and what to press, and it sits at the top of the list where
-            // it is read before the rows that caused it.
-            if (_storageSettings.NothingAccepted)
-            {
-                _storageRows.Insert(0, StorageSettingsRow(StorageSettingsModel.NothingAcceptedHint,
-                    StorageSettingsModel.CategoryOff, HudTheme.TextMeta, 0, StorageCaret.None, null));
-                _storageRows.Insert(0, StorageSettingsRow(StorageSettingsModel.NothingAcceptedLead,
-                    StorageSettingsModel.CategoryOff, HudTheme.Warn, 0, StorageCaret.None, null));
-            }
+        StorageSettingsModel.Command _presetCommand;
+
+        /// <summary>One rung of the ladder: a colour square and a name, in a box that fills when held.</summary>
+        VisualElement StorageRungButton(string label, HudColour hue, bool held, bool last, Action press)
+        {
+            var button = new VisualElement();
+            button.style.flexDirection = FlexDirection.Row;
+            button.style.alignItems = Align.Center;
+            button.style.justifyContent = Justify.Center;
+            button.style.flexGrow = 1;
+            button.style.height = 34;
+            if (!last) button.style.marginRight = 6;
+
+            button.style.backgroundColor = held
+                ? new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f, 0.22f)
+                : new Color(0f, 0f, 0f, 0.40f);
+            SetBorder(button, held ? HudTokens.Convert(hue) : new Color(1f, 1f, 1f, 0.18f), 1);
+
+            var swatch = new VisualElement();
+            swatch.style.width = 8;
+            swatch.style.height = 8;
+            swatch.style.flexShrink = 0;
+            swatch.style.marginRight = 7;
+            swatch.style.backgroundColor = HudTokens.Convert(hue);
+            button.Add(swatch);
+
+            Label text = HudText.Make(label, HudTextRole.Body);
+            text.style.color = held ? HudTokens.Convert(hue) : new Color(1f, 1f, 1f, 0.72f);
+            button.Add(text);
+
+            button.RegisterCallback<ClickEvent>(_ => press());
+            return button;
+        }
+
+        /// <summary>A preset chip: a bordered box with a word in it.</summary>
+        VisualElement StorageChip(string label, bool last, Action press)
+        {
+            var chip = new VisualElement();
+            chip.style.flexDirection = FlexDirection.Row;
+            chip.style.alignItems = Align.Center;
+            chip.style.justifyContent = Justify.Center;
+            chip.style.height = 26;
+            chip.style.paddingLeft = 11;
+            chip.style.paddingRight = 11;
+            if (!last) chip.style.marginRight = 7;
+            chip.style.backgroundColor = new Color(0f, 0f, 0f, 0.40f);
+            SetBorder(chip, new Color(1f, 1f, 1f, 0.18f), 1);
+
+            Label text = HudText.Make(label, HudTextRole.Body);
+            text.style.color = new Color(1f, 1f, 1f, 0.82f);
+            chip.Add(text);
+
+            chip.RegisterCallback<ClickEvent>(_ => press());
+            return chip;
         }
 
         /// <summary>
-        /// What a zone with no name of its own is called: the registry's noun and an ordinal.
-        /// Never blank and never invented.
-        ///
-        /// <para>The ordinal is the zone's place in <b>cell order</b> — how many zones begin at a
-        /// lower cell than this one — rather than a counter written down somewhere. That makes it
-        /// the same answer on both sides of a save with nothing saved, at the price of a zone's
-        /// number changing when a zone before it is deleted. A name the player has typed is the
-        /// fix for that and it is the next unit; until then the ordinal is what the pane and the
-        /// board both say, which is the property that matters.</para>
+        /// A category row: caret, box, glyph, name in the category's hue, and the member count
+        /// right-aligned. The row is washed with its own hue at a tenth, so six blocks stay
+        /// findable while scrolling — and the commodity rows below stay plain, because the colour
+        /// marks the group and not every line.
         /// </summary>
-        string StorageTitle(int slot)
+        VisualElement StorageCategoryRow(StorageSettingsModel.Row row, Action press, Action pressCaret)
         {
-            var storage = _boot?.Colony?.Pawns.Storage;
-            if (storage == null) return Registry.Label(PaletteTools.Stockpile);
+            HudColour hue = HudTheme.ItemCategoryHue(row.Category);
+            bool empty = row.IsEmpty;
 
-            IReadOnlyList<int> mine = storage.CellsOf(slot);
-            int first = mine.Count > 0 ? mine[0] : int.MaxValue;
+            var element = new VisualElement();
+            element.style.flexDirection = FlexDirection.Row;
+            element.style.alignItems = Align.Center;
+            element.style.height = StorageRowHeight;
+            element.style.flexShrink = 0;
+            element.style.paddingLeft = 10;
+            element.style.paddingRight = 10;
+            element.style.backgroundColor =
+                new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f, empty ? 0.045f : 0.09f);
 
-            int ordinal = 1;
-            for (int other = 0; other < storage.ZoneCount; other++)
+            // The caret column exists whether or not this row has a caret, so every box below it
+            // starts at the same x. An empty category has none at all, which is how it says it
+            // will not open.
+            var caret = new VisualElement();
+            caret.style.width = StorageCaretColumn;
+            caret.style.flexShrink = 0;
+            if (!empty)
             {
-                if (other == slot) continue;
-                IReadOnlyList<int> cells = storage.CellsOf(other);
-                if (cells.Count > 0 && cells[0] < first) ordinal++;
+                var glyph = new HudGlyph(
+                    row.Expanded ? HudGlyphKind.ChevronDown : HudGlyphKind.ChevronRight,
+                    StorageCaretColumn, HudTokens.Convert(hue));
+                glyph.pickingMode = PickingMode.Position;
+                glyph.RegisterCallback<ClickEvent>(e => { pressCaret(); e.StopPropagation(); });
+                caret.Add(glyph);
             }
 
-            return $"{Registry.Label(PaletteTools.Stockpile)} {ordinal}";
+            element.Add(caret);
+            element.Add(StorageCheckbox(row.State, hue, 10));
+
+            var icon = new HudGlyph(CategoryGlyph(row.Category), StorageGlyph,
+                HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue));
+            icon.style.marginLeft = 10;
+            element.Add(icon);
+
+            Label text = HudText.Make(row.Label, HudTextRole.Body);
+            text.style.marginLeft = 10;
+            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue);
+            element.Add(text);
+
+            Label count = HudText.Make(row.Members.ToString(), HudTextRole.Meta);
+            count.style.flexGrow = 1;
+            count.style.unityTextAlign = TextAnchor.MiddleRight;
+            if (empty) count.style.color = new Color(1f, 1f, 1f, 0.30f);
+            element.Add(count);
+
+            element.RegisterCallback<ClickEvent>(_ => press());
+            return element;
         }
 
-        enum StorageCaret { None, Closed, Open }
+        /// <summary>
+        /// A commodity row: indented past the caret column, a box, and a plain name.
+        ///
+        /// <b>No icon column is reserved</b>, because most commodities have no art and a row of
+        /// placeholder squares says less than nothing. The day a sheet covers them the badge goes
+        /// in front of the label and nothing else moves.
+        /// </summary>
+        VisualElement StorageCommodityRow(StorageSettingsModel.Row row, Action press)
+        {
+            var element = new VisualElement();
+            element.style.flexDirection = FlexDirection.Row;
+            element.style.alignItems = Align.Center;
+            element.style.height = StorageCommodityRowHeight;
+            element.style.flexShrink = 0;
+            element.style.paddingLeft = StorageIndent;
+            element.style.paddingRight = 10;
+
+            element.Add(StorageCheckbox(row.State, HudTheme.ItemCategoryHue(row.Category), 0));
+
+            Label text = HudText.Make(row.Label, HudTextRole.Body);
+            text.style.marginLeft = 10;
+            element.Add(text);
+
+            // The matched run, marked where it really is. Drawn as a band behind the whole label
+            // rather than as a slice of it, because a Label is one text element and cutting it into
+            // three would give three baselines to keep in line — the exact failure this rebuild is
+            // fixing.
+            if (row.MatchStart >= 0)
+                text.style.backgroundColor = new Color(1f, 1f, 1f, 0.14f);
+
+            element.RegisterCallback<ClickEvent>(_ => press());
+            return element;
+        }
+
+        /// <summary>
+        /// The box: 16 px square, square corners, a 1 px border. Off is hollow, mixed carries the
+        /// tri-state bar in the hue, on is a filled hue with the tick in panel ink.
+        /// </summary>
+        VisualElement StorageCheckbox(int state, HudColour hue, int marginLeft)
+        {
+            var box = new VisualElement();
+            box.style.width = StorageBox;
+            box.style.height = StorageBox;
+            box.style.flexShrink = 0;
+            box.style.alignItems = Align.Center;
+            box.style.justifyContent = Justify.Center;
+            if (marginLeft > 0) box.style.marginLeft = marginLeft;
+
+            if (state == StorageSettingsModel.CategoryOn)
+            {
+                box.style.backgroundColor = HudTokens.Convert(hue);
+                SetBorder(box, HudTokens.Convert(hue), 1);
+                box.Add(new HudGlyph(HudGlyphKind.Check, StorageBox - 2,
+                    HudTokens.Convert(HudTheme.OnAccent)));
+            }
+            else if (state == StorageSettingsModel.CategoryMixed)
+            {
+                box.style.backgroundColor =
+                    new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f, 0.18f);
+                SetBorder(box, HudTokens.Convert(hue), 1);
+                box.Add(new HudGlyph(HudGlyphKind.TriState, StorageBox - 2, HudTokens.Convert(hue)));
+            }
+            else
+            {
+                box.style.backgroundColor = Color.clear;
+                SetBorder(box, new Color(1f, 1f, 1f, 0.28f), 1);
+            }
+
+            return box;
+        }
+
+        /// <summary>A line of copy in the list: a warning, or the reason a search found nothing.</summary>
+        VisualElement StorageNote(string text, HudColour ink)
+        {
+            var element = new VisualElement();
+            element.style.paddingLeft = 14;
+            element.style.paddingRight = 14;
+            element.style.paddingTop = 4;
+            element.style.paddingBottom = 4;
+            element.style.flexShrink = 0;
+
+            Label label = HudText.Make(text, HudTextRole.Meta);
+            label.style.color = HudTokens.Convert(ink);
+            label.style.whiteSpace = WhiteSpace.Normal;
+            element.Add(label);
+            return element;
+        }
+
+        static HudGlyphKind CategoryGlyph(int category) => category switch
+        {
+            0 => HudGlyphKind.CategoryFood,
+            1 => HudGlyphKind.CategoryMedicine,
+            2 => HudGlyphKind.CategoryMaterials,
+            3 => HudGlyphKind.CategoryBooks,
+            4 => HudGlyphKind.CategoryItems,
+            _ => HudGlyphKind.CategoryWeapons,
+        };
+
+        /// <summary>A 26 px square in the title row: rename, and close. Disabled when there is no action.</summary>
+        VisualElement StorageHeaderButton(HudGlyphKind kind, string tooltip, Action? press)
+        {
+            var button = new VisualElement();
+            button.style.width = 26;
+            button.style.height = 26;
+            button.style.flexShrink = 0;
+            button.style.marginLeft = 6;
+            button.style.alignItems = Align.Center;
+            button.style.justifyContent = Justify.Center;
+            SetBorder(button, new Color(1f, 1f, 1f, press == null ? 0.10f : 0.18f), 1);
+            button.tooltip = tooltip;
+
+            button.Add(new HudGlyph(kind, 13,
+                new Color(1f, 1f, 1f, press == null ? 0.30f : 0.66f)));
+            if (press != null) button.RegisterCallback<ClickEvent>(_ => press());
+            return button;
+        }
+
+        static void SetBorder(VisualElement element, Color colour, int width)
+        {
+            element.style.borderTopWidth = width;
+            element.style.borderBottomWidth = width;
+            element.style.borderLeftWidth = width;
+            element.style.borderRightWidth = width;
+            element.style.borderTopColor = colour;
+            element.style.borderBottomColor = colour;
+            element.style.borderLeftColor = colour;
+            element.style.borderRightColor = colour;
+        }
 
         /// <summary>
         /// Submit one of the store's commands about the cell the pane is describing, then rebuild
@@ -1101,67 +1475,6 @@ namespace Odyssey.Presentation.Ui
             FillStoragePanel();
         }
 
-        /// <summary>
-        /// One row of the storage settings: a caret column, a tri-state box, and a label in the
-        /// row's own hue.
-        ///
-        /// <para><b>Every mark is drawn, never typed</b> — the tick, the tri-state bar and the
-        /// caret are all <see cref="HudGlyph"/> shapes. Archivo Narrow has no U+2713, no U+25B8
-        /// and nothing that reads as "partly", so a typed mark is an empty column that neither
-        /// tier can see. <c>HudFontTests</c> holds the line and caught this file once already.</para>
-        /// </summary>
-        VisualElement StorageSettingsRow(string label, int state, HudColour hue, int indent,
-            StorageCaret caret, Action? press, Action? pressCaret = null)
-        {
-            var row = new VisualElement();
-            row.AddToClassList("bedowner__row");
-            if (indent > 0) row.style.paddingLeft = indent;
-
-            // The caret sits in its own column whether or not this row has one, so every box in
-            // the list starts at the same x and the column can be read straight down. An empty
-            // category has no caret at all, which is how it says it will not open.
-            VisualElement carets;
-            if (caret == StorageCaret.None)
-            {
-                carets = new VisualElement();
-                carets.style.width = BedPickerMarkSize;
-            }
-            else
-            {
-                var glyph = new HudGlyph(
-                    caret == StorageCaret.Open ? HudGlyphKind.ChevronDown : HudGlyphKind.ChevronRight,
-                    BedPickerMarkSize, HudTokens.Convert(hue));
-                if (pressCaret != null) glyph.RegisterCallback<ClickEvent>(e => { pressCaret(); e.StopPropagation(); });
-                carets = glyph;
-            }
-
-            row.Add(carets);
-
-            VisualElement box;
-            if (state == StorageSettingsModel.CategoryOn)
-            {
-                box = new HudGlyph(HudGlyphKind.Check, BedPickerMarkSize, HudTokens.Convert(hue));
-            }
-            else if (state == StorageSettingsModel.CategoryMixed)
-            {
-                box = new HudGlyph(HudGlyphKind.TriState, BedPickerMarkSize, HudTokens.Convert(hue));
-            }
-            else
-            {
-                box = new VisualElement();
-                box.style.width = BedPickerMarkSize;
-            }
-
-            box.AddToClassList("bedowner__mark");
-            row.Add(box);
-
-            Label text = HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name");
-            text.style.color = HudTokens.Convert(hue);
-            row.Add(text);
-
-            if (press != null) row.RegisterCallback<ClickEvent>(_ => press());
-            return row;
-        }
 
         /// <summary>
         /// What a name in the picker carries beside it. No words: the owner asked for "just a

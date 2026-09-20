@@ -501,5 +501,27 @@ namespace Odyssey.Hud
 
         /// <summary>The footer past twenty rows.</summary>
         public string FooterText => $"{AcceptedCount} of {TotalCount} accepted";
+
+        /// <summary>
+        /// The line beside the preset chips: how much of the list is showing, and — while the
+        /// search does not exist — <b>why it does not</b>.
+        ///
+        /// <para>Saying "search hidden below 20" is the one place the rule explains itself. A
+        /// control that appears without warning is a control a player thinks they broke something
+        /// to summon; a sentence that says when it will arrive costs a line and answers it.</para>
+        /// </summary>
+        public string StatusText
+        {
+            get
+            {
+                int showing = Searching ? MatchCount : TotalCount;
+                string count = $"{showing} of {TotalCount} commodities";
+                return ShowSearch ? count : $"{count} · search hidden below {SearchAppearsAbove}";
+            }
+        }
+
+        /// <summary>The extent line in the title row: what this is, how big, and which layer.</summary>
+        public static string Extent(int cells, int layer) =>
+            $"zone · {cells} {(cells == 1 ? "cell" : "cells")} · L{layer}";
     }
 }
