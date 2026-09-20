@@ -149,6 +149,126 @@ runs on a heartbeat, not per tick).
   work. Deconstructing an owned bed clears the owner; the pawn falls back to unowned beds and
   the ground.
 
+## 7a. A bed cell is a cell with a bed in it (2026-09-20)
+
+**Later the same day, the played colony stopped starting with beds at all** (owner: *"beds should
+never be given on startup / new game — but things seem to work fine"*). `ScenarioDef.Playtest` has
+`beds = 0`; the colonists sleep on the ground, take the slept-on-ground thought, and a bed becomes
+the first thing worth building. `Bare` keeps its five, because the tests, the goldens and the
+ten-day runs baseline on a colony that is rested, and a scenario shorting the colony of beds on
+purpose is what the `beds` field was always for. Everything below about the starting beds being
+*real* still holds — for `Bare`, and for whatever scenario next gives some.
+
+Two owner reports, one cause.
+
+> *"Some colonists still sleep off the bed, it needs to understand that the bed spans two tiles and
+> the body needs rest within those tiles and not off them as it looks like it's trying to rest them
+> in the first tile in some circumstances where they are hanging off the bed."*
+
+> *"When I assigned a bed to a colonist and they are asleep — I expect them to get up immediately
+> and get into the bed they have been assigned to."*
+
+### The phantom bed cells
+
+§7 above says the bed list "keeps its scenario cells and gains the head cell of every built bed",
+and that sentence is the bug. `ColonyScenario` placed five entries in `ColonyItems.Beds` that were
+**cells and nothing else** — no edifice, no record. That was correct when it was written, because a
+bed *was* a property of a cell and there was nothing to build. It became a lie the day beds became
+furniture, because everything a bed now is hangs off the record:
+
+- **It cannot be seen.** Nothing is drawn at the cell.
+- **It cannot be owned.** `AssignOwnerAt` refuses a cell with no edifice in it, so the whole of §7
+  and §8 — the pane, the popover, the assignment — was dead on every bed the colony woke up with.
+- **It cannot be lain on.** Presentation asks `WorldRenderModel.BedHeadAt` which bed a sleeper is
+  in, gets nothing, and falls back to the *ground* pose: a colonist laid flat on the grass, centred
+  on her own cell, along whatever yaw she last faced. Beside a real bed that reads exactly as the
+  owner described — resting in one tile, hanging off.
+
+**Measured before it was changed**, because reading the code has been wrong every time on this
+project. Three colonists, three built beds, three days, with and without the phantom cells:
+
+| | colonist 1 | colonist 2 | colonist 3 |
+|---|---|---|---|
+| with the five phantom cells | **0** ticks on a bed, 53,222 off | 36,709 on, **17,399 off** | 52,919 on, 0 off |
+| without them | 52,439 on, 0 off | 52,331 on, 0 off | 53,145 on, 0 off |
+
+Every off-bed sleep was **one to three cells from a real bed she never used**. That is the
+screenshot.
+
+**The fix is that a bed cell is a cell with a bed in it.** `ColonyScenario.RaiseAStartingBed` puts
+a real `Building_Bed` down through the construction grid and lets `Raise` add the head cell to the
+list — one owner for "what counts as a bed". Normal quality, so the colony wakes as rested as it
+always did (a qualityless bed cell restored 100 and so does a Normal bed). Two details the
+placement needed:
+
+- **Eight footprints per spot, not four.** The spot can be the bed's head *or* its foot, and both
+  keep the bed on the storey the scenario named. Four was measurably not enough: on the ruined
+  city, where a storey is rooms rather than open ground, two spots in five had no free neighbour in
+  the direction a head needed and the colony started three beds short.
+- **The bed stays off cells promised to another group.** Every storey is searched up front, so by
+  the time a bed is raised the stockpile's cells are already chosen; adding the bed's far cell to
+  the taken set would be too late. `Storeys.Spoken` lets the bed ask instead, and it tries the
+  unspoken footprints first. This is not a nicety — a bed claims its cells against items, so a
+  stockpile cell under a bed's foot is a cell nothing can ever be put in, and the colony's hauling
+  stalls two crates short with nothing to show why.
+
+`BedTests.EveryCellTheSleepChooserKnowsHasABedInIt` is the invariant; `NobodySleepsBesideABed` is
+the end-to-end form; `AStartingBedCanBeOwnedLikeAnyOther` is the feature that was dead.
+
+### Getting out of the wrong bed
+
+The assignment used to land on the record and be read again only the next time she looked for
+somewhere to sleep, so a bed given to a sleeping colonist did nothing anybody could see until the
+following night. `JobSystem.GetOutOfTheWrongBed` runs on the tick after any ownership change —
+intents drain at step 1 of `SimWorld.Tick` and the pawn phase is step 4, so it is the *same* tick
+the player's click lands in, and the think tree is consulted in the same tick a job ends. She is
+walking before the hand has left the mouse.
+
+**The rule is about the bed, not about the assignment**, and the first draft got that wrong twice
+in ways worth recording:
+
+1. **Naming the colonists involved does not work.** The obvious implementation lists the old owner
+   and the new one. It misses the commonest case there is: a colony short of beds keeps them
+   unowned and shared (§7's pool rule), so the colonist actually *lying in* a bed when the player
+   gives it away is very often nobody's owner and appears in no such list. Who is affected is a
+   question about where people are sleeping, which the construction grid does not know. It raises a
+   flag; the job system sweeps.
+2. **Acting on the change alone loops.** A sleeper claims an unowned bed the moment she arrives in
+   it (`TryClaimForSleeper`), and that claim goes through the very same door a player's assignment
+   does. Waking on the change would get her up, send her to walk to the bed she is already in, and
+   do it again for ever.
+
+So, for each colonist on a sleep job:
+
+| She is | What happens | Why |
+|---|---|---|
+| in her own bed | nothing, whatever changed | otherwise her own arrival-claim wakes her, for ever |
+| owner of a bed somewhere else | up she gets | an own bed wins outright in `TrySleep`; covers the ground sleeper too |
+| in a bed that is now somebody's, owning none | up she gets | it is not hers to be in |
+| in an unowned bed, owning none | nothing | that is the shared pool working as designed |
+
+The job ends as a **failure**, which is what releases the bed she was holding.
+
+`ASleeperWhoClaimsTheBedSheIsLyingInIsNotWokenByHerOwnClaim` is the negative control and is the one
+that matters; `AColonistAsleepOnTheGroundGetsUpForABedSheIsGiven` is the case draft one missed.
+
+**And an interrupted sleep resumes** (second play day, 2026-09-20: *"when I assigned someone else
+to a bed — everyone just started going back to work"*). The first version got her up and handed
+her to the think tree, and the tree sleeps below the rest `seekThreshold` of 280 and wakes at 950.
+A colonist got up at 600, halfway through the night, was by the tree's lights not tired, and went
+to work at three in the morning — both of them did, the one who lost the bed and the one who was
+given it, which in a colony of three is "everyone". Every test of the rule had assigned the bed
+within a tick of her lying down, at a rest of 40, and so never crossed the gap between the two
+thresholds. Now the sweep runs in **two passes**: every affected sleep ends first, so every claim
+is released, and then each woken colonist goes straight back through `TrySleep` — her own bed if
+she has one, the nearest free one if not, the ground if there is none — past the tiredness gate,
+because she was asleep and the only question is where. Two passes rather than one because the bed
+the player just gave B is the bed A is still lying in: choose in the same pass and whether B gets
+her own bed or the nearest spare depends on which of the two the colony list holds first.
+`AColonistWokenMidNightGoesToTheBedSheWasGivenNotToWork` and
+`GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse` hold it, the second in the
+colony's own shape: three colonists, five starting beds, each claimed on the first night.
+
 ## 8. The pane and the popover
 
 `CellDetail` widens by two sparse fields, the same shape as its neighbours (ADR 0004 amendment

@@ -1437,11 +1437,14 @@ namespace Odyssey.Presentation.Rendering
         /// thing the player is looking at and an order is a job on a list, and if they look alike
         /// then neither means anything.</para>
         ///
-        /// <para>On top of solid rock and on the floor of anything else, because that is the face
-        /// you see it from: a mine order is read looking down at the stone, and a fell order is
-        /// read on the ground the tree stands in. Inset from the cell edges so a row of marked
-        /// cells reads as a row rather than as one continuous sheet, and flat, so it never
-        /// competes with the thing it is marking.</para>
+        /// <para>On top of whatever is in the cell, because that is the face you see it from: a
+        /// mine order is read looking down at the stone, a deconstruct order on the top of the
+        /// wall or the bed it is taking apart, and a fell order on the ground the tree stands in.
+        /// <see cref="WorldRenderModel.MarkHeight"/> is the one place that decides which — it used
+        /// to be a solid-terrain test here, which is why deconstruct needed a shape of its own
+        /// before it could be seen at all. Inset from the cell edges so a row of marked cells
+        /// reads as a row rather than as one continuous sheet, and flat, so it never competes with
+        /// the thing it is marking.</para>
         /// </summary>
         public void DrawCellMark(CellRef cell, Color colour)
         {
@@ -1454,10 +1457,9 @@ namespace Odyssey.Presentation.Rendering
             };
 
             int index = _model.Index(cell.X, cell.Z, cell.Y);
-            bool solid = _model.IsSolid(index);
 
             Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
-            centre.y += solid ? CellMetrics.SizeY + MarkLift : MarkLift;
+            centre.y += _model.MarkHeight(index) + MarkLift;
 
             const float Inset = 0.22f;
             var size = new Vector3(
@@ -1810,50 +1812,6 @@ namespace Odyssey.Presentation.Rendering
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));
-        }
-
-        /// <summary>
-        /// A whole cell washed in a colour, for an order given about a thing that <b>fills</b> its
-        /// cell — a wall marked for demolition.
-        ///
-        /// <para><b>Why a wash and not the floor plate every other order gets.</b> A mine order and
-        /// a fell order are read looking down at a face that is already there, so
-        /// <see cref="DrawCellMark"/> paints the floor and that is the whole of it. A wall is three
-        /// metres of solid thing standing in the cell, and its floor is <em>inside</em> it: the
-        /// plate is drawn, correctly, exactly where the wall's own panels and core hide it. That is
-        /// not a hypothesis — it is why the owner reported deconstruct as having no marker at all
-        /// (2026-09-17).</para>
-        ///
-        /// <para><b>Proud of the cell rather than inset.</b> <see cref="DrawCellSlab"/> insets by
-        /// 6 cm so a slab does not fight the faces of the rock it is drawn over; this has the
-        /// opposite problem and needs the opposite answer, because anything inside the cell is
-        /// behind an opaque wall. Three centimetres clears the panels and is sub-pixel at the
-        /// nearest the camera comes, so the wall does not visibly grow.</para>
-        ///
-        /// <para><b>Draped, not lifted</b>, per the rule the stepped-wall fault produced: anything
-        /// fixed to the grid is draped and only what moves over it is lifted. A run of walls marked
-        /// together abuts, and a lift would step each wash against its neighbour by the ground's
-        /// slope across a cell exactly as it once stepped the walls themselves.</para>
-        /// </summary>
-        public void DrawCellShade(CellRef cell, Color colour)
-        {
-            Material material = BracketMaterial(colour);
-            var rp = new RenderParams(material)
-            {
-                layer = GameObjectLayer,
-                shadowCastingMode = ShadowCastingMode.Off,
-                receiveShadows = false,
-            };
-
-            const float Outset = 0.03f;
-            var size = new Vector3(
-                CellMetrics.SizeXZ + Outset * 2f,
-                CellMetrics.SizeY + Outset * 2f,
-                CellMetrics.SizeXZ + Outset * 2f);
-
-            Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
-            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
-                GroundRelief.Drape(centre) * Matrix4x4.Scale(size));
         }
 
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour) =>

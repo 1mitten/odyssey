@@ -531,18 +531,22 @@ namespace Odyssey.Hud
         /// who is about to drag a box over their colony can tell from the panel whether they are
         /// about to cancel it or take it apart.</para>
         ///
-        /// <para>Four existing signal tokens rather than four new hues. They are already the
-        /// interface's words for "careful", "destructive", "growing" and "information", which is
-        /// close enough to what each tool does that nothing new had to be invented — and the rule
-        /// that the HUD does not grow a colour per thing is the one the category tiers above
-        /// already spend their exception on.</para>
+        /// <para><b>The answer comes from <see cref="OrderColours"/> and not from here</b>, since
+        /// 2026-09-20. It used to be four existing signal tokens written out below — already the
+        /// interface's words for "careful", "destructive", "growing" and "information", and close
+        /// enough to what each tool does that nothing new had to be invented. What that reasoning
+        /// missed is that the chip is not the only place an order is coloured: the cursor and the
+        /// mark left on the board are two more, they lived in another assembly, and two of the
+        /// four disagreed with this list for months. The hue is the mode, so the mode has one
+        /// owner — Mine's is the single hue there that is not a signal token, and
+        /// <see cref="OrderColours.Mine"/> says why it had to stop being <see cref="Info"/>.</para>
         /// </summary>
         public static HudColour? PinnedActionHue(string key) => key switch
         {
-            PaletteTools.Fell => Good,
-            PaletteTools.Mine => Info,
-            PaletteTools.Deconstruct => Warn,
-            PaletteTools.Cancel => Bad,
+            PaletteTools.Fell => OrderColours.Hue(DesignateTool.Fell),
+            PaletteTools.Mine => OrderColours.Hue(DesignateTool.Mine),
+            PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
+            PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),
             _ => null,
         };
 

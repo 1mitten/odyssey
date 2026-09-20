@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
@@ -41,16 +42,16 @@ namespace Odyssey.Tests.Sim
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver);
 
+            // AddColony rather than a hand-rolled list of systems, because it is the one place
+            // that wires `PawnContext.Construction` — and since 2026-09-20 the scenario needs it:
+            // a starting bed is a real bed now, raised through the construction grid, so a colony
+            // composed without one starts with none and this file's own "the colony gets beds"
+            // would fail on the wiring rather than on the placement.
             var world = new SimWorldBuilder()
                 .WithSeed(seed)
                 .WithSize(size)
-                .AddSystem(_ => support)
-                .AddSystem(_ => new NavigationSystem(nav, support))
-                .AddSystem(_ => new NeedsSystem(pawns))
-                .AddSystem(_ => new JobSystem(pawns))
-                .AddSystem(_ => new MovementSystem(pawns))
-                .AddTickable(_ => pawns.Pawns)
-                .AddSnapshotContributor(pawns.Pawns)
+                .AddColony(pawns, new DesignationGrid(grid, outcome.Edifices), support, nav,
+                    outcome.Placements, out _)
                 .Build();
 
             var placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, ScenarioDef.Bare());

@@ -7521,3 +7521,259 @@ first structural addition the next kind will ask for.
 **What a raid needs that events should not provide:** a faction and a hostility model, a
 non-colonist pawn kind, an arrival edge, combat and health. The incident is the thing that
 asks for them at a moment; they are their own units.
+## 2026-09-20 — four reports from one play session: beds, loading, and the colour of an order
+
+Four owner reports in one message, on `claude/bed-assign-and-order-colours`. Three turned out to
+share nothing; the two bed reports turned out to share a cause.
+
+### The phantom bed cells, which were two bugs wearing one coat
+
+> *"Some colonists still sleep off the bed … it looks like it's trying to rest them in the first
+> tile in some circumstances where they are hanging off the bed."*
+
+> *"When I assigned a bed to a colonist and they are asleep — I expect them to get up immediately
+> and get into the bed they have been assigned to."*
+
+**The first one nearly cost a session, because reading the code said it was fine.** `SleepPose`
+lays a body from the pillow along the bed's own facing; the arithmetic puts a 1.8 m colonist
+between −1.55 m and +0.26 m of a bed spanning ±2.30 m, which is comfortably on it. `AimSleep` runs
+every frame, so nothing is stale. `GotoCell` requires exact arrival, so a sleeper cannot stop one
+cell short. Every reading said the sleeper was on the bed.
+
+So it was measured instead — three colonists, three built beds, three days, counting the ticks
+each spent asleep on a bed cell and off one. With the fixture the tests use (`scenario.beds = 0`)
+every sleep was on a bed. With the number the **game** actually ships (`ScenarioDef.beds = 5`) one
+colonist spent **all 53,222** of her sleeping ticks off a bed and a second **17,399** of hers, and
+every off-bed cell was **one to three cells from a real bed she never used**.
+
+`ColonyScenario` had been putting five entries into `ColonyItems.Beds` that were *cells and nothing
+else* — no edifice, no record. That was right when it was written: a bed was then a property of a
+cell and there was nothing to build. It became a lie the day beds became furniture, because
+everything a bed now is hangs off the record. The cell cannot be seen. It cannot be **owned**
+(`AssignOwnerAt` refuses a cell with no edifice), so §7 and §8 of `20-beds.md` — the pane, the
+popover, the whole assignment feature — were dead on every bed the colony woke up with. And a
+colonist who "sleeps in it" gets the **ground** pose, flat on the grass along her last yaw, which
+beside a real bed is a colonist hanging off it.
+
+One fix: a starting bed is a real bed, raised through the construction grid, and `Raise` adds the
+head cell to the list itself — one owner for "what counts as a bed". Two things the placement
+needed, both found by tests rather than by thinking:
+
+- **Eight footprints per spot, not four.** A bed is wider than the spot it is given, and the spot
+  can be its head *or* its foot. Four facings left the ruined city three beds short of five,
+  because a storey there is rooms and two spots had no free neighbour in the direction a head
+  needed.
+- **Keep off cells promised to another group.** Every storey is searched up front, so the
+  stockpile's cells are chosen before any bed is raised and adding the bed's far cell to the taken
+  set would be too late. `Storeys.Spoken` lets the bed ask instead. Not cosmetic: a bed claims its
+  cells against items, so a stockpile cell under a bed's foot is a cell nothing can ever be put in.
+  `ForbidIntentTests` caught it, reporting it as "forbidding is broken" — the colony was hauling
+  perfectly and had filled its last three free cells with rations.
+
+**The assignment half** is `JobSystem.GetOutOfTheWrongBed`, and the first draft of it was wrong
+twice in ways worth keeping:
+
+1. **Naming the colonists involved does not work.** The obvious version lists the bed's old owner
+   and its new one. It misses the commonest case there is — a colony short of beds keeps them
+   unowned and shared, so the colonist actually *lying in* the bed when the player gives it away is
+   very often nobody's owner and is in no such list. `ASleeperWhoseBedIsGivenAwayGetsUp` failed on
+   exactly that. Who is affected is a question about where people are sleeping, which the
+   construction grid does not know; it raises a flag and the job system sweeps.
+2. **Acting on the change rather than on the bed loops.** A sleeper claims an unowned bed the
+   moment she arrives, through the same door a player's assignment uses. Waking on the change would
+   get her up, walk her to the bed she is already in, and repeat for ever.
+
+So the rule is *is she asleep somewhere that is not hers?*, and the negative control
+(`ASleeperWhoClaimsTheBedSheIsLyingInIsNotWokenByHerOwnClaim`) is the test that matters. Full
+account in `20-beds.md` §7a.
+
+### Load with nothing to load
+
+> *"I notice when you try a load a game in game and there is none available — you can end up losing
+> your current game as it goes back to the main menu."*
+
+The in-game Load row tears the colony down first, on purpose — the player watches the panel close,
+the world go, the list arrive, which is Quit to main menu followed by Load and was built to look
+like it. It never asked whether the list would have anything on it. It asks now, before anything
+irreversible, and with nothing readable in the folder the colony is untouched and the row says
+**No saved colonies** until the next press.
+
+Recorded as still open: backing out of the load screen *after* going there still loses the colony,
+because the teardown has already happened. Fixing that means showing the browser over a live
+session, and the menu is currently tied to there being no session at all. That is a restructure of
+the start screen's modality rather than a guard, and it wants its own round. `17-start-flow.md` §5b.
+
+### One colour per order, and the question that had to be asked
+
+> *"The deconstruct order when placed puts down an entire square as the blueprint to deconstruct,
+> the placement shouldn't be red … make it mark the tile for deconstruction instead like you would
+> mark in mining. Also match the orders blueprints/placement titles to the color assigned on their
+> toolbar. Clarify this with me."*
+
+Two mappings of tool to colour, in two assemblies, written months apart, disagreeing on two of the
+four tools. Deconstruct was orange on the palette chip and **red** on the board — the interface's
+own colour for *cancel* — so while the player held the deconstruct tool the panel and the cursor
+said different things. A **P1**, and the plainest one in the register.
+
+Nothing caught it because the board's copy lives in `Odyssey.Presentation`, which the fast tier does
+not compile, and the only assertion on it was one of *totality*: every kind maps to something,
+which a wrong colour satisfies perfectly. The mapping is `Odyssey.Hud.OrderColours` now — Unity-free,
+so `OrderColoursTests` runs in the fast tier and asserts that the chip, the drag cursor and the
+board mark are one hue per tool.
+
+**The clarification was needed and the answer was not derivable.** Giving deconstruct the orange
+its chip already had would have put it within a few points of mine's warm amber on the same board.
+Three options were offered with the cost of each stated; the owner chose **the toolbar wins**, so
+mine's board mark becomes its chip's blue and loses the warmth that had been chosen for standing
+out against cool stone. That was a real reason and it lost to a better one. Mine's hue is the one
+value here that is not an existing signal token, because `HudTheme.Info` is within a few points of
+`Accent` — what a pending *build* is marked in — and a colony half dug and half planned would have
+been two blues nobody could separate. Deeper and bluer, on **both** surfaces so the chip and the
+mark still match, and `NoTwoOrdersLookAlikeOnTheBoard` pins the distance so somebody tuning `Info`
+for a tooltip learns in two seconds.
+
+**And the first pick of that blue was wrong in a way the test caught on itself.** `#5fb2d8` looked
+deeper and bluer and measured at *exactly* 60 channel-points from the accent — it passed a
+60-point threshold by sitting on it, for the one pair the threshold existed to police. A blue
+reads as cyan when its green is near its blue, so the separation had to come out of green:
+`#4a90c8`, 144 against the accent's 211, 131 points away. The threshold is 80 now, which is the
+most the existing palette clears (orange against red is the closest pair at 83). A number chosen
+to let the current values through is a number that asserts nothing, and it took measuring all ten
+pairs to notice this one had become that.
+
+**The shape half was simpler than §6a made it.** That section was right that a floor plate under a
+wall is inside the wall, and reached for a different shape — a whole-cell wash. The answer was the
+same shape at the right height, which is what a mine order already does to rock.
+`WorldRenderModel.MarkHeight` is the one rule now: the top of the cell for anything that fills it,
+the top of itself for anything that stands up without filling it (a bed), the floor for everything
+else. Trees stay on the floor deliberately — a fell order is read on the ground the tree stands in.
+`DrawCellShade` is deleted. `16-cancel-and-deconstruct.md` §6b.
+
+### And a control that found a third thing
+
+The owner added, mid-session: *"make sure saved games save orders assigned as well."* Every order
+did round-trip — designation and its progress, blueprint with material and deliveries, bed owner,
+zone, forbidding, work priorities — so the six new tests all passed first time. The **seventh**,
+the control, did not.
+
+`ColonyItems` hashed its things and not its stockpile zones or its bed list, both of which it had
+been *saving* since they existed. That is the worse way round: `WorldRoundTripTests` proves a save
+by comparing hashes, so a zone whose filter failed to round-trip would have come back accepting
+everything and passed. OQ-50's shape exactly, and found the same way — flip one bit of a filter and
+ask whether the number moved. It did not.
+
+Both lists are hashed now. `OrdersSurviveASaveTests.EachOrderMovesTheStateHash` walks all eight
+kinds of player order, and it is worth more than the six round-trips above it: those can only cover
+the orders somebody thought to name.
+
+### The goldens, re-baked twice in one commit
+
+Every `Generated` and `Simulated` on all three cases moved, and it happened in two steps for two
+reasons — the beds becoming records, then the zones entering the hash. Both are the hash **seeing
+more**, not the colony doing anything different, and the evidence for that is specific rather than
+asserted: the placement signature on both maps kept its part count at 34 either side of the bed
+change, so the colony is the same colony with the same things in it and only the beds are
+somewhere else. No generator pass changed.
+
+`ScenarioDefTests.AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid` was re-baked too, and its
+promise is narrower now than when it was written: it promised the storey work moved nothing, and a
+deliberate content change has moved it. Said so in the test rather than quietly replacing the
+number.
+
+### And the bed change found a fourth thing, which is why a write is a probe
+
+The starting beds were the first thing in the project ever to **write to the chunk grid during a
+world build**. Three PlayMode tests threw `IndexOutOfRangeException` out of `ChunkGrid.MarkDirty`
+the moment they did — and the new code was not wrong.
+
+`OdysseyBootstrap.BuildSession` built the chunk grid and the render model from the inspector's
+`new GridSize(sizeX, sizeZ, layers)`, and built the world from `sizeOverride ?? size`, the setup
+page's. A new game on any board but the scene's default therefore had a mirror and a chunk grid of
+one size over a world of another, and every cell index near the far edge fell outside them. A
+plain P1 — one number, two owners — with the extra property that it was **latent behind a write
+nobody had made**. The fast tier could not have seen it at any point: `PawnContext.Chunks` is null
+headless, so `MarkChunksAround` returns on its first line, and 769 Sim tests were green the whole
+time it was live.
+
+Two halves to the fix, because either alone leaves the trap set. The size is decided once, before
+the chunk grid and the mirror are built from it. And `MarkChunksAround` asks the grid it is about
+to write into rather than the one beside it — it had been checking `ctx.Size`, the *cell* grid,
+one line above a write to the *chunk* grid, which is why the guard passed and the array did not.
+
+The lesson is about diagnosis rather than about sizes. A new write into a structure nothing wrote
+to before is a probe: when it fails, suspect the structure's provenance before the write, because
+the write is usually correct and merely first.
+
+### What the tiers said in the end
+
+Fast **769 Sim + 455 Hud**, Long **21**, EditMode **1,931 total, 1,918 passed, 0 failed**,
+PlayMode **82 total, 77 passed, 0 failed**. Both content gates pass unchanged — the one new piece
+of player-facing text on the Load row reuses `ui.start.empty`, which the registry already had.
+
+**PlayMode earned its place in this round.** It is slow enough to be tempting to skip, and it is
+the only tier that caught the board-size fault: the fast tier cannot, because `PawnContext.Chunks`
+is null headless, and EditMode did not, because nothing there builds a session through
+`OdysseyBootstrap`. Three tests failed, all in `StartScreenTests`, all with the same stack, and
+the new code in the stack was not the wrong code.
+
+## 2026-09-20 — The second play day: woken for a bed, and sent to work
+
+The branch's first play day had put the bed rule in front of the owner, and the report back was
+one line: *"the issue here is when I assigned someone else to a bed — everyone just started going
+back to work — the rest of the fixes seemed fine."*
+
+**Reproduced before it was read**, in two tests, because the last three days have taught that
+reading this code says it is correct. The first is the report in its simplest shape: one colonist,
+two beds, asleep in the near one, given the far one after half a night. The second is the colony
+the owner actually played — three colonists, five starting beds, each claimed on the first night —
+with one sleeper's bed given to another at night. Both failed on the same line: the woken colonist
+was on a **work** job the tick after the assignment. The third colonist, whose bed had not
+changed, slept on; so "everyone" was the two people concerned, which in a colony of three it is.
+
+**The cause was the hand-over, not the sweep.** `GetOutOfTheWrongBed` ended the right sleeps and
+then left each colonist to the think tree, and the tree's sleep branch is gated on rest below the
+`seekThreshold` of 280 — the question *should she start sleeping?* A sleeper wakes at 950, so a
+colonist got up at 600 was, by that gate, not tired, and the work branch took her. Every one of
+the five existing tests had assigned the bed within a tick of her lying down, at the rest of 40 the
+helper sets, and so never crossed the 670-point gap between the two thresholds. A test that probes
+a range at one point proves the rule at that point.
+
+**The fix is that an interrupted sleep resumes.** The sweep now runs in two passes — every
+affected sleep ends first, so every claim is released, and then each woken colonist goes straight
+back through `TrySleep`, past the gate, because she was asleep and the only question is where.
+Two passes rather than one because the bed the player just gave B is the bed A is still lying in:
+choose in the same pass and whether B gets her own bed or the nearest spare depends on which of the
+two the colony list holds first, which is the kind of order-dependence that passes every test
+until the day it does not. `TrySleep` became public for it; the scratch list of the woken is
+cleared before and after every use and is neither saved nor hashed.
+
+Fast tier **777 Sim + 455 Hud**, Long **21**. The goldens did not move: no golden run assigns a
+bed, and an arrival claim on one's own bed still falls through the sweep's first case. Unity could
+not be run from this session — the owner's editor is open on this worktree — so the Unity tier
+is the pull request's to prove.
+
+Also this session: `origin/main` had taken the falling-items branch (PR #138), and this branch
+conflicted with it only in the three documents both had appended to. Both journal entries and both
+playtest-queue rows were kept, and the tier line keeps this branch's counts, re-run after the merge.
+
+## 2026-09-20 — The second merge of the day, and no beds at the start
+
+`main` took the events layer (PR #140) between this branch's push and its review, and the pull
+request conflicted again: the two documents both branches append to, and **all six golden hashes**.
+The goldens were baked afresh from the merged code rather than taken from either side, because both
+branches had moved every number for their own reasons — beds and zones entering the hash here, the
+incident layer's state on `main` — and neither side's value was a number the merged code had ever
+produced. `Generated` moved on all three cases because the events layer hashes before the first
+tick, as it already did on `main`.
+
+**And the owner ruled out starting beds:** *"beds should never be given on startup / new game — but
+things seem to work fine."* The five real beds this branch had raised at tick zero were, from the
+player's side, five beds the colony had never had — the phantom cells they replaced were invisible.
+`ScenarioDef.Playtest` now has `beds = 0`; the colonists sleep on the ground and take the thought
+for it until a bed is built, which is what makes a bed the first thing worth building. `Bare`
+keeps its five, so no test, golden or ten-day run changed under it, because none of them
+builds on `Playtest`. Everything §7a says about a starting bed
+being a *real* bed still holds for the scenario that has some.
+
+Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
+

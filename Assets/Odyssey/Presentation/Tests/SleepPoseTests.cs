@@ -1,5 +1,6 @@
 #nullable enable
 using NUnit.Framework;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using UnityEngine;
 
@@ -106,6 +107,62 @@ namespace Odyssey.Tests.Presentation
             Assert.That(onBed.y - 0.7f, Is.LessThan(Hip * 0.5f), "and lying on it, not floating");
             Assert.That(onBed.y - onFloor.y, Is.EqualTo(0.7f).Within(0.001f),
                 "the two differ by exactly the height of the bed");
+        }
+
+        /// <summary>
+        /// <b>A sleeper laid in a bed is inside the bed's own two cells, head to foot</b> (owner,
+        /// 2026-09-20: <i>"the bed spans two tiles and the body needs rest within those tiles and
+        /// not off them"</i>).
+        ///
+        /// <para><b>Asserted rather than reasoned.</b> The arithmetic does say so — the head goes
+        /// on the pillow at −1.55 m and a 0.95 m hip gives a 1.81 m body, so the feet land at
+        /// +0.26 m of a footprint running ±2.50 m — and reasoning it through is exactly what was
+        /// done when the owner reported sleepers hanging off beds. It was right, and the real
+        /// fault was elsewhere (the scenario's phantom bed cells, <c>20-beds.md</c> §7a). A
+        /// measurement that had been written down would have said so in a second instead of an
+        /// hour, which is the whole argument for this test.</para>
+        ///
+        /// <para><b>Over a range of builds, not one.</b> Sixty-one characters have sixty-one sets
+        /// of proportions and the director scales them besides, so the question is not whether one
+        /// hip height fits but at what point one stops fitting. Up to 1.30 m of hip — a 2.47 m
+        /// body, well past anything in the packs — the feet are still on the bed.</para>
+        /// </summary>
+        [Test]
+        public void ASleeperLiesWithinTheBedsOwnTwoCells()
+        {
+            // The bed's own numbers, in bed-local Z: the footprint is two cells centred on the
+            // origin, and the head rests on the pillow.
+            float halfSpan = CellMetrics.SizeXZ;
+            float head = BedShape.HeadRestAlong;
+
+            foreach (float hip in new[] { 0.70f, 0.85f, Hip, 1.10f, 1.30f })
+            {
+                float feet = head + SleepPose.BodyLength(hip);
+
+                Assert.That(head, Is.GreaterThanOrEqualTo(-halfSpan),
+                    $"at hip {hip:0.00} the head is off the head end of the bed");
+                Assert.That(feet, Is.LessThanOrEqualTo(halfSpan),
+                    $"at hip {hip:0.00} the feet are {feet - halfSpan:0.00} m past the foot end");
+            }
+        }
+
+        /// <summary>
+        /// And the placement agrees with the arithmetic above, through the same call the figure
+        /// director makes — so a change to <c>Place</c> cannot pass the span check while moving
+        /// the body.
+        /// </summary>
+        [Test]
+        public void ThePlacedBodyIsWhereTheSpanCheckSaysItIs()
+        {
+            var headAt = new Vector3(0f, 0f, BedShape.HeadRestAlong);
+            SleepPose.Place(
+                SleepPose.PostureFor(1), headAt, Vector3.forward, surfaceY: BedShape.MattressTop,
+                Hip, weight: 1f, standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
+                out Vector3 feet, out _);
+
+            Assert.That(feet.z, Is.EqualTo(BedShape.HeadRestAlong + SleepPose.BodyLength(Hip)).Within(0.001f));
+            Assert.That(feet.z, Is.LessThanOrEqualTo(CellMetrics.SizeXZ),
+                "the feet are off the end of the bed");
         }
 
         /// <summary>

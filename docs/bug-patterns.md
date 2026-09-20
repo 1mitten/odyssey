@@ -34,6 +34,8 @@ Every occurrence so far:
 | **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
 | Is this cell the foot of a terrace step? | `BankLayout` (render mirror), `TerraceFoot` (cell grid) | allowed on purpose: different data, pinned cell-by-cell by `TerraceFootTests` |
 | **When is a colonist starving?** | `AlertModel.StarveAt` (120, of 1000), `AlertWatch.StarveThreshold` (12, of a scale that does not exist) | **the alert chime fired at 1.2% food instead of 12%, which is to say never — and its three unit tests all passed, because they fed the watcher literal numbers rather than a published pawn** |
+| **What colour is this order?** | `HudTheme.PinnedActionHue` (the chip), four `Color` constants in `OdysseyBootstrap` (the board) | **deconstruct was orange on the panel and the cancel red on the ground for months; the board's copy is in an assembly the fast tier does not compile, and the Unity-tier test asserted only that the mapping was total** |
+| **How big is the board?** | `BuildSession`'s chunk grid and render model (the inspector's), the colony request (the setup page's) | **silent for as long as nothing wrote to the chunk grid during a build; the first write threw out of bounds with the bounds check passing, because it asked the cell grid** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -182,6 +184,124 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — Woken for a bed, and sent to work instead
+
+Owner, second play day: *"when I assigned someone else to a bed — everyone just started going back
+to work."*
+
+`JobSystem.GetOutOfTheWrongBed` ended the sleep of everybody the assignment concerned — correctly,
+and only them — and handed each to the think tree. The tree's sleep branch is gated on rest below
+the `seekThreshold` (280 of 1000); a sleeper wakes at 950. A colonist got up at 600 was, by that
+gate, not tired, so `WorkThinkNode` took her. In a colony of three the two people concerned are
+"everyone".
+
+**The shape: a rule that reuses a decision made for a different question.** "Should she start
+sleeping?" and "she was asleep; where should she continue?" share a chooser but not a gate, and
+routing the second through the first's gate was invisible while the gate happened to be open.
+
+**Why five tests missed it.** All five assigned the bed within a tick of her lying down, at the
+rest of 40 the helper sets, so the gate was open in every one. A test that probes a range at one
+point proves the rule at that point. The repro sleeps her to `seek + 300` first.
+
+**Stopped by** the sweep resuming the sleep itself, in two passes (end every affected sleep, then
+choose again, so that the bed just given to B is not still reserved by A when B chooses), through
+`CriticalNeedsThinkNode.TrySleep` made public. `BedTests.AColonistWokenMidNightGoesToTheBedSheWasGivenNotToWork`,
+`GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse`. `docs/design/20-beds.md` §7.
+
+### 2026-09-20 — The board had two sizes, and only a write could tell
+
+Not reported, and not reportable: it was silent until something wrote.
+
+`OdysseyBootstrap.BuildSession` built the **chunk grid and the render model** from
+`new GridSize(sizeX, sizeZ, layers)` — the inspector's numbers — and then built the **world** from
+`sizeOverride ?? size`, the setup page's. So a new game on any board but the scene's default had a
+mirror and a chunk grid of one size over a world of another. Every cell index near the far edge
+landed outside them.
+
+**Nothing had ever written to the chunk grid during a world build**, so it sat there. The moment
+the scenario started raising real beds (`ColonyScenario.RaiseAStartingBed`, same day) three
+PlayMode tests threw `IndexOutOfRangeException` out of `ChunkGrid.MarkDirty` — with the bounds
+check one line above it *passing*, because `ConstructionGrid.MarkChunksAround` asked `ctx.Size`,
+the cell grid, about a write going to the chunk grid.
+
+- **A plain P1**, with the extra twist that the disagreement was **latent behind an unexercised
+  write**. Two owners for one number, agreeing in every configuration anybody ran.
+- **The fast tier could not see it.** `PawnContext.Chunks` is null headless, so
+  `MarkChunksAround` returns on its first line. 769 Sim tests were green while this was live.
+- **Stopped twice over**: the size is decided once in `BuildSession`, before the chunk grid and
+  the mirror are built from it, and `MarkChunksAround` now asks the grid it is about to write to
+  rather than the one beside it. The second half is the one that does not depend on remembering
+  the first.
+- **The lesson for the next change like it:** a new *write* into a structure nothing wrote to
+  before is a probe. When one starts failing, suspect the structure's provenance rather than the
+  new write — the write is usually correct and merely first.
+
+### 2026-09-20 — Colonists slept beside beds, and a phantom cell was why
+
+Owner: *"some colonists still sleep off the bed … it looks like it's trying to rest them in the
+first tile in some circumstances where they are hanging off the bed."*
+
+`ColonyScenario` put five entries into `ColonyItems.Beds` that were **cells and nothing else** — no
+edifice, no record. Correct when it was written, because a bed was then a property of a cell.
+The day beds became furniture it became a lie with three consequences, and only the third was
+reported: the cell cannot be seen, it cannot be owned (`AssignOwnerAt` refuses a cell with no
+edifice, so bed ownership was dead on every bed the colony started with), and a colonist who
+"sleeps in it" is laid out by the **ground** pose — flat on the grass, centred on her cell, along
+her last yaw. Next to a real bed that is a colonist hanging off it.
+
+**The shape: a value that meant one thing when a cheap representation was all there was, left in
+place after the real representation arrived.** Not two owners disagreeing — one owner holding two
+*kinds* of thing in one list and every reader assuming the richer kind.
+
+**The measurement is the point.** Reading the pose arithmetic said it was correct, and it was: a
+sleeper aimed from a real bed lies between −1.55 m and +0.26 m of a bed spanning ±2.30 m. Three
+colonists, three built beds, three days, counted: one spent **all 53,222** of her sleeping ticks
+off a bed and a second **17,399** of hers, every one within three cells of a bed she never used.
+With the phantom cells gone, all three slept on a bed for every tick.
+
+**Stopped by** `ColonyScenario.RaiseAStartingBed` — a starting bed is a real bed — and
+`BedTests.EveryCellTheSleepChooserKnowsHasABedInIt`, which asserts the invariant directly rather
+than the symptom. `docs/design/20-beds.md` §7a.
+
+### 2026-09-20 — Two colour tables for one tool, in two assemblies
+
+Owner: *"the placement shouldn't be red — it should use the same colour as deconstruct (the orange
+colour) … match the orders blueprints/placement titles to the color assigned on their toolbar."*
+
+A **P1**, and the plainest one yet. `HudTheme.PinnedActionHue` said what a palette chip was;
+four `Color` constants in `OdysseyBootstrap` said what the board was. They disagreed on two of the
+four tools. Deconstruct was orange on the chip and **red** on the board — the interface's own
+colour for *cancel* — so the panel and the cursor told the player two different things about which
+tool was in their hand, for months.
+
+**Why nothing caught it:** the board's copy lived in `Odyssey.Presentation`, which the fast tier
+does not compile, and the only thing asserting it was a Unity-tier test of *totality* — every kind
+maps to something — which a wrong colour satisfies perfectly.
+
+**Stopped by** `Odyssey.Hud.OrderColours`, one owner in a Unity-free assembly, with
+`PinnedActionHue` delegating to it and `OrderColoursTests` in the **fast tier** asserting that the
+chip, the cursor and the board mark are the same hue for every tool, and that no two tools look
+alike on the board. `docs/design/16-cancel-and-deconstruct.md` §6b.
+
+### 2026-09-20 — The state hash could not see a stockpile
+
+Not reported; found by a control written for an owner ask about saves.
+
+`ColonyItems` hashed its things and **not** its stockpile zones or its bed list — both of which it
+had been *saving* since they existed, which is the worse of the two ways round. Save and hash are
+meant to cover the same set, and `WorldRoundTripTests` proves a save by **comparing hashes**: a
+zone whose filter failed to round-trip would have come back accepting everything, hashed
+identically, and passed. The goldens and the determinism harness were blind to it too.
+
+**This is OQ-50's shape exactly** — the whole cell grid sat outside the hash for a year — and the
+way to find it is the same: do not read the contributor, flip one bit of the state and ask whether
+the number moved.
+
+**Stopped by** hashing both lists, and by
+`OrdersSurviveASaveTests.EachOrderMovesTheStateHash`, which walks every kind of player order —
+designation, blueprint, bed owner, zone cells, zone priority, zone filter, forbidding, work
+priority — and asserts each one moves the hash. It found this on its first run.
 
 ### 2026-09-19 — The volume you set on the title screen was never saved
 

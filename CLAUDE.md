@@ -283,6 +283,18 @@ invisible where the game is played.
   gates must pass before a content commit.
 - **Do not answer `RegistryTests` by rewording a literal** — call `Registry.Label(key)`, or the wiki
   and the screen will disagree the first time somebody corrects one of the two copies.
+- **The board's size is decided once, in `OdysseyBootstrap.BuildSession`, before the chunk grid
+  and the render model are built from it.** It was two numbers until 2026-09-20 — the inspector's
+  for those two, the setup page's for the world — and nothing could tell, because nothing wrote to
+  the chunk grid during a build. The first thing that did threw out of bounds.
+- **An order's colour has one owner, and it is `Odyssey.Hud.OrderColours`.** The chip in the orders
+  strip, the palette header, the drag cursor and the mark left on the board are all the same hue.
+  There were two tables in two assemblies for months and they disagreed on two of the four tools —
+  deconstruct was orange on the panel and the *cancel* red on the ground. Never write a `Color` for
+  an order in Presentation; ask. `OrderColoursTests` runs in the fast tier and walks every tool.
+- **Where an order's mark sits is `WorldRenderModel.MarkHeight`** — the top of the cell for
+  anything that fills it, the top of itself for anything that stands up without filling it, the
+  floor for everything else. Trees are on the floor deliberately.
 - *Subsystems* are simulation-side; *directors* are presentation-side. Do not unify the two words.
 
 ### Fixed decisions
@@ -296,7 +308,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **788 Sim + 465 Hud** (2026-09-20, the events branch with falling items merged; 753 + 449 on 2026-09-19); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **806 Sim + 471 Hud** (2026-09-20, the bed and order-colour branch with events and falling items merged); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
@@ -381,6 +393,12 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
   off sideways on to the landing beside it. Nothing migrates — a real floor still counts, so old
   saves and the city's own ladders are untouched — but a player who builds a full upper floor first
   must deconstruct one slab before the ladder will go in.
+- **Backing out of the in-game load screen still loses the colony.** Pressing Load with nothing
+  readable in the Saves folder is safe now (the colony is untouched and the row says so), but the
+  row still tears the world down *before* the list appears, so a player who changes their mind at
+  the list has nowhere to go back to. The real fix is showing the browser over a live session, and
+  the menu is tied to there being none (`OnSessionChanged` calls `SetShowing(live == null)`). A
+  restructure of the start screen's modality, not a guard — `docs/design/17-start-flow.md` §5b.
 - **The scenario table is written twice** — `OdysseyBootstrap.ScenarioFor` and
   `SessionRoundTripTests.ScenarioByName` each map two `defName`s by hand. Not urgent (a scenario
   acts only at tick zero) and both copies say so.
