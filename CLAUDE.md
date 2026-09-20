@@ -336,14 +336,14 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~35 s, no Unity): **826 Sim + 523 Hud** (2026-09-20, the reviewed Work tab branch merged with main); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~35 s, no Unity): **842 Sim + 532 Hud** (2026-09-20, the paged Work tab branch merged with main); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the
-  reviewed Work tab branch merged with main (doors included): EditMode **2,104 total, 2,091 passed,
+  paged Work tab branch merged with main (doors included): EditMode **2,110 total, 2,097 passed,
   0 failed**; PlayMode **85 total, 80 passed, 0 failed**. The remainder are `[Explicit]` or ignored.
-  The run before it, the same day on `claude/colonist-figures-and-portraits`, was EditMode
-  2,003 / 1,990 and PlayMode 85 / 80.
+  The run before it, the same day and branch before pagination, was EditMode 2,104 / 2,091 and
+  PlayMode 85 / 80.
 - **Do not run the PlayMode tier while another Unity batch run is going.** It carries the timing
   tests, and `HudStressTests` failed at 3.770 ms against a 1.167 ms budget beside two other
   `unity.sh` runs and passed at 0.603 ms alone, on the same commit. **The baseline the test logs is
