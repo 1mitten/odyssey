@@ -384,6 +384,35 @@ namespace Odyssey.Tests.Sim
                     return items[i].Cell;
             return -1;
         }
+        [Test]
+        public void TheSowScanHandsOutTheClearingOfItsOwnBlocker()
+        {
+            // Growing scans at order one and hauling at four, so a busy field starves the haul
+            // order and the stone on its own tile waits forever (owner, 2026-09-20). The sow
+            // scan now hands the clearing out itself: when every tile is sown or waiting on a
+            // thing, the job a sower takes is the haul of that thing.
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            CellRef start = colony.Start;
+            // The scenario's own piles crowd the start; the zone goes on the nearest cell
+            // that can still take the blocker.
+            int plotCell = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, Size.Index(start), ItemIndex.Salvage, 1, maxRadius: 3);
+            Assume.That(plotCell, Is.GreaterThanOrEqualTo(0), "nowhere near the start for the zone");
+            CellRef plot = Size.FromIndex(plotCell);
+            colony.World.Intents.Submit(new Intent(IntentKind.DesignateZone, plot, PlantHandle.Carrot + 1));
+            colony.World.Tick();
+            colony.Pawns.Items.Spawn(ItemIndex.Salvage, Size.Index(plot), 1);
+
+            var pawn = colony.Pawns.Pawns.All[0];
+            var job = new Job();
+            bool gave = new SowWorkGiver().TryGiveJob(pawn, colony.Pawns, job);
+
+            Assert.That(gave, Is.True,
+                "a field whose only tile is blocked handed out no work at all");
+            Assert.That(colony.Pawns.Content.Jobs[job.DefIndex].driver, Is.EqualTo(JobIndex.Haul),
+                "the job a blocked field hands out is the clearing of its blocker");
+        }
         static int CarrotsOnTheGround(ColonyWorld colony)
         {
             int total = 0;

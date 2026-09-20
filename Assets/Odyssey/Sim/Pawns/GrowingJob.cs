@@ -54,7 +54,24 @@ namespace Odyssey.Sim.Pawns
                 best = cell;
             }
 
-            if (best < 0) return false;
+            if (best < 0)
+            {
+                // No tile to sow - and if the reason is a thing lying on one, the sower clears
+                // it herself rather than leaving it to the haul order, which a busy field
+                // starves: growing scans at order one and hauling at four, so a field with
+                // endless sowing and reaping never hands anyone the stone on its own tile
+                // (owner, 2026-09-20: "the items were not picked up and removed from the
+                // dirt/garden tile"). The haul scan prefers a zoned blocker over every ordinary
+                // pile, so the job handed out here is the field's own blocker first.
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    int blocked = cells[i];
+                    if (zones.IsPlanted(blocked)) continue;
+                    if (ctx.Items.ItemAt(blocked) == null) continue;
+                    return new HaulWorkGiver().TryGiveJob(pawn, ctx, job);
+                }
+                return false;
+            }
 
             job.Reset(JobIndex.Sow);
             job.TargetCell = best;
