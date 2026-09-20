@@ -483,6 +483,21 @@ code cannot show on its own:
   a material. The tier is built in all three layouts, shown only while the zone tool wants
   it, and Rows' PLANT heading dims rather than disappears so the panel never changes height.
 
+### 7a. The crop has a Stores row (2026-09-20)
+
+`LedgerModel` counted meals, wood and salvage and nothing else, so a harvest could be carried
+into the store or eaten and **no readout anywhere showed a carrot**. The owner reported it as the
+crop disappearing, and from the keyboard that is exactly what it is: the simulation was right
+throughout — the ten-day field soak accounts for all 580 harvested, 501 still on the map and the
+rest eaten — but a food commodity with nowhere to be counted has, to the player, gone.
+
+Counted wherever it lies, in the field as much as in the store: the ledger is the colony's count,
+not the storeroom's, which is the rule Meal already followed. `ui.res.carrots` was already in the
+registry; only the model had to learn it.
+
+**Stone, iron ore and coal are still uncounted** and have the same problem waiting. They are
+mining's commodities, not growing's, so they are recorded here rather than fixed here.
+
 ## 8. Hooks: what is deliberately not here
 
 Each of these was considered and deferred, and each has a named landing place rather than a
