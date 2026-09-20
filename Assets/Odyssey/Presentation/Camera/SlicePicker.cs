@@ -119,9 +119,21 @@ namespace Odyssey.Presentation.CameraRig
                 // renderer drops its slab so the player can see in. A surface that is not drawn
                 // must not be clickable, so that layer offers only what occludes — the rock over
                 // your head stays pickable, the floor slab that was meshed away does not.
-                bool floors = !(slice != null && layer == activeLayer + 1 && slice.SuppressCeilingAt(activeLayer));
+                //
+                // RF1 adds the second half, and it is per cell rather than per layer. A roof two
+                // or more layers up is always dropped, so it must not be clickable - but that rule
+                // takes the SLABS and leaves the ground, so the layer as a whole still offers its
+                // terrain. `floors` gates the horizontal pick for every cell alike, a hillside's
+                // included, so switching it off for the whole layer would have left a terrace two
+                // storeys up drawn and unclickable - the same disagreement between renderer and
+                // picker, in the other direction. `slabsDropped` is the narrow one (27-roofs.md §4).
+                bool floors = !(slice != null && layer == activeLayer + 1
+                    && slice.SuppressCeilingAt(activeLayer));
+                bool slabsDropped = slice != null
+                    && SliceSettings.RoofIsAlwaysDropped(layer - activeLayer);
 
-                if (!PickOnLayer(ray, model, layer, floors, out CellRef hit, out float t, out bool thing))
+                if (!PickOnLayer(ray, model, layer, floors, slabsDropped,
+                        out CellRef hit, out float t, out bool thing))
                     continue;
 
                 // Strictly nearer, or the same surface with something standing on it. The second
@@ -179,7 +191,7 @@ namespace Odyssey.Presentation.CameraRig
         /// cell up, and that is the block underneath.</para>
         /// </summary>
         static bool PickOnLayer(
-            Ray ray, WorldRenderModel model, int layer, bool floors,
+            Ray ray, WorldRenderModel model, int layer, bool floors, bool slabsDropped,
             out CellRef cell, out float hitAt, out bool thing)
         {
             cell = default;
@@ -285,7 +297,11 @@ namespace Odyssey.Presentation.CameraRig
                 // layer's flat plane. This is the whole of the relief's effect on picking: the
                 // ground the player is aiming at is the tilted one, so that is the surface the ray
                 // has to meet.
-                float tFloor = floors ? FloorCrossing(ray, floorY) : float.MaxValue;
+                // `slabsDropped` is RF1's rule and is asked of the cell, not of the layer:
+                // the renderer stopped drawing this layer's SLABS and went on drawing its ground,
+                // so a cell carrying a slab offers nothing and a hillside beside it still does.
+                bool hidden = !floors || (slabsDropped && model.Floor(index) != 0);
+                float tFloor = hidden ? float.MaxValue : FloorCrossing(ray, floorY);
 
                 if (tFloor >= t - 1e-4f && tFloor <= tCellEnd
                     && Owner(model, index, layer, out CellRef owner, out thing))

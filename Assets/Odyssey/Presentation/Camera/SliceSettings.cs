@@ -276,6 +276,43 @@ namespace Odyssey.Presentation.CameraRig
         public bool SuppressCeilingAt(int activeLayer) =>
             suppressActiveCeiling && (followDepth || AboveAt(activeLayer) != AboveMode.Full);
 
+        /// <summary>
+        /// How many layers above the slice a roof must be before it is dropped whatever the
+        /// settings say. Two: the storey directly overhead keeps its slab, anything higher loses
+        /// it (RF1, <c>docs/design/27-roofs.md</c> §4).
+        /// </summary>
+        public const int RoofDropsFrom = 2;
+
+        /// <summary>
+        /// <b>Is a roof this far above the slice dropped because nothing should ever lid you?</b>
+        ///
+        /// <para>Above the surface <see cref="AboveAt"/> answers <c>Full</c> and every layer above
+        /// is drawn solid, and <see cref="SuppressCeilingAt"/> reaches one layer only and is off by
+        /// default. So roofing a building and then working two storeys under it left the colony
+        /// beneath a plate — and RF1 is the unit that makes roofing easy, so it is the unit that
+        /// would have caused it.</para>
+        ///
+        /// <para><b>Unconditional, and that is the point.</b> It is not gated on
+        /// <c>suppressActiveCeiling</c>, because the owner turned that off on 2026-09-17 for a
+        /// reason that holds — <i>"I expected to see and be able to build at least floor above from
+        /// my current height"</i> — and that reason is about the storey <em>directly</em> overhead.
+        /// This rule starts one layer past it, so the setting keeps its exact present meaning and
+        /// nothing higher can hide the colony.</para>
+        ///
+        /// <para><b>Slabs only.</b> The roof list holds slabs and ground surfaces together — a
+        /// storey above the slice dropping its ground is what lets you see into it, and that is
+        /// deliberate. This rule reaches further than one layer, where the thing over your head is
+        /// as likely to be a hillside as a ceiling, so the caller keeps the terrain and drops only
+        /// the slabs: <b>the landscape is never cut away</b>. The renderer tells them apart by
+        /// <c>TintCode.IsTerrain</c> rather than by a fourth bucket list, which would have
+        /// reshaped a structure seven Unity-tier test files read.</para>
+        ///
+        /// <para>Read by <c>ChunkRenderer</c> and by <c>SlicePicker</c>, from here rather than
+        /// twice, because those two live in assemblies neither test tier sees together and that is
+        /// exactly how they came to disagree before <c>FloorToolReachTests</c> was written.</para>
+        /// </summary>
+        public static bool RoofIsAlwaysDropped(int steps) => steps >= RoofDropsFrom;
+
         /// <summary>Is a layer above the slice drawn translucent rather than solid?</summary>
         public bool GhostsAbove(int activeLayer)
         {

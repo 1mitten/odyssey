@@ -7374,3 +7374,91 @@ Five questions resolved with the owner before any code was written:
   - Unity EditMode: **1,916 total, 1,902 passed, 0 failed** (includes new tests in `ItemFallMotionTests`, `ItemFallingTrackerTests`, `FallingTests`, `FloorsAndCollapseTests`).
   - Unity PlayMode: **82 total, 77 passed, 0 failed**.
 
+
+### Roofs: RF1, and what was already there, 2026-09-20
+
+The owner: *"We need to plan and understand Roofs. We've created floors now that seem to work well —
+check and research, investigate how we can add roofs so we can make 1 or many floor buildings etc.
+I think it should work like slabs do but it creates roof."*
+
+**The instinct was right and the work was already done.** `02-world-and-layers.md` §4 and
+`03-systems-catalogue.md` layer question 2 both answer *"is a roof a floor?"* with **yes** — one
+material slab at a layer boundary, stored on the upper cell — and U29 built it on 2026-09-17. The
+Slab tool's registry key is literally `ui.arch.tool.roof`. `CoreContent.SlabRoof` exists and
+worldgen stamps it. `ChunkBatch.Roof` is already a separate draw bucket, which is ADR 0006's
+"separably cullable" requirement met. `CellGrid.IsRoofed` was written for this and **has never had
+a caller**. Three separate things that sounded like work turned out to be built, which is the whole
+argument for `CLAUDE.md`'s "check the code before you trust any status line".
+
+So the interview was about the gap between *roofs are implemented* and *roofing is something a
+player does*, and the owner took all six recommendations: ergonomics and seeing-in only; one Slab
+tool rather than a second Roof tool; a pitched cap makes a roof non-walkable (decided now, built in
+RF2); drop **every** roof above the slice, not just the one overhead; the support pillar is in; the
+roofs overlay is out. `docs/design/27-roofs.md` holds all of it.
+
+**Two things measured, and both corrected the plan that had been approved.**
+
+*The span limit was derived and the derivation was wrong.* The plan said a room interior wider than
+six cells could not be roofed — `S_max` 4, decaying one per cell, three cells of reach from a wall.
+The probe disagreed: sweeping a roof on as a drag does, a 6 × 6 room takes **0** holes, 8 × 8 takes
+**1**, 10 × 10 takes **9** and 12 × 12 takes **25**. The arithmetic cannot see that a cell ordered
+early supports the cells ordered after it through `SupportedByWhatIsPlanned`, so the answer depends
+on the order a drag visits cells in. A hut roofs whole and the holes then grow faster than the room.
+Better argument for the pillar than the one it replaced.
+
+*The lift rule had a hazard the plan would have shipped.* RF1a is "a slab ordered where a slab is
+means the boundary above", and the obvious spelling is `HasFloor` — *anything you could stand on* —
+which also fixes the ground-floor case where the floor is terrain rather than a slab. Measured on
+open meadow: the air cell over the ground answers `HasFloor` true, and one layer above **that** the
+support rule returns **3** whenever a wall stands beside it, because the slab over the wall's head
+is grounded. So `HasFloor` would have turned a click on grass beside a wall into a slab in the sky,
+accepted and built. The clause asks `Floor[index]` instead, which fixes the upper storey and cannot
+reach that cell. `RoofsTests.BareGrassStillRefusesAndNeverPutsASlabInTheSky` keeps the measurement.
+
+The cost of the narrower rule is honest and recorded: **a ground-floor room's interior still cannot
+be roofed by pointing at one cell of it**, because its floor is terrain and nothing distinguishes
+standing inside a hut from standing on the meadow outside it except enclosure, which is M4 and
+which `a-05-rooms-and-beauty.md` warns against reducing to one boolean. Dragging a box over the
+whole hut, walls included, already works and always has — `RunLayerFor` takes the highest layer any
+cell of the run reaches. That is the common gesture, and it is why this is a recorded limit rather
+than a blocker.
+
+**The pillar cost nothing it looked like it would cost.** `SupportSolver.IsGrounded` ends at
+`Edifice[below] >= 0`, so *any* edifice already grounds the slab over it at `S_max`: a pillar has
+worked for as long as the solver has run and there was simply nothing that could build one.
+`CoreContent.EdificePillar`, `ModuleShape.Pillar`, `SM_Bld_Base_Pillar_01` and
+`ui.arch.tool.pillar` — mapped to sheet 04, labelled *"Extends how far a roof can span"* — all
+existed. It needed a def, a handle and a palette row, and **not one line of the support rule**. Both
+content `--check`s stayed clean because the key and its label were already in the CSVs.
+
+**A third bucket list was written and reverted, and the reason is the point.** RF1b drops roofs two
+or more layers up, and `ChunkBatch.Roof` holds ground surfaces alongside slabs, so dropping it
+whole would cut away a higher terrace. The tidy fix is a `Surface` list. It also reshapes a
+structure **seven Unity-tier test files read directly**, eleven sites between them — and this
+container has no Unity, so none of it could be run. `TintCode.IsTerrain` already separates the two
+(every terrain contribution carries `TerrainBase`; a slab is tinted `Stuff(...)`, which is the raw
+index with no marker; water keeps the terrain bit), and it is the same mechanism `NeverFades`
+already uses. Same behaviour, no test-shape change. The split stays available to a session with the
+editor in front of it. **And the sharing is not a bug**: `SurfaceContributor` puts ground there on
+purpose, so a storey above the slice can drop its ground — right for the two rules that already
+exist, wrong only for one that reaches further. Both existing rules are untouched.
+
+`SlicePicker`'s half had the mirror of the same trap: its `floors` flag is per *layer* and gates the
+horizontal pick for every cell alike, a hillside's included, so switching it off two storeys up
+would have left that terrace drawn and unclickable. It is asked of the cell now —
+`slabsDropped && model.Floor(index) != 0`.
+
+- *Verified here:* fast tier **770 Sim + 449 Hud, 0 failed** (759 + 449 before; RF1 adds 11 Sim),
+  both content gates clean, **goldens unmoved**.
+- *One red herring, settled with a control.* The Long tier's
+  `ATickThatDoesNothingAllocatesNextToNothing` failed on the branch, which reads as "you put an
+  allocation in `SimWorld.Tick`". Four runs each against a clean `HEAD` worktree: the branch failed
+  twice in four, **clean `HEAD` failed twice in four**. It is load-sensitive in this container and
+  fails no more with the change than without it; run alone it reports exactly the 1.6 and 3.3 bytes
+  per tick its own comment cites. Nothing RF1 touches is in `Tick` at all — the only simulation
+  change is order-time. `docs/lessons.md` has the table.
+- *Not verified here, and this is the handover's first line:* **no Unity tier ran.** The container
+  has no Unity and no Windows. RF1b is entirely in `Odyssey.Presentation`, which the fast tier does
+  not compile — so the renderer and picker changes have not been compiled, let alone run or looked
+  at. `docs/lessons.md` and `CLAUDE.md` both say two green tiers say nothing about whether the game
+  runs; one green tier that cannot see the assembly says less.

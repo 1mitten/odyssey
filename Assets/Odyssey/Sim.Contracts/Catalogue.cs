@@ -158,7 +158,23 @@ namespace Odyssey.Sim.Contracts
         /// with a bed in it has ever left this branch.</para>
         /// </summary>
         public const int Bed = 5;
-        public const int Count = 6;
+
+        /// <summary>
+        /// A support pillar: a column in one cell whose only job is to hold up the slab above it
+        /// (docs/design/27-roofs.md §5).
+        ///
+        /// <para><b>The solver has trusted one since M1 and nothing could build it.</b>
+        /// <c>SupportSolver.IsGrounded</c> ends at <c>Edifice[below] >= 0</c>, so any edifice
+        /// underneath already grounds a slab at <c>S_max</c> — a pillar needed a def, a handle and
+        /// a palette row, and not one line of the support rule.</para>
+        ///
+        /// <para>Appended, as every handle before it was. Handle order is the save contract and a
+        /// value inserted in the middle would compile silently and mean something else in every
+        /// save already written.</para>
+        /// </summary>
+        public const int Pillar = 6;
+
+        public const int Count = 7;
     }
 
     /// <summary>

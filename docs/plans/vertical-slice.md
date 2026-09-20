@@ -286,6 +286,43 @@ planned; WS4 stays held; every owner deferral in the section below stands.
 
 ---
 
+## RF — Roofs (owner, 2026-09-20)
+
+**These units are `RF1`–`RF3`.** A new two-letter track rather than `U51`+, for the reason `WS` and
+`HT` are: a line of work with its own design document numbers from 1.
+
+**The finding that sized the track.** A roof is a floor is a slab (`02-world-and-layers.md` §4,
+layer question 2) and U29 built it. The Slab tool's key is literally `ui.arch.tool.roof`;
+`CoreContent.SlabRoof`, `ChunkBatch.Roof` and `CellGrid.IsRoofed` all exist, the last with no
+caller at all. So there was no roof pipeline to build, and RF1 is the gap between *roofs are
+implemented* and *roofing is something a player does*. Design and the six owner decisions:
+`docs/design/27-roofs.md`.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **RF1 Roofing a building, and seeing under it** | M | — | **Done, fast tier only.** (a) `ConstructionGrid.StandingOver` lifts a slab order off a cell that already holds a slab, so pointing at an upper storey's floor roofs that storey instead of being refused in silence. (b) A roof two or more layers above the slice is never drawn and never clickable, unconditionally; the storey directly overhead keeps today's behaviour and today's default. (c) `Building_Pillar`: a column in one cell, 3 wood, 90 ticks, appended at handle 6, **no change to `SupportSolver`**. Fast tier 770 Sim + 449 Hud, both content gates clean, goldens unmoved. **Owes both Unity tiers and a probe** — RF1b is entirely in `Odyssey.Presentation`, which the fast tier does not compile. |
+| **RF2 The pitched cap** | M | RF1, a Unity session | The autotiled pitched roof drawn over the topmost slab, and a capped roof is **not walkable** (owner, 2026-09-20). The art is bought and cell-sized — `SM_Bld_Base_Roof_Straight_01`, `_Corner_In_01`, `_Corner_Out_01`, halves, quarter, ridge and hip `Cap_*`, eaves `Trim_*`, all on the 2.5 m pitch — and **3.25 m tall against a 3.00 m layer**, so it caps and never floors (`e-01-module-mapping.md`, `17-floors-and-collapse.md` §10). Carries the one-line fix for `WorldRenderModel.FloorModule` ignoring slab kind, so a roof stops drawing as the same grey plate as a floor, and the eaves trim is the candidate fascia for the paper-lip problem in the playtest queue. Non-walkable moves the state hash; the goldens re-bake with a reason line. |
+| **RF3 The roofs overlay** | S | RF1 | `ui.overlay.roofs` — named, keyed *"What is roofed, and by what"*, listed dead in `HudShell.Bar.cs` and never built. A chunk mesh per layer, never per-cell UI (`02-world-and-layers.md` §3). It is the answer to *"did I roof all of it"*, which RF1 leaves to the eye, and it is worth more once a hall is big enough to have a middle. |
+
+**Not in this track, deliberately.** Enclosure, `IsSheltered`, indoors, weather, temperature and
+per-cell light are **M4**, and `a-05-rooms-and-beauty.md` has already ruled on the shape: chamber
+detection plus `IsSheltered` only at M3, and never a single `IsEnclosed` boolean — keep
+`IsSheltered` for weather and `IsIndoors` for mood and work speed, and expect to want a third.
+`CellGrid.IsRoofed` is where the first consumer lands.
+
+**And the thing RF1 cannot fix.** A ground-floor room's interior cannot be roofed by pointing at one
+cell of it, because its floor is terrain rather than a slab and nothing tells standing inside a hut
+from standing on the meadow outside it except enclosure. Dragging a box over the whole hut, walls
+included, already works and always has (`RunLayerFor` takes the highest layer the run reaches), and
+that is the common gesture. Recorded in `27-roofs.md` §8 rather than worked around.
+
+**What this track does not touch.** Stairs (`U44`) and the ten-day gate close M3 exactly as planned,
+and `U44` is the prerequisite for the thing roofs are in service of: **a hauler cannot climb a
+ladder, so no material reaches an upper floor.** RF1 makes roofing at ground level pleasant and
+cannot make a second storey buildable.
+
+---
+
 ## Deferred: the rest of the look (recorded 2026-09-16, owner deferred)
 
 Pull request #50 landed the day/night cycle, the golden hour under it, the hill wood and the B17

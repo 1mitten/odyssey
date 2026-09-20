@@ -21,6 +21,21 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Nobody has seen a roof go on, or looked up out of a roofed building** (`claude/adoring-ptolemy-baq5te`,
+  `docs/design/27-roofs.md`). RF1, and most of it was already built — a roof has been a slab since U29.
+  Three things changed. **(a)** Pointing at the floor of an upper storey and ordering a slab now roofs
+  *that* storey, instead of being refused in silence for "there is already a floor here"; you no longer
+  raise the depth rail one notch first. **(b)** A roof two or more layers above the slice is never
+  drawn, so a three-storey building cannot hide its own ground floor. The storey *directly* overhead
+  is untouched and still buildable from below, which is the 2026-09-17 setting you turned off and it
+  stays off. **(c)** A **support pillar** under Structure: a column in one cell, 3 wood, 90 ticks.
+  Measured — a 10 × 10 hall takes nine holes in its roof and one pillar closes all nine.
+  Open questions a test cannot answer: whether the pillar's cost and the cell of floor it eats feel
+  like a fair price for the span; whether losing every roof two storeys up reads as clarity or as
+  the building being unfinished; and whether a roof still reading as the same grey plate as a floor
+  is the next thing worth fixing (RF2 has the pitched cap ready to go, art and all).
+  **The fast tier is the only tier that has run this** — see the handover.
+
 - **Nobody has seen falling items drop and land** (`claude/falling-items`, `docs/design/26-falling-items.md`).
   When ground or a floor slab beneath resting items is destroyed or deconstructed, items drop down onto
   the nearest solid floor below (or despawn if over the void). Presentation accelerates airborne items

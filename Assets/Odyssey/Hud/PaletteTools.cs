@@ -94,6 +94,14 @@ namespace Odyssey.Hud
         /// </summary>
         public const string Ladder = "ui.arch.tool.ladder";
 
+        /// <summary>
+        /// The <b>support pillar</b> (RF1): a column that holds up the slab above it, and what
+        /// makes a room wider than a hut roofable at all. Under <c>Structure</c> beside the wall
+        /// and the slab, because a wall, its roof and the pillar holding the middle of that roof
+        /// up are one job. <c>docs/design/27-roofs.md</c> §5.
+        /// </summary>
+        public const string Pillar = "ui.arch.tool.pillar";
+
         public const string Bed = "ui.arch.tool.bed";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
@@ -124,7 +132,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, Pillar, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
@@ -236,6 +244,13 @@ namespace Odyssey.Hud
             new PaletteTool(Ladder,
                 d => d.ArmBuild(BuildingHandle.Ladder),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
+                wantsMaterial: true),
+
+            // What holds the middle of a wide roof up (RF1). Beside the slab, because the order a
+            // player gives is "roof this hall" and the pillar is half of that answer.
+            new PaletteTool(Pillar,
+                d => d.ArmBuild(BuildingHandle.Pillar),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Pillar,
                 wantsMaterial: true),
 
             // The first furniture, and the palette's first single-placement, rotatable thing:

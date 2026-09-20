@@ -56,7 +56,12 @@ namespace Odyssey.Tests.Sim
         // wrong side of its cell — a free-standing one had nowhere to take a facing from and fell
         // back to north, which the player could neither predict nor change. A ladder fixed to a
         // wall still hugs it; the rotation only decides where there is nothing to hug.
-        const ulong BuildingFingerprint = 16750019241906452571UL;
+        // RF1 appended Building_Pillar at handle 6 - a column in one cell, blocking, 3 stuff and
+        // 90 ticks, whose only job is to hold up the slab above it. Appended, as every handle
+        // since the bed has been. It needed no change to the support solver at all: IsGrounded
+        // already ends at `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as
+        // long as the solver has run and there was simply nothing that could build one.
+        const ulong BuildingFingerprint = 9905424667026776188UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

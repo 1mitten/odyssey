@@ -367,12 +367,35 @@ namespace Odyssey.Sim.Construction
         /// <para>Ordinary ground is untouched by it. A click on grass lifts to the air above,
         /// <see cref="AllowsSlab"/> refuses that for having a floor already, and the refusal is
         /// reported at the cell the player clicked — exactly as it was before.</para>
+        ///
+        /// <para><b>A cell that already holds a slab lifts too, and that is RF1's half of this
+        /// rule</b> (<c>docs/design/27-roofs.md</c> §3). Stand on an upper storey, point at the
+        /// floor under your feet and order a slab: the picker answers with that floor's own cell,
+        /// because a pointer names a surface and the surface is the slab. Without this clause the
+        /// order was <c>NotPermitted</c> for having a floor already — measured, and silent — so
+        /// roofing the storey you are standing on meant raising the depth rail first. It is the
+        /// same sentence as the clause above seen from the other side: you cannot put a slab where
+        /// a slab is, so the order means the next boundary up.</para>
+        ///
+        /// <para><b>An actual slab, and deliberately not <c>HasFloor</c>.</b> The looser test would
+        /// take in the air cell over solid ground, which is every cell of open meadow — and
+        /// measured, a click on the grass beside a wall would then lift twice and land one cell
+        /// above the wall's head, where the support rule <i>accepts</i> it at 3 because the slab
+        /// over the wall beside it is grounded. A slab in the sky, from a click on grass. The
+        /// clause asks <c>Floor[index]</c> because a cell holding a slab can never be that cell.
+        /// <c>RoofsTests.BareGrassStillRefusesAndNeverPutsASlabInTheSky</c> is the control.</para>
+        ///
+        /// <para><b>One step, always.</b> Ordering a slab where one already stands lifts onto the
+        /// roof above it, <see cref="AllowsSlab"/> refuses that for the same reason, and the
+        /// refusal is reported at the cell the player clicked. The rule cannot walk a column.</para>
         /// </summary>
         int StandingOver(int index, int building)
         {
             // Anything that fills the cell, which is the same set the solver calls grounding: a
-            // slab laid over it has something underneath to rest on.
-            if (!_grid.IsSolidTerrain(index) && _grid.Edifice[index] < 0) return index;
+            // slab laid over it has something underneath to rest on. Or anything that already
+            // carries a slab, which is the same question asked from above (RF1).
+            if (!_grid.IsSolidTerrain(index) && _grid.Edifice[index] < 0 &&
+                _grid.Floor[index] == CoreContent.SlabNone) return index;
 
             int above = index + _grid.Size.LayerStride;
             return above < _grid.Size.CellCount && Allows(above, building) ? above : index;

@@ -2138,3 +2138,34 @@ a duration identical to the last run's, down to the seventh decimal.
 - **Only one Unity may hold a project.** A background `test playmode` and a foreground `build` in
   the same worktree are mutually exclusive, and the second one loses silently if you are not
   reading its output.
+
+## The allocation test is load-sensitive; settle it with a clean-HEAD control, not by reading your diff
+
+**2026-09-20, RF1.** `PathAllocationTests.ATickThatDoesNothingAllocatesNextToNothing` failed in a
+Long-tier run on a branch. It is a measurement of bytes allocated per tick against a 16-byte budget,
+so a failure reads as *"you put an allocation in `SimWorld.Tick`"* — and the temptation is to go
+looking for one in your own diff.
+
+**Run the same tier on a clean worktree first.** `git worktree add /tmp/<name> HEAD` costs half a
+minute and answers the question the diff cannot.
+
+Four runs each, in this container, same tier, nothing else changed:
+
+| | run 1 | run 2 | run 3 | run 4 |
+|---|---|---|---|---|
+| the branch | fail | fail | pass | pass |
+| **clean `HEAD`** | pass | **fail** | pass | **fail** |
+
+It fails *more often without the change than with it*. Run on its own the test reports exactly the
+1.6 and 3.3 bytes per tick its own comment cites and passes every time; it is the batch, and
+whatever else the machine is doing, that moves it. A GC that happens to land inside the measurement
+window is the mechanism.
+
+- **A flaky measurement is not evidence about your change until you have the control.** Two samples
+  — one red on the branch, one green on `HEAD` — look conclusive and are worth nothing.
+- **Do not "fix" it by widening the budget.** The 16-byte budget is four times under the 64-byte
+  delegate the test exists to catch, and loosening it to quiet a container would retire the test.
+- The same reasoning applies to anything timed rather than asserted: `TickBenchmarkTests`,
+  `FrameTimeTests`, and any future row that prints a number. `docs/process.md` §2 already says a
+  number names its machine and its date; this is the other half — **a number that disagrees with
+  itself across runs on identical code is naming the machine, not the code.**

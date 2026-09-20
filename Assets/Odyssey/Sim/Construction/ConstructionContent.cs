@@ -331,7 +331,7 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed",
+            "Building_Bed", "Building_Pillar",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -426,6 +426,34 @@ namespace Odyssey.Sim.Construction
                     blocking = false, footprint = 2, rotates = true, takesQuality = true,
                     needsClearCell = true, costCount = 5, workToBuild = 180, minSkill = 0,
                     iconKey = "ui.arch.tool.bed",
+                },
+
+                // The support pillar (RF1, docs/design/27-roofs.md §5). A column in one cell that
+                // holds up the slab above it, and the thing that makes a hall roofable: measured,
+                // a room with an 8-cell interior takes nine holes in its roof and a 10-cell one
+                // takes twenty-five, because support decays one per cell from a wall and a slab
+                // stands at most three cells from anything holding it up.
+                //
+                // `edifice` is CoreContent.EdificePillar, which has existed since worldgen stamped
+                // its first colonnade. The support solver needs NO change at all: IsGrounded ends
+                // at `Edifice[below] >= 0`, so a pillar has grounded the slab over it for as long
+                // as the solver has run - there was simply no way to build one.
+                //
+                // `blocking` true, and it is a decision rather than a detail. A pillar fills its
+                // 2.5 m cell, so span is paid for in the floor it stands on; you cannot walk
+                // through a column. A non-blocking pillar would make a pillared hall strictly
+                // better than an unpillared one and the choice free. The solver reads
+                // `Edifice[below] >= 0` and not the flag, so either would hold the roof up.
+                //
+                // 3 and 90 against a wall's 5 and 135 and a slab's 4 and 120: less material than a
+                // 3 m wall panel, dearer per cell than a slab. Neither number is derived from
+                // anything and nothing derives from them; they are the owner's to tune.
+                new BuildingDef
+                {
+                    defName = "Building_Pillar", label = "support pillar",
+                    edifice = CoreContent.EdificePillar, blocking = true,
+                    costCount = 3, workToBuild = 90, minSkill = 0,
+                    iconKey = "ui.arch.tool.pillar",
                 },
             };
         }

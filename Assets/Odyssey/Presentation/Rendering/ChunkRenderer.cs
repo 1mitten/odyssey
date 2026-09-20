@@ -264,10 +264,19 @@ namespace Odyssey.Presentation.Rendering
                 // The active layer's ceiling is the slab of the layer above it. Dropping it is
                 // what makes interiors visible, and it is also exactly what roofs-off mode wants
                 // for every layer it draws.
+                //
+                // Three rules, and only the last is RF1's. The first two drop the whole list,
+                // terrain included, which is what lets a player see into the storey overhead and
+                // is deliberate - SurfaceContributor says so in as many words. RF1's reaches
+                // further than one layer, where the thing over your head is as likely to be a
+                // hillside as a ceiling, so it takes the SLABS and leaves the ground: the
+                // landscape is never cut away. 27-roofs.md §4.
                 AboveMode aboveMode = slice.AboveAt(activeLayer);
                 bool drawRoof = true;
+                bool slabsOnlyDropped = false;
                 if (above && aboveMode == AboveMode.RoofsOff) drawRoof = false;
                 else if (steps == 1 && slice.SuppressCeilingAt(activeLayer)) drawRoof = false;
+                else slabsOnlyDropped = SliceSettings.RoofIsAlwaysDropped(steps);
 
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
@@ -284,7 +293,8 @@ namespace Odyssey.Presentation.Rendering
                     if (sight) ChunksSightTested++;
 
                     DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight);
+                    if (drawRoof)
+                        DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight, slabsOnlyDropped);
                 }
             }
         }
@@ -307,12 +317,19 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha, bool sight = false)
+            float shade, bool ghost, float alpha, bool sight = false, bool skipSlabs = false)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
+
+                // RF1's rule, and the reason it can be a test on the tint rather than a fourth
+                // bucket list: the roof list holds slabs and ground together, and every terrain
+                // contribution carries TerrainBase while a slab is tinted by its stuff and does
+                // not. Water keeps the terrain bit too, so a pond two storeys up survives. The
+                // same mechanism NeverFades already uses, for the same reason. 27-roofs.md §4.
+                if (skipSlabs && !TintCode.IsTerrain(bucket.Tint)) continue;
 
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
