@@ -104,6 +104,12 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   hours cycle as before. The column icon tiles are gone and the labels sit where they were. Each
   half carries its own title or pager. Simple is the default reading.
 
+  **It is hooked up, and that is now tested rather than assumed** (§18). Setting a column to
+  *never* really does stop the work: a colonist told never to cut leaves a marked tree standing.
+  **One thing to expect rather than report:** a priority decides the *next* job, not the one in
+  hand, so a colonist told to stop chopping finishes the tree she has already started. That is
+  deliberate and it is the reference's behaviour. The schedule half still governs nothing at all.
+
   What only a person can answer: **whether sorting by skill is the thing you actually reach for**,
   or whether you wanted priority; whether the armed block stays obvious enough that you do not lose
   track of what is in your hand; and whether the panel at .995 opacity now sits too heavily over the

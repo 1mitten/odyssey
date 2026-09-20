@@ -8981,3 +8981,51 @@ through the schedule bands and moving them.
 picture that has to explain itself. The one that carried a real fact — nothing obeys the schedule
 yet — still says so in the design document and on the playtest queue, which is where somebody will
 read it once rather than ignore it daily.
+
+## 2026-09-20 — "Is it hooked up?", and the test that failed for the right reason
+
+Owner, before merge: *"can we ensure it's performant - and is it fully functional? as I've only
+tested the menu and not whether it's hooked up"*. A fair question to ask of a panel that had eighty
+tests and not one that watched a colonist.
+
+**Everything written for this panel proved a link in a chain and nothing proved the chain.** The
+panel emits an intent; the intent writes a byte; the byte is saved, hashed and published. All
+tested. Whether the byte changes what anybody *does* was not, and the schedule half is the standing
+proof that a panel can be complete in every one of those senses and govern nothing at all.
+
+My first look was a bad grep. I searched `WorkPriorities` across the simulation, found only the
+scenario writing it, and had the sentence "the priority grid is not hooked up" half-composed —
+which would have been a confident, wrong, alarming answer. The accessor is `WorkPriority` singular,
+`JobSystem.cs:704`, and the scan is exactly what the design claimed: one pass per priority, 1 to 4,
+skipping any giver the colonist holds at another number. **Zero matches none of 1 to 4, so never is
+never offered.** It works.
+
+**Then the behavioural test failed, and it was right to.** I marked a tree, set cutting to *never*,
+ran eight thousand ticks, and she felled it anyway. Rather than reason about why, I printed the job:
+`5`, `Fell`, both before and after the priority changed. She had already taken the job in the tick
+where I designated. `WorkThinkNode` runs when a colonist needs something to do, not while she is
+doing it — so a priority decides the *next* job and not the one in hand.
+
+That is the right behaviour and the reference's, and a colonist who dropped her axe mid-stroke
+every time a number moved would be worse. But it was my test that was wrong, not the code, and the
+distinction only became visible because I measured instead of reasoning. Reordered — priority
+first, then the order — it passes, and the accidental discovery is now its own test with its own
+name, because **it is the first thing a player will notice**: set a column to never and she finishes
+what she is doing.
+
+The other thing worth having is an alarm rather than a sentence. §12d has said since the schedule
+landed that no system reads it; that was prose. `TheScheduleStillGovernsNothing` asserts it — a
+colonist whose twenty-four hours all say *Sleep* fells a tree anyway — and its failure message names
+the three things that owe an update on the day it starts passing for the wrong reason: itself,
+`EditingTheDayDoesNotMoveTheStateHash`, and the goldens.
+
+**On performance, the honest answer was that I had asserted bounds and not milliseconds.** The
+element count is capped and the rows are pooled, both tested, and both are arguments that the cost
+*is a constant* rather than measurements of what the constant is. `WorkTabCostTests` takes the
+measurement the way `HudStressTests` takes its own: the real panel over a real session, shut and
+then open, 180 frames each after 120 of settling, held to a quarter of the dev budget because it is
+one panel and not the interface. It checks the frame cost, the size of the tree that actually got
+built, and that the collector does not run at all while the panel sits open.
+
+It logs its baseline and says to read that first, because the last timing test to fail on this
+machine failed to contention and not to a regression.

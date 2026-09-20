@@ -810,3 +810,89 @@ the playtest queue. A footnote nobody reads twice was not where it was earning i
 | The schedule's name | nothing | **Schedule**, top-left of the schedule half, as *Work* is of the panel |
 | The default reading | Detailed | **Simple**. A tick and a cross are what anyone can read at a glance; four ranks of urgency are what you go looking for once you want them |
 | The panel fill | the shared `.window` token at `.96` | `.panel.work` at `.995` — the one place a panel does not take the shared fill, because it is the largest panel in the game and the only one whose signal is small coloured cells, and the world came through the schedule bands and moved them |
+
+## 18. Is it hooked up, and is it fast? (2026-09-20)
+
+**Owner, before merging:** *"can we ensure it's performant - and is it fully functional? as I've
+only tested the menu and not whether it's hooked up"*.
+
+### 18a. The work half is hooked up, and now there is a test that would notice if it stopped
+
+Every test written for this panel until now proved a *link*: the panel emits an intent
+(`AClickEmitsTheWorkHandleAndNotThePanelsColumnNumber`), the intent writes a byte
+(`TheCommandWritesOnePriorityOnOneColonist`), the byte is saved and hashed. **None of them proved
+the byte changes what a colonist does** — and a grid of numbers nobody obeys is exactly what the
+schedule half already is, honestly, by design.
+
+It does work. `WorkThinkNode.TryGiveJob` runs one pass per priority, 1 to 4, and skips any giver
+whose work type the colonist has at another number:
+
+```csharp
+for (int priority = 1; priority <= 4; priority++)
+    for (...)
+        if (pawn.WorkPriority(giver.WorkType) != priority) continue;
+```
+
+**Zero matches none of 1 to 4, so "never" is never offered.** That is the whole mechanism and it
+predates this panel; what is new is that something outside the simulation can now write to it.
+
+`WorkPriorityEffectTests` is the behavioural end of the chain: a colonist told *never* to cut leaves
+a marked tree standing for eight thousand ticks, and the same colonist on the same board with the
+same tree fells it once the number changes. The B half matters as much as the A half — without it
+the test would pass just as well on a colonist who could not reach the tree.
+
+### 18b. A priority decides the next job, not the one in hand
+
+**Found by writing that test the wrong way round.** The first draft marked the tree, let the
+colonist pick up the job, *then* set cutting to never — and she went on chopping. That is not a
+gap: `WorkThinkNode` runs when a colonist needs something to do, not while she is doing it, which
+is the reference's behaviour too and the right one. A colonist who dropped her axe mid-stroke every
+time a number moved would be worse.
+
+It is asserted now (`ChangingAPriorityDoesNotAbandonTheJobAlreadyInHand`) so it reads as a decision
+rather than as the fault the first draft took it for. **And it is the first thing a player will
+notice**, so it is on the playtest queue as an expected answer: set a column to never and the
+colonist finishes what she is doing first.
+
+### 18c. The schedule is still obeyed by nothing, and that is now an alarm rather than a sentence
+
+§12d has said since the schedule landed that no system reads it. That was a claim about the
+simulation recorded only in prose. `TheScheduleStillGovernsNothing` asserts it: a colonist whose
+twenty-four hours all say *Sleep* fells a tree anyway.
+
+**It is written to fail loudly.** The day somebody wires the job system to the schedule, this test
+and `ScheduleTests.EditingTheDayDoesNotMoveTheStateHash` both fail, and its message names the three
+things that then owe an update — itself, that test, and the goldens, which move once, deliberately,
+with `ODYSSEY_REGOLDEN=1`.
+
+### 18d. The cost, measured
+
+The fast tier already asserts the two things that make the cost a constant — the element count is
+bounded and a refresh reuses its rows — but neither of those is a millisecond.
+`WorkTabCostTests.TheWorkTabCostsLittleEnoughToLeaveOpen` is the millisecond: the real panel over a
+real session, shut and then open, each sampled over 180 frames after 120 of settling.
+
+It is held to **a quarter of the dev budget** — ADR 0003's 3.5 ms laptop figure over the headroom
+factor of 3, then a quarter of that because this is one panel and not the interface — and it
+asserts three things: the frame cost over the closed baseline, that the built tree is under two
+thousand elements, and that the collector does not run at all while the panel sits open and steady.
+
+**The baseline is logged and is meant to be read first.** A failure caused by another Unity batch
+run on the same machine shows up as a baseline that has moved rather than as a regression in this
+panel, which has already happened once to `HudStressTests` (`docs/lessons.md`).
+
+**First reading, 2026-09-20, on a quiet machine:**
+
+```
+[Work] open costs 0.031 ms over a 0.867 ms baseline, against a 0.292 ms budget
+       609 elements, 0 gen-0 collections, 180 frames
+```
+
+**0.031 ms against a 0.292 ms budget** is about nine times under, and 609 elements against the
+bound of 2,000 — the estimate in §16c was 1,017 for a *full* page, and a colony of three fills
+three rows of the twelve, so the panel builds what it shows there too. Nothing collected over three
+seconds of it sitting open.
+
+The bytes-per-frame figure the test logs is **not** a clean differential — it is the whole process's
+heap, not the panel's — so the assertion is on the collection count, which is the stronger signal
+and the one `HudStressTests` leans on for the same reason.
