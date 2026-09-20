@@ -269,6 +269,166 @@ her own bed or the nearest spare depends on which of the two the colony list hol
 `GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse` hold it, the second in the
 colony's own shape: three colonists, five starting beds, each claimed on the first night.
 
+## 7b. The body was measured against the floor (2026-09-20)
+
+**Third report, and the first two fixes were both right.**
+
+> *"Fix the bug where the colonists seem to sleep off the bed — it should know to always put the
+> head onto the first tile and then the rest of the body goes on the 2nd tile — it looks like the
+> colonists are resting in the centre and hanging off the bed and sometimes even off the bed. It
+> needs to be aware of the position and where to lie — this happens sometimes but often enough so
+> there is a miscalculation here."*
+
+### The simulation was clean, so the drawing was not
+
+Start where §7a ended. That fix made every cell in the sleep chooser's list a cell with a bed in
+it, and the measurement it was proved by was a sim-side one. So the sim was measured again first,
+on the branch the owner is playing: three colonists, three player-built beds, three days, four
+seeds.
+
+| | on a bed's head cell | on its foot cell | off a bed |
+|---|---|---|---|
+| seed 20260917 | 52,439 / 52,331 / 53,145 | 0 | **0** |
+| seed 20260918 | 52,992 / 53,840 / 54,202 | 0 | **0** |
+| seed 20260919 | 53,828 / 53,453 / 52,869 | 0 | **0** |
+| seed 20260920 | 52,482 / 51,808 / 54,166 | 0 | **0** |
+
+Every sleeping tick on the head cell of a real bed. The colonist the owner photographed hanging
+off a bed **was in that bed**, exactly as she was in §7a's first round — and, as then, the fault
+was in what was drawn rather than in what was simulated. This time, though, it was not that the
+pose was missing. It was that the pose was being handed a body of the wrong size.
+
+### `StandingHipHeight` measures the floor
+
+`SleepPose.BodyLength` was `standingHipHeight * 1.9`: a person's hip is a little over half their
+height, so the reciprocal turns the one length the director knows about a character into the
+length of body it has to lay down. The length the director knows is set once at bind:
+
+```
+figure.StandingHipHeight = Mathf.Max(0.2f, figure.Hips.position.y - figure.Transform.position.y);
+```
+
+and `figure.Hips` is `animator.GetBoneTransform(HumanBodyBones.Hips)`. **On the Synty humanoid
+avatar that bone is called `Root` and it sits at the model origin.** The real pelvis is its child.
+Measured, with the graph played and evaluated exactly as `PawnFigureDirector.Create` does it
+(`scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run`):
+
+| | drawn metres above the figure's root |
+|---|---|
+| `Root` — what the avatar calls Hips | **−0.010** |
+| `Hips` — its child, the real pelvis | 1.211 |
+| `UpperLeg_L` | 1.164 |
+| `Head` | 2.181 |
+| crown of the drawn body | **2.488** |
+
+So the subtraction is nought on every one of the sixty-one characters, the clamp is the whole of
+the answer, and every colonist in the game reports a hip height of exactly 0.2 m. The body length
+that came out of it was **0.38 m** for a colonist who is **2.49 m** tall — a sixth of her.
+
+### What that draws
+
+The placement is right and was never in doubt: the head goes on the pillow, the root is the feet,
+and the body extends one body-length behind the root. Give it a 0.38 m body and the root lands
+0.38 m past the pillow — and the 2.49 m figure attached to that root reaches 2.1 m the other way.
+Measured, along the bed's facing from the head cell's centre, with the two cells at [−1.25, 1.25]
+and [1.25, 3.75] and the frame at [−1.05, 3.55]:
+
+| | body, along the bed |
+|---|---|
+| before | **[−2.57, 0.29]** — 1.5 m of colonist past the head end, on the floor |
+| after | [−0.30, 2.19] — head on the pillow, feet a fifth of the way into the foot cell |
+
+Which is the report. Half of her — 1.3 m of the 2.9 m she spans — is past the head of the bed and
+over the floor; what is left on the bed sits around the middle of the first tile, which is
+"resting in the centre and hanging off the bed"; and the second tile is empty. The lift was wrong
+by the same factor — half a torso's thickness came out as 32 mm rather than 0.21 m — so what was
+still over the mattress was inside it.
+
+### Why two rounds of fixes and a test did not catch it
+
+`SleepPoseTests.ASleeperLiesWithinTheBedsOwnTwoCells` was written in §7a's round for exactly this
+question, and it passed. It walked a range of plausible **hip heights** — 0.70 m to 1.30 m — and
+checked the body each one implies. Every one of them fitted. The number the director actually
+passed was 0.2 m, which no range starting at 0.70 m can reach.
+
+That is the pattern, and it is one of the four in `docs/bug-patterns.md`: **a test that fixes the
+input instead of asking where the input comes from.** The fixture's `const float Hip = 0.95f` is a
+perfectly reasonable hip for a person, and it was never the number the game used. So the test now
+walks the **body length** — the quantity the placement is a function of — from 1.5 m to 3.2 m, and
+`FigureBuildTests` measures a real rig and asserts the measurement looks like a person.
+
+### The fix
+
+**A body's length is its own drawn height, and it is measured rather than derived.** `FigureBuild`
+bakes the posed mesh and takes the sole and the crown — the idiom `MeasureSole` already uses, and
+for the same reason: a bone's meaning is a decision made by whoever rigged the character and cannot
+be assumed, while where the drawn vertices are is what the player is looking at. There is no ratio
+left between the measurement and the thing measured, because every ratio here has been wrong once.
+
+Three details the change needed.
+
+- **The bounds are not the mesh.** `SkinnedMeshRenderer.bounds` is the loose precomputed volume:
+  on this cast it runs −0.296 m to 2.618 m on a body that is 0.000 m to 2.488 m. A third of a metre
+  of slack at each end is far too much for a body that has to fit a bed, and it is the same error
+  that once measured a boot sole at 0.394 m.
+- **`BakeMesh(useScale: true)` applies the renderer's own local scale, not the figure's.** The 1.4
+  lives on the root above it, so the full local-to-world is still needed afterwards. Measured, the
+  three combinations give 2.488 m, 3.483 m and 1.777 m for one figure, and all three look like
+  heights.
+- **A length that is not one falls back on a colonist.** `SleepPose.BodyLength` refuses anything
+  outside 0.5 m to 5 m. The failure this section is about was silent precisely because 0.38 m is a
+  number and every line downstream went on working; the worst a broken rig can now do is draw one
+  character the wrong size.
+
+### And the arms, which the same measurement exposed
+
+Once the body was the right size and resting on the mattress, the probe could see the limbs — and
+**both supine postures were wrong, in opposite directions.** A positive pitch swings a supine
+sleeper's arm *downward*, through the bedding; a negative one raises it. The first cut had it the
+other way about, and nobody could tell while the whole colonist was hanging off the end of the bed.
+
+Swept through the arm's whole arc, with the body's own top 0.66 m above the mattress, so anything
+above that is a limb in the air and anything below nought is a limb through the bed:
+
+| arm | elbow | lowest drawn point vs the mattress | highest | reaches past the crown |
+|---|---|---|---|---|
+| **+118 (was "arms up")** | +58 | **−0.54** | 0.66 | 0.22 m |
+| **−62 (was "back")** | +14 | 0.01 | **≈1.25** | — |
+| −150 | −15 | 0.01 | 0.66 | 0.42 m |
+| −10 | +15 | 0.01 | 0.66 | — |
+
+So *"back"* held both arms 0.55 m in the air above a colonist lying flat, and *"back, arms up"*
+drove both forearms half a metre through the mattress and out past the head of the bed. They are
+−10°/+15° and −150°/−15° now: arms level with the body and touching the mattress, and arms stretched
+flat above the head ending 0.42 m past the crown and still 0.34 m inside the frame.
+
+**The two side postures were measured in the same pass and were already right** — their limbs sit
+0.07 m to 0.10 m above the body's own top and nothing dips below the mattress — so they are
+untouched. Which is the useful half of the result: the fault was in the two postures that share a
+roll of zero, not in the pitching.
+
+### What was deliberately not changed
+
+`StandingHipHeight` still measures the floor, and it is left doing so. The only thing that still
+reads it is the gesture crouch — `ApplyGesturePose` draws `min(depth, DeepestCrouch) *
+StandingHipHeight` — and that is tuned against what it actually returns, by photograph, with the
+stoop and the lift signed off by the owner (§CL, `24-carrying.md`). Correcting the measurement
+without retuning those deepens every crouch six-fold, which is a visual change nobody asked for,
+and the retune is a contact sheet rather than a test. So the field keeps its name, gains a comment
+saying plainly what it is, and nothing derives a length from it again.
+
+### Still open, measured and not fixed
+
+**A sleeper lies flat; the bed it lies on is sheared.** Everything fixed to the grid is draped —
+`BedShape.Root` is `GroundRelief.Drape(...)`, which tilts the bed's 4.6 m along the ground's
+tangent plane — while `AimSleep` samples one height at the bed's origin and lays the body level on
+it. At the relief's steepest (amplitude 2.0 m, period 150 m, so 0.136 rise per metre) that is
+0.21 m of disagreement at the pillow and 0.09 m the other way at the feet: a body sunk into the
+mattress at one end and floating above it at the other, varying with where on the board the bed
+stands and which way it faces. It is second-order beside a body six times too short and it is a
+change to how a sleeper is drawn, so it is recorded here with its numbers and left for the owner
+to judge against the screenshot they now have.
+
 ## 8. The pane and the popover
 
 `CellDetail` widens by two sparse fields, the same shape as its neighbours (ADR 0004 amendment

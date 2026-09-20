@@ -7777,3 +7777,95 @@ being a *real* bed still holds for the scenario that has some.
 
 Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 
+## 2026-09-20 — The sleeper was measured against the floor
+
+Third report of the same symptom, and the first two fixes were both right.
+
+> *"Fix the bug where the colonists seem to sleep off the bed — it should know to always put the
+> head onto the first tile and then the rest of the body goes on the 2nd tile — it looks like the
+> colonists are resting in the centre and hanging off the bed and sometimes even off the bed. It
+> needs to be aware of the position and where to lie — this happens sometimes but often enough so
+> there is a miscalculation here."*
+
+**The sim was measured before anything was read**, because §7a's round had ended in the simulation
+and reading the code has been wrong every time on this project. Three colonists, three
+player-built beds, three days, four seeds: **every sleeping tick on the head cell of a real bed,
+none off one, none even on a foot cell.** So the colonist the owner was looking at was in her bed,
+the pose was being placed from that bed, and the fault was in the arithmetic that placed it — which
+had already been read and pronounced correct twice, once by the session that wrote it and once by
+the session that fixed §7a.
+
+It was correct. It was being handed a body **0.38 m long for a colonist 2.49 m tall**.
+
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9` — a person's hip is a little over half their
+height, so the reciprocal turns the one length the director knows about a character into the length
+of body it has to lay down. And `StandingHipHeight` is
+`animator.GetBoneTransform(HumanBodyBones.Hips).position.y - transform.position.y`, where **the
+Synty humanoid avatar maps `Hips` to a bone literally named `Root` that sits at the model origin**,
+with the real pelvis as its child. Measured, with the graph played and evaluated exactly as
+`PawnFigureDirector.Create` does it:
+
+| | metres above the figure's root |
+|---|---|
+| `Root`, which the avatar calls Hips | −0.010 |
+| `Hips`, its child | 1.211 |
+| `UpperLeg_L` | 1.164 |
+| `Head` | 2.181 |
+| the crown of the drawn body | 2.488 |
+
+Nought, on every one of the sixty-one characters, and a `Mathf.Max(0.2f, …)` turned that into
+twenty centimetres. The root of a lying figure is its feet, so the feet went 0.38 m past the pillow
+and the remaining 2.1 m of colonist extended the other way: measured along the bed, body
+**[−2.57, 0.29]** against a frame of [−1.05, 3.55]. Half of her was past the head of the bed and
+over the floor, what was left on the bed sat around the middle of the first tile, and the second
+tile was empty — which is "resting in the centre and hanging off the bed", and the same words the
+owner had used a day earlier about "trying to rest them in the first tile".
+
+**The lift was wrong by the same factor.** Half a torso's thickness came out as 32 mm, so whatever
+was still over the bed was inside it.
+
+**The test written for exactly this question passed.** `ASleeperLiesWithinTheBedsOwnTwoCells` came
+out of §7a and walked a range of plausible *hip heights*, 0.70 m to 1.30 m, checking the body each
+one implies. Every one fitted. The value the game passed was 0.2 m, which no range starting at
+0.70 m can reach — and the fixture's `const float Hip = 0.95f` is a perfectly reasonable hip for a
+person and was never the number the game used. That is now `P10` in `docs/bug-patterns.md`: **a
+measurement that never measured anything, clamped into plausibility.** Nothing threw, nothing
+logged, no test failed, and the symptom surfaced a long way downstream in the shape of a
+*placement* bug — which is where two rounds of investigation went.
+
+**The fix is to measure the body rather than derive it.** `FigureBuild` bakes the posed mesh and
+takes the sole and the crown — the idiom `MeasureSole` already uses, and for its reason: a bone's
+meaning is a decision somebody made in a modelling package and cannot be assumed, while where the
+drawn vertices are is what the player is looking at. There is no ratio left between the measurement
+and the thing measured, because every ratio here has been wrong once. `SleepPose.BodyLength` guards
+anything outside 0.5 m to 5 m, so the worst a strange rig can now do is draw one character the wrong
+size rather than hang the whole colony off the ends of their beds.
+
+Two details cost time and are written down in `FigureBuild`. `SkinnedMeshRenderer.bounds` is the
+loose precomputed volume — on this cast it runs −0.296 m to 2.618 m on a body that is 0.000 m to
+2.488 m — and a third of a metre of slack at each end is far too much for a body that has to fit a
+bed. And `BakeMesh(mesh, useScale: true)` applies the *renderer's own local* scale, which on these
+prefabs is one, because the figure's 1.4 lives on the root above it: the three plausible
+combinations of bake flag and transform give 2.488 m, 3.483 m and 1.777 m for one figure, and all
+three look like heights.
+
+**And the two lift fractions were retuned against the same measurement.** They were 0.16 and 0.24
+of a hip that was meant to be half a person, which is a human being's proportions; these characters
+are stylised and 0.59 m through the chest on a 2.58 m body. At the human figure the body still sank
+0.13 m into the mattress after the length was fixed, so they are 0.135 and 0.152 of the body's own
+length now — measured, as the clearance printed by `SleepProbe` for each of the four postures.
+
+**What was deliberately not changed.** `StandingHipHeight` still measures the floor. The only thing
+left reading it is the gesture crouch, `min(depth, DeepestCrouch) * StandingHipHeight`, and that is
+tuned against what it actually returns, by photograph, with the stoop and the lift signed off by the
+owner. Correcting it without retuning them deepens every crouch six-fold, which is a visual change
+nobody asked for, and the retune is a contact sheet rather than a test. The field keeps its name and
+gains a comment saying plainly what it is.
+
+**Left measured and unfixed**, in `20-beds.md` §7b: a sleeper lies flat and the bed it lies on is
+sheared. Everything fixed to the grid is draped, so `BedShape.Root` tilts the bed's 4.6 m along the
+ground's tangent plane, while `AimSleep` samples one height at the bed's origin. At the relief's
+steepest — amplitude 2.0 m over a 150 m period, 0.136 rise per metre — that is 0.21 m of
+disagreement at the pillow and 0.09 m the other way at the feet, varying with where the bed stands
+and which way it faces. Second-order beside a body six times too short, and a change to how a
+sleeper is drawn, so it waits for the owner to judge it against the screenshot they now have.

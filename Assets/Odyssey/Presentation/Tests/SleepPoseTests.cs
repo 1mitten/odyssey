@@ -19,12 +19,21 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class SleepPoseTests
     {
-        const float Hip = 0.95f;
+        /// <summary>
+        /// A colonist's drawn height, sole to crown, which is what a sleeper is now laid down by.
+        ///
+        /// <para><b>Measured, not chosen</b> — <c>scripts/unity.sh exec
+        /// Odyssey.EditorTools.SleepProbe.Run</c>, 2026-09-20: the body skin of every character in
+        /// the cast runs 0.000 m to 2.488 m at the catalogue's 1.4 scale, with the hair a couple of
+        /// centimetres above that. The fixture used to hold a 0.95 m <c>Hip</c> here, which is a
+        /// perfectly reasonable hip for a person and was never the number the director passed.</para>
+        /// </summary>
+        const float Body = 2.49f;
 
         /// <summary>Laid with its head at the origin, so every assertion reads against a known point.</summary>
         static void Place(int pawnId, Vector3 along, float surfaceY, out Vector3 position, out Quaternion rotation) =>
             SleepPose.Place(
-                SleepPose.PostureFor(pawnId), headAt: Vector3.zero, along, surfaceY, Hip, weight: 1f,
+                SleepPose.PostureFor(pawnId), headAt: Vector3.zero, along, surfaceY, Body, weight: 1f,
                 standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
                 out position, out rotation);
 
@@ -46,11 +55,11 @@ namespace Odyssey.Tests.Presentation
             Place(1, Vector3.forward, 0.7f, out Vector3 position, out Quaternion rotation);
 
             // The root is the feet, and the body extends behind it once laid back.
-            Vector3 head = position + rotation * Vector3.up * SleepPose.BodyLength(Hip);
+            Vector3 head = position + rotation * Vector3.up * SleepPose.BodyLength(Body);
 
             Assert.That(head.x, Is.EqualTo(0f).Within(0.01f), "the head is where it was placed");
             Assert.That(head.z, Is.EqualTo(0f).Within(0.01f));
-            Assert.That(position.z, Is.EqualTo(SleepPose.BodyLength(Hip)).Within(0.01f),
+            Assert.That(position.z, Is.EqualTo(SleepPose.BodyLength(Body)).Within(0.01f),
                 "and the feet are one body-length along from it");
             Assert.That(head.y, Is.EqualTo(position.y).Within(0.05f),
                 "a sleeper is level: the head is not propped up or buried");
@@ -69,15 +78,22 @@ namespace Odyssey.Tests.Presentation
             Assume.That(back.Roll, Is.EqualTo(0f), "the first posture is the flat one");
             Assume.That(Mathf.Abs(side.Roll), Is.GreaterThan(45f), "the third is on its side");
 
-            Assert.That(SleepPose.Lift(side, Hip), Is.GreaterThan(SleepPose.Lift(back, Hip)),
+            Assert.That(SleepPose.Lift(side, Body), Is.GreaterThan(SleepPose.Lift(back, Body)),
                 "a body on its side needs more clearance than one on its back");
-            Assert.That(SleepPose.Lift(back, Hip),
-                Is.EqualTo(Hip * SleepPose.ThicknessPerHip).Within(0.001f),
+            Assert.That(SleepPose.Lift(back, Body),
+                Is.EqualTo(Body * SleepPose.ThicknessPerBody).Within(0.001f),
                 "and one on its back needs exactly half its thickness");
 
             foreach (SleepPose.Posture posture in SleepPose.Postures)
-                Assert.That(SleepPose.Lift(posture, Hip), Is.GreaterThan(0f),
+                Assert.That(SleepPose.Lift(posture, Body), Is.GreaterThan(0f),
                     $"{posture.Name} would lie inside whatever it is on");
+
+            // And enough of it to matter. The old lift was a fraction of a 0.2 m clamp - 32 mm on
+            // a colonist whose torso is a fifth of a metre thick - so the whole body lay inside
+            // the bedding. A tenth of a metre is well under anything anybody would tune to and
+            // well over what a collapsed measurement can produce.
+            Assert.That(SleepPose.Lift(back, Body), Is.GreaterThan(0.1f),
+                "a sleeper this flat is inside the mattress rather than on it");
         }
 
         /// <summary>The body lies along the bed, not across it — so a turned bed turns its sleeper.</summary>
@@ -104,7 +120,7 @@ namespace Odyssey.Tests.Presentation
             Place(1, Vector3.forward, 0f, out Vector3 onFloor, out _);
 
             Assert.That(onBed.y, Is.GreaterThan(0.7f), "above the mattress, not in it");
-            Assert.That(onBed.y - 0.7f, Is.LessThan(Hip * 0.5f), "and lying on it, not floating");
+            Assert.That(onBed.y - 0.7f, Is.LessThan(Body * 0.25f), "and lying on it, not floating");
             Assert.That(onBed.y - onFloor.y, Is.EqualTo(0.7f).Within(0.001f),
                 "the two differ by exactly the height of the bed");
         }
@@ -122,10 +138,22 @@ namespace Odyssey.Tests.Presentation
         /// measurement that had been written down would have said so in a second instead of an
         /// hour, which is the whole argument for this test.</para>
         ///
+        /// <para><b>And it failed for a second time, the same day it was written</b> (owner,
+        /// 2026-09-20: <i>"colonists are resting in the centre and hanging off the bed and
+        /// sometimes even off the bed"</i>). The test above was not wrong; it was asked the wrong
+        /// question. It took a range of plausible <i>hip heights</i> and checked the body each one
+        /// implies, and every one of them fitted — while the number the director actually passed
+        /// was 0.2 m, the floor of a clamp on a measurement that returns nought on every rig in
+        /// the cast. A range that starts at a hip of 0.70 m can never reach it. So this walks the
+        /// <b>body length</b> instead, which is the quantity the placement is a function of, and
+        /// it walks it from a length far too short to a length far too long — because the fault
+        /// both times was a body of the wrong size, and a bound on only one side would have caught
+        /// only one of them. <c>docs/design/20-beds.md</c> §7b.</para>
+        ///
         /// <para><b>Over a range of builds, not one.</b> Sixty-one characters have sixty-one sets
-        /// of proportions and the director scales them besides, so the question is not whether one
-        /// hip height fits but at what point one stops fitting. Up to 1.30 m of hip — a 2.47 m
-        /// body, well past anything in the packs — the feet are still on the bed.</para>
+        /// of proportions and the director scales them besides. The cast measures 2.49 m
+        /// (<see cref="Body"/>); from 1.5 m to 3.2 m — well either side of anything in the packs —
+        /// the sleeper stays on the bed.</para>
         /// </summary>
         [Test]
         public void ASleeperLiesWithinTheBedsOwnTwoCells()
@@ -135,15 +163,46 @@ namespace Odyssey.Tests.Presentation
             float halfSpan = CellMetrics.SizeXZ;
             float head = BedShape.HeadRestAlong;
 
-            foreach (float hip in new[] { 0.70f, 0.85f, Hip, 1.10f, 1.30f })
+            foreach (float body in new[] { 1.5f, 2.0f, Body, 2.8f, 3.2f })
             {
-                float feet = head + SleepPose.BodyLength(hip);
+                float feet = head + SleepPose.BodyLength(body);
 
                 Assert.That(head, Is.GreaterThanOrEqualTo(-halfSpan),
-                    $"at hip {hip:0.00} the head is off the head end of the bed");
+                    $"at a body of {body:0.00} m the head is off the head end of the bed");
                 Assert.That(feet, Is.LessThanOrEqualTo(halfSpan),
-                    $"at hip {hip:0.00} the feet are {feet - halfSpan:0.00} m past the foot end");
+                    $"at a body of {body:0.00} m the feet are {feet - halfSpan:0.00} m past the foot end");
             }
+        }
+
+        /// <summary>
+        /// <b>And a body length that is not one puts the sleeper back on the bed rather than on
+        /// the floor beside it.</b>
+        ///
+        /// <para>The guard is the point. A measurement can collapse — this one did, to the 0.2 m
+        /// floor of its own clamp — and the failure was silent, because 0.38 m is a number and
+        /// every line of arithmetic downstream of it went on working.
+        /// <see cref="SleepPose.BodyLength"/> refuses anything that is plainly not a person and
+        /// lays a colonist at the drawn scale instead, so the worst a broken rig can now do is
+        /// make one character the wrong size rather than hang every colonist in the colony off the
+        /// end of a bed.</para>
+        /// </summary>
+        [Test]
+        public void ABodyLengthThatIsNotOneFallsBackOnAColonist()
+        {
+            float halfSpan = CellMetrics.SizeXZ;
+
+            foreach (float nonsense in new[] { 0f, 0.2f, 0.38f, -1f, 12f, float.NaN })
+            {
+                float length = SleepPose.BodyLength(nonsense);
+
+                Assert.That(length, Is.GreaterThan(1f).And.LessThan(5f),
+                    $"{nonsense} was taken for a body length");
+                Assert.That(BedShape.HeadRestAlong + length, Is.LessThanOrEqualTo(halfSpan),
+                    $"the fallback for {nonsense} still hangs off the foot of the bed");
+            }
+
+            Assert.That(SleepPose.BodyLength(Body), Is.EqualTo(Body).Within(0.001f),
+                "and a real measurement is passed through untouched");
         }
 
         /// <summary>
@@ -157,10 +216,10 @@ namespace Odyssey.Tests.Presentation
             var headAt = new Vector3(0f, 0f, BedShape.HeadRestAlong);
             SleepPose.Place(
                 SleepPose.PostureFor(1), headAt, Vector3.forward, surfaceY: BedShape.MattressTop,
-                Hip, weight: 1f, standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
+                Body, weight: 1f, standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
                 out Vector3 feet, out _);
 
-            Assert.That(feet.z, Is.EqualTo(BedShape.HeadRestAlong + SleepPose.BodyLength(Hip)).Within(0.001f));
+            Assert.That(feet.z, Is.EqualTo(BedShape.HeadRestAlong + SleepPose.BodyLength(Body)).Within(0.001f));
             Assert.That(feet.z, Is.LessThanOrEqualTo(CellMetrics.SizeXZ),
                 "the feet are off the end of the bed");
         }
@@ -204,6 +263,41 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// <b>No supine posture pitches an arm downward.</b>
+        ///
+        /// <para>A pitch here is taken about the figure's own lateral axis, so on a sleeper lying
+        /// on its back a <i>positive</i> arm angle swings the arm down, through the mattress, and a
+        /// negative one raises it. The first cut of the table had it the other way about: "back,
+        /// arms up" was authored at +118° with a +58° elbow and drove both forearms 0.54 m through
+        /// the bedding and out past the head of the bed, on a quarter of the colony, for two days.
+        /// Nobody could see it while the whole colonist was still hanging off the end of the
+        /// bed.</para>
+        ///
+        /// <para><b>This is a guard against the sign, not a check of the pose.</b> Whether a
+        /// posture reads as somebody asleep is a look and belongs to the owner and to
+        /// <c>scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run</c>, which prints every
+        /// posture's clearance against a real rig. What a test can hold is the direction: measured
+        /// across the whole arc, a supine arm is clear of the bedding from about −170° up to
+        /// about +10° and through it beyond that, so anything authored past +10° is the sign
+        /// mistake coming back. Rolled postures are exempt because a body on its side presents a
+        /// different plane and both of ours were measured in the same pass and were already
+        /// right.</para>
+        /// </summary>
+        [Test]
+        public void NoSupinePostureSwingsAnArmIntoTheBedding()
+        {
+            foreach (SleepPose.Posture posture in SleepPose.Postures)
+            {
+                if (Mathf.Abs(posture.Roll) > 20f) continue; // on its side; a different plane
+
+                Assert.That(posture.RightArm, Is.LessThanOrEqualTo(10f),
+                    $"{posture.Name} pitches its right arm down through the mattress");
+                Assert.That(posture.LeftArm, Is.LessThanOrEqualTo(10f),
+                    $"{posture.Name} pitches its left arm down through the mattress");
+            }
+        }
+
+        /// <summary>
         /// Weight zero is the standing pose untouched, so a colonist who is not asleep is not
         /// nudged by any of this — and the ease has somewhere honest to start from.
         /// </summary>
@@ -215,7 +309,7 @@ namespace Odyssey.Tests.Presentation
 
             SleepPose.Place(
                 SleepPose.PostureFor(1), headAt: Vector3.zero, along: Vector3.forward, surfaceY: 0f,
-                standingHipHeight: Hip, weight: 0f,
+                bodyLength: Body, weight: 0f,
                 standing, upright, out Vector3 position, out Quaternion rotation);
 
             Assert.That(position, Is.EqualTo(standing));

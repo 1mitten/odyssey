@@ -181,9 +181,79 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 
 ---
 
+### P10 — A measurement that never measured anything, clamped into plausibility
+
+Every length in the figure director is deliberately *measured* off the rig rather than written down,
+because sixty-one characters have sixty-one sets of proportions and a number of metres is right on
+one of them. That is the correct instinct and it moves the risk rather than removing it: the whole
+of the arithmetic downstream now rests on one reading, and **a reading can be of the wrong thing
+while still being a number.**
+
+`figure.StandingHipHeight` read `animator.GetBoneTransform(HumanBodyBones.Hips)`, which on this
+cast's avatar is a bone named `Root` standing on the floor. The difference it computed was nought.
+A `Mathf.Max(0.2f, …)` then turned "nothing" into "twenty centimetres", and everything that
+consumed it went on working perfectly on a colonist a sixth of her real size.
+
+**The tell is that the bad value is in range.** Nothing throws, nothing logs, no test fails, and the
+symptom appears a long way downstream in a shape that looks like a different bug — here, a body
+drawn in the wrong *place*, which sent two rounds of investigation into the placement arithmetic and
+into the simulation, both of which were right.
+
+**Ask what the measurement returns when it measures nothing**, and make that answer loud rather than
+plausible. A clamp, a `?? default`, a `Mathf.Max` floor and a zero-initialised field are all the
+same trap: they are there so that a missing rig does not crash, and they double as a disguise for a
+rig that is present and being read wrongly. Where the fallback has to exist, it should be a value a
+test can recognise as the fallback — and a test should assert that the real thing is not it.
+
+**And prefer the thing the player sees to the thing the rigger named.** A bone's meaning is a
+decision somebody made in a modelling package and cannot be assumed; where the drawn vertices are is
+not. `MeasureSole` already knew this — it bakes the posed mesh rather than believing the root is the
+sole — and the fix was to ask the same question the same way.
+
+---
+
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — A colonist was laid down a sixth of her own length (P5, P10)
+
+Owner, third report on the same symptom: *"colonists are resting in the centre and hanging off the
+bed and sometimes even off the bed … it should know to always put the head onto the first tile and
+then the rest of the body goes on the 2nd tile."*
+
+The simulation was measured first, because the two previous rounds had both ended in the sim: three
+colonists, three player-built beds, three days, four seeds — **every sleeping tick on the head cell
+of a real bed, none off one**. So the sleeper was in the bed and the drawing was wrong, and the
+drawing is `SleepPose.Place`, whose arithmetic had been read and pronounced correct twice.
+
+It was correct. It was being handed a body 0.38 m long for a colonist 2.49 m tall.
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9`, and `StandingHipHeight` is
+`hips.position.y - transform.position.y` where `hips` is
+`animator.GetBoneTransform(HumanBodyBones.Hips)` — **which on the Synty humanoid avatar is a bone
+literally named `Root`, sitting at the model origin, with the real pelvis as its child.** Nought on
+every one of the sixty-one characters, so the `Mathf.Max(0.2f, …)` clamp was the whole of the
+answer. The root of the lying figure went 0.38 m past the pillow and the rest of her — 2.1 m —
+extended the other way, off the head end of the bed and on to the floor. Measured along the bed:
+body `[−2.57, 0.29]` against a frame of `[−1.05, 3.55]`.
+
+**The shape: a measurement that returns a plausible number for a question it never answered.**
+Nothing downstream could tell, because 0.38 m is a length and every line that consumed it worked
+perfectly. The clamp made it worse by turning "I measured nothing" into "20 cm".
+
+**Why the test written for exactly this missed it.** `ASleeperLiesWithinTheBedsOwnTwoCells` was
+added in the previous round to assert that a sleeper fits the bed, and it passed. It walked a range
+of plausible **hip heights** — 0.70 m to 1.30 m — and checked the body each implies. The value the
+game passed was 0.2 m, which no range starting at 0.70 m can reach. A fixture constant that is a
+reasonable value for a quantity is not evidence that the quantity is reasonable.
+
+**Stopped by** measuring the body instead of deriving it: `FigureBuild.Height` bakes the posed mesh
+and takes the sole and the crown, the idiom `MeasureSole` already uses. `SleepPose.BodyLength`
+guards anything outside 0.5 m to 5 m. The span test now walks the body length rather than a hip,
+from far too short to far too long, and `FigureBuildTests` instantiates a real rig and asserts the
+measurement looks like a person and that the avatar's `Hips` bone is nothing like a body length.
+`scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run` prints the whole of it.
+`docs/design/20-beds.md` §7b.
 
 ### 2026-09-20 — Woken for a bed, and sent to work instead
 

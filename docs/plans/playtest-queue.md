@@ -21,6 +21,20 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **A sleeping colonist is now the size she is drawn** (`worktree-bed-sleep-pose`,
+  `docs/design/20-beds.md` §7b). She was being laid down 0.38 m long — the figure director's
+  "hip height" is the 0.2 m floor of a clamp on a bone that stands on the floor — so she reached
+  1.5 m past the head of the bed and lay inside the mattress. She is 2.49 m now, head on the pillow
+  in the first tile, feet 2.28 m along into the second, resting on the bedding rather than in it.
+  Two things want an eye rather than a test. **The two supine postures had their arm angles the
+  wrong way round**, so a quarter of the colony slept with its arms a half-metre in the air and
+  another quarter with both forearms through the mattress; both are measured flat now, one at the
+  sides and one stretched above the head, and whether the second reads as *asleep* or as
+  *surrendering* is a look. And **a sleeper lies level while the bed under her is draped**, which on
+  a slope disagrees by up to 0.21 m at the pillow — measured, left alone, and the numbers are in
+  §7b, because fixing it changes how every sleeper is drawn and it should be judged against a
+  picture of the one that is now right.
+
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
   its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm

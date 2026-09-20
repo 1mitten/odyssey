@@ -53,30 +53,33 @@ namespace Odyssey.Presentation.World
         public static float PitchDegrees { get; set; } = 90f;
 
         /// <summary>
-        /// Total height as a multiple of the standing hip height, which is what the rig measures.
-        ///
-        /// <para>A person's hip is a little over half their height, so this is the reciprocal of
-        /// that rather than a guess at anybody's build: it turns the one length the director
-        /// already knows about a character into the length of body it has to lay down.</para>
-        /// </summary>
-        public static float HeightPerHip { get; set; } = 1.9f;
-
-        /// <summary>
-        /// Half a torso's thickness, front to back, as a fraction of the hip height. What a
+        /// Half a torso's thickness, front to back, as a fraction of the body's own length. What a
         /// sleeper on its back floats above the surface.
+        ///
+        /// <para><b>Measured off the cast rather than off a person.</b> The figure lying on its
+        /// back is 0.59 m through the chest on a body 2.58 m long, so half of it is 0.135 of the
+        /// length — these characters are stylised and stockier than the human proportion the first
+        /// numbers came from. Laid at the human figure the body sank 0.13 m into the mattress, and
+        /// "sunk" is a word the owner has already used about this pose once
+        /// (<c>docs/design/20-beds.md</c> §7b). <c>scripts/unity.sh exec
+        /// Odyssey.EditorTools.SleepProbe.Run</c> prints the clearance for every posture.</para>
         /// </summary>
-        public static float ThicknessPerHip { get; set; } = 0.16f;
+        public static float ThicknessPerBody { get; set; } = 0.135f;
 
         /// <summary>
-        /// Half a torso's width, shoulder to shoulder, as a fraction of the hip height.
+        /// Half a torso's width, shoulder to shoulder, as a fraction of the body's own length.
         ///
         /// <para><b>This is what stops a side sleeper sinking.</b> Rolled on to its side a body
         /// presents its width to the mattress rather than its thickness, and the width is half as
         /// much again — so a lift computed from thickness alone buried the shoulder and the hip in
         /// the bed (owner, 2026-09-18: "sunk"). <see cref="Lift"/> takes whichever the roll
         /// actually presents.</para>
+        ///
+        /// <para>Measured the same way and for the same reason as its neighbour: 0.152 of the
+        /// body's length is what puts the drawn shoulder, hip and drawn-up knee of both side
+        /// postures on the mattress rather than through it.</para>
         /// </summary>
-        public static float ShoulderPerHip { get; set; } = 0.24f;
+        public static float ShoulderPerBody { get; set; } = 0.152f;
 
         /// <summary>
         /// How far the body's middle floats above what it lies on, for a posture at a given roll.
@@ -85,13 +88,20 @@ namespace Odyssey.Presentation.World
         /// roll: flat on the back it is the thickness, full on the side it is the width, and
         /// between the two it is what the rotation gives. There is no fudge in it, which is why it
         /// is right for a posture nobody has drawn yet.</para>
+        ///
+        /// <para><b>A fraction of the body's length, not of a hip.</b> The two fractions used to
+        /// be 0.16 and 0.24 of a hip height that was supposed to be a little over half the figure,
+        /// and the hip the director handed over was the 0.2 m floor of a clamp — so the lift came
+        /// out at 32 mm and the colonist lay inside the bedding. These are taken of the body's own
+        /// measured length, and their values are measured too: what actually puts the drawn mesh
+        /// on the mattress rather than what a human being's proportions would suggest.</para>
         /// </summary>
-        public static float Lift(in Posture posture, float standingHipHeight)
+        public static float Lift(in Posture posture, float bodyLength)
         {
-            float hip = standingHipHeight > 0.01f ? standingHipHeight : 0.95f;
+            float body = BodyLength(bodyLength);
             float roll = posture.Roll * Mathf.Deg2Rad;
-            return hip * (ThicknessPerHip * Mathf.Abs(Mathf.Cos(roll))
-                          + ShoulderPerHip * Mathf.Abs(Mathf.Sin(roll)));
+            return body * (ThicknessPerBody * Mathf.Abs(Mathf.Cos(roll))
+                           + ShoulderPerBody * Mathf.Abs(Mathf.Sin(roll)));
         }
 
         /// <summary>How long the figure takes to lie down or get up, in seconds.</summary>
@@ -144,15 +154,38 @@ namespace Odyssey.Presentation.World
         /// <summary>
         /// The four. Two on the back and two on the side, the sides mirrored so a room of sleepers
         /// does not all face the same wall.
+        ///
+        /// <para><b>The two supine arm angles were measured on 2026-09-20 and both were wrong, in
+        /// opposite directions.</b> A positive pitch here swings a supine sleeper's arm
+        /// <i>downward</i>, through the bedding, and a negative one raises it; the first cut had it
+        /// the other way about. Measured against the drawn mesh, with the body's own top 0.66 m
+        /// above the mattress, sweeping the arm through its whole arc
+        /// (<c>scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run</c>):</para>
+        ///
+        /// <list type="bullet">
+        /// <item><description><b>"back"</b> was <c>-62°</c>, which held both arms 0.55 m in the air
+        /// above a colonist lying flat on her back. It is <c>-10°</c>, in the band −170° to +10°
+        /// where the arms lie level with the body and touch the mattress.</description></item>
+        /// <item><description><b>"back, arms up"</b> was <c>+118°</c> with a <c>+58°</c> elbow, which
+        /// drove both forearms 0.54 m <i>through</i> the mattress and out past the head of the bed.
+        /// It is <c>-150°</c> with a <c>-15°</c> elbow: arms stretched above the head, flat, ending
+        /// 0.42 m past the crown and still 0.34 m inside the bed's own frame.</description></item>
+        /// </list>
+        ///
+        /// <para>The two side postures were measured in the same pass and were already right — their
+        /// limbs sit 0.07 m to 0.10 m above the body's own top and nothing dips below the
+        /// mattress — so they are untouched. <c>docs/design/20-beds.md</c> §7b.</para>
         /// </summary>
         public static readonly Posture[] Postures =
         {
             // On the back, arms down. The plainest, and the one a player will read first.
-            new Posture("back", 0f, -62f, -62f, 14f, 14f, -10f, 6f),
+            new Posture("back", 0f, -10f, -10f, 15f, 15f, -10f, 6f),
 
-            // On the back with the arms up behind the head — the sheet's first figure. The elbows
-            // carry most of it: arms raised with straight elbows reads as a fall, not a sprawl.
-            new Posture("back, arms up", 0f, 118f, 118f, 58f, 58f, -8f, 10f),
+            // On the back with the arms up behind the head — the sheet's first figure. The elbow
+            // opens the forearm back down on to the bedding, so the hands rest above the crown
+            // rather than standing off it; measured, that is where the reach past the head comes
+            // from and where the clearance stays at a centimetre rather than going negative.
+            new Posture("back, arms up", 0f, -150f, -150f, -15f, -15f, -8f, 10f),
 
             // On one side, knees drawn up. The knee bend is what says foetal rather than felled.
             new Posture("side, curled", 74f, -40f, -74f, 46f, 22f, 26f, 46f),
@@ -197,9 +230,29 @@ namespace Odyssey.Presentation.World
             return Mathf.MoveTowards(current, target, step);
         }
 
-        /// <summary>The length of body to lay down, given the rig's standing hip height.</summary>
-        public static float BodyLength(float standingHipHeight) =>
-            standingHipHeight > 0.01f ? standingHipHeight * HeightPerHip : 1.8f;
+        /// <summary>
+        /// The length of body to lay down: the figure's own drawn height, because a body lying
+        /// down is exactly as long as it is tall standing up.
+        ///
+        /// <para><b>There is no ratio here any more, and that is the fix.</b> It used to be
+        /// <c>standingHipHeight * 1.9</c> — a hip is a little over half a person, so the
+        /// reciprocal turns one into the other — and the hip the director handed it was
+        /// <c>hips.position.y - transform.position.y</c> on a rig whose humanoid <c>Hips</c> is a
+        /// bone named <c>Root</c> sitting at the model origin. Nought, on every one of the
+        /// sixty-one, clamped up to 0.2 m, so a 2.49 m colonist was laid down 0.38 m long: her
+        /// feet went on the pillow and the remaining 2.1 m of her hung off the head end of the
+        /// bed and on to the floor. That is what the owner reported twice
+        /// (<c>docs/design/20-beds.md</c> §7b), and it survived the first fix because the
+        /// arithmetic that was read and pronounced correct was correct — it was being fed a
+        /// number that was not a length.</para>
+        ///
+        /// <para>So the caller measures the body and hands it over, <see cref="FigureBuild"/> does
+        /// the measuring off the posed mesh, and the only thing left here is the guard: a length
+        /// that is plainly not one falls back on a colonist at the drawn scale rather than laying
+        /// somebody out along three cells of bed.</para>
+        /// </summary>
+        public static float BodyLength(float measured) =>
+            measured >= 0.5f && measured <= 5f ? measured : 2.5f;
 
         /// <summary>
         /// Where the figure's root goes and which way it points, to lie along
@@ -221,7 +274,7 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static void Place(
             in Posture posture, Vector3 headAt, Vector3 along, float surfaceY,
-            float standingHipHeight, float weight,
+            float bodyLength, float weight,
             Vector3 standingPosition, Quaternion standingRotation,
             out Vector3 position, out Quaternion rotation)
         {
@@ -232,8 +285,8 @@ namespace Odyssey.Presentation.World
             if (flat.sqrMagnitude < 1e-6f) flat = Vector3.forward;
             flat.Normalize();
 
-            float length = BodyLength(standingHipHeight);
-            float lift = Lift(posture, standingHipHeight);
+            float length = BodyLength(bodyLength);
+            float lift = Lift(posture, bodyLength);
 
             var feet = new Vector3(
                 headAt.x + flat.x * length,

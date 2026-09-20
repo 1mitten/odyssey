@@ -868,6 +868,17 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float MeasuredSoleOffset { get; private set; }
 
+        /// <summary>
+        /// The drawn height of the tallest figure built so far, in metres.
+        ///
+        /// <para>Printed by the contact sheets beside the sole, and for a sharper reason than
+        /// curiosity: this is the number whose collapse put a sleeping colonist two and a half
+        /// metres off the end of her bed. A figure at <see cref="FigureBuild.FallbackHeight"/>
+        /// exactly is one whose mesh could not be measured — worth looking at rather than
+        /// trusting.</para>
+        /// </summary>
+        public float MeasuredStandingHeight { get; private set; }
+
 
         /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
         bool CanDraw(PawnId pawn)
@@ -1075,7 +1086,7 @@ namespace Odyssey.Presentation.World
             // No pillow to aim at, so the body is centred on the cell it dropped in: the head goes
             // half a body-length back along the way it is lying.
             figure.SleepHeadAt =
-                floor - figure.SleepAlong * (SleepPose.BodyLength(figure.StandingHipHeight) * 0.5f);
+                floor - figure.SleepAlong * (SleepPose.BodyLength(figure.StandingHeight) * 0.5f);
         }
 
         /// <summary>
@@ -1664,7 +1675,7 @@ namespace Odyssey.Presentation.World
             {
                 SleepPose.Place(
                     SleepPose.PostureFor(figure.Pawn), figure.SleepHeadAt, figure.SleepAlong,
-                    figure.SleepSurfaceY, figure.StandingHipHeight, figure.SleepWeight,
+                    figure.SleepSurfaceY, figure.StandingHeight, figure.SleepWeight,
                     figure.Transform.position, figure.Transform.rotation,
                     out Vector3 lain, out Quaternion laid);
                 figure.Transform.position = lain;
@@ -2103,6 +2114,12 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
             figure.SoleOffset = MeasureSole(figure);
+            // And how long a body there is to lay down. Measured here, beside the sole, because
+            // both are one bake of the posed mesh and both are properties of the rig rather than
+            // of the colonist wearing it.
+            figure.StandingHeight = MeasureBody(figure);
+            if (figure.StandingHeight > MeasuredStandingHeight)
+                MeasuredStandingHeight = figure.StandingHeight;
             if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
             _figures.Add(figure);
             return figure;

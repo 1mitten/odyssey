@@ -183,6 +183,7 @@ this file.
 | Floors, slabs, support, collapse | `docs/design/17-floors-and-collapse.md` |
 | Paving | `docs/design/18-paving.md` |
 | Beds, furniture, quality tiers, who owns one | `docs/design/20-beds.md` |
+| How a sleeper is laid in a bed, and how big a drawn colonist is | `docs/design/20-beds.md` §7b |
 | How a pile on the ground says its size | `docs/design/24-pile-reading.md` |
 | The debug menu | `docs/design/18-debug-menu.md` |
 | The start screen, saving, loading | `docs/design/17-start-flow.md` |
@@ -295,6 +296,14 @@ invisible where the game is played.
 - **Where an order's mark sits is `WorldRenderModel.MarkHeight`** — the top of the cell for
   anything that fills it, the top of itself for anything that stands up without filling it, the
   floor for everything else. Trees are on the floor deliberately.
+- **A length taken off a rig is measured from the drawn mesh, never from a bone's name.** The
+  Synty humanoid avatar maps `HumanBodyBones.Hips` to a bone called `Root` that stands on the
+  floor, so `StandingHipHeight` is the 0.2 m floor of its own clamp on every one of the sixty-one
+  characters — and `SleepPose` read it as a length and laid a 2.49 m colonist down 0.38 m long,
+  hanging her off the end of her bed. `FigureBuild` bakes the posed mesh and takes the sole and the
+  crown; `MeasureSole` already did the same for the same reason. `StandingHipHeight` is left as it
+  is because the gesture crouch is tuned against what it returns — do not derive a length from it.
+  `docs/design/20-beds.md` §7b, `docs/bug-patterns.md` P10.
 - *Subsystems* are simulation-side; *directors* are presentation-side. Do not unify the two words.
 
 ### Fixed decisions
@@ -311,7 +320,9 @@ invisible where the game is played.
 - **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **806 Sim + 471 Hud** (2026-09-20, the bed and order-colour branch with events and falling items merged); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the sleep-pose
+  branch (`worktree-bed-sleep-pose`): EditMode **2,004 total, 1,991 passed, 0 failed** — the four new
+  `FigureBuildTests` and `SleepPoseTests` rows among them. The run before it, the same day on the events
   branch (`claude/events-system`, after the first-look fixes, the falling-items merge and the extensibility review): EditMode **1,968 total, 1,954 passed, 0 failed**; PlayMode **82 total,
   77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
   The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, since merged),

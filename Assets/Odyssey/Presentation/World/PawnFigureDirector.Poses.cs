@@ -87,29 +87,24 @@ namespace Odyssey.Presentation.World
         /// </summary>
         static float LowestDrawnPoint(Figure figure)
         {
-            float lowest = float.MaxValue;
-            Mesh? baked = null;
-
-            for (int i = 0; i < figure.Skins.Length; i++)
-            {
-                SkinnedMeshRenderer skin = figure.Skins[i];
-                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
-
-                baked ??= new Mesh { name = "Odyssey/SoleProbe" };
-                skin.BakeMesh(baked, useScale: true);
-
-                Vector3[] vertices = baked.vertices;
-                Transform at = skin.transform;
-                for (int v = 0; v < vertices.Length; v++)
-                {
-                    float y = at.TransformPoint(vertices[v]).y;
-                    if (y < lowest) lowest = y;
-                }
-            }
-
-            if (baked != null) UnityEngine.Object.DestroyImmediate(baked);
+            FigureBuild.DrawnExtent(figure.Skins, out float lowest, out _);
             return lowest;
         }
+
+        /// <summary>
+        /// How long a body this figure has to lay down when it sleeps: its own drawn height, sole
+        /// to crown, measured once at bind off the posed mesh.
+        ///
+        /// <para><b>This replaces deriving it from the hip, which was measuring the floor.</b>
+        /// <c>SleepPose.BodyLength</c> used to be <c>StandingHipHeight * 1.9</c>, and
+        /// <see cref="Figure.StandingHipHeight"/> is <c>hips.position.y - transform.position.y</c>
+        /// where the Synty avatar maps <c>Hips</c> to a bone named <c>Root</c> at the model
+        /// origin. Nought on all sixty-one, clamped up to 0.2 m, and a 2.49 m colonist was laid
+        /// down 0.38 m long — so her feet landed near the pillow and the rest of her hung two and
+        /// a half metres off the head end of the bed. <c>docs/design/20-beds.md</c> §7b.</para>
+        /// </summary>
+        static float MeasureBody(Figure figure) =>
+            FigureBuild.Height(figure.Skins, figure.Transform.position.y, FigureBuild.FallbackHeight);
 
         /// <summary>
         /// Lay the work pose over whatever the mixer just wrote.
