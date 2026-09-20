@@ -308,9 +308,9 @@ invisible where the game is played.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the
-  bed and order-colour work: EditMode **1,929 total, 1,916 passed, 0 failed**; PlayMode
-  **PLAYMODE_LINE**. The remainder of each are `[Explicit]` or ignored. The 1,872/1,858 previously
-  on this line was the pawn-avoidance run.
+  bed and order-colour work: EditMode **1,931 total, 1,918 passed, 0 failed**; PlayMode
+  **82 total, 77 passed, 0 failed**. The remainder of each are `[Explicit]` or ignored. The
+  1,872/1,858 previously on this line was the pawn-avoidance run.
   **A first run in a fresh worktree is slow and it is the Synty import, not a hang** — the Library
   builds to about 4 GB before a single test runs, which took roughly seven minutes here. Check
   `du -sh Library` before concluding anything is stuck. And **cancelling the wrapper does not

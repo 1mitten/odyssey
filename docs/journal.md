@@ -7536,3 +7536,15 @@ one line above a write to the *chunk* grid, which is why the guard passed and th
 The lesson is about diagnosis rather than about sizes. A new write into a structure nothing wrote
 to before is a probe: when it fails, suspect the structure's provenance before the write, because
 the write is usually correct and merely first.
+
+### What the tiers said in the end
+
+Fast **769 Sim + 455 Hud**, Long **21**, EditMode **1,931 total, 1,918 passed, 0 failed**,
+PlayMode **82 total, 77 passed, 0 failed**. Both content gates pass unchanged — the one new piece
+of player-facing text on the Load row reuses `ui.start.empty`, which the registry already had.
+
+**PlayMode earned its place in this round.** It is slow enough to be tempting to skip, and it is
+the only tier that caught the board-size fault: the fast tier cannot, because `PawnContext.Chunks`
+is null headless, and EditMode did not, because nothing there builds a session through
+`OdysseyBootstrap`. Three tests failed, all in `StartScreenTests`, all with the same stack, and
+the new code in the stack was not the wrong code.
