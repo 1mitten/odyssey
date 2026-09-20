@@ -892,9 +892,30 @@ namespace Odyssey.Presentation.Ui
             _alertsPanel.style.display = DisplayStyle.None;
             column.Add(_alertsPanel);
 
-            // ---- toasts, under the alerts in the same column (SK4). No header: the alerts panel
-            // earns a heading because it is a standing list a player comes back to, and a toast is
-            // a line that is already leaving.
+            // ---- events (A6), under the alerts in the same column. An alert is a condition that
+            // clears itself; an event is a fact that stays until dismissed (design 23 §5). Same
+            // chrome, same row height, its own model, and the same class as the alerts panel,
+            // because the column spaces its panels by that class and not by who they are.
+            _bulletinsPanel = Panel("bulletins", "alerts");
+            VisualElement eventsHeader = Header(_bulletinsPanel, "Events", out _);
+            VisualElement clearEvents = CloseButton(eventsHeader, "events", () =>
+            {
+                _bulletins.DismissAll();
+                RefreshBulletins();
+            });
+            clearEvents.tooltip = "Clear all events";
+
+            _bulletinRows = new VisualElement();
+            _bulletinRows.AddToClassList("bulletins__rows");
+            _bulletinsPanel.Add(_bulletinRows);
+
+            _bulletinsPanel.style.display = DisplayStyle.None;
+            column.Add(_bulletinsPanel);
+
+            // ---- toasts, at the foot of that same column (SK4), under the Events panel so that
+            // a six-second row arriving and leaving never steps the standing panels up and down.
+            // No header: the alerts panel earns a heading because it is a standing list a player
+            // comes back to, and a toast is a line that is already leaving.
             _toastsPanel = Panel("toasts", "toasts");
             _toastRows = new VisualElement();
             _toastRows.AddToClassList("toasts__rows");
@@ -1063,6 +1084,113 @@ namespace Odyssey.Presentation.Ui
             // The toasts ride this method's four call sites (SK4) — see RefreshToasts. Last, so the
             // two stacks are written in the order they are drawn in.
             RefreshToasts();
+        }
+
+        void RefreshBulletins()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+            _bulletins.Refresh(world.Views.Current);
+
+            // The chime rides the row, as an alert's does: the model says what is news, and a
+            // clone with no catalogue gets a null director and silence. A gift sounds glad, a
+            // blow sounds like one, and anything else is worth a glance.
+            if (_bulletins.Arrived > 0)
+                _boot.Audio?.PlayAlert(_bulletins.ArrivedFavourability switch
+                {
+                    1 => Audio.SoundIds.AlertHappy,
+                    2 => Audio.SoundIds.AlertNegative,
+                    _ => Audio.SoundIds.AlertNormal,
+                });
+
+            if (_bulletinsDrawn == _bulletins.Version) return;
+            _bulletinsDrawn = _bulletins.Version;
+
+            while (_bulletinViews.Count < _bulletins.Rows.Count) _bulletinViews.Add(NewBulletinRow());
+            while (_bulletinViews.Count > _bulletins.Rows.Count)
+            {
+                _bulletinViews[^1].Root.RemoveFromHierarchy();
+                _bulletinViews.RemoveAt(_bulletinViews.Count - 1);
+            }
+
+            for (int i = 0; i < _bulletins.Rows.Count; i++)
+            {
+                BulletinRow model = _bulletins.Rows[i];
+                BulletinRowView view = _bulletinViews[i];
+                view.Id = model.Id;
+                view.TargetCell = model.Cell;
+
+                Color ink = model.Favourability switch
+                {
+                    1 => HudTokens.Good,
+                    2 => HudTokens.Bad,
+                    _ => HudTokens.Accent,
+                };
+                view.Icon.SetKey(model.Key);
+                view.Icon.Inherit(ink);
+                HudText.Set(view.Title, model.Title, HudTextRole.Body);
+                view.Title.style.color = ink;
+                HudText.Set(view.Stamp, model.Stamp, HudTextRole.Body);
+                view.Root.tooltip = model.Title + " · " + model.Stamp + " — click to look";
+            }
+
+            _bulletinsPanel.style.display =
+                _bulletins.Rows.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        BulletinRowView NewBulletinRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("bulletin");
+
+            var icon = new IconBadge(IncidentLabels.Unknown, IconBadge.BarSize);
+            icon.AddToClassList("bulletin__icon");
+
+            var text = new VisualElement();
+            text.AddToClassList("bulletin__text");
+            Label title = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "bulletin__title");
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            Label stamp = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "bulletin__stamp");
+            text.Add(title);
+            text.Add(stamp);
+
+            var dismiss = new VisualElement();
+            dismiss.AddToClassList("bulletin__dismiss");
+            dismiss.Add(new HudGlyph(HudGlyphKind.Close, 11f, HudTokens.TextDim));
+            dismiss.tooltip = "Dismiss event";
+
+            row.Add(icon);
+            row.Add(text);
+            row.Add(dismiss);
+            _bulletinRows.Add(row);
+
+            var view = new BulletinRowView
+            {
+                Root = row, Icon = icon, Title = title, Stamp = stamp, Dismiss = dismiss,
+            };
+
+            // An event always has a place: the row is a way of getting the camera over it, and
+            // nothing more (owner, 2026-09-20). It used to move the slice to the event's layer
+            // and select the cell as well, and the owner did not expect the depth to change:
+            // the jump lands at the layer the player is already looking at, and what is cut
+            // away or selected is left as they had it.
+            row.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                if (_directors == null || _boot?.World == null) return;
+                _directors.Camera.JumpTo(
+                    new CellRef(view.TargetCell.X, view.TargetCell.Z, _directors.Slice.ActiveLayer));
+            });
+
+            dismiss.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
+            dismiss.RegisterCallback<ClickEvent>(evt =>
+            {
+                evt.StopPropagation();
+                _bulletins.Dismiss(view.Id);
+                RefreshBulletins();
+            });
+
+            return view;
         }
 
         AlertRowView NewAlertRow()

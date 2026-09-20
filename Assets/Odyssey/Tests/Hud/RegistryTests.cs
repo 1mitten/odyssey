@@ -38,6 +38,91 @@ namespace Odyssey.Tests.Hud
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
         }
 
+        /// <summary>
+        /// <c>AlertModel.IconKeys</c> said it existed "for the registry test" from the day it was
+        /// written, and no such test did until the events work (2026-09-20).
+        /// </summary>
+        [Test]
+        public void EveryDebugKeyIsARegisteredName()
+        {
+            foreach (string key in DebugDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
+        public void EveryAlertKeyIsARegisteredName()
+        {
+            foreach (string key in AlertModel.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        /// <summary>
+        /// The Work tab's three key sets, and <b>the third time a catalogue has arrived carrying an
+        /// <c>IconKeys</c> array for a registry test that nobody wrote</b>.
+        ///
+        /// <para><c>AlertModel</c> did it and went two milestones unchecked; <c>DebugDirector</c>
+        /// did it and was caught by the events work; <c>WorkCatalogue</c>, <c>ScheduleCatalogue</c>
+        /// and <c>WorkDirector</c> all did it on 2026-09-20 and were caught by this review. The
+        /// array is not the guard — <b>the loop over it is</b>, and an array that no loop reads is
+        /// a comment claiming a test exists.</para>
+        ///
+        /// <para>What it buys: the grid's twenty-two column headers, the legend's six block names
+        /// and the panel's own title all come out of <c>Registry.Label</c>, and a key the CSV does
+        /// not know draws as a raw key on the screen. Twenty-nine names, checked in the fast tier,
+        /// before the panel is ever opened.</para>
+        /// </summary>
+        [Test]
+        public void EveryWorkTabKeyIsARegisteredName()
+        {
+            foreach (string key in WorkCatalogue.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in ScheduleCatalogue.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in WorkDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // And the two lists are the ones the panel actually draws from, not copies of them:
+            // an entry added to a catalogue and forgotten in its IconKeys would pass the loops
+            // above by saying nothing, which is the failure mode this pairing closes.
+            Assert.That(WorkCatalogue.IconKeys.Length, Is.EqualTo(WorkCatalogue.All.Count));
+            Assert.That(ScheduleCatalogue.IconKeys.Length, Is.EqualTo(ScheduleCatalogue.All.Count));
+            for (int i = 0; i < WorkCatalogue.All.Count; i++)
+                Assert.That(WorkCatalogue.IconKeys[i], Is.EqualTo(WorkCatalogue.All[i].Key));
+            for (int i = 0; i < ScheduleCatalogue.All.Count; i++)
+                Assert.That(ScheduleCatalogue.IconKeys[i], Is.EqualTo(ScheduleCatalogue.All[i].Key));
+        }
+
+        [Test]
+        public void EveryIncidentKeyIsARegisteredNameAndTheTableIsTheHandleTable()
+        {
+            Assert.That(IncidentLabels.Keys.Length, Is.EqualTo(IncidentHandle.Count),
+                "an incident the label table does not know draws as the fallback key");
+            foreach (string key in IncidentLabels.Keys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            Assert.That(Registry.Labels, Does.ContainKey(IncidentLabels.Unknown), "the fallback key must be registered too");
+        }
+
+        /// <summary>
+        /// The Def file spells each incident's key beside the incident; this assembly spells the
+        /// same keys in <see cref="IncidentLabels"/> because it cannot import the Def (ADR 0003).
+        /// The two sets are held equal here, on the bargain <see cref="JobLabels.CarryingAspect"/>
+        /// already makes for an aspect name.
+        /// </summary>
+        [Test]
+        public void TheIncidentKeysAreTheOnesTheDefsDeclare()
+        {
+            string? folder = Find(Path.Combine("Assets", "Odyssey", "Defs", "Core", "Events"));
+            Assert.That(folder, Is.Not.Null, "the incident Defs were not found above the test assembly");
+            string xml = File.ReadAllText(Path.Combine(folder!, "Incidents.xml"));
+            var declared = new List<string>();
+            foreach (Match match in Regex.Matches(xml, @"<bulletinKey>\s*([^<\s]+)\s*</bulletinKey>"))
+                declared.Add(match.Groups[1].Value);
+
+            Assert.That(declared, Is.Not.Empty, "no incident in the Defs declares a bulletinKey");
+            Assert.That(declared, Is.EquivalentTo(IncidentLabels.Keys),
+                "IncidentLabels.Keys and the Defs' bulletinKeys are two spellings of one list");
+        }
+
         [Test]
         public void EverySettingsKeyIsARegisteredName()
         {
@@ -196,6 +281,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(BuildShapes.CanRotate(BuildingHandle.Bed), Is.True);
             Assert.That(BuildShapes.CellsOf(BuildingHandle.Wall), Is.EqualTo(1));
             Assert.That(BuildShapes.CanRotate(BuildingHandle.Wall), Is.False);
+            Assert.That(BuildShapes.CanRotate(BuildingHandle.Door), Is.True);
         }
 
         /// <summary>
@@ -256,6 +342,9 @@ namespace Odyssey.Tests.Hud
         static readonly string[] Enforced =
         {
             "ui.arch.tool.", "ui.arch.category.", "ui.status.", "ui.res.", "ui.alert.", "ui.job.",
+            // An event is named on the Events panel today and the History screen tomorrow
+            // (design 23 §5), which is this test's own criterion for a namespace.
+            "ui.bulletin.",
         };
 
         /// <summary>

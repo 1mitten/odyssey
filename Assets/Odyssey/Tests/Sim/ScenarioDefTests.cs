@@ -209,6 +209,16 @@ namespace Odyssey.Tests.Sim
         /// they did not move. That is the whole evidence: a baked number nobody has seen the old
         /// code produce proves only that the new code is consistent with itself.</para>
         ///
+        /// <para><b>Re-baked once, on 2026-09-20, and the promise is narrower than it was.</b> A
+        /// starting bed stopped being a bare cell in the sleep chooser's list and became a real
+        /// two-cell bed raised through the construction grid — see
+        /// <c>ColonyScenario.RaiseAStartingBed</c> for why it had to. A bed is wider than the spot
+        /// it was given, so it can no longer stand wherever a single walkable cell was found, and
+        /// the beds in this signature moved. <b>The part count did not</b>: 34 before and 34
+        /// after, on both maps, so the colony is the same colony with the same things in it and
+        /// only the beds are somewhere else. That is the measurement, and it is the reason this is
+        /// a re-bake rather than a regression.</para>
+        ///
         /// <para>Deliberately not "everything is on the start layer" — that is false and the first
         /// draft of this test asserted it. The old search widens through nearby layers when a
         /// column has nothing walkable at the start layer, so five colonists on a ruined city
@@ -218,9 +228,9 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid()
         {
-            Assert.That(PlacementSignature(City(ScenarioDef.Bare())), Is.EqualTo("34/36347CC0728A29AC"),
+            Assert.That(PlacementSignature(City(ScenarioDef.Bare())), Is.EqualTo("34/CF54D9D013E9AF93"),
                 "the default placement moved on the ruined city");
-            Assert.That(PlacementSignature(Wooded(ScenarioDef.Bare())), Is.EqualTo("34/1A786205CF734E9A"),
+            Assert.That(PlacementSignature(Wooded(ScenarioDef.Bare())), Is.EqualTo("34/D92AD45F0C0D53B7"),
                 "the default placement moved on the wooded map");
         }
 

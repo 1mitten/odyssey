@@ -457,13 +457,7 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < PaletteTools.Categories.Length; i++)
                 cats.Add(CategoryTile(i, "bp__bar-cat"));
 
-            var hint = HudText.Make("icon tiles name themselves on hover", HudTextRole.Meta,
-                ussClass: "bp__bar-hint");
-            hint.pickingMode = PickingMode.Ignore;
-            var hintSpacer = new VisualElement { pickingMode = PickingMode.Ignore };
-            hintSpacer.style.flexGrow = 1;
-            cats.Add(hintSpacer);
-            cats.Add(hint);
+
             _buildBody.Add(cats);
 
             var content = new VisualElement();
@@ -893,6 +887,12 @@ namespace Odyssey.Presentation.Ui
             // the buttons that raised them, and the player would have no way to tell which of the
             // two the Escape they are about to press belongs to.
             if (open) ToggleMenu(false);
+
+            // And the Work tab, which docks in this same bottom-left corner. OnWorkChanged has
+            // closed the palette since the tab was written; this is the other direction, which it
+            // did not have — press B with Work open and the two drew over each other, in the one
+            // corner where the rule is already stated twice.
+            if (open) _directors?.Work.SetOpen(false);
 
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 

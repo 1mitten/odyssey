@@ -20,6 +20,14 @@ namespace Odyssey.Sim.Pawns
 
         public override int WorkType => WorkTypeIndex.Growing;
 
+        /// <summary>
+        /// The haul giver this one borrows when a field's own tile is blocked. One instance,
+        /// because a work giver holds no per-call state and <c>new</c>-ing one inside a scan is
+        /// an allocation on the think path - which is measured at a few hundred bytes a tick
+        /// with six colonists on a large field, in a tick that otherwise allocates four.
+        /// </summary>
+        static readonly HaulWorkGiver Clearing = new HaulWorkGiver();
+
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {
             var zones = ctx.Growing;
@@ -49,6 +57,12 @@ namespace Odyssey.Sim.Pawns
 
                 int distance = ctx.Distance(pawn.Cell, cell);
                 if (distance >= bestDistance) continue;
+                // Last, because it is the dear one: every other giver in the project asks it and
+                // these two did not. Distance here is a straight-line estimate, so without this
+                // the nearest plot WINS the scan whether or not a colonist can walk to it - and
+                // the giver hands out one cell, so a single unreachable plot starves the whole
+                // of growing. See HarvestWorkGiver for the measurement.
+                if (!ctx.Reachable(pawn, cell)) continue;
 
                 bestDistance = distance;
                 best = cell;
@@ -68,7 +82,7 @@ namespace Odyssey.Sim.Pawns
                     int blocked = cells[i];
                     if (zones.IsPlanted(blocked)) continue;
                     if (ctx.Items.ItemAt(blocked) == null) continue;
-                    return new HaulWorkGiver().TryGiveJob(pawn, ctx, job);
+                    return Clearing.TryGiveJob(pawn, ctx, job);
                 }
                 return false;
             }
@@ -105,6 +119,13 @@ namespace Odyssey.Sim.Pawns
 
                 int distance = ctx.Distance(pawn.Cell, cell);
                 if (distance >= bestDistance) continue;
+                // As the sower does, and this is the half that was measured. A ripe crop the
+                // colonist cannot path to - mine the ground out from under a plot and the crop
+                // stays standing over the hole - was still handed out, the walk failed at once,
+                // and the same cell won the next think because it is still the nearest. One
+                // colonist, one unreachable crop: 159 failed jobs in 2,000 ticks, and no other
+                // growing work done in any of them.
+                if (!ctx.Reachable(pawn, cell)) continue;
 
                 bestDistance = distance;
                 best = cell;
@@ -202,8 +223,10 @@ namespace Odyssey.Sim.Pawns
 
             PlantDef plant = zones.Plant(zones.ZonePlantAt(cell));
             // Progress is milliwork and the plant's price is ticks (design 17 §3b's convention):
-            // pay at the pawn's own rate — flat today, since no skill drives the curve yet
-            // (design 22 §5) — and read the price against the standard one.
+            // pay at the pawn's own rate and read the price against the standard one. That rate
+            // is NOT flat - Work_Growing carries rateSkill 4 and cutting's curve, so a skilled
+            // grower really is faster at the hoe (design 22 §5). This comment said otherwise
+            // for two days.
             ToilProgress += Pawn.WorkRatePerMille(WorkTypeIndex.Growing);
             Work(ctx);
             if (ToilProgress < plant.sowWorkTicks * Rates.Scale) return JobStatus.Ongoing;
@@ -332,13 +355,34 @@ namespace Odyssey.Sim.Pawns
             // free terrain tile that isn't dirt/soil"). Where nothing at all qualifies, the
             // felling argument takes over - nowhere that can take the yield is a board packed
             // too solid for anything in the game to have produced.
+            // What the PLANT says it yields, not a hard-coded carrot. The def has carried a
+            // [DefReference(typeof(ItemDef))] since U46 - it is what proves at load that the
+            // thing a crop grows is a real commodity - and nothing read it: the harvest spawned
+            // ItemIndex.Carrots whatever was planted, so the second crop would have yielded
+            // carrots and the reference would have gone on passing. Resolved here by name
+            // against the item table, which is seven entries long and cheap to walk once a
+            // harvest; there is no handle on the def because an item handle is a save contract
+            // and deriving one at load would be a second place to keep it in step.
+            int yield = ItemIndexOf(ctx, plant.yields);
+            if (yield < 0) return;
+
             int at = ctx.Items.NearestCellWithSpace(
-                ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 12,
-                accept: c => zones.ZonePlantAt(c) < 0);
+                ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 12,
+                accept: ctx.NotZoned);
             if (at < 0)
                 at = ctx.Items.NearestCellWithSpace(
-                    ctx.Cells, cell, ItemIndex.Carrots, plant.yieldCount, maxRadius: 3);
-            if (at >= 0) ctx.Items.Spawn(ItemIndex.Carrots, at, plant.yieldCount);
+                    ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 3);
+            if (at >= 0) ctx.Items.Spawn(yield, at, plant.yieldCount);
+        }
+
+        /// <summary>The item table slot of a def name, or -1 if the content has no such item.</summary>
+        static int ItemIndexOf(PawnContext ctx, string defName)
+        {
+            ItemDef[] items = ctx.Content.Items;
+            for (int i = 0; i < items.Length; i++)
+                if (string.Equals(items[i].defName, defName, System.StringComparison.Ordinal))
+                    return i;
+            return -1;
         }
     }
 }

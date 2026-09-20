@@ -56,6 +56,18 @@ namespace Odyssey.Hud
         const string Wood = "ui.res.wood";
         const string Scrap = "ui.res.scrap";
 
+        /// <summary>
+        /// The field crop (GR). It earns a row for the reason Meal has one: it is <b>food the
+        /// player is deciding on</b>, and until 2026-09-20 it had nowhere on screen to be
+        /// counted at all. A harvest left a pile, a hauler carried it to the store or a hungry
+        /// colonist ate it, and nothing anywhere showed a carrot afterwards - which from the
+        /// keyboard is indistinguishable from the crop vanishing, and is exactly how the owner
+        /// reported it ("they seemed to disappear now"). The simulation was right the whole
+        /// time: the ten-day field soak accounts for every carrot, 580 harvested against 501
+        /// left on the map and the rest eaten.
+        /// </summary>
+        const string Carrots = "ui.res.carrots";
+
         /// <summary>How long a baseline stands before it is resampled.</summary>
         public const double BaselineSeconds = 10.0;
 
@@ -70,7 +82,7 @@ namespace Odyssey.Hud
         static readonly string[] Planned = { Scrap, "ui.res.medkit" };
 
         /// <summary>Every key a row can carry, so a test can prove each is a name the registry knows.</summary>
-        public static readonly string[] IconKeys = new[] { Meal, Wood }.Concat(Planned).ToArray();
+        public static readonly string[] IconKeys = new[] { Meal, Wood, Carrots }.Concat(Planned).ToArray();
 
         public readonly List<LedgerRow> Rows = new List<LedgerRow>();
 
@@ -96,7 +108,7 @@ namespace Odyssey.Hud
         {
             Rows.Clear();
 
-            int meals = 0, salvage = 0, wood = 0;
+            int meals = 0, salvage = 0, wood = 0, carrots = 0;
             var things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
             {
@@ -104,9 +116,11 @@ namespace Odyssey.Hud
                 if (things[i].DefIndex == ItemHandle.Meal) meals += stack;
                 else if (things[i].DefIndex == ItemHandle.Salvage) salvage += stack;
                 else if (things[i].DefIndex == ItemHandle.Wood) wood += stack;
+                else if (things[i].DefIndex == ItemHandle.Carrots) carrots += stack;
             }
 
             Add(Meal, meals, real: true);
+            Add(Carrots, carrots, real: true);
             Add(Wood, wood, real: true);
             Add(Scrap, salvage, real: true);
 

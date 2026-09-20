@@ -353,6 +353,24 @@ namespace Odyssey.Presentation.Rendering
                         ? null
                         : materials[Mathf.Min(sub, materials.Length - 1)];
                     if (material == null) material = FallbackMaterial;
+
+                    // Doors in the Synty packs assign a contrasting brick material to the doorway surround.
+                    // To match the wall texture and avoid an out-of-place red brick arch, override any brick
+                    // submesh on door modules with the matching plaster material present on the same renderer.
+                    if (entry.shape == ModuleShape.WallPanel && entry.moduleId != null &&
+                        entry.moduleId.IndexOf("door", System.StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        material != null && material.name.IndexOf("Brick", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        for (int m = 0; m < materials.Length; m++)
+                        {
+                            if (materials[m] != null && materials[m].name.IndexOf("Plaster", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                material = materials[m];
+                                break;
+                            }
+                        }
+                    }
+
                     raw.Add((mesh!, sub, material!, local));
                 }
 

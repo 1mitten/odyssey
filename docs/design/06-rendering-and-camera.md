@@ -1122,6 +1122,194 @@ have left the bones unwritten, and the work pose is laid over what the graph wri
 the same way, at `simulationSpeed` zero, since they are simulated in world space by Unity and know
 nothing about the tick.
 
+## 6c. What the frame costs, and the one number that explains it
+
+Measured 2026-09-20 on the played meadow, an RTX 5070 Ti at 640 x 480, under the real player loop
+(`FrameTimeTests`; never an editor render loop — see `docs/lessons.md`).
+
+### The number
+
+**A draw submission costs about 4.6 us whatever is in it.** That is the single most useful figure
+for this renderer. It is not triangles and at this resolution it is not fill: three passes were
+submitting once per cell, and all three were expensive for that reason alone and for no other.
+
+> **Qualified a day later, and the qualification matters.** The mark pass was measured with a
+> control in the same run and its submissions cost about **0.1 us**, not 4.6 (§6c.1). Every
+> reading the constant came from submitted a real mesh; a mark is a unit cube in a cached
+> material. Treat 4.6 us as what a *loaded* submission costs — the number to reach for when a
+> pass is slow and you are looking for the reason — and not as a price that condemns any
+> per-cell loop before it is measured.
+
+    meadow 5.04 -> 2.59 ms      field (2,065 zone cells) 6.95 -> 4.09 ms
+    field draw calls 3,847 -> 1,300
+
+### Where it went
+
+| Pass | Was | Now |
+|---|---|---|
+| Growing-zone cover | one `RenderMesh` per zoned cell per frame — 2,065 calls, 3.67 ms | a bit on the terrain bucket's tint, no draws at all (§22-growing 6a) |
+| The surround wood | 760 instanced batches, 3.65 ms | 272 batches, same 4,169 trees |
+| Seed specks | six `RenderMesh` per sown cell | one `RenderMeshInstanced` a frame |
+
+**The surround is the instructive one, because the obvious answer was wrong.** Dropping all 2,577
+hill trees changed nothing (5.37 ms against 5.04); dropping the 1,592 near trees took the meadow
+to 2.26. But the cost tracked the *batch* count, not the tree count — 760 batches 3.5 ms, 438
+batches 2.1 ms. A batch key carries a spatial sector, and at 80 m the ring outside a 300 m board
+fell into hundreds of near-empty batches. Coarsening the sector to 400 m rides the same trees in
+272 batches and the wood is untouched. Thinning was measured too — 30 per cent took 1,592 trees to
+435 and saved 1.5 ms — and is strictly worse: it costs the look and buys less.
+
+The trade in that: a coarser sector is a looser `worldBounds`, so less of the wood frustum-culls.
+Measured, that is the right way round — the draw the culling saves is cheaper than the per-batch
+cost of being able to save it. `TerrainSkirt.TreeSectorMetres` is the number to turn if a weaker
+machine ever reverses it, and `NearWoodDensityPercent` is the second.
+
+### The rule this leaves
+
+**Anything fixed to the grid belongs in the chunk mesher, not in a per-frame draw.** A bucket is
+one instanced call of one (module, part, tint) in one chunk, and it inherits frustum culling,
+slice culling and the dirty-chunk rebuild for nothing — so the per-cell work happens when the
+world changes rather than sixty times a second. The crop was always drawn this way and was always
+free; the zone cover was not, and was the whole cost of a field.
+`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` is the guard: it fails the moment a
+zone costs draws in proportion to its cells.
+
+### 6c.1 The mark pass, measured — and the constant's limit
+
+**2026-09-20, the next day.** `DrawCellMark` and `DrawCellSlab` drew standing orders one
+`Graphics.RenderMesh` per designated cell and incremented no counter: the last instance of P10 on
+the list above. It is fixed — gathered by colour and flushed as one `RenderMeshInstanced` per
+colour, the same shape the seed specks use — and **the measurement that justified it says
+something the constant above did not predict.**
+
+The instrument is `FrameTimeTests.TheMarkPassCostsWhatItSubmits`: one meadow, timed three times
+seconds apart — bare, then with 901 mine orders standing, then with the same 901 plates instanced.
+`ChunkRenderer.InstanceCellPlates` is the control, and it is a control rather than a second code
+path: the geometry has one owner in `GatherCellPlate` and only the submission changes.
+
+| 901 standing orders | frame | submit | tick | draw calls |
+|---|---|---|---|---|
+| none | 3.04 ms | 2.322 ms | 0.012 ms | 1,243 |
+| one submission a cell | 3.44 ms | 2.701 ms | 0.017 ms | 2,144 |
+| instanced by colour | 3.35 ms | 2.614 ms | 0.016 ms | 1,245 |
+
+**So the whole pass is 0.40 ms with 901 orders on the board, and dropping 899 submissions
+recovers 0.09 ms of it — about 0.1 us a submission.** The control understates the old path
+slightly, because it reuses one `RenderParams` per colour where the old code built one and looked
+up a material per cell; that difference was not measured separately and is bounded by a
+dictionary lookup times 901.
+
+**What that does to the 4.6 us constant.** It is not a toll on `Graphics.RenderMesh`. Both
+readings it came from — the zone cover at 2,065 calls for 3.67 ms and the surround at 2.9 us a
+batch — submitted a **real mesh**: the ground module drawn over itself, translucent and full
+tile, and a batch of trees. A mark is a twelve-triangle cube in a cached material, and it costs
+a twentieth of that. Read the constant as *what a loaded submission costs*, an upper bound worth
+reaching for when a pass is slow, and not as a per-call price that makes any per-cell loop
+expensive by arithmetic. The zone cover's 3.67 ms is therefore **most likely its translucent
+full-tile fill rather than its call count**, and that has not been measured — the pass no longer
+exists to measure.
+
+**The batching is kept even so**, for three reasons that are not the 0.09 ms: the pass is now
+*counted*, which was the half of P10 that hid it (a field reported 1,782 draw calls while
+issuing 3,847); the cost stays flat as a player marks more, where the old one grew with the
+board; and a quarry of five thousand cells is the same code.
+
+**And the first attempt at this measurement read the pass as free, because it never ran.**
+The order case walked the board row-major from `z = 1` and designated the topmost solid cell of
+each column — 901 orders placed, published and counted, all of them outside the band
+`DrawStandingOrders` filters to (the drawn slice was 8..15; that strip of ground is lower). It
+measured 4.85 ms against the bare meadow's 4.86 and looked exactly like a pass that costs
+nothing. `CellPlatesDrawn` exists for that reason: the case asserts that at least one plate was
+drawn before it believes its own difference.
+
+### 6c.2 What a colony costs, and the O(N squared) in the crowd
+
+**2026-09-20, from a Play report.** The owner watched the developer overlay while spawning
+colonists: *"it seemed to hover 1.7 ms no matter the colony size but then frames dropped after so
+many colonists. I think at pretty high numbers."* Flat then a knee has several possible causes and
+none of them was worth guessing, so `FrameTimeTests.TheFrameAgainstColonySize` measures eight
+colony sizes in one world, seconds apart, with the draw block split by section.
+
+| pawns | figures | frame | tick | submit | World | Figures | Actors |
+|---|---|---|---|---|---|---|---|
+| 8 | 8 | 2.65 | 0.009 | 2.023 | 1.909 | 0.088 | 0.017 |
+| 32 | 32 | 3.14 | 0.013 | 2.368 | 1.905 | 0.435 | 0.019 |
+| 64 | 64 | 4.08 | 0.021 | 3.139 | 1.935 | 1.174 | 0.019 |
+| 96 | 64 | 4.84 | 0.032 | 3.842 | 1.993 | 1.429 | 0.409 |
+| 128 | 64 | 5.70 | 0.041 | 4.692 | 1.985 | 1.710 | 0.985 |
+| 192 | 64 | 8.56 | 0.081 | 7.361 | 2.201 | 2.369 | 2.777 |
+| 256 | 64 | 11.98 | 0.131 | 10.672 | 2.180 | 3.058 | 5.416 |
+| 384 | 64 | 22.45 | 0.310 | 20.691 | 2.486 | 4.908 | 13.275 |
+
+Draw calls across that whole range: **1,243 to 1,324.** Everything else in the frame — Mirror,
+Sight, Audio, Doors, Overlays — stays under 0.02 ms throughout.
+
+**Three things fall out, and the first two are the owner's observation explained.**
+
+- **`World` is flat.** The board, its chunks and the surround cost 1.9 to 2.5 ms whatever the
+  colony is doing. That is the number that hovers.
+- **It is not the simulation and it is not the submissions.** The tick is **0.31 ms at 384 pawns**,
+  1.4% of the frame, which confirms OQ-19 at four times its colony size. Draw calls move by 7%
+  across a 48-fold colony.
+- **It is `Actors` and `Figures`, and they share one cause.** Both call `PawnPose.Of`, and
+  `PawnPose.Of` **scans every other pawn** to find who to sidestep (`SteeringCurve.Proximity`
+  against each). Figures are capped at `FigureCeiling` = 64, so that pass is 64 x N — linear, and
+  it measures linear. Actors is every pawn without a figure, so it is (N-64) x N — quadratic, and
+  it measures quadratic: 147,456 pairs at 384 pawns, each with a `Vector3.Distance`, which at
+  about 90 ns a pair is 13 ms against the 13.275 measured.
+
+**The knee the owner saw is the figure ceiling**, not because the ceiling is wrong but because
+crossing it is where the quadratic term starts: below 64 there are no stand-ins and the only crowd
+scan is the linear one.
+
+**The fix is exact, not an approximation, and that is the point worth carrying.**
+`SteeringCurve.CrowdFarRadius` is 3.0 m and a cell is 2.5 m, so `Proximity` returns **zero** for
+any pawn more than about one cell away — every one of those 147,000 pairs contributes nothing and
+is computed anyway. A cell-bucketed index over the pawn span, built once a frame and shared by
+both callers, makes the pass O(N x k) and **cannot change a single drawn position**, so the
+sidestep the owner has already judged (`25-pawn-steering.md`) is not up for re-judgement. It is
+not done: it is the next unit, and the sweep above is its before.
+
+**At the scale target it is not yet a problem.** Fifty colonists is under the ceiling and the
+whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
+before it binds, and worth fixing because the fix is cheap and provably invisible.
+
+### Still outstanding
+
+**Nothing in this section is measured at the resolution the game will be played at.** See below.
+
+### What has NOT been measured, which is most of the question
+
+Every number above is **640 x 480 on an RTX 5070 Ti**. The stated target is a 2022 mid-range
+laptop at a real resolution. So these findings are sound about *what this renderer does wrong*
+and close to worthless as a prediction of what it will cost a player.
+
+- **Play resolution.** 640 x 480 is 307k pixels. That is precisely why "a submission costs
+  4.6 us and fill costs nothing" was the right diagnosis *there* — and it is the reason the
+  conclusion may not transfer. 1080p is 6.75x the pixels; the alpha-tested foliage that covers
+  the horizon is exactly the kind of geometry whose cost is invisible at 640 x 480 and dominant
+  at 1080p. An attempt to measure it in batch (2026-09-20) failed and is worth recording so
+  nobody repeats it: the batch game view ignores `-screen-width`, and forcing a camera
+  `targetTexture` instead costs so much itself that the control case went from 2.0 ms to 16 ms.
+  The measurement has to come from the on-screen readout in a real Play session.
+- **Target hardware.** Per-draw overhead is largely CPU and driver, so a weaker CPU makes the
+  batching work matter *more*; fill makes a weaker GPU matter more at the same time. The two
+  pull in opposite directions and neither has been measured.
+- **Colony scale.** The frame cases run the scenario's own small colony. Pawns, items, buildings
+  and standing orders all add per-frame work, and the order marks add it per designated cell
+  (see above).
+- **A long session.** 180 frames is a snapshot. Nothing here says what an hour of play does.
+
+The cheapest way to turn all four into knowledge is the developer overlay in a real Play session
+at the owner's resolution. Until then the honest statement is: the faults that were found are
+fixed and guarded, and the budget is unverified on the hardware it was written for.
+
+### And the budget is not enforced
+
+`FrameTimeTests` asserts only that a frame is under a 30 Hz tick. The 5 ms budget lives in the
+documents, so **a green PlayMode run says nothing about it** — read the printed numbers, not the
+pass. That has always been true and is not a growing-zones matter.
+
 ## 7. Presentation is a reader
 
 The rule that keeps this document honest, and the one that the architecture benchmark treats as a judged phase: **presentation never reads simulation objects and never mutates them.** It reads the immutable snapshot published by the simulation at tick end, keyed by stable handles, and it sends player actions back as intents on a queue consumed at a tick boundary (`docs/design/ui-plan-reconciliation.md`).

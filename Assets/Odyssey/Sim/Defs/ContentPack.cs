@@ -45,8 +45,9 @@ namespace Odyssey.Sim.Defs
 
         /// <summary>Register every Def type the core pack contains.</summary>
         public static DefLoader Register(DefLoader loader) =>
-            Construction.ConstructionContent.Register(
-                WorldContent.Register(PawnContent.Register(loader)));
+            Events.IncidentContent.Register(
+                Construction.ConstructionContent.Register(
+                    WorldContent.Register(PawnContent.Register(loader))));
 
         /// <summary>Load the core pack from a directory: every <c>.xml</c> beneath it.</summary>
         public static DefDatabase LoadCore(string root) =>
@@ -77,6 +78,13 @@ namespace Odyssey.Sim.Defs
 
         /// <summary>The crops, in the handle order the zones and crops channels carry.</summary>
         public static Growing.PlantDef[] Plants() => WorldContent.PlantsFromDefs(Core);
+
+        /// <summary>
+        /// The incidents (design 23), in <c>IncidentHandle</c> order, each already bound to the
+        /// item it pays out and the worker that fires it. A fresh record per call, as
+        /// <see cref="Pawns"/> is, and for the same reason.
+        /// </summary>
+        public static Events.IncidentContent Incidents() => Events.IncidentContent.FromDefs(Core, Pawns());
 
         /// <summary>
         /// Forget the loaded pack and any root set by <see cref="UseRoot"/>, so the next read goes

@@ -47,7 +47,10 @@ namespace Odyssey.Hud
         Clock,
         Alerts,
 
-        /// <summary>The transient toast stack, under the alerts in the same column (SK4).</summary>
+        /// <summary>The Events panel (A6): incidents that happened, under the alerts in the same column.</summary>
+        Bulletins,
+
+        /// <summary>The transient toast stack, at the foot of that same column (SK4).</summary>
         Toasts,
 
         DepthRail,
@@ -102,6 +105,13 @@ namespace Odyssey.Hud
         public readonly int CellRows;
 
         /// <summary>
+        /// Rows of the Events panel: incidents that happened and are not yet dismissed. Zero hides
+        /// the panel outright, exactly as <see cref="Alerts"/> does, so a colony nothing has
+        /// happened to pays nothing for the region.
+        /// </summary>
+        public readonly int Bulletins;
+
+        /// <summary>
         /// Toasts on screen right now (SK4). Zero hides the stack outright, which is its resting
         /// state: a toast lasts six seconds and nothing raises one most of the time, so this is
         /// zero whenever the coverage criterion is measured.
@@ -109,7 +119,7 @@ namespace Odyssey.Hud
         public readonly int Toasts;
 
         public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
-                          int skillRows = 0, int cellRows = 0, int toasts = 0)
+                          int skillRows = 0, int cellRows = 0, int bulletins = 0, int toasts = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
@@ -118,6 +128,7 @@ namespace Odyssey.Hud
             NeedRows = Math.Max(0, needRows);
             SkillRows = Math.Max(0, skillRows);
             CellRows = Math.Max(0, cellRows);
+            Bulletins = Math.Max(0, bulletins);
             Toasts = Math.Max(0, toasts);
         }
 
@@ -442,6 +453,14 @@ namespace Odyssey.Hud
 
         /// <summary>The alerts panel's own label row and the gap under it.</summary>
         public const int AlertHeaderBlock = HeaderHeight + HeaderGap;
+
+        /// <summary>
+        /// One row of the Events panel: the same line of body text an alert is, because the two
+        /// panels share a column and a row idiom, and two heights would be two things to drift.
+        /// </summary>
+        public const int BulletinHeight = AlertHeight;
+
+        public const int BulletinGap = AlertGap;
 
         // ------------------------------------------------------------------ depth rail
 
@@ -1263,15 +1282,28 @@ namespace Odyssey.Hud
                 ? default
                 : new HudRect(clockX, alertsTop, ClockWidth, alertsHeight);
 
-            // ---- toasts, under the alerts in the same column (SK4). Panel A6 puts the bulletin
+            // ---- events, under the alerts in the same column, or under the clock when there are
+            // none, because the column is a flex column and a hidden panel takes no room in it.
+            float bulletinsTop = alertsTop + (content.Alerts > 0 ? alertsHeight + Gap : 0f);
+            float bulletinsHeight = BulletinsHeight(content.Bulletins);
+            boxes[HudRegion.Bulletins] = content.Bulletins <= 0
+                ? default
+                : new HudRect(clockX, bulletinsTop, ClockWidth, bulletinsHeight);
+
+            // ---- toasts, at the foot of that same column (SK4). Panel A6 puts the bulletin
             // stack "right edge, below the alerts" and a toast is the passing member of that
             // family, so it takes the same column and the same width. It is hidden when there are
             // none, which is most of the time — so the coverage criterion, which is stated with
             // nothing selected and no alerts, never sees it.
+            //
+            // <b>It is last in the column, under the Events panel, and that is the whole reason
+            // the order is this way round.</b> A toast arrives every couple of minutes and leaves
+            // six seconds later; anything below it in a stacked column would step down and back
+            // up each time. Nothing is below it, so nothing moves.
             boxes[HudRegion.Toasts] = content.Toasts <= 0
                 ? default
                 : new HudRect(clockX,
-                    alertsTop + (content.Alerts <= 0 ? 0f : alertsHeight + Gap),
+                    bulletinsTop + (content.Bulletins <= 0 ? 0f : bulletinsHeight + Gap),
                     ClockWidth, ToastsHeight(content.Toasts));
 
             // ---- colonist strip, centred in what is left between the two top corners
@@ -1337,6 +1369,11 @@ namespace Odyssey.Hud
         public static float AlertsHeight(int alerts) =>
             alerts <= 0 ? 0f : Frame + Pad + AlertHeaderBlock + alerts * AlertHeight +
                                (alerts - 1) * AlertGap + Pad;
+
+        /// <summary>The Events panel is built exactly as the alerts panel is, so it is as tall.</summary>
+        public static float BulletinsHeight(int bulletins) =>
+            bulletins <= 0 ? 0f : Frame + Pad + AlertHeaderBlock + bulletins * BulletinHeight +
+                                  (bulletins - 1) * BulletinGap + Pad;
 
         /// <summary>
         /// The toast stack's height (SK4). One row per toast at the alerts' own row height, and

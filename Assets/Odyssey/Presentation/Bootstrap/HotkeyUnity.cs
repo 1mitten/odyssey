@@ -74,13 +74,16 @@ namespace Odyssey.Presentation.Bootstrap
             HudKey.PageUp => Key.PageUp,
             HudKey.PageDown => Key.PageDown,
             HudKey.Backquote => Key.Backquote,
+            HudKey.F1 => Key.F1,
             _ => Key.None,
         };
 
         /// <summary>
         /// The binding-map key an engine key names, or null when the game will not bind it —
-        /// Escape, the modifiers, the function keys the command bar has promised to panels,
-        /// and everything else the closed set leaves out.
+        /// Escape, the modifiers, and everything else the closed set leaves out. <b>The function
+        /// keys were listed here as excluded until the Work tab arrived on F1</b> (design 27):
+        /// one is bindable now because one has a panel behind it, and the rest follow as theirs
+        /// are built.
         /// </summary>
         public static HudKey? ToHud(Key key) => key switch
         {
@@ -130,6 +133,7 @@ namespace Odyssey.Presentation.Bootstrap
             Key.PageUp => HudKey.PageUp,
             Key.PageDown => HudKey.PageDown,
             Key.Backquote => HudKey.Backquote,
+            Key.F1 => HudKey.F1,
             _ => null,
         };
 

@@ -240,6 +240,9 @@ namespace Odyssey.Tests.Hud
 
             (".alert", "min-height", () => HudLayout.AlertHeight, "an alert row"),
             (".alerts__rows", "margin-top", () => HudLayout.HeaderGap, "header to first alert"),
+            (".bulletin", "min-height", () => HudLayout.BulletinHeight, "an event row"),
+            (".bulletin", "margin-bottom", () => HudLayout.BulletinGap, "gap between events"),
+            (".bulletins__rows", "margin-top", () => HudLayout.HeaderGap, "header to first event"),
 
             (".strip", "top", () => HudLayout.StripTop, "the strip docked to the top"),
             (".card", "width", () => HudLayout.CardWidth, "card width"),

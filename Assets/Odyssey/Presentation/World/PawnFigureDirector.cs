@@ -42,13 +42,40 @@ namespace Odyssey.Presentation.World
     public sealed partial class PawnFigureDirector : IDisposable, ICarriedLoads
     {
         /// <summary>
+        /// The hard ceiling on live figures. **Nothing may raise the cap above this**
+        /// (owner, 2026-09-20: *"make the absolute cap 64 for safety for now"*).
+        ///
+        /// <para>A figure is a whole Synty character with its own <c>PlayableGraph</c>, and
+        /// sixty-four of them is already well above the audit's scale target of fifty colonists.
+        /// What this forbids is somebody raising the cap because a crowd looked wrong — the
+        /// answer to a crowd that looks wrong is <see cref="ChooseTheNearest"/>, which decides
+        /// *which* sixty-four, and a measurement if the ceiling itself is ever to move.</para>
+        ///
+        /// <para>The word for now is the owner's and it is the right word: this is a safety rail
+        /// on an unmeasured number, not a finding. Moving it means measuring the frame under the
+        /// real player loop at the new count, not editing this line.</para>
+        /// </summary>
+        public const int FigureCeiling = 64;
+
+        /// <summary>
         /// How many pawns may have a live figure at once.
         ///
         /// A cap rather than a promise: past it, pawns keep the baked instanced form, which costs
-        /// what a wall costs. The number is deliberately generous for the slice — the colony is
-        /// five — and exists so that a later crowd degrades in quality rather than in frame rate.
+        /// what a wall costs. Past it, which colonists keep a figure is decided by distance from
+        /// the camera rather than by pawn id — see <see cref="ChooseTheNearest"/>.
+        ///
+        /// <para><b>Clamped rather than trusted.</b> It is settable so that a harness can ask for
+        /// a small crowd cheaply, and a setter that silently accepted a large one would make
+        /// <see cref="FigureCeiling"/> a suggestion. Below zero is zero, which draws the whole
+        /// colony as baked stand-ins and is a legal thing to ask for.</para>
         /// </summary>
-        public int MaxFigures { get; set; } = 64;
+        public int MaxFigures
+        {
+            get => _maxFigures;
+            set => _maxFigures = value < 0 ? 0 : value > FigureCeiling ? FigureCeiling : value;
+        }
+
+        int _maxFigures = FigureCeiling;
 
         /// <summary>
         /// How fast a figure turns to face where it is going, in degrees per second.
@@ -868,6 +895,17 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float MeasuredSoleOffset { get; private set; }
 
+        /// <summary>
+        /// The drawn height of the tallest figure built so far, in metres.
+        ///
+        /// <para>Printed by the contact sheets beside the sole, and for a sharper reason than
+        /// curiosity: this is the number whose collapse put a sleeping colonist two and a half
+        /// metres off the end of her bed. A figure at <see cref="FigureBuild.FallbackHeight"/>
+        /// exactly is one whose mesh could not be measured — worth looking at rather than
+        /// trusting.</para>
+        /// </summary>
+        public float MeasuredStandingHeight { get; private set; }
+
 
         /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
         bool CanDraw(PawnId pawn)
@@ -966,7 +1004,8 @@ namespace Odyssey.Presentation.World
             int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
             var pawns = snapshot.Pawns;
 
-            for (int i = 0; i < pawns.Length && Drawn.Count < MaxFigures; i++)
+            _eligible.Clear();
+            for (int i = 0; i < pawns.Length; i++)
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
@@ -976,6 +1015,14 @@ namespace Odyssey.Presentation.World
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
                 if (!CanDraw(pawns[i].Id)) continue;
 
+                _eligible.Add(i);
+            }
+
+            ChooseTheNearest(pawns);
+
+            for (int n = 0; n < _eligible.Count; n++)
+            {
+                int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
                     World, pawns, out Vector3 steer);
                 Figure figure = Lease(pawns[i].Id, position);
@@ -990,6 +1037,85 @@ namespace Odyssey.Presentation.World
             CheckSocialGreetings();
             ApplyGazePose(deltaTime);
         }
+
+        /// <summary>
+        /// Cut the eligible list down to <see cref="MaxFigures"/>, keeping the ones nearest the
+        /// camera.
+        ///
+        /// <para><b>The cap was "the first sixty-four in the snapshot" and the design said it was
+        /// "a long way off".</b> Nothing sorted, so which colonists lost their animation was
+        /// decided by pawn id: a colonist standing in front of you stood frozen while one across
+        /// the map walked, and the set never changed however the camera moved. Measured on
+        /// 2026-09-20 with eighty-five colonists — twenty-one of them still, and always the same
+        /// twenty-one (<c>docs/design/20-avatars.md</c> §11).</para>
+        ///
+        /// <para><b>It does nothing at all under the cap</b>, which is every colony anybody has
+        /// played: no sort, no distances, one comparison. Above it, the cost is one insertion
+        /// sort over the overflow, which is the cheap end of a problem that only exists at a
+        /// scale nothing else here is tuned for either.</para>
+        ///
+        /// <para><b>Cell centres, not drawn positions.</b> The drawn position costs a
+        /// <see cref="PawnPose.Of"/> per pawn and the answer would not change: the two differ by
+        /// less than a cell, and the question is which colonists are across the map.</para>
+        ///
+        /// <para><b>And a pawn that already has a figure counts as nearer than it is</b>, by a
+        /// quarter. Without that, panning the camera across a crowd swaps figures in and out at
+        /// the boundary every few frames, and a re-leased figure starts its gait and its gesture
+        /// memory again — which reads as colonists twitching in the middle distance. The discount
+        /// makes the set sticky enough that a figure is given up only when something is clearly
+        /// nearer.</para>
+        /// </summary>
+        void ChooseTheNearest(ReadOnlySpan<PawnView> pawns)
+        {
+            if (_eligible.Count <= MaxFigures) return;
+
+            Vector3 eye = ViewerPosition ?? _parent.position;
+
+            _order.Clear();
+            for (int n = 0; n < _eligible.Count; n++)
+            {
+                int i = _eligible[n];
+                float distance = (CellMetrics.FloorCentre(pawns[i].Cell) - eye).sqrMagnitude;
+                if (_byPawn.ContainsKey(pawns[i].Id.Value)) distance *= StickyFigure;
+                _order.Add(new Nearest(i, distance));
+            }
+
+            _order.Sort(NearestFirst);
+            _eligible.Clear();
+            for (int n = 0; n < MaxFigures; n++) _eligible.Add(_order[n].Index);
+            // Back into snapshot order, so that leasing, posing and everything downstream sees
+            // the colony in the order it has always seen it. Which pawns are drawn is what this
+            // decides; the order they are drawn in is not its business.
+            _eligible.Sort();
+        }
+
+        /// <summary>
+        /// How much nearer a pawn that already has a figure counts as being. See
+        /// <see cref="ChooseTheNearest"/>; squared distances, so this is the square of the margin.
+        /// </summary>
+        const float StickyFigure = 0.75f;
+
+        readonly struct Nearest
+        {
+            public Nearest(int index, float distance) { Index = index; Distance = distance; }
+            public readonly int Index;
+            public readonly float Distance;
+        }
+
+        static readonly Comparison<Nearest> NearestFirst =
+            (a, b) => a.Distance != b.Distance
+                ? a.Distance.CompareTo(b.Distance)
+                : a.Index.CompareTo(b.Index);
+
+        readonly List<int> _eligible = new List<int>();
+        readonly List<Nearest> _order = new List<Nearest>();
+
+        /// <summary>
+        /// Where the camera is, for the one decision that needs it: which colonists keep a live
+        /// figure when there are more of them than the cap allows. Null falls back to the
+        /// director's own root, which is what a harness with no camera gets.
+        /// </summary>
+        public Vector3? ViewerPosition { get; set; }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
         /// tool can step the clock deliberately rather than relying on a running player.</summary>
@@ -1056,16 +1182,28 @@ namespace Odyssey.Presentation.World
                 Vector3 origin = GroundRelief.Lift(BedShape.Origin(at.X, at.Z, at.Y, facing));
                 var along = new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing]);
 
+                // **The mattress is a tilted plane, because the bed is draped on to one.**
+                // `BedShape.Root` is `GroundRelief.Drape(...)`, a shear that takes the ground's
+                // tangent plane at the bed's own origin and carries the whole 4.6 m of bed along
+                // it. Sampling one height here and laying the body flat on it was right about a
+                // level bed and wrong by up to 0.21 m at the pillow on the steepest ground the
+                // relief makes. The same slope, read at the same point the drape reads it at.
+                GroundRelief.SlopeAt(origin.x, origin.z, out float slopeX, out float slopeZ);
+                float alongSlope = slopeX * along.x + slopeZ * along.z;
+
                 // The head goes on the pillow, which is a point the bed itself decides — so moving
                 // the pillow moves the sleeper and the two cannot drift apart.
                 figure.SleepHeadAt = origin + along * BedShape.HeadRestAlong;
-                figure.SleepSurfaceY = origin.y + BedShape.MattressTop;
+                // And the surface is the one under *that* point rather than under the bed's middle,
+                // because that is what the body is laid from.
+                figure.SleepSurfaceY =
+                    origin.y + BedShape.MattressTop + alongSlope * BedShape.HeadRestAlong;
                 figure.SleepAlong = along;
+                figure.SleepSlope = alongSlope;
                 return;
             }
 
             Vector3 floor = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.Cell));
-            figure.SleepSurfaceY = floor.y;
 
             // Whatever it was facing when it lay down. Held rather than recomputed, so a colonist
             // asleep on the ground does not swing round as the yaw eases.
@@ -1074,8 +1212,15 @@ namespace Odyssey.Presentation.World
 
             // No pillow to aim at, so the body is centred on the cell it dropped in: the head goes
             // half a body-length back along the way it is lying.
-            figure.SleepHeadAt =
-                floor - figure.SleepAlong * (SleepPose.BodyLength(figure.StandingHipHeight) * 0.5f);
+            float half = SleepPose.BodyLength(figure.StandingHeight) * 0.5f;
+            figure.SleepHeadAt = floor - figure.SleepAlong * half;
+
+            // The ground is draped too, cell by cell, so a body on a hillside lies along the hill
+            // for the same reason it lies along a bed. Read at the cell she dropped in, and the
+            // surface under her head follows from it.
+            GroundRelief.SlopeAt(floor.x, floor.z, out float groundX, out float groundZ);
+            figure.SleepSlope = groundX * figure.SleepAlong.x + groundZ * figure.SleepAlong.z;
+            figure.SleepSurfaceY = floor.y - figure.SleepSlope * half;
         }
 
         /// <summary>
@@ -1664,7 +1809,7 @@ namespace Odyssey.Presentation.World
             {
                 SleepPose.Place(
                     SleepPose.PostureFor(figure.Pawn), figure.SleepHeadAt, figure.SleepAlong,
-                    figure.SleepSurfaceY, figure.StandingHipHeight, figure.SleepWeight,
+                    figure.SleepSurfaceY, figure.StandingHeight, figure.SleepSlope, figure.SleepWeight,
                     figure.Transform.position, figure.Transform.rotation,
                     out Vector3 lain, out Quaternion laid);
                 figure.Transform.position = lain;
@@ -2103,6 +2248,12 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
             figure.SoleOffset = MeasureSole(figure);
+            // And how long a body there is to lay down. Measured here, beside the sole, because
+            // both are one bake of the posed mesh and both are properties of the rig rather than
+            // of the colonist wearing it.
+            figure.StandingHeight = MeasureBody(figure);
+            if (figure.StandingHeight > MeasuredStandingHeight)
+                MeasuredStandingHeight = figure.StandingHeight;
             if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
             _figures.Add(figure);
             return figure;

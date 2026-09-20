@@ -70,15 +70,18 @@ namespace Odyssey.Tests.PlayMode
                 // "debug" is the debug menu (2026-09-17), backtick's own panel now rather than a
                 // direct toggle of the developer overlay: built and hidden at startup exactly as
                 // "settings" is, so it too is a framed region whatever the colony is doing.
-                //
-                // "toasts" is the transient stack (SK4), under the alerts in the same column. Like
+                // "work" is the Work tab (design 27, 2026-09-20): docked bottom-left over the
+                // command bar, built and hidden at startup exactly as "settings" and "debug" are.
+                // "bulletins" is the Events panel (design 23, 2026-09-20): under the alerts in
+                // their column, hidden until something has happened, a framed region all the same.
+                // "toasts" is the transient stack (SK4), at the foot of that same column. Like
                 // "alerts" it is built once and hidden until it has something to say, so it belongs
                 // in this list whatever the colony is doing — the list is every framed region the
                 // shell BUILDS, not every one on screen.
                 string[] expected =
                 {
-                    "stores", "clock", "alerts", "toasts", "rail", "orders", "inspect", "build",
-                    "menu", "settings", "debug", "start", "saveprompt",
+                    "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "inspect",
+                    "build", "menu", "settings", "debug", "work", "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);

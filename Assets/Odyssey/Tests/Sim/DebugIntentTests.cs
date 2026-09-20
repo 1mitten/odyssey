@@ -132,6 +132,26 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.World.Intents.Rejected[1].Reason, Is.EqualTo(IntentRejection.NotPermitted));
         }
 
+        /// <summary>
+        /// The row that used to be inert (design 18): it fires the one incident there is, and a
+        /// def index the content does not have is refused as out of bounds rather than as
+        /// anything that sounds like the world's fault.
+        /// </summary>
+        [Test]
+        public void InvokeIncidentFiresTheSupplyDropAndRefusesABadIndex()
+        {
+            ColonyWorld colony = ColonyWorld.Build(Tall, seed: 8u, Colony(1));
+
+            colony.World.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, IncidentHandle.SupplyDrop));
+            colony.World.Intents.Submit(new Intent(IntentKind.InvokeIncident, default, 999));
+            colony.World.Tick();
+
+            Assert.That(colony.World.Intents.Rejected, Has.Count.EqualTo(1));
+            Assert.That(colony.World.Intents.Rejected[0].Reason, Is.EqualTo(IntentRejection.OutOfBounds));
+            Assert.That(colony.Incidents.Skyfallers.InFlight, Has.Count.EqualTo(1));
+            Assert.That(colony.Incidents.Ledger.Count, Is.EqualTo(1));
+        }
+
         static int WoodOnBoard(ColonyWorld colony)
         {
             int total = 0;

@@ -34,6 +34,8 @@ Every occurrence so far:
 | **Does a floor hide what is beneath it?** | `ChunkMesher.EmitScatter` (asks), `SurfaceContributor` (never asked) | **rubble drawn through a wooden deck, chased for three sessions** |
 | Is this cell the foot of a terrace step? | `BankLayout` (render mirror), `TerraceFoot` (cell grid) | allowed on purpose: different data, pinned cell-by-cell by `TerraceFootTests` |
 | **When is a colonist starving?** | `AlertModel.StarveAt` (120, of 1000), `AlertWatch.StarveThreshold` (12, of a scale that does not exist) | **the alert chime fired at 1.2% food instead of 12%, which is to say never — and its three unit tests all passed, because they fed the watcher literal numbers rather than a published pawn** |
+| **What colour is this order?** | `HudTheme.PinnedActionHue` (the chip), four `Color` constants in `OdysseyBootstrap` (the board) | **deconstruct was orange on the panel and the cancel red on the ground for months; the board's copy is in an assembly the fast tier does not compile, and the Unity-tier test asserted only that the mapping was total** |
+| **How big is the board?** | `BuildSession`'s chunk grid and render model (the inspector's), the colony request (the setup page's) | **silent for as long as nothing wrote to the chunk grid during a build; the first write threw out of bounds with the bounds check passing, because it asked the cell grid** |
 
 **The fix is always the same**: name one owner, make every other site *ask* it, and write a test that
 walks both. Never restate the rule "just here"; never answer a disagreement by changing one copy.
@@ -177,11 +179,465 @@ used at one fixed shape — pad to it — or not be shared.
 **And treat a Unity warning in a render path as a bug report.** This one named the property, both
 sizes and the exact line, and it had been printing for as long as the feature existed.
 
+### P10 — A pass that draws once per cell, in a renderer built on instancing
+
+**A submission costs about 4.6 us whatever is in it** (`docs/design/06-rendering-and-camera.md`
+§6c). So a pass that issues one `Graphics.RenderMesh` per cell is priced by how much of the board
+the player has touched, not by how much there is to see — and it is invisible to review, because
+each call is obviously correct and the loop around it is three lines.
+
+It hides especially well when the pass **does not increment `DrawCalls`**: the budget then cannot
+see it at all, and a milestone can report a healthy number while the pass is the largest thing in
+the frame.
+
+| The pass | What it drew per cell | What it cost | Now |
+|---|---|---|---|
+| `DrawZoneCover` | the ground module again, tinted | 2,065 calls, **3.67 ms of a 5 ms budget**, counted nowhere | a bit on the terrain bucket's tint — no draws |
+| `DrawSeedSpecks` | six unit cubes, one material | six submissions a sown cell | one `RenderMeshInstanced` a frame |
+| `TerrainSkirt` trees | instanced, but split into 760 spatial batches | 3.5 ms; **the tree count was irrelevant** | 272 batches, same 4,169 trees |
+| `DrawCellMark`/`Cut`/`Fill` | a plate per designated cell | **0.40 ms at 901 orders, counted nowhere** | gathered by colour, one instanced call each |
+
+**The tell:** a cost that scales with cells the player painted, designated or planted rather than
+with what is on screen. **The check:** anything fixed to the grid belongs in the chunk mesher,
+where a bucket is one instanced call and inherits culling and the dirty-chunk rebuild.
+`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` and
+`CellPlateTests.ABiggerMarkedAreaAddsInstancesRatherThanDraws` are the guards — each fails the
+moment its pass costs draws in proportion to its cells.
+
+**But price the pass before you believe the arithmetic.** The mark pass was the fourth of these
+and the first to be measured with a control in the same run, and it came out at **0.40 ms for
+901 plates, of which batching recovered 0.09** — a twentieth of what "4.6 us a submission times
+901" predicts. A submission's price depends on what is in it after all: the readings that
+constant came from each drew a real mesh, and a mark is a unit cube. The counted-nowhere half of
+this pattern is the reliable one; the it-must-be-expensive half is a hypothesis to test.
+`docs/design/06-rendering-and-camera.md` §6c.1.
+
+**The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
+publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
+paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
+its whole tick cost. Per-cell-per-frame and per-cell-per-tick are one pattern wearing two coats.
+
+### P11 — A measurement that never measured anything, clamped into plausibility
+
+Every length in the figure director is deliberately *measured* off the rig rather than written down,
+because sixty-one characters have sixty-one sets of proportions and a number of metres is right on
+one of them. That is the correct instinct and it moves the risk rather than removing it: the whole
+of the arithmetic downstream now rests on one reading, and **a reading can be of the wrong thing
+while still being a number.**
+
+`figure.StandingHipHeight` read `animator.GetBoneTransform(HumanBodyBones.Hips)`, which on this
+cast's avatar is a bone named `Root` standing on the floor. The difference it computed was nought.
+A `Mathf.Max(0.2f, …)` then turned "nothing" into "twenty centimetres", and everything that
+consumed it went on working perfectly on a colonist a sixth of her real size.
+
+**The tell is that the bad value is in range.** Nothing throws, nothing logs, no test fails, and the
+symptom appears a long way downstream in a shape that looks like a different bug — here, a body
+drawn in the wrong *place*, which sent two rounds of investigation into the placement arithmetic and
+into the simulation, both of which were right.
+
+**Ask what the measurement returns when it measures nothing**, and make that answer loud rather than
+plausible. A clamp, a `?? default`, a `Mathf.Max` floor and a zero-initialised field are all the
+same trap: they are there so that a missing rig does not crash, and they double as a disguise for a
+rig that is present and being read wrongly. Where the fallback has to exist, it should be a value a
+test can recognise as the fallback — and a test should assert that the real thing is not it.
+
+**Its second face: an aggregate answers the question it aggregates, not the one you asked** (added
+2026-09-20). Here the measurement was real and correctly computed, and still about the wrong thing.
+`SleepPose.Lift` was tuned until the lowest drawn vertex *anywhere* on a sleeping colonist just
+touched the mattress. On a supine sleeper that vertex is her back and the tuning was right. On a
+**side** sleeper it is a drawn-up knee, which props the body up like a kickstand — so half the
+colony lay 9 to 12 cm above its own bedding while the number reported 0.00 and 0.02 and looked
+perfect. A `min` over a whole body is a statement about that body's *extremities*; the thing being
+judged was its trunk.
+
+**Ask what the aggregate is over, and whether the subject is the whole of it.** Where it is not,
+measure the part in question — `SleepProbe` now prints the trunk's clearance beside the whole
+mesh's, so the next person to look can watch the two disagree. This is the harder half of the
+pattern, because there is no clamp and no zero to notice: both numbers are true.
+
+**And prefer the thing the player sees to the thing the rigger named.** A bone's meaning is a
+decision somebody made in a modelling package and cannot be assumed; where the drawn vertices are is
+not. `MeasureSole` already knew this — it bakes the posed mesh rather than believing the root is the
+sole — and the fix was to ask the same question the same way.
+
+### P12 — A per-actor pass that consults every other actor
+
+**P10's sibling, one level up.** P10 is about a pass priced by cells the player touched; this is
+about a pass priced by the *square* of how many things are alive. It hides even better, because
+each call is obviously correct, the loop around it is three lines, and at the colony size anybody
+tests with the quadratic term is smaller than the noise.
+
+| The pass | What it consults | What it cost | State |
+|---|---|---|---|
+| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **13.3 ms of a 22.5 ms frame at 384 colonists**, 0.02 ms at 64 | open; the fix is exact, see below |
+
+**The tell:** a cost that is flat while the count is small and then bends upward, with **draw
+calls and tick time both flat through the bend**. If neither the submissions nor the simulation
+moved, the cost is in a per-frame loop, and a loop that bends is a loop inside a loop.
+
+**The check:** for every per-actor pass, ask *what does it read that is not its own actor?* If the
+answer is "all of them", ask what the influence radius is. Here `SteeringCurve.CrowdFarRadius` is
+3.0 m against a 2.5 m cell, so all but a handful of the 147,000 pairs at 384 pawns contribute
+**exactly zero** — the pass is not approximating, it is computing nothing, expensively. **A bound
+like that makes the fix exact**, which matters more than the speed: a spatial index that skips
+only zero-weight pairs changes no drawn position, so a judged visual does not have to be judged
+again.
+
+**The instrument:** `OdysseyBootstrap.FrameSectionMs` splits the draw block eight ways and
+`FrameTimeTests.TheFrameAgainstColonySize` sweeps eight colony sizes in one world. A frame number
+that says "the renderer is slow" without saying which part only licences a guess.
+
+### P13 — The asset cannot draw the thing the code asked for, and nothing says so
+
+*Numbered out of order on purpose. It arrived as a second `P10` when two branches merged, and both `P10`s were already cited across the design documents; moving the newer one costs four references and leaves every existing citation true. A number in this catalogue has to resolve to one pattern.*
+
+A string literal, a shader keyword, a sprite name or a font glyph is *valid code* that names
+something the shipped asset does not contain. Nothing throws. The renderer draws its fallback — a
+blank, a magenta quad, a box — and every test passes, because a test asserts the value that was
+asked for and not the picture that came back.
+
+**The tell is that the thing is missing rather than wrong.** A colour that is off is a colour
+somebody chose; a glyph that is simply absent is nobody's decision, and it only shows up in a
+screenshot taken by a person who happens to be looking at that state. The Work tab's Simple mode
+had this in its purest form: `"✓"` and `"✕"` in two labels, Archivo Narrow with neither in
+its cmap and IBM Plex Mono with only the first, so a legend drew two blanks and every "won't do"
+cell drew one. The same fault was already sitting in the bed-owner picker on `main` and had never
+been played.
+
+**Neither tier can see it and that is structural, not an oversight.** The fast tier has no text
+engine at all; the Unity tier runs one and asserts no pixels. So this class has to be caught by
+**reading the asset**, which is cheap: `HudFontTests` parses both `.ttf` cmaps and fails on any
+non-ASCII character in a HUD literal that either font cannot draw. It found the second instance on
+its first run.
+
+**Ask it of anything the code names by string and the pack has to supply**: a glyph, a shader, a
+sprite key, an audio clip, an animation state. If the name is a literal and the asset is a file,
+something should read the file. The project already does this for icons (ADR 0007's validator) and
+for Defs (the content fingerprints); a font is the same question with a different file format.
+
+---
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
+
+Owner, from a Play session while spawning colonists: *"it seemed to hover 1.7 ms no matter the
+colony size but then frames dropped after so many colonists. I think at pretty high numbers."*
+
+Both halves were true and neither meant what it looked like. The hover is `World` — the board, its
+chunks and the surround — which is flat at 1.9–2.5 ms whatever the colony does. The drop is not
+the simulation (0.31 ms of tick at 384 pawns), not the draw calls (1,243 to 1,324 across a 48-fold
+colony) and not the figure ceiling being too low. It is `PawnPose.Of` scanning **every other
+pawn** for the crowd sidestep, once per posed pawn, every frame: 64 x N for the capped figures and
+(N-64) x N for the instanced stand-ins. The knee is at the ceiling because that is where the
+quadratic term is born.
+
+**The shape: a cost that is invisible at every size anybody tests at, and cubic-looking at sizes
+nobody does.** It is P12, and the reason it is worth a pattern of its own is the check it
+suggests — the influence radius. `CrowdFarRadius` is 3.0 m against a 2.5 m cell, so all but a
+handful of the pairs contribute exactly zero and are computed anyway, which makes a spatial index
+an **exact** rewrite rather than an approximation.
+
+**Found by** `FrameTimeTests.TheFrameAgainstColonySize` and `OdysseyBootstrap.FrameSectionMs`,
+both written for this report. **Not yet fixed** — held as the next unit so the sweep stands as its
+before. `docs/design/06-rendering-and-camera.md` §6c.2, `25-pawn-steering.md`.
+
+### 2026-09-20 — the pass that was free because it never ran
+
+Not a player report: a benchmark reading. A new `FrameTimeTests` case put 901 mine orders on the
+board and measured 4.85 ms against the bare meadow's 4.86 — which reads as "the mark pass costs
+nothing" and is one of the two answers that should never be believed on sight (the other being a
+five-fold regression). The orders were real: placed, published, counted in the snapshot. They
+were simply **outside the band the pass draws**. `DrawStandingOrders` filters every order to
+`LowestSelectableLayer .. HighestSelectableLayer`, the drawn slice was 8..15, and the case walked
+the board row-major from `z = 1`, which is a strip of lower ground. Nothing drew and nothing
+said so.
+
+**The shape: an instrument that can measure nothing and report a number.** It is the sibling of
+"count the pass, or the budget cannot see it" — there the pass ran and was uncounted, here the
+pass was counted and did not run. Both produce a plausible number from an empty measurement, and
+a plausible wrong result is worse than an obviously broken one.
+
+**Stopped by** `ChunkRenderer.CellPlatesDrawn`, printed on every `[FrameTime]` line and asserted
+greater than zero by the case that depends on it, and by the case asking the rig for the band
+rather than assuming the surface is in it.
+
+### 2026-09-20 — two editors on one machine, and a frame number that meant nothing
+
+Also not a player report. The first three frame-time readings of the session had the city canary
+at 4.01, 2.86 and 2.71 ms against its 2.01 ms record, and the mark pass read 1.57 ms, then
+0.81 ms, then 0.19 ms on runs of the same code. The machine was running a sibling checkout's
+PlayMode suite, then its player build, then an editor importing a third worktree. **Every
+absolute was inflated and every cross-run difference was noise.**
+
+**Stopped by** measuring the before and the after **inside one run, seconds apart**:
+`TheMarkPassCostsWhatItSubmits` times one meadow three times and quotes the differences, and
+`ChunkRenderer.InstanceCellPlates` switches the submission strategy without touching the
+geometry. Cross-run comparison on this machine is not a measurement, and the canary was already
+in `docs/lessons.md` saying so.
+
+### 2026-09-20 — Half the colony slept on one knee, and the number said nought (P11)
+
+Owner, watching the sleepers after the length fix landed: *"the body isn't quite flush on to the bed
+surface but the pillow head is placed nicely enough."*
+
+`SleepPose.Lift` had been tuned until the lowest drawn vertex anywhere on the mesh just touched the
+mattress — measured, 0.00 m and +0.02 m on the two side postures, which is a centimetre and reads
+as correct. Measuring the **trunk** alone, the band of baked mesh between the spine and the neck,
+gave **+0.09 m and +0.12 m**: on a side sleeper the lowest vertex is a drawn-up knee, and seating
+it props the whole body up like a kickstand. The two supine postures were genuinely flush and
+always had been, which is why the fault survived a contact sheet — half the pictures were right.
+
+**The shape: a true number about the wrong part of the subject.** Unlike the rest of P11 there is
+no clamp and no missing measurement to find; both figures are real and correctly computed, and the
+aggregate simply answers a question about extremities when the question was about a trunk.
+
+**Stopped by** `ShoulderPerBody` 0.152 → 0.109, set against the trunk, and by `SleepProbe` printing
+both clearances side by side so the disagreement is visible rather than inferred. The deliberate
+price is a knee pressed about 0.10 m into a 0.30 m mattress. `docs/design/20-beds.md` §7d.
+
+### 2026-09-20 — A colonist was laid down a sixth of her own length (P5, P11)
+
+Owner, third report on the same symptom: *"colonists are resting in the centre and hanging off the
+bed and sometimes even off the bed … it should know to always put the head onto the first tile and
+then the rest of the body goes on the 2nd tile."*
+
+The simulation was measured first, because the two previous rounds had both ended in the sim: three
+colonists, three player-built beds, three days, four seeds — **every sleeping tick on the head cell
+of a real bed, none off one**. So the sleeper was in the bed and the drawing was wrong, and the
+drawing is `SleepPose.Place`, whose arithmetic had been read and pronounced correct twice.
+
+It was correct. It was being handed a body 0.38 m long for a colonist 2.49 m tall.
+`SleepPose.BodyLength` was `StandingHipHeight * 1.9`, and `StandingHipHeight` is
+`hips.position.y - transform.position.y` where `hips` is
+`animator.GetBoneTransform(HumanBodyBones.Hips)` — **which on the Synty humanoid avatar is a bone
+literally named `Root`, sitting at the model origin, with the real pelvis as its child.** Nought on
+every one of the sixty-one characters, so the `Mathf.Max(0.2f, …)` clamp was the whole of the
+answer. The root of the lying figure went 0.38 m past the pillow and the rest of her — 2.1 m —
+extended the other way, off the head end of the bed and on to the floor. Measured along the bed:
+body `[−2.57, 0.29]` against a frame of `[−1.05, 3.55]`.
+
+**The shape: a measurement that returns a plausible number for a question it never answered.**
+Nothing downstream could tell, because 0.38 m is a length and every line that consumed it worked
+perfectly. The clamp made it worse by turning "I measured nothing" into "20 cm".
+
+**Why the test written for exactly this missed it.** `ASleeperLiesWithinTheBedsOwnTwoCells` was
+added in the previous round to assert that a sleeper fits the bed, and it passed. It walked a range
+of plausible **hip heights** — 0.70 m to 1.30 m — and checked the body each implies. The value the
+game passed was 0.2 m, which no range starting at 0.70 m can reach. A fixture constant that is a
+reasonable value for a quantity is not evidence that the quantity is reasonable.
+
+**Stopped by** measuring the body instead of deriving it: `FigureBuild.Height` bakes the posed mesh
+and takes the sole and the crown, the idiom `MeasureSole` already uses. `SleepPose.BodyLength`
+guards anything outside 0.5 m to 5 m. The span test now walks the body length rather than a hip,
+from far too short to far too long, and `FigureBuildTests` instantiates a real rig and asserts the
+measurement looks like a person and that the avatar's `Hips` bone is nothing like a body length.
+`scripts/unity.sh exec Odyssey.EditorTools.SleepProbe.Run` prints the whole of it.
+`docs/design/20-beds.md` §7b.
+
+### 2026-09-20 — The soil had borders, and the borders were the frame budget
+
+Owner, with a screenshot: *"Remove the borders from dirt/soil tiles — each tile must have some
+kind of border/shade ... or could be something overlaying and reacting."* The second guess was
+right.
+
+A growing zone was drawn as the ground's own module laid over itself, tinted and translucent. It
+carried a 1.01 scale so neighbours **overlapped rather than met**, on the reasoning that an
+overlap of one tint is invisible by construction. That is true of an opaque overlay and false of
+a translucent one: alpha blending is not idempotent, so at alpha 0.78 a doubly-covered band
+composites to 1-(1-0.78)^2 = 0.95 and the dirt showing through falls from 22% to 5%. Hence a dark
+line on every **interior** edge and none on the outside edge — which is the shape in the
+photograph, and the thing that identifies the cause without reading any code. Under it,
+`MarkLift` did the same again in miniature: lifting a cover raises a *box*, whose four sides then
+stand proud of the neighbouring soil by exactly the lift.
+
+**The shape: a geometric fix and a blending fix that are incompatible, each correct alone.** The
+overlap was added to close a sliver; the sliver's real cause (the cover drew the plain default
+block instead of the drawn variant clump) had already been fixed, so the overlap was belt over
+braces, and the braces were made of alpha.
+
+**Settled by four photographs rather than argument** — bug, overlap removed, alpha 1.0 (seamless,
+so the meshes tile with no gap), alpha 0 (seamless, so the ground has no seam of its own). Two
+controls that each eliminate one candidate outright.
+
+**And the same pass was 3.67 ms of a 5 ms frame**, one submission per zoned cell, incrementing no
+counter (P10). Because the look fix had made the cover provably the ground's own mesh in the
+ground's own place, the answer to both was to stop drawing it twice.
+
+**Stopped by** `TintCode.TilledBase` — worked soil is a bit on the terrain bucket's tint —
+and by `GrowingRenderTests.AZoneCoverSitsExactlyOnTheGroundItCovers` before it was deleted,
+`ABiggerFieldAddsInstancesRatherThanDraws` after. `docs/design/22-growing.md` §6a,
+`06-rendering-and-camera.md` §6c.
+
+### 2026-09-20 — The carrots did not disappear; there was nowhere to see one
+
+Owner: *"I thought people picked up the carrots ... but they seemed to disappear now?"*
+
+They did not. The ten-day field soak accounts for every one — 116 harvests at five apiece, 501
+still on the map, the rest eaten — and the contact sheet shows the pile spawning off the soil and
+drawing correctly. `LedgerModel` counted meals, wood and salvage and nothing else, so the whole
+visible life of a carrot was: a pile appears, a hauler carries it to the store or a colonist eats
+it, and then nothing in the interface mentions carrots again.
+
+**The shape: a complete feature with no readout, reported as a simulation bug.** For a commodity
+the player is meant to decide on, "cannot be seen anywhere" and "does not exist" are the same
+report. Worth remembering when a report says something vanished: ask what would have shown it.
+
+**Stopped by** a Carrots row counted wherever it lies — the ledger is the colony's count, not the
+storeroom's — and `LedgerModelTests.TheFieldCropIsCountedWhereverItLies` /
+`TheCropRowStandsEvenWithNoCarrotsInIt`. Stone, iron ore and coal are still uncounted and have
+the same report waiting.
+### 2026-09-20 — Two glyphs the fonts do not have, in two panels, neither ever drawn (P13)
+
+Not reported. Found while reviewing PR #145 by asking a question no test asks: *are the characters
+this code writes actually in the font that draws them?*
+
+The Work tab's Simple mode drew its two readings as the characters U+2713 CHECK MARK and U+2715
+MULTIPLICATION X, in a `Label`. **Archivo Narrow's cmap contains neither and IBM Plex Mono contains
+only the tick.** The cell glyph takes the mono face (it is `numeric: true`, for the digit beside
+it), so every *won't do* cell drew a blank; the legend takes the UI face, so both of its swatches
+drew blanks. The whole of Simple mode was two empty columns of boxes.
+
+**And the same character was already on `main`**, in the bed-owner picker `HudShell.Inspect.cs`
+shipped by PR #141 — `BedPickerMark.ThisBed` is a tick in `HudTextRole.Body`, which is Archivo
+Narrow, which does not have one. The mark that says *this is the bed this colonist owns* has been an
+empty column since it was written, and that panel is still on the playtest queue unplayed.
+
+**Why every test passed.** The fast tier compiles no text engine; the Unity tier compiles one and
+asserts no pixels; the PlayMode smoke test counts framed regions. A `Label` whose `text` is `"✓"`
+has that text in every assertion anybody could write about it. The picture is the only place the
+fault exists and nothing in either tier looks at a picture.
+
+**Stopped by** two things. The shapes are now drawn — `HudGlyphKind.Check` and `HudGlyphKind.Cross`
+on the same 24-unit grid as every other chrome icon, which is what this project does with icons
+anyway — and `HudFontTests.EveryCharacterTheHudWritesExistsInBothFonts` reads both `.ttf` files'
+`cmap` tables and fails the **fast tier** on any non-ASCII character in a string literal under
+`Odyssey.Hud` or `Odyssey.Presentation` that either face cannot draw. It is held to *both* faces
+rather than the one that happens to draw it today, because a label's face is picked by its role and
+roles move. Every other character the HUD uses — `· × – — • … ›` — is in both, so the rule costs
+nothing to hold. The test found the bed-picker instance on its first run.
+
+### 2026-09-20 — Woken for a bed, and sent to work instead
+
+Owner, second play day: *"when I assigned someone else to a bed — everyone just started going back
+to work."*
+
+`JobSystem.GetOutOfTheWrongBed` ended the sleep of everybody the assignment concerned — correctly,
+and only them — and handed each to the think tree. The tree's sleep branch is gated on rest below
+the `seekThreshold` (280 of 1000); a sleeper wakes at 950. A colonist got up at 600 was, by that
+gate, not tired, so `WorkThinkNode` took her. In a colony of three the two people concerned are
+"everyone".
+
+**The shape: a rule that reuses a decision made for a different question.** "Should she start
+sleeping?" and "she was asleep; where should she continue?" share a chooser but not a gate, and
+routing the second through the first's gate was invisible while the gate happened to be open.
+
+**Why five tests missed it.** All five assigned the bed within a tick of her lying down, at the
+rest of 40 the helper sets, so the gate was open in every one. A test that probes a range at one
+point proves the rule at that point. The repro sleeps her to `seek + 300` first.
+
+**Stopped by** the sweep resuming the sleep itself, in two passes (end every affected sleep, then
+choose again, so that the bed just given to B is not still reserved by A when B chooses), through
+`CriticalNeedsThinkNode.TrySleep` made public. `BedTests.AColonistWokenMidNightGoesToTheBedSheWasGivenNotToWork`,
+`GivingOneSleepersBedToAnotherMidNightMovesThemBothAndWakesNobodyElse`. `docs/design/20-beds.md` §7.
+
+### 2026-09-20 — The board had two sizes, and only a write could tell
+
+Not reported, and not reportable: it was silent until something wrote.
+
+`OdysseyBootstrap.BuildSession` built the **chunk grid and the render model** from
+`new GridSize(sizeX, sizeZ, layers)` — the inspector's numbers — and then built the **world** from
+`sizeOverride ?? size`, the setup page's. So a new game on any board but the scene's default had a
+mirror and a chunk grid of one size over a world of another. Every cell index near the far edge
+landed outside them.
+
+**Nothing had ever written to the chunk grid during a world build**, so it sat there. The moment
+the scenario started raising real beds (`ColonyScenario.RaiseAStartingBed`, same day) three
+PlayMode tests threw `IndexOutOfRangeException` out of `ChunkGrid.MarkDirty` — with the bounds
+check one line above it *passing*, because `ConstructionGrid.MarkChunksAround` asked `ctx.Size`,
+the cell grid, about a write going to the chunk grid.
+
+- **A plain P1**, with the extra twist that the disagreement was **latent behind an unexercised
+  write**. Two owners for one number, agreeing in every configuration anybody ran.
+- **The fast tier could not see it.** `PawnContext.Chunks` is null headless, so
+  `MarkChunksAround` returns on its first line. 769 Sim tests were green while this was live.
+- **Stopped twice over**: the size is decided once in `BuildSession`, before the chunk grid and
+  the mirror are built from it, and `MarkChunksAround` now asks the grid it is about to write to
+  rather than the one beside it. The second half is the one that does not depend on remembering
+  the first.
+- **The lesson for the next change like it:** a new *write* into a structure nothing wrote to
+  before is a probe. When one starts failing, suspect the structure's provenance rather than the
+  new write — the write is usually correct and merely first.
+
+### 2026-09-20 — Colonists slept beside beds, and a phantom cell was why
+
+Owner: *"some colonists still sleep off the bed … it looks like it's trying to rest them in the
+first tile in some circumstances where they are hanging off the bed."*
+
+`ColonyScenario` put five entries into `ColonyItems.Beds` that were **cells and nothing else** — no
+edifice, no record. Correct when it was written, because a bed was then a property of a cell.
+The day beds became furniture it became a lie with three consequences, and only the third was
+reported: the cell cannot be seen, it cannot be owned (`AssignOwnerAt` refuses a cell with no
+edifice, so bed ownership was dead on every bed the colony started with), and a colonist who
+"sleeps in it" is laid out by the **ground** pose — flat on the grass, centred on her cell, along
+her last yaw. Next to a real bed that is a colonist hanging off it.
+
+**The shape: a value that meant one thing when a cheap representation was all there was, left in
+place after the real representation arrived.** Not two owners disagreeing — one owner holding two
+*kinds* of thing in one list and every reader assuming the richer kind.
+
+**The measurement is the point.** Reading the pose arithmetic said it was correct, and it was: a
+sleeper aimed from a real bed lies between −1.55 m and +0.26 m of a bed spanning ±2.30 m. Three
+colonists, three built beds, three days, counted: one spent **all 53,222** of her sleeping ticks
+off a bed and a second **17,399** of hers, every one within three cells of a bed she never used.
+With the phantom cells gone, all three slept on a bed for every tick.
+
+**Stopped by** `ColonyScenario.RaiseAStartingBed` — a starting bed is a real bed — and
+`BedTests.EveryCellTheSleepChooserKnowsHasABedInIt`, which asserts the invariant directly rather
+than the symptom. `docs/design/20-beds.md` §7a.
+
+### 2026-09-20 — Two colour tables for one tool, in two assemblies
+
+Owner: *"the placement shouldn't be red — it should use the same colour as deconstruct (the orange
+colour) … match the orders blueprints/placement titles to the color assigned on their toolbar."*
+
+A **P1**, and the plainest one yet. `HudTheme.PinnedActionHue` said what a palette chip was;
+four `Color` constants in `OdysseyBootstrap` said what the board was. They disagreed on two of the
+four tools. Deconstruct was orange on the chip and **red** on the board — the interface's own
+colour for *cancel* — so the panel and the cursor told the player two different things about which
+tool was in their hand, for months.
+
+**Why nothing caught it:** the board's copy lived in `Odyssey.Presentation`, which the fast tier
+does not compile, and the only thing asserting it was a Unity-tier test of *totality* — every kind
+maps to something — which a wrong colour satisfies perfectly.
+
+**Stopped by** `Odyssey.Hud.OrderColours`, one owner in a Unity-free assembly, with
+`PinnedActionHue` delegating to it and `OrderColoursTests` in the **fast tier** asserting that the
+chip, the cursor and the board mark are the same hue for every tool, and that no two tools look
+alike on the board. `docs/design/16-cancel-and-deconstruct.md` §6b.
+
+### 2026-09-20 — The state hash could not see a stockpile
+
+Not reported; found by a control written for an owner ask about saves.
+
+`ColonyItems` hashed its things and **not** its stockpile zones or its bed list — both of which it
+had been *saving* since they existed, which is the worse of the two ways round. Save and hash are
+meant to cover the same set, and `WorldRoundTripTests` proves a save by **comparing hashes**: a
+zone whose filter failed to round-trip would have come back accepting everything, hashed
+identically, and passed. The goldens and the determinism harness were blind to it too.
+
+**This is OQ-50's shape exactly** — the whole cell grid sat outside the hash for a year — and the
+way to find it is the same: do not read the contributor, flip one bit of the state and ask whether
+the number moved.
+
+**Stopped by** hashing both lists, and by
+`OrdersSurviveASaveTests.EachOrderMovesTheStateHash`, which walks every kind of player order —
+designation, blueprint, bed owner, zone cells, zone priority, zone filter, forbidding, work
+priority — and asserts each one moves the hash. It found this on its first run.
 
 ### 2026-09-19 — The volume you set on the title screen was never saved
 
@@ -1088,6 +1544,64 @@ board: 3,172 frames of 59,000 moved a colonist backwards along her own step, up 
   not gone far enough. Running the same measurement with the steering switched off gave numbers
   identical to the frame, which said in one run that this was a different fault.
 
+## A cached picture of a moving world (2026-09-20)
+
+Owner: *"when generating more colonists — some ... their profile picture seems black."*
+
+`PortraitStudio` renders a colonist once and keeps the texture for the session. It is careful that
+its own key light must not escape into the world, and never asked the reverse question. The daylight
+cycle writes the **global** ambient, fog, skybox and sun, so the portrait camera read whatever hour
+it happened to fire on: the same colonist measured 80 of 255 at noon and 26 at midnight, and 26 is a
+black square in a 26 px tile. Cached, so it never recovers.
+
+- **The pattern:** *a render that is kept is a render of everything that was true at that instant.*
+  Anything one-shot and cached — a portrait, a baked mesh, a thumbnail — has to own every global it
+  reads, not merely the ones it set. Ask of any such render: **what in this picture is a fact about
+  the subject, and what is a fact about when it was taken?**
+- **It is the mirror of a rule the file already had.** Design 20 §10.3 reasons carefully that the
+  studio's light must not reach the world. The same sentence, read backwards, is the bug.
+- **"Some" is the signature.** A cached derivation that depends on an unnoticed input fails for
+  exactly the subset created while that input was wrong — which reads as randomness and is not.
+- **A global can look taken over and not be.** Three versions of the fix measured as working and
+  were not: `ambientMode`/`ambientLight` leave the renderer on a stale probe,
+  `RenderSettings.ambientProbe` is honoured only under `AmbientMode.Custom`, and the skybox still
+  arrives as the default reflection probe. **Measure the take-over, do not read it** — a spread
+  across the day is one number and it said no three times.
+- **The check:** `PortraitLightingTests` photographs one fixed appearance at ten hours of one day
+  and fails if the brightest is more than 3% over the darkest; a companion asserts the studio hands
+  the environment back. Both fail on the old code.
+
+## One rule with two owners, again: the brightest light in the scene (2026-09-20)
+
+`OdysseyBootstrap.FindKeyLight` means "the scene's own sun" and says so in a comment. What it does
+is take the brightest directional light in the scene — and `PortraitStudio` puts one there, hidden
+and switched off, the first time the setup page photographs a candidate. Adopt it and the world
+loses its sun while every portrait is lit by a light the clock is quietly retuning.
+
+- **The pattern:** a finder whose comment states an intent its predicate does not. The predicate is
+  the rule; the comment is a wish. It is this file's recurring *one rule with two owners* in a new
+  coat: here the two owners are a comment and a `foreach`.
+- **What made it invisible:** it only fires when the scene's own sun is dimmer than 1.6 at the
+  moment a session is built, and the play scene bakes its sun at midday.
+- **The check:** the predicate now skips lights on objects with hide flags, and the studio
+  re-asserts its own light's aim, colour and intensity on every shot — so neither half can be
+  quietly retuned by the other again.
+
+## A cap with no order is a cap on identity (2026-09-20)
+
+Past `PawnFigureDirector.MaxFigures` a colonist is drawn as a baked mesh and does not animate, which
+is deliberate and documented as *"a colonist beyond the cap is a long way off"*. Nothing sorted. The
+loop walked the snapshot and stopped, and snapshot order is pawn id — so the colonists that lost
+their animation were fixed at creation and the camera never changed it. Eighty-five colonists: the
+nearest frozen one at 134 m, an animated one at 179 m.
+
+- **The pattern:** a budget applied in arrival order rather than in the order the budget's own
+  justification names. The comment said "a long way off"; nothing made distance the criterion.
+- **Where to look for more:** anything that truncates a list to a budget. If the doc comment gives a
+  reason ("far", "old", "least important"), the code has to sort by it or the reason is fiction.
+- **The check:** `FigureCapTests` spawns twenty colonists along a line in a *scrambled* order, so id
+  order and distance order disagree; the old code fails it. Scrambling is the whole test — spawn
+  them nearest-first and taking the first N by id passes without sorting anything.
 
 ## A housekeeping rule that only runs while there is something to keep house over
 

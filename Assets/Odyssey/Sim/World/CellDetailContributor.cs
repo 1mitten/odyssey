@@ -28,14 +28,16 @@ namespace Odyssey.Sim.World
         readonly CellGrid _grid;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
         readonly Growing.GrowingZones? _zones;
+        readonly EnclosureGrid? _enclosure;
         readonly int[] _costByClass = new int[256];
 
         public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
-            Growing.GrowingZones? zones = null)
+            Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null)
         {
             _grid = grid;
             _edifices = edifices;
             _zones = zones;
+            _enclosure = enclosure;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -109,9 +111,10 @@ namespace Odyssey.Sim.World
                 }
             }
 
+            bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner, zonePlant, cropGrowth, zoneYield));
+                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors));
         }
     }
 }

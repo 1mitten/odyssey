@@ -510,15 +510,15 @@ namespace Odyssey.Presentation.World
         /// <summary>
         /// Does this cell hide the face towards it, so no panel need be drawn there?
         ///
-        /// Doors count, which is not obvious and matters: a door is deliberately *not* blocking
-        /// for movement, so a movement-based test would wall the doorway up with the neighbouring
-        /// wall cell's panel and the door would open onto masonry.
+        /// A solid block, wall, window, pillar or vault occludes. Doors do NOT occlude: a door
+        /// is a framed portal through which the adjacent wall panels must form the jambs, rather
+        /// than leaving the wall's hollow interior exposed.
         /// </summary>
         public bool OccludesFace(int index)
         {
             if (IsSolid(index)) return true;
             ushort def = _edifice[index];
-            return def == CoreContent.EdificeWall || def == CoreContent.EdificeDoor ||
+            return def == CoreContent.EdificeWall ||
                    def == CoreContent.EdificeWindow || def == CoreContent.EdificePillar ||
                    def == CoreContent.EdificeVaultWall;
         }
@@ -605,6 +605,92 @@ namespace Odyssey.Presentation.World
             return chosen & 3;
         }
 
+        /// <summary>
+        /// The direction a door frame and sliding leaf face to align with adjacent walls, 0–3 (<see cref="Directions"/>).
+        ///
+        /// <para>Facing points along the opening (the walkway), with the frame running perpendicular to it.
+        /// When walls stand on opposite sides (e.g. West and East), the doorway opens North/South (yaw 0).
+        /// Shared between <see cref="ChunkMesher"/> and <see cref="DoorDirector"/> so the frame
+        /// and the sliding leaf cannot disagree on orientation.</para>
+        /// </summary>
+        public int DoorFacing(int index) =>
+            DoorFacing(Size.FromIndex(index).X, Size.FromIndex(index).Z, Size.FromIndex(index).Y, _edificeFacing[index] & 3);
+
+        public int DoorFacing(int index, int chosen)
+        {
+            CellRef cell = Size.FromIndex(index);
+            return DoorFacing(cell.X, cell.Z, cell.Y, chosen);
+        }
+
+        public int DoorFacing(int x, int z, int y) =>
+            DoorFacing(x, z, y, Size.Contains(x, z, y) ? (_edificeFacing[Size.Index(x, z, y)] & 3) : 0);
+
+        public int DoorFacing(int x, int z, int y, int chosen)
+        {
+            bool westWall = Size.Contains(x - 1, z, y) && OccludesFace(Size.Index(x - 1, z, y));
+            bool eastWall = Size.Contains(x + 1, z, y) && OccludesFace(Size.Index(x + 1, z, y));
+            bool northWall = Size.Contains(x, z + 1, y) && OccludesFace(Size.Index(x, z + 1, y));
+            bool southWall = Size.Contains(x, z - 1, y) && OccludesFace(Size.Index(x, z - 1, y));
+
+            bool ewWalls = (westWall && eastWall) || ((westWall || eastWall) && !northWall && !southWall);
+            bool nsWalls = (northWall && southWall) || ((northWall || southWall) && !westWall && !eastWall);
+
+            if (ewWalls)
+            {
+                // Wall runs East-West: doorway opening must run North-South.
+                // If one side is indoor (roofed) and the other is outdoor (unroofed),
+                // the door frame automatically faces the outdoor facade.
+                bool southRoofed = Size.Contains(x, z - 1, y) && IsRoofed(x, z - 1, y);
+                bool northRoofed = Size.Contains(x, z + 1, y) && IsRoofed(x, z + 1, y);
+                if (northRoofed && !southRoofed) return Directions.South;
+                if (southRoofed && !northRoofed) return Directions.North;
+
+                // When both or neither side is roofed, respect player's rotation choice if North or South.
+                if (chosen == Directions.North || chosen == Directions.South)
+                    return chosen;
+
+                return Directions.South;
+            }
+
+            if (nsWalls)
+            {
+                // Wall runs North-South: doorway opening must run East-West.
+                bool westRoofed = Size.Contains(x - 1, z, y) && IsRoofed(x - 1, z, y);
+                bool eastRoofed = Size.Contains(x + 1, z, y) && IsRoofed(x + 1, z, y);
+                if (westRoofed && !eastRoofed) return Directions.East;
+                if (eastRoofed && !westRoofed) return Directions.West;
+
+                // When both or neither side is roofed, respect player's rotation choice if East or West.
+                if (chosen == Directions.East || chosen == Directions.West)
+                    return chosen;
+
+                return Directions.East;
+            }
+
+            // At corners, tees or free-standing: respect the player's rotation choice,
+            // avoiding facing directly into an immediately adjacent occluding wall.
+            int desired = chosen & 3;
+            int nx = x + Directions.DeltaX[desired], nz = z + Directions.DeltaZ[desired];
+            if (Size.Contains(nx, nz, y) && OccludesFace(Size.Index(nx, nz, y)))
+            {
+                int opp = Directions.Opposite(desired);
+                int ox = x + Directions.DeltaX[opp], oz = z + Directions.DeltaZ[opp];
+                if (!Size.Contains(ox, oz, y) || !OccludesFace(Size.Index(ox, oz, y)))
+                    return opp;
+            }
+            return desired;
+        }
+
+        public bool IsRoofed(int x, int z, int y)
+        {
+            for (int aboveY = y + 1; aboveY < Size.SizeY; aboveY++)
+            {
+                int idx = Size.Index(x, z, aboveY);
+                if (IsSolid(idx) || _floor[idx] != CoreContent.SlabNone) return true;
+            }
+            return false;
+        }
+
         /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
         public int BedPillowModule => _bedPillowModule;
 
@@ -661,6 +747,37 @@ namespace Odyssey.Presentation.World
         {
             if ((uint)index >= (uint)_edifice.Length) return 0f;
             return _edifice[index] == CoreContent.EdificeBed ? BedShape.Size.y : 0f;
+        }
+
+        /// <summary>
+        /// How far above this cell's floor an <b>order mark</b> sits, in metres — the one rule for
+        /// where the paint on an ordered cell goes.
+        ///
+        /// <para><b>Written because deconstruct had no mark it could use.</b> Every other standing
+        /// order is drawn as a flat plate, and a plate at the floor of a cell with a wall standing
+        /// in it is inside the wall. Deconstruct was given a whole-cell outlined box instead, and
+        /// the owner reported that back (2026-09-20): <i>"puts down an entire square as the
+        /// blueprint to deconstruct … make it mark the tile for deconstruction instead like you
+        /// would mark in mining"</i>. Mining works because rock is solid and the mark goes on top
+        /// of it; the answer was never a different shape, it was the same shape at the right
+        /// height.</para>
+        ///
+        /// <para><b>Three cases and no list of defs.</b> Anything that fills its cell is marked on
+        /// its top face, which is the face you see it from — solid rock for a mine order, and a
+        /// wall, door, window, pillar or vault for a deconstruct one, all of them
+        /// <see cref="OccludesFace"/>'s own answer. Anything that stands up without filling the
+        /// cell is marked on top of itself, which is <see cref="StandHeight"/> and today means a
+        /// bed. Everything else is marked on the floor: a tree ordered felled, a ladder, a slab, a
+        /// cell waiting to be built in.</para>
+        ///
+        /// <para>Trees fall through to the floor deliberately, and that is why this asks
+        /// <see cref="OccludesFace"/> rather than "is anything here": a fell order is read on the
+        /// ground the tree stands in, and lifting it three metres would hang it in the canopy.</para>
+        /// </summary>
+        public float MarkHeight(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return 0f;
+            return OccludesFace(index) ? CellMetrics.SizeY : StandHeight(index);
         }
 
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>

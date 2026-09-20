@@ -870,8 +870,21 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnPreferencesChanged()
         {
-            if (_menu.Screen == MenuScreen.Settings && !_boot!.Preferences.Open) _menu.Back();
+            // A note on a session row answers one press. Opening or closing the panel is a new
+            // visit, and a row still saying "No saved colonies" from last time would be stating
+            // it about a folder nobody has looked in since.
+            if (_boot!.Preferences.Open != _notesTakenWhileOpen)
+            {
+                _notesTakenWhileOpen = _boot.Preferences.Open;
+                ClearSessionNotes();
+            }
+
+            if (_menu.Screen == MenuScreen.Settings && !_boot.Preferences.Open) _menu.Back();
         }
+
+        /// <summary>Whether the panel was open last time <see cref="OnPreferencesChanged"/> ran —
+        /// the edge this shell needs and the preference bus does not publish.</summary>
+        bool _notesTakenWhileOpen;
 
         void RefreshStartArming()
         {
@@ -1166,10 +1179,30 @@ namespace Odyssey.Presentation.Ui
                     break;
 
                 case SessionCommands.LoadKey:
+                {
+                    // **Look before the colony is thrown away.** The three steps below are
+                    // deliberate — the panel closes, the world goes, the list arrives — and until
+                    // 2026-09-20 they ran without anybody having asked whether the list would have
+                    // anything on it. With an empty Saves folder the player pressed Load, watched
+                    // their colony disappear, and arrived at "No saved colonies" with no way back
+                    // to it (owner, 2026-09-20: "you can end up losing your current game as it
+                    // goes back to the main menu").
+                    //
+                    // Readable, not merely present: a save this build cannot open is listed but
+                    // cannot be chosen (`MenuDirector.ChooseSave`), so a folder holding only those
+                    // is a folder with nothing to load, and tearing down for it would lose the
+                    // colony exactly as an empty folder did.
+                    if (!AnySaveCanBeOpened())
+                    {
+                        NoteOnSessionRow(SessionCommands.LoadKey, Registry.Label("ui.start.empty"));
+                        break;
+                    }
+
                     _boot!.Preferences.SetOpen(false);
                     _boot.TeardownSession();
                     _menu.Choose(SessionCommands.LoadKey);
                     break;
+                }
 
                 case SessionCommands.QuitToMenuKey:
                     _boot!.Preferences.SetOpen(false);
@@ -1179,6 +1212,21 @@ namespace Odyssey.Presentation.Ui
                 // The exit row keeps its own path: SettingsPresenter has listened to
                 // ExitRequested since before this panel had any other session row.
             }
+        }
+
+        /// <summary>
+        /// Is there a colony on disk this build could actually open?
+        ///
+        /// <para>The same question <see cref="FillSaveList"/> answers with a row of text and
+        /// <c>MenuDirector.ChooseSave</c> answers by refusing, asked before anything irreversible
+        /// happens. It reads the folder, which is disk work, and it is done once on a press rather
+        /// than every frame.</para>
+        /// </summary>
+        static bool AnySaveCanBeOpened()
+        {
+            foreach (SaveEntry entry in SaveFiles.List())
+                if (entry.IsReadable) return true;
+            return false;
         }
 
         void OnLoadSave(SaveRow row)

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
   What can be built, and what out of.
 
@@ -186,6 +186,23 @@
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>
     <iconKey>ui.arch.tool.bed</iconKey>
+  </BuildingDef>
+
+  <!--
+    THE DOOR. edifice 2 is CoreContent.EdificeDoor.
+    blocking false: a door is passable.
+    costCount 5 and workToBuild 135 matching a wall.
+  -->
+  <BuildingDef>
+    <defName>Building_Door</defName>
+    <label>door</label>
+    <edifice>2</edifice>
+    <blocking>false</blocking>
+    <rotates>true</rotates>
+    <costCount>5</costCount>
+    <workToBuild>135</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.door</iconKey>
   </BuildingDef>
 
   <!--

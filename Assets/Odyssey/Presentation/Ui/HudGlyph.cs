@@ -28,6 +28,36 @@ namespace Odyssey.Presentation.Ui
         AlertTriangle,
         Info,
 
+        /// <summary>
+        /// A passion flame, filled: one means a colonist likes the work, two that they love it
+        /// (design 27 §6.4). The only filled organic shape in this set — everything else here is
+        /// a chevron, a triangle or a rule — so it is drawn as a closed polygon rather than built
+        /// out of the stroke helpers.
+        /// </summary>
+        Flame,
+
+        /// <summary>
+        /// A tick and a cross: Simple mode's "will do" and "won't do" (design 27 §6.5).
+        ///
+        /// <para><b>Drawn rather than typed, and that is a measurement not a preference.</b> They
+        /// were U+2713 and U+2715 in a label until the two font files were read:
+        /// Archivo Narrow's cmap has neither, and IBM Plex Mono has the tick and not the cross. So
+        /// the legend drew two blanks and every "won't do" cell in the grid drew one, and neither
+        /// tier could see it — the fast tier has no text engine and the Unity tier asserts no
+        /// pixels. <see cref="HudGlyphKind.Cross"/> is deliberately its own kind rather than
+        /// <see cref="Close"/> at another inset: one dismisses a panel, the other is a value in a
+        /// cell, and a glyph that means two things is a glyph that gets restyled for one of
+        /// them.</para>
+        /// </summary>
+        Check,
+        Cross,
+
+        /// <summary>
+        /// A circular arrow: put this back the way it was. The Work tab's reset, which drops a
+        /// column sort and returns the rows to the roster's own order.
+        /// </summary>
+        Refresh,
+
         // ---------------------------------------------------------------- Build palette
         //
         // Forty-two more, drawn for the same reason the eleven above are and under the same
@@ -272,6 +302,37 @@ namespace Odyssey.Presentation.Ui
                     Dot(painter, P(12, 17.6f), Mathf.Max(0.9f, 1.15f * scale));
                     return;
 
+                case HudGlyphKind.Flame:
+                    // Proportions lifted from the mockup's clip-path and put on the 24 grid this
+                    // file draws everything on: a narrow teardrop with the kick to the right that
+                    // makes it read as a flame rather than as a leaf, at the 9 px it is drawn at.
+                    FillPolygon(painter,
+                        P(12f, 1f), P(17.8f, 8.2f), P(16.6f, 11.5f), P(20.2f, 15.8f),
+                        P(16.6f, 23f), P(6.2f, 23f), P(3.4f, 15.8f), P(7.8f, 9.6f));
+                    return;
+
+                case HudGlyphKind.Check:
+                    Polyline(painter, true, P(4.5f, 12.4f), P(9.6f, 17.5f), P(19.5f, 6.5f));
+                    return;
+
+                case HudGlyphKind.Cross:
+                    // Close's X, inset half a pixel further so that at the 13 px a cell draws it
+                    // the strokes do not touch the rounded corner of the box behind them.
+                    Polyline(painter, true, P(6.5f, 6.5f), P(17.5f, 17.5f));
+                    Polyline(painter, true, P(17.5f, 6.5f), P(6.5f, 17.5f));
+                    return;
+
+                case HudGlyphKind.Refresh:
+                    // Three quarters of a circle with an arrowhead on the open end. Drawn as a
+                    // polyline of eight points rather than with an arc, because every other shape
+                    // in this file is a polyline and one arc would be one more thing to tune.
+                    Polyline(painter, true,
+                        P(19.4f, 8.6f), P(16.6f, 5.1f), P(12.0f, 3.6f), P(7.4f, 5.1f),
+                        P(4.3f, 8.9f), P(4.0f, 13.6f), P(6.4f, 17.7f), P(10.6f, 19.9f),
+                        P(15.3f, 19.5f), P(18.7f, 16.6f));
+                    FillTriangle(painter, P(20.6f, 3.4f), P(21.0f, 10.0f), P(14.8f, 8.0f));
+                    return;
+
                 case HudGlyphKind.Info:
                     Circle(painter, P(12, 12), 9.2f * scale);
                     Polyline(painter, true, P(12, 11.5f), P(12, 16.5f));
@@ -300,6 +361,17 @@ namespace Odyssey.Presentation.Ui
             painter.MoveTo(a);
             painter.LineTo(b);
             painter.LineTo(c);
+            painter.ClosePath();
+            painter.Fill();
+        }
+
+        /// <summary>Any closed filled figure. <see cref="FillTriangle"/> with no fixed arity.</summary>
+        static void FillPolygon(Painter2D painter, params Vector2[] points)
+        {
+            if (points.Length < 3) return;
+            painter.BeginPath();
+            painter.MoveTo(points[0]);
+            for (int i = 1; i < points.Length; i++) painter.LineTo(points[i]);
             painter.ClosePath();
             painter.Fill();
         }

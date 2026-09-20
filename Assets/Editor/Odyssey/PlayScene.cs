@@ -1202,10 +1202,11 @@ namespace Odyssey.EditorTools
             Wall("odyssey.module.wall.glazed", "SM_Bld_Base_Wall_Window_Double_01");
             Wall(ModuleIds.VaultWall, "SM_Bld_Base_Wall_01");
 
-            Wall(ModuleIds.Door, "SM_Bld_Base_Wall_Door_01");
-            Wall("odyssey.module.door.single", "SM_Bld_Base_Wall_Door_01");
+            Wall(ModuleIds.Door, "SM_Bld_Base_Wall_Door_Large_01");
+            Wall("odyssey.module.door.single", "SM_Bld_Base_Wall_Door_Large_01");
             Wall("odyssey.module.door.double", "SM_Bld_Base_Wall_Door_Double_01");
             Wall("odyssey.module.door.lobby", "SM_Bld_Base_Wall_Door_Double_Large_01");
+            Wall(ModuleIds.DoorLeaf, "SM_Bld_Base_Door_Large_01");
 
             rows.Add(new ModuleEntry
             {

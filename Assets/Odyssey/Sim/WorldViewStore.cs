@@ -58,6 +58,12 @@ namespace Odyssey.Sim
         /// is a row per question rather than a channel per layer.
         /// </summary>
         public void AddCellDetail(in CellDetail detail) => _target.AddCellDetail(detail);
+
+        /// <summary>Publish one entry of the incident ledger. See <see cref="BulletinView"/>.</summary>
+        public void AddBulletin(in BulletinView view) => _target.AddBulletin(view);
+
+        /// <summary>Publish one thing in the air. See <see cref="FallingView"/>.</summary>
+        public void AddFalling(in FallingView view) => _target.AddFalling(view);
     }
 
     /// <summary>

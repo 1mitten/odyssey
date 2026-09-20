@@ -103,19 +103,19 @@ The intents, one per gesture:
 the one clock that will not wait), `Skill_Growing`, `Job_Sow` and `Job_Harvest`
 (driver ids 10 and 11). Neither JobDef carries `workTicks`: like mining, the work is priced per
 plant, the driver reading `sowWorkTicks` or `harvestWorkTicks` from the zone's `PlantDef` as it
-swings. Skill and experience ride the def defaults.
+swings. Every driver pays work at the pawn's own rate — `Pawn.WorkRatePerMille(WorkType)`,
+banked as milliwork per WS1's one-unit rule.
 
-**Growing carried no rate curve until 2026-09-19, and now it does.** The original note read:
-*"with no `rateSkill` on `Work_Growing` that rate is the flat tuned speed, so a skill still buys
-nothing at the hoe"* — true, and it made Growing the one live skill with no consequence, which is
-precisely the complaint that won Chopping its own row (`15-skills.md`). The curve is
-`rateSkill` 4, base 600, slope 100, added by this branch's own *"the hoe pays by skill"*.
-
-**It was written twice, and that is worth recording.** The skills branch derived the identical
-curve the next day and called it `SK1`, because both sessions read the same "no curve yet" note and
-neither re-checked the other's head. Two agents, one unit, byte-for-byte the same content change and
-the same re-baked fingerprint. The duplicate was dropped on merge; the lesson is in
-`docs/journal.md` under 2026-09-20.
+**Growing carries a rate curve, and this paragraph said the opposite until 2026-09-20.**
+`Work_Growing` has `rateSkill 4` with cutting's own numbers — `600 + 100 x level`, so a novice
+runs at six tenths of the tuned speed and the tuned speed sits around level four (owner,
+2026-09-19: *"make sure the speed of the sowing and harvesting is determined by the relevant
+skill"*). The curve was added with the work type and three separate comments went on denying it:
+this one, the header of `WorkTypes.xml`, and `GrowingJob`'s own *"flat today"*. All three are
+corrected. It matters beyond tidiness — **this is the first place in the game where a skill level
+does something a player can feel**, which closes a gap CLAUDE.md had listed as open, and it is
+the one thing on the playtest list that a still cannot show. §3a of `17-rates-and-stats.md`
+still owns the shape of the curve itself.
 
 **It is cutting's curve, exactly, and that is the decision.** They are the two plant work types, and
 the design had felling training Growing outright until 2026-09-18 (`15-skills.md` §6.2) — so a
@@ -193,6 +193,43 @@ Cancel: the cancel tool gains `CancelZone` as a third intent per cell — zone f
 designation, then nothing. No new tool, no new mode; the rubber already in the player's hand.
 
 ## 6. Presentation
+
+### 6a. The zone itself is a bit on the ground's tint (2026-09-20)
+
+A painted zone is not drawn. Its ground is, and it is drawn once: `DrawnTerrain` already swaps a
+zoned cell's terrain to bare earth, and `TintCode.TilledBase` marks that terrain bucket as worked
+soil, which `ChunkRenderer.ResolveColour` grades by `TilledGrade`. No second mesh, no overlay, no
+per-cell work in the frame at all.
+
+It arrived as a translucent cover — the ground's own module drawn again over itself — and that
+design had both a look fault and a cost fault, which turned out to be the same fault.
+
+- **The look.** The cover carried a 1.01 scale so neighbours overlapped rather than met, on the
+  reasoning that an overlap of one tint is invisible. True of an opaque overlay and false of a
+  translucent one: alpha blending is not idempotent, so at alpha 0.78 a doubly-covered band
+  composited to 0.95 and the dirt showing through fell from 22% to 5%. That is a dark line on
+  every **interior** edge of a field and none on its outside edge, which is exactly the shape
+  the owner photographed. `MarkLift` then did the same thing again in miniature: lifting a cover
+  raises a *box*, and its sides stand proud of the neighbouring soil by the lift.
+- **The cost.** One `Graphics.RenderMesh` per zoned cell per frame — 2,065 draw calls and
+  **3.67 ms of a 5 ms budget** on the benchmark's field, against 0.17 ms for the same field with
+  the pass switched off. It was also the only thing in the feature standing outside the
+  instanced-chunk architecture, and it incremented no counter, so `FrameTimeTests` had never
+  counted one of them.
+
+The colour is derived from the cover rather than re-chosen, so the field keeps what was agreed:
+the cover composited as `0.78 x (0.06, 0.032, 0.012) + 0.22 x ground`, a scale plus a warm
+pedestal, and `TilledGrade` is the per-channel multiply that reaches the same place. A uniform
+0.25 was tried and read grey — the pedestal was carrying the warmth.
+
+`ABiggerFieldAddsInstancesRatherThanDraws` is the guard: it fails the moment a zone costs draws
+in proportion to its cells. That matters most for the storage zones coming next, which are
+painted across a whole base rather than in a plot.
+
+Seed specks went the same way on the same day: six submissions per sown cell of one cube in one
+material, gathered now and drawn in a single `RenderMeshInstanced`.
+
+### 6b. The crop
 
 The crop draws through the module id indirection like everything else: the `PlantDef` carries a
 module id per stage (`odyssey.module.carrot.s/m/l`), `ModuleCatalogue` resolves them to the Farm
@@ -461,6 +498,57 @@ code cannot show on its own:
   chosen crop wears the sub-type tier's own lit class — it is the zone tool's payload, not
   a material. The tier is built in all three layouts, shown only while the zone tool wants
   it, and Rows' PLANT heading dims rather than disappears so the panel never changes height.
+
+### 7a. The crop has a Stores row (2026-09-20)
+
+`LedgerModel` counted meals, wood and salvage and nothing else, so a harvest could be carried
+into the store or eaten and **no readout anywhere showed a carrot**. The owner reported it as the
+crop disappearing, and from the keyboard that is exactly what it is: the simulation was right
+throughout — the ten-day field soak accounts for all 580 harvested, 501 still on the map and the
+rest eaten — but a food commodity with nowhere to be counted has, to the player, gone.
+
+Counted wherever it lies, in the field as much as in the store: the ledger is the colony's count,
+not the storeroom's, which is the rule Meal already followed. `ui.res.carrots` was already in the
+registry; only the model had to learn it.
+
+**Stone, iron ore and coal are still uncounted** and have the same problem waiting. They are
+mining's commodities, not growing's, so they are recorded here rather than fixed here.
+
+### 7b. What a field costs the tick, measured (2026-09-20)
+
+Nothing had measured it. `TickBenchmarkTests` uses a structured world with no zone in it and
+`FrameTimeTests` measures the frame, so growing's three additions to the tick — the growth pass,
+the two work-giver scans, and the zone snapshot channel — had never been priced.
+`FieldTickBenchmarkTests` is the instrument; it is `[Explicit]`, like every other benchmark here.
+
+The same 120 x 120 board, six colonists, 4,000 ticks:
+
+| | ms/tick | heap/tick |
+|---|---|---|
+| no field | 0.0056 | 4 B |
+| an 8 x 8 plot, 54 cells | 0.0071 | 150 B |
+| a 45 x 45 field, 2,015 cells | 0.0468 | 199 B |
+| the same field, one colonist | 0.0356 | 33 B |
+| the same field, **no colonists at all** | 0.0347 | 4 B |
+
+**The cost is the snapshot channel, not the work.** With nobody alive to think, scan or sow, a
+2,015-cell field still costs 0.035 ms a tick — and switching off `Contribute` takes that to
+0.0010, and the six-colonist case from 0.0468 to 0.0093. So roughly **80% of a large field's
+tick is republishing zone rows that did not change**, and with an idle colony it is 97%.
+
+It is not a problem yet: 0.037 ms against three ticks in a 16.6 ms frame is about half a per
+cent. It is recorded because it is **O(zone cells) every tick for ever**, and because storage
+zones are the same channel painted across a whole base rather than a plot — which is where it
+stops being free. The fix is a generation counter on the zone set and a snapshot channel that
+carries over when it has not moved; it belongs with the storage work, not here, because it
+changes the frame buffer that every channel shares.
+
+The allocation line is honest too: 199 bytes a tick with six colonists, and **zero gen-0
+collections over 4,000 ticks**, so it is churn rather than a cost. Two per-call allocations were
+removed on the way (a captured lambda in both yield searches, now `PawnContext.NotZoned`, and a
+`new HaulWorkGiver()` inside the sow scan, now one shared stateless instance) — both are right,
+and **neither moved this number**, so the source is elsewhere and is not worth hunting until it
+collects something.
 
 ## 8. Hooks: what is deliberately not here
 

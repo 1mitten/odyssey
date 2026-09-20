@@ -574,6 +574,7 @@ namespace Odyssey.Hud
         int _cellRowsZonePlant;
         int _cellRowsZoneYield;
         int _cellRowsCropGrowth;
+        bool _cellRowsIndoors;
 
         /// <summary>
         /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
@@ -634,7 +635,8 @@ namespace Odyssey.Hud
                 && _cellRowsOwner == detail.EdificeOwner
                 && _cellRowsZonePlant == detail.ZonePlant
                 && _cellRowsCropGrowth == detail.CropGrowth
-                && _cellRowsZoneYield == detail.ZoneYield) return;
+                && _cellRowsZoneYield == detail.ZoneYield
+                && _cellRowsIndoors == detail.IsIndoors) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -649,6 +651,7 @@ namespace Odyssey.Hud
             _cellRowsZonePlant = detail.ZonePlant;
             _cellRowsCropGrowth = detail.CropGrowth;
             _cellRowsZoneYield = detail.ZoneYield;
+            _cellRowsIndoors = detail.IsIndoors;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -692,6 +695,8 @@ namespace Odyssey.Hud
                     ? howMany + " — awaiting its seed"
                     : howMany + " — " + detail.CropGrowth / 10 + "% grown");
             }
+            if (detail.IsIndoors)
+                Row(n++, "environment", "indoors");
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"

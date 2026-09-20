@@ -101,6 +101,20 @@ namespace Odyssey.Sim.Contracts
         GiveResource,
 
         /// <summary>
+        /// Fire the incident whose def index is <c>A</c>, now, whatever its gates say. The debug
+        /// menu's row, and the seam a quest or a scripted beat would use later: the worker behind
+        /// it is the same one a storyteller fires, so a forced event behaves exactly like an
+        /// earned one. <see cref="Intent.Cell"/> and <c>B</c>, <c>C</c> are unused today and
+        /// reserved for a forced landing cell.
+        ///
+        /// <para>Not applied while paused: it spawns things and needs a tick, exactly as
+        /// <see cref="SpawnPawn"/> and <see cref="GiveResource"/> do. Refused as
+        /// <see cref="IntentRejection.NotPermitted"/> when the worker says it cannot fire — for
+        /// the supply drop, when no column on the board can take a landing.</para>
+        /// </summary>
+        InvokeIncident,
+
+        /// <summary>
         /// Debug-menu-only: bring every standing crop to ripeness at once, daylight window and
         /// all. <see cref="Intent.Cell"/> and the payloads are unused — the ask is the whole
         /// field, because the menu is testing the harvest half and the four-day wait is the
@@ -109,6 +123,39 @@ namespace Odyssey.Sim.Contracts
         /// board says "nothing to ripen" rather than quietly succeeding.
         /// </summary>
         DebugRipen,
+        /// Set one colonist's priority for one work type: <c>A</c> is a <c>PawnId</c> value,
+        /// <c>B</c> a <see cref="WorkHandle"/> and <c>C</c> the priority, 0 to 4, where <b>0 is
+        /// never</b> and 1 is most urgent. <see cref="Intent.Cell"/> is unused — this is the second
+        /// intent that names a pawn and the first that names nothing else.
+        ///
+        /// <para><b>The work type crosses as an index and the reason is in
+        /// <c>Catalogue.cs</c>.</b> Skills reach the interface as named aspects and never touch
+        /// this assembly, which is why there is no <c>SkillHandle</c>; a priority is written as
+        /// well as read, and an intent carries integers, so the order has to be agreed somewhere
+        /// and it is agreed there.</para>
+        ///
+        /// <para><b>Applied while paused.</b> Assigning work is exactly the thing a player pauses
+        /// in order to do, and it meets the test the other paused intents meet: it writes state
+        /// the player authored and needs no system to finish it. A priority that did not land
+        /// until you pressed play would be the slab fault told a third time.</para>
+        /// </summary>
+        SetWorkPriority,
+
+        /// <summary>
+        /// Set one colonist's schedule for one hour: <c>A</c> is a <c>PawnId</c> value, <c>B</c>
+        /// the hour 0–23 and <c>C</c> a <see cref="ScheduleHandle"/>.
+        ///
+        /// <para>The third intent that names a pawn, and it carries no cell for the same reason
+        /// <see cref="SetWorkPriority"/> does not: a schedule is a fact about a person and a day,
+        /// not about a place.</para>
+        ///
+        /// <para><b>It writes state nothing reads yet</b>, which is unusual and deliberate — see
+        /// <see cref="ScheduleHandle"/>. That is also why the schedule is saved but <b>not
+        /// hashed</b>: a value no system consults cannot affect a tick, which is the same test the
+        /// saved view passes. The day the job system reads it, it enters the hash and the goldens
+        /// move once, deliberately.</para>
+        /// </summary>
+        SetScheduleBlock,
     }
 
     /// <summary>
@@ -159,6 +206,13 @@ namespace Odyssey.Sim.Contracts
             // paused. Cancelling it likewise. Both write state the player owns outright.
             IntentKind.DesignateZone => true,
             IntentKind.CancelZone => true,
+            // The Work tab is a panel you open while paused, and a grid that accepted twenty
+            // clicks and applied none of them until you pressed play would be the worst version
+            // of the fault this list was written to end.
+            IntentKind.SetWorkPriority => true,
+            // Same test and the same panel: a player pauses to plan the day, and half of that
+            // panel is the day.
+            IntentKind.SetScheduleBlock => true,
             _ => false,
         };
     }

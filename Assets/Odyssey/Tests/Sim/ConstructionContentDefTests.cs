@@ -56,7 +56,10 @@ namespace Odyssey.Tests.Sim
         // wrong side of its cell — a free-standing one had nowhere to take a facing from and fell
         // back to north, which the player could neither predict nor change. A ladder fixed to a
         // wall still hugs it; the rotation only decides where there is nothing to hug.
-        const ulong BuildingFingerprint = 16750019241906452571UL;
+        // 2026-09-20: Appended Building_Door at handle 6 — edifice 2 (CoreContent.EdificeDoor),
+        // passable (blocking false), 5 stuff and 135 ticks matching a wall. Gained `rotates`
+        // so doors can be oriented by the player before placement and at wall corners/reveals.
+        const ulong BuildingFingerprint = 4156044371283347139UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

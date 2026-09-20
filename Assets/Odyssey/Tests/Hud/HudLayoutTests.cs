@@ -537,6 +537,43 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// SK4 against EV: the toast stack is the LAST thing in that column, under the Events
+        /// panel, and that order is the decision rather than an accident of who was written first.
+        /// A toast arrives every couple of minutes and leaves six seconds later; anything below it
+        /// in a stacked column would step down and back up each time it did. Nothing is below it.
+        ///
+        /// <para>Both features were written on branches that did not know about each other and
+        /// both said "under the alerts", so on merging they solved to the same top and drew over
+        /// one another. The overlap sweep in <see cref="Cases"/> catches that; this says why the
+        /// resolution went this way round rather than the other.</para>
+        /// </summary>
+        [Test]
+        public void TheToastStackIsTheLastThingInTheAlertsColumn()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                var content = new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                             bulletins: BulletinModel.MaxRows,
+                                             toasts: ToastModel.MaxRows);
+                var boxes = HudLayout.Solve(width, height, content);
+
+                HudRect alerts = boxes[HudRegion.Alerts];
+                HudRect bulletins = boxes[HudRegion.Bulletins];
+                HudRect toasts = boxes[HudRegion.Toasts];
+
+                Assert.That(bulletins.Empty, Is.False, $"the Events panel is missing at {width}x{height}");
+                Assert.That(toasts.Empty, Is.False, $"the toast stack is missing at {width}x{height}");
+
+                Assert.That(bulletins.Y, Is.GreaterThanOrEqualTo(alerts.Bottom),
+                    "the Events panel is not under the alerts");
+                Assert.That(toasts.Y, Is.GreaterThanOrEqualTo(bulletins.Bottom),
+                    "the toast stack is not under the Events panel");
+                Assert.That(toasts.X, Is.EqualTo(alerts.X), "the three are not in one column");
+                Assert.That(bulletins.X, Is.EqualTo(alerts.X), "the three are not in one column");
+            }
+        }
+
+        /// <summary>
         /// With no alerts the stack rises to where they would have been rather than leaving their
         /// gap behind it — a toast on an otherwise quiet screen should not float in the middle of
         /// the gutter.
@@ -598,6 +635,8 @@ namespace Odyssey.Tests.Hud
             yield return HudContent.NothingSelected(Colonists, 3, Layers);          // resting
             yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 2);     // colonist selected
             yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2);     // and in trouble
+            yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2, bulletins: 4); // and eventful
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0, bulletins: BulletinModel.MaxRows); // events, no alerts
             yield return new HudContent(0, 0, 0, Layers, 0);                        // nobody left
             yield return new HudContent(8, AllStoreRows, 1, 32, 4);                 // a deeper, fuller game
 
@@ -621,6 +660,17 @@ namespace Odyssey.Tests.Hud
                                         toasts: ToastModel.MaxRows);
             yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
                                         skillRows: SkillCatalogue.Rows, toasts: ToastModel.MaxRows);
+
+            // The right-hand column at its very tallest: clock, a full alerts panel, a full Events
+            // panel and a full toast stack, all at once. SK4 and EV were written on branches that
+            // did not know about each other and both placed their panel "under the alerts", so
+            // both solved to the same top and the toast stack drew over the Events panel. This is
+            // the case that would have caught it.
+            yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                        bulletins: BulletinModel.MaxRows, toasts: ToastModel.MaxRows);
+            yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows,
+                                        bulletins: BulletinModel.MaxRows, toasts: ToastModel.MaxRows);
         }
 
         /// <summary>

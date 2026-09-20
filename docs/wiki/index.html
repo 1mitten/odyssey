@@ -148,11 +148,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#items">Items and equipment<b>30</b></a></li>
 <li><a href="#buildings">Buildings and orders<b>81</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
-<li><a href="#work">Work and skills<b>36</b></a></li>
+<li><a href="#work">Work and skills<b>42</b></a></li>
 <li><a href="#colonists">Colonists<b>36</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>38</b></a></li>
-<li><a href="#world">World and interface<b>82</b></a></li>
+<li><a href="#events">Events<b>39</b></a></li>
+<li><a href="#world">World and interface<b>91</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>665</b><i>named entries</i></div>
+<div class="stat"><b>683</b><i>named entries</i></div>
 <div class="stat"><b>269</b><i>with icon art</i></div>
-<div class="stat m"><b>396</b><i>no art yet</i></div>
+<div class="stat m"><b>414</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1460,8 +1460,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="work" data-sec="1">
-<h2>Work and skills <em class="count">36 entries</em></h2>
-<p class="blurb">The work types a colonist can be assigned, in priority order of urgency, and the skills that govern how well they do them. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging.</p>
+<h2>Work and skills <em class="count">42 entries</em></h2>
+<p class="blurb">The work types a colonist can be assigned, in priority order of urgency, the skills that govern how well they do them, and the schedule blocks that say when. Salvaging is ours: it sits beside mining because taking a ruin apart without wrecking what is inside it is a different craft from digging. Work and schedule share one tab and one table, so they share a page here.</p>
 <h3 class="nsh">Work types</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -1684,6 +1684,46 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Research speed</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M2</div>
+</div>
+</div>
+<h3 class="nsh">Schedule blocks</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.schedule.anything" data-hay="anything ui.schedule.anything no instruction: work, rest or idle as needs dictate " data-gap="1">
+<div class="nm">Anything<span class="k">ui.schedule.anything</span></div>
+<div class="dsc">No instruction: work, rest or idle as needs dictate</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
+</div>
+<div class="row gap" id="ui.schedule.work" data-hay="work ui.schedule.work take jobs from the priority grid this hour " data-gap="1">
+<div class="nm">Work<span class="k">ui.schedule.work</span></div>
+<div class="dsc">Take jobs from the priority grid this hour</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
+</div>
+<div class="row gap" id="ui.schedule.sleep" data-hay="sleep ui.schedule.sleep go to bed whether tired or not " data-gap="1">
+<div class="nm">Sleep<span class="k">ui.schedule.sleep</span></div>
+<div class="dsc">Go to bed whether tired or not</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
+</div>
+<div class="row gap" id="ui.schedule.recreation" data-hay="recreation ui.schedule.recreation rest and recover mood " data-gap="1">
+<div class="nm">Recreation<span class="k">ui.schedule.recreation</span></div>
+<div class="dsc">Rest and recover mood</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
+</div>
+<div class="row gap" id="ui.schedule.eat" data-hay="eat ui.schedule.eat take a meal even if not yet hungry " data-gap="1">
+<div class="nm">Eat<span class="k">ui.schedule.eat</span></div>
+<div class="dsc">Take a meal even if not yet hungry</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
+</div>
+<div class="row gap" id="ui.schedule.meditate" data-hay="meditate ui.schedule.meditate quiet hours, for whatever comes to need them " data-gap="1">
+<div class="nm">Meditate<span class="k">ui.schedule.meditate</span></div>
+<div class="dsc">Quiet hours, for whatever comes to need them</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M7</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -2102,7 +2142,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">38 entries</em></h2>
+<h2>Events <em class="count">39 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2327,6 +2367,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M2</div>
 </div>
+<div class="row gap" id="ui.bulletin.supplydrop" data-hay="supply drop ui.bulletin.supplydrop something has fallen from the sky. fetch it before the weather does a stack falling from the sky. our own concept" data-gap="1">
+<div class="nm">Supply drop<span class="k">ui.bulletin.supplydrop</span></div>
+<div class="dsc">Something has fallen from the sky. Fetch it before the weather does<span class="need">Needs drawing: a stack falling from the sky. Our own concept</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.bulletin.birth" data-hay="birth ui.bulletin.birth a tame animal has given birth a newborn animal" data-gap="1">
 <div class="nm">Birth<span class="k">ui.bulletin.birth</span></div>
 <div class="dsc">A tame animal has given birth<span class="need">Needs drawing: a newborn animal</span></div>
@@ -2347,7 +2393,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">82 entries</em></h2>
+<h2>World and interface <em class="count">91 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2644,9 +2690,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
-<div class="row" id="ui.tab.schedule" data-hay="schedule ui.tab.schedule who does what, and when " data-gap="0">
+<div class="row" id="ui.tab.schedule" data-hay="schedule ui.tab.schedule folded into work: one table says who does what, and when " data-gap="0">
 <div class="nm">Schedule<span class="k">ui.tab.schedule</span></div>
-<div class="dsc">Who does what, and when</div>
+<div class="dsc">Folded into Work: one table says who does what, and when</div>
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
@@ -2829,6 +2875,60 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row gap" id="ui.settings.developer" data-hay="developer overlay ui.settings.developer the frame-time and draw-call readout, kept on the machine between sessions " data-gap="1">
 <div class="nm">Developer overlay<span class="k">ui.settings.developer</span></div>
 <div class="dsc">The frame-time and draw-call readout, kept on the machine between sessions</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.display" data-hay="display ui.settings.display how the frame is paced and how large it is drawn " data-gap="1">
+<div class="nm">Display<span class="k">ui.settings.display</span></div>
+<div class="dsc">How the frame is paced and how large it is drawn</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.detail" data-hay="detail ui.settings.detail what the board is drawn with. none of it reaches the simulation " data-gap="1">
+<div class="nm">Detail<span class="k">ui.settings.detail</span></div>
+<div class="dsc">What the board is drawn with. None of it reaches the simulation</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.vsync" data-hay="vsync ui.settings.vsync match the screen's refresh rate. stops tearing, and paces the frame " data-gap="1">
+<div class="nm">VSync<span class="k">ui.settings.vsync</span></div>
+<div class="dsc">Match the screen's refresh rate. Stops tearing, and paces the frame</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.framecap" data-hay="frame rate cap ui.settings.framecap the ceiling on frames a second. a rate the machine can hold beats a higher one that swings " data-gap="1">
+<div class="nm">Frame rate cap<span class="k">ui.settings.framecap</span></div>
+<div class="dsc">The ceiling on frames a second. A rate the machine can hold beats a higher one that swings</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.renderscale" data-hay="render scale ui.settings.renderscale how large the world is drawn before it is scaled to the window. the interface stays sharp " data-gap="1">
+<div class="nm">Render scale<span class="k">ui.settings.renderscale</span></div>
+<div class="dsc">How large the world is drawn before it is scaled to the window. The interface stays sharp</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.antialias" data-hay="anti-aliasing ui.settings.antialias smooth the stepped edges of the board. the most expensive thing on this page " data-gap="1">
+<div class="nm">Anti-aliasing<span class="k">ui.settings.antialias</span></div>
+<div class="dsc">Smooth the stepped edges of the board. The most expensive thing on this page</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.shadowdist" data-hay="shadow distance ui.settings.shadowdist how far from the camera shadows are still drawn " data-gap="1">
+<div class="nm">Shadow distance<span class="k">ui.settings.shadowdist</span></div>
+<div class="dsc">How far from the camera shadows are still drawn</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.displaymode" data-hay="display mode ui.settings.displaymode fullscreen, borderless or a window " data-gap="1">
+<div class="nm">Display mode<span class="k">ui.settings.displaymode</span></div>
+<div class="dsc">Fullscreen, borderless or a window</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.resolution" data-hay="resolution ui.settings.resolution how many pixels the game is drawn at. only a built game can change it " data-gap="1">
+<div class="nm">Resolution<span class="k">ui.settings.resolution</span></div>
+<div class="dsc">How many pixels the game is drawn at. Only a built game can change it</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -3057,7 +3157,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 665, "gaps": 396};</script>
+<script>window.WIKI={"total": 683, "gaps": 414};</script>
 <script>
 (function(){
   var D = window.WIKI;

@@ -579,6 +579,74 @@
     --glyph-color: #e64a38;
 }
 
+/* ---------------------------------------------------------------- A6 events
+
+   Under the alerts in the same column, built to the same row: an event is a fact that stays
+   until dismissed where an alert is a condition that clears itself (design 23 §5), so it is a
+   second panel with its own model rather than a fourth kind of alert. Its own class names,
+   not .alert reused, because the PlayMode gate counts .alert rows to model the alerts panel
+   and an event row wearing that class would be counted twice. */
+.bulletins__rows { margin-top: 9px; margin-bottom: -4px; }
+
+.bulletin {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-left: 4px;
+    padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
+}
+
+.bulletin:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.bulletin__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.bulletin__text {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-grow: 1;
+    align-items: center;
+    overflow: hidden;
+}
+
+.bulletin__title {
+    color: #eef3f6;
+    white-space: nowrap;
+}
+
+.bulletin__stamp {
+    color: rgba(255, 255, 255, 0.60);
+    white-space: nowrap;
+    margin-left: 6px;
+}
+
+.bulletin__dismiss {
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: link;
+    border-radius: 2px;
+}
+
+.bulletin__dismiss:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.bulletin__dismiss:hover > .hud-glyph {
+    --glyph-color: #e64a38;
+}
+
 /* ---------------------------------------------------------------- the right-hand gutter
 
    One column against the right edge holding the depth rail and, under it, the orders strip
@@ -1131,6 +1199,59 @@
     background-color: rgba(12, 16, 20, 0.96);
 }
 
+/* ---------------------------------------------------------------- The Work tab
+
+   Denser than every other panel, and the one place a panel fill is not the shared token.
+   Owner, 2026-09-20: "make this menu less transculent/transparent as it needs to see over menus
+   behind a little better." It is the largest panel in the game by a long way and the only one
+   with a grid of small coloured cells in it; at .96 the world's greens and the terrain's contrast
+   came through the schedule bands and moved them, which is exactly the signal those bands carry.
+   The other panels keep .96 because they are small and mostly text. */
+.panel.work {
+    background-color: rgba(10, 13, 17, 0.995);
+}
+
+/* A key entry that is also a button: the schedule half's six blocks. It has to read as pressable
+   before it is pressed, which is why the resting state already has a border rather than growing
+   one on hover — a control that only looks like a control once you have found it is not one. */
+.workkey__btn {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 8px;
+    padding: 2px 7px 2px 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.10);
+    border-radius: 4px;
+    cursor: link;
+}
+
+.workkey__btn:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Armed: this block is the one in your hand, and an hour you click takes it. */
+.workkey__btn--on {
+    background-color: rgba(111, 211, 227, 0.16);
+    border-color: rgb(111, 211, 227);
+}
+
+.workkey__swatch {
+    width: 13px;
+    height: 13px;
+    margin-right: 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.workkey__name {
+    color: #a9b7c0;
+}
+
+.workkey__btn--on .workkey__name {
+    color: #eef3f6;
+}
+
 /* A window raised from the command bar, which is additionally anchored to the left edge of the
    button that raised it and sits flush on the bar with no gap. The left and bottom are written
    from code, because where a popover sits is a fact about the button that raised it and only the
@@ -1625,7 +1746,9 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 300px;
+    width: 860px;
+    max-width: 94%;
+    max-height: 90%;
 }
 
 /* The debug menu (backtick). Centred exactly like Settings and mutually exclusive with it
@@ -1644,6 +1767,26 @@
     height: 26px;
     border-bottom-width: 1px;
     border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+.settings__scroll {
+    max-height: 480px;
+    min-height: 0;
+    flex-shrink: 1;
+}
+
+.settings__columns {
+    flex-direction: row;
+}
+
+.settings__column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 14px;
+}
+
+.settings__column:last-child {
+    margin-right: 0;
 }
 
 .settings__body { margin-top: 9px; }
@@ -1744,6 +1887,10 @@
     margin: 9px 0 4px 0;
 }
 
+.settings__column > .settings__section:first-child {
+    margin-top: 0;
+}
+
 .settings__row {
     flex-direction: row;
     align-items: center;
@@ -1777,6 +1924,46 @@
     border-color: #6fd3e3;
 }
 
+/* The resolution dropdown selector: single control replacing the rank of buttons */
+.settings__dropdown {
+    width: 130px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+}
+
+.settings__dropdown .unity-base-popup-field__input {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    padding: 0 6px;
+    height: 24px;
+}
+
+.settings__dropdown:hover .unity-base-popup-field__input {
+    border-color: #6fd3e3;
+}
+
+.settings__dropdown .unity-base-popup-field__text {
+    color: rgba(255, 255, 255, 0.82);
+    -unity-text-align: middle-center;
+    margin: 0;
+    padding: 0;
+}
+
+.settings__dropdown .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: rgba(255, 255, 255, 0.66);
+    align-self: center;
+    width: 10px;
+    height: 6px;
+    margin-left: 4px;
+}
+
+.settings__dropdown:hover .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: #6fd3e3;
+}
+
 .settings__note {
     color: rgba(255, 255, 255, 0.50);
     white-space: normal;
@@ -1807,6 +1994,25 @@
 
 /* The reset row under the binding list, set apart from the list it undoes. */
 .settings__reset { margin-top: 9px; }
+
+/* The session rows grid, below every tab: 2 columns across, separated by a hairline */
+.settings__session-grid {
+    flex-direction: row;
+    margin-top: 9px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 6px;
+}
+
+.settings__session-col {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 14px;
+}
+
+.settings__session-col:last-child {
+    margin-right: 0;
+}
 
 /* The way out, below every tab: separated by a hairline, because it is not a setting and
    should not read as one. Armed, it says what it is waiting for and the accent says it means

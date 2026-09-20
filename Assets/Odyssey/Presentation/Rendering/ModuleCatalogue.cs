@@ -432,6 +432,7 @@ namespace Odyssey.Presentation.Rendering
         // Defaults declared on TemplateDef, used by any template that does not override them.
         public const string Wall = Prefix + "wall";
         public const string Door = Prefix + "door";
+        public const string DoorLeaf = Prefix + "door.leaf";
         public const string Window = Prefix + "window";
         public const string Pillar = Prefix + "pillar";
         public const string Stair = Prefix + "stair";

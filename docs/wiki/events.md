@@ -2,7 +2,7 @@
 
 Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
 
-38 entries, 14 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+39 entries, 15 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -49,6 +49,7 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Refugee** | `ui.bulletin.refugee` | Someone is asking for shelter <br>**Needs:** someone asking for shelter | no art | M2 |
 | **Animal joined** | `ui.bulletin.animaljoin` | A tame beast has attached itself to us | sheet 06 (action tiles), med | M2 |
 | **Crash** | `ui.bulletin.crash` | Something has come down nearby <br>**Needs:** a crashed ship or drop pod | no art | M2 |
+| **Supply drop** | `ui.bulletin.supplydrop` | Something has fallen from the sky. Fetch it before the weather does <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
 | **Birth** | `ui.bulletin.birth` | A tame animal has given birth <br>**Needs:** a newborn animal | no art | M2 |
 
 ## Toasts

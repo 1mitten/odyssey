@@ -214,5 +214,184 @@ namespace Odyssey.Tests.Presentation
             mesher.Mesh(batch, layer * chunksPerLayer);
             return batch;
         }
+
+        /// <summary>Every bucket in the batch whose tint is marked as worked soil.</summary>
+        static List<InstanceBucket> TilledBuckets(ChunkBatch batch)
+        {
+            var found = new List<InstanceBucket>();
+            foreach (InstanceBucket bucket in batch.Body)
+                if (TintCode.IsTilled(bucket.Tint))
+                    found.Add(bucket);
+            return found;
+        }
+
+        static ZoneView[] Zones(RenderTestWorld world, params (int X, int Z)[] cells)
+        {
+            var views = new ZoneView[cells.Length];
+            for (int i = 0; i < cells.Length; i++)
+                views[i] = new ZoneView(world.Index(cells[i].X, cells[i].Z, 2), 0);
+            return views;
+        }
+
+        /// <summary>
+        /// A zoned cell's ground carries the tilled mark in its <b>bucket tint</b>, and no second
+        /// mesh is laid over it.
+        ///
+        /// <para>This is the whole of how a growing zone is drawn now, and it fixes both faults
+        /// the cover pass had. Visually: a cover was a second copy of the ground module laid over
+        /// the first, and any offset at all put its box sides above the soil beside it, so a
+        /// translucent strip blended twice and drew a dark line on every interior edge of a field
+        /// (owner, 2026-09-20). Cost: one Graphics.RenderMesh per zoned cell per frame - 2,065
+        /// draw calls and 3.67 ms on the benchmark's field, against 0.17 ms for the same field
+        /// with the pass switched off. A bit on the tint has neither.</para>
+        /// </summary>
+        [Test]
+        public void TilledGroundIsMarkedOnTheTerrainBucketAndNotDrawnTwice()
+        {
+            var world = Field();
+            world.Model.UpdateZones(Zones(world, (3, 3)));
+
+            ChunkBatch batch = MeshOneChunk(world, 1);
+            List<InstanceBucket> tilled = TilledBuckets(batch);
+
+            Assert.That(tilled, Has.Count.EqualTo(1), "one zoned cell is one tilled bucket");
+            Assert.That(tilled[0].Count, Is.EqualTo(1), "and one instance in it");
+            Assert.That(TintCode.IsTerrain(tilled[0].Tint), Is.True,
+                "tilled ground is still terrain, and still tinted as terrain");
+        }
+
+        /// <summary>Paint nothing and nothing is marked — the control, so the test above cannot
+        /// pass on a bit that is always set.</summary>
+        [Test]
+        public void GroundOutsideAZoneIsNotTilled()
+        {
+            var world = Field();
+            ChunkBatch batch = MeshOneChunk(world, 1);
+            Assert.That(TilledBuckets(batch), Is.Empty);
+        }
+
+        /// <summary>
+        /// Worked soil is the earth of its cell graded down, not a colour of its own: the texture
+        /// has to keep reading through it (owner, 2026-09-19: "the dirt tile is black with no
+        /// texture instead the brown that was before").
+        /// </summary>
+        [Test]
+        public void TilledGroundIsTheSameEarthGradedDarker()
+        {
+            int plain = TintCode.Daylit(
+                TintCode.Terrain(Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainBareEarth), true);
+            int tilled = TintCode.Tilled(plain);
+
+            ChunkRenderer.ResolveColour(plain, fallback: false, shade: 1f, out Color a, out Color _);
+            ChunkRenderer.ResolveColour(tilled, fallback: false, shade: 1f, out Color b, out Color _);
+
+            Assert.That(b.r, Is.LessThan(a.r), "tilled soil must be darker than the earth it is");
+            Assert.That(b.r, Is.EqualTo(a.r * ChunkRenderer.TilledGrade.r).Within(1e-4f));
+            Assert.That(b.g, Is.EqualTo(a.g * ChunkRenderer.TilledGrade.g).Within(1e-4f));
+            Assert.That(b.b, Is.EqualTo(a.b * ChunkRenderer.TilledGrade.b).Within(1e-4f));
+
+            // A multiply, so the texture's own variation survives at the graded contrast rather
+            // than being flattened onto a pedestal - and warm, because the cover this replaces
+            // carried its warmth in that pedestal and a uniform grade read grey without it.
+            Assert.That(b.r / b.b, Is.GreaterThan(a.r / a.b),
+                "worked soil must be no cooler than the earth it is, or it stops reading brown");
+        }
+
+        static (int Buckets, int Instances) TilledField(int from, int to)
+        {
+            var world = Field();
+            var cells = new List<(int, int)>();
+            for (int z = from; z <= to; z++)
+            for (int x = from; x <= to; x++)
+                cells.Add((x, z));
+            world.Model.UpdateZones(Zones(world, cells.ToArray()));
+
+            List<InstanceBucket> tilled = TilledBuckets(MeshOneChunk(world, 1));
+            int instances = 0;
+            for (int i = 0; i < tilled.Count; i++) instances += tilled[i].Count;
+            return (tilled.Count, instances);
+        }
+
+        /// <summary>
+        /// The performance invariant, stated where it can fail: <b>a bigger field adds instances,
+        /// not draws</b>. That is the whole difference between a carrot plot and a stockpile
+        /// painted across a base, and it is what the old cover pass got wrong - one
+        /// Graphics.RenderMesh per zoned cell per frame, 2,065 draw calls and 3.67 ms on the
+        /// benchmark's field against 0.17 ms with the pass off.
+        ///
+        /// <para>Not "one bucket": the earth wears one of <c>GroundMesh.Variants</c> tops per
+        /// cell and a bucket is keyed by (module, part, tint), so a field costs the same handful
+        /// of buckets that the ordinary ground around it costs. The test is that the handful does
+        /// not grow with the field.</para>
+        /// </summary>
+        [Test]
+        public void ABiggerFieldAddsInstancesRatherThanDraws()
+        {
+            (int Buckets, int Instances) small = TilledField(2, 5);   // 16 cells
+            (int Buckets, int Instances) large = TilledField(1, 6);   // 36 cells
+
+            Assert.That(small.Instances, Is.EqualTo(16), "every zoned cell is drawn");
+            Assert.That(large.Instances, Is.EqualTo(36), "every zoned cell is drawn");
+            Assert.That(large.Buckets, Is.EqualTo(small.Buckets),
+                $"the field more than doubled and the draws went {small.Buckets} -> "
+                    + $"{large.Buckets}; a zone must cost instances, not draws");
+            Assert.That(large.Buckets, Is.LessThan(large.Instances / 2),
+                "a field is a handful of variant buckets, nothing like a draw per tile");
+        }
+
+        /// <summary>
+        /// A frame's seed specks are <b>one instanced call</b>, however many cells are sown.
+        ///
+        /// <para>They used to be six <c>Graphics.RenderMesh</c> submissions per sown cell, of the
+        /// same unit cube in the same material. The surround measurement priced a submission at
+        /// about 4.6 us regardless of its contents, so a field part-way through sowing spent
+        /// milliseconds drawing a few hundred cubes. This is the guard on the batching: it fails
+        /// the moment anything goes back to submitting per cell.</para>
+        ///
+        /// <para>It also guards the quieter risk in that change. The speck material is the
+        /// translucent bracket material, and an instanced draw through a material that does not
+        /// support instancing draws nothing at all - silently, and invisibly to the contact sheet,
+        /// which is too far out to show a speck either way (checked: the sheet has no speck pixels
+        /// before the change or after it).</para>
+        /// </summary>
+        [Test]
+        public void AFrameOfSeedSpecksIsOneInstancedCall()
+        {
+            var world = Field();
+            world.Publish();
+            using var renderer = new ChunkRenderer(world.Model);
+
+            int before = renderer.DrawCalls;
+            for (int z = 2; z < 6; z++)
+            for (int x = 2; x < 6; x++)
+                renderer.DrawSeedSpecks(new CellRef(x, z, 2), Color.white);
+
+            Assert.That(renderer.DrawCalls, Is.EqualTo(before),
+                "gathering must not submit anything");
+
+            renderer.FlushSeedSpecks(Color.white);
+
+            Assert.That(renderer.DrawCalls, Is.EqualTo(before + 1),
+                "sixteen sown cells must be one call, not sixteen and not ninety-six");
+            Assert.That(renderer.InstancesDrawn, Is.EqualTo(16 * 6),
+                "and every speck must actually be in it");
+        }
+
+        /// <summary>Flushing twice must not draw the same handful again — the buffer empties.</summary>
+        [Test]
+        public void FlushingSeedSpecksTwiceDrawsThemOnce()
+        {
+            var world = Field();
+            world.Publish();
+            using var renderer = new ChunkRenderer(world.Model);
+
+            renderer.DrawSeedSpecks(new CellRef(3, 3, 2), Color.white);
+            renderer.FlushSeedSpecks(Color.white);
+            int after = renderer.DrawCalls;
+
+            renderer.FlushSeedSpecks(Color.white);
+            Assert.That(renderer.DrawCalls, Is.EqualTo(after), "an empty flush draws nothing");
+        }
+
     }
 }

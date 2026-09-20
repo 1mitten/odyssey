@@ -103,6 +103,7 @@ namespace Odyssey.Hud
         /// its floor and the ladder onto it are one job.
         /// </summary>
         public const string Ladder = "ui.arch.tool.ladder";
+        public const string Door = "ui.arch.tool.door";
 
         public const string Bed = "ui.arch.tool.bed";
         public const string Mine = "ui.arch.tool.mine";
@@ -147,7 +148,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
@@ -273,6 +274,10 @@ namespace Odyssey.Hud
             new PaletteTool(Ladder,
                 d => d.ArmBuild(BuildingHandle.Ladder),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
+                wantsMaterial: true),
+            new PaletteTool(Door,
+                d => d.ArmBuild(BuildingHandle.Door),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Door,
                 wantsMaterial: true),
 
             // The first furniture, and the palette's first single-placement, rotatable thing:

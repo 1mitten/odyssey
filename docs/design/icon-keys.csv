@@ -126,6 +126,12 @@ ui.work.fabrication,Fabrication,ui.work,M7,Advanced production
 ui.work.art,Art,ui.work,M7,Make sculptures and decoration
 ui.work.operating,Operating,ui.work,M7,Run powered machinery
 ui.work.rescue,Rescue,ui.work,M7,Carry the downed to a bed
+ui.schedule.anything,Anything,ui.schedule,M7,"No instruction: work, rest or idle as needs dictate"
+ui.schedule.work,Work,ui.schedule,M7,Take jobs from the priority grid this hour
+ui.schedule.sleep,Sleep,ui.schedule,M7,Go to bed whether tired or not
+ui.schedule.recreation,Recreation,ui.schedule,M7,Rest and recover mood
+ui.schedule.eat,Eat,ui.schedule,M7,Take a meal even if not yet hungry
+ui.schedule.meditate,Meditate,ui.schedule,M7,"Quiet hours, for whatever comes to need them"
 ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
 ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
 ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
@@ -267,7 +273,7 @@ ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer u
 ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk
 ui.tab.build,Build,ui.tab,M1,"Build, dig and zone — the palette of placement tools"
 ui.tab.work,Work,ui.tab,M1,The priority grid
-ui.tab.schedule,Schedule,ui.tab,M1,"Who does what, and when"
+ui.tab.schedule,Schedule,ui.tab,M1,"Folded into Work: one table says who does what, and when"
 ui.tab.research,Research,ui.tab,M1,"The tree, and what is being worked on"
 ui.tab.colonists,Colonists,ui.tab,M1,"Everyone, at a glance"
 ui.tab.animals,Animals,ui.tab,M1,Tame beasts and their training
@@ -314,6 +320,7 @@ ui.bulletin.wanderer,Wanderer,ui.bulletin,M2,Someone wants to join
 ui.bulletin.refugee,Refugee,ui.bulletin,M2,Someone is asking for shelter
 ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached itself to us
 ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
+ui.bulletin.supplydrop,Supply drop,ui.bulletin,M3,"Something has fallen from the sky. Fetch it before the weather does"
 ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
 ui.weather.clear,Clear,ui.weather,M1,Open sky
 ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
@@ -443,6 +450,7 @@ ui.keys.cancel,Cancel tool,ui.keys,M3,"Arm the cancel designation"
 ui.keys.growzone,Growing zone tool,ui.keys,M3,"Arm the growing-zone designation"
 ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.debugmenu,Debug menu,ui.keys,M3,"Open the debug menu"
+ui.keys.worktab,Work tab,ui.keys,M3,"Open the work priority grid"
 ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Stored on the machine, in decibels"
 ui.settings.camspeed,Camera speed,ui.settings,M3,"How fast the camera pans and zooms, as a share of its tuned speed"
 ui.settings.buildlayout,Build palette layout,ui.settings,M3,"Which of the three shapes the Build palette takes: rows, rail or bar"
@@ -452,10 +460,20 @@ ui.debug.spawnpawn,Spawn colonist,ui.debug,M3,"Adds a colonist with no scenario 
 ui.debug.givewood,Give wood,ui.debug,M3,"Adds 50 wood near the camera"
 ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
 ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
+ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
+ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
-ui.debug.invokeevent,Invoke event,ui.debug,M3,"No repeatable event system exists yet"
+ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"
+ui.settings.detail,Detail,ui.settings,M3,"What the board is drawn with. None of it reaches the simulation"
+ui.settings.vsync,VSync,ui.settings,M3,"Match the screen's refresh rate. Stops tearing, and paces the frame"
+ui.settings.framecap,Frame rate cap,ui.settings,M3,"The ceiling on frames a second. A rate the machine can hold beats a higher one that swings"
+ui.settings.renderscale,Render scale,ui.settings,M3,"How large the world is drawn before it is scaled to the window. The interface stays sharp"
+ui.settings.antialias,Anti-aliasing,ui.settings,M3,"Smooth the stepped edges of the board. The most expensive thing on this page"
+ui.settings.shadowdist,Shadow distance,ui.settings,M3,"How far from the camera shadows are still drawn"
+ui.settings.displaymode,Display mode,ui.settings,M3,"Fullscreen, borderless or a window"
+ui.settings.resolution,Resolution,ui.settings,M3,"How many pixels the game is drawn at. Only a built game can change it"
 ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
 ui.settings.volume.master,Master volume,ui.settings,M3,"Everything at once"
 ui.settings.volume.music,Music volume,ui.settings,M3,"What plays under the game"

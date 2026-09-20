@@ -66,8 +66,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>What the colony was given at the start, for a run's report to say so.</summary>
         public ScenarioDef Scenario { get; }
 
+        /// <summary>The events (design 23): the ledger, the air, and the door an incident fires through.</summary>
+        public Events.Incidents Incidents => Pawns.Incidents!;
+
         /// <summary>The job pipeline, for the per-def counters a soak run asserts on.</summary>
         public JobSystem Jobs { get; }
+
+        /// <summary>The door lifecycle system.</summary>
+        public DoorSystem Doors => Pawns.Doors!;
 
         public CellRef Start => Outcome.StartCell;
 
@@ -126,6 +132,12 @@ namespace Odyssey.Sim.Pawns
                 // here, and every restored colonist keeps the world seed — which is what that
                 // colony was.
                 new PawnSeedSection(pawns.Pawns),
+                // Appended, never spliced in: a section's place in this list is its place in the
+                // file, and an old save read against a new list would hand the wrong bytes to the
+                // wrong reader. Both are new sections, so a save from before events simply has
+                // neither and loads with an empty ledger and nothing in the air (design 23 §7).
+                pawns.Incidents!.Ledger,
+                pawns.Incidents!.Skyfallers,
             };
         }
 
@@ -200,6 +212,7 @@ namespace Odyssey.Sim.Pawns
             // Worldgen's own ladders are already registered, because the board is regenerated from
             // its seed before a save is read over it.
             Construction.RebuildLadderConnectors(Pawns);
+            Construction.RebuildDoors(Pawns);
 
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.
