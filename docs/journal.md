@@ -7487,3 +7487,37 @@ fingerprint is for.
 **Owed.** The Unity tiers on this round, the second look (design 23 §9: chute or lift, waited for
 or not, the swell back), the History screen, and the storyteller when the owner wants events
 that arrive unasked.
+
+## 2026-09-20 — Events reviewed for the next kind: what a raid costs
+
+The owner called the supply drop good enough for an MVP event system and asked for the PR to
+be reviewed against the events to come — raids, encounters — so that adding one is a matter of
+adding rather than restructuring. The review is design 23 §8, "Adding an incident: the recipe".
+
+**The verdict.** Five edits, every one of them caught by the fast tier if missed: a worker
+that joins by existing, a Def, a line in `Order`, a handle and a label in the same position,
+and a registry key. The Events panel, the chime and the debug tab follow from the key and the
+Def. The seams a storyteller needs — gates on the Def, `LastFiredTick` and `Fires` on the
+ledger, `CanFire` / `TryFire` as the one door, `Points` on the parms, a category enum with the
+threat, arrival and condition bags already named — are all present and unread, which is the
+right state for them.
+
+**One thing changed.** The content loader validated the supply drop's fields — stack range,
+fall time — for every incident, so the first raid Def would have been held to rules about
+falling meals. `IncidentWorker.Validate(def, pawns)` is a virtual hook now, the loader checks
+only what every incident has (a key, a worker, an item the content carries), and
+`SupplyDropWorker` owns its three rules and adds a fourth: a drop that pays out nothing is a
+content error, not a silent no-op. Three tests, one of them a bare worker in the test
+assembly proving a Def with none of the drop's fields loads.
+
+**What was left narrow on purpose**, and written down so nobody reads it as the design: the
+flat `IncidentDef`, which becomes per-worker nested blocks the day a second worker wants
+parameters the first does not (the loader already reads them); `InvokeIncident` carrying the
+Def index only, though the parms take a cell and a budget; and the four-field ledger entry,
+which a raid's outcome or a condition's end will widen with a save-format bump. A condition is
+the one kind of event the layer does not represent at all — a span, not a firing — and is the
+first structural addition the next kind will ask for.
+
+**What a raid needs that events should not provide:** a faction and a hostility model, a
+non-colonist pawn kind, an arrival edge, combat and health. The incident is the thing that
+asks for them at a moment; they are their own units.

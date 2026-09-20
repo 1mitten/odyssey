@@ -188,9 +188,61 @@ values moved together, including the barren meadow's, which no gameplay change h
 | Conditions (timed, map-wide, no entities) | a second worker family; the ledger already records them |
 | Quests (reward on completion) | a wrapper that calls incident workers; not an incident |
 | The History screen (F9, B16) | reads the ledger; needs a paged channel and a virtualised list |
-| A second event | a Def, a worker, a row in `IncidentContent.Order`, `IncidentHandle` and `IncidentLabels.Keys`, and a registry key. The debug menu's Events tab lists it by existing |
+| A second event | the recipe below; the debug menu's Events tab lists it by existing |
 | A pod that opens, debris to haul | a second skyfaller kind; the meals fall bare by owner choice |
 | Landing reachability | one line in the worker, if "anywhere" proves maddening |
+
+### Adding an incident: the recipe (reviewed 2026-09-20)
+
+The PR was reviewed with one question: what does a raid or an encounter cost to add. The
+answer is **five edits, all caught by the fast tier if one is missed**, and nothing in the
+layer has to be restructured. In order:
+
+1. **A worker** in `Assets/Odyssey/Sim/Events/`, a class deriving `IncidentWorker` with a
+   public parameterless constructor and no state. It joins by existing: the registry scans the
+   assembly, and `link.xml` preserves it in a stripped build. `Name` is what the Def spells.
+   `CanFireNow` changes nothing and answers cheaply; `TryExecute` does it and records it with
+   `ctx.Ledger.Record`. It reaches everything through `IncidentContext`: the world, the pawn
+   context (registry, cells, items, navigation), the content, the ledger, the air.
+   Override `Validate` to check the fields it reads and throw `DefLoadException` naming the
+   Def; the loader checks only what every incident has (a key, a worker, an item the content
+   carries), so the supply drop's stack range is the supply drop's business and a raid is not
+   held to it. Draw randomness from `ctx.Random(purpose)` with a **new constant** in
+   `IncidentPurpose` per draw — never reuse `Landing` or `Payload` — and mix the tick in the
+   way `SupplyDropWorker` does, or every firing in a world lands the same way.
+2. **A Def** in `Assets/Odyssey/Defs/Core/Events/Incidents.xml`: `defName`, `bulletinKey`,
+   `favourability`, `category`, `worker`, the gates, and whichever worker parameters it
+   reads. Fields it does not read stay at their defaults. `IncidentDef` is flat today; when a
+   second worker wants parameters the first does not, the loader already reads nested objects
+   and lists, so a per-worker block (`<raid>…</raid>`) is the shape to reach for rather than
+   widening the flat set — that day, not before.
+3. **One line in `IncidentContent.Order`**, appended, never inserted: the position is the
+   index the ledger and every save carry. The content fingerprint in `IncidentContentTests`
+   moves and is re-baked with the reason.
+4. **One constant in `IncidentHandle`** (`Sim.Contracts`) and `Count` up one, and **one key in
+   `IncidentLabels.Keys`** (`Hud`), both in the same position. Three spellings of one list is
+   the project's standing bargain for anything the interface names without importing the
+   simulation (`ItemLabels`, `JobLabels`, terrain), and `IncidentContentTests` plus
+   `RegistryTests` fail the fast tier on any disagreement in length, order or key.
+5. **A registry row** in `docs/design/icon-keys.csv` under `ui.bulletin.*`, then both rebuilds
+   and both `--check`s. The Events panel, its ink, its chime and the debug tab's row all follow
+   from the key and the Def; no presentation file learns the incident's name.
+
+What a raid needs that the events layer does not provide, and should not: a hostile faction
+and a hostility model, a pawn kind that is not a colonist, an arrival edge and a target, and
+the combat and health it presupposes. Those are their own units; the incident is the thing
+that asks for them at a moment. A visitor or a trader encounter is the same shape with a
+neutral faction. A **condition** (a cold snap, a fallout) is the one kind this layer does not
+yet represent: the ledger records a firing, not a span, so a condition wants a second
+record — active, until tick — beside the skyfallers, and that is the first structural
+addition the next kind of event will ask for (§8).
+
+Two seams were left deliberately narrow and are noted so nobody mistakes them for the design:
+`IntentKind.InvokeIncident` carries the Def index only, although `IncidentParms` already
+takes a cell and a points budget, so the debug tab cannot yet force a landing or a size; and
+a ledger entry is `(id, tick, def, cell)`, so a raid that wants to record its points or its
+outcome, or a condition its end, adds fields and bumps the save format. Both are one-line
+widenings when a caller exists.
 
 ## 9. Invited tuning and open questions
 

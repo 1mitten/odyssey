@@ -101,26 +101,55 @@ namespace Odyssey.Tests.Sim.Events
             Assert.That(thrown!.Message, Does.Contain("Nothing").And.Contain("SupplyDrop"));
         }
 
+        /// <summary>
+        /// The worker's own rules are checked at load, by the worker (2026-09-20): a stack range
+        /// written backwards, or a drop that names nothing to drop, both throw naming the Def.
+        /// </summary>
         [Test]
         public void AStackRangeWrittenBackwardsFailsAtLoad()
         {
-            DefDatabase defs = IncidentContent.Register(new DefLoader())
-                .AddSource(new InMemoryDefSource("Test").Add("Incidents.xml", Pack(stackMin: 20, stackMax: 10)))
-                .Load();
+            var thrown = Assert.Throws<DefLoadException>(() =>
+                new SupplyDropWorker().Validate(new IncidentDef { defName = "Incident_Test", item = "Item_Meal", stackMin = 20, stackMax = 10 }, ContentPack.Pawns()));
+            Assert.That(thrown!.Message, Does.Contain("Incident_Test").And.Contain("20–10"));
+        }
 
-            Assert.Throws<DefLoadException>(() => IncidentContent.FromDefs(defs, ContentPack.Pawns()));
+        [Test]
+        public void ASupplyDropThatPaysOutNothingFailsAtLoad()
+        {
+            Assert.Throws<DefLoadException>(() =>
+                new SupplyDropWorker().Validate(new IncidentDef { defName = "Incident_Test" }, ContentPack.Pawns()));
+        }
+
+        /// <summary>
+        /// A second kind of incident is not held to the first's rules: the base worker accepts a
+        /// Def with none of the supply drop's fields set, which is the shape a raid or an
+        /// encounter will take (design 23 §8). The registry scans the simulation assembly only,
+        /// so this worker cannot be named from content and is exercised directly.
+        /// </summary>
+        [Test]
+        public void AWorkerWithNoRulesOfItsOwnAcceptsABareDef()
+        {
+            Assert.DoesNotThrow(() =>
+                new BareWorker().Validate(new IncidentDef { defName = "Incident_Test" }, ContentPack.Pawns()));
         }
 
         /// <summary>
         /// A pack of one incident that pays out nothing, so the loader's own reference check —
-        /// which wants the named item in the same database — stays out of tests about other
-        /// things.
+        /// which wants the named item in the same database — stays out of the unknown-worker
+        /// test, which fails before any worker is asked.
         /// </summary>
-        static string Pack(string worker = "SupplyDrop", int stackMin = 1, int stackMax = 1) =>
+        static string Pack(string worker) =>
             "<Defs><IncidentDef><defName>Incident_SupplyDrop</defName>" +
             "<bulletinKey>ui.bulletin.supplydrop</bulletinKey>" +
             $"<worker>{worker}</worker>" +
-            $"<stackMin>{stackMin}</stackMin><stackMax>{stackMax}</stackMax>" +
             "</IncidentDef></Defs>";
+    }
+
+    /// <summary>The smallest worker there is: no rules, never fires. Test assembly only.</summary>
+    public sealed class BareWorker : IncidentWorker
+    {
+        public override string Name => "TestBare";
+        public override bool CanFireNow(IncidentContext ctx, in IncidentParms parms) => false;
+        public override bool TryExecute(IncidentContext ctx, in IncidentParms parms) => false;
     }
 }

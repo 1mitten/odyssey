@@ -1,5 +1,7 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
+using Odyssey.Sim.Pawns;
 
 namespace Odyssey.Sim.Events
 {
@@ -28,6 +30,17 @@ namespace Odyssey.Sim.Events
         public const int MaxDraws = 64;
 
         public override string Name => "SupplyDrop";
+
+        /// <summary>A drop needs something to drop, a stack range the right way round and a fall that is not negative.</summary>
+        public override void Validate(IncidentDef def, PawnContent pawns)
+        {
+            if (def.item.Length == 0)
+                throw new DefLoadException($"{def.Origin}: incident '{def.defName}' is a supply drop that pays out nothing; name an item.");
+            if (def.stackMin < 1 || def.stackMax < def.stackMin)
+                throw new DefLoadException($"{def.Origin}: incident '{def.defName}' has stack range {def.stackMin}–{def.stackMax}.");
+            if (def.fallTicks < 0)
+                throw new DefLoadException($"{def.Origin}: incident '{def.defName}' falls for {def.fallTicks} ticks.");
+        }
 
         public override bool CanFireNow(IncidentContext ctx, in IncidentParms parms)
         {

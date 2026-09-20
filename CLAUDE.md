@@ -296,11 +296,11 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **786 Sim + 465 Hud** (2026-09-20, the events branch with falling items merged; 753 + 449 on 2026-09-19); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **788 Sim + 465 Hud** (2026-09-20, the events branch with falling items merged; 753 + 449 on 2026-09-19); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the events
-  branch (`claude/events-system`, after the first-look fixes and the falling-items merge): EditMode **1,966 total, 1,952 passed, 0 failed**; PlayMode **82 total,
+  branch (`claude/events-system`, after the first-look fixes, the falling-items merge and the extensibility review): EditMode **1,968 total, 1,954 passed, 0 failed**; PlayMode **82 total,
   77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
   The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, now
   at `main`'s tip), was EditMode 1,916 / 1,902 and PlayMode 82 / 77.

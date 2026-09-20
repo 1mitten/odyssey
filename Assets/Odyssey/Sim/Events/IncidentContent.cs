@@ -118,9 +118,11 @@ namespace Odyssey.Sim.Events
         public static DefLoader Register(DefLoader loader) => loader.Register<IncidentDef>();
 
         /// <summary>
-        /// Read and bind. A missing Def, an unknown worker, an item the pawn content does not
-        /// carry or a stack range written backwards all throw here, naming the culprit, rather
-        /// than surfacing as an event that does something odd on the day it first fires.
+        /// Read and bind. A missing Def, an unknown worker or an item the pawn content does not
+        /// carry throw here, naming the culprit, rather than surfacing as an event that does
+        /// something odd on the day it first fires; what a worker's own fields must satisfy is
+        /// checked by <see cref="IncidentWorker.Validate"/>, so a stack range written backwards
+        /// throws too, from the one worker that reads stack ranges.
         /// </summary>
         public static IncidentContent FromDefs(DefDatabase defs, PawnContent pawns)
         {
@@ -148,10 +150,8 @@ namespace Odyssey.Sim.Events
 
                 content.ItemIndex[i] = def.item.Length == 0 ? -1 : ItemIndexOf(pawns, def);
 
-                if (def.stackMin < 1 || def.stackMax < def.stackMin)
-                    throw new DefLoadException($"{def.Origin}: incident '{def.defName}' has stack range {def.stackMin}–{def.stackMax}.");
-                if (def.fallTicks < 0)
-                    throw new DefLoadException($"{def.Origin}: incident '{def.defName}' falls for {def.fallTicks} ticks.");
+                // What this worker's own fields must satisfy is the worker's to say.
+                worker.Validate(def, pawns);
             }
 
             return content;

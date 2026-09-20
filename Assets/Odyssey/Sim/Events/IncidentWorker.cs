@@ -89,6 +89,16 @@ namespace Odyssey.Sim.Events
         /// <summary>The name a Def's <c>worker</c> field spells. Stable; a save never stores it.</summary>
         public abstract string Name { get; }
 
+        /// <summary>
+        /// Check the fields of a Def that names this worker, at load, and throw a
+        /// <see cref="DefLoadException"/> naming the culprit if they cannot be fired with. The
+        /// worker owns its own parameters: the loader checks what every incident has — a key, a
+        /// worker, an item the content carries — and leaves a stack range or a fall time to the
+        /// one worker that reads them, so a second kind of incident is not held to the first's
+        /// rules. The default accepts anything.
+        /// </summary>
+        public virtual void Validate(IncidentDef def, PawnContent pawns) { }
+
         public abstract bool CanFireNow(IncidentContext ctx, in IncidentParms parms);
 
         public abstract bool TryExecute(IncidentContext ctx, in IncidentParms parms);
