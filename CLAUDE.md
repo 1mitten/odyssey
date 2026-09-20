@@ -346,7 +346,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~35 s, no Unity): **842 Sim + 532 Hud** (2026-09-20, the paged Work tab branch merged with main); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~35 s, no Unity): **878 Sim + 543 Hud** (2026-09-20, the paged Work tab branch merged with main, growing zones and sleep pose included); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
@@ -358,10 +358,10 @@ invisible where the game is played.
   and figure-cap guards). The remainder are `[Explicit]` or ignored. The run before that,
   on the events branch, was EditMode 1,968 / 1,954 and PlayMode 82 / 77.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the
-  paged Work tab branch merged with main (doors included): EditMode **2,110 total, 2,097 passed,
-  0 failed**; PlayMode **85 total, 80 passed, 0 failed**. The remainder are `[Explicit]` or ignored.
-  The run before it, the same day and branch before pagination, was EditMode 2,104 / 2,091 and
-  PlayMode 85 / 80.
+  paged Work tab branch merged with main (doors, growing zones and sleep pose included): EditMode
+  **2,188 total, 2,170 passed, 0 failed**; PlayMode **88 total, 83 passed, 0 failed**. The remainder
+  are `[Explicit]` or ignored. The run before it, the same branch before that merge, was EditMode
+  2,110 / 2,097 and PlayMode 85 / 80.
 - **Do not run the PlayMode tier while another Unity batch run is going.** It carries the timing
   tests, and `HudStressTests` failed at 3.770 ms against a 1.167 ms budget beside two other
   `unity.sh` runs and passed at 0.603 ms alone, on the same commit. **The baseline the test logs is
