@@ -21,6 +21,22 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Storage zones are a thing you can draw, and the starting zone is visible for the first time**
+  (`claude/storage-zones`, S1, `docs/design/26-storage.md`). A stockpile tool in the orders strip —
+  the sixth chip, which needed an argument and got one — paints a zone with a drag; the ground it
+  covers is washed towards a blue-grey, on bare earth and on a built floor alike, for no extra draw
+  calls. **Every colony ever played has had a nine-cell zone at the start and nobody has ever seen
+  it**, so the first thing to look at is whether it now reads as a deliberate part of the colony or
+  as a stain. Four questions only a person can answer. **Is the wash the right strength?** — a
+  third of the way to the hue, chosen so stone still reads as stone and planks as planks, and it is
+  the one number here with no test behind it. **Does the anchor rule feel right?** — a drag begun
+  inside a zone extends that zone, one begun outside founds a new one and takes any cells it
+  crosses, and two zones that touch stay two. **Is one starting cell missing a nuisance?** — on the
+  wooded board a tree stands in one of the nine, so the zone is eight cells and has a notch in it
+  until the tree is felled (§3). **And does a store read differently from a field?** — the two are
+  the only tools that paint ground, they sit next to each other in the strip, and their hues have
+  to be told apart at the play camera rather than side by side in a palette.
+
 - **A sleeping colonist is now the size she is drawn** (`worktree-bed-sleep-pose`,
   `docs/design/20-beds.md` §7b). She was being laid down 0.38 m long — the figure director's
   "hip height" is the 0.2 m floor of a clamp on a bone that stands on the floor — so she reached

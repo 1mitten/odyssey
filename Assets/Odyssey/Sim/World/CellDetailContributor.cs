@@ -29,15 +29,18 @@ namespace Odyssey.Sim.World
         readonly IReadOnlyList<PlacedEdifice> _edifices;
         readonly Growing.GrowingZones? _zones;
         readonly EnclosureGrid? _enclosure;
+        readonly Storage.StorageZones? _storage;
         readonly int[] _costByClass = new int[256];
 
         public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
-            Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null)
+            Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null,
+            Storage.StorageZones? storage = null)
         {
             _grid = grid;
             _edifices = edifices;
             _zones = zones;
             _enclosure = enclosure;
+            _storage = storage;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -111,10 +114,35 @@ namespace Odyssey.Sim.World
                 }
             }
 
+            // And the store, if one covers this cell. The same one-step-up lift the field above
+            // uses and for the same reason — a click lands on the ground a zone is drawn on,
+            // while the zone itself lives in the air cell a colonist stands in — with one
+            // difference: a store is commonly painted on a built floor, where the clicked cell
+            // *is* the walked cell and no lift is wanted. Asking the cell first and the cell above
+            // it second gets both without knowing which surface was clicked.
+            int storageZone = -1;
+            byte storagePriority = 0;
+            if (_storage != null)
+            {
+                int storeCell = cell;
+                if (!_storage.IsStorage(storeCell)
+                    && _grid.IsSolidTerrain(cell)
+                    && cell + _grid.Size.LayerStride < _grid.Terrain.Length)
+                    storeCell += _grid.Size.LayerStride;
+
+                int slot = _storage.ZoneAt(storeCell);
+                if (slot >= 0)
+                {
+                    storageZone = slot;
+                    storagePriority = (byte)_storage.SettingsOf(slot).Priority;
+                }
+            }
+
             bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors));
+                quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
+                storageZone, storagePriority));
         }
     }
 }

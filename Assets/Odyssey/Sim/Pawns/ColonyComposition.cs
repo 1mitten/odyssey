@@ -138,7 +138,8 @@ namespace Odyssey.Sim.Pawns
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
-                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure))                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
+                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure, storage))
+                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
                 // second path into `StartJob` would be a second path out of it — which is where a

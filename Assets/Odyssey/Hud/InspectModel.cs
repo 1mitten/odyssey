@@ -556,6 +556,18 @@ namespace Odyssey.Hud
         int _cellRowsOrderPercent;
         int _cellRowsQuality;
         int _cellRowsOwner;
+
+        /// <summary>
+        /// The store's rung, plus one, or 0 for no store — the two facts the storage row draws
+        /// folded into the one integer this guard needs. Plus one because rung 0 is Last, a real
+        /// answer, and a guard that could not tell it from "no store at all" would leave the row
+        /// standing over a cell the player had just un-zoned.
+        /// </summary>
+        int _cellRowsStoragePriority;
+
+        static int StoragePriorityOf(CellDetail detail) =>
+            detail.StorageZone >= 0 ? detail.StoragePriority + 1 : 0;
+
         int _cellRowsZonePlant;
         int _cellRowsZoneYield;
         int _cellRowsCropGrowth;
@@ -621,6 +633,7 @@ namespace Odyssey.Hud
                 && _cellRowsZonePlant == detail.ZonePlant
                 && _cellRowsCropGrowth == detail.CropGrowth
                 && _cellRowsZoneYield == detail.ZoneYield
+                && _cellRowsStoragePriority == StoragePriorityOf(detail)
                 && _cellRowsIndoors == detail.IsIndoors) return;
 
             _cellRowsFor = detail.CellIndex;
@@ -636,6 +649,7 @@ namespace Odyssey.Hud
             _cellRowsZonePlant = detail.ZonePlant;
             _cellRowsCropGrowth = detail.CropGrowth;
             _cellRowsZoneYield = detail.ZoneYield;
+            _cellRowsStoragePriority = StoragePriorityOf(detail);
             _cellRowsIndoors = detail.IsIndoors;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
@@ -680,6 +694,15 @@ namespace Odyssey.Hud
                     ? howMany + " — awaiting its seed"
                     : howMany + " — " + detail.CropGrowth / 10 + "% grown");
             }
+            // The store's own answer, beside the field's: what the colony has set this ground
+            // aside for, and how much it cares. Its rung leads, because the rung is the thing a
+            // player changes and the thing that decides where the next armful goes; the size
+            // follows it, because a zone has no name until storage groups arrive (S2) and "how
+            // big" is the only other thing that tells two of them apart.
+            if (detail.StorageZone >= 0)
+                Row(n++, "storage",
+                    Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]));
+
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");
 
