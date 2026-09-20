@@ -7777,3 +7777,77 @@ being a *real* bed still holds for the scenario that has some.
 
 Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 
+
+## 2026-09-20 — The Work tab, from a supplied mockup
+
+The owner supplied a complete visual specification for the work priority grid — colonists as rows,
+work types as columns, four independent signals in a 34px cell — with one instruction over the top
+of it: *"we should assume to point our own equivalent icons fonts in keeping consistent with our
+design"*. So the work was not to build what the mockup drew; it was to find out which of its
+decisions were ours already, which were arithmetic, and which were another game's furniture.
+
+**Three of its assumptions were already settled here and it did not know.** The panel is
+`10-ui-panel-catalogue.md` §B2, which named the intent it emits — `SetWorkPriority(pawn, workType,
+priority)` — before any of this. The priority model exists: `Pawn.WorkPriorities` is a byte per work
+type, 0 to 4, defaulting to 3, saved and hashed, and `JobSystem` has always scanned one band at a
+time. And the tab has a slot and a key: `ui.tab.work` on F1, carrying the reason *"the work grid
+arrives with M7"*. So nothing was invented; a paragraph was turned into a panel.
+
+**The mockup's thirteen work types are not ours and its hues are a second colour system.**
+`icon-keys.csv` carries twenty-two `ui.work.*` with names, wiki entries and icon-map rows. Four are
+simulated. The `SkillCatalogue` precedent decides it — show the design's list, draw the rest as
+unavailable with the reason — with one thing added that the precedent did not need: **not-built-yet
+is a third state and must not be drawn as incapable.** One says *this colonist cannot*; the other
+says *nobody can yet*. Greying both identically would teach a player that eighteen of their columns
+are a disability. The per-work-type hues were dropped outright: the rule is that category colour
+lives in the icon stroke and comes from `HudTheme.CategoryOf`, and this project spent 2026-09-20
+merging two colour tables that disagreed. Adding a twenty-two-entry third was not on.
+
+**The rotation angle is the part worth keeping and the mockup got the number wrong for us.** Its own
+reasoning is right — a label's horizontal footprint is `width × cos θ` and it must clear the pitch —
+and its −62° projects 36.6px at our 34px pitch, which overlaps. Ours is **−66°**: "Firefighting" at
+Archivo Narrow 13px models 78px, `cos 66° × 78 = 31.7`, with 2.3px of margin. The rise, 71.3px, is
+where the header band's 72 comes from. `WorkGridTests.LabelsClearTheirNeighbours` runs it over the
+real catalogue and a failure prints the shallowest angle the pitch allows, so the next person is
+told what to change rather than that something is wrong. The fault it guards against is nasty in
+the specific way this project keeps meeting: it gets **worse toward the left of the panel**, so it
+is invisible in a screenshot of the right-hand columns and invisible again in a mockup with fewer
+columns than the game.
+
+**And it overturned the catalogue on one point.** §B2 says the column headers are *"work-type icons
+with a tooltip"*. That loses to `09-ui-and-input.md` §7a — the owner's rule of 2026-09-16 that while
+the icons are placeholders a control is named by its full word, never an abbreviation — because
+`ui.work.firefighting` is today *"spray canister, read as an extinguisher"* at **low** confidence.
+Twenty-two low-confidence glyphs, each the only thing naming a column, is a panel nobody can use.
+So the header carries both, and the rotation is what makes room for the label.
+
+**`WorkHandle` had to exist before the panel could emit anything.** Skills reach the interface as
+named pawn aspects and never cross `Sim.Contracts` at all — that is the point of the aspect seam and
+why there is deliberately no `SkillHandle`. A work priority cannot do the same, because it is
+*written* as well as read and an `Intent` carries three integers and no strings. Without an agreed
+index the HUD would have sent its own column number and the simulation would have had to know the
+order of a list that lives in the HUD: the exact coupling the aspect seam exists to prevent,
+arriving through the other door. So `WorkHandle` sits in `Catalogue.cs` beside `JobHandle` and
+`WorkTypeIndex` aliases it, as `JobIndex` already does.
+
+**Capability is built although nothing can answer it with a no.** There are no traits and no health
+model, so every colonist is capable of everything. The channel is published anyway, and the rule
+the mockup asks for by name is kept verbatim and enforced at the model rather than in a stylesheet:
+when `!capable`, the priority and the passion are zero and the glyph is an em-dash. A capability
+expressed as opacity is a capability that leaks — into a tooltip, into a screenshot, into a
+copy-and-paste — and adding the channel later would mean finding every reader that assumed a digit.
+
+Two small consequences fell out of the numbers. **Hauling has a work type and no skill**, because
+`WorkTypes.xml` gives `Work_Haul` no `rateSkill`, so its cells have no border ramp and never a
+flame; a ramp colour invented for hauling would be a lie told in a colour the player has learned to
+trust. And **a missing priority aspect reads as the default, not as never** — a snapshot taken
+before the first publish must not silently un-assign the colony.
+
+Nothing moved a golden: the priorities are hashed but no test changes one, and an aspect is neither
+saved nor hashed. **The Presentation draw is not built.** `HudShell.Work.cs` is the next unit and
+the mockup is its specification; it is last on purpose, because the fast tier compiles neither
+Presentation nor Editor and it is the half that cannot be proven without a Unity run.
+
+**Neither tier was run for this work.** The container has no dotnet SDK and no Unity, and the
+egress policy refuses `builds.dotnet.microsoft.com`, so every C# file here is unproven. Both content
+checks pass, because no content changed — the panel's own chrome words are the open question OQ-W1.

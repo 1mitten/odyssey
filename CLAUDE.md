@@ -163,6 +163,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **EV** events | **Built on `claude/events-system`, 2026-09-20** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
 | **HT** hardening | **Audited 2026-09-19, in review — PR #136, nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
 | **FI** falling items | **Done on `claude/falling-items`** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
+| **WT** the Work tab | **Designed and half built on `claude/happy-tesla-2onz0q`** — `docs/design/27-work-tab.md`, from the owner's supplied mockup re-pointed at our tokens (`docs/reference/mockups/work-v1.html`). Twenty-two `ui.work.*` columns with the simulation's four live and eighteen drawn as **not built yet**, which is a third state and deliberately not the incapable grey; rotated headers at **−66°**, the angle our 34px pitch actually demands rather than the mockup's −62°, asserted in the fast tier; the five-step skill border, the passion flames and a Simple / Detailed switch that moves nothing but the glyph. Sim seam in: `WorkHandle`, `IntentKind.SetWorkPriority` (applied while paused) and the priority and capability aspects. **The Presentation draw is not built** — `HudShell.Work.cs` is the next unit and the mockup is its specification. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
 the branch up to date. Branch protection enforces it, agents included. `claude/*` branches are
@@ -177,6 +178,7 @@ this file.
 | If you are touching | Read |
 |---|---|
 | Falling items, mid-air drops, landing motion | `docs/design/26-falling-items.md` |
+| The Work tab, priorities, the rotated headers | `docs/design/27-work-tab.md` |
 | Walls, sites, materials, the build botch | `docs/design/15-building.md` |
 | Cancel, deconstruct | `docs/design/16-cancel-and-deconstruct.md` |
 | The Build palette's three layouts | `docs/design/17-build-palette-layouts.md` |
@@ -402,6 +404,7 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 - **The scenario table is written twice** — `OdysseyBootstrap.ScenarioFor` and
   `SessionRoundTripTests.ScenarioByName` each map two `defName`s by hand. Not urgent (a scenario
   acts only at tick zero) and both copies say so.
+- **The Work tab has no Presentation half.** The model, the layout arithmetic and the `SetWorkPriority` seam are in and tested in the fast tier; nothing draws them, so F1 still says the grid arrives with M7. `docs/design/27-work-tab.md` §10.
 - **Forced orders have their simulation half only** — steps 3 and 4, the right-click/drag split and
   the context-menu panel, are not started, so nothing in the running game can send one.
 - **The presentation half of `OdysseyBootstrap`** is still wired by hand. The simulation half was

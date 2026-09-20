@@ -21,6 +21,17 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **The Work tab has a mockup and a model, and nobody has seen it on a screen**
+  (`claude/happy-tesla-2onz0q`, `docs/design/27-work-tab.md`, mockup
+  `docs/reference/mockups/work-v1.html`). **Open the mockup in a browser first** — the C# draw is
+  not built, so this row is a review of the mockup, not of the game. What only a person can answer:
+  whether twenty-two columns with eighteen drawn as *not built yet* teach the shape of the game or
+  just cost eighteen columns of width (OQ-W2); whether the rotated labels at −66° read at a glance
+  or have to be tilted the head for; whether hauling's borderless cell reads as *no skill* or as
+  broken (OQ-W3); and whether Simple mode loses so little that it is the mode you would leave it
+  in. A wrong answer on the first looks like you scrolling past the dead columns to find the four
+  that work — if so, the live-four switch in the review rail is the panel's real default.
+
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
   its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm

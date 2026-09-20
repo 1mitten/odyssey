@@ -31,6 +31,37 @@ namespace Odyssey.Sim.Contracts
         public const int Count = 10;
     }
 
+    /// <summary>
+    /// See <see cref="JobHandle"/>: work-type indices, as <see cref="IntentKind.SetWorkPriority"/>
+    /// carries them.
+    ///
+    /// <para><b>Why this had to exist before the Work tab could emit anything.</b> Skills reach
+    /// the interface as named pawn aspects and never cross this assembly at all, which is the
+    /// point of that mechanism and is why <c>SkillIndex</c> is deliberately <i>not</i> mirrored
+    /// here. A work priority cannot do the same: it is <em>written</em> as well as read, and an
+    /// <see cref="Intent"/> carries three integers and no strings. Without an agreed index the
+    /// interface would have to send its own column number and the simulation would have to know
+    /// the order of a list that lives in the HUD — which is the coupling the aspect seam was built
+    /// to avoid, arriving through the other door.</para>
+    ///
+    /// <para>The simulation's <c>WorkTypeIndex</c> aliases these, exactly as <c>JobIndex</c>
+    /// aliases <see cref="JobHandle"/>, so there is one order and it is written down here.</para>
+    /// </summary>
+    public static class WorkHandle
+    {
+        public const int Haul = 0;
+        public const int Cutting = 1;
+        public const int Mining = 2;
+
+        /// <summary>Carrying material to a building site, and working at one. Both.</summary>
+        public const int Construction = 3;
+
+        public const int Count = 4;
+
+        /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
+        public const int None = -1;
+    }
+
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
     public static class ItemHandle
     {

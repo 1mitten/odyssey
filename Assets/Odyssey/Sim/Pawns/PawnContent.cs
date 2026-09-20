@@ -199,17 +199,30 @@ namespace Odyssey.Sim.Pawns
         public int experiencePerWorkTick;
     }
 
+    /// <summary>
+    /// Aliases of <see cref="WorkHandle"/>, exactly as <see cref="JobIndex"/> aliases
+    /// <see cref="JobHandle"/>: a work priority is written by the player as well as read, so the
+    /// index crosses the seam inside an <see cref="Intent"/> and both sides must agree what it
+    /// counts. The order is <c>Sim.Contracts/Catalogue.cs</c>'s and is written down there.
+    /// </summary>
     public static class WorkTypeIndex
     {
-        public const int Haul = 0;
-        public const int Cutting = 1;
-        public const int Mining = 2;
+        public const int Haul = WorkHandle.Haul;
+        public const int Cutting = WorkHandle.Cutting;
+        public const int Mining = WorkHandle.Mining;
 
         /// <summary>Carrying material to a building site, and working at one. Both, deliberately:
         /// fetching the wood is part of building the wall, not a haul that happens to help.</summary>
-        public const int Construction = 3;
+        public const int Construction = WorkHandle.Construction;
 
-        public const int Count = 4;
+        public const int Count = WorkHandle.Count;
+
+        /// <summary>
+        /// The names work types are published under, parallel to the indices above, and the same
+        /// shape as <see cref="SkillIndex.Names"/>. The interface reads
+        /// <c>odyssey.pawn.work.mining.priority</c> by name and never sees this array.
+        /// </summary>
+        public static readonly string[] Names = { "haul", "cutting", "mining", "construction" };
     }
 
     /// <summary>

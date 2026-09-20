@@ -95,6 +95,29 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// <c>SetWorkPriority(A = pawn, B = work handle, C = priority)</c> — the Work tab's one
+        /// command.
+        ///
+        /// <para><b>Every argument is checked and none is clamped.</b> A priority of 9 is not a
+        /// player asking for something unusual, it is a caller that has misunderstood the range,
+        /// and quietly storing 4 would put a number in the <i>hash</i> that nobody asked for. The
+        /// same goes for the work handle: out of range is a refusal, not a modulus.</para>
+        /// </summary>
+        public IntentRejection HandleSetWorkPriority(Intent intent)
+        {
+            Pawn? pawn = Get(new PawnId(intent.A));
+            if (pawn == null) return IntentRejection.NotPermitted;
+            if (intent.B < 0 || intent.B >= WorkTypeIndex.Count) return IntentRejection.NotPermitted;
+            if (intent.C < 0 || intent.C > 4) return IntentRejection.NotPermitted;
+
+            if (pawn.WorkPriorities[intent.B] == (byte)intent.C)
+                return IntentRejection.AlreadyInThatState;
+
+            pawn.WorkPriorities[intent.B] = (byte)intent.C;
+            return IntentRejection.None;
+        }
+
         /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
         public Pawn Adopt(Pawn pawn)
         {
@@ -219,6 +242,19 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Level[s], pawn.SkillLevel(s));
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Passion[s], pawn.Passions[s]);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Experience[s], pawn.Skills[s]);
+                }
+
+                // The work priorities, on the same terms and through the same channel (design 27).
+                // Every colonist rather than the selected one, because the Work tab is a grid of
+                // everybody and a panel that had to ask for a subscription per row would be the
+                // one panel in the game that cannot open. Eight rows a colonist.
+                for (int w = 0; w < WorkTypeIndex.Count; w++)
+                {
+                    writer.AddPawnAspect(pawn.Id, WorkAspects.Priority[w], pawn.WorkPriorities[w]);
+
+                    // Nothing can answer this with a no yet — there are no traits and no health
+                    // model — so it is a constant one today. Published anyway: see WorkAspects.
+                    writer.AddPawnAspect(pawn.Id, WorkAspects.Capable[w], 1);
                 }
 
                 // The seed this colonist was rolled from (U40), which is what the interface names
