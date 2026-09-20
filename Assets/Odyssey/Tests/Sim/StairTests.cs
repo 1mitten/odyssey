@@ -1,6 +1,7 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Worldgen;
@@ -195,6 +196,61 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Grid.Edifice[second], Is.LessThan(0), "and so is the far one");
             Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.False,
                 "the portal must not outlive the stair");
+        }
+
+        /// <summary>
+        /// <b>And a player takes one apart by marking it, not by calling Demolish.</b>
+        ///
+        /// <para>The test above proves the <em>rule</em> — either half names the whole stair — by
+        /// calling <c>Demolish</c> straight. That is one step short of what the owner asked about
+        /// on 2026-09-21: a deconstruct order is a designation, a work giver has to see it, a
+        /// colonist has to walk to it and finish it, and the mark on the <em>other</em> half has to
+        /// go when the stair does. A stale designation over an empty cell is a job that can never
+        /// be filled and is handed out for ever, which is exactly what an unreachable crop cost
+        /// PR #119 — 159 failed jobs in 2,000 ticks.</para>
+        ///
+        /// <para>Marked by each half in turn, because the far half is a record of its own and the
+        /// two are not symmetric in the code even though they are to the player.</para>
+        /// </summary>
+        [Test]
+        public void AMarkedStairIsPulledDownWholeByAColonist([Values(true, false)] bool byTheFarHalf)
+        {
+            ColonyWorld colony = Board();
+            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out int landing);
+            RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
+            colony.World.Tick();
+
+            int marked = byTheFarHalf ? second : head;
+            Assume.That(colony.Designations.CanDeconstruct(marked), Is.True,
+                "the half that was clicked has to be something the deconstruct tool will take");
+            Assert.That(
+                colony.Designations.Designate(Size.FromIndex(marked), DesignationKind.Deconstruct),
+                Is.EqualTo(IntentRejection.None), "the order was refused");
+
+            for (int tick = 0; tick < 20_000 && colony.Grid.Edifice[head] >= 0; tick++)
+                colony.World.Tick();
+
+            // Assert rather than Assume, for the reason DeconstructTests records against its own
+            // stone wall: a precondition that fails is reported as green.
+            Assert.That(colony.Grid.Edifice[head], Is.LessThan(0), "nobody pulled the stair down");
+            Assert.That(colony.Grid.Edifice[second], Is.LessThan(0),
+                "half a stair was left standing, which is a portal whose far end is a hole");
+
+            Assert.That(colony.Designations.At(head), Is.EqualTo(DesignationKind.None),
+                "a mark outlived the thing it was on");
+            Assert.That(colony.Designations.At(second), Is.EqualTo(DesignationKind.None),
+                "the mark on the other half outlived the stair");
+
+            // **The portal, and not reachability.** The obvious assertion — that the landing is
+            // no longer reachable — is the wrong one for this fixture and passes or fails for the
+            // wrong reason: the landing is the top of a single wall, so a colonist can get on to
+            // it with a one-block hop whether or not a stair was ever there. Measured, 2026-09-21:
+            // the connector is correctly gone and the landing is still reachable. The claim worth
+            // making is that the stair took its portal with it.
+            Assert.That(colony.Pawns.Nav.TwoCellConnectorTouching(head), Is.LessThan(0),
+                "the stair is gone and its portal is still registered at the near half");
+            Assert.That(colony.Pawns.Nav.TwoCellConnectorTouching(second), Is.LessThan(0),
+                "...and at the far half");
         }
 
         // ---- where one may be ordered -----------------------------------------------------------

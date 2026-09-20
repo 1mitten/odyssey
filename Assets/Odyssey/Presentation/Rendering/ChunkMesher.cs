@@ -738,7 +738,9 @@ namespace Odyssey.Presentation.Rendering
 
             // The climb runs lower -> upper. Seen from the upper half, that is the way it came.
             int climb = def == CoreContent.EdificeStairLower ? dir : Directions.Opposite(dir);
-            float rise = def == CoreContent.EdificeStairLower ? 0f : CellMetrics.SizeY * 0.5f;
+            // StairShape owns this, and the picker reads the other end of it: a flight drawn at
+            // one height and clickable at another is what the owner reported on 2026-09-21.
+            float rise = StairShape.FootOfRun(def);
 
             AddBody(batch, module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise) *

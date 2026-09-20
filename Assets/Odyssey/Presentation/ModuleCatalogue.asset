@@ -471,7 +471,7 @@ MonoBehaviour:
     baseAtY: 0
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
-    yaw: 0
+    yaw: 180
     scale: {x: 1, y: 1, z: 1}
     materialOnly: 0
     material: {fileID: 0}
@@ -501,7 +501,7 @@ MonoBehaviour:
     baseAtY: 0
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
-    yaw: 0
+    yaw: 180
     scale: {x: 1, y: 1, z: 1}
     materialOnly: 0
     material: {fileID: 0}
@@ -531,7 +531,7 @@ MonoBehaviour:
     baseAtY: 0
     topAtY: 0
     offset: {x: 0, y: 0, z: 0}
-    yaw: 0
+    yaw: 180
     scale: {x: 1, y: 1, z: 1}
     materialOnly: 0
     material: {fileID: 0}

@@ -261,6 +261,50 @@ same thing in a quarter of a second.
 second storey on top of one. **No stair has ever been photographed**, stamped or built — the
 playtest queue has never held a stair row.
 
+## 8b. The first play, and the two things it found
+
+**2026-09-21, the owner:** *"I put one stairs to build - and it built two - also I couldn't click on
+the stairs either to get any information ... could you check that deconstruct works with it as well
+but the stairs seemed bugged. Pillar seemed ok."*
+
+**The flight was drawn as two descending flights.** The heights were right — §4's arithmetic holds,
+the art is a half-flight rising 1.50 m over a 2.5 m run, and the upper half is lifted by half a
+layer — but `SM_Bld_Base_Stairs_01` ascends toward its own local **−Z**, so yawing each half by its
+*climb* direction pointed both of them down it. The pieces diverged instead of meeting: one flight
+on the ground and a second floating 1.5 m above and beyond it. `ModuleEntry.yaw = 180` on the three
+stair rows corrects it, which is what that field is for, and it corrects worldgen's stamped
+stairwells at the same time — they had the same fault and nobody had ever looked at one either.
+
+**Nobody could click a stair.** It does not occlude, so the only surface it offered a ray was the
+floor of its own cell, and it is drawn *climbing* — so at the play camera's 48° the whole flight sat
+in front of the cells that answered for it. `docs/design/20-beds.md` had this exact fault in
+September and `StandHeight` was written for it; its comment said *"the next non-occluding thing that
+stands up adds a line here"*, and a stair is that thing. It is also **the first that is not flat**,
+so it needs two numbers rather than one, and both the mesher and the picker now read them from
+`StairShape`:
+
+| | drawn from | drawn to | offers the picker |
+|---|---|---|---|
+| lower half | the cell floor | half a layer | its floor, and a plane at 1.5 m |
+| upper half | half a layer | the next floor | a plane at 1.5 m, and one at 3.0 m |
+
+**One plane cannot be a ramp**, and the measurement is worth keeping: with only the top of each run
+offered, the far two thirds of the *upper* half stayed unclickable, because its floor is 1.5 m below
+where its art starts — a ray crosses the top plane before the cell and the floor plane after it, and
+falls through to the ground behind. `WorldRenderModel.StandFoot` is the second plane and the two
+bracket the climb. `StairPickHeightTests` aims at every tenth of a drawn flight.
+
+The deconstruct mark follows for nothing, because `MarkHeight` reads `StandHeight`: an order to take
+a stair apart is painted on the flight rather than buried under it.
+
+**Deconstruct was checked and was already right.** `EitherHalfTakesTheWholeStairApart` proved the
+rule by calling `Demolish` directly; `AMarkedStairIsPulledDownWholeByAColonist` now proves the
+gesture — mark either half, a colonist walks to it and finishes it, both records go, both marks
+clear and the connector goes with them. One correction to the obvious assertion: **the landing does
+not become unreachable**, and expecting it to was wrong. It is the top of a single wall, so a
+colonist can get on to it with a one-block hop whether a stair was ever there or not. The claim
+worth asserting is that the *portal* went, and it does.
+
 ## 9. Open
 
 - **`EmitStair` infers facing by scanning for its partner**, which `20-beds.md` §93 says a built

@@ -1217,11 +1217,24 @@ namespace Odyssey.EditorTools
             // Half a flight per cell: 1.50 m of rise over a 2.5 m run, so two cells climb one
             // 3.0 m layer, which is the rule the templates are authored to. The piece carries a
             // 0.33 m skirt below its pivot that must sink into the slab, so no base snapping.
+            //
+            // **And turned about, which is what the yaw field is for** (owner, 2026-09-21: "I put
+            // one stairs to build - and it built two"). The piece ASCENDS toward its own local
+            // -Z, so yawing it by the climb direction — which is what ChunkMesher.EmitStair does,
+            // correctly — pointed both halves down the way they were meant to climb. The two
+            // pieces then diverged instead of meeting: one descending flight on the ground and a
+            // second descending flight floating 1.5 m above and beyond it, which is exactly two
+            // staircases. The heights were right all along; only the facing was not.
+            //
+            // Photographed before and after by Odyssey.EditorTools.StairCheck. It belongs here
+            // rather than in the mesher because it is a property of the ART — the field's own
+            // tooltip is "use it when a piece faces the wrong way" — and because worldgen's
+            // stamped stairwells draw through the same rows and were wrong in the same way.
             foreach (string id in new[] { ModuleIds.Stair, "odyssey.module.stair.straight", "odyssey.module.stair.core" })
                 rows.Add(new ModuleEntry
                 {
                     moduleId = id, shape = ModuleShape.StairFlight, prefabName = "SM_Bld_Base_Stairs_01",
-                    centreXZ = true, baseAtY = false,
+                    centreXZ = true, baseAtY = false, yaw = 180f,
                 });
 
             // Exactly one layer tall, pushed back against the wall it is fixed to.

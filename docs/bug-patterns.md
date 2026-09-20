@@ -323,6 +323,59 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-21 — One stair drawn as two, and a flight nobody could click (P1, P5)
+
+Owner, the first play of U44: *"I put one stairs to build - and it built two - also I couldn't click
+on the stairs either to get any information."* Two separate faults under one report, and the second
+is a fault this project has already had once in another costume.
+
+**"It built two" was the drawing, not the order.** One click really does place one stair —
+`DesignateDirector.SinglePlacement` returns the anchor alone for anything more than one cell — and a
+stair really is two edifice records by design. The art is a **half-flight**: `SM_Bld_Base_Stairs_01`
+measures 2.50 × 1.83 × 2.50 with its rise exactly 1.50 m over a 2.5 m run, so two chained pieces
+climb one 3.0 m layer and the heights were right all along. **The pieces were turned about.** The
+model ascends toward its own local −Z, so `ChunkMesher.EmitStair` yawing each half by its climb
+direction — which reads correctly and is the obvious thing to write — pointed both of them *down*
+the way they were meant to climb. The two then diverged instead of meeting: one descending flight on
+the ground and a second descending flight floating 1.5 m above and beyond it. That is exactly two
+staircases, and the owner described it precisely.
+
+**Nothing could have caught it but a photograph.** No stair had ever been photographed — not a built
+one and not one of worldgen's own stairwells, because the meadow is what the scene loads and the
+ruined city is not. Every tier was green; the geometry is correct in every respect a test can name.
+`StairCheck` now takes the picture, and the side elevation is the one that answers it, because a
+three-quarter view cannot settle a question about a profile along one line.
+
+**Fixed in the catalogue, not the mesher** — `yaw = 180` on the three stair rows, whose own tooltip
+is *"use it when a piece faces the wrong way"*. It is a property of the art, and worldgen's stamped
+stairwells draw through the same rows and were wrong in the same way, so one line corrects both.
+
+**And the click was the bed's fault, again** (P5, and the second time this exact shape has cost a
+report). `WorldRenderModel.StandHeight` knew about one thing — the bed — and its own comment said
+*"the next non-occluding thing that stands up adds a line here."* A stair does not occlude, so the
+only surface it offered a ray was the floor of its cell; but it is drawn **climbing**, and at the
+play camera's 48° the whole flight sat well in front of the cells answering for it. Every click went
+through to the ground behind. The bed had this in July's terms on 2026-09-19 and was reported as
+being "really specific" to click.
+
+**A stair is the first non-occluding thing that is not flat**, which is why the fix is not one more
+line. `StairShape` owns the drawn heights and both the mesher and the picker read them, so the two
+ends cannot drift apart. And one plane cannot be a ramp: offering only the top of each run left the
+far two thirds of the *upper* half unclickable — measured — because its floor is 1.5 m below where
+its art begins, so a ray crosses the top plane before the cell and the floor plane after it.
+`StandFoot` is the second plane, and the two bracket the climb.
+
+**The check that catches the next one:** `StairPickHeightTests` aims at every tenth of a drawn
+flight and requires the cell under the pointer to come back — `BedPickHeightTests`' own shape, which
+is the point. Anything that stands up and is not flat wants that sweep, not a check of its centre:
+a test of the two midpoints alone passed before the fix.
+
+**A near miss on the way.** Applying the yaw by running *Rebuild module catalogue* dropped **2,160
+lines** of the asset — the curated skin, hair and cloth swatch rectangles for all sixty-one
+colonists, which is how appearance recolouring works at all. The rebuild is only half the pipeline;
+*Classify character swatches* is a separate step. `AppearanceCatalogueTests` was the only thing that
+said so. **Do not regenerate that asset to change one field of one row.**
+
 ### 2026-09-20 — A chip on the palette with no shape, and the first CI run this branch ever had
 
 Not reported. Found by merging PR #143 (RF1 + U44) with `main` and letting the pull-request checks

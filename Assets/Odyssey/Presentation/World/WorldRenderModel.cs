@@ -738,15 +738,47 @@ namespace Odyssey.Presentation.World
         /// where the bed was drawn and where it could be clicked disagreed by a quarter cell —
         /// measured, and reported by the owner as a bed being "really specific" to click.</para>
         ///
-        /// <para>A bed is the only thing that answers today, and the shape it answers with is
-        /// <see cref="BedShape"/>'s own, because two copies of a height is how one of them gets
-        /// corrected on its own — the same argument that put the bed's shape in one place to
-        /// begin with. The next non-occluding thing that stands up adds a line here.</para>
+        /// <para>Each shape answers with its own numbers — <see cref="BedShape"/>'s and
+        /// <see cref="StairShape"/>'s — because two copies of a height is how one of them gets
+        /// corrected on its own, the same argument that put the bed's shape in one place to begin
+        /// with. The next non-occluding thing that stands up adds a line here.</para>
+        ///
+        /// <para><b>A stair was the second, and it is the first that is not flat</b> (2026-09-21,
+        /// the owner: <i>"I couldn't click on the stairs either to get any information"</i>). It is
+        /// drawn climbing, so the two halves answer differently — the lower to half a layer, the
+        /// upper from there to the next floor — and the plane offered is the <em>top</em> of each
+        /// half's own run. The picker claims it only inside the cell's own footprint, so the far
+        /// half of each cell is answered by this plane and the near half by the floor underneath;
+        /// between them they approximate the ramp from either end.
+        /// <c>StairPickHeightTests</c> aims at every tenth of the drawn flight.</para>
         /// </summary>
         public float StandHeight(int index)
         {
             if ((uint)index >= (uint)_edifice.Length) return 0f;
-            return _edifice[index] == CoreContent.EdificeBed ? BedShape.Size.y : 0f;
+            if (_edifice[index] == CoreContent.EdificeBed) return BedShape.Size.y;
+            return StairShape.TopOfRun(_edifice[index]);
+        }
+
+        /// <summary>
+        /// How far above this cell's floor the thing standing in it <b>begins</b>, in metres — 0
+        /// for everything that sits on the floor, and half a layer for the upper half of a stair.
+        ///
+        /// <para><b>Because one plane cannot be a ramp.</b> <see cref="StandHeight"/> offers the
+        /// top of a stair's run, and measured on 2026-09-21 that alone leaves the far end of the
+        /// upper half unclickable: its floor is 1.5 m below where its art starts, so a ray aimed
+        /// two thirds of the way up the flight crosses the top plane before the cell and the floor
+        /// plane after it, and falls through to the ground behind. The two planes together bracket
+        /// the climb — the far part of each cell is answered by its top and the near part by its
+        /// foot — which is as much ramp as a picker built on horizontal planes can offer, and is
+        /// enough to make every tenth of a drawn flight answer with the cell it is over.</para>
+        ///
+        /// <para>A bed answers 0 here and is unaffected: its foot plane is its floor, which the
+        /// picker already tests.</para>
+        /// </summary>
+        public float StandFoot(int index)
+        {
+            if ((uint)index >= (uint)_edifice.Length) return 0f;
+            return StairShape.FootOfRun(_edifice[index]);
         }
 
         /// <summary>
