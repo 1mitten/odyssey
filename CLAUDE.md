@@ -362,9 +362,8 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **892 Sim + 562 Hud** (2026-09-20,
-  `claude/mark-pass-batching` merged with a main carrying the Work tab and the sleep pose);
-  Long tier **23**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **915 Sim + 562 Hud** (2026-09-20,
+  PR #143 — RF1 and U44 — merged with main; RF1 added 11 Sim and U44 12); Long tier **23**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on

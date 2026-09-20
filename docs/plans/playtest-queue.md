@@ -21,7 +21,7 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
-- **Nobody has ever seen a stair** — stamped or built (`claude/adoring-ptolemy-baq5te`,
+- **Nobody has ever seen a stair** — stamped or built (PR #143, `claude/adoring-ptolemy-baq5te`,
   `docs/design/28-stairs.md`). `U44`, the last M3 unit. A **Stair** chip is live under Structure: two
   cells, rotatable with the rotate key like a bed, 6 wood and 150 ticks. It is the only way up a
   **hauler** can use, so an upper storey is somewhere a colony can build rather than merely visit —
@@ -32,9 +32,10 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   whether the flight *reads* as a flight, given no stair has ever been photographed and the art is
   the Synty half-flight at 1.5 m a cell; whether the rotate key lands the stair the way you expect;
   and whether losing ladder-borne delivery is felt as a loss before the stair is affordable.
-  Fast tier 782 Sim + 449 Hud, Long tier 21 of 21, **no golden moved**. Both Unity tiers owed.
+  Fast tier 915 Sim + 562 Hud after merging main, Long tier 23 of 23, **no golden moved**.
 
-- **Nobody has seen a roof go on, or looked up out of a roofed building** (`claude/adoring-ptolemy-baq5te`,
+- **Nobody has seen a roof go on, or looked up out of a roofed building** (PR #143,
+  `claude/adoring-ptolemy-baq5te`,
   `docs/design/27-roofs.md`). RF1, and most of it was already built — a roof has been a slab since U29.
   Three things changed. **(a)** Pointing at the floor of an upper storey and ordering a slab now roofs
   *that* storey, instead of being refused in silence for "there is already a floor here"; you no longer
@@ -47,7 +48,7 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   like a fair price for the span; whether losing every roof two storeys up reads as clarity or as
   the building being unfinished; and whether a roof still reading as the same grey plate as a floor
   is the next thing worth fixing (RF2 has the pitched cap ready to go, art and all).
-  **The fast tier is the only tier that has run this** — see the handover.
+  Merged with main on 2026-09-20 — see the handover for what the merge moved.
 
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build

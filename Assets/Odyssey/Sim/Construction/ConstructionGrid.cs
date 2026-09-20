@@ -1204,9 +1204,17 @@ namespace Odyssey.Sim.Construction
 
             int stride = _grid.Size.LayerStride;
             int head = StairHeadAt(cell);
-            int second = head >= 0
+
+            // The head's own record, read through the grid — and asked for rather than assumed,
+            // because this method is called across a seven-cell fan-out after any structure
+            // change and is the one place a derived cell is used as an index. A head that names
+            // an empty cell is a stair with one half left standing, which nothing can produce
+            // today; the guard costs a comparison and turns that into "no connector" rather than
+            // into an exception in the tick.
+            int headHandle = head >= 0 ? _grid.Edifice[head] : -1;
+            int second = headHandle >= 0
                 ? EdificeFootprint.SecondCell(
-                    head, CoreContent.EdificeStairLower, _edifices[_grid.Edifice[head]].Facing, _grid.Size)
+                    head, CoreContent.EdificeStairLower, _edifices[headHandle].Facing, _grid.Size)
                 : -1;
 
             // **Both upper cells open, and at least one of them somewhere to arrive.** Measured,
@@ -1424,7 +1432,6 @@ namespace Odyssey.Sim.Construction
             return false;
         }
 
-        /// <summary>Is a ladder standing in this cell, whoever put it there?</summary>
         /// <summary>
         /// Whether what stands in this cell is the colony's rather than the generator's — the
         /// <c>PlacedEdifice.Built</c> bit, asked by cell.
@@ -1450,6 +1457,7 @@ namespace Odyssey.Sim.Construction
                     || placed.Def == CoreContent.EdificeStairUpper);
         }
 
+        /// <summary>Is a ladder standing in this cell, whoever put it there?</summary>
         bool IsLadder(int cell)
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
