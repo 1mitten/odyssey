@@ -179,34 +179,6 @@ used at one fixed shape — pad to it — or not be shared.
 **And treat a Unity warning in a render path as a bug report.** This one named the property, both
 sizes and the exact line, and it had been printing for as long as the feature existed.
 
-### P10 — The asset cannot draw the thing the code asked for, and nothing says so
-
-A string literal, a shader keyword, a sprite name or a font glyph is *valid code* that names
-something the shipped asset does not contain. Nothing throws. The renderer draws its fallback — a
-blank, a magenta quad, a box — and every test passes, because a test asserts the value that was
-asked for and not the picture that came back.
-
-**The tell is that the thing is missing rather than wrong.** A colour that is off is a colour
-somebody chose; a glyph that is simply absent is nobody's decision, and it only shows up in a
-screenshot taken by a person who happens to be looking at that state. The Work tab's Simple mode
-had this in its purest form: `"✓"` and `"✕"` in two labels, Archivo Narrow with neither in
-its cmap and IBM Plex Mono with only the first, so a legend drew two blanks and every "won't do"
-cell drew one. The same fault was already sitting in the bed-owner picker on `main` and had never
-been played.
-
-**Neither tier can see it and that is structural, not an oversight.** The fast tier has no text
-engine at all; the Unity tier runs one and asserts no pixels. So this class has to be caught by
-**reading the asset**, which is cheap: `HudFontTests` parses both `.ttf` cmaps and fails on any
-non-ASCII character in a HUD literal that either font cannot draw. It found the second instance on
-its first run.
-
-**Ask it of anything the code names by string and the pack has to supply**: a glyph, a shader, a
-sprite key, an audio clip, an animation state. If the name is a literal and the asset is a file,
-something should read the file. The project already does this for icons (ADR 0007's validator) and
-for Defs (the content fingerprints); a font is the same question with a different file format.
-
----
-
 ### P10 — A pass that draws once per cell, in a renderer built on instancing
 
 **A submission costs about 4.6 us whatever is in it** (`docs/design/06-rendering-and-camera.md`
@@ -223,13 +195,22 @@ the frame.
 | `DrawZoneCover` | the ground module again, tinted | 2,065 calls, **3.67 ms of a 5 ms budget**, counted nowhere | a bit on the terrain bucket's tint — no draws |
 | `DrawSeedSpecks` | six unit cubes, one material | six submissions a sown cell | one `RenderMeshInstanced` a frame |
 | `TerrainSkirt` trees | instanced, but split into 760 spatial batches | 3.5 ms; **the tree count was irrelevant** | 272 batches, same 4,169 trees |
-| `DrawCellMark`/`Shade`/`Cut` | a plate per designated cell | **unmeasured** — the benchmark's board is barren and has nothing to designate | open |
+| `DrawCellMark`/`Cut`/`Fill` | a plate per designated cell | **0.40 ms at 901 orders, counted nowhere** | gathered by colour, one instanced call each |
 
 **The tell:** a cost that scales with cells the player painted, designated or planted rather than
 with what is on screen. **The check:** anything fixed to the grid belongs in the chunk mesher,
 where a bucket is one instanced call and inherits culling and the dirty-chunk rebuild.
-`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` is the guard for one of them —
-it fails the moment a zone costs draws in proportion to its cells.
+`GrowingRenderTests.ABiggerFieldAddsInstancesRatherThanDraws` and
+`CellPlateTests.ABiggerMarkedAreaAddsInstancesRatherThanDraws` are the guards — each fails the
+moment its pass costs draws in proportion to its cells.
+
+**But price the pass before you believe the arithmetic.** The mark pass was the fourth of these
+and the first to be measured with a control in the same run, and it came out at **0.40 ms for
+901 plates, of which batching recovered 0.09** — a twentieth of what "4.6 us a submission times
+901" predicts. A submission's price depends on what is in it after all: the readings that
+constant came from each drew a real mesh, and a mark is a unit cube. The counted-nowhere half of
+this pattern is the reliable one; the it-must-be-expensive half is a hypothesis to test.
+`docs/design/06-rendering-and-camera.md` §6c.1.
 
 **The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
 publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
@@ -279,11 +260,125 @@ decision somebody made in a modelling package and cannot be assumed; where the d
 not. `MeasureSole` already knew this — it bakes the posed mesh rather than believing the root is the
 sole — and the fix was to ask the same question the same way.
 
+### P12 — A per-actor pass that consults every other actor
+
+**P10's sibling, one level up.** P10 is about a pass priced by cells the player touched; this is
+about a pass priced by the *square* of how many things are alive. It hides even better, because
+each call is obviously correct, the loop around it is three lines, and at the colony size anybody
+tests with the quadratic term is smaller than the noise.
+
+| The pass | What it consults | What it cost | State |
+|---|---|---|---|
+| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **13.3 ms of a 22.5 ms frame at 384 colonists**, 0.02 ms at 64 | open; the fix is exact, see below |
+
+**The tell:** a cost that is flat while the count is small and then bends upward, with **draw
+calls and tick time both flat through the bend**. If neither the submissions nor the simulation
+moved, the cost is in a per-frame loop, and a loop that bends is a loop inside a loop.
+
+**The check:** for every per-actor pass, ask *what does it read that is not its own actor?* If the
+answer is "all of them", ask what the influence radius is. Here `SteeringCurve.CrowdFarRadius` is
+3.0 m against a 2.5 m cell, so all but a handful of the 147,000 pairs at 384 pawns contribute
+**exactly zero** — the pass is not approximating, it is computing nothing, expensively. **A bound
+like that makes the fix exact**, which matters more than the speed: a spatial index that skips
+only zero-weight pairs changes no drawn position, so a judged visual does not have to be judged
+again.
+
+**The instrument:** `OdysseyBootstrap.FrameSectionMs` splits the draw block eight ways and
+`FrameTimeTests.TheFrameAgainstColonySize` sweeps eight colony sizes in one world. A frame number
+that says "the renderer is slow" without saying which part only licences a guess.
+
+### P13 — The asset cannot draw the thing the code asked for, and nothing says so
+
+*Numbered out of order on purpose. It arrived as a second `P10` when two branches merged, and both `P10`s were already cited across the design documents; moving the newer one costs four references and leaves every existing citation true. A number in this catalogue has to resolve to one pattern.*
+
+A string literal, a shader keyword, a sprite name or a font glyph is *valid code* that names
+something the shipped asset does not contain. Nothing throws. The renderer draws its fallback — a
+blank, a magenta quad, a box — and every test passes, because a test asserts the value that was
+asked for and not the picture that came back.
+
+**The tell is that the thing is missing rather than wrong.** A colour that is off is a colour
+somebody chose; a glyph that is simply absent is nobody's decision, and it only shows up in a
+screenshot taken by a person who happens to be looking at that state. The Work tab's Simple mode
+had this in its purest form: `"✓"` and `"✕"` in two labels, Archivo Narrow with neither in
+its cmap and IBM Plex Mono with only the first, so a legend drew two blanks and every "won't do"
+cell drew one. The same fault was already sitting in the bed-owner picker on `main` and had never
+been played.
+
+**Neither tier can see it and that is structural, not an oversight.** The fast tier has no text
+engine at all; the Unity tier runs one and asserts no pixels. So this class has to be caught by
+**reading the asset**, which is cheap: `HudFontTests` parses both `.ttf` cmaps and fails on any
+non-ASCII character in a HUD literal that either font cannot draw. It found the second instance on
+its first run.
+
+**Ask it of anything the code names by string and the pack has to supply**: a glyph, a shader, a
+sprite key, an audio clip, an animation state. If the name is a literal and the asset is a file,
+something should read the file. The project already does this for icons (ADR 0007's validator) and
+for Defs (the content fingerprints); a font is the same question with a different file format.
+
+---
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
+
+Owner, from a Play session while spawning colonists: *"it seemed to hover 1.7 ms no matter the
+colony size but then frames dropped after so many colonists. I think at pretty high numbers."*
+
+Both halves were true and neither meant what it looked like. The hover is `World` — the board, its
+chunks and the surround — which is flat at 1.9–2.5 ms whatever the colony does. The drop is not
+the simulation (0.31 ms of tick at 384 pawns), not the draw calls (1,243 to 1,324 across a 48-fold
+colony) and not the figure ceiling being too low. It is `PawnPose.Of` scanning **every other
+pawn** for the crowd sidestep, once per posed pawn, every frame: 64 x N for the capped figures and
+(N-64) x N for the instanced stand-ins. The knee is at the ceiling because that is where the
+quadratic term is born.
+
+**The shape: a cost that is invisible at every size anybody tests at, and cubic-looking at sizes
+nobody does.** It is P12, and the reason it is worth a pattern of its own is the check it
+suggests — the influence radius. `CrowdFarRadius` is 3.0 m against a 2.5 m cell, so all but a
+handful of the pairs contribute exactly zero and are computed anyway, which makes a spatial index
+an **exact** rewrite rather than an approximation.
+
+**Found by** `FrameTimeTests.TheFrameAgainstColonySize` and `OdysseyBootstrap.FrameSectionMs`,
+both written for this report. **Not yet fixed** — held as the next unit so the sweep stands as its
+before. `docs/design/06-rendering-and-camera.md` §6c.2, `25-pawn-steering.md`.
+
+### 2026-09-20 — the pass that was free because it never ran
+
+Not a player report: a benchmark reading. A new `FrameTimeTests` case put 901 mine orders on the
+board and measured 4.85 ms against the bare meadow's 4.86 — which reads as "the mark pass costs
+nothing" and is one of the two answers that should never be believed on sight (the other being a
+five-fold regression). The orders were real: placed, published, counted in the snapshot. They
+were simply **outside the band the pass draws**. `DrawStandingOrders` filters every order to
+`LowestSelectableLayer .. HighestSelectableLayer`, the drawn slice was 8..15, and the case walked
+the board row-major from `z = 1`, which is a strip of lower ground. Nothing drew and nothing
+said so.
+
+**The shape: an instrument that can measure nothing and report a number.** It is the sibling of
+"count the pass, or the budget cannot see it" — there the pass ran and was uncounted, here the
+pass was counted and did not run. Both produce a plausible number from an empty measurement, and
+a plausible wrong result is worse than an obviously broken one.
+
+**Stopped by** `ChunkRenderer.CellPlatesDrawn`, printed on every `[FrameTime]` line and asserted
+greater than zero by the case that depends on it, and by the case asking the rig for the band
+rather than assuming the surface is in it.
+
+### 2026-09-20 — two editors on one machine, and a frame number that meant nothing
+
+Also not a player report. The first three frame-time readings of the session had the city canary
+at 4.01, 2.86 and 2.71 ms against its 2.01 ms record, and the mark pass read 1.57 ms, then
+0.81 ms, then 0.19 ms on runs of the same code. The machine was running a sibling checkout's
+PlayMode suite, then its player build, then an editor importing a third worktree. **Every
+absolute was inflated and every cross-run difference was noise.**
+
+**Stopped by** measuring the before and the after **inside one run, seconds apart**:
+`TheMarkPassCostsWhatItSubmits` times one meadow three times and quotes the differences, and
+`ChunkRenderer.InstanceCellPlates` switches the submission strategy without touching the
+geometry. Cross-run comparison on this machine is not a measurement, and the canary was already
+in `docs/lessons.md` saying so.
 
 ### 2026-09-20 — Half the colony slept on one knee, and the number said nought (P11)
 
@@ -396,7 +491,7 @@ report. Worth remembering when a report says something vanished: ask what would 
 storeroom's — and `LedgerModelTests.TheFieldCropIsCountedWhereverItLies` /
 `TheCropRowStandsEvenWithNoCarrotsInIt`. Stone, iron ore and coal are still uncounted and have
 the same report waiting.
-### 2026-09-20 — Two glyphs the fonts do not have, in two panels, neither ever drawn (P10)
+### 2026-09-20 — Two glyphs the fonts do not have, in two panels, neither ever drawn (P13)
 
 Not reported. Found while reviewing PR #145 by asking a question no test asks: *are the characters
 this code writes actually in the font that draws them?*
