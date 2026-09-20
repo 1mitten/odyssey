@@ -614,6 +614,15 @@ namespace Odyssey.Presentation.World
             {
                 Pitch(figure.RightUpperArm, axis, posture.RightArm * weight);
                 Pitch(figure.LeftUpperArm, axis, posture.LeftArm * weight);
+
+                // Out from the midline, about the body's forward axis, and after the pitch rather
+                // than before it: the pitch decides where along the body the arm points and this
+                // decides how far out from it, which is the order they read in. Mirrored by the
+                // sign the caller gives each arm, because "out" is opposite on the two sides.
+                Vector3 out_ = figure.Transform.forward;
+                if (posture.RightArmOut != 0f) Pitch(figure.RightUpperArm, out_, posture.RightArmOut * weight);
+                if (posture.LeftArmOut != 0f) Pitch(figure.LeftUpperArm, out_, posture.LeftArmOut * weight);
+
                 Pitch(figure.RightLowerArm, axis, posture.RightElbow * weight);
                 Pitch(figure.LeftLowerArm, axis, posture.LeftElbow * weight);
             }

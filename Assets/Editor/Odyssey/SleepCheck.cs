@@ -5,6 +5,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
@@ -79,8 +80,18 @@ namespace Odyssey.EditorTools
             GameObject? cameraObject = null;
             Action<ScriptableRenderContext, Camera>? hook = null;
 
+            float amplitudeWas = GroundRelief.Amplitude;
+
             try
             {
+                // **The relief, switched on before anything is meshed.** It is a static that
+                // `OdysseyBootstrap.BuildSession` sets and a harness does not, so it defaults to
+                // nought — and a sheet shot on dead level ground cannot show the one thing half of
+                // this branch is about, which is a sleeper lying along a bed that is draped on a
+                // slope. The first run of this tool reported a slope of 0.000 at all four beds and
+                // proved nothing; that readout is below and it is why the fault was visible.
+                GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+
                 var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(PlayScene.CataloguePath);
                 var size = new GridSize(PlayScene.PlaySizeXZ, PlayScene.PlaySizeXZ, PlayScene.PlayLayers);
                 var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
@@ -232,8 +243,50 @@ namespace Odyssey.EditorTools
                     // And the bearing and pitch the board is actually played at.
                     PlayScene.Shoot(camera, middle, 48f, yaw + 45f, 14f, $"Logs/sleep-{name}-play.png");
 
+                    // The slope the bed is draped on, because a sheet shot on level ground proves
+                    // nothing about the tilt and there is no way to tell from the picture which it
+                    // was. The relief reaches 0.136 rise per metre; a bed at nought is a bed that
+                    // did not exercise this at all.
+                    GroundRelief.SlopeAt(middle.x, middle.z, out float slopeX, out float slopeZ);
+                    float alongSlope = slopeX * Directions.DeltaX[facing] + slopeZ * Directions.DeltaZ[facing];
+
                     Debug.Log($"[Sleep] Logs/sleep-{name}-*.png: colonist {pawn.Id.Value} " +
-                              $"in the bed at {at}, facing {facing}.");
+                              $"in the bed at {at}, facing {facing}, " +
+                              $"on a slope of {alongSlope:0.000} along the bed " +
+                              $"({alongSlope * 4.6f:0.00} m across its length).");
+                }
+
+                // **And one bed on the steepest ground the relief makes.** The four above stand
+                // where the scenario put them, which on this seed is very nearly level: the first
+                // run with the relief switched on reported 0.002 to 0.021 rise per metre, a
+                // centimetre to ten across a whole bed, and a sleeper lying along a plane that
+                // flat is indistinguishable from one lying across it. The arithmetic is asserted
+                // at the full 0.136 by `ASleeperOnASlopeLiesAlongItRatherThanLevelAcrossIt`; this
+                // is the picture of it, which is the half a test cannot do.
+                int steepBed = SteepestFootprint(pawns, size, result.StartCell, out float steepSlope);
+                if (steepBed >= 0)
+                {
+                    Pawn onTheHill = onTheGround;
+                    pawns.Construction!.Raise(pawns, steepBed, (byte)QualityHandle.Normal);
+                    model.RefreshAll(grid, result.Edifices);
+
+                    var hill = new List<(Pawn pawn, int bed, string posture)>
+                        { (onTheHill, steepBed, "hill") };
+                    for (int settle = 0; settle < 8; settle++)
+                        Step(world, figures, activeLayer, slice, movePerTick, hill, onTheHill);
+
+                    Vector3 hillMiddle = BedMiddle(model, size, steepBed);
+                    float hillYaw = Directions.Yaw[model.BedFacing(steepBed)];
+                    PlayScene.Shoot(camera, hillMiddle, 6f, hillYaw + 90f, 13f, "Logs/sleep-slope-side.png");
+                    PlayScene.Shoot(camera, hillMiddle, 48f, hillYaw + 45f, 14f, "Logs/sleep-slope-play.png");
+
+                    Debug.Log($"[Sleep] Logs/sleep-slope-*.png: a bed on a slope of {steepSlope:0.000} " +
+                              $"along its own length ({steepSlope * 4.6f:0.00} m end to end).");
+                }
+                else
+                {
+                    Debug.LogWarning("[Sleep] found nowhere steep enough to stand a bed; " +
+                                     "the slope pictures are missing from this sheet.");
                 }
 
                 Step(world, figures, activeLayer, slice, movePerTick, sleepers, onTheGround);
@@ -254,6 +307,7 @@ namespace Odyssey.EditorTools
             }
             finally
             {
+                GroundRelief.Amplitude = amplitudeWas;
                 if (hook != null) RenderPipelineManager.beginCameraRendering -= hook;
                 figures?.Dispose();
                 renderer?.Dispose();
@@ -262,6 +316,54 @@ namespace Odyssey.EditorTools
                 if (lightingRoot != null) UnityEngine.Object.DestroyImmediate(lightingRoot);
                 if (exitWhenDone) EditorApplication.Exit(exitCode);
             }
+        }
+
+        /// <summary>
+        /// The buildable bed footprint near the start whose ground falls away fastest <b>along</b>
+        /// the bed, which is the direction the sleeper is laid in and the only one that tilts her.
+        ///
+        /// <para>Searched rather than chosen, because where the steep ground is depends on the seed
+        /// and the relief is a fixed field rather than a seeded one — a hard-coded cell would be
+        /// level on the next board anybody tries.</para>
+        /// </summary>
+        static int SteepestFootprint(PawnContext pawns, GridSize size, CellRef start, out float slope)
+        {
+            slope = 0f;
+            int best = -1;
+            ConstructionGrid? sites = pawns.Construction;
+            if (sites == null) return -1;
+
+            for (int dz = -24; dz <= 24; dz++)
+            for (int dx = -24; dx <= 24; dx++)
+            {
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+
+                int head = size.Index(x, z, start.Y);
+                if (!sites.Allows(head, BuildingHandle.Bed)) continue;
+
+                for (int facing = 0; facing < Directions.Count; facing++)
+                {
+                    int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, facing, size);
+                    if (foot < 0 || !sites.Allows(foot, BuildingHandle.Bed)) continue;
+
+                    Vector3 origin = BedShape.Origin(x, z, start.Y, facing);
+                    GroundRelief.SlopeAt(origin.x, origin.z, out float sx, out float sz);
+                    float along = sx * Directions.DeltaX[facing] + sz * Directions.DeltaZ[facing];
+                    if (Mathf.Abs(along) <= Mathf.Abs(slope)) continue;
+
+                    if (sites.Place(size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing)
+                        != IntentRejection.None) continue;
+
+                    // Placed to claim it; if a steeper one turns up the order is cancelled again,
+                    // because two overlapping sites is not a thing the grid will hold.
+                    if (best >= 0) sites.Cancel(size.FromIndex(best));
+                    best = head;
+                    slope = along;
+                }
+            }
+
+            return best;
         }
 
         /// <summary>

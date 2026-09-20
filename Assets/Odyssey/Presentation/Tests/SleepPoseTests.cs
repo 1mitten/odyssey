@@ -33,7 +33,8 @@ namespace Odyssey.Tests.Presentation
         /// <summary>Laid with its head at the origin, so every assertion reads against a known point.</summary>
         static void Place(int pawnId, Vector3 along, float surfaceY, out Vector3 position, out Quaternion rotation) =>
             SleepPose.Place(
-                SleepPose.PostureFor(pawnId), headAt: Vector3.zero, along, surfaceY, Body, weight: 1f,
+                SleepPose.PostureFor(pawnId), headAt: Vector3.zero, along, surfaceY, Body,
+                alongSlope: 0f, weight: 1f,
                 standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
                 out position, out rotation);
 
@@ -216,7 +217,8 @@ namespace Odyssey.Tests.Presentation
             var headAt = new Vector3(0f, 0f, BedShape.HeadRestAlong);
             SleepPose.Place(
                 SleepPose.PostureFor(1), headAt, Vector3.forward, surfaceY: BedShape.MattressTop,
-                Body, weight: 1f, standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
+                Body, alongSlope: 0f, weight: 1f,
+                standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
                 out Vector3 feet, out _);
 
             Assert.That(feet.z, Is.EqualTo(BedShape.HeadRestAlong + SleepPose.BodyLength(Body)).Within(0.001f));
@@ -225,8 +227,9 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// Flat. Whatever the posture, a sleeper's body is horizontal: the "up" it stands on
-        /// becomes a direction along the bed, which is the whole of what lying down is.
+        /// Flat on a level bed. Whatever the posture, a sleeper's body lies along the bed: the "up"
+        /// it stands on becomes a direction along the mattress, which is the whole of what lying
+        /// down is.
         /// </summary>
         [Test]
         public void EveryPostureLiesFlat()
@@ -237,6 +240,70 @@ namespace Odyssey.Tests.Presentation
                 Vector3 spine = rotation * Vector3.up;
                 Assert.That(Mathf.Abs(spine.y), Is.LessThan(0.08f),
                     $"pawn {id} ({SleepPose.PostureFor(id).Name}) is not lying flat");
+            }
+        }
+
+        /// <summary>
+        /// <b>And along the bed rather than level across it, when the bed is not level.</b>
+        ///
+        /// <para>Everything fixed to the grid is draped: <c>BedShape.Root</c> shears a bed's 4.6 m
+        /// along the ground's tangent plane, while the body used to be laid flat on one sampled
+        /// height. At the relief's steepest — 2.0 m over a 150 m period, 0.136 rise per metre —
+        /// that is 0.21 m of disagreement at the pillow, so a colonist on a slope was buried in the
+        /// mattress at one end and floating above it at the other.</para>
+        ///
+        /// <para>Asserted as the two halves of one plane: the body's own axis takes the gradient it
+        /// was given, and the feet end up that much higher than the head. Either alone would pass
+        /// while the sleeper hovered over a bed she was parallel to.</para>
+        /// </summary>
+        [Test]
+        public void ASleeperOnASlopeLiesAlongItRatherThanLevelAcrossIt()
+        {
+            foreach (float slope in new[] { -0.136f, -0.05f, 0.05f, 0.136f })
+            {
+                SleepPose.Place(
+                    SleepPose.Postures[0], headAt: Vector3.zero, along: Vector3.forward,
+                    surfaceY: 0f, bodyLength: Body, alongSlope: slope, weight: 1f,
+                    standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
+                    out Vector3 feet, out Quaternion rotation);
+
+                // The spine runs feet to head, so it descends where the bed rises: the gradient
+                // it carries is the bed's, negated.
+                Vector3 spine = rotation * Vector3.up;
+                float gradient = -spine.y / new Vector2(spine.x, spine.z).magnitude;
+                Assert.That(gradient, Is.EqualTo(slope).Within(0.005f),
+                    $"at a slope of {slope:0.000} the body lies at {gradient:0.000}");
+
+                // And it is on the plane, not merely parallel to it: the feet stand one
+                // body-length's worth of rise above the head end.
+                float lift = SleepPose.Lift(SleepPose.Postures[0], Body);
+                Assert.That(feet.y - lift, Is.EqualTo(slope * SleepPose.BodyLength(Body)).Within(0.01f),
+                    $"at a slope of {slope:0.000} the feet are off the mattress");
+            }
+        }
+
+        /// <summary>
+        /// A level bed is exactly what it always was. The slope arrived as a new argument to
+        /// <see cref="SleepPose.Place"/>, and the cheapest way for it to go wrong is to change the
+        /// answer when it is nought.
+        /// </summary>
+        [Test]
+        public void NoSlopeIsTheLevelPlacementUntouched()
+        {
+            foreach (SleepPose.Posture posture in SleepPose.Postures)
+            {
+                SleepPose.Place(
+                    posture, headAt: Vector3.zero, along: Vector3.forward, surfaceY: 0.7f,
+                    bodyLength: Body, alongSlope: 0f, weight: 1f,
+                    standingPosition: Vector3.zero, standingRotation: Quaternion.identity,
+                    out Vector3 feet, out Quaternion rotation);
+
+                Assert.That(feet.y, Is.EqualTo(0.7f + SleepPose.Lift(posture, Body)).Within(0.001f),
+                    $"{posture.Name} does not rest on a level mattress");
+                Assert.That(feet.z, Is.EqualTo(SleepPose.BodyLength(Body)).Within(0.001f),
+                    $"{posture.Name} is not one body-length along");
+                Assert.That(Mathf.Abs((rotation * Vector3.up).y), Is.LessThan(0.08f),
+                    $"{posture.Name} is not level on a level bed");
             }
         }
 
@@ -309,7 +376,7 @@ namespace Odyssey.Tests.Presentation
 
             SleepPose.Place(
                 SleepPose.PostureFor(1), headAt: Vector3.zero, along: Vector3.forward, surfaceY: 0f,
-                bodyLength: Body, weight: 0f,
+                bodyLength: Body, alongSlope: 0f, weight: 0f,
                 standing, upright, out Vector3 position, out Quaternion rotation);
 
             Assert.That(position, Is.EqualTo(standing));

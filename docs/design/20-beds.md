@@ -444,7 +444,7 @@ without retuning those deepens every crouch six-fold, which is a visual change n
 and the retune is a contact sheet rather than a test. So the field keeps its name, gains a comment
 saying plainly what it is, and nothing derives a length from it again.
 
-### Still open, measured and not fixed
+### Open when this was written, and closed in §7c below
 
 **A sleeper lies flat; the bed it lies on is sheared.** Everything fixed to the grid is draped —
 `BedShape.Root` is `GroundRelief.Drape(...)`, which tilts the bed's 4.6 m along the ground's
@@ -455,6 +455,80 @@ mattress at one end and floating above it at the other, varying with where on th
 stands and which way it faces. It is second-order beside a body six times too short and it is a
 change to how a sleeper is drawn, so it is recorded here with its numbers and left for the owner
 to judge against the screenshot they now have.
+
+### 7c. The two things §7b left, both done (2026-09-20)
+
+Owner's call after the contact sheet: do both.
+
+#### A sleeper lies along the bed, not level across it
+
+Everything fixed to the grid is draped. `BedShape.Root` is `GroundRelief.Drape(...)`, a **shear**
+that takes the ground's tangent plane at the bed's own origin and carries the whole 4.6 m of bed
+along it — while `AimSleep` sampled one height at that origin and laid the body flat on it. At the
+relief's steepest (2.0 m over a 150 m period, 0.136 rise per metre) that is **0.21 m** of
+disagreement at the pillow and 0.09 m the other way at the feet: buried in the mattress at one end,
+floating above it at the other, varying with where the bed stands and which way it faces.
+
+`SleepPose.Place` now takes the plane rather than a point — `surfaceY` is the height under the
+**head**, and `alongSlope` is its gradient along the bed. Three consequences, each small and each
+wrong if left out:
+
+- the feet stand `alongSlope × bodyLength` above the head, so the body is *on* the plane;
+- the lying pitch is `90° + atan(alongSlope)`, so the body is *parallel* to it — either alone would
+  pass while the sleeper hovered over a bed she matched the angle of;
+- the roll is taken about the body's **own** long axis, which is now the tilted one. About `flat` it
+  was right while the body was level and a few degrees out once it was not, and the correct axis is
+  free because the pitch has just produced it.
+
+The ground fallback gets the same treatment from the same field, so a colonist who collapses on a
+hillside lies along the hill.
+
+Asserted by `ASleeperOnASlopeLiesAlongItRatherThanLevelAcrossIt` at the full ±0.136 — both halves,
+the gradient the body carries and the height its feet stand at — and by
+`NoSlopeIsTheLevelPlacementUntouched`, because the cheapest way for a new argument to go wrong is to
+change the answer when it is nought.
+
+#### `Posture` gains a second angle, and "arms up" means it now
+
+The sheet said the posture still read as arms *out*, near 45° from above, which is surrendering
+rather than sleeping. **The pictures were right and the reason was not what it looked like.**
+Measured, the arms were never off the bed: the posture spanned 1.06 m across a frame 2.00 m wide,
+the same as `"back"`. They simply lay out to the sides instead of over the crown — and **no pitch
+about the lateral axis can bring them in**, because every angle in `Posture` moves a limb in the
+plane that runs head to foot, and whatever spread the idle clip already holds is carried round with
+the arm.
+
+So `RightArmOut` / `LeftArmOut`: an abduction, taken about the body's *forward* axis, which on a
+sleeper on her back is the vertical — it swings the arm in the plane of the mattress, between out
+across the bed and in along it. Nought on every posture that does not ask for it, so the three that
+were measured right are untouched by its existence.
+
+Swept through its arc on the real rig, **+15°** (mirrored) is the one place that costs nothing: it
+is both the narrowest the arms get and the furthest they reach past the head.
+
+| abduction | across the bed | reach past the crown |
+|---|---|---|
+| −30° | 1.94 m | 0.48 m |
+| 0° (was) | 1.06 m | 0.71 m |
+| **+15°** | **0.71 m** | **0.73 m** |
+| +30° | 0.68 m | 0.67 m |
+| +45° | 0.70 m | 0.55 m |
+
+#### Where the four postures finally sit
+
+Measured on the cast at the catalogue's scale, along the bed from the head cell's centre. The two
+cells are [−1.25, 3.75], the frame is [−1.05, 3.55] and 2.00 m wide, and "clears" is the lowest
+drawn vertex against the mattress top:
+
+| posture | along | across | clears |
+|---|---|---|---|
+| back | [−0.29, 2.29] | 1.06 m | +0.01 |
+| back, arms up | [−0.73, 2.27] | 0.71 m | +0.01 |
+| side, curled | [−0.29, 2.01] | 1.99 m | 0.00 |
+| side, loose | [−0.29, 2.25] | 1.68 m | +0.02 |
+
+`side, curled` is 0.04 m wider than the frame on one side — a drawn-up knee just over the rail,
+which is what a knee does. Recorded rather than tuned.
 
 ## 8. The pane and the popover
 

@@ -321,9 +321,9 @@ invisible where the game is played.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the sleep-pose
-  branch (`worktree-bed-sleep-pose`): EditMode **2,005 total, 1,992 passed, 0 failed**; PlayMode
-  **82 total, 77 passed, 0 failed**. The six new and rewritten `FigureBuildTests` / `SleepPoseTests`
-  rows are among them. The run before it, the same day on the events
+  branch (`claude/sleep-pose-body-length`): EditMode **2,007 total, 1,994 passed, 0 failed**; PlayMode
+  **82 total, 77 passed, 0 failed**. The eight new and rewritten `FigureBuildTests` /
+  `SleepPoseTests` rows are among them. The run before it, the same day on the events
   branch (`claude/events-system`, after the first-look fixes, the falling-items merge and the extensibility review): EditMode **1,968 total, 1,954 passed, 0 failed**; PlayMode **82 total,
   77 passed, 0 failed**, with `HudSmokeTests` now naming thirteen framed regions (the Events panel joined).
   The remainder are `[Explicit]` or ignored. The run before it, the same day on falling items (`claude/falling-items`, since merged),

@@ -130,7 +130,8 @@ namespace Odyssey.EditorTools
                         graph.Evaluate(0f); // re-write the idle, as the director does every frame
 
                         SleepPose.Place(
-                            posture, headAt, Vector3.forward, surfaceY, body, weight: 1f,
+                            posture, headAt, Vector3.forward, surfaceY, body,
+                            alongSlope: 0f, weight: 1f,
                             standingPosition: headAt, standingRotation: Quaternion.identity,
                             out Vector3 position, out Quaternion rotation);
                         instance.transform.SetPositionAndRotation(position, rotation);
@@ -145,12 +146,14 @@ namespace Odyssey.EditorTools
                         Vector3 crown = position + rotation * Vector3.up * body;
 
                         DrawnAlong(skins, out float nearZ, out float farZ);
+                        DrawnAcross(skins, out float leftX, out float rightX);
 
                         report.AppendLine(
                             $"    {posture.Name,-14} head {crown.z - cellCentre.z,6:F2}" +
                             $"  feet {position.z - cellCentre.z,6:F2}" +
-                            $"  drawn along [{nearZ - cellCentre.z,6:F2},{farZ - cellCentre.z,6:F2}]" +
-                            $"  clears {lowBody - surfaceY,6:F2} body / {lowLain - surfaceY,6:F2} limbs");
+                            $"  along [{nearZ - cellCentre.z,6:F2},{farZ - cellCentre.z,6:F2}]" +
+                            $"  across [{leftX - cellCentre.x,6:F2},{rightX - cellCentre.x,6:F2}]" +
+                            $"  clears {lowLain - surfaceY,6:F2}");
                     }
 
                     graph.Destroy();
@@ -199,6 +202,38 @@ namespace Odyssey.EditorTools
             if (baked != null) Object.DestroyImmediate(baked);
         }
 
+        /// <summary>
+        /// And across it. The bed's frame is 2.00 m wide on a 2.50 m cell, so the mattress runs
+        /// ±1.00 m from the middle — an arm past that is over the edge, which no other number on
+        /// this sheet would show.
+        /// </summary>
+        static void DrawnAcross(SkinnedMeshRenderer[] skins, out float left, out float right)
+        {
+            left = float.MaxValue;
+            right = float.MinValue;
+            Mesh? baked = null;
+
+            for (int i = 0; i < skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = skins[i];
+                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
+
+                baked ??= new Mesh { name = "Odyssey/SleepProbe" };
+                skin.BakeMesh(baked, useScale: true);
+
+                Vector3[] vertices = baked.vertices;
+                Transform at = skin.transform;
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    float x = at.TransformPoint(vertices[v]).x;
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                }
+            }
+
+            if (baked != null) Object.DestroyImmediate(baked);
+        }
+
         static float Y(Animator animator, HumanBodyBones which)
         {
             Transform? bone = animator.isHuman ? animator.GetBoneTransform(which) : null;
@@ -217,8 +252,14 @@ namespace Odyssey.EditorTools
             if (!animator.isHuman) return;
             Vector3 axis = instance.transform.right;
 
+            Vector3 out_ = instance.transform.forward;
+
             Pitch(animator, HumanBodyBones.RightUpperArm, axis, posture.RightArm);
             Pitch(animator, HumanBodyBones.LeftUpperArm, axis, posture.LeftArm);
+            if (posture.RightArmOut != 0f)
+                Pitch(animator, HumanBodyBones.RightUpperArm, out_, posture.RightArmOut);
+            if (posture.LeftArmOut != 0f)
+                Pitch(animator, HumanBodyBones.LeftUpperArm, out_, posture.LeftArmOut);
             Pitch(animator, HumanBodyBones.RightLowerArm, axis, posture.RightElbow);
             Pitch(animator, HumanBodyBones.LeftLowerArm, axis, posture.LeftElbow);
             Pitch(animator, HumanBodyBones.RightUpperLeg, axis, posture.Hip);

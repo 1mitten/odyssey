@@ -137,8 +137,29 @@ namespace Odyssey.Presentation.World
             /// <summary>And the knees, which is what makes a side sleeper read as foetal.</summary>
             public readonly float Knee;
 
+            /// <summary>
+            /// How far each upper arm swings <b>out from the body's midline</b>, in degrees.
+            ///
+            /// <para><b>The second axis, and it is what "arms up behind the head" needed.</b> Every
+            /// other angle in this struct is a pitch about the body's own lateral axis, which moves
+            /// a limb in the plane that runs head to foot. No amount of it can pull an arm in
+            /// <i>towards</i> the midline: whatever spread the idle clip already holds is carried
+            /// round with the arm, so the posture that is named for putting the hands over the
+            /// crown put them out sideways at something near 45° instead, and read as surrendering
+            /// rather than as asleep (the contact sheet, 2026-09-20, <c>docs/design/20-beds.md</c>
+            /// §7b). This is taken about the body's <i>forward</i> axis — which on a sleeper on her
+            /// back is the vertical — so it swings the arm in the plane of the mattress, between
+            /// out across the bed and in along it.</para>
+            ///
+            /// <para>Nought on every posture that does not ask for it, so the three that were
+            /// measured right are untouched by its existence.</para>
+            /// </summary>
+            public readonly float RightArmOut;
+            public readonly float LeftArmOut;
+
             public Posture(string name, float roll, float rightArm, float leftArm,
-                float rightElbow, float leftElbow, float hip, float knee)
+                float rightElbow, float leftElbow, float hip, float knee,
+                float rightArmOut = 0f, float leftArmOut = 0f)
             {
                 Name = name;
                 Roll = roll;
@@ -148,6 +169,8 @@ namespace Odyssey.Presentation.World
                 LeftElbow = leftElbow;
                 Hip = hip;
                 Knee = knee;
+                RightArmOut = rightArmOut;
+                LeftArmOut = leftArmOut;
             }
         }
 
@@ -175,6 +198,16 @@ namespace Odyssey.Presentation.World
         /// <para>The two side postures were measured in the same pass and were already right — their
         /// limbs sit 0.07 m to 0.10 m above the body's own top and nothing dips below the
         /// mattress — so they are untouched. <c>docs/design/20-beds.md</c> §7b.</para>
+        ///
+        /// <para><b>And then the contact sheet said "arms up" still read as arms <i>out</i></b>, at
+        /// something near 45° from above, which is surrendering rather than sleeping. The pictures
+        /// were right and the reason was not what it looked like: measured, the arms were never off
+        /// the bed at all — the posture spans 1.06 m across a frame 2.00 m wide, the same as "back"
+        /// — they simply lay out to the sides instead of over the crown, and no pitch about the
+        /// lateral axis can pull them in. <see cref="Posture.RightArmOut"/> is the second angle that
+        /// can. Swept through its arc, +15° (mirrored) is both the narrowest the arms get, 1.06 m
+        /// down to 0.71 m, and the furthest they reach past the head, so it is the one place on the
+        /// sweep where tucking them in costs nothing.</para>
         /// </summary>
         public static readonly Posture[] Postures =
         {
@@ -185,7 +218,7 @@ namespace Odyssey.Presentation.World
             // opens the forearm back down on to the bedding, so the hands rest above the crown
             // rather than standing off it; measured, that is where the reach past the head comes
             // from and where the clearance stays at a centimetre rather than going negative.
-            new Posture("back, arms up", 0f, -150f, -150f, -15f, -15f, -8f, 10f),
+            new Posture("back, arms up", 0f, -150f, -150f, -15f, -15f, -8f, 10f, 15f, -15f),
 
             // On one side, knees drawn up. The knee bend is what says foetal rather than felled.
             new Posture("side, curled", 74f, -40f, -74f, 46f, 22f, 26f, 46f),
@@ -269,12 +302,25 @@ namespace Odyssey.Presentation.World
         /// rotation about the middle: laid back through a right angle the body extends
         /// <i>behind</i> the root, so the root goes one body-length along the bed from the head.</para>
         ///
+        /// <para><b>And it lies along what it is on, not level across it.</b> Everything fixed to
+        /// the grid is <i>draped</i> — <c>BedShape.Root</c> is <c>GroundRelief.Drape(...)</c>, which
+        /// shears a bed's 4.6 m along the ground's tangent plane — while this used to take one
+        /// height and lay the body flat on it. Measured: at the relief's steepest (2.0 m over a
+        /// 150 m period, 0.136 rise per metre) that is 0.21 m of disagreement at the pillow and
+        /// 0.09 m the other way at the feet, so a colonist on sloping ground was buried in the
+        /// mattress at one end and floating above it at the other. <paramref name="surfaceY"/> is
+        /// now the surface under the <i>head</i> and <paramref name="alongSlope"/> is its gradient
+        /// along the bed, which between them describe the plane rather than a point on it.</para>
+        ///
         /// <para><paramref name="weight"/> blends the whole thing against the standing pose, so a
         /// colonist lies down and gets up rather than snapping flat.</para>
         /// </summary>
+        /// <param name="surfaceY">The height of the surface beneath <paramref name="headAt"/>.</param>
+        /// <param name="alongSlope">Its rise per metre along <paramref name="along"/>: nought on
+        /// the level, positive where the foot of the bed is higher than its head.</param>
         public static void Place(
             in Posture posture, Vector3 headAt, Vector3 along, float surfaceY,
-            float bodyLength, float weight,
+            float bodyLength, float alongSlope, float weight,
             Vector3 standingPosition, Quaternion standingRotation,
             out Vector3 position, out Quaternion rotation)
         {
@@ -288,18 +334,30 @@ namespace Odyssey.Presentation.World
             float length = BodyLength(bodyLength);
             float lift = Lift(posture, bodyLength);
 
+            // **The surface the body lies on is a plane, not a height** (see the parameter). The
+            // head is given its own point on that plane by the caller; the feet are one body-length
+            // along it, which is `alongSlope` metres higher for every metre travelled.
             var feet = new Vector3(
                 headAt.x + flat.x * length,
-                surfaceY + lift,
+                surfaceY + lift + alongSlope * length,
                 headAt.z + flat.z * length);
 
             Quaternion facing = Quaternion.LookRotation(flat, Vector3.up);
 
-            // Pitched onto the back first, then rolled about the body's own long axis — which is
-            // the direction it is lying in, so the roll is taken in the world about `flat` and
-            // needs no knowledge of how anybody rigged their character.
-            Quaternion lying = Quaternion.AngleAxis(-PitchDegrees, facing * Vector3.right) * facing;
-            if (posture.Roll != 0f) lying = Quaternion.AngleAxis(posture.Roll, flat) * lying;
+            // Pitched onto the back, and a little further so the body lies *along* what it is on
+            // rather than level across it. A right angle exactly is a body on a level mattress;
+            // the slope is added to it, so a bed drawn tilted carries its sleeper tilted with it.
+            float slopeDegrees = Mathf.Atan(alongSlope) * Mathf.Rad2Deg;
+            Quaternion lying =
+                Quaternion.AngleAxis(-(PitchDegrees + slopeDegrees), facing * Vector3.right) * facing;
+
+            // Then rolled about the body's **own** long axis, which is now the tilted one. Taking
+            // the roll about `flat` was right while the body was level and is a few degrees out
+            // once it is not — and the axis is free, because the pitch above has just produced it.
+            // Negated so that the sense of Roll is what it always was: `lying * up` runs feet to
+            // head, which is the opposite of the direction the body is laid along.
+            if (posture.Roll != 0f)
+                lying = Quaternion.AngleAxis(posture.Roll, -(lying * Vector3.up)) * lying;
 
             position = Vector3.Lerp(standingPosition, feet, weight);
             rotation = Quaternion.Slerp(standingRotation, lying, weight);

@@ -162,6 +162,16 @@ namespace Odyssey.Presentation.World
             public float StandingHipHeight;
 
             /// <summary>
+            /// The gradient of the surface this sleeper is lying on, along the way she is lying:
+            /// nought on the level, positive where the foot of the bed is higher than its head.
+            ///
+            /// <para>Everything fixed to the grid is draped, so a bed is sheared along the ground's
+            /// tangent plane while a body laid level across it sinks at one end and floats at the
+            /// other. <c>docs/design/20-beds.md</c> §7b.</para>
+            /// </summary>
+            public float SleepSlope;
+
+            /// <summary>
             /// This figure's drawn height, sole to crown, in metres — and so the length of body
             /// there is to lay down when it sleeps. Measured off the posed mesh at bind by
             /// <c>MeasureBody</c>; see <see cref="FigureBuild"/> for why it is not taken off a
