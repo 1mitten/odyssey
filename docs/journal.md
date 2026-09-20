@@ -7879,3 +7879,14 @@ this is the file that told two sessions the curve was missing.
 **Nothing moved a golden and nothing moved the fingerprint.** The XML edit is a comment, the tests are
 tests, and the one behaviour change is presentation state cleared at a session boundary. Long tier 23,
 green, on the merged branch.
+
+
+**The Unity tier ran, and that was the review's real deliverable.** EditMode **1,989 total, 1,971
+passed, 0 failed**; PlayMode **85 total, 80 passed, 0 failed**, with `HudSmokeTests` naming thirteen
+framed regions and the toast stack among them. So the bar, the toast row and its click handler
+compile and the shell frames them — none of which the fast tier can say, and all of which the PR
+correctly flagged as unproven. Worth recording once: **Unity's own runner exits 2 whenever anything
+is inconclusive**, which it was eighteen times (the `[Explicit]` benchmarks, the ignored allocation
+probes and the four `GrowingJobTests` the fast tier also skips). `unity.sh` reads `failed=` out of
+the results XML and exited 0; a log line saying "Exiting with code 2 (Failed)" beside `failed="0"`
+is not a failure.

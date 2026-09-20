@@ -50,10 +50,14 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   **The per-stroke pip was deliberately not built**: the bar's continuous movement is what the
   request was about, and a flash timed to the drawn stroke would couple the pane to the world's
   stroke clock for a decoration. If the bar reads as static, that pip is the first thing to try.
-  **No presentation code in it has been compiled** — the fast tier builds neither Presentation nor
-  PlayMode and the container had no Unity, so `scripts/unity.sh test editmode` is the first thing
-  that can say whether any of it draws. **This row is second because the row above blocks it**: it
-  sits on #119 and cannot merge until that does.
+  **Compiled and reviewed on the owner's machine, 2026-09-20** (`claude/skills-review`): EditMode
+  1,989 / 1,971 / 0 and PlayMode 85 / 80 / 0, so the bar, the toast row and its click handler do
+  build and the shell does frame the stack. The review also found the one fault a test had not:
+  the level watch kept its marks across a session boundary, so a new colony's first colonist
+  announced a level she was rolled with (§8f-bis). **The fastest way to see a toast is the debug
+  menu's Skip one day** — it runs a real day of ticks, so a working colonist levels inside it and
+  should raise **one** row per skill, not a stack of them. **This row is second because the row
+  above blocks it**: it sits on #119 and cannot merge until that does.
 
 - **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
   `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three

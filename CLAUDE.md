@@ -304,11 +304,16 @@ invisible where the game is played.
   growing's tests as well as the skills ones.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last recorded 2026-09-19 on
-  the pawn-avoidance work that is `main`'s tip: EditMode **1,872 total, 1,858 passed, 0 failed**;
-  PlayMode **82 total, 75 passed, 0 failed** — 75 rather than 77 because that run was in a scratch
-  worktree with no Synty junction, so `AvatarSheetTests`' two art cases skipped (`docs/journal.md`).
-  The 1857/1843 previously on this line was the alert-chimes run, two PRs earlier.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
+  `claude/skills-review` (#139 with #119 merged up, Synty junctioned): EditMode **1,989 total,
+  1,971 passed, 0 failed**; PlayMode **85 total, 80 passed, 0 failed**, `HudSmokeTests` naming
+  thirteen framed regions with the toast stack among them. The eighteen and five that are not
+  passes are `[Explicit]`, ignored, or the four `GrowingJobTests` the fast tier also skips.
+  **Unity's own runner exits 2 when anything is inconclusive**, which is normal here and not a
+  failure; `unity.sh` reads `failed=` out of the XML and is the thing to believe.
+  The run before it, 2026-09-19 on the pawn-avoidance work that is `main`'s tip: EditMode
+  **1,872 / 1,858**, PlayMode **82 / 75** — 75 rather than 77 because that run was in a scratch
+  worktree with no Synty junction, so `AvatarSheetTests`' two art cases skipped.
   `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
   `TheRosterBarFollowsTheColonyIntoANewSession`.
   PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
