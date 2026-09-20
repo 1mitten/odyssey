@@ -21,6 +21,29 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Do the order marks still draw?** (`claude/mark-pass-batching`,
+  `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
+  fill now goes through one instanced call per colour instead of one submission per cell. Nothing
+  about the geometry moved, so this should look identical — but an instanced draw through a
+  material that does not support instancing **draws nothing at all, silently**, and no test can
+  see pixels. Arm mine or chop, drag a box over a dozen trees or rocks, and say whether the marks
+  appear as they did. Then let a colonist start on one, so the cut slab shows too. A wrong answer
+  looks like: the cells you dragged over look untouched, or the mark is there and the progress
+  slab is not.
+
+- **Nobody has pressed Play on the graphics settings** (`claude/confident-rubin-ydvdhc`,
+  `docs/design/27-graphics-settings.md`). The Graphics tab now opens in two groups: **Display** —
+  VSync, frame cap, render scale, anti-aliasing, shadow distance, display mode and resolution —
+  over **Detail**, the six older toggles. Two of these can only be judged in a player build
+  (`Build/Win64/Odyssey.exe`), because the Game view is not a window the game owns. What to look
+  for: whether **render scale at 85%** is a trade worth having — the world softens, the HUD does
+  not, and if it reads as *blurry* rather than *smaller* then FSR is not buying what §2 claims and
+  the rung should go; whether the **hitch** on changing render scale or anti-aliasing is a blink
+  or a stall, since the tooltip promises a blink; whether **greying the cap behind VSync** reads
+  as *explained* or as *broken* — a wrong answer is reaching for the cap, finding it dead and not
+  reading why; and whether seven rows in one group is a page or a wall. Also, plainly: after
+  pressing every row, `git status` must be clean — a dirty `Assets/Settings/PC_RPAsset.asset`
+  means the pipeline copy is wrong, and that is the one failure this design most expects.
 - **Storage zones are a thing you can draw, and a colony now starts with none**
   (`claude/storage-zones`, S1, `docs/design/26-storage.md`). A stockpile tool in the orders strip —
   the sixth chip, which needed an argument and got one — paints a zone with a drag; the ground it
@@ -78,6 +101,72 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   after dark, and say whether the new card is *worse than the daylight ones used to look* or merely
   different. A wrong answer looks like: the cards all read the same and you stop using the face to
   tell people apart.
+
+- **The Work tab opens now — F1, or the Work item on the command bar** (`claude/happy-tesla-2onz0q`,
+  PR #145, `docs/design/27-work-tab.md`). A click cycles a priority 1 → 2 → 3 → 4 → blank,
+  right-click cycles back, shift-click sets the whole column, and the Simple / Detailed switch is in
+  the header. **Note the colony does not start on a grid of threes**: the scenario deals two miners
+  at Mining 1 and everybody else at Chopping 1, so the first screen is a division of labour somebody
+  already chose. What only a person can answer: whether twenty-two columns with eighteen drawn as
+  *not built yet* teach the shape of the game or just cost width (OQ-W2); whether the rotated labels
+  at −66° read at a glance or need the head tilted; whether hauling's borderless, flameless column
+  reads as *no skill* or as broken (OQ-W3); and whether click, right-click and shift-column are
+  enough without drag-paint (OQ-W5). A wrong answer on the first looks like you scrolling past the
+  dead columns to find the four that work.
+
+  **Compare against `docs/reference/mockups/work-v1.html`**, which is the same panel in a browser
+  with a *Live 4* switch the real one does not have — if the four-column view is the one you want to
+  stay in, that switch is the panel's real default.
+
+  **Growing is a live column now**, since PR #119 merged: five of the twenty-two do something
+  rather than four, and the hoe has a skill behind it, so a growing cell has a border band and can
+  carry flames like the others.
+
+  **Reviewed and corrected before this first play** (`27-work-tab.md` §15). Seven things moved, and
+  two of them change what there is to look at: **Simple mode drew nothing at all** — its tick and
+  cross were characters neither shipped font has a glyph for, so the whole mode was empty boxes and
+  no test could see it — and the panel is no longer a fixed 1,756px that hangs off the right of any
+  window narrower than about 1,780. Escape closes the tab now, opening Build puts it away, and every
+  cell has a tooltip naming its four signals in words. **So Simple mode is worth a look on its own
+  terms**: it has never been seen by anybody.
+
+  **And then the scrollbar went** (§16). The grid pages like the roster instead: **11 work columns
+  a page**, two pages, `‹ 1 / 2 ›` in the panel header; **12 colonists a page**, `‹ 1 / 3 ›` over the
+  names; wheel turns the rows, shift-wheel the columns. The day is never paged. The panel is a
+  constant 1,385 px and nothing about it resizes any more. What only a person can answer: **whether
+  splitting the live columns across two pages is a daily annoyance** — Construction, Growing and
+  Mining are on page 1, Cutting and Hauling on page 2, and if that turns out to be a constant
+  page-turn the fix is reordering `icon-keys.csv` rather than changing the page size. Also whether
+  shift-wheel is a gesture anybody discovers. A wrong answer on the first looks like you turning the
+  page every time you set a priority.
+
+  **And eleven more things off your second look** (§17). The panel no longer hangs over the map —
+  that was a border box: `.panel`'s 12px padding was not in the width I set. **Click a column header
+  to sort the colony by that skill**, highest first; hauling sorts by priority because it has no
+  skill; an accent rule under the header says which one you sorted by; the refresh button beside the
+  Colonist name clears it, and so does closing the panel. **The schedule key is a palette**: click a
+  block to arm it, click hours to paint it, click it again to put it down — with nothing armed the
+  hours cycle as before. The column icon tiles are gone and the labels sit where they were. Each
+  half carries its own title or pager. Simple is the default reading.
+
+  **It is hooked up, and that is now tested rather than assumed** (§18). Setting a column to
+  *never* really does stop the work: a colonist told never to cut leaves a marked tree standing.
+  **One thing to expect rather than report:** a priority decides the *next* job, not the one in
+  hand, so a colonist told to stop chopping finishes the tree she has already started. That is
+  deliberate and it is the reference's behaviour. The schedule half still governs nothing at all.
+
+  What only a person can answer: **whether sorting by skill is the thing you actually reach for**,
+  or whether you wanted priority; whether the armed block stays obvious enough that you do not lose
+  track of what is in your hand; and whether the panel at .995 opacity now sits too heavily over the
+  world. A wrong answer on the sort looks like you clicking a header and then hunting for the
+  colonist you were already looking at.
+
+- **The bed-owner picker's tick has never been drawn** (already on `main`, PR #141,
+  `docs/design/20-beds.md`). Found by the font test written for the Work tab: the mark that says
+  *this is the bed this colonist owns* is a U+2713 in Archivo Narrow, which has no such glyph, so
+  that column has been blank since the picker was written. It is a drawn tick now. When you play the
+  bed-assignment row that is already on this list, **check the list actually marks the current owner**
+  — a wrong answer looks like every name in the popover reading the same.
 
 - **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
   `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,

@@ -530,7 +530,7 @@ namespace Odyssey.Sim.Pawns
                 writer.Write(item.Despawned);
             }
 
-            // Format 7: the zones are gone from this section and live in `odyssey.storage.zones`.
+            // Format 8: the zones are gone from this section and live in `odyssey.storage.zones`.
             // Nothing is written in their place — a reader at 7 or later simply does not look.
 
             writer.Write(_beds.Count);
@@ -546,10 +546,10 @@ namespace Odyssey.Sim.Pawns
             _beds.Clear();
             PendingLegacyZones.Clear();
 
-            // Version 7 gave an item a container and took the zones out of this section. An older
+            // Version 8 gave an item a container and took the zones out of this section. An older
             // file has neither: every item reads back ContainerId 0, which is "on the ground or in
             // a pair of hands" and is what every item in such a world was.
-            bool containers = reader.FormatVersion >= 7;
+            bool containers = reader.FormatVersion >= 8;
 
             _nextId = reader.ReadInt();
             int itemCount = reader.ReadInt();

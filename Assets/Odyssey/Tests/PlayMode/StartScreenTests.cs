@@ -313,15 +313,16 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.HasSession, Is.False,
                     "a world was built from a box that does not name a seed");
 
-                VisualElement? commit = doc.rootVisualElement.Q(className: "settings__row--off");
-                Assert.That(commit, Is.Not.Null,
+                VisualElement? commit = doc.rootVisualElement.Q(className: "setup__commit");
+                Assert.That(commit, Is.Not.Null, "the setup page has no Start button");
+                Assert.That(commit!.ClassListContains("settings__row--off"), Is.True,
                     "Start is still drawn pressable over a seed that cannot be used");
 
                 // And back, so the disabling is a state rather than a one-way door.
                 box.value = "77";
                 yield return Settle();
 
-                Assert.That(doc.rootVisualElement.Q(className: "settings__row--off"), Is.Null,
+                Assert.That(commit.ClassListContains("settings__row--off"), Is.False,
                     "Start stayed inert over a seed that is perfectly good");
             }
             finally

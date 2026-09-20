@@ -144,13 +144,34 @@ namespace Odyssey.Tests.Sim
         /// measured 0.0029 ms locally. A gate calibrated on the fastest machine that runs it is a
         /// gate that fails on every other one.</para>
         ///
-        /// <para><b>0.030 is chosen from the bug rather than from the noise</b>, which is the only
-        /// way a performance threshold stays meaningful. The defect costs twenty-six times the
-        /// fixed figure, so on the slow runner it would land near 0.3 ms — ten times this
-        /// threshold, and unmissable. The slowest honest reading seen is 0.0164, so there is
-        /// roughly a factor of two of headroom above the noise and a factor of ten below the
-        /// thing being guarded against. Widening it further would start to hide the bug; leaving
-        /// it at 0.012 hid nothing and stopped the queue.</para>
+        /// <para><b>The threshold is chosen from the bug rather than from the noise</b>, which is
+        /// the only way a performance threshold stays meaningful. The defect costs twenty-six
+        /// times the fixed figure, so on the slow runner it would land near 0.3 ms — several
+        /// times this threshold, and unmissable.</para>
+        ///
+        /// <para><b>Re-baked a second time on 2026-09-20, and the reason is the same one.</b> It
+        /// went to 0.030 against a slowest honest reading of 0.0164; the GitHub-hosted Linux
+        /// runner then clocked the fixed code at <b>0.0368</b> and stopped the queue again — on
+        /// the merge of PR #145, which touches no designation code at all and whose own Long tier
+        /// had passed minutes earlier on the same content. Every honest reading to date:</para>
+        ///
+        /// <code>
+        /// local (9800X3D)   0.0022   0.0029
+        /// CI (Linux)        0.0125   0.0164   0.0368   &lt;- three readings, all fixed code
+        /// the bug           0.057 local, ~0.3 extrapolated to CI
+        /// </code>
+        ///
+        /// <para>So <b>0.075</b>: roughly a factor of two above the slowest honest reading, which
+        /// is the headroom the 0.030 was chosen with, and a factor of four below the thing being
+        /// guarded against. Widening it further would start to hide the bug. <b>The lesson is not
+        /// about this number</b> — it is that a wall-clock threshold on a shared cloud runner buys
+        /// a guard and a recurring false alarm, and this one has now stopped the queue twice. The
+        /// fix that ends it rather than postponing it is to assert the <i>shape</i> of the cost
+        /// instead of its size: the defect made publishing scale with the area of the layer, so
+        /// the same measurement on a 60 x 60 board and a 120 x 120 one would differ by four with
+        /// the bug and by nothing without it, and a ratio does not care how fast the machine is.
+        /// That is a change to what this test measures rather than to what it allows, and it is
+        /// written down here rather than done in passing on a red main.</para>
         /// </summary>
         [Test, Category("Long")]
         public void PublishingCostsWhatTheOrdersCostRatherThanWhatTheLayerCosts()
@@ -169,11 +190,12 @@ namespace Odyssey.Tests.Sim
             Console.WriteLine($"[progress] {Ticks:N0} ticks on 120x120x16 with no orders: " +
                               $"{clock.Elapsed.TotalMilliseconds:F0} ms, {msPerTick:F4} ms/tick");
 
-            Assert.That(msPerTick, Is.LessThan(0.030),
+            Assert.That(msPerTick, Is.LessThan(0.075),
                 $"a tick on an empty board costs {msPerTick:F4} ms, which is the whole-layer " +
                 "publish loop back again (it cost 0.057 ms a tick, against 0.002 without it). " +
-                "If this is nearer 0.02 than 0.3 the machine is slow rather than the code being " +
-                "broken — see the remarks on this test before re-baking the number");
+                "If this is nearer 0.05 than 0.3 the machine is slow rather than the code being " +
+                "broken — see the remarks on this test before re-baking the number, and note it " +
+                "has been re-baked twice for exactly that reason");
         }
     }
 }
