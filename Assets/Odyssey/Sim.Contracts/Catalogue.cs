@@ -72,6 +72,54 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// What kind of thing a commodity is, as <c>ItemDef.category</c> declares it and a storage
+    /// filter groups by. The owner's six, in the owner's order (2026-09-20).
+    ///
+    /// <para>An enum rather than a handle table, unlike everything else in this file, because it
+    /// is the one of these a <b>Def declares by name</b> — the loader parses an enum from its
+    /// spelling, so the XML reads <c>&lt;category&gt;Food&lt;/category&gt;</c> instead of a number
+    /// nobody can check. The handle tables next to it are indices into content that content itself
+    /// defines; this is a fixed set the code knows.</para>
+    ///
+    /// <para><b>Four of them have no members yet</b>, and that is on purpose rather than an
+    /// oversight: the names are what the wiki prints and what a filter row says, and a category
+    /// that arrives with its first commodity is a content commit that also has to touch the
+    /// registry, the CSV and the wiki. They are cheaper here, empty, than added one at a time.
+    /// What is deliberately <em>not</em> here because of it is the tri-state category tree — a
+    /// roll-up over four empty branches compresses nothing (docs/plans/storage.md decisions 23,
+    /// 30 and 31).</para>
+    ///
+    /// <para>Order is the filter's row order and the wiki's, not a save contract in itself — a
+    /// zone's filter is stored per item def, never per category — but it is pinned by
+    /// <c>ItemCategoryTests</c> all the same, because the wiki prints it.</para>
+    /// </summary>
+    public enum ItemCategory : byte
+    {
+        /// <summary>Anything a colonist can eat, cooked or raw.</summary>
+        Food = 0,
+
+        /// <summary>What tending draws on.</summary>
+        Medicine = 1,
+
+        /// <summary>What things are made of, and what mining and felling leave behind.</summary>
+        Materials = 2,
+
+        /// <summary>Research obtained elsewhere rather than produced (owner, 2026-09-20).</summary>
+        Books = 3,
+
+        /// <summary>Made things that are carried, worn or used, and are not weapons.</summary>
+        Items = 4,
+
+        Weapons = 5,
+    }
+
+    /// <summary>How many <see cref="ItemCategory"/> values there are. One place says so, and a test holds it to the enum.</summary>
+    public static class ItemCategories
+    {
+        public const int Count = 6;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: incident def indices, as <see cref="BulletinView"/> and
     /// <see cref="Intent"/> carry them. The order is <c>IncidentContent.Order</c> in the
     /// simulation and <c>IncidentLabels.Keys</c> in the interface, and a test on each side holds

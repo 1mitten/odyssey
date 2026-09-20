@@ -39,13 +39,14 @@ namespace Odyssey.Tests.Sim
         /// the whole reason this test exists, and it did its job on the way to 3.
         /// </summary>
         [Test]
-        public void TheFormatVersionIsSix()
+        public void TheFormatVersionIsSeven()
         {
             // 2 was U36's recipe header; 3 U38's barren/wooded recipe flags; 4 the beds' edifice
             // record (facing, quality, owner) and a construction site's facing byte; 5 U42's
-            // milliwork accumulators (Rates); 6 WS3's starvation severity on the pawn. See
-            // WorldSave.CurrentFormatVersion.
-            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(6));
+            // milliwork accumulators (Rates); 6 WS3's starvation severity on the pawn; 7 storage
+            // S1 — an item's ContainerId, and the zones leaving the items section for two of their
+            // own. See WorldSave.CurrentFormatVersion.
+            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(7));
         }
 
         [Test]
@@ -63,7 +64,7 @@ namespace Odyssey.Tests.Sim
             var (restored, restoredCounter) = Build();
             var header = WorldSave.Load(restored, stream, new[] { restoredCounter });
 
-            Assert.That(header.FormatVersion, Is.EqualTo(6));
+            Assert.That(header.FormatVersion, Is.EqualTo(WorldSave.CurrentFormatVersion));
             Assert.That(header.Recipe.Map, Is.EqualTo(MapType.Natural));
             Assert.That(header.Recipe.Scenario, Is.EqualTo("Scenario_Bare"));
             Assert.That(header.Recipe.ColonyName, Is.EqualTo("Meridian"));

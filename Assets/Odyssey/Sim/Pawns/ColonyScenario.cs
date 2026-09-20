@@ -765,11 +765,21 @@ namespace Odyssey.Sim.Pawns
                 if (spot < 0) break;
                 stockpile.Add(spot);
             }
-            if (stockpile.Count > 0)
+            if (stockpile.Count > 0 && pawns.Storage != null)
             {
-                var allow = new bool[ItemIndex.Count];
-                for (int i = 0; i < allow.Length; i++) allow[i] = true;
-                pawns.Items.AddStockpile(new Stockpile(priority: 2, stockpile.ToArray(), allow));
+                // Through the zones rather than around them, and at the anchor the colony's first
+                // cell names: the scenario's zone is an ordinary zone from the first tick, with an
+                // ordinary settings record at Normal accepting everything — which is what a zone a
+                // player draws is too (decision 22). It used to be built by hand with its own
+                // priority integer and its own filter array, and it was the only zone in the game
+                // that nothing could edit.
+                //
+                // **And it is now drawn**, which nothing about the starting zone ever was. Every
+                // colony ever made has had one and nobody has seen it.
+                int anchor = stockpile[0];
+                for (int i = 0; i < stockpile.Count; i++)
+                    pawns.Storage.Designate(
+                        grid.Size.FromIndex(stockpile[i]), anchor, Storage.StoragePreset.Everything);
             }
 
             // Loose salvage so hauling has work from the first tick. A draw that lands on a

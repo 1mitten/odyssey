@@ -79,6 +79,15 @@ namespace Odyssey.Sim.Pawns
             // `pawns.Growing` by the sowing giver and the save.
             var growing = new GrowingZones(pawns.Cells, ContentPack.Plants(), pawns.Chunks);
             pawns.Growing = growing;
+            // And the storage zones, for the same argument again: an optional one is how a caller
+            // forgets, and a colony that forgot them would have a stockpile tool that silently did
+            // nothing and a haul scan with nowhere to go. The items are told about the zones here
+            // rather than constructing them, because the dependency runs one way — the zones
+            // re-bucket the things, and the things ask one boolean back (`IZoneMembership`).
+            var storage = new Storage.StorageZones(
+                pawns.Cells, new Storage.StorageSettingsTable(pawns.Content), pawns.Items, pawns.Chunks);
+            pawns.Storage = storage;
+            pawns.Items.Membership = storage;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -151,6 +160,7 @@ namespace Odyssey.Sim.Pawns
             pawns.Incidents = incidents;
             incidents.Attach(builder);
             growing.Attach(builder);
+            storage.Attach(builder);
             return builder;
         }
     }

@@ -245,8 +245,7 @@ namespace Odyssey.Tests.Sim
             foreach (int cell in colony.Pawns.Items.Beds) parts.Add("b" + cell);
             foreach (var item in colony.Pawns.Items.Items)
                 parts.Add("i" + item.DefIndex + ":" + item.Cell + ":" + item.Stack);
-            foreach (var pile in colony.Pawns.Items.Stockpiles)
-                foreach (int cell in pile.Cells) parts.Add("s" + cell);
+            foreach (int cell in colony.Pawns.Storage!.Cells) parts.Add("s" + cell);
 
             ulong hash = 14695981039346656037UL;
             foreach (string part in parts)

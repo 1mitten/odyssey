@@ -36,6 +36,9 @@ namespace Odyssey.Sim
         /// <summary>Publish one growing-zone cell, wherever in the world it is.</summary>
         public void AddZone(in ZoneView view) => _target.AddZone(view);
 
+        /// <summary>Publish one storage-zone cell, wherever in the world it is.</summary>
+        public void AddStore(in StoreView view) => _target.AddStore(view);
+
         /// <summary>Publish one planted cell, wherever in the world it is.</summary>
         public void AddPlant(in PlantView view) => _target.AddPlant(view);
 

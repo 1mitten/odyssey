@@ -5,6 +5,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.Storage;
 
 namespace Odyssey.Tests.Sim
 {
@@ -38,14 +39,13 @@ namespace Odyssey.Tests.Sim
             return count;
         }
 
-        /// <summary>A pile that takes only the defs named, at the cells given.</summary>
-        static Stockpile Pile(Colony colony, int priority, int[] cells, params int[] accepts)
+        /// <summary>A zone that takes only the defs named, at the cells given.</summary>
+        static StorageSettings Pile(Colony colony, int priority, int[] cells, params int[] accepts)
         {
-            var allow = new bool[ItemIndex.Count];
-            for (int i = 0; i < accepts.Length; i++) allow[accepts[i]] = true;
-            var pile = new Stockpile(priority, cells, allow);
-            colony.Ctx.Items.AddStockpile(pile);
-            return pile;
+            StorageSettings settings = colony.Stockpile(priority, cells);
+            settings.ApplyPreset(StoragePreset.Nothing);
+            for (int i = 0; i < accepts.Length; i++) settings.SetDef(accepts[i], true);
+            return settings;
         }
 
         // ---------------------------------------------------------------- has space
@@ -174,10 +174,13 @@ namespace Odyssey.Tests.Sim
             int full = colony.Cell(8, 2, 0);       // accepts wood, higher priority, but the load does not fit
             int winner = colony.Cell(12, 12, 0);   // accepts wood, the load fits, farthest
 
-            Pile(colony, 9, new[] { filtered }, Meal);
-            Pile(colony, 1, new[] { nearest }, Wood);
-            Pile(colony, 5, new[] { full }, Wood);
-            Pile(colony, 3, new[] { winner }, Wood);
+            // The four rungs are named now, and the numbers matter only in their order: the
+            // filtered pile outranks everything and refuses wood, the full one outranks the
+            // winner and has no room, and the nearest is the worst rung there is.
+            Pile(colony, StoragePriority.Urgent, new[] { filtered }, Meal);
+            Pile(colony, StoragePriority.Last, new[] { nearest }, Wood);
+            Pile(colony, StoragePriority.Preferred, new[] { full }, Wood);
+            Pile(colony, StoragePriority.Normal, new[] { winner }, Wood);
             colony.Ctx.Items.Spawn(Wood, full, stack: limit - Load + 1);
             colony.Ctx.Items.Spawn(Wood, winner, stack: limit - Load);
 
@@ -300,12 +303,16 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Ctx.Items.StoredItems, Has.Count.EqualTo(1), "the wood is stored");
             Assert.That(colony.Ctx.Items.LooseItems, Has.Count.EqualTo(1), "the salvage is loose");
 
+            // Both sections, because the zones are their own now and the listers are derived from
+            // the two together. Saving only the items and expecting the stored lister back is
+            // asking a file to remember something it was never given.
             using var stream = new MemoryStream();
-            WorldSave.Save(colony.World, stream, new ISaveable[] { colony.Ctx.Items });
+            WorldSave.Save(colony.World, stream, colony.SaveComponents);
             stream.Position = 0;
 
             var fresh = Colony.Build();
-            WorldSave.Load(fresh.World, stream, new ISaveable[] { fresh.Ctx.Items });
+            WorldSave.Load(fresh.World, stream, fresh.SaveComponents);
+            fresh.Storage.RebucketAll();
 
             Assert.That(fresh.Ctx.Items.StoredItems, Is.EqualTo(colony.Ctx.Items.StoredItems));
             Assert.That(fresh.Ctx.Items.LooseItems, Is.EqualTo(colony.Ctx.Items.LooseItems));

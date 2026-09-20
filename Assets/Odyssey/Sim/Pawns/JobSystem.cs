@@ -4,6 +4,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.Storage;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -868,8 +869,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         static int StoredPriority(PawnContext ctx, ColonyItem item)
         {
-            var pile = ctx.Items.StockpileAt(item.Cell);
-            return pile != null && pile.Accepts(item.DefIndex) ? pile.Priority : int.MinValue;
+            var zones = ctx.Storage;
+            if (zones == null) return int.MinValue;
+            return zones.Accepts(item.Cell, item.DefIndex) ? zones.PriorityAt(item.Cell) : int.MinValue;
         }
 
         /// <summary>
@@ -878,43 +880,59 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         static int BestStorageCell(Pawn pawn, PawnContext ctx, ColonyItem item, int abovePriority)
         {
-            var piles = ctx.Items.Stockpiles;
-            int bestCell = -1;
-            int bestPriority = abovePriority;
-            int bestDistance = int.MaxValue;
+            var zones = ctx.Storage;
+            if (zones == null) return -1;
 
-            for (int s = 0; s < piles.Count; s++)
+            // **Bands, high to low, stopping at the first that yields.** Priority dominates
+            // distance — nearest only breaks ties *inside* a band — so once a band has produced a
+            // reachable cell, no lower band can win and the walk is over. That turns the scan from
+            // "every cell of every zone, for every candidate item" into "the cells of the best
+            // band", which is the difference between a warehouse being free to have and being
+            // paid for on every think (docs/plans/storage.md §5f).
+            //
+            // Strictly above `abovePriority`, which is how a re-stow is kept from shuffling
+            // between two piles at one priority: equal is not better (a-14 §3D).
+            // `priority >= 0` as well as `> abovePriority`, and not for tidiness: the floor for a
+            // loose thing is int.MinValue — the implicit rank of "not stored at all" — and a loop
+            // that only tested the floor would count down two billion times before it stopped.
+            for (int priority = StoragePriority.Count - 1; priority >= 0 && priority > abovePriority; priority--)
             {
-                var pile = piles[s];
-                if (!pile.Accepts(item.DefIndex)) continue;
-                if (pile.Priority < bestPriority) continue;
-                // At the floor itself nothing has been found yet, and the floor is not a find.
-                if (pile.Priority == abovePriority) continue;
-                // At the floor itself nothing has been found yet, and the floor is not a find.
+                int bestCell = -1;
+                int bestDistance = int.MaxValue;
 
-                bool better = pile.Priority > bestPriority;
-                for (int c = 0; c < pile.Cells.Length; c++)
+                for (int slot = 0; slot < zones.ZoneCount; slot++)
                 {
-                    int cell = pile.Cells[c];
-                    if (cell == item.Cell) continue;
-                    if (!ctx.Items.CellHasSpace(cell, item.DefIndex, item.Stack)) continue;
+                    StorageSettings settings = zones.SettingsOf(slot);
+                    if (settings.Priority != priority) continue;
+                    if (!settings.Accepts(item.DefIndex)) continue;
 
-                    long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
-                    if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                    if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
-                    if (!ctx.Nav.Reachable(item.Cell, cell, Mode)) continue;
+                    IReadOnlyList<int> cells = zones.CellsOf(slot);
+                    for (int c = 0; c < cells.Count; c++)
+                    {
+                        int cell = cells[c];
+                        if (cell == item.Cell) continue;
+                        if (!ctx.Items.CellHasSpace(cell, item.DefIndex, item.Stack)) continue;
 
-                    int distance = ctx.Distance(item.Cell, cell);
-                    if (!better && distance >= bestDistance) continue;
+                        // The distance first, because it is two array reads and it is what lets a
+                        // cell that cannot win skip the reservation, the nav flag and the region
+                        // lookup behind it.
+                        int distance = ctx.Distance(item.Cell, cell);
+                        if (distance >= bestDistance) continue;
 
-                    better = false;
-                    bestPriority = pile.Priority;
-                    bestDistance = distance;
-                    bestCell = cell;
+                        long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                        if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                        if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
+                        if (!ctx.Nav.Reachable(item.Cell, cell, Mode)) continue;
+
+                        bestDistance = distance;
+                        bestCell = cell;
+                    }
                 }
+
+                if (bestCell >= 0) return bestCell;
             }
 
-            return bestCell;
+            return -1;
         }
     }
 }

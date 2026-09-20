@@ -602,6 +602,43 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One cell of a storage zone: where it is, which zone it belongs to, and how much the colony
+    /// cares about it.
+    ///
+    /// <para><b>Its own channel rather than a field on <see cref="ZoneView"/></b>, which is the
+    /// growing zone's. The two are drawn differently, answer different questions and a cell can
+    /// be neither or either but never both — a growing zone is refused on anything but open
+    /// fertile ground, and a storage zone's commonest home is a slab indoors.</para>
+    ///
+    /// <para>Sparse, one row per zone cell, whole-world and in cell-index order, for the reason
+    /// <c>DesignationGrid.Contribute</c> gives at length: a layer is fourteen thousand cells and
+    /// a warehouse is tens to thousands, and a zone painted on a layer that is not the active one
+    /// must still be drawn.</para>
+    /// </summary>
+    public readonly struct StoreView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>
+        /// Which zone this cell belongs to. A slot index, so it is stable only within the frame
+        /// that published it — long enough to tell "these cells are one zone" apart from "these
+        /// cells are two zones that touch", which is the only thing presentation asks of it.
+        /// </summary>
+        public readonly int Zone;
+
+        /// <summary>The zone's <c>StoragePriority</c>, 0 to 4. Drawn as a strength, not a hue.</summary>
+        public readonly byte Priority;
+
+        public StoreView(int cellIndex, int zone, byte priority)
+        {
+            CellIndex = cellIndex;
+            Zone = zone;
+            Priority = priority;
+        }
+    }
+
+    /// <summary>
     /// One standing crop: a planted cell, what grows there, and how far it has got.
     ///
     /// <para><b>Quantised growth, and it is not <see cref="SiteView"/>'s argument repeated.</b>
@@ -728,11 +765,23 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Whether this cell is inside an enclosed, roofed room.</summary>
         public readonly bool IsIndoors;
 
+        /// <summary>
+        /// The storage zone covering this cell, or -1 where there is none. A slot index and so
+        /// good only for this frame, which is all the pane needs: it asks the question again every
+        /// time it is asked about a cell.
+        /// </summary>
+        public readonly int StorageZone;
+
+        /// <summary>The storage zone's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StorageZone"/> is -1.</summary>
+        public readonly byte StoragePriority;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
-            bool isIndoors = false)
+            bool isIndoors = false, int storageZone = -1, byte storagePriority = 0)
         {
+            StorageZone = storageZone;
+            StoragePriority = storagePriority;
             CellIndex = cellIndex;
             Terrain = terrain;
             Edifice = edifice;
@@ -765,6 +814,7 @@ namespace Odyssey.Sim.Contracts
         OrderView[] _orders = Array.Empty<OrderView>();
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
+        StoreView[] _stores = Array.Empty<StoreView>();
         PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
@@ -826,6 +876,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many growing-zone cells the world holds, anywhere in it.</summary>
         public int ZoneCount { get; private set; }
 
+        /// <summary>How many storage-zone cells the world holds, anywhere in it.</summary>
+        public int StoreCount { get; private set; }
+
         /// <summary>How many planted cells are standing.</summary>
         public int PlantCount { get; private set; }
 
@@ -874,6 +927,12 @@ namespace Odyssey.Sim.Contracts
         /// zones. See <see cref="ZoneView"/>.
         /// </summary>
         public ReadOnlySpan<ZoneView> Zones => new ReadOnlySpan<ZoneView>(_zones, 0, ZoneCount);
+
+        /// <summary>
+        /// Every storage-zone cell in the world, in cell-index order. Empty when the colony has
+        /// drawn none. See <see cref="StoreView"/>.
+        /// </summary>
+        public ReadOnlySpan<StoreView> Stores => new ReadOnlySpan<StoreView>(_stores, 0, StoreCount);
 
         /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
         public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
@@ -963,6 +1022,7 @@ namespace Odyssey.Sim.Contracts
             OrderCount = 0;
             SiteCount = 0;
             ZoneCount = 0;
+            StoreCount = 0;
             PlantCount = 0;
 
             AspectCount = 0;
@@ -1018,6 +1078,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _zones, ZoneCount + 1);
             _zones[ZoneCount++] = view;
+        }
+
+        internal void AddStore(in StoreView view)
+        {
+            Grow(ref _stores, StoreCount + 1);
+            _stores[StoreCount++] = view;
         }
 
         internal void AddPlant(in PlantView view)

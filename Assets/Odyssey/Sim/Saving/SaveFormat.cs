@@ -230,7 +230,22 @@ namespace Odyssey.Sim.Saving
         /// <para>Version 1, 2, 3, 4 and 5 files all still load; <see cref="ReadHeader"/> is the one
         /// place that knows which versions wrote what.</para>
         /// </summary>
-        public const int CurrentFormatVersion = 6;
+        /// <remarks>
+        /// <para>7 (S1, storage): two changes to one section and two new ones. The item record
+        /// gained <c>ContainerId</c> — 0 in every world that has one, because storage units are
+        /// S2 — and the storage zones <b>left</b> the items section for
+        /// <c>odyssey.storage.zones</c>, with what they accept in <c>odyssey.storage.settings</c>
+        /// beside it. A version 6 file still carries its zones in the items section, so
+        /// <c>ColonyItems.Load</c> reads them there and stashes them, and
+        /// <c>ColonyWorld.RebuildDerived</c> hands them to the zones once both have loaded —
+        /// which is what keeps this from depending on the order of the components list.</para>
+        ///
+        /// <para>Adding the two sections needed no version at all: sections are keyed and
+        /// length-prefixed, so a reader skips what it does not know and a new reader simply never
+        /// calls <c>Load</c> for a section an old file does not have. What forced the bump is the
+        /// item record's layout, which no key can rescue.</para>
+        /// </remarks>
+        public const int CurrentFormatVersion = 7;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)

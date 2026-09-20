@@ -123,6 +123,49 @@ namespace Odyssey.Sim.Contracts
         /// board says "nothing to ripen" rather than quietly succeeding.
         /// </summary>
         DebugRipen,
+
+        /// <summary>
+        /// Put a storage-zone cell down: <c>A</c> is the <b>anchor cell index</b> of the drag this
+        /// cell belongs to, and <c>B</c> a <c>StoragePreset</c> for the zone a drag founds.
+        ///
+        /// <para><b>Why the anchor rides along.</b> A growing zone joins whatever same-plant
+        /// ground touches it and folds two zones into one, which is sound because a growing zone
+        /// is identified by its crop and two touching carrot fields are interchangeable. A storage
+        /// zone carries a configuration, so a fold would silently destroy one of two filters and
+        /// "extend the zone you touched" would silently adopt a stranger's. The anchor decides
+        /// instead: a drag that begins inside a zone extends <em>that</em> zone, and one that
+        /// begins outside founds a new one and takes from any zone it crosses. Two existing zones
+        /// never merge, which is also what makes overlap impossible rather than merely
+        /// discouraged (docs/design/26-storage.md, and docs/plans/storage.md §4).</para>
+        ///
+        /// <para>The anchor is a cell index and not a minted id, because it is data with a meaning:
+        /// the handler resolves it against the zone grid, and a drag replayed or split across a
+        /// tick boundary degrades into two zones rather than into a corrupt one.</para>
+        /// </summary>
+        DesignateStorage,
+
+        /// <summary>
+        /// Take a cell back out of its storage zone. A zone reduced to nothing is deleted, exactly
+        /// as a growing zone is; anything lying in the cell becomes loose again and the haul scan
+        /// picks it up on the next think.
+        /// </summary>
+        CancelStorage,
+
+        /// <summary>
+        /// Set the priority of the zone under <see cref="Intent.Cell"/>: <c>A</c> is a
+        /// <c>StoragePriority</c> value, 0 to 4. Named for the cell rather than the zone because
+        /// the same intent has to serve a crate the day one exists, and a cell is the one address
+        /// both of them have.
+        /// </summary>
+        SetStoragePriority,
+
+        /// <summary>
+        /// Change one bit of the filter of the zone under <see cref="Intent.Cell"/>: <c>A</c> is
+        /// the scope — 0 one item def, 1 a whole category, 2 a preset — <c>B</c> the index within
+        /// that scope, and <c>C</c> is 0 for off and 1 for on. A preset ignores <c>C</c>, because
+        /// a preset is not a switch.
+        /// </summary>
+        SetStorageFilter,
     }
 
     /// <summary>
@@ -173,6 +216,14 @@ namespace Odyssey.Sim.Contracts
             // paused. Cancelling it likewise. Both write state the player owns outright.
             IntentKind.DesignateZone => true,
             IntentKind.CancelZone => true,
+            // And the storage zone, for the same reason and one more: its filter and its priority
+            // are settings a player opens a panel to change, and a panel is a thing you open while
+            // paused. A tick-boundary filter would leave the popover reading one thing and the
+            // world doing another until you pressed play.
+            IntentKind.DesignateStorage => true,
+            IntentKind.CancelStorage => true,
+            IntentKind.SetStoragePriority => true,
+            IntentKind.SetStorageFilter => true,
             _ => false,
         };
     }
