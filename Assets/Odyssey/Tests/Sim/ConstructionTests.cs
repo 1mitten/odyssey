@@ -4,6 +4,7 @@ using Odyssey.Sim;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
@@ -778,6 +779,72 @@ namespace Odyssey.Tests.Sim
 
             second = -1;
             return -1;
+        }
+
+        [Test]
+        public void ADoorCanBePlacedDeliveredBuiltAndDemolished()
+        {
+            ColonyWorld colony = Board();
+            int site = SiteBesideTheStart(colony);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0), "a legal site exists near start");
+
+            Assert.That(colony.Construction.Allows(site, BuildingHandle.Door), Is.True);
+
+            // Place door intent
+            colony.World.Intents.Submit(new Intent(
+                IntentKind.PlaceBuilding, Size.FromIndex(site), BuildingHandle.Door, StuffHandle.Wood));
+            colony.World.Tick();
+            Assert.That(colony.World.Intents.Rejected, Is.Empty);
+            Assert.That(colony.Construction.At(site), Is.EqualTo(BuildingHandle.Door));
+
+            // Spawn wood for delivery
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, site, ItemIndex.Wood, 20, JobDriver.DropSearchRadius);
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 20);
+
+            // Tick until built
+            int raisedAt = -1;
+            for (int tick = 0; tick < 20_000 && raisedAt < 0; tick++)
+            {
+                colony.World.Tick();
+                if (colony.Grid.Edifice[site] >= 0) raisedAt = tick;
+            }
+
+            Assert.That(raisedAt, Is.GreaterThanOrEqualTo(0), "door was raised");
+            int handle = colony.Grid.Edifice[site];
+            Assert.That((colony.Pawns.Nav.Grid.Flags[site] & NavFlags.Door), Is.Not.EqualTo(NavFlags.None),
+                "NavFlags.Door is set on the cell");
+
+            // Demolish door
+            bool demolished = colony.Construction.Demolish(colony.Pawns, site, out PlacedEdifice was);
+
+            Assert.That(demolished, Is.True, "door was demolished");
+            Assert.That(was.Def, Is.EqualTo(CoreContent.EdificeDoor));
+            Assert.That(colony.Grid.Edifice[site], Is.LessThan(0), "door was removed from cell");
+            Assert.That((colony.Pawns.Nav.Grid.Flags[site] & NavFlags.Door), Is.EqualTo(NavFlags.None),
+                "NavFlags.Door is cleared on demolish");
+        }
+
+        [Test]
+        public void DoorsAreRestoredOnLoadViaRebuildDoors()
+        {
+            ColonyWorld colony = Board();
+            int site = SiteBesideTheStart(colony);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+
+            colony.Construction.Place(Size.FromIndex(site), BuildingHandle.Door, StuffHandle.Wood);
+            colony.Construction.Raise(colony.Pawns, site);
+
+            Assert.That((colony.Pawns.Nav.Grid.Flags[site] & NavFlags.Door), Is.Not.EqualTo(NavFlags.None));
+
+            // Clear door flag to simulate cold load before RebuildDerived
+            colony.Pawns.Nav.Grid.Flags[site] &= ~NavFlags.Door;
+            Assert.That((colony.Pawns.Nav.Grid.Flags[site] & NavFlags.Door), Is.EqualTo(NavFlags.None));
+
+            colony.RebuildDerived();
+
+            Assert.That((colony.Pawns.Nav.Grid.Flags[site] & NavFlags.Door), Is.Not.EqualTo(NavFlags.None),
+                "RebuildDerived restores NavFlags.Door from the edifice list");
         }
     }
 }

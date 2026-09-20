@@ -281,6 +281,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(BuildShapes.CanRotate(BuildingHandle.Bed), Is.True);
             Assert.That(BuildShapes.CellsOf(BuildingHandle.Wall), Is.EqualTo(1));
             Assert.That(BuildShapes.CanRotate(BuildingHandle.Wall), Is.False);
+            Assert.That(BuildShapes.CanRotate(BuildingHandle.Door), Is.True);
         }
 
         /// <summary>

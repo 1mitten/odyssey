@@ -160,8 +160,8 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void AToolWhoseThingDoesNotExistYetArmsNothing()
         {
-            Assert.That(PaletteTools.TryGet("ui.arch.tool.door", out _), Is.False,
-                "doors cannot be built yet, so the door chip must be drawn disabled");
+            Assert.That(PaletteTools.TryGet("ui.arch.tool.stair", out _), Is.False,
+                "stairs cannot be built yet, so the stair chip must be drawn disabled");
             Assert.That(PaletteTools.TryGet("ui.arch.tool.stockpile", out _), Is.False);
             Assert.That(PaletteTools.TryGet("not.a.key.at.all", out _), Is.False);
         }
@@ -311,7 +311,7 @@ namespace Odyssey.Tests.Hud
             string[] built =
             {
                 PaletteTools.Wall, PaletteTools.Slab, PaletteTools.Paving, PaletteTools.Ladder,
-                PaletteTools.Bed,
+                PaletteTools.Bed, PaletteTools.Door,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

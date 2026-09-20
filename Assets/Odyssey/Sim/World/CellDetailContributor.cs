@@ -27,12 +27,15 @@ namespace Odyssey.Sim.World
     {
         readonly CellGrid _grid;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
+        readonly EnclosureGrid? _enclosure;
         readonly int[] _costByClass = new int[256];
 
-        public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
+        public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
+            EnclosureGrid? enclosure = null)
         {
             _grid = grid;
             _edifices = edifices;
+            _enclosure = enclosure;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -76,9 +79,10 @@ namespace Odyssey.Sim.World
 
             ushort workToClear = (ushort)WorldContent.Table[terrain].workToClear;
 
+            bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
-                quality, owner));
+                quality, owner, isIndoors));
         }
     }
 }

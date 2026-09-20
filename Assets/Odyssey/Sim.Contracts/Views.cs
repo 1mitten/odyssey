@@ -633,8 +633,12 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int EdificeOwner;
 
+        /// <summary>Whether this cell is inside an enclosed, roofed room.</summary>
+        public readonly bool IsIndoors;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
-            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0)
+            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
+            bool isIndoors = false)
         {
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -645,6 +649,7 @@ namespace Odyssey.Sim.Contracts
             WorkToClear = workToClear;
             EdificeQuality = edificeQuality;
             EdificeOwner = edificeOwner;
+            IsIndoors = isIndoors;
         }
     }
 
