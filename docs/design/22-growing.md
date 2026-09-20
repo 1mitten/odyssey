@@ -312,6 +312,26 @@ matter what"*):**
   five lie there — then holds at twelve so a store square is a proper heap without every
   extra carrot redrawing it; the stack limit rises to 75, the same as wood and stone, and
   `ItemHeap.Most` rises with it so rubble's full stacks grow the same way.
+- **The cover is the drawn ground's own mesh, variant and bearing, plus a hair of overlap**
+  (owner, 2026-09-20, on the second round of screenshots: the grid survived the shared lift).
+  Two faults were stacked: the earth resolves a **variant clump per cell** (and a face cut
+  where sides show) while the cover drew the plain default block — a different shape, whose
+  partings against the drawn clumps showed slivers of untinted earth as a grid over the whole
+  field; and the photo sheet that had said "no seams" was **blind, because it ran on a board
+  with no relief amplitude** — a flat board has no partings to show (CropCheck sets the
+  played board's amplitude now, and restores it in its finally). The cover now reads the
+  earth contributor's own choices — module, variant, exposure, yaw, drape — and scales a
+  hair in the plane (`CoverOverlap`, 2.5 cm a side) so adjacent covers overlap rather than
+  meet. The sheet, on real relief, reads one continuous patch inside the field; what remains
+  at the outer edge is the boundary of two different grounds meeting, which is the field's
+  own outline rather than a fault.
+- **A field blocker with nowhere to be stored is cleared to the grass anyway** (owner,
+  2026-09-20: *"the colonists didn't remove the stone from the dirt tile and didn't bother
+  sowing and nothing happened"*). The stall was a deadlock in which every party behaved: the
+  store was full, so the haul scan formed no job; the sow guard had blocked the tile, so no
+  sowing; nobody was at fault and nothing moved. A thing on tilled soil that no store will
+  take now goes to the nearest free cell outside every zone, becomes an ordinary pile there,
+  and the stockpile can have it back when it has room.
 - **The covers lift along the world's up, and the borders died** (owner, 2026-09-20: *"remove
   the borderlines from the dirt tiles so the grow areas would appear as one"*). Each cover
   had lifted along its own drape direction; two neighbours' drapes disagree by a few

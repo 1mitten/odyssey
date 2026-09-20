@@ -7512,3 +7512,22 @@ fifty cells of bias, which is the ordering and not a radius. And the hoe finally
 skill: Work_Growing carries rateSkill with cutting's own shape, the def is the whole seam
 because both drivers have paid at WorkRatePerMille since WS1, and the curve's tuning is left
 to the skills work the owner says is coming.
+
+
+### The second border day and the stone that stayed (2026-09-20)
+
+The grid survived the shared world-up lift, and the reason my sheet had called it fixed was
+the sheet: CropCheck never set the relief amplitude, so its board was flat and a flat board
+cannot show a parting. With the played amplitude the grid reproduced on demand. The cause
+under it: the earth draws a variant clump per cell - a different shape per cell - and the
+cover drew the plain default block; every disagreement between the drawn clump and the lifted
+block showed a sliver of untinted earth. The cover now reads the earth contributor's own
+choices - module, variant, exposure, bearing, drape - and scales a hair in the plane so
+adjacent covers overlap rather than meet; on real relief the field reads as one patch.
+
+And the stone that stayed: the store was full, so the haul scan formed no job at all, and the
+sow guard had blocked the tile behind it - a deadlock where nobody was wrong. A field blocker
+with nowhere to be stored is cleared to the nearest free cell off the zone now, and the store
+can have it back when it has room. The lesson the flat sheet earned went into lessons already:
+an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
+board's amplitude and the blindness is recorded beside it.
