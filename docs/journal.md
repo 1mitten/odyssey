@@ -7333,3 +7333,23 @@ already states the Python floor, so HT2 owes only the `python3 --version` check;
 
 - *Verified:* fast tier on this branch, Windows, dotnet 8.0.425 — **753 Sim + 449 Hud, 0 failed**;
   both content gates clean. No Unity run: the numbers above are the journal's, not a fresh tier.
+
+### The first five verdicts, 2026-09-20
+
+The owner, on the *Not yet listed* table the day after it was written: *"gaze, flush cursor and
+sight fade, avoidance and diagonals is all working now."* Five rows closed at once — head turning
+and gaze (#128), the flush selection cursor (#127), the sight-fade exemptions (#123), soft crowd
+avoidance and sub-tile steering (#134), and eight-directional movement with the strict corner rules
+(#132). None of the five produced a fix, so there is no bug-patterns row and no design-doc
+amendment; the *Judged* table records the date, the verdict and that the consequence was none.
+
+Two things worth keeping from it. **The table earned its keep in a day** — those five were merged
+on 18–19 September, had no row anywhere, and would have stayed unjudged because nothing was asking
+about them; naming them was the whole of the work. And **a pass on the look is not a pass on tuning
+invited by name**, which is why the closing note says so: the queue closes the question *does this
+read right*, and a number a design doc still offers for tuning is a separate question that outlives
+the verdict.
+
+`23-head-turning-and-gaze.md` also gained the `CLAUDE.md` pointer it never had — a design document
+with no row in the read-this table is one the next session does not find. `13-gestures.md` and
+`15-skills.md` are still in that state and are not fixed here.

@@ -192,6 +192,7 @@ this file.
 | Ladders, the shaft rule, the climb pose, what a click may land on | `docs/design/21-ladders-and-climbing.md` |
 | Tree colour | `docs/design/21-tree-colours.md` |
 | The sub-tile sidestep, crowd and tree avoidance | `docs/design/25-pawn-steering.md` |
+| Where a colonist looks, the head turn | `docs/design/23-head-turning-and-gaze.md` |
 | Terrace steps, banks, what may stand at the foot of one | `docs/design/22-terrace-steps.md` |
 | Water, swimming, the float | `docs/design/20-swimming-and-water.md` |
 | Picking up, carrying, putting down, the armful | `docs/design/24-carrying.md` |

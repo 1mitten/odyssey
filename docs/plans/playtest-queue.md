@@ -165,24 +165,23 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   `docs/lessons.md` — do not prune a worktree without checking.
 
 
-## Not yet listed
-
-The list was moved out of `CLAUDE.md` verbatim, so it inherited that file's gaps as well as its
-rows. Five changes merged on 2026-09-18 and 2026-09-19 have no row here and at least four of them
-are things only a person at the keyboard can judge. **The session that next touches one of these
-writes its row from the PR's own handover** rather than inventing the questions:
-
-| Merged | What | Why it probably wants a row |
-|---|---|---|
-| PR #134 | soft crowd avoidance and sub-tile lateral steering (`docs/design/25-pawn-steering.md`) | whether a colonist stepping aside reads as courtesy or as drift |
-| PR #132 | eight-directional diagonal movement and strict corner rules | whether diagonals read as natural or as sliding |
-| PR #128 | procedural head turning and gaze (`docs/design/23-head-turning-and-gaze.md`) | whether the gaze reads as attention or as a twitch |
-| PR #127 | the flush selection cursor (`docs/design/23-flush-selection-cursor.md`) | whether it sits flush on every surface it was fixed for |
-| PR #123 | the sight fade leaving water, banks and marsh whole | whether the exemptions read as deliberate |
-
-PR #130/#131 (the player build) is deliberately not in that table: a build that runs is proven by
-the smoke run, not by a look.
-
 ## Judged
 
-_Nothing yet. Rows move here with the date, the verdict in one line, and where the consequence went._
+Rows move here with the date, the verdict in one line, and where the consequence went.
+
+| Judged | What | Verdict | Consequence |
+|---|---|---|---|
+| 2026-09-20 | **Head turning and gaze** (PR #128, `docs/design/23-head-turning-and-gaze.md`) | working — owner: *"gaze … is all working now"* | none; the design doc stands |
+| 2026-09-20 | **The flush selection cursor** (PR #127, `docs/design/23-flush-selection-cursor.md`) | working | none; the design doc stands |
+| 2026-09-20 | **The sight fade leaving water, banks and marsh whole** (PR #123) | working — the exemptions read as deliberate | none |
+| 2026-09-20 | **Soft crowd avoidance and sub-tile lateral steering** (PR #134, `docs/design/25-pawn-steering.md`) | working — the sidestep reads as courtesy, not drift | none; the design doc stands |
+| 2026-09-20 | **Eight-directional diagonal movement and the strict corner rules** (PR #132) | working | none |
+
+These five were merged on 18–19 September with no row here — the list was moved out of `CLAUDE.md`
+verbatim and inherited its gaps. They were named in a *Not yet listed* table for one day and the
+owner closed all five at once. **A pass on the look is not a pass on tuning that was invited by
+name**: where one of those five carries a number the owner was asked to judge, the design doc still
+holds the invitation.
+
+_The player build (PRs #130/#131) never had a row and does not want one: a build that runs is
+proven by the smoke run, not by a look._
