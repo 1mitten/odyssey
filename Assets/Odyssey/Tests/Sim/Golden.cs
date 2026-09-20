@@ -160,6 +160,18 @@ namespace Odyssey.Tests.Sim
     /// guard on tree placement can reach neither — measured by running the whole table and reading
     /// which assertions failed: one, the wooded board's, on the <c>Generated</c> value. Anything
     /// else moving would have meant something had come along uninvited.</para>
+    ///
+    /// <para><b>Moved an eleventh time, 2026-09-20, by the events (design 23), all six numbers,
+    /// and for the dullest of reasons: the hash sees more.</b> Two new components joined every
+    /// colony — the incident ledger and the things in the air — and both hash their state before
+    /// the first tick runs, which on a fresh board is four integers all reading zero. So every
+    /// <c>Generated</c> value moved without a generator pass or a placement changing, and every
+    /// <c>Simulated</c> value inherited it. Nothing in a tick draws a number or moves a thing
+    /// unless an incident is fired, and none is fired without the debug menu's intent, so the
+    /// colonies did nothing different — the round trips, the headless runs and the soak all
+    /// agree with themselves as before. The control this time is the shape of the failure:
+    /// all three <c>Generated</c> values moved together, including the barren meadow's, which
+    /// no gameplay change has ever touched.</para>
     /// </summary>
     public static class Golden
     {
@@ -228,6 +240,15 @@ namespace Odyssey.Tests.Sim
         /// are in the hash now, so every colony with a starting stockpile hashes differently
         /// again; the colony is not doing anything new, the hash is seeing more of it. That
         /// distinction is the whole of whether a re-bake is honest.</para>
+        /// <para><b>Re-baked a third time the same day, on the merge with the events layer</b>
+        /// (PR #140). Both branches had moved every number here for their own reasons — beds and
+        /// zones on this side, the incident layer's hashed state on <c>main</c>'s — so the merge
+        /// conflicted on all six and neither side's value was right for the merged code. Baked
+        /// afresh from the merge, as the 2026-09-18 entry below says a golden conflict must be.
+        /// <c>Generated</c> moved on all three because the events layer hashes before the first
+        /// tick, exactly as it did on <c>main</c>. The played scenario losing its starting beds
+        /// the same session moved <b>nothing</b> here: every case builds on <c>Bare</c>, which
+        /// keeps its five.</para>
         /// </remarks>
         public static readonly Case Meadow = new Case
         {
@@ -237,8 +258,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 15721581818529621809UL,
-            Simulated = 6540063495833481032UL,
+            Generated = 16958749844635840481UL,
+            Simulated = 11858881608759532200UL,
         };
 
         /// <summary>
@@ -254,8 +275,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 17205523407833078228UL,
-            Simulated = 13091739187043166010UL,
+            Generated = 2584357304411896596UL,
+            Simulated = 14646127984407405818UL,
         };
 
         /// <summary>
@@ -291,8 +312,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 7416457840173175292UL,
-            Simulated = 228442719616695994UL,
+            Generated = 1780140414182223036UL,
+            Simulated = 17860401635204099098UL,
         };
     }
 }

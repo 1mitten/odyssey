@@ -31,13 +31,12 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   cyan are far enough apart when a colony is half dug and half planned — that pair is the one thing
   the owner's chosen option (*toolbar wins*) traded away, and reversing it is one constant.
 
-- **Nobody has pressed Play on the starting beds becoming real beds** (same branch,
-  `docs/design/20-beds.md` §7a). The colony wakes up with five actual two-cell beds instead of five
-  invisible cells, so **the board looks different at tick zero** and the beds can be given to
-  people from the pane for the first time. Open questions: whether five beds near the start crowd
-  the opening clearing, and whether the placement puts them somewhere sensible rather than strung
-  out along whatever spots the storey search found. A picture answers neither — it wants a look at
-  a new colony.
+- **A new game starts with no beds now** (same branch, `docs/design/20-beds.md` §7a). The owner saw
+  the five real starting beds once and ruled them out; the played scenario has none, so the
+  colonists sleep on the grass with the slept-on-ground thought until a bed is built. Unplayed
+  since. What to look for: whether the first night on the ground reads as *build a bed* or as a
+  bug, and whether a built bed is claimed on the first night by whoever reaches it, as §7 says.
+  A wrong answer is a colonist still sleeping on the ground beside an unowned bed.
 
 - **A colonist given a bed mid-night has been seen once, and went to work** (same branch, second
   play day). That is fixed — an interrupted sleep resumes, in the new bed for the one given it and

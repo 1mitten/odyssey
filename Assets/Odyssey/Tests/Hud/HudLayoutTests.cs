@@ -517,6 +517,8 @@ namespace Odyssey.Tests.Hud
             yield return HudContent.NothingSelected(Colonists, 3, Layers);          // resting
             yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 2);     // colonist selected
             yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2);     // and in trouble
+            yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2, bulletins: 4); // and eventful
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0, bulletins: BulletinModel.MaxRows); // events, no alerts
             yield return new HudContent(0, 0, 0, Layers, 0);                        // nobody left
             yield return new HudContent(8, AllStoreRows, 1, 32, 4);                 // a deeper, fuller game
 

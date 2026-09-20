@@ -151,6 +151,14 @@ runs on a heartbeat, not per tick).
 
 ## 7a. A bed cell is a cell with a bed in it (2026-09-20)
 
+**Later the same day, the played colony stopped starting with beds at all** (owner: *"beds should
+never be given on startup / new game — but things seem to work fine"*). `ScenarioDef.Playtest` has
+`beds = 0`; the colonists sleep on the ground, take the slept-on-ground thought, and a bed becomes
+the first thing worth building. `Bare` keeps its five, because the tests, the goldens and the
+ten-day runs baseline on a colony that is rested, and a scenario shorting the colony of beds on
+purpose is what the `beds` field was always for. Everything below about the starting beds being
+*real* still holds — for `Bare`, and for whatever scenario next gives some.
+
 Two owner reports, one cause.
 
 > *"Some colonists still sleep off the bed, it needs to understand that the bed spans two tiles and

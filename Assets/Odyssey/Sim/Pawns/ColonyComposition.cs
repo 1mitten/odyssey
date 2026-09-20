@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Construction;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
@@ -126,6 +127,14 @@ namespace Odyssey.Sim.Pawns
                 .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
             designations.Attach(builder);
             construction.Attach(builder);
+
+            // The events (design 23): the ledger, whatever is in the air, and the one command that
+            // fires an incident on demand. Every colony gets them for the reason every colony gets
+            // the debug intents above — a world that could not be sent an event is a world the
+            // debug menu cannot test, and the storyteller, when it exists, will need the same seam.
+            var incidents = new Events.Incidents(pawns, ContentPack.Incidents());
+            pawns.Incidents = incidents;
+            incidents.Attach(builder);
             return builder;
         }
     }

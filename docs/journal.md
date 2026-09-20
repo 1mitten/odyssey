@@ -7374,6 +7374,153 @@ Five questions resolved with the owner before any code was written:
   - Unity EditMode: **1,916 total, 1,902 passed, 0 failed** (includes new tests in `ItemFallMotionTests`, `ItemFallingTrackerTests`, `FallingTests`, `FloorsAndCollapseTests`).
   - Unity PlayMode: **82 total, 77 passed, 0 failed**.
 
+## 2026-09-20 — Events: the incident layer, and the storyteller that is deliberately not there
+
+The owner asked for a world-event system aligned with RimWorld's — cadence types (regular, weekly,
+ad hoc, condition-based; periodic or one-off), positive or negative by storyteller, rewards on
+completion or the event as the reward, shown as an alert and in an activity log — and to start
+with a meal dropping from the sky to be hauled. The result is `docs/design/23-events-and-storyteller.md`
+and the `EV` track. The research is `docs/research/a-11-storyteller-incidents.md`.
+
+**What the research settled.** The reference picks a category, then an incident by weight; its
+storytellers are a difficulty curve plus independent generators on their own clocks; every
+incident is a Def of gates plus a worker split into `CanFireNow` (cheap, side-effect-free) and
+`TryExecute` (does it), so one worker serves the storyteller, a quest and the debug menu. Nothing
+fires on a calendar date, which makes "weekly" the one owner term with no counterpart, and the
+reason is design intent rather than omission: a schedulable event is one the player prepares for
+perfectly. Reward-on-completion is a quest, a wrapper round incident verbs, not an incident.
+
+**Four decisions, the owner's.** The display is a new Events panel under the alerts, not a row in
+the alerts panel (the alert model rebuilds its rows from the frame every quarter second, which is
+right for a condition and would wipe an event on the next refresh — the design catalogue had ruled
+this in advance and was right). Firing is debug-only for now: no storyteller, but the gates are on
+the Def and the ledger keeps the refire memory, so the scheduler reads rather than restructures.
+The landing is anywhere on the board, uniform, which is the reference's own behaviour; I said what
+it costs — most drops land out of sight and an unreachable one lies there — and named the one-line
+knob if it maddens. The ledger lives in the sim now, saved and hashed; the History screen (F9,
+reserved since M1) is the next unit.
+
+**What was built.** `IncidentDef` and `IncidentContent` (a fourth content family, in
+`ContentPack.Register`), `IncidentWorker` discovered by name the way work givers are,
+`SupplyDropWorker`, `Skyfallers` (the flight is simulated: nothing exists until it lands, and a
+mid-air save lands on the promised tick), `IncidentLedger` (append-only, monotonic ids, the tail
+published), `Incidents` with `Attach` and the one door `TryFire`; `IntentKind.InvokeIncident`;
+`CellGrid.SkyLanding`; `BulletinView` and `FallingView` channels; `BulletinModel` and the Events
+panel; `FallArc` and `ChunkRenderer.RenderFalling`; `AudioDirector.StepLandings` for a sound the
+catalogue does not yet hold. The debug row that stood disabled since 2026-09-17 fires it.
+
+**The landing rule is the one that took thought.** `NearestWalkableInColumn` from the top would
+search past a wall to the floor beside its foot and past deep water to the bed beneath it — the
+two answers a drop "through open sky" must refuse — and `FirstFloorAtOrBelow` is happy to stop
+under a ceiling. `SkyLanding` walks down to the first cell that is not open air and lands only if
+that cell can be stood in; a rooftop slab qualifies, a wall, a lake and bare rock do not, and a
+tree's cell does, because a tree blocks nothing and felled wood already lands there. Seven tests
+pin it.
+
+**What the hash saw.** All six golden numbers moved before a single tick ran: two new components
+hash four zero integers. The control is that all three `Generated` values moved together,
+including the barren meadow's, which no gameplay change has ever touched. Re-baked once, with
+the paragraph in `Golden.cs`.
+
+**Two things found on the way.** `AlertModel.IconKeys` said it existed "for the registry test"
+from the day it was written and no such test existed; it does now, beside the incident one. And
+the interface's key table for incidents cannot import the Def, so it is held to the Defs'
+`bulletinKey` values by a test that reads the XML — the `CarryingAspect` bargain, made a second
+time. `ui.bulletin.` joined the enforced namespaces without finding a duplicate literal.
+
+**Owed.** The Unity tiers on this branch, the play day (design 23 §9, §10), the History screen,
+a second incident to turn the debug row into a picker, and the storyteller when the owner wants
+events that arrive unasked. The catalogue row for `odyssey.sound.drop.land` is the owner's, in the
+editor; the director declines it silently until then.
+
+## 2026-09-20 — Events, the first look: four things moved the same day
+
+The owner pressed Play on the supply drop the afternoon it was built, and four things came back.
+None was a fault in the incident layer; all four were the drawing, the sound and the menu around
+it, which is where a first look usually lands.
+
+**The fall was over before it was seen.** Two seconds from six metres above the top of the world,
+gathering speed like a stone — a physically honest arc that entered the frame part-way down and
+landed almost at once. Two changes. The duration is the Def's and is now six seconds (`fallTicks`
+360); the fingerprint moved and was re-baked with the reason. The start height is presentation's:
+`FallArc.DropHeight`, 120 m over the landing floor, which is above the play camera at any zoom
+(32–160 m up, looking down at 48°), so the thing enters from beyond the top of the frame rather
+than popping in. And the curve is a straight line now — a crate under a chute comes down at one
+speed — because the square law that reads as a real fall when the fall is short reads as a thing
+loitering and then dropping when it is six seconds long. `FallArcTests` was rewritten to say
+this: equal steps, the same start over a roof as over the meadow, and a world taller than 120 m
+still starting above its own top. The "second half covers more ground" test went with the arc.
+
+**The Events row moved the depth.** Clicking a row moved the slice to the event's layer, selected
+the cell and jumped the camera. The owner expected the camera to move and nothing else — the cut
+away and the selection are theirs, and a panel that changes them is a panel that surprises. The
+row jumps to the event's column at the active layer now and does nothing else. The cost is a
+rooftop drop looked at from below the roof: the pad's column is where the camera goes, and the
+slice is yours to raise. Design 23 §5 states it.
+
+**Events want a tab of their own.** The debug menu had one flat list with an *Invoke event* row
+at the bottom, and the owner asked for a second tab. `DebugDirector` gained a `Tab` (opens on
+Cheats, because the overlay toggle is the row backtick was bound to for a day) and a `TabChanged`
+event, in Settings' tab idiom so a third tab strip in this shell invents nothing. The Events tab
+is built when the panel opens, from the open colony's `IncidentContent`, one row per Def named
+through `IncidentLabels` and tooltipped by the Def's own `description` — so a second Def appears
+by existing and `HudShell.Debug.cs` never learns its name, which is what design 18 had promised
+the day a picker was wanted. The `ui.debug.invokeevent` key is gone; `ui.debug.tab.cheats` and
+`ui.debug.tab.events` replace it, and `DebugDirector.IconKeys` is now held to the registry by
+`EveryDebugKeyIsARegisteredName`, beside the alert and incident checks.
+
+**The chime snapped off.** "The sound snaps to silence and the music switches back on." Two
+causes, both in `AudioDirector`, neither in the recordings. The duck's release was its attack —
+0.15 s down, 0.15 s back — and a tenth of a second is right for carving a chime's space and wrong
+for handing it back; it is 1.0 s now, and the music swells rather than switches. And the clip
+stopped dead: `StepChimeTails` fades the last 0.4 s of every voice on the Alerts bus, from the
+gain it was played at, so a fader move during the tail is applied on top rather than fought.
+Alerts only, because a chop or a pick is a transient and is meant to stop dead. The busy clock
+already knew where each voice's end was (`_busyUntil` is arithmetic, not `isPlaying`), so the
+tail costs a subtraction per voice per frame and works in edit mode and in a test. Two tests pin
+it, measured at a fifth of a second after the duck ends and part-way into the tail.
+
+**What did not change.** The landing rule, the ledger, the hash, the goldens: none of the four
+touched a tick. The one Def edit moved the content fingerprint and nothing else, which is what a
+fingerprint is for.
+
+**Owed.** The Unity tiers on this round, the second look (design 23 §9: chute or lift, waited for
+or not, the swell back), the History screen, and the storyteller when the owner wants events
+that arrive unasked.
+
+## 2026-09-20 — Events reviewed for the next kind: what a raid costs
+
+The owner called the supply drop good enough for an MVP event system and asked for the PR to
+be reviewed against the events to come — raids, encounters — so that adding one is a matter of
+adding rather than restructuring. The review is design 23 §8, "Adding an incident: the recipe".
+
+**The verdict.** Five edits, every one of them caught by the fast tier if missed: a worker
+that joins by existing, a Def, a line in `Order`, a handle and a label in the same position,
+and a registry key. The Events panel, the chime and the debug tab follow from the key and the
+Def. The seams a storyteller needs — gates on the Def, `LastFiredTick` and `Fires` on the
+ledger, `CanFire` / `TryFire` as the one door, `Points` on the parms, a category enum with the
+threat, arrival and condition bags already named — are all present and unread, which is the
+right state for them.
+
+**One thing changed.** The content loader validated the supply drop's fields — stack range,
+fall time — for every incident, so the first raid Def would have been held to rules about
+falling meals. `IncidentWorker.Validate(def, pawns)` is a virtual hook now, the loader checks
+only what every incident has (a key, a worker, an item the content carries), and
+`SupplyDropWorker` owns its three rules and adds a fourth: a drop that pays out nothing is a
+content error, not a silent no-op. Three tests, one of them a bare worker in the test
+assembly proving a Def with none of the drop's fields loads.
+
+**What was left narrow on purpose**, and written down so nobody reads it as the design: the
+flat `IncidentDef`, which becomes per-worker nested blocks the day a second worker wants
+parameters the first does not (the loader already reads them); `InvokeIncident` carrying the
+Def index only, though the parms take a cell and a budget; and the four-field ledger entry,
+which a raid's outcome or a condition's end will widen with a save-format bump. A condition is
+the one kind of event the layer does not represent at all — a span, not a firing — and is the
+first structural addition the next kind will ask for.
+
+**What a raid needs that events should not provide:** a faction and a hostility model, a
+non-colonist pawn kind, an arrival edge, combat and health. The incident is the thing that
+asks for them at a moment; they are their own units.
 ## 2026-09-20 — four reports from one play session: beds, loading, and the colour of an order
 
 Four owner reports in one message, on `claude/bed-assign-and-order-colours`. Three turned out to
@@ -7608,4 +7755,25 @@ is the pull request's to prove.
 Also this session: `origin/main` had taken the falling-items branch (PR #138), and this branch
 conflicted with it only in the three documents both had appended to. Both journal entries and both
 playtest-queue rows were kept, and the tier line keeps this branch's counts, re-run after the merge.
+
+## 2026-09-20 — The second merge of the day, and no beds at the start
+
+`main` took the events layer (PR #140) between this branch's push and its review, and the pull
+request conflicted again: the two documents both branches append to, and **all six golden hashes**.
+The goldens were baked afresh from the merged code rather than taken from either side, because both
+branches had moved every number for their own reasons — beds and zones entering the hash here, the
+incident layer's state on `main` — and neither side's value was a number the merged code had ever
+produced. `Generated` moved on all three cases because the events layer hashes before the first
+tick, as it already did on `main`.
+
+**And the owner ruled out starting beds:** *"beds should never be given on startup / new game — but
+things seem to work fine."* The five real beds this branch had raised at tick zero were, from the
+player's side, five beds the colony had never had — the phantom cells they replaced were invisible.
+`ScenarioDef.Playtest` now has `beds = 0`; the colonists sleep on the ground and take the thought
+for it until a bed is built, which is what makes a bed the first thing worth building. `Bare`
+keeps its five, so no test, golden or ten-day run changed under it, because none of them
+builds on `Playtest`. Everything §7a says about a starting bed
+being a *real* bed still holds for the scenario that has some.
+
+Fast tier **806 Sim + 471 Hud**, Long **21**. Unity not run here: the editor is open on this worktree.
 

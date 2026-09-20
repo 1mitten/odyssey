@@ -167,6 +167,11 @@ namespace Odyssey.Sim.Pawns
                 startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0,
                 mealPiles = 3, salvage = 0,
                 stonePiles = 2, woodPiles = 2,
+                // No beds (owner, 2026-09-20: "beds should never be given on startup / new
+                // game"). The colony sleeps on the ground until it builds some, which is what
+                // makes a bed the first thing worth building. Bare keeps its five: the tests
+                // and the goldens baseline on a colony that is rested.
+                beds = 0,
             };
 
         /// <summary>

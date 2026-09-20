@@ -38,6 +38,55 @@ namespace Odyssey.Tests.Hud
                 Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
         }
 
+        /// <summary>
+        /// <c>AlertModel.IconKeys</c> said it existed "for the registry test" from the day it was
+        /// written, and no such test did until the events work (2026-09-20).
+        /// </summary>
+        [Test]
+        public void EveryDebugKeyIsARegisteredName()
+        {
+            foreach (string key in DebugDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
+        public void EveryAlertKeyIsARegisteredName()
+        {
+            foreach (string key in AlertModel.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
+        public void EveryIncidentKeyIsARegisteredNameAndTheTableIsTheHandleTable()
+        {
+            Assert.That(IncidentLabels.Keys.Length, Is.EqualTo(IncidentHandle.Count),
+                "an incident the label table does not know draws as the fallback key");
+            foreach (string key in IncidentLabels.Keys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            Assert.That(Registry.Labels, Does.ContainKey(IncidentLabels.Unknown), "the fallback key must be registered too");
+        }
+
+        /// <summary>
+        /// The Def file spells each incident's key beside the incident; this assembly spells the
+        /// same keys in <see cref="IncidentLabels"/> because it cannot import the Def (ADR 0003).
+        /// The two sets are held equal here, on the bargain <see cref="JobLabels.CarryingAspect"/>
+        /// already makes for an aspect name.
+        /// </summary>
+        [Test]
+        public void TheIncidentKeysAreTheOnesTheDefsDeclare()
+        {
+            string? folder = Find(Path.Combine("Assets", "Odyssey", "Defs", "Core", "Events"));
+            Assert.That(folder, Is.Not.Null, "the incident Defs were not found above the test assembly");
+            string xml = File.ReadAllText(Path.Combine(folder!, "Incidents.xml"));
+            var declared = new List<string>();
+            foreach (Match match in Regex.Matches(xml, @"<bulletinKey>\s*([^<\s]+)\s*</bulletinKey>"))
+                declared.Add(match.Groups[1].Value);
+
+            Assert.That(declared, Is.Not.Empty, "no incident in the Defs declares a bulletinKey");
+            Assert.That(declared, Is.EquivalentTo(IncidentLabels.Keys),
+                "IncidentLabels.Keys and the Defs' bulletinKeys are two spellings of one list");
+        }
+
         [Test]
         public void EverySettingsKeyIsARegisteredName()
         {
@@ -256,6 +305,9 @@ namespace Odyssey.Tests.Hud
         static readonly string[] Enforced =
         {
             "ui.arch.tool.", "ui.arch.category.", "ui.status.", "ui.res.", "ui.alert.", "ui.job.",
+            // An event is named on the Events panel today and the History screen tomorrow
+            // (design 23 §5), which is this test's own criterion for a namespace.
+            "ui.bulletin.",
         };
 
         /// <summary>
