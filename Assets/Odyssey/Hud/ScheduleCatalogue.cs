@@ -46,7 +46,7 @@ namespace Odyssey.Hud
     /// other saturated element is <see cref="HudTheme.Accent"/> on the now-line — which is why
     /// every block below is measured against the accent as well as against its neighbours.</para>
     ///
-    /// <para><b>Distinctness is asserted, not assumed</b> (<c>ScheduleCatalogueTests</c>), because
+    /// <para><b>Distinctness is asserted, not assumed</b> (<c>ScheduleGridTests.NoTwoBandsLookAlike</c>), because
     /// these sit edge to edge in an unbroken band rather than as separate chips, which is a harder
     /// test than two swatches in a legend. The first pass put <i>Anything</i> at 77 channel-points
     /// from <i>Sleep</i> — a flat grey and a dark indigo, the one pair a player actually has to
