@@ -46,6 +46,27 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   reading why; and whether seven rows in one group is a page or a wall. Also, plainly: after
   pressing every row, `git status` must be clean — a dirty `Assets/Settings/PC_RPAsset.asset`
   means the pipeline copy is wrong, and that is the one failure this design most expects.
+- **Storage zones are a thing you can draw, and a colony now starts with none**
+  (`claude/storage-zones`, S1, `docs/design/26-storage.md`). A stockpile tool in the orders strip —
+  the sixth chip, which needed an argument and got one — paints a zone with a drag; the ground it
+  covers is washed towards a blue-grey, on bare earth and on a built floor alike, for no extra draw
+  calls. **The first build did not place anything at all** (§2b): a pointer names a surface, and on
+  open ground the store lives in the air cell above it, so every cell of every outdoor drag was
+  refused. Fixed, and the fix is a question the simulation asks rather than a lift the tool
+  performs, because a store on a built floor must *not* be lifted. Four questions only a person can
+  answer. **Does the drag land where you meant it to**, indoors on a slab as well as out on the
+  grass? **Is the wash the right strength?** — a third of the way to the hue, so stone still reads
+  as stone and planks as planks, and it is the one number here with no test behind it. **Does the
+  anchor rule feel right?** — a drag begun inside a zone extends that zone, one begun outside
+  founds a new one and takes any cells it crosses, and two zones that touch stay two. **And does a
+  store read differently from a field?** — the two are the only tools that paint ground, they sit
+  next to each other in the strip, and their hues have to be told apart at the play camera rather
+  than side by side in a palette.
+- **A colony starts with nowhere to put anything** (same branch). `stockpileCells` is nought, so
+  until the player draws a store nothing is ever hauled: felled wood and mined stone lie where they
+  fell. That is the asked-for behaviour and it is also a **first ten minutes** question — whether
+  the colony reads as waiting for an instruction or as broken, and whether anything on screen says
+  which. There is no "no storage" alert yet; it is S3.
 
 - **A sleeping colonist is now the size she is drawn** (`worktree-bed-sleep-pose`,
   `docs/design/20-beds.md` §7b). She was being laid down 0.38 m long — the figure director's

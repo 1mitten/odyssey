@@ -510,6 +510,17 @@ namespace Odyssey.Sim.Pawns
         public int nutrition;
 
         public int stackLimit = 1;
+
+        /// <summary>
+        /// What kind of thing this is, as a <see cref="CategoryHandle"/> value — what a storage
+        /// filter groups by and what the wiki files it under.
+        ///
+        /// <para>Defaults to <see cref="ItemCategory.Materials"/> rather than to nought, and the
+        /// difference matters: nought is Food, and a commodity that forgot to declare itself would
+        /// quietly join the pantry and be offered to a hungry colonist by a filter. Materials is
+        /// the harmless answer and the commonest one.</para>
+        /// </summary>
+        public ItemCategory category = ItemCategory.Materials;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>

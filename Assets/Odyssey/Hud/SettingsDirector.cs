@@ -99,6 +99,11 @@ namespace Odyssey.Hud
         /// </summary>
         CloseWork,
 
+        /// <summary>
+        /// Close the Almanac reference browser (F9), which fills the screen above the bar.
+        /// </summary>
+        CloseAlmanac,
+
         /// <summary>Close the Menu popover.</summary>
         CloseMenu,
 
@@ -1203,12 +1208,23 @@ namespace Odyssey.Hud
         /// anything can observe. It is tested after the palette only because it is the newer of
         /// the two.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen)
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen: false);
+
+        /// <summary>
+        /// The same rule with the Almanac (F9) in it as well.
+        ///
+        /// <para>The Almanac is a full-screen reference browser raised from the command bar (or
+        /// from the info button on an inspect card). Like the Work tab, "every window can be
+        /// escaped", and it unwinds before the options panel behind it.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen, bool almanacOpen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
             if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
             if (workOpen) return EscapeAction.CloseWork;
+            if (almanacOpen) return EscapeAction.CloseAlmanac;
             return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
         }
     }

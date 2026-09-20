@@ -6,6 +6,7 @@ using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.Storage;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 
@@ -168,19 +169,22 @@ namespace Odyssey.Tests.Sim
         public void AStockpileComesBackWithItsCellsPriorityAndFilter()
         {
             ColonyWorld colony = Fresh();
-            Assume.That(colony.Pawns.Items.Stockpiles.Count, Is.GreaterThan(0));
+            var zones = colony.Pawns.Storage!;
+            Assume.That(zones.ZoneCount, Is.GreaterThan(0));
 
-            Stockpile pile = colony.Pawns.Items.Stockpiles[0];
-            pile.Priority = 3;
-            for (int i = 0; i < pile.Allow.Length; i++) pile.Allow[i] = i == ItemIndex.Stone;
-            int[] cells = (int[])pile.Cells.Clone();
+            StorageSettings pile = zones.SettingsOf(0);
+            pile.Priority = StoragePriority.Preferred;
+            pile.ApplyPreset(StoragePreset.Nothing);
+            pile.SetDef(ItemIndex.Stone, true);
+            var cells = new List<int>(zones.CellsOf(0));
 
             ColonyWorld restored = RoundTrip(colony);
-            Assert.That(restored.Pawns.Items.Stockpiles.Count, Is.EqualTo(1));
+            var restoredZones = restored.Pawns.Storage!;
+            Assert.That(restoredZones.ZoneCount, Is.EqualTo(1));
 
-            Stockpile back = restored.Pawns.Items.Stockpiles[0];
-            Assert.That(back.Cells, Is.EqualTo(cells), "the zone came back a different shape");
-            Assert.That(back.Priority, Is.EqualTo(3), "the priority the player set was lost");
+            StorageSettings back = restoredZones.SettingsOf(0);
+            Assert.That(restoredZones.CellsOf(0), Is.EqualTo(cells), "the zone came back a different shape");
+            Assert.That(back.Priority, Is.EqualTo(StoragePriority.Preferred), "the priority the player set was lost");
             Assert.That(back.Accepts(ItemIndex.Stone), Is.True, "the filter came back accepting nothing");
             Assert.That(back.Accepts(ItemIndex.Meal), Is.False,
                 "the filter came back open, which silently undoes every zone the player narrowed");
@@ -294,8 +298,8 @@ namespace Odyssey.Tests.Sim
             // A zone's filter.
             {
                 ColonyWorld colony = Fresh();
-                Assume.That(colony.Pawns.Items.Stockpiles.Count, Is.GreaterThan(0));
-                Stockpile pile = colony.Pawns.Items.Stockpiles[0];
+                Assume.That(colony.Pawns.Storage!.ZoneCount, Is.GreaterThan(0));
+                StorageSettings pile = colony.Pawns.Storage!.SettingsOf(0);
                 Assume.That(pile.Allow.Length, Is.GreaterThan(0));
                 ulong before = Hash(colony);
                 pile.Allow[ItemIndex.Meal] = !pile.Allow[ItemIndex.Meal];
@@ -306,9 +310,9 @@ namespace Odyssey.Tests.Sim
             // A zone's priority.
             {
                 ColonyWorld colony = Fresh();
-                Assume.That(colony.Pawns.Items.Stockpiles.Count, Is.GreaterThan(0));
+                Assume.That(colony.Pawns.Storage!.ZoneCount, Is.GreaterThan(0));
                 ulong before = Hash(colony);
-                colony.Pawns.Items.Stockpiles[0].Priority += 1;
+                colony.Pawns.Storage!.SettingsOf(0).Priority += 1;
                 Assert.That(Hash(colony), Is.Not.EqualTo(before),
                     "a stockpile's priority is invisible to the hash");
             }

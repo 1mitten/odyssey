@@ -52,6 +52,22 @@ namespace Odyssey.Hud
         public static readonly HudColour Mine = new HudColour(0x4a, 0x90, 0xc8);
 
         /// <summary>
+        /// A storage zone's blue-grey, on the chip, the drag cursor, the armed banner and the
+        /// ground it is painted on.
+        ///
+        /// <para>Desaturated on purpose. A store is the one order that covers a large area and
+        /// then <b>stays</b> — a mine order is worked off, a field turns into a crop, and a
+        /// warehouse floor is simply a warehouse floor for the rest of the colony's life. A
+        /// saturated hue over fifty cells for a hundred hours is a screen the player stops
+        /// seeing past.</para>
+        ///
+        /// <para>Its distance from the other five is what <c>OrderColoursTests</c> polices: it is
+        /// far from Mine's blue in green and in saturation, and far from the Zones brown in hue
+        /// altogether.</para>
+        /// </summary>
+        public static readonly HudColour StoreHue = new HudColour(0x7f, 0x96, 0xa8);
+
+        /// <summary>
         /// The hue of an order, opaque — the chip's colour, and the colour every mark and cursor
         /// below is a transparency of.
         ///
@@ -75,6 +91,14 @@ namespace Odyssey.Hud
             // painted field is worked soil (ChunkRenderer.TilledGrade), which is the result
             // rather than the order, exactly as a built wall is not the blue of its blueprint.
             DesignateTool.GrowZone => HudTheme.ZonesHue,
+            // The store, on its own blue-grey. Not the Zones brown the growing tool wears: the
+            // two are the only tools that paint ground rather than order work on it, so they are
+            // the pair a player is most likely to confuse, and a shared hue would make a field
+            // and a warehouse the same colour on the board. Blue-grey because that is what the
+            // committed ground wears too (`ChunkRenderer.StoredGrade`) — a store, unlike a field,
+            // is not a transformation of the ground, so the order's colour and the result's can
+            // be the same one.
+            DesignateTool.Stockpile => StoreHue,
             _ => HudTheme.Accent,
         };
 

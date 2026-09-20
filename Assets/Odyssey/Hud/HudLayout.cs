@@ -1538,7 +1538,9 @@ namespace Odyssey.Hud
         {
             if (cellRows > 0)
             {
-                float rows = cellRows * CellRow + (cellRows - 1) * CellRowGap;
+                // One row more than the facts: the shell prepends a location row to the readout
+                // (owner, 2026-09-20 — coordinates moved out of the header's meta line).
+                float rows = (cellRows + 1) * CellRow + cellRows * CellRowGap;
 
                 // A tile keeps the shorter header: its slot holds an icon, not a portrait.
                 return Frame + Pad + InspectHeaderNarrow + InspectHeaderGap + rows + Pad;

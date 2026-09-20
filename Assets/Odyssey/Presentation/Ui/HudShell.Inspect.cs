@@ -210,6 +210,7 @@ namespace Odyssey.Presentation.Ui
                 _metaLayer = layer;
                 _metaPosition = _inspect.Position;
                 HudText.Set(_inspectMeta, MetaLine(), HudTextRole.Meta);
+                if (_locationValue != null) HudText.Set(_locationValue, Coordinates(), HudTextRole.Meta);
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
                 _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site) ||
@@ -453,9 +454,9 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(view.Value, whole.ToString("0") + "%", HudTextRole.Meta);
         }
 
-        /// <summary>The line beside the name: what it is, which layer, where.</summary>
+        /// <summary>The line beside the name: what it is, which layer.</summary>
         string MetaLine() => _inspect.Layer >= 0
-            ? $"{_inspect.Subtitle} · L{_inspect.Layer} · {Coordinates()}"
+            ? $"{_inspect.Subtitle} · L{_inspect.Layer}"
             : _inspect.Subtitle;
 
         string Coordinates()
@@ -508,6 +509,8 @@ namespace Odyssey.Presentation.Ui
             _needsGrid = null;
             _skillsGrid = null;
             _cellRowsGrid = null;
+            _locationRow = null;
+            _locationValue = null;
             _needRows = 0;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
@@ -575,6 +578,13 @@ namespace Odyssey.Presentation.Ui
                     actions.Add(ActionButton(command));
                 }
 
+            var info = new VisualElement();
+            info.AddToClassList("inspect__info");
+            info.Add(new HudGlyph(HudGlyphKind.Info, 14f, HudTokens.TextDim));
+            info.tooltip = "Almanac entry";
+            info.RegisterCallback<ClickEvent>(_ => OpenAlmanacForSelection());
+            actions.Add(info);
+
             var close = new VisualElement();
             close.AddToClassList("inspect__close");
             close.Add(new HudGlyph(HudGlyphKind.Close, 14f, HudTokens.TextDim));
@@ -617,9 +627,9 @@ namespace Odyssey.Presentation.Ui
 
                 var grid = new VisualElement();
                 grid.AddToClassList("needs");
-                _needs.Add(Need(grid, "Food", "ui.need.food"));
-                _needs.Add(Need(grid, "Rest", "ui.need.rest"));
-                _needs.Add(Need(grid, "Mood", "ui.need.mood"));
+                _needs.Add(Need(grid, "ui.need.food"));
+                _needs.Add(Need(grid, "ui.need.rest"));
+                _needs.Add(Need(grid, "ui.need.mood"));
                 _needRows = (_needs.Count + 1) / 2;
                 _needsGrid = grid;
                 tabBody.Add(grid);
@@ -643,6 +653,14 @@ namespace Odyssey.Presentation.Ui
                 // growing row, so the tile answers wherever on it the click lands.
                 _cellRowsGrid = new VisualElement();
                 _cellRowsGrid.AddToClassList("inspect__rows");
+
+                _locationRow = new VisualElement();
+                _locationRow.AddToClassList("inspect__row");
+                _locationRow.Add(HudText.Make("location", HudTextRole.Meta, ussClass: "inspect__rowname"));
+                _locationValue = HudText.Make(Coordinates(), HudTextRole.Meta, ussClass: "inspect__rowvalue");
+                _locationRow.Add(_locationValue);
+                _cellRowsGrid.Add(_locationRow);
+
                 _inspectBody.Add(_cellRowsGrid);
             }
 
@@ -663,6 +681,9 @@ namespace Odyssey.Presentation.Ui
         void SyncCellRows()
         {
             if (_cellRowsGrid == null) return;
+
+            if (_locationValue != null)
+                HudText.Set(_locationValue, Coordinates(), HudTextRole.Meta);
 
             while (_cellRows.Count < _inspect.CellRows.Count)
             {
@@ -706,7 +727,13 @@ namespace Odyssey.Presentation.Ui
                 CellRowView captured = view;
                 view.Root.RegisterCallback<ClickEvent>(_ =>
                 {
-                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                    if (!captured.IsPick) return;
+                    // Two interactive rows now, and which one this is comes off the row's own
+                    // name rather than off a second flag: the name is what decided it was
+                    // pickable in the first place, so a row cannot be pickable for one reason and
+                    // dispatched for another.
+                    if (captured.LastName == "storage") ToggleStoragePanel(captured.Root);
+                    else ToggleBedPicker(captured.Root);
                 });
 
                 _cellRowsGrid.Add(view.Root);
@@ -730,7 +757,8 @@ namespace Odyssey.Presentation.Ui
 
                 // The owner row is pickable exactly while the tile says it is a bed's (the model
                 // clears the flag every refresh, so the affordance cannot outlive the bed).
-                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane)
+                    || (row.Name == "storage" && _inspect.StoreUnderPane);
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -762,7 +790,9 @@ namespace Odyssey.Presentation.Ui
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
+                    view.Root.tooltip = pick
+                        ? row.Name == "storage" ? "Choose what goes in this store" : "Choose whose bed this is"
+                        : null;
                 }
             }
         }
@@ -860,6 +890,161 @@ namespace Odyssey.Presentation.Ui
             if (_bedPicker != null) _bedPicker.style.display = DisplayStyle.None;
         }
 
+        // ---- the store's settings: what goes in, and how much it matters ----------------------
+
+        VisualElement? _storagePanel;
+        VisualElement? _storageRows;
+        VisualElement? _storageAnchor;
+        readonly StorageSettingsModel _storageSettings = new StorageSettingsModel();
+
+        /// <summary>
+        /// Raise the store's settings over the storage row, or put it down if it is already up.
+        ///
+        /// <para><b>Rebuilt on every open, unlike the bed picker</b>, and for the opposite reason:
+        /// the picker's rows are colonists, which change slowly, while these rows are the state of
+        /// one filter, which changes every time the player presses one of them. Cheap — five rungs,
+        /// two presets and a row per commodity is under twenty elements — and it means a press and
+        /// the picture of it cannot come apart.</para>
+        ///
+        /// <para><b>Every press is an intent about a cell.</b> The pane never writes to the world:
+        /// it names the cell the pane is describing and the simulation resolves it to whatever
+        /// store covers it — which is what lets the same control drive a crate the day crates
+        /// exist, and what makes a filter changed while the clock is paused land at once
+        /// (<c>PausedIntents</c>) rather than on unpause.</para>
+        /// </summary>
+        void ToggleStoragePanel(VisualElement anchor)
+        {
+            var world = _boot?.World;
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (world == null || storage == null) return;
+
+            if (_storagePanel == null)
+            {
+                _storagePanel = Popover("storage", "What goes in here", CloseStoragePanel, "bedowner");
+                _storageRows = new VisualElement();
+                _storageRows.AddToClassList("bedowner__rows");
+                _storagePanel.Add(_storageRows);
+                _hud.Add(_storagePanel);
+                _storagePanel.RegisterCallback<GeometryChangedEvent>(_ => PlaceStoragePanel());
+            }
+
+            if (_storagePanel.style.display == DisplayStyle.Flex)
+            {
+                CloseStoragePanel();
+                return;
+            }
+
+            _storageAnchor = anchor;
+            _storagePanel.style.display = DisplayStyle.Flex;
+            FillStoragePanel();
+            PlaceStoragePanel();
+        }
+
+        /// <summary>Build the rows from the store under the pane. Called on open and after every press.</summary>
+        void FillStoragePanel()
+        {
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (_storageRows == null || storage == null) return;
+
+            int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
+            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
+            if (slot < 0) { CloseStoragePanel(); return; }
+
+            var settings = storage.SettingsOf(slot);
+            var content = _boot.Colony.Pawns.Content;
+            var keys = new List<string>(content.Items.Length);
+            for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
+
+            _storageSettings.Show(cell, hasStore: true, settings.Priority, storage.CellsOf(slot).Count, keys,
+                accepts: settings.Accepts, categoryOf: i => (int)content.Items[i].category);
+
+            _storageRows.Clear();
+
+            // The ladder first: it is the thing that decides where the next armful goes, and the
+            // thing a player changes most.
+            for (int i = 0; i < StorageSettingsModel.PriorityKeys.Length; i++)
+            {
+                int rung = i;
+                _storageRows.Add(StorageSettingsRow(Registry.Label(StorageSettingsModel.PriorityKeys[i]),
+                    rung == _storageSettings.Priority ? BedPickerMark.ThisBed : BedPickerMark.None,
+                    () => { if (_storageSettings.PressPriority(rung, out var c)) SendStorageCommand(IntentKind.SetStoragePriority, c); }));
+            }
+
+            for (int i = 0; i < StorageSettingsModel.PresetKeys.Length; i++)
+            {
+                int preset = i;
+                _storageRows.Add(StorageSettingsRow(Registry.Label(StorageSettingsModel.PresetKeys[i]),
+                    BedPickerMark.None,
+                    () => { if (_storageSettings.PressPreset(preset, out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
+            }
+
+            // Then one row per commodity. The category rows the model already builds are not drawn
+            // yet: four of the six have no commodity in them, so a parent over a branch of nought
+            // compresses nothing (docs/plans/storage.md decisions 21 and 31). The model carries
+            // their three-way state, so the tree is a layout change when the table is long enough
+            // to need it.
+            foreach (StorageSettingsModel.DefRow row in _storageSettings.Defs)
+            {
+                int def = row.DefIndex;
+                _storageRows.Add(StorageSettingsRow(Registry.Label(row.Key),
+                    row.Accepted ? BedPickerMark.ThisBed : BedPickerMark.None,
+                    () => { if (_storageSettings.PressDef(def, out var c)) SendStorageCommand(IntentKind.SetStorageFilter, c); }));
+            }
+        }
+
+        /// <summary>
+        /// Submit one of the store's commands about the cell the pane is describing, then rebuild
+        /// the rows — the simulation applies a storage intent while paused, so the answer is
+        /// already true by the time the next frame draws.
+        /// </summary>
+        void SendStorageCommand(IntentKind kind, StorageSettingsModel.Command command)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+            world.Intents.Submit(new Intent(kind, _inspect.Cell, command.A, command.B, command.C));
+            FillStoragePanel();
+        }
+
+        VisualElement StorageSettingsRow(string label, BedPickerMark mark, Action press)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("bedowner__row");
+
+            // Drawn, not typed, for the reason `BedPickerRow` records at length: Archivo Narrow's
+            // cmap has no U+2713, so a typed tick is an empty column and neither tier can see it.
+            // This row was written with one and `HudFontTests` — which main added the same week,
+            // after the Work tab met the identical fault — caught it on the merge.
+            VisualElement flag;
+            if (mark == BedPickerMark.ThisBed)
+            {
+                var tick = new HudGlyph(HudGlyphKind.Check, BedPickerMarkSize,
+                    HudTokens.Convert(HudTheme.TextPrimary));
+                tick.AddToClassList("bedowner__mark");
+                flag = tick;
+            }
+            else
+            {
+                flag = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "bedowner__mark");
+            }
+
+            row.Add(flag);
+            row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
+            row.RegisterCallback<ClickEvent>(_ => press());
+            return row;
+        }
+
+        void PlaceStoragePanel()
+        {
+            if (_storagePanel == null || _storageAnchor == null) return;
+            if (_storagePanel.style.display.value != DisplayStyle.Flex) return;
+            PlacePopover(_storagePanel, _storageAnchor, onTheBar: false);
+        }
+
+        void CloseStoragePanel()
+        {
+            if (_storagePanel != null) _storagePanel.style.display = DisplayStyle.None;
+        }
+
         /// <summary>
         /// What a name in the picker carries beside it. No words: the owner asked for "just a
         /// tick next to their name and also indicate the others already have a bed assigned"
@@ -944,8 +1129,17 @@ namespace Odyssey.Presentation.Ui
             return button;
         }
 
-        static NeedView Need(VisualElement grid, string name, string iconKey)
+        /// <summary>
+        /// One need row. The name comes from the registry rather than from the caller, which is
+        /// what stops the screen and the wiki disagreeing: the three literals that used to be
+        /// passed in here were fine until storage added <c>ui.res.category.food</c>, at which
+        /// point "Food" was a registry name written in C# and
+        /// <c>RegistryTests.NoPlayerFacingNameIsWrittenInCSharp</c> said so. The answer to that
+        /// test is never to reword the literal.
+        /// </summary>
+        static NeedView Need(VisualElement grid, string iconKey)
         {
+            string name = Registry.Label(iconKey);
             var view = new NeedView();
 
             view.Root = new VisualElement();
@@ -972,6 +1166,15 @@ namespace Odyssey.Presentation.Ui
 
             grid.Add(view.Root);
             return view;
+        }
+
+        void OpenAlmanacForSelection()
+        {
+            if (_directors?.Almanac == null) return;
+            if (!_directors.Almanac.OpenForSelection(_inspect))
+            {
+                ToggleAlmanac(true);
+            }
         }
     }
 }

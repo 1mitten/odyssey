@@ -162,7 +162,11 @@ namespace Odyssey.Tests.Hud
         {
             Assert.That(PaletteTools.TryGet("ui.arch.tool.stair", out _), Is.False,
                 "stairs cannot be built yet, so the stair chip must be drawn disabled");
-            Assert.That(PaletteTools.TryGet("ui.arch.tool.stockpile", out _), Is.False);
+            // The stockpile was the second example here until S1 built it. The dumping zone takes
+            // its place: its key is still in the registry, deliberately, because a real dumping
+            // zone — one that also takes rubble, never re-stows out and sits at Last — is a thing
+            // worth having a name ready for, and until it exists it must arm nothing.
+            Assert.That(PaletteTools.TryGet("ui.arch.tool.dumping", out _), Is.False);
             Assert.That(PaletteTools.TryGet("not.a.key.at.all", out _), Is.False);
         }
 
@@ -197,11 +201,24 @@ namespace Odyssey.Tests.Hud
         /// palette, where the player has to read rather than aim. Five verbs, each with its own
         /// colour and glyph, is still a list you aim at; a sixth should be argued for here
         /// rather than slipped into <c>PaletteTools.Pinned</c>.</para>
+        ///
+        /// <para><b>And from five to six on 2026-09-20, argued here as that paragraph asked.</b>
+        /// The stockpile is the sixth, and it earns the place on the same ground the growing zone
+        /// did: it is a <i>verb a player uses constantly and from anywhere</i>. Every hauled thing
+        /// in the colony needs somewhere to go, a store is drawn and redrawn as the colony grows,
+        /// and the alternative is opening the Build palette and finding the Zones category every
+        /// time — which is the cost the strip exists to remove. It keeps the strip a list you aim
+        /// at rather than read: six verbs, six colours, six glyphs, Cancel still last, and the
+        /// two that paint ground adjacent to each other so the pair is learned as a pair.</para>
+        ///
+        /// <para>A seventh is a different argument and should be made here too. The ceiling is
+        /// the thing stopping the strip becoming a second palette, and its value has never been
+        /// the point — what matters is that raising it costs somebody a paragraph.</para>
         /// </summary>
         [Test]
         public void ThePinnedRowStaysShort()
         {
-            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(5));
+            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(6));
         }
 
         /// <summary>
@@ -227,16 +244,24 @@ namespace Odyssey.Tests.Hud
                 foreach (var (key, tools) in PaletteTools.Categories)
                 {
                     if (Array.IndexOf(tools, pinned) < 0) continue;
-                    Assert.That(pinned, Is.EqualTo(PaletteTools.GrowZone),
+                    // Two exceptions now, and they are the same exception: both zone tools are
+                    // pinned and both are filed under Zones. The category is where a player
+                    // learns that painting ground is a kind of thing you can do; the strip is
+                    // where they reach for it afterwards.
+                    // Written as an or rather than with Is.AnyOf, which the Unity tier's older
+                    // NUnit does not have (docs/lessons.md: the two tiers are not the same NUnit,
+                    // and the fast tier's is the newer one).
+                    Assert.That(pinned == PaletteTools.GrowZone || pinned == PaletteTools.Stockpile,
+                        Is.True,
                         $"{pinned} is pinned and also listed under {Registry.Label(key)}, so it " +
                         "draws twice in one open panel");
                     alsoFiled = true;
                 }
 
-                if (pinned == PaletteTools.GrowZone)
+                if (pinned == PaletteTools.GrowZone || pinned == PaletteTools.Stockpile)
                     Assert.That(alsoFiled, Is.True,
-                        "the growing zone's palette row is half of what the exception allows — if " +
-                        "it left the Zones category, the exception is dead weight and goes with it");
+                        $"{pinned}'s palette row is half of what the exception allows — if it left " +
+                        "the Zones category, the exception is dead weight and goes with it");
             }
         }
 

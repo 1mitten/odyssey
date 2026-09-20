@@ -93,6 +93,13 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void EveryAlmanacKeyIsARegisteredName()
+        {
+            foreach (string key in AlmanacDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
         public void EveryIncidentKeyIsARegisteredNameAndTheTableIsTheHandleTable()
         {
             Assert.That(IncidentLabels.Keys.Length, Is.EqualTo(IncidentHandle.Count),

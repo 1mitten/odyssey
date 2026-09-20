@@ -154,11 +154,13 @@ namespace Odyssey.Presentation.Ui
 
         HudGlyphKind _kind;
         Color _tint = Color.white;
+        readonly float _strokeScale = 1f;
 
-        public HudGlyph(HudGlyphKind kind, float size, Color tint)
+        public HudGlyph(HudGlyphKind kind, float size, Color tint, float strokeScale = 1f)
         {
             _kind = kind;
             _tint = tint;
+            _strokeScale = strokeScale;
             pickingMode = PickingMode.Ignore;
             style.width = size;
             style.height = size;
@@ -232,7 +234,7 @@ namespace Odyssey.Presentation.Ui
             painter.fillColor = _tint;
             painter.lineCap = LineCap.Round;
             painter.lineJoin = LineJoin.Round;
-            painter.lineWidth = Mathf.Max(1f, LucideStroke * scale);
+            painter.lineWidth = Mathf.Max(1f, LucideStroke * scale * _strokeScale);
 
             switch (_kind)
             {

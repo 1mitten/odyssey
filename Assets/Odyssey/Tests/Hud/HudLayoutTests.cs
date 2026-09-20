@@ -788,8 +788,10 @@ namespace Odyssey.Tests.Hud
             // became a 60 px portrait (2026-09-18).
             float chrome = HudLayout.Frame + HudLayout.Pad + HudLayout.InspectHeaderNarrow +
                            HudLayout.InspectHeaderGap + HudLayout.Pad;
+            // Six rows for five facts: the shell prepends a location row to the readout
+            // (owner, 2026-09-20 — coordinates moved out of the header's meta line).
             Assert.That(HudLayout.InspectHeight(0, 0, cellRows: 5),
-                Is.EqualTo(chrome + 5 * HudLayout.CellRow + 4 * HudLayout.CellRowGap));
+                Is.EqualTo(chrome + 6 * HudLayout.CellRow + 5 * HudLayout.CellRowGap));
             Assert.That(HudLayout.InspectHeight(0, 0, cellRows: 5) / chrome, Is.GreaterThan(2.5f),
                 "five facts stand the pane up around three times its header alone");
         }

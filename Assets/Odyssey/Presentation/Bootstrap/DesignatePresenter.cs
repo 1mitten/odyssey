@@ -313,6 +313,11 @@ namespace Odyssey.Presentation.Bootstrap
                     world.Intents.Submit(new Intent(IntentKind.CancelDesignation, cells[i]));
                     world.Intents.Submit(new Intent(IntentKind.CancelBuilding, cells[i]));
                     world.Intents.Submit(new Intent(IntentKind.CancelZone, cells[i]));
+                    // The fourth kind of order, and the newest (S1). A cell cannot carry a
+                    // designation, a site, a growing zone and a store all at once, so at most one
+                    // of the four does anything and the rest answer AlreadyInThatState — which is
+                    // still the cheapest way to make one tool mean "whatever is here, stop".
+                    world.Intents.Submit(new Intent(IntentKind.CancelStorage, cells[i]));
                 }
 
                 return;
@@ -344,6 +349,23 @@ namespace Odyssey.Presentation.Bootstrap
                 int plant = Director.Plant + 1;
                 for (int i = 0; i < cells.Count; i++)
                     world.Intents.Submit(new Intent(IntentKind.DesignateZone, cells[i], plant));
+                return;
+            }
+
+            // A store carries the **anchor** of its own drag, which is how a rectangle becomes one
+            // zone and how "extend the one I started in" is said without minting an id: the
+            // simulation resolves the anchor against the zones it has, so a drag begun inside a
+            // store extends that store and one begun outside founds a new one.
+            //
+            // `Director.LastAnchor` and not `cells[0]`: the committed cells come back in grid
+            // order, so the first of them is the box's minimum corner and is the head rather than
+            // the anchor whenever the drag ran up or left.
+            if (tool == DesignateTool.Stockpile)
+            {
+                int anchor = world.Size.Index(Director.LastAnchor);
+                for (int i = 0; i < cells.Count; i++)
+                    world.Intents.Submit(new Intent(
+                        IntentKind.DesignateStorage, cells[i], anchor, Odyssey.Sim.Storage.StoragePreset.Everything));
                 return;
             }
 

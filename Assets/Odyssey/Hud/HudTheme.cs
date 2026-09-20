@@ -571,6 +571,7 @@ namespace Odyssey.Hud
             PaletteTools.Deconstruct => OrderColours.Hue(DesignateTool.Deconstruct),
             PaletteTools.Cancel => OrderColours.Hue(DesignateTool.Cancel),
             PaletteTools.GrowZone => OrderColours.Hue(DesignateTool.GrowZone),
+            PaletteTools.Stockpile => OrderColours.Hue(DesignateTool.Stockpile),
             _ => null,
         };
 
@@ -620,6 +621,7 @@ namespace Odyssey.Hud
             { "ui.tab.bills", HudCategory.Work },
             { "ui.tab.factions", HudCategory.Record },
             { "ui.tab.archive", HudCategory.Record },
+            { "ui.tab.almanac", HudCategory.Record },
             { "ui.tab.menu", HudCategory.Neutral },
         };
 

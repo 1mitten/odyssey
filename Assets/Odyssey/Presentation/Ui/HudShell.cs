@@ -216,6 +216,8 @@ namespace Odyssey.Presentation.Ui
 
         // ---- the tile readout's rows, built once and updated in place
         VisualElement? _cellRowsGrid;
+        VisualElement? _locationRow;
+        Label? _locationValue;
         readonly List<CellRowView> _cellRows = new List<CellRowView>();
 
         // ---- command bar (A8)
@@ -618,6 +620,7 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
+            BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
             // above. Built whether or not a session exists, because the state it belongs to is the
@@ -678,6 +681,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
+            _directors.Almanac.Changed += OnAlmanacChanged;
+            _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
@@ -735,6 +740,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged -= OnDebugTabChanged;
             _directors.Work.Changed -= OnWorkChanged;
             _directors.Work.ModeChanged -= OnWorkModeChanged;
+            _directors.Almanac.Changed -= OnAlmanacChanged;
+            _directors.Almanac.Navigated -= OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;

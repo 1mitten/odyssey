@@ -40,6 +40,7 @@ namespace Odyssey.Hud
         /// always one with nothing behind it.
         /// </summary>
         F1,
+        F9,
     }
 
     /// <summary>
@@ -87,6 +88,11 @@ namespace Odyssey.Hud
         /// promise.
         /// </summary>
         WorkTab,
+
+        /// <summary>
+        /// Open or close the Almanac reference browser. F9 on the command bar.
+        /// </summary>
+        Almanac,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -172,6 +178,7 @@ namespace Odyssey.Hud
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
             (HotkeyAction.WorkTab,          HudKey.F1,        HudKey.None),
+            (HotkeyAction.Almanac,          HudKey.F9,        HudKey.None),
         };
 
         /// <summary>
@@ -352,6 +359,7 @@ namespace Odyssey.Hud
             HotkeyAction.BuildPalette => "ui.keys.build",
             HotkeyAction.DebugMenu => "ui.keys.debugmenu",
             HotkeyAction.WorkTab => "ui.keys.worktab",
+            HotkeyAction.Almanac => "ui.keys.almanac",
             _ => KeysKey,
         };
 

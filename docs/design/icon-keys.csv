@@ -282,6 +282,7 @@ ui.tab.bills,Bills,ui.tab,M1,Standing production orders
 ui.tab.trade,Trade,ui.tab,M1,Caravans and traders
 ui.tab.factions,Factions,ui.tab,M1,"Who likes us, and how much"
 ui.tab.archive,History,ui.tab,M1,Everything that has happened
+ui.tab.almanac,Almanac,ui.tab,M1,"The colony reference: every terrain, material, structure, item and craft"
 ui.tab.menu,Menu,ui.tab,M1,"Save, load, settings, quit"
 ui.alert.starvation,Starving,ui.alert,M2,Someone is going hungry
 ui.alert.breach,Breach,ui.alert,M2,The outside has got in
@@ -451,6 +452,7 @@ ui.keys.growzone,Growing zone tool,ui.keys,M3,"Arm the growing-zone designation"
 ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.debugmenu,Debug menu,ui.keys,M3,"Open the debug menu"
 ui.keys.worktab,Work tab,ui.keys,M3,"Open the work priority grid"
+ui.keys.almanac,Almanac,ui.keys,M3,"Open and close the Almanac reference browser"
 ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Stored on the machine, in decibels"
 ui.settings.camspeed,Camera speed,ui.settings,M3,"How fast the camera pans and zooms, as a share of its tuned speed"
 ui.settings.buildlayout,Build palette layout,ui.settings,M3,"Which of the three shapes the Build palette takes: rows, rail or bar"
@@ -682,3 +684,16 @@ ui.occupation.doomsday-prepper,Doomsday prepper,ui.occupation,MS,
 ui.occupation.lottery-winner,Lottery winner,ui.occupation,MS,
 ui.occupation.smuggler,Smuggler,ui.occupation,MS,
 ui.occupation.petty-thief,Petty thief,ui.occupation,MS,
+ui.storage.priority.last,Last,ui.storage.priority,M3,Filled only when every other store is full
+ui.storage.priority.low,Low,ui.storage.priority,M3,Overflow. Take from here before anywhere else
+ui.storage.priority.normal,Normal,ui.storage.priority,M3,What a store is unless you say otherwise
+ui.storage.priority.preferred,Preferred,ui.storage.priority,M3,Filled before an ordinary store
+ui.storage.priority.urgent,Urgent,ui.storage.priority,M3,Filled first. Things already stored elsewhere are moved here
+ui.storage.preset.everything,Everything,ui.storage.preset,M3,"Accept every kind of thing, including ones added later"
+ui.storage.preset.nothing,Nothing,ui.storage.preset,M3,"Accept nothing, then tick what belongs"
+ui.res.category.food,Food,ui.res.category,M3,"Anything a colonist can eat, cooked or raw"
+ui.res.category.medicine,Medicine,ui.res.category,M3,What tending draws on
+ui.res.category.materials,Materials,ui.res.category,M3,"What things are made of, and what mining and felling leave behind"
+ui.res.category.books,Books,ui.res.category,M3,Research obtained elsewhere rather than worked out here
+ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, worn or used"
+ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with
