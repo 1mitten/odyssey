@@ -21,6 +21,29 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Nobody has pressed Play on the order colours of 2026-09-20** (`claude/bed-assign-and-order-colours`,
+  `docs/design/16-cancel-and-deconstruct.md` §6b). Every order tool is now one colour on its chip,
+  its drag cursor and the mark it leaves: chop green, **mine a deeper blue where it used to be warm
+  amber**, **deconstruct orange where it used to be red**, cancel red, build cyan. A deconstruct
+  order is a floor plate on the top of the wall now, like a mine order on rock, instead of a
+  whole-cell wash. Open questions a picture cannot answer: whether an orange plate on a wall top
+  reads as *coming down* at the play camera, and whether mine's new blue and the build blueprint's
+  cyan are far enough apart when a colony is half dug and half planned — that pair is the one thing
+  the owner's chosen option (*toolbar wins*) traded away, and reversing it is one constant.
+
+- **Nobody has pressed Play on the starting beds becoming real beds** (same branch,
+  `docs/design/20-beds.md` §7a). The colony wakes up with five actual two-cell beds instead of five
+  invisible cells, so **the board looks different at tick zero** and the beds can be given to
+  people from the pane for the first time. Open questions: whether five beds near the start crowd
+  the opening clearing, and whether the placement puts them somewhere sensible rather than strung
+  out along whatever spots the storey search found. A picture answers neither — it wants a look at
+  a new colony.
+
+- **Nobody has seen a colonist get up when given a bed** (same branch). Assign a bed to a sleeping
+  colonist and she should stand, walk and lie down in the new one. Measured and tested; what no
+  test can say is whether it reads as *obeying* or as *startling* — a colonist snapping upright
+  mid-night may want a beat before she moves.
+
 - **Nobody has given a verdict on the growing zone** (`claude/growing-zones`, **PR #119, still
   open**, `docs/design/22-growing.md`). `U46`–`U50`: the carrot crop, the paint-a-zone tool in the
   palette and the orders strip, and sow → daylight-window growth → harvest → auto re-sow. It has had

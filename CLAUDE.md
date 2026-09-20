@@ -279,6 +279,18 @@ invisible where the game is played.
   gates must pass before a content commit.
 - **Do not answer `RegistryTests` by rewording a literal** — call `Registry.Label(key)`, or the wiki
   and the screen will disagree the first time somebody corrects one of the two copies.
+- **The board's size is decided once, in `OdysseyBootstrap.BuildSession`, before the chunk grid
+  and the render model are built from it.** It was two numbers until 2026-09-20 — the inspector's
+  for those two, the setup page's for the world — and nothing could tell, because nothing wrote to
+  the chunk grid during a build. The first thing that did threw out of bounds.
+- **An order's colour has one owner, and it is `Odyssey.Hud.OrderColours`.** The chip in the orders
+  strip, the palette header, the drag cursor and the mark left on the board are all the same hue.
+  There were two tables in two assemblies for months and they disagreed on two of the four tools —
+  deconstruct was orange on the panel and the *cancel* red on the ground. Never write a `Color` for
+  an order in Presentation; ask. `OrderColoursTests` runs in the fast tier and walks every tool.
+- **Where an order's mark sits is `WorldRenderModel.MarkHeight`** — the top of the cell for
+  anything that fills it, the top of itself for anything that stands up without filling it, the
+  floor for everything else. Trees are on the floor deliberately.
 - *Subsystems* are simulation-side; *directors* are presentation-side. Do not unify the two words.
 
 ### Fixed decisions
@@ -292,21 +304,20 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **753 Sim + 449 Hud** (2026-09-19, dotnet 8.0.131 in the remote container); Long tier **21**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **769 Sim + 455 Hud** (2026-09-20); Long tier **21**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last recorded 2026-09-19 on
-  the pawn-avoidance work that is `main`'s tip: EditMode **1,872 total, 1,858 passed, 0 failed**;
-  PlayMode **82 total, 75 passed, 0 failed** — 75 rather than 77 because that run was in a scratch
-  worktree with no Synty junction, so `AvatarSheetTests`' two art cases skipped (`docs/journal.md`).
-  The 1857/1843 previously on this line was the alert-chimes run, two PRs earlier.
-  `TheRosterOrderAndPageSurviveAStreamAndRestore` on save/load persistence and
-  `TheRosterBarFollowsTheColonyIntoANewSession`.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on the
+  bed and order-colour work: EditMode **1,929 total, 1,916 passed, 0 failed**; PlayMode
+  **PLAYMODE_LINE**. The remainder of each are `[Explicit]` or ignored. The 1,872/1,858 previously
+  on this line was the pawn-avoidance run.
+  **A first run in a fresh worktree is slow and it is the Synty import, not a hang** — the Library
+  builds to about 4 GB before a single test runs, which took roughly seven minutes here. Check
+  `du -sh Library` before concluding anything is stuck. And **cancelling the wrapper does not
+  cancel Unity**: the orphaned batch process keeps the lock and the next run says "close the
+  editor" about a process that is not one. `docs/lessons.md` has the command that tells the two
+  apart — there are usually several worktrees' runs on the machine and only one is yours.
   PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
-  **Its previously recorded 74 was wrong, not superseded**: nothing under
-  `Assets/Odyssey/Tests/PlayMode` had changed since the commit it was recorded against, no PlayMode
-  test is parameterised, and this branch added none at the point it was re-measured at 77. Three
-  cases were miscounted or mis-transcribed into this file. EditMode's 1638 was right.
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
@@ -373,6 +384,12 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
   off sideways on to the landing beside it. Nothing migrates — a real floor still counts, so old
   saves and the city's own ladders are untouched — but a player who builds a full upper floor first
   must deconstruct one slab before the ladder will go in.
+- **Backing out of the in-game load screen still loses the colony.** Pressing Load with nothing
+  readable in the Saves folder is safe now (the colony is untouched and the row says so), but the
+  row still tears the world down *before* the list appears, so a player who changes their mind at
+  the list has nowhere to go back to. The real fix is showing the browser over a live session, and
+  the menu is tied to there being none (`OnSessionChanged` calls `SetShowing(live == null)`). A
+  restructure of the start screen's modality, not a guard — `docs/design/17-start-flow.md` §5b.
 - **The scenario table is written twice** — `OdysseyBootstrap.ScenarioFor` and
   `SessionRoundTripTests.ScenarioByName` each map two `defName`s by hand. Not urgent (a scenario
   acts only at tick zero) and both copies say so.
