@@ -121,7 +121,21 @@ not scale with the board.
 | Order a wall in a doorway of a room with colonists in it | they still cross the cell while it is a site, and the wall completes when the last one is clear | the room reads as sealed before the wall exists, or the order never finishes |
 | Load a save from before this branch with somebody walled in | they step out on the first tick | they stay in the wall |
 
-## 5. The state hash
+## 5. The other half of the report: how long a built thing takes to appear
+
+The same session carried a second report — *"there is about a second or 3 delay when the object
+appears when it's built"* — and the answer to it lives in `06-rendering-and-camera.md` §6c.3 rather
+than here, because it is a rendering fault and not a construction one. Two things came out of
+measuring it (`BuildAppearanceTests`):
+
+- **The publish seam is innocent.** A raised wall is in the render mirror on the very next frame and
+  drawn on the one after. Whatever the seconds are, they are not the sim, the snapshot or the mesher.
+- **The whole board was being re-meshed on every edit**, because `WorldRenderModel.Version` was one
+  number for all of it. One wall cost 12.53 ms in the frame after the raise against 0.7 ms either
+  side; per-chunk versions make it 3 chunks and 1.73 ms. That is the *glitch* in the report, and it
+  is fixed.
+
+## 6. The state hash
 
 Nothing here is saved. The nav flag is derived from the site, which is already saved and hashed, and
 is re-applied by `ConstructionGrid.Load` because loading goes through `Set` like everything else.

@@ -309,7 +309,9 @@ namespace Odyssey.Presentation.Rendering
                 batch = new ChunkBatch();
                 _batches[chunkIndex] = batch;
             }
-            if (batch.Version != _model.Version)
+            // Per chunk, not the whole board: see WorldRenderModel.ChunkVersion for the
+            // measurement that made this a per-chunk question.
+            if (batch.Version != _model.ChunkVersion(chunkIndex))
             {
                 _mesher.Mesh(batch, chunkIndex);
                 ChunksMeshedThisFrame++;
