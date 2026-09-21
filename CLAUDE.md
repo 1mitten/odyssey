@@ -386,10 +386,11 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **953 Sim + 642 Hud**
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **954 Sim + 642 Hud**
   (2026-09-21, PR #143 — RF1 and U44 — merged with a main carrying the perf trace, the meshing
   budget and the Huge board; 928 before, and the twenty-five are `RoofsTests`, `StairTests` and
-  the two the stair's first play added); Long tier **34**, up from 23 because the per-board
+  the two the stair's first play added, and the guard on `Demolish` the second review found);
+  Long tier **34**, up from 23 because the per-board
   measurement arms all carry `Category("Long")`.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look. It cost two
@@ -397,12 +398,15 @@ invisible where the game is played.
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
-  PR #143 (RF1 + U44) **after merging main**: EditMode **2,395 total, 2,374 passed, 0 failed**,
+  PR #143 (RF1 + U44) **after merging main**: EditMode **2,396 total, 2,375 passed, 0 failed**,
   13 skipped and 8 inconclusive — the same twenty-one non-passing as the run before it, so the
-  twenty-nine added are all passing. The new ones are `RoofsTests`, `StairTests` and
-  `StairPickHeightTests`, the last of which aims at every tenth of a drawn flight. **PlayMode is
-  owed on this branch**: two other Unity batch runs held the machine, and PlayMode carries the
-  timing tests. The run before it, on `claude/huge-map` **after merging main**: EditMode
+  thirty added are all passing; PlayMode **97 total, 92 passed, 0 failed**, matching `main`
+  exactly. The new ones are `RoofsTests`, `StairTests` and `StairPickHeightTests`, the last of
+  which aims at every tenth of a drawn flight. **One EditMode run in the middle failed**
+  `BoardMemoryTests` at **minus eleven megabytes**, beside the CI runner's PlayMode batch — a
+  world cannot cost that, so the sign is the tell and no control is needed; it passed alone
+  either side and five of five in the fast tier. `docs/lessons.md`.
+  The run before it, on `claude/huge-map` **after merging main**: EditMode
   **2,366 total, 2,345 passed, 0 failed**; PlayMode **97 total, 92 passed, 0 failed**.
   The new ones on that branch
   are `SurroundCostTests`, `MeshBudgetTests`, `FrameWindowTests`, `TraceWriterTests`, and in

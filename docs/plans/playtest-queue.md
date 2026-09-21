@@ -42,8 +42,12 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
   was checked and was already right. What is left for a person: whether the flight now reads as
   *one* staircase in play rather than in a still, whether clicking anywhere along it selects it,
   and whether a deconstruct mark painted on the treads is legible.
-  Fast tier 953 Sim + 642 Hud, Long tier 34 of 34, EditMode 2,395 / 2,374 / 0 on the tree merged
-  with main on 2026-09-21, **no golden moved**.
+  Fast tier 954 Sim + 642 Hud, Long tier 34 of 34, EditMode 2,396 / 2,375 / 0 and PlayMode
+  97 / 92 / 0 on the tree merged with main on 2026-09-21, **no golden moved**.
+  **And both stair pictures were re-shot after the merge** — `Logs/stair-side.png` and
+  `Logs/stair-play.png`, one continuous flight from the profile and from the play camera's 48°.
+  The first attempt photographed eleven chunks of meadow and no stair at all, which was `main`'s
+  new meshing budget meeting a probe that gets one frame, not a framing mistake (`docs/lessons.md`).
 
 - **Nobody has seen a roof go on, or looked up out of a roofed building** (PR #143,
   `claude/adoring-ptolemy-baq5te`,
