@@ -325,7 +325,7 @@ fast tier compiles neither `Odyssey.Presentation` nor the editor, which is the w
 
 | Owed | Why it matters |
 |---|---|
-| `scripts/unity.sh test editmode`, then PlayMode | **§4 has not been compiled**, let alone run |
+| ~~`scripts/unity.sh test editmode`~~ — **run 2026-09-21** on the tree merged with main: 2,395 / 2,374 / 0 | §4 is compiled and green. **PlayMode is still owed**, and is where the drawing is |
 | A `ChunkMesherTests`/`SlicePickerTests` pair for the drop | a roof two layers up is not drawn, and the picker refuses exactly what the renderer skipped — one test each, and they must read the same `SliceSettings` predicate |
 | A `FloorToolReachTests` case for §3 | the picker-to-order seam for the upper-storey click. That file exists *because* those two halves once disagreed in silence |
 | A probe photographing three storeys from each of its layers | the picture that says §4 works. `FloorCheck` is the model |

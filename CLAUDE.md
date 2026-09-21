@@ -386,17 +386,25 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **928 Sim + 642 Hud**
-  (2026-09-21, `claude/huge-map` merged with a main carrying the storage pane); Long tier **34**,
-  up from 23 because the per-board measurement arms all carry `Category("Long")`.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **953 Sim + 642 Hud**
+  (2026-09-21, PR #143 — RF1 and U44 — merged with a main carrying the perf trace, the meshing
+  budget and the Huge board; 928 before, and the twenty-five are `RoofsTests`, `StairTests` and
+  the two the stair's first play added); Long tier **34**, up from 23 because the per-board
+  measurement arms all carry `Category("Long")`.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look. It cost two
   rounds on 2026-09-21: a callback parameter in `FrameTimeTests` shadowed a local, and later a
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
-  `claude/huge-map` **after merging main**: EditMode **2,366 total, 2,345 passed,
-  0 failed**; PlayMode **97 total, 92 passed, 0 failed**. The new ones on this branch
+  PR #143 (RF1 + U44) **after merging main**: EditMode **2,395 total, 2,374 passed, 0 failed**,
+  13 skipped and 8 inconclusive — the same twenty-one non-passing as the run before it, so the
+  twenty-nine added are all passing. The new ones are `RoofsTests`, `StairTests` and
+  `StairPickHeightTests`, the last of which aims at every tenth of a drawn flight. **PlayMode is
+  owed on this branch**: two other Unity batch runs held the machine, and PlayMode carries the
+  timing tests. The run before it, on `claude/huge-map` **after merging main**: EditMode
+  **2,366 total, 2,345 passed, 0 failed**; PlayMode **97 total, 92 passed, 0 failed**.
+  The new ones on that branch
   are `SurroundCostTests`, `MeshBudgetTests`, `FrameWindowTests`, `TraceWriterTests`, and in
   PlayMode `TheDecorationAgainstTheFrame`, `TheSurroundSectorSweep`,
   `TheTraceAgreesWithTheArmThatTimedIt` and `TheMeshBudgetKeepsAWholeBoardRemeshOutOfOneFrame`.

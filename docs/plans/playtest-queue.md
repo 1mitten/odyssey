@@ -42,7 +42,8 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
   was checked and was already right. What is left for a person: whether the flight now reads as
   *one* staircase in play rather than in a still, whether clicking anywhere along it selects it,
   and whether a deconstruct mark painted on the treads is legible.
-  Fast tier 917 Sim + 562 Hud, Long tier 23 of 23, **no golden moved**.
+  Fast tier 953 Sim + 642 Hud, Long tier 34 of 34, EditMode 2,395 / 2,374 / 0 on the tree merged
+  with main on 2026-09-21, **no golden moved**.
 
 - **Nobody has seen a roof go on, or looked up out of a roofed building** (PR #143,
   `claude/adoring-ptolemy-baq5te`,
@@ -60,7 +61,8 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
   plate up rather than as a wall seen end-on — it had no shape at all until the review and drew the
   placeholder square; and whether a roof still reading as the same grey plate as a floor is the next
   thing worth fixing (RF2 has the pitched cap ready to go, art and all).
-  Merged with main on 2026-09-20 — see the handover for what the merge moved.
+  Merged with main twice — 2026-09-20 for the door, and 2026-09-21 for the perf trace, the
+  meshing budget, the Huge board and the storage pane. See the handover for what each moved.
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
   batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now
