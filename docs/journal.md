@@ -9781,3 +9781,61 @@ submission itself and the pixels it costs.
 
 `docs/design/06-rendering-and-camera.md` §6c.3 holds the table, the ranked options and the rule for
 reading the new overlay lines. Nothing is built past the instruments; the phase gate holds.
+
+---
+
+## 2026-09-21 — the surround halved, and a constant that had been guarding the wrong factor
+
+The owner, after the measurement: *"Ok what can we do about the surround and focus on this"*.
+
+**The instrument came before the fix, and it is what made the fix findable.** A census of the
+skirt's three batch lists on the played meadow: ground 24 batches for 12,832 instances, tufts 12 for
+1,191 — both fine — and **trees 230 batches for 3,907 instances, mean 17 a call, 192 of the 230
+holding fewer than thirty-two**. The wood was 230 of the 266 batches and it was submitting them
+nearly empty.
+
+**And the key those 230 came out of was 115 sectors × 4 mutes × 1 part × 2 tints × 16 themes.**
+§6c had cut this pass once, 80 m sectors to 400, 760 batches to 266, and then recorded that the
+ladder saturated and that the remaining floor was "the variants, themes, mute steps and parts,
+which no sector size can merge". The first half was right. The second named the right factor for
+the wrong reason and was never measured: four mute steps, two tints and one part are not splitting
+anything. `SectorOf` **folds the variant into the sector number**, so those 115 sectors are spatial
+cells times tree kinds, and a sixteen-kind wood cannot fall below sixteen batches a spatial cell
+however coarse the cells are. That is the whole explanation of the saturation, and it had sat there
+for a day disguised as a floor.
+
+**Then a sweep rather than another judged constant.** The two sector sizes and the near variant
+count were `const` and a const cannot be swept, which is exactly how the 400 came to be chosen once
+and believed. They are settable statics now, written by nothing but the sweep, which restores them
+in a `finally`. One built world, rebuilt only in the skirt, six readings in one run — surround
+section in ms: 400/800 ×16 **1.080** at 266 batches; 800/1600 ×16 **0.952** at 230; 1600/3200 ×16
+**0.935** at 230; 800/1600 ×8 **0.576** at 151; ×6 **0.483** at 129; ×4 **0.371** at 104. **Space is
+the cheap half and one step spends all of it** — 1600 m and a single 100 km sector measure the same
+as 800 — and the kinds go on paying the whole way down. Cost tracked batches throughout, 4.06 µs a
+batch at 266 and 3.81 at 104, the 4.6 µs constant behaving as §6c says a *loaded* submission does.
+
+**Shipped: 800 m near, 1600 far, eight kinds.** The surround is 1.08 → **0.58 ms** on the meadow and
+the whole frame 2.71 → **2.14**, with every one of the 3,907 trees still standing. It is now **flat
+at about 0.6 ms on every board** where it used to grow with the ring: Large 1.78 → 0.60, Huge
+2.05 → 0.63, and Huge's whole frame 8.07 → 6.09, which matters because §28 measured Huge as over
+budget.
+
+**Four was measured, is cheaper again, and was not taken.** A slot is a (module, theme) pair sampled
+from the board's own wood by frequency, and the census says the meadow's surround uses **2 tints and
+16 themes** — so sixteen slots were buying sixteen colour palettes over two silhouettes, not sixteen
+kinds of tree. Halving the palettes ought to be invisible; quartering them might not be, and that is
+an eye on the horizon rather than another reading. So 8 ships and 4 waits for a verdict.
+
+**The guard is on the factor, not the number.**
+`SurroundCostTests.HalvingTheVariantsHalvesTheWoodsBatchesAndNotTheWood` builds one board twice
+differing in the slot count alone and fails if the wood changes or the batches do not. Its first
+draft asserted something else — that a thicker wood rides in the batches already open — and it
+failed honestly: a denser board pushes the surround further out and opens real new spatial cells,
+so batches grew faster than instances and the premise was wrong. Worth recording, because the
+failing version looked like the more general guard and was simply untrue of this geometry.
+
+**And the caveat is undiminished.** All of it is CPU submission at 640 × 480. Halving a batch count
+halves per-call overhead and does nothing at all for fill, so if the owner's report turns out to be
+GPU-bound at play resolution this has moved a number they were not watching. It was still worth
+doing unconditionally — half a millisecond off every board for nobody's trade — but the Play session
+with the GPU readout is still what decides everything after it.

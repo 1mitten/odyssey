@@ -23,6 +23,16 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
+  (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
+  batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now
+  draws **eight**, which took it from 1.08 ms to 0.58 with all 3,907 trees still standing and the
+  meadow frame from 2.71 to 2.14. **A slot is a colour palette over one of two silhouettes**, not a
+  kind of tree, so halving them ought to be invisible: look along the rim and at the hills behind
+  it, from the play camera and from a low orbit. **A wrong answer looks like a stripe** — the same
+  colour of tree recurring at a regular spacing along a ridge, which is the failure this number has.
+  If it reads clean, **×4 is measured at 0.371 ms** and is the next rung; if it stripes, 12 is
+  untested and sits between.
 - **Which side of the bus is the frame losing on?** (`claude/huge-map`,
   `docs/design/06-rendering-and-camera.md` §6c.3.) **Top of the list, because it decides four other
   lines and costs one minute.** The owner reported the grass tufts and the surround costing frames;

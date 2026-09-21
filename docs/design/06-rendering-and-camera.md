@@ -1385,6 +1385,98 @@ tufts are baked into chunk meshes and re-meshed only when the mirror says a chun
 no per-frame rebuild anywhere in either pass to eliminate. **What is left is the submission itself
 and the pixels it costs**, which is why the two numbers above are the ones that matter.
 
+### 6c.4 The surround, halved — and the constant that was guarding the wrong factor
+
+**2026-09-21, the same day, after the owner said to focus on it.** §6c.3 found the surround was 45
+per cent of the meadow's frame. This is what was done about it: **1.08 ms → 0.58 ms with every one
+of the 3,907 trees still standing**, and the meadow's whole frame 2.71 → 2.14 ms.
+
+### The census, which is what made it findable
+
+§6c cut this pass once, from 760 batches to 266, by coarsening the spatial half of the batch key
+from 80 m to 400 m. It then recorded that the ladder saturates past 400 m and that what was left
+was "the variants, themes, mute steps and parts, which no sector size can merge". **The first half
+was right; the second was believed rather than measured, and it named the right factor for the
+wrong reason.**
+
+A census of the three batch lists on the played meadow:
+
+| List | Batches | Instances | Mean | Thin (<32) |
+|---|---|---|---|---|
+| Ground | 24 | 12,832 | 534.7 | 0 |
+| Tufts | 12 | 1,191 | 99.3 | 3 |
+| **Trees** | **230** | **3,907** | **17.0** | **192** |
+
+The wood was 230 of the 266 batches, at seventeen trees a draw call, with five in six of them
+holding fewer than thirty-two. And the key those 230 came from was
+**115 sectors × 4 mutes × 1 part × 2 tints × 16 themes**. Four mute steps, two tints, one part: the
+three factors the earlier note blamed were not splitting anything. **`SectorOf` folds the variant
+into the sector number**, so the 115 "sectors" are spatial cells multiplied by tree kinds, and a
+sixteen-kind wood cannot fall below sixteen batches per spatial cell however coarse the cells get.
+That is why the sector ladder saturated, and it is the whole explanation.
+
+### The sweep
+
+One built world, rebuilt only in the skirt, six readings in one run
+(`FrameTimeTests.TheSurroundSectorSweep`) — the rule every frame number off this machine is subject
+to. Surround section in milliseconds:
+
+| Sectors (near/far) | Kinds | Batches | Surround | Frame |
+|---|---|---|---|---|
+| 400 / 800 (shipped to today) | 16 | 266 | 1.080 | 2.71 |
+| 800 / 1600 | 16 | 230 | 0.952 | 2.62 |
+| 1600 / 3200 | 16 | 230 | 0.935 | 2.57 |
+| **800 / 1600 (shipped)** | **8** | **151** | **0.576** | **2.14** |
+| 800 / 1600 | 6 | 129 | 0.483 | 2.04 |
+| 800 / 1600 | 4 | 104 | 0.371 | 1.92 |
+
+**Space was the cheap half and it is now spent**: one step from 400 to 800 m takes all of it, and
+1600 m and a single 100 km sector both measure identically to 800. **The kinds are where the rest
+is**, and they go on paying all the way down. The cost tracks the batch count throughout — 4.06 µs
+a batch at 266 and 3.81 at 104 — which is the 4.6 µs constant behaving exactly as §6c says a
+*loaded* submission does.
+
+### What shipped, and why 8 rather than 4
+
+`TerrainSkirt.DefaultTreeSectorMetres` 400 → **800**, `DefaultFarTreeSectorMetres` 800 → **1600**,
+`DefaultTreeVariantSlots` 16 → **8**.
+
+| Board | Surround was | Surround is | Frame was | Frame is |
+|---|---|---|---|---|
+| Standard 120² | 1.08 ms | **0.58** | 2.71 ms | **2.14** |
+| Large 180² | 1.78 ms | **0.60** | 5.57 ms | **3.92** |
+| Huge 240² | 2.05 ms | **0.63** | 8.07 ms | **6.09** |
+
+The surround is now **flat at about 0.6 ms on every board**, where it used to grow with the ring.
+Huge gains the most in absolute terms, which matters because Huge is the board §28 measured as over
+budget.
+
+**Four is available, measured and cheaper again, and was not taken.** The reason is what a slot
+actually is. A slot is a (module, theme) pair sampled from the board's own wood by frequency, and
+the census finds the meadow's surround using **2 tints and 16 themes** — so sixteen slots were
+buying sixteen colour palettes over two silhouettes, not sixteen kinds of tree. Halving them halves
+the palettes and leaves the silhouettes alone, which is a change that ought to be invisible.
+Quartering them might not be. That is a judgement for an eye on the horizon, not another reading,
+so 8 ships and 4 waits for a verdict.
+
+### The guard
+
+`SurroundCostTests.HalvingTheVariantsHalvesTheWoodsBatchesAndNotTheWood` builds one board twice,
+differing in the slot count alone, and fails if the wood changes or the batches do not. It guards
+the *factor*, not the number: what it catches is somebody taking the variant back out of the key's
+cost, and that saving would otherwise go silently, because **nothing else in either tier can see a
+batch count**. `TerrainSkirt.CensusOf` and `KeySpreadOf` are the instruments behind it and are
+worth reaching for before any further guess about this pass.
+
+### What this does not answer
+
+The same caveat as §6c.3, undiminished: all of it is CPU submission at 640 × 480. Halving the
+batch count halves per-call overhead and does nothing whatever for fill, so if the owner's report
+turns out to be GPU-bound at play resolution this work will have moved a number they were not
+watching. **It was still worth doing unconditionally** — 0.5 ms off every board, on the CPU side,
+costs nothing and is nobody's trade — but the Play session with the GPU readout is still the next
+step and still decides what comes after.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.

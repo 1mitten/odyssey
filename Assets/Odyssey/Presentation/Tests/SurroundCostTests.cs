@@ -76,6 +76,85 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// The variant count is what the wood's batch count is made of.
+        ///
+        /// <para><b>This is the load-bearing test in the file</b>, and it guards the shape of the
+        /// fault rather than any one instance of it. The surround costs its <em>batch</em> count
+        /// and not its tree count — 760 batches 3.5 ms, 438 batches 2.1 ms, about 4.6 us a batch
+        /// (§6c) — and <c>SectorOf</c> folds the variant into the sector number, so every extra
+        /// kind of tree multiplies the batches by one more spatial cell's worth. That is why the
+        /// sector ladder saturated at 800 m in the 2026-09-21 sweep while halving the variants
+        /// went on paying: 230 batches at ×16 against 151 at ×8, the same 3,907 trees standing.
+        /// </para>
+        ///
+        /// <para>So: the same board, built twice, differing in <see cref="TerrainSkirt.TreeVariantSlots"/>
+        /// alone. The wood must be the same wood and the batches must be materially fewer. What
+        /// fails this is somebody taking the variant back out of the key's cost — by caching a
+        /// material per slot, say, or by splitting the wood again on something that varies per
+        /// tree — and the saving would go silently, because nothing else in either tier can see a
+        /// batch count.</para>
+        /// </summary>
+        [Test]
+        public void HalvingTheVariantsHalvesTheWoodsBatchesAndNotTheWood()
+        {
+            int shipped = TerrainSkirt.TreeVariantSlots;
+            try
+            {
+                TerrainSkirt.TreeVariantSlots = 16;
+                TerrainSkirt.Census many = TreeCensus();
+
+                TerrainSkirt.TreeVariantSlots = 8;
+                TerrainSkirt.Census few = TreeCensus();
+
+                Assert.That(many.Instances, Is.GreaterThan(0), "no wood grew outside this board");
+
+                // The same trees in the same places: slots decide what a tree is drawn as, never
+                // whether it is there. A change here means the sampling has started deciding the
+                // density too, which would make every batch reading below incomparable.
+                Assert.That(few.Instances, Is.EqualTo(many.Instances),
+                    "the wood itself changed with the slot count, so this compares two woods");
+
+                Assert.That(few.Batches, Is.LessThan(many.Batches * 0.8d),
+                    $"×16 gave {many} and ×8 gave {few}: the variant has stopped multiplying the " +
+                    "batch count, so cutting it no longer buys anything");
+            }
+            finally
+            {
+                // Process-wide. A leak would retune every test that ran afterwards, and it would
+                // read as a change in the renderer rather than as a fault in this file.
+                TerrainSkirt.TreeVariantSlots = shipped;
+            }
+        }
+
+        static TerrainSkirt.Census TreeCensus()
+        {
+            var world = new RenderTestWorld(16, 16, 4);
+            for (int z = 0; z < 16; z++)
+            for (int x = 0; x < 16; x++)
+                world.Solid(x, z, 0, NaturalContent.TerrainGrass);
+
+            int planted = 0;
+            for (int z = 0; z < 16 && planted < 64; z++)
+            for (int x = 0; x < 16 && planted < 64; x++, planted++)
+                world.Edifice(x, z, 1, NaturalContent.EdificeTreeConifer, blocking: false);
+
+            world.Publish();
+
+            var materials = new MaterialCache();
+            var skirt = new TerrainSkirt(world.Model, materials) { SubmitToGpu = false };
+            try
+            {
+                skirt.Build();
+                return skirt.CensusOf(TerrainSkirt.SkirtPart.Trees);
+            }
+            finally
+            {
+                skirt.Dispose();
+                materials.Dispose();
+            }
+        }
+
+        /// <summary>
         /// The counter is per frame, not cumulative. It is read straight onto the overlay every
         /// frame, so an accumulating figure would climb for ever and read as a leak.
         /// </summary>

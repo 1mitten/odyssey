@@ -308,6 +308,89 @@ namespace Odyssey.Tests.PlayMode
             split.Length > (int)section ? split[(int)section] : 0d;
 
         /// <summary>
+        /// What the surround's sector size is worth, swept over one built world.
+        ///
+        /// <para><b>Why a sweep and not another judged number.</b> §6c chose 400 m by hand, found
+        /// the cost tracked the batch count rather than the tree count, and recorded that past
+        /// 400 m it "saturates … the floor being the variants, themes, mute steps and parts, which
+        /// no sector size can merge". The census taken on 2026-09-21 says that floor was not
+        /// reached: the wood was <b>230 batches over 115 sectors</b>, mean 17 trees a call, with
+        /// 192 of the 230 holding fewer than 32 — and only <b>4 mute steps, 2 tints and 1 part</b>
+        /// in the whole key. The space was still doing the splitting. A hand-picked constant could
+        /// not have shown that; a sweep with the batch count printed beside the frame does.</para>
+        ///
+        /// <para><b>And the sector ladder saturates almost at once</b>, which is why the variant
+        /// count is swept beside it: 400 → 800 m took the wood 230 → 194 batches and the surround
+        /// 1.08 → 0.92 ms, and 1600 m and a single 100 km sector both changed nothing further. The
+        /// reason is in <c>SectorOf</c>, which folds the variant into the sector number, so a
+        /// sixteen-kind wood cannot fall below sixteen batches per spatial cell however coarse the
+        /// cells are. Space was the cheap half and it is spent.</para>
+        ///
+        /// <para>Same built world throughout, rebuilt only in the skirt, in one run — the rule
+        /// every frame reading on this machine is subject to (§6c). Read the differences.</para>
+        ///
+        /// <para>It asserts no time, for the reason the rest of this file gives, and it restores
+        /// the shipped sizes in a <c>finally</c> because they are process-wide statics and a test
+        /// that leaked one would silently retune every arm that ran afterwards.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSurroundSectorSweep()
+        {
+            (string Label, float Near, float Far, int Variants)[] sizes =
+            {
+                ("400/800 x16 (shipped to 2026-09-21)", 400f, 800f, 16),
+                ("800/1600 x16", 800f, 1600f, 16),
+                ("1600/3200 x16", 1600f, 3200f, 16),
+                ("800/1600 x8 (shipped)", 800f, 1600f, 8),
+                ("800/1600 x6", 800f, 1600f, 6),
+                ("800/1600 x4", 800f, 1600f, 4),
+            };
+
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                float baseline = 0f;
+                yield return TimeFrames("sector/warm", boot, WarmupFrames, m => baseline = m);
+
+                ChunkRenderer renderer = boot.Renderer!;
+
+                for (int i = 0; i < sizes.Length; i++)
+                {
+                    (string label, float near, float far, int variants) = sizes[i];
+                    TerrainSkirt.TreeSectorMetres = near;
+                    TerrainSkirt.FarTreeSectorMetres = far;
+                    TerrainSkirt.TreeVariantSlots = variants;
+                    renderer.Skirt.Build();
+                    yield return null;
+
+                    float mean = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"sector/{label}", boot, WarmupFrames,
+                        m => mean = m, s => split = s);
+
+                    TerrainSkirt.Census trees = renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Trees);
+                    Debug.Log($"[FrameTime] sector {label}: frame {mean:0.00} ms, " +
+                              $"Surround {Section(split, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                              $"{renderer.Skirt.BatchesDrawn} batches drawn; trees {trees}; " +
+                              $"{renderer.Skirt.KeySpreadOf(TerrainSkirt.SkirtPart.Trees)}");
+
+                    Assert.That(trees.Instances, Is.GreaterThan(0),
+                        $"{label} built no wood, so this reading is of an empty surround");
+                }
+            }
+            finally
+            {
+                // Process-wide statics. A leaked value would retune every arm that runs after this
+                // one, and the leak would read as a performance change rather than as a test fault.
+                TerrainSkirt.TreeSectorMetres = TerrainSkirt.DefaultTreeSectorMetres;
+                TerrainSkirt.FarTreeSectorMetres = TerrainSkirt.DefaultFarTreeSectorMetres;
+                TerrainSkirt.TreeVariantSlots = TerrainSkirt.DefaultTreeVariantSlots;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// What the decoration costs: the grass tufts and the land beyond the board, measured
         /// against each other and against a board with neither.
         ///
@@ -392,6 +475,17 @@ namespace Odyssey.Tests.PlayMode
                           $"World {Section(allSplit, OdysseyBootstrap.FrameSection.World):0.000} " +
                           $"-> {Section(bareSplit, OdysseyBootstrap.FrameSection.World):0.000} ms, " +
                           $"{surroundTrees} surround trees, tuft density {shippedDensity}");
+
+                // Where the surround's batches actually go. §6c cut the count by coarsening the
+                // spatial half of the key and said the floor was "the variants, themes, mute
+                // steps and parts"; this is the first reading that says whether those remaining
+                // batches are full or nearly empty, which is the whole of what to do next.
+                Debug.Log($"[FrameTime] surround census: " +
+                          $"ground {renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Ground)}; " +
+                          $"trees {renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Trees)}; " +
+                          $"tufts {renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Tufts)}");
+                Debug.Log($"[FrameTime] surround tree key: " +
+                          renderer.Skirt.KeySpreadOf(TerrainSkirt.SkirtPart.Trees));
             }
             finally
             {
