@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.IO;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
@@ -259,6 +260,33 @@ namespace Odyssey.Tests.Sim
 
             orders.Clear(cell);
             Assert.That(units.IsEmptying(unit), Is.False, "cancelling the order un-empties it");
+        }
+
+        [Test]
+        public void ClickingTheGroundUnderAShelfStillFindsTheShelf()
+        {
+            // **One answer to "which cell is the store in".** `StoreCellOf` owns it — solid terrain
+            // answers for the cell above it — and the pane resolved the zone through it while
+            // asking the raw cell about the shelf. A pick that landed on the ground beneath a shelf
+            // would then have said "no store" in the pane while the settings panel over it said
+            // there was one, which is the shape §2b of the storage doc exists to prevent.
+            ColonyWorld colony = Fresh();
+            int cell = OpenCell(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+            RaiseShelf(colony, cell);
+
+            CellRef above = Size.FromIndex(cell);
+            var below = new CellRef(above.X, above.Z, above.Y - 1);
+            Assume.That(colony.Pawns.Cells.IsSolidTerrain(Size.Index(below)), Is.True,
+                "the shelf stands on solid ground, which is what makes the lift apply");
+
+            colony.World.Intents.Submit(new Intent(IntentKind.QueryCell, below));
+            colony.World.Tick();
+
+            ReadOnlySpan<CellDetail> details = colony.World.Views.Current.CellDetails;
+            Assert.That(details.Length, Is.EqualTo(1));
+            Assert.That(details[0].StoreKind, Is.EqualTo(CellDetail.StoreShelf),
+                "the ground under a shelf answers for the shelf, as it does for a painted zone");
         }
 
         // ---------------------------------------------------------------- coming apart

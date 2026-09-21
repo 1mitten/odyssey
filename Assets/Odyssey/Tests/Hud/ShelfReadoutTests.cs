@@ -36,7 +36,7 @@ namespace Odyssey.Tests.Hud
             WorldSnapshot snapshot = Snapshot();
             snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(1, 1, 1), ItemHandle.Wood, 0, stack: 30));
             snapshot.AddThing(new ThingView(new ThingId(2), new CellRef(4, 4, 1), ItemHandle.Wood, 0,
-                stack: 45, container: 7, slot: 0));
+                stack: 45, container: 7));
 
             Assert.That(ColonyStock.Of(snapshot, ItemHandle.Wood), Is.EqualTo(75),
                 "loose and shelved alike");
@@ -51,7 +51,7 @@ namespace Odyssey.Tests.Hud
             // and not piles, so it was already right the moment the view existed.
             WorldSnapshot snapshot = Snapshot();
             snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(4, 4, 1), ItemHandle.Meal, 0,
-                stack: 12, container: 3, slot: 1));
+                stack: 12, container: 3));
 
             var ledger = new LedgerModel();
             ledger.Refresh(snapshot);

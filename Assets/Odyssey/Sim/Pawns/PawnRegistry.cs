@@ -357,20 +357,14 @@ namespace Odyssey.Sim.Pawns
                 int where = _ctx.WhereIs(item);
                 if (where < 0) continue;
 
-                // The slot is the thing's place in its store's own ordered contents. It is a
-                // drawing position and nothing more: the simulation does not number slots, because
-                // which shelf a jar sits on is not a fact the colony has an opinion about.
-                IReadOnlyList<int> holds = _ctx.Items.ContentsOf(item.ContainerId);
-                int slot = 0;
-                for (int h = 0; h < holds.Count; h++)
-                {
-                    if (holds[h] != i) continue;
-                    slot = h;
-                    break;
-                }
-
+                // **No slot is published, and that is the decision.** The simulation does not
+                // number the shelves inside a shelf, because which one a jar sits on is not a fact
+                // the colony has an opinion about — and a number derived from the store's ordered
+                // contents would not even be stable: eating a stack out shifts every later one
+                // down, so the remaining goods would visibly hop. Presentation places a commodity
+                // from its own def, which is the same place on every shelf for ever.
                 writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
-                    item.Stack, item.ContainerId, (byte)slot));
+                    item.Stack, item.ContainerId));
             }
         }
 

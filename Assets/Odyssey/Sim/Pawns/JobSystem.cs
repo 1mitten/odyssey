@@ -895,8 +895,7 @@ namespace Odyssey.Sim.Pawns
                 // before sowing to an appropriate place"): the sowing scan will not touch its
                 // cell while it lies there, so it outranks every ordinary pile however near -
                 // the field cannot wait on a nearer rock.
-                if (ctx.Growing != null && ctx.Growing.ZonePlantAt(at) >= 0)
-                    distance -= ClearanceBias;
+                if (OnSoilSomebodyWantsToSow(ctx, item)) distance -= ClearanceBias;
 
                 if (distance >= bestDistance) continue;
                 if (!ctx.Reachable(pawn, at, Mode)) continue;
@@ -993,10 +992,19 @@ namespace Odyssey.Sim.Pawns
         /// asks, and the one place the two cases are named together.
         /// </summary>
         static bool InTheWay(PawnContext ctx, ColonyItem item) =>
-            // The soil question is asked only of a thing actually lying on some: a contained thing
-            // has no cell, and the shelf's own cell is not what is being sown.
-            (item.Cell >= 0 && ctx.Growing != null && ctx.Growing.ZonePlantAt(item.Cell) >= 0)
-            || Refused(ctx, item);
+            OnSoilSomebodyWantsToSow(ctx, item) || Refused(ctx, item);
+
+        /// <summary>
+        /// Is this thing lying on ground somebody wants to plant?
+        ///
+        /// <para><b>Its own method because two callers ask it</b> — the clearance bias and
+        /// <see cref="InTheWay"/> — and because it is exactly the question a third home makes easy
+        /// to get wrong. It asks <c>item.Cell</c> and not "where can a colonist reach it": a thing
+        /// on a shelf is not lying on anything, and a shelf built on a zone cell would otherwise
+        /// give everything standing on it the bias meant for a rock in the dirt.</para>
+        /// </summary>
+        static bool OnSoilSomebodyWantsToSow(PawnContext ctx, ColonyItem item) =>
+            item.Cell >= 0 && ctx.Growing != null && ctx.Growing.ZonePlantAt(item.Cell) >= 0;
 
         /// <summary>
         /// The priority a stored thing already enjoys, which a re-stow has to beat: the implicit
@@ -1017,9 +1025,12 @@ namespace Odyssey.Sim.Pawns
                 Storage.StorageUnit? unit = ctx.StorageUnits?.ByContainerId(item.ContainerId);
                 if (unit == null) return int.MinValue;
 
-                // **This one line is the whole of "an emptying shelf gives up its contents".**
-                // Ranked below every real store, so every band beats it and the haul giver moves
-                // what is in it without knowing what emptying means.
+                // An emptying store holds nothing at a rank worth keeping. **Not reached in
+                // practice** — `Refused` says the same thing one loop up and sends these to the
+                // first pass, where no priority is consulted — and kept for the reason this method's
+                // own doc gives: it is a true answer to its own question rather than one that
+                // depends on which caller asked. The day something re-stows out of an emptying
+                // store by another route, this is already right.
                 if (ctx.StorageUnits!.IsEmptying(unit)) return int.MinValue;
 
                 return ctx.StorageUnits!.Accepts(unit, item.DefIndex)

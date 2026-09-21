@@ -1021,8 +1021,24 @@ namespace Odyssey.Presentation.Rendering
                     int shelfIndex = _model.Size.Index(cell);
                     Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y,
                         _model.EdificeFacing(shelfIndex));
+                    // Placed by what it is, not by what order it arrived in: wood sits in the same
+                    // place on every shelf in the colony, and taking a stack out never moves the
+                    // ones left behind.
                     Vector3 stand = ShelfShape.SlotCentre(shelf, _model.EdificeFacing(shelfIndex),
-                        things[i].Slot);
+                        ShelfShape.SlotFor(def));
+
+                    // **A thing just set on a shelf is still leaving the hands that held it**, the
+                    // same rule the floor path keeps one paragraph down and for the same reason:
+                    // the simulation moves a load in one instant, and an instant transfer drawn
+                    // literally is a teleport. The hands were a third of a metre in front of the
+                    // colonist; the deck is a metre up. Without this the load pops.
+                    Vector3 settling = Vector3.zero;
+                    if (carried != null
+                        && carried.TryGetSettling(things[i].Id.Value, out Vector3 fromHands, out float held))
+                        settling = Vector3.Lerp(fromHands - stand, Vector3.zero,
+                            CarryHandover.Fallen(held));
+
+                    stand += settling;
 
                     if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe onShelf))
                     {
@@ -1032,10 +1048,10 @@ namespace Odyssey.Presentation.Rendering
                         var tight = new ItemHeap.Recipe(onShelf.Fewest, onShelf.Biggest, onShelf.Full,
                             ShelfShape.SlotSpread, onShelf.SizeJitter, lyingDown: onShelf.LyingDown);
 
-                        int held = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                        int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
                             stand, tight, _heapPlacements);
 
-                        for (int rock = 0; rock < held; rock++)
+                        for (int rock = 0; rock < rocks; rock++)
                         {
                             Matrix4x4 placement = _heapPlacements[rock];
 

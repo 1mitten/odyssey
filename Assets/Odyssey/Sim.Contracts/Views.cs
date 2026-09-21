@@ -465,16 +465,10 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int Container;
 
-        /// <summary>
-        /// Which of the store's slots this thing sits in, so the drawn goods have somewhere to
-        /// stand. Meaningless where <see cref="Container"/> is 0.
-        /// </summary>
-        public readonly byte Slot;
-
         public bool Contained => Container != 0;
 
         public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
-            int container = 0, byte slot = 0)
+            int container = 0)
         {
             Id = id;
             Cell = cell;
@@ -482,7 +476,6 @@ namespace Odyssey.Sim.Contracts
             StuffIndex = stuffIndex;
             Stack = stack;
             Container = container;
-            Slot = slot;
         }
     }
 

@@ -134,9 +134,15 @@ namespace Odyssey.Sim.World
             byte storedStacks = 0, storeSlots = 0, storedDef = 255;
             int storedUnits = 0;
 
+            // **One answer to "which cell is the store in", asked once.** StoreCellOf is the owner
+            // of it — solid terrain answers for the cell above it, everything else for itself — and
+            // asking it for the zone while asking the raw cell for the shelf is how the pane comes
+            // to say a cell is not a store while the panel over it says it is.
+            int storeCell = _storage?.StoreCellOf(cell) ?? cell;
+
             if (_storage != null)
             {
-                int slot = _storage.ZoneAt(_storage.StoreCellOf(cell));
+                int slot = _storage.ZoneAt(storeCell);
                 if (slot >= 0)
                 {
                     storageZone = slot;
@@ -150,7 +156,7 @@ namespace Odyssey.Sim.World
             // A built store, asked second and never at the same time: a shelf takes its cell out of
             // any zone when it is raised, and a zone cannot be painted over an edifice, so the two
             // answers are mutually exclusive by construction rather than by precedence here.
-            Storage.StorageUnit? unit = _items == null ? null : _units?.AtCell(cell);
+            Storage.StorageUnit? unit = _items == null ? null : _units?.AtCell(storeCell);
             if (unit != null)
             {
                 storeKind = CellDetail.StoreShelf;

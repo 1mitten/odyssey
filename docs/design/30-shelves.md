@@ -122,7 +122,7 @@ nothing.
 ## 7. Publishing what is on a shelf
 
 **A contained thing is published as an ordinary `ThingView` at its store's cell, carrying the store's
-id and a slot.** That one decision keeps every consumer of "what does the colony hold" correct
+id.** That one decision keeps every consumer of "what does the colony hold" correct
 without being told anything about shelves:
 
 | Consumer | Change needed |
@@ -166,6 +166,14 @@ it does not stand in the middle of its cell.
 `ItemHeap`'s own ramp and its own spiral, on the deck instead of the floor, with the spread tightened
 to a slot's width (the recipe's spreads are sized for a 2.5 m cell and a slot is a fifth of that).
 
+**Which slot a commodity stands on is presentation's own answer**, from the def: wood sits in the
+same place on every shelf in the colony, for ever. It was published as a field for a day and taken
+out — a number from the store's ordered contents is not stable, because eating one stack out shifts
+every later one down and the goods left behind visibly hop. The simulation has no opinion about
+where on a shelf a jar sits, so it does not carry one. Two commodities share a slot once the game
+has more of them than a shelf has slots, and their heaps overlap; that is a placeholder's problem
+and a visible one, which is the right kind.
+
 `RenderThings` already groups by def and submits one instanced call per kind, so a shelf's contents
 land in a bucket that was going to be submitted anyway: **forty shelves add matrices, not
 submissions.** The alternative — a pass over the shelves — is `docs/bug-patterns.md` **P10**, which
@@ -202,9 +210,15 @@ before the fix and says nothing.
 
 ## 10. Coming apart
 
-**A store with anything in it is never offered to a deconstructor**, only to haulers. An ordered
-store ranks its contents below every real store, so the colony empties it first and a deconstructor
-arrives to a store that is already empty.
+**A store with anything in it is never offered to a deconstructor**, only to haulers. The colony
+empties it first and a deconstructor arrives to a store that is already empty.
+
+**How it empties is not a rule of its own**, and that is the merge with `main` paying for itself.
+`main` landed "a store empties itself of what it refuses" the same week: a thing a store will not
+have is scanned in the **first** haul pass beside the loose things rather than in the tidying, and
+goes to open ground when no store will take it. A store being *taken apart* is the same sentence —
+it will not have its contents and waiting will not change that — so `Refused` answers true for
+everything inside one, and the urgent pass and the clearance fallback both arrive for free.
 
 Without that gate the refusal is a **loop rather than a rule**: the work is banked on the cell, so a
 colonist would walk over, swing until the work was done, be refused, and be handed the same site
@@ -217,14 +231,18 @@ designation stands, and **nothing is lost**.
 
 ### 10a. The deadlock the tightened test found
 
-An emptying shelf's contents rank below every real store, so they want to leave — but with no other
-store on the board the destination scan found nothing and they stayed, **while the gate refused to
-take the shelf apart until they had gone.** Nothing moved and nothing said why.
+An emptying shelf's contents wanted to leave — but with no other store on the board the destination
+scan found nothing and they stayed, **while the gate refused to take the shelf apart until they had
+gone.** Nothing moved and nothing said why.
 
-An emptying store now gives its contents up to the **floor** when no store will take them. Hauled out
+An emptying store gives its contents up to the **floor** when no store will take them. Hauled out
 rather than spilled, deliberately: the same load ends on the same sort of cell either way, but a
 colonist carries it, and that is the difference between a colony emptying a shelf and a shelf
 emptying itself.
+
+*Written first as a fallback of its own, and deleted on the merge* — `main`'s clearance rule already
+said exactly this for a store that refuses a thing, so the fix is one word in `Refused` rather than
+a block in the haul giver. The deadlock was real either way; only the size of the answer changed.
 
 **The test that found it had been passing for the wrong reason.** It ran blind to the end and
 asserted the shelf was empty — which it was, because the colonist had finished the deconstruct and
