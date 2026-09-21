@@ -14,13 +14,26 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, and the breach is widening.** There are **45 open rows** as of
-2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
+**The rule is already breached, and the breach is widening.** There are **46 open rows** as of
+2026-09-21 — 28 on the day this file was written, 29 the day after, 46 now. Seventeen more in two
 days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
 is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
 rule that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
+
+- **Is the pointer accurate now, and does the crosshair help or clutter?** (`claude/pointer-cursor`,
+  `docs/design/28-pointer-cursor.md`.) Two changes under one question. The game now draws its own
+  cursor — an arrow, and a **crosshair in the armed order's colour** over the world, reverting to
+  the arrow over the HUD — and, separately, **every pick is now resolved after the camera has
+  moved** instead of a frame before it, which is the actual candidate for *"doesn't seem super
+  accurate"*. **Arm Mine and pan hard with W or the edge while the ghost is up**: that is the
+  gesture the old code was wrong on and a still camera never was. A wrong answer looks like the
+  ghost still trailing behind the pointer while the board slides — in which case the remaining
+  offset is `SlicePicker` marching cell boxes against art drawn off them (section 5), and the next
+  move is the overlay that draws the picked box and the raw ray hit together. Also worth one
+  glance: whether a crosshair over the board is a help or a busy little thing in the way, and
+  whether the arrow coming back over a panel reads as *this click will not reach the world*.
 
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its

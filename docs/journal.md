@@ -10152,3 +10152,58 @@ Five EditMode guards (`MeshBudgetTests`), of which the load-bearing one is
 frame whose meshing cost is proportional to how much went stale. One of its drafts failed honestly
 first — a 48-cell board is 2 x 2 chunks against `CellGrid.ChunkSize` of 25, and four chunks cannot
 tell a budget of four from no budget at all.
+## 2026-09-21 — A proper cursor, and the frame in which a click is resolved
+
+Owner: *"The cursor doesn't seem super accurate but I noticed this issue and we should use a proper
+cursor — Runtime cursors other than the default cursor need to be defined using a texture."* Two
+faults in one sentence, unrelated to each other, and the second one is the interesting half.
+
+**The warning was eighteen inert declarations.** `Hud.uss` carried fifteen `cursor: link`, one
+`cursor: pointer`, one `cursor: default` and one `cursor: initial`. Keyword cursors are Editor-only
+in UI Toolkit; in the runtime panel the game actually has, they set nothing and log once per
+repaint. Every one had been written believing it changed the pointer, and the game has run the bare
+OS arrow since the HUD was written — nothing in the project had ever called `Cursor.SetCursor`.
+Deleted rather than converted to eighteen `url(...)` forms, for the reason `OrderColours` exists
+(eighteen selectors naming a cursor is eighteen owners) and for the reason written in Hud.uss
+itself at the bed-owner row: **hover is not an affordance**, so a per-widget pointer swap is the
+weakest signal available even in the world where it worked.
+
+**The accuracy half was arithmetic, and it was in `SliceCameraRig.Update`.** The order was
+`ReadKeyboard` → `ReadMouse` → `TakeJumpRequest` → `ApplyTransform` → `DrawSelection`, and every
+pointer ray in the game was cast inside `ReadMouse`. `CellAt` goes through `Camera.ScreenPointToRay`,
+which reads the camera's *current* transform — which at that point in the frame is still the one
+written at the end of the previous frame, while the world is then drawn from the new one. **Every
+hover, drag, box and click was resolved against a camera one frame behind the picture.** Exact
+while the camera is still, which is how it survived; a constant one-frame lag the whole time it
+moves, which is half a metre at a 30 m/s pan and more with shift held. Panning while placing is the
+commonest thing a player does with a tool in hand.
+
+The fix is ordering and the ordering is the invariant. `ReadMouse` now *latches* what the frame
+decided — a verb and two screen points, with no cell anywhere in the enum, because a cell is the
+one thing that cannot be worked out yet — and `ResolvePointer` runs after `ApplyTransform` and
+turns the points into cells. Every branch is the one `ReadMouse` took inline, unchanged.
+**Applying the transform above `ReadMouse` was the smaller diff and was rejected**: the wheel and
+the orbit write their targets inside `ReadMouse`, so the camera would answer the player's zoom a
+frame late instead — a different misalignment, not one fewer.
+
+**Three of the four tests read files rather than run code**, and that is the honest shape of it
+rather than a shortcut. A stylesheet asking a runtime panel for the impossible is a log line, and
+log lines are invisible in every gate this project has. The frame ordering cannot be tested at all:
+the PlayMode harness still cannot deliver a synthetic mouse, so nothing here can move a pointer and
+look at where the highlight landed. What can be defended is the invariant, so the invariant is what
+is asserted — including `OnlyTheResolvePassTurnsAScreenPointIntoACell`, because the ordering is
+worth nothing if a second `CellAt` reappears further up.
+
+**The art is baked in code at 32 x 32 and both numbers are load-bearing.** Above 32 px Windows
+cannot carry the cursor and Unity composites a software one, which lags the pointer and freezes
+with the frame — answering an accuracy complaint by making it worse, invisibly, on a machine other
+than the one that reported it. Baking also makes the tool crosshair a function of
+`OrderColours.Hue`, so the pointer is the fifth surface an armed order appears on and the only one
+that would otherwise have guessed at its own colour; a new tool inherits a cursor with no art work.
+And it avoids carving an exception into ADR 0007's absolute rule about interface art, which is how
+that rule would die.
+
+**What is deliberately not fixed** is recorded in `docs/design/28-pointer-cursor.md` section 5:
+`SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
+tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
+both at once would leave the playtest unable to say which one it had judged.

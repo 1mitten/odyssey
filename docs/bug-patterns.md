@@ -344,6 +344,34 @@ configures; the eviction has to live in whatever scans for work. Here the filter
 is why "the filter is obviously right" and "the behaviour is obviously wrong" were both true for
 two days.
 
+### P15 — A pick resolved against the frame before the one on screen
+
+A screen position is turned into a world thing by casting a ray through the camera — and the cast
+happens earlier in the frame than the camera's own move. The input pass reads the pointer and
+resolves it immediately, because that is the natural place to write it; the transform is applied
+further down, because that is the natural place to write *that*; and the two were written months
+apart by people each doing the obvious thing.
+
+**The tell is that it is perfectly accurate when nothing is moving.** Every test passes, because a
+test holds the camera still. Every screenshot is right, because a screenshot is one frame with the
+camera parked. The complaint arrives as a feeling — *"it doesn't seem super accurate"* — with no
+reproduction, because the offset exists only while the player is panning, orbiting or zooming, and
+it vanishes the moment they stop to look at it. It does not converge, either: it is a constant one
+frame of lag rather than an error that settles, so a slow pan is off by a little for ever and a
+fast one is off by a lot.
+
+**The question to ask of any input pass:** *what has this frame already changed that the answer
+depends on, and has it happened yet?* A camera is the obvious one; a slice layer, a scroll offset,
+a panel that has just been resized and a world that has just ticked are all the same shape.
+
+**The fix is ordering, and the repair worth making is that the ordering becomes an invariant.**
+Separating *deciding what the gesture was* from *resolving it against the world* is what makes the
+order expressible at all — the decision can be latched as a verb and a screen point, and then
+there is exactly one place that consults the camera instead of one per gesture. Guard it with a
+test, including the "and nowhere else" half: this one was `SliceCameraRig.Update`, and
+`PointerCursorTests` asserts both that the resolve pass runs after the transform and that no other
+line in the file turns a screen point into a cell.
+
 ---
 
 ---
