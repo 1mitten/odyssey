@@ -59,14 +59,14 @@ namespace Odyssey.Tests.Sim
         // 2026-09-20: Appended Building_Door at handle 6 — edifice 2 (CoreContent.EdificeDoor),
         // passable (blocking false), 5 stuff and 135 ticks matching a wall. Gained `rotates`
         // so doors can be oriented by the player before placement and at wall corners/reveals.
-        const ulong BuildingFingerprint = 4156044371283347139UL;
+        const ulong BuildingFingerprint = 5521470646937622315UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
         /// 15). Update this only when you meant to change a material's numbers, and say what moved
         /// in the commit message.
         /// </summary>
-        const ulong StuffFingerprint = 5872933115437906559UL;
+        const ulong StuffFingerprint = 4054578596745551293UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140

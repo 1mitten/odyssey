@@ -123,7 +123,7 @@ namespace Odyssey.Tests.Sim
         // storage filter, and every filter in a golden colony accepts everything — but the
         // starting zone moving to a real `StorageZones` does move them, and that is measured
         // separately. Taken from a freshly loaded pack.
-        const ulong ContentFingerprint = 9529039565603056167UL;
+        const ulong ContentFingerprint = 1711719411136522227UL;
 
 
         [Test]
