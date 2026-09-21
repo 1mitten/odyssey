@@ -10345,3 +10345,41 @@ that rule would die.
 `SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
 tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
 both at once would leave the playtest unable to say which one it had judged.
+
+## 2026-09-21 — Animals: ground and interview (`claude/compassionate-keller-w21ez3`)
+
+The owner asked for a plan to bring animals in, a pig first with their own model, harmless even
+when attacked, clickable like a colonist with food and rest readable, the interface later and
+the emphasis on how the system works and what it costs. This is the ground and the interview,
+written to `docs/design/31-animals.md`; nothing is built and the phase stops at the questions.
+
+**Three things the grounding overturned before a line was planned.** The first was the premise
+of the question itself: the plan was framed around whether an animal is a row in the pawn table
+or a second table, and there is no table — `Pawn` is a heap object in an id-ordered list, every
+decision on it is a virtual method, and `PawnRegistry.Adopt` has said since it was written that
+it is the seam a pawn kind goes through. Nothing has ever used it. The second was that the
+navigation already carries an `Animal` traverse mode with districts built for it, doors and
+ladders refused to it, and three test files asserting so — the pathing half of the work was done
+in M2 and nobody had written that down anywhere a plan would read it. The third is the cost that
+decides the order: `PawnPose.Of` scans every other pawn for the crowd sidestep once per posed
+pawn per frame, 13.3 ms at 384 pawns, and it is quadratic in `snapshot.Pawns`, so the brief's
+three hundred animals would put the frame straight into the knee found on 2026-09-20 and make
+every colonist's scan seven times longer as well. The fix is exact and already designed (§6c.2);
+it is the one unit in the ladder that is a prerequisite rather than a feature, and it can go first
+because it has no animal in it.
+
+**The decision recommended** is the subclass — `Animal : Pawn` with a species Def, the think tree
+a property of the pawn so `JobSystem.Think` asks rather than owns, one registry so reachability,
+movement, reservations, occupancy, the snapshot, the selection ray and the figure pool are all
+inherited — against a separate registry (a second owner of every one of those rules, which is the
+project's most-repeated fault) and against a walking item. Two departures are recorded with their
+reasons: the pawn kind goes on `PawnView` as a field rather than as a minted aspect, because six
+per-frame passes read every pawn and an aspect is a linear scan by design (ADR 0004 amendment 3
+when built); and the save's kind byte goes **first** in the record rather than last like
+`StarvationSeverity`, because the record is constructed before its fields are read and a section
+cannot retype an object already built. Grazing on crops — the first way an animal would cost the
+colony anything — is a question to the owner and not a default.
+
+**Eleven questions** are in §5, each with the assumption the plan is written on. The playtest
+queue stands at 57 open rows against a rule of about ten; the owner asked for this feature by
+name, which is their call, and the first two units add no rows to it.
