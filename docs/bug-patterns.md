@@ -1639,6 +1639,15 @@ two readings of nothing is indistinguishable from a difference between two readi
   and mined-cell counts do not move with the machine's mood. `MineOneCell.Mined == Ticks` and
   `callsOn < callsOff` catch a fixture that stopped doing its job; a millisecond figure never will.
 
+**A third of the same shape, found hours later by an owner's play log rather than by any test.**
+Every per-board measurement arm generated its world from `MapGenerator.DefaultDef` while the played
+scene is *barren + wooded* and so gets `MakeWooded()` applied on top — two owners for one choice,
+silently disagreeing. The owner's console read `patches 0, trees 1598`; the arms were reporting
+`patches 2210, trees 1222` for the same board. The fix deleted the second owner
+(`ColonyWorld.DefFor`) rather than copying the first. **This pattern was written one commit earlier,
+in the same branch, about the other two — and was not applied to the arms it was written about.**
+Writing a pattern down is not the same as running it over the work in hand.
+
 **Where to look for more:** any property a per-frame system re-derives from settings — a test that
 writes it is writing into the next frame's overwrite. And any capture-and-compare: ask what the
 picture looks like when the subject is removed entirely, and make the test assert that answer.
