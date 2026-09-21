@@ -136,9 +136,21 @@ namespace Odyssey.Hud
         public const string StarveKey = "ui.alert.starvation";
         public const string BreakKey = "ui.alert.mentalbreak";
         public const string IdleKey = "ui.alert.idle";
+        public const string StoreStuckKey = "ui.alert.storagestuck";
+
+        /// <summary>
+        /// Seconds a store must be marked for removal and still full before the panel says so.
+        ///
+        /// <para>Longer than the idle latch because the ordinary case looks identical for a while:
+        /// a shelf ordered taken apart is full until a hauler has walked to it, and telling the
+        /// player it is stuck while somebody is on their way to empty it would be crying wolf. Ten
+        /// seconds is long enough for a colonist to cross a room and short enough that a player who
+        /// walks away and comes back finds the reason waiting.</para>
+        /// </summary>
+        public const double StoreStuckSustain = 10.0;
 
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -147,6 +159,10 @@ namespace Odyssey.Hud
         readonly HashSet<int> _dismissed = new HashSet<int>();
 
         double _idleSince = -1.0;
+
+        /// <summary>When the first store that is being emptied and is not empty was seen.</summary>
+        double _storeStuckSince = -1.0;
+        bool _wasStoreStuck;
 
         int _wasStarving = -1;
         int _wasBreaking = -1;
@@ -239,14 +255,31 @@ namespace Odyssey.Hud
 
             bool idleStands = _idleSince >= 0.0 && seconds - _idleSince >= IdleSustain;
 
+            // A store that has been told to come apart and still has something in it. The
+            // simulation publishes the state and this decides when it is news, exactly as it does
+            // for an idle colony: a wall-clock rule has no business inside a fixed-tick tick.
+            int stuck = 0;
+            System.ReadOnlySpan<StorageUnitView> stores = snapshot.StorageUnits;
+            for (int i = 0; i < stores.Length; i++)
+                if (stores[i].Emptying && stores[i].Stacks > 0) stuck++;
+
+            if (stuck > 0)
+            {
+                if (_storeStuckSince < 0.0) _storeStuckSince = seconds;
+            }
+            else _storeStuckSince = -1.0;
+
+            bool storeStuck = _storeStuckSince >= 0.0 && seconds - _storeStuckSince >= StoreStuckSustain;
+
             if (starving == _wasStarving && breaking == _wasBreaking &&
-                idleStands == _wasIdle && pawns.Length == _wasColony &&
+                idleStands == _wasIdle && storeStuck == _wasStoreStuck && pawns.Length == _wasColony &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
             _wasStarving = starving;
             _wasBreaking = breaking;
             _wasIdle = idleStands;
+            _wasStoreStuck = storeStuck;
             _wasColony = pawns.Length;
             _wasLatchVersion = _latchVersion;
             _wasDismissVersion = _dismissVersion;
@@ -292,6 +325,14 @@ namespace Odyssey.Hud
                     }
                 }
             }
+
+            if (storeStuck)
+                Rows.Add(new AlertRow(
+                    StoreStuckKey,
+                    Registry.Label(StoreStuckKey),
+                    stuck == 1 ? " — nowhere to put what is in it" : " — " + stuck + " of them",
+                    AlertSeverity.Warning,
+                    count: stuck));
 
             if (idleStands)
             {

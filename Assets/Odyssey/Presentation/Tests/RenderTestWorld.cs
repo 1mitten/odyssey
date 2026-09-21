@@ -124,6 +124,19 @@ namespace Odyssey.Tests.Presentation
             return this;
         }
 
+        /// <summary>A shelf standing in one cell, facing as given.</summary>
+        public RenderTestWorld Shelf(int x, int z, int y, int facing, ushort stuff = CoreContent.StuffConcrete)
+        {
+            int cell = Index(x, z, y);
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = cell, Def = CoreContent.EdificeShelf, Stuff = stuff, Built = true,
+                Facing = (byte)facing,
+            });
+            Grid.Edifice[cell] = _edifices.Count - 1;
+            return this;
+        }
+
         /// <summary>
         /// A board whose <c>x &lt; half</c> is <paramref name="rise"/> layers higher than the rest:
         /// a straight terrace step running the whole depth of the map, published and ready.

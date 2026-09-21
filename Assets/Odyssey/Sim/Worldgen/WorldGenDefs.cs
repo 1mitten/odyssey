@@ -358,6 +358,18 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeBed = 12;
 
         /// <summary>
+        /// A shelf: the colony's first buildable <b>store</b>, and the second thing that arrives
+        /// only by <c>ConstructionGrid.Raise</c> (docs/design/26-storage.md, the S2 branch).
+        ///
+        /// <para><b>13, and the numbers it must not collide with are 10 and 11.</b> Those are the
+        /// trees' — <c>NaturalContent.FirstEdifice</c> reserved them the day woodland landed — and
+        /// 12 is the bed. Spelled as a literal with this note for the reason the bed's own comment
+        /// gives: CoreContent does not depend on the natural tables, and a number that can be read
+        /// beside the ones it must not collide with is safer than an offset to re-derive.</para>
+        /// </summary>
+        public const ushort EdificeShelf = 13;
+
+        /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
         /// in code and the XML mirrored it, which meant every terrain was written twice.
