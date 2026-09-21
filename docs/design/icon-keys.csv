@@ -188,6 +188,7 @@ ui.arch.tool.researchbench,Research bench,ui.arch.tool,M3,Where research happens
 ui.arch.tool.comms,Comms console,ui.arch.tool,M3,Talk to factions and traders
 ui.arch.tool.bunk,Bunk,ui.arch.tool,M3,Cheap sleeping. Poor comfort
 ui.arch.tool.bed,Bed,ui.arch.tool,M3,"Better rest, better mood"
+ui.arch.tool.campfire,Campfire,ui.arch.tool,M4,"A fire: warmth you can build"
 ui.arch.tool.table,Table,ui.arch.tool,M3,Eating at one beats eating on the floor
 ui.arch.tool.chair,Chair,ui.arch.tool,M3,Comfort while working or eating
 ui.arch.tool.lamp,Lamp,ui.arch.tool,M3,Light. Costs power

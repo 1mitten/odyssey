@@ -148,6 +148,7 @@ namespace Odyssey.Presentation.World
         readonly int _wallCoreModule;
         readonly int _waterFallModule;
         readonly int _bedModule;
+        readonly int _campfireModule;
         readonly int _bedPillowModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library, PlantDef[]? plants = null)
@@ -204,6 +205,7 @@ namespace Odyssey.Presentation.World
             // When real two-cell art exists a catalogue row on this id upgrades it everywhere,
             // with no code change — the same deal every other module id already offers.
             _bedModule = library.Resolve(ModuleIds.Bed, ModuleShape.SolidBlock);
+            _campfireModule = library.Resolve(ModuleIds.Campfire, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
@@ -865,6 +867,7 @@ namespace Odyssey.Presentation.World
             // The bed first, before the natural range: its id sits above the trees' but it is not
             // one of theirs, and the natural table below would index past itself for it.
             if (def == CoreContent.EdificeBed) return _bedModule;
+            if (def == CoreContent.EdificeCampfire) return _campfireModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

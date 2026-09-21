@@ -492,6 +492,14 @@ namespace Odyssey.Presentation.Rendering
         public const string Bed = Prefix + "bed";
 
         /// <summary>
+        /// The campfire. As the bed is: no catalogue row owed, the plain block placeholder in
+        /// the stuff's tint until real art lands — a ring of stones reads fine as a low block,
+        /// and the fire's warmth is a number the pane carries, not a thing the mesh does. One
+        /// row on this id upgrades every campfire when the art arrives.
+        /// </summary>
+        public const string Campfire = Prefix + "campfire";
+
+        /// <summary>
         /// The bed's pillow, which is a module of its own so it can be a different shape and a
         /// different colour from the rest of the bed. Bedding is linen whatever the frame is made
         /// of: a stone bed has a white pillow, exactly as a wooden one does.

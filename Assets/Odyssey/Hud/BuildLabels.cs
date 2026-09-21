@@ -25,7 +25,7 @@ namespace Odyssey.Hud
         public static readonly string[] BuildingKeys =
         {
             "", "ui.arch.tool.wall", "ui.arch.tool.roof", "ui.arch.tool.deckplate",
-            "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.door",
+            "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.door", "ui.arch.tool.campfire",
         };
 
         /// <summary>

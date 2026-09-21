@@ -59,6 +59,7 @@ namespace Odyssey.Hud
             { "ui.arch.tool.brazier", "Brazier" },
             { "ui.arch.tool.bunk", "Bunk" },
             { "ui.arch.tool.butcher", "Butcher table" },
+            { "ui.arch.tool.campfire", "Campfire" },
             { "ui.arch.tool.cancel", "Cancel" },
             { "ui.arch.tool.chair", "Chair" },
             { "ui.arch.tool.clearrubble", "Clear rubble" },
