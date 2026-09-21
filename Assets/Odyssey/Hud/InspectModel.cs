@@ -17,6 +17,27 @@ namespace Odyssey.Hud
     /// Tabs whose systems do not exist yet are present and disabled, so the shape of the game is
     /// visible from the first version — the panel catalogue's guarantee, made concrete.
     /// </summary>
+    /// <summary>
+    /// One kind of thing on a built store: what it is, how much, and in how many of its bays.
+    ///
+    /// <para>A struct in a pooled list rather than a string built per frame, for the pane's usual
+    /// reason — this is rebuilt fifteen times a second while a store is selected.</para>
+    /// </summary>
+    public struct StoreContentRow
+    {
+        /// <summary>The registry key, for the icon beside the name.</summary>
+        public string IconKey;
+
+        /// <summary>The commodity's name, from the registry and never written here.</summary>
+        public string Name;
+
+        /// <summary>Units of it, summed across however many bays hold it.</summary>
+        public int Units;
+
+        /// <summary>How many of the store's bays it occupies.</summary>
+        public int Stacks;
+    }
+
     public struct InspectTab
     {
         public string Name;
@@ -174,6 +195,43 @@ namespace Odyssey.Hud
         public readonly List<int> JobCounts = new List<int>();
 
         public readonly List<InspectTab> Tabs = new List<InspectTab>();
+
+        /// <summary>
+        /// What a built store is holding, one row per kind, biggest first. Empty for everything
+        /// else — a painted zone's contents are on the board and are read off the board.
+        /// </summary>
+        public readonly List<StoreContentRow> StoreContents = new List<StoreContentRow>();
+
+        /// <summary>Whether the store under the pane is one the colony built, rather than painted.</summary>
+        public bool IsBuiltStore { get; private set; }
+
+        /// <summary>
+        /// Everything the Holding rows are drawn from, in one int.
+        ///
+        /// <para>The contents change as haulers arrive, which the filter's signature cannot see —
+        /// so the group has a cheap one of its own and the pane still rebuilds nothing on a frame
+        /// where nothing moved.</para>
+        /// </summary>
+        public int StoreContentsSignature
+        {
+            get
+            {
+                unchecked
+                {
+                    int signature = IsBuiltStore ? 17 : 0;
+                    for (int i = 0; i < StoreContents.Count; i++)
+                    {
+                        signature = signature * 31 + StoreContents[i].IconKey.GetHashCode();
+                        signature = signature * 31 + StoreContents[i].Units;
+                        signature = signature * 31 + StoreContents[i].Stacks;
+                    }
+                    return signature * 31 + StoreSummary.GetHashCode();
+                }
+            }
+        }
+
+        /// <summary>How full a built store is, as the Holding header says it: "4 of 8 stacks".</summary>
+        public string StoreSummary { get; private set; } = string.Empty;
         public readonly List<InspectCommand> Commands = new List<InspectCommand>();
 
         /// <summary>
@@ -290,6 +348,9 @@ namespace Odyssey.Hud
             Commands.Clear();
             _bedUnderPane = false;
             IsStore = false;
+            IsBuiltStore = false;
+            StoreSummary = string.Empty;
+            StoreContents.Clear();
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -540,6 +601,11 @@ namespace Odyssey.Hud
             // the other would be the same report arriving a second time. The ordinal is one series
             // across both, so "Shelf 3" and "Stockpile 3" can never be the same store.
             IsStore = detail.StoreKind != CellDetail.StoreNone;
+            // A painted zone's contents are on the board and are read off the board; only a built
+            // one has an inside that has to be described. The Holding group hangs off this rather
+            // than off the list being non-empty, so an empty shelf can say it is empty instead of
+            // the section silently not existing.
+            IsBuiltStore = detail.StoreKind == CellDetail.StoreShelf;
             if (IsStore)
             {
                 bool built = detail.StoreKind == CellDetail.StoreShelf;
@@ -554,6 +620,7 @@ namespace Odyssey.Hud
                 Subtitle = built
                     ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks"
                     : StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
+                StoreSummary = built ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks" : string.Empty;
                 // Named from the registry, not written here. "Tile" is already the name of a floor
                 // covering in `ui.arch.tool.tile`, so a literal would have been a second copy of a
                 // name the wiki owns — which `RegistryTests` said, and the answer to that test is
@@ -562,6 +629,11 @@ namespace Odyssey.Hud
                 Tabs.Add(new InspectTab { Name = Registry.Label(TabTile), Enabled = true, Reason = string.Empty });
                 if (ActiveTab < 0 || ActiveTab >= Tabs.Count) ActiveTab = 0;
             }
+
+            // Outside the branch on purpose: it clears as well as fills, and a list left behind
+            // by the last selection would be drawn over the next one. Every other field here is
+            // assigned on every path for the same reason.
+            FillStoreContents(snapshot, detail);
 
             string edifice = EdificeLabels.Title(detail.Edifice);
             string terrain = TerrainLabels.Label(detail.Terrain);
@@ -828,9 +900,21 @@ namespace Odyssey.Hud
                     holding = "empty — " + detail.StoreSlots + " stacks free";
                 else
                 {
-                    string what = detail.StoredDef == 255
-                        ? detail.StoredUnits.ToString()
-                        : Registry.Label(ItemLabels.IconKey(detail.StoredDef)) + " × " + detail.StoredUnits;
+                    // **Never a bare number.** This said `46 — 3 of 8 stacks` for a store holding
+                    // more than one kind, because the single-kind byte is 255 there and the amount
+                    // was printed on its own: a quantity of nothing named, which reads as a bug
+                    // whichever way you take it. Nor is it summed and labelled, because 400 wood
+                    // and 20 meals are not 420 of anything. The kinds themselves are listed on the
+                    // Storage tab now, so this line only has to say that there is more than one.
+                    //
+                    // **It falls back rather than trusting the scan.** `StoreContents` is filled
+                    // from the published things, and a caller that hands over a detail row with no
+                    // store cell on it — every test that builds one by hand — would otherwise be
+                    // told this shelf holds "0 kinds", which is a worse lie than the one being
+                    // fixed.
+                    string what = detail.StoredDef != 255
+                        ? Registry.Label(ItemLabels.IconKey(detail.StoredDef)) + " × " + detail.StoredUnits
+                        : StoreContents.Count > 1 ? StoreContents.Count + " kinds" : "mixed";
                     holding = what + " — " + detail.StoredStacks + " of " + detail.StoreSlots + " stacks";
                 }
 
@@ -860,6 +944,63 @@ namespace Odyssey.Hud
                 Row(n++, "support", detail.Support.ToString());
 
             while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
+        }
+
+        /// <summary>
+        /// What is in the store under the pane, gathered by kind, biggest first.
+        ///
+        /// <para><b>Off the things, not off a second channel.</b> A contained thing is published
+        /// in <see cref="WorldSnapshot.Things"/> at its store's own cell carrying its container id
+        /// — the decision <c>ThingView.Container</c> records — so the list a player reads and the
+        /// totals the Build palette and the stores panel count are the same rows. A contents
+        /// channel of its own would be the fifth place to look and the one that drifts.</para>
+        ///
+        /// <para>Scanned rather than indexed because a store holds at most a handful of kinds and
+        /// this runs only while one is selected. Sorted by amount so the thing there is most of is
+        /// the thing read first, and ties broken by name so the list does not shuffle under the
+        /// pointer as stacks come and go.</para>
+        /// </summary>
+        void FillStoreContents(WorldSnapshot snapshot, in CellDetail detail)
+        {
+            StoreContents.Clear();
+            if (detail.StoreKind != CellDetail.StoreShelf || detail.StoreCellIndex < 0) return;
+
+            GridSize size = snapshot.Size;
+            var things = snapshot.Things;
+
+            for (int i = 0; i < things.Length; i++)
+            {
+                if (things[i].Container == 0) continue;
+                if (size.Index(things[i].Cell) != detail.StoreCellIndex) continue;
+
+                int def = things[i].DefIndex;
+                int at = -1;
+                for (int row = 0; row < StoreContents.Count; row++)
+                    if (StoreContents[row].IconKey == ItemLabels.IconKey(def)) { at = row; break; }
+
+                if (at < 0)
+                {
+                    StoreContents.Add(new StoreContentRow
+                    {
+                        IconKey = ItemLabels.IconKey(def),
+                        Name = Registry.Label(ItemLabels.IconKey(def)),
+                        Units = things[i].Stack,
+                        Stacks = 1,
+                    });
+                    continue;
+                }
+
+                StoreContentRow had = StoreContents[at];
+                had.Units += things[i].Stack;
+                had.Stacks++;
+                StoreContents[at] = had;
+            }
+
+            StoreContents.Sort(static (a, b) =>
+            {
+                int byAmount = b.Units.CompareTo(a.Units);
+                return byAmount != 0 ? byAmount : string.CompareOrdinal(a.Name, b.Name);
+            });
         }
 
         void Row(int index, string name, string value, HudColour? tint = null)

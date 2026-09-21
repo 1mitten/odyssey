@@ -12,9 +12,9 @@ namespace Odyssey.Tests.Presentation
     /// The shelf's geometry, and the two things a copy of <see cref="BedShape"/> gets wrong.
     ///
     /// <para>Relations rather than numbers, in <c>BedShapeTests</c>' idiom: the posts stand on the
-    /// floor, the decks hang between them, the rail stands on the upper deck, every stack stands on
-    /// a real deck, and the whole thing stays inside its own cell. Asserting the literals back would
-    /// only say that the table has not been retyped.</para>
+    /// floor and stop on the top deck, the decks hang between them, every stack stands on a real
+    /// deck, and the whole thing stays inside its own cell. Asserting the literals back would only
+    /// say that the table has not been retyped.</para>
     /// </summary>
     public class ShelfShapeTests
     {
@@ -45,7 +45,7 @@ namespace Odyssey.Tests.Presentation
             return bounds;
         }
 
-        const int PostBackLeft = 0, PostFrontLeft = 2, LowerDeck = 4, UpperDeck = 5, Rail = 6;
+        const int PostBackLeft = 0, PostFrontLeft = 2, LowerDeck = 4, UpperDeck = 5;
 
         /// <summary>Every part of the rack in one box, which is what a bracket has to cover.</summary>
         static Bounds WholeBox(int facing = 0)
@@ -56,26 +56,43 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void ThePostsCarryBothDecksAndTheRailStandsOnTheUpperOne()
+        public void ThePostsCarryBothDecksAndStopDeadOnTheTopOne()
         {
-            Bounds post = BoxOf(PostBackLeft), lower = BoxOf(LowerDeck);
-            Bounds upper = BoxOf(UpperDeck), rail = BoxOf(Rail);
+            Bounds post = BoxOf(PostBackLeft), lower = BoxOf(LowerDeck), upper = BoxOf(UpperDeck);
 
             Assert.That(post.min.y, Is.EqualTo(0f).Within(0.001f), "the posts stand on the floor");
-            Assert.That(post.max.y, Is.GreaterThanOrEqualTo(upper.max.y - 0.001f),
-                "and they reach the deck they carry");
 
             Assert.That(lower.min.y, Is.GreaterThan(0.1f), "the lower deck is off the floor");
             Assert.That(upper.min.y, Is.GreaterThan(lower.max.y),
                 "the upper deck is above the lower one, not resting on it");
-            Assert.That(rail.min.y, Is.EqualTo(upper.max.y).Within(0.001f),
-                "and the rail stands on the upper deck");
 
             Assert.That(ShelfShape.LowerDeckTop, Is.EqualTo(lower.max.y).Within(0.001f),
                 "LowerDeckTop is the lower deck's own top, derived rather than written down twice");
             Assert.That(ShelfShape.DeckTop, Is.EqualTo(upper.max.y).Within(0.001f),
                 "DeckTop is the upper deck's own top, which is what StandHeight answers");
-            Assert.That(ShelfShape.Top, Is.EqualTo(rail.max.y).Within(0.001f));
+        }
+
+        [Test]
+        public void NothingStandsAboveTheTopDeck()
+        {
+            // **The owner's report, 2026-09-21**: "the legs that go up to the air, they just need
+            // to go up the shelve level". The posts ran 6 cm proud of the deck and a back rail
+            // stood 26 cm above it, and a rack whose uprights carry on past the last shelf reads
+            // as unfinished. The deck is the top of the timber now, and the only thing higher is
+            // the order mark, which is not a drawn part.
+            Bounds upper = BoxOf(UpperDeck);
+
+            for (int part = 0; part < ShelfShape.PartCount; part++)
+                Assert.That(BoxOf(part).max.y, Is.LessThanOrEqualTo(upper.max.y + 0.001f),
+                    $"part {part} stands above the top deck");
+
+            Assert.That(BoxOf(PostBackLeft).max.y, Is.EqualTo(upper.max.y).Within(0.001f),
+                "and a post stops exactly on it rather than short of it");
+
+            // The mark still has to clear a loaded deck, which is what the rail used to give it
+            // for free. AShelfsMarkSitsOnTopOfItAndItsPickSitsOnTheDeck is the other half.
+            Assert.That(ShelfShape.Top, Is.GreaterThan(upper.max.y + 0.2f),
+                "an order mark at deck height would be buried under a full shelf");
         }
 
         [Test]
@@ -94,6 +111,12 @@ namespace Odyssey.Tests.Presentation
             Assert.That(upper.size.y, Is.LessThan(0.2f));
             Assert.That(upper.min.y - lower.max.y, Is.GreaterThan(0.4f),
                 "with room between them for the goods that stand on the lower one");
+
+            // What the back rail used to say, now said by the decks themselves: the thing has a
+            // front and a back, so turning it is visible. Without this a rack of four equal posts
+            // and two equal decks is symmetric end to end and the rotate key looks broken.
+            Assert.That(upper.size.z, Is.LessThan(lower.size.z * 0.75f),
+                "the upper deck is the shallower one, which is the whole facing cue");
         }
 
         [Test]

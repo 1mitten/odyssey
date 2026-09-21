@@ -195,7 +195,8 @@ namespace Odyssey.Sim.World
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
                 storageZone, storagePriority, storageCells, storageOrdinal,
-                storeKind, storedStacks, storeSlots, storedDef, storedUnits));
+                storeKind, storedStacks, storeSlots, storedDef, storedUnits,
+                storeKind == CellDetail.StoreNone ? -1 : storeCell));
         }
     }
 }

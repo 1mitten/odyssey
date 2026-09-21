@@ -80,6 +80,103 @@ namespace Odyssey.Tests.Hud
                 storeKind: CellDetail.StoreShelf, storedStacks: stacks, storeSlots: slots,
                 storedDef: def, storedUnits: units);
 
+        /// <summary>The same shelf, but owning up to which cell it stands in.</summary>
+        static CellDetail StockedShelf(byte stacks, byte def, int units) =>
+            new CellDetail(
+                Size.Index(At), TerrainHandle.Grass, (byte)EdificeHandle.Shelf, StuffHandle.None, 0,
+                1000, 0,
+                storageZone: -1, storagePriority: StorageRung.Normal,
+                storageCells: 1, storageOrdinal: 4,
+                storeKind: CellDetail.StoreShelf, storedStacks: stacks, storeSlots: 8,
+                storedDef: def, storedUnits: units, storeCellIndex: Size.Index(At));
+
+        /// <summary>The pane over a shelf, with the given stacks actually inside it.</summary>
+        static InspectModel ShowingStocked(in CellDetail detail, params (int def, int stack)[] inside)
+        {
+            WorldSnapshot frame = Snapshot();
+            frame.AddCellDetail(detail);
+            for (int i = 0; i < inside.Length; i++)
+                frame.AddThing(new ThingView(new ThingId(i + 1), At, inside[i].def, 0,
+                    stack: inside[i].stack, container: 9));
+
+            var model = new InspectModel();
+            model.SetCell(At);
+            model.Refresh(frame);
+            return model;
+        }
+
+        [Test]
+        public void AShelfListsWhatIsOnItBiggestFirst()
+        {
+            // **The owner could not tell what was in one** (2026-09-21: "I can't view the contents
+            // of the shelve easy either"). The pane said how full it was and, for more than one
+            // kind, a bare unit total. The kinds are read off the published things — the same rows
+            // the Build palette and the stores panel count — so a list here and a total there can
+            // never disagree.
+            InspectModel model = ShowingStocked(
+                StockedShelf(4, 255, 0),
+                (ItemHandle.Wood, 75), (ItemHandle.Meal, 12), (ItemHandle.Wood, 75),
+                (ItemHandle.Stone, 40));
+
+            Assert.That(model.StoreContents, Has.Count.EqualTo(3), "three kinds, four bays");
+
+            Assert.That(model.StoreContents[0].Name, Is.EqualTo(Registry.Label(ItemLabels.IconKey(ItemHandle.Wood))));
+            Assert.That(model.StoreContents[0].Units, Is.EqualTo(150), "two bays of wood, summed");
+            Assert.That(model.StoreContents[0].Stacks, Is.EqualTo(2));
+
+            Assert.That(model.StoreContents[1].Units, Is.EqualTo(40), "stone next, because it is the next biggest");
+            Assert.That(model.StoreContents[2].Units, Is.EqualTo(12));
+
+            // And the Tile tab's one-liner defers to it rather than repeating it or lying.
+            Assert.That(RowValue(model, "holding"), Is.EqualTo("3 kinds — 4 of 8 stacks"));
+        }
+
+        [Test]
+        public void GoodsLyingOnTheFloorAreNotOnTheShelfAboveThem()
+        {
+            // The rule that makes the scan safe: a contained thing is published at its store's
+            // cell, so the only thing separating the shelf's goods from a pile on the same cell
+            // is the container id. Reading the cell alone would count the floor twice.
+            WorldSnapshot frame = Snapshot();
+            frame.AddCellDetail(StockedShelf(1, (byte)ItemHandle.Wood, 75));
+            frame.AddThing(new ThingView(new ThingId(1), At, ItemHandle.Wood, 0, stack: 75, container: 9));
+            frame.AddThing(new ThingView(new ThingId(2), At, ItemHandle.Stone, 0, stack: 99));
+
+            var model = new InspectModel();
+            model.SetCell(At);
+            model.Refresh(frame);
+
+            Assert.That(model.StoreContents, Has.Count.EqualTo(1), "the loose stone is not on the shelf");
+            Assert.That(model.StoreContents[0].Units, Is.EqualTo(75));
+        }
+
+        [Test]
+        public void TheContentsDoNotOutliveTheSelection()
+        {
+            // A list that is filled inside an `if` and never cleared is drawn over whatever is
+            // selected next. Every other field on this model is assigned on every path.
+            WorldSnapshot frame = Snapshot();
+            frame.AddCellDetail(StockedShelf(1, (byte)ItemHandle.Wood, 75));
+            frame.AddThing(new ThingView(new ThingId(1), At, ItemHandle.Wood, 0, stack: 75, container: 9));
+
+            var model = new InspectModel();
+            model.SetCell(At);
+            model.Refresh(frame);
+            Assert.That(model.StoreContents, Is.Not.Empty);
+
+            model.Refresh(PlainGround());
+            Assert.That(model.StoreContents, Is.Empty, "the ground is not holding the shelf's wood");
+        }
+
+        /// <summary>A snapshot whose queried cell is bare ground with no store on it.</summary>
+        static WorldSnapshot PlainGround()
+        {
+            WorldSnapshot frame = Snapshot();
+            frame.AddCellDetail(new CellDetail(
+                Size.Index(At), TerrainHandle.Grass, EdificeHandle.None, StuffHandle.None, 0, 1000, 0));
+            return frame;
+        }
+
         static InspectModel Showing(in CellDetail detail)
         {
             WorldSnapshot frame = Snapshot();
@@ -140,8 +237,18 @@ namespace Odyssey.Tests.Hud
                 Is.EqualTo("Wood × 600 — 8 of 8 stacks"),
                 "eight stacks of one kind is the ordinary case, and it is named");
 
+            // **This asserted `46 — 3 of 8 stacks` and called it intended**, on the reasoning
+            // that several kinds should "say only how much and how full". The owner met it the
+            // first time they clicked a shelf holding two things and could not tell what was in
+            // it: 46 is not a quantity of anything a player can name, and summing unlike
+            // commodities is not a number either. The kinds are on the Storage tab now, and this
+            // line says only that there is more than one of them.
+            //
+            // "mixed" rather than "2 kinds" here because a hand-built detail row carries no store
+            // cell, so nothing was scanned — the fallback, asserted deliberately so that the day
+            // it changes somebody has to look at it.
             Assert.That(RowValue(Showing(Shelf(3, 8, 255, 46, StorageRung.Normal)), "holding"),
-                Is.EqualTo("46 — 3 of 8 stacks"), "several kinds say only how much and how full");
+                Is.EqualTo("mixed — 3 of 8 stacks"), "several kinds are named on the Storage tab");
 
             Assert.That(RowValue(Showing(Shelf(0, 8, 255, 0, StorageRung.Normal)), "holding"),
                 Is.EqualTo("empty — 8 stacks free"));

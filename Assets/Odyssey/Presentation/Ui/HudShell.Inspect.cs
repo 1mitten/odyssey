@@ -1006,6 +1006,15 @@ namespace Odyssey.Presentation.Ui
 
         readonly List<VisualElement> _storageTabUnderlines = new List<VisualElement>();
         VisualElement? _storagePane;
+
+        /// <summary>The Holding group: its header summary, its rows, and the pool they come from.</summary>
+        VisualElement? _storeHoldingGroup;
+        VisualElement? _storeHoldingList;
+        Label? _storeHoldingSummary;
+        readonly List<VisualElement> _storeHoldingRows = new List<VisualElement>();
+
+        /// <summary>The contents signature the Holding rows on screen were built from.</summary>
+        int _storeHoldingFilledFor = int.MinValue;
         VisualElement? _storageRows;
         ScrollView? _storageList;
         VisualElement? _storageWarning;
@@ -1079,6 +1088,30 @@ namespace Odyssey.Presentation.Ui
             _storagePane = new VisualElement();
             _storagePane.AddToClassList(StoragePaneClass);
             _storagePane.style.flexDirection = FlexDirection.Column;
+
+            // ---- holding: what is actually in there, which is the question a player clicking a
+            // store is most often asking. It leads the tab because the filter below it answers
+            // "what will it take", which is set once, while this changes all day.
+            _storeHoldingGroup = new VisualElement();
+            _storeHoldingGroup.style.flexDirection = FlexDirection.Column;
+
+            VisualElement holdingHeader = StorageHeaderRow();
+            holdingHeader.Add(StorageSectionLabel("Holding"));
+            _storeHoldingSummary = HudText.Make(string.Empty, HudTextRole.Body);
+            _storeHoldingSummary.style.unityTextAlign = TextAnchor.MiddleRight;
+            _storeHoldingSummary.style.flexGrow = 1;
+            holdingHeader.Add(_storeHoldingSummary);
+            _storeHoldingGroup.Add(holdingHeader);
+
+            _storeHoldingList = new VisualElement();
+            _storeHoldingList.style.flexDirection = FlexDirection.Column;
+            _storeHoldingList.style.paddingLeft = 14;
+            _storeHoldingList.style.paddingRight = 14;
+            _storeHoldingList.style.paddingBottom = 10;
+            _storeHoldingGroup.Add(_storeHoldingList);
+
+            _storeHoldingGroup.Add(StorageDivider(0.14f));
+            _storagePane.Add(_storeHoldingGroup);
 
             // ---- priority: the section label, and the rung it is on, on one line
             VisualElement priorityHeader = StorageHeaderRow();
@@ -1260,8 +1293,88 @@ namespace Odyssey.Presentation.Ui
         void SyncStoragePanel()
         {
             if (_storagePane == null || !_inspect.IsStore) return;
+            SyncStoreHolding();
             if (!TryStoreUnderPane(out _, out _, out _, out int signature)) return;
             if (signature != _storageFilledFor) FillStoragePanel();
+        }
+
+        /// <summary>
+        /// Show what the store is holding, rebuilding the rows only when they have changed.
+        ///
+        /// <para><b>A signature of its own, not the filter's.</b> The filter changes when a person
+        /// presses something; the contents change whenever a hauler arrives, which the filter's
+        /// signature cannot see. Sharing one would have left the list frozen at whatever was in
+        /// there when the store was selected — the same class of fault as the panel that was one
+        /// action stale, and just as invisible.</para>
+        ///
+        /// <para>Hidden outright over a painted zone: a stockpile's contents are lying on the
+        /// board in front of you, and a list of them would be a second, worse view of something
+        /// already on screen.</para>
+        /// </summary>
+        void SyncStoreHolding()
+        {
+            if (_storeHoldingGroup == null || _storeHoldingList == null) return;
+
+            _storeHoldingGroup.style.display =
+                _inspect.IsBuiltStore ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!_inspect.IsBuiltStore) return;
+
+            int signature = _inspect.StoreContentsSignature;
+            if (signature == _storeHoldingFilledFor) return;
+            _storeHoldingFilledFor = signature;
+
+            if (_storeHoldingSummary != null) _storeHoldingSummary.text = _inspect.StoreSummary;
+
+            // One row per kind, plus one line saying so when there are none. Pooled, because this
+            // is a panel that ticks fifteen times a second and a store being loaded is a stream of
+            // small changes rather than one.
+            int wanted = Math.Max(1, _inspect.StoreContents.Count);
+            while (_storeHoldingRows.Count < wanted)
+            {
+                var row = new VisualElement();
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = Align.Center;
+                row.style.paddingTop = 2;
+                row.style.paddingBottom = 2;
+
+                Label rowName = HudText.Make(string.Empty, HudTextRole.Body);
+                Label rowAmount = HudText.Make(string.Empty, HudTextRole.Body, numeric: true);
+                rowAmount.style.unityTextAlign = TextAnchor.MiddleRight;
+                rowAmount.style.flexGrow = 1;
+
+                row.Add(rowName);
+                row.Add(rowAmount);
+                _storeHoldingList.Add(row);
+                _storeHoldingRows.Add(row);
+            }
+
+            for (int i = 0; i < _storeHoldingRows.Count; i++)
+            {
+                VisualElement row = _storeHoldingRows[i];
+                bool used = i < wanted;
+                row.style.display = used ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!used) continue;
+
+                var rowName = (Label)row[0];
+                var rowAmount = (Label)row[1];
+
+                if (_inspect.StoreContents.Count == 0)
+                {
+                    rowName.text = "nothing yet";
+                    rowName.style.color = new Color(1f, 1f, 1f, 0.55f);
+                    rowAmount.text = string.Empty;
+                    continue;
+                }
+
+                StoreContentRow content = _inspect.StoreContents[i];
+                rowName.text = content.Name;
+                rowName.style.color = new Color(1f, 1f, 1f, 0.92f);
+                // The bay count only where it adds something: 150 in two bays is a fact about the
+                // store; 40 in one is just the amount, and the number would be noise.
+                rowAmount.text = content.Stacks > 1
+                    ? content.Units + "  (" + content.Stacks + " bays)"
+                    : content.Units.ToString();
+            }
         }
 
         /// <summary>

@@ -186,6 +186,7 @@ namespace Odyssey.EditorTools
                 // The full one, for the close shots: an empty rack says whether the frame reads,
                 // and only a loaded one says whether the goods do.
                 Vector3 loaded = At(raised[raised.Length - 1], size);
+                Vector3 empty = At(raised[0], size);
 
                 // A shelf's open front is its local +Z, so the camera has to stand on that side of
                 // it or the sheet is four pictures of the back rail. Yaw 180 faces it squarely and
@@ -197,6 +198,11 @@ namespace Odyssey.EditorTools
                 // sky. This is the shot that says "rack" rather than "crate", and the one the
                 // single-deck version could not have passed.
                 PlayScene.Shoot(camera, middle, 14f, 180f, 12f, "Logs/shelf-front.png");
+
+                // The bare frame, square on and close: the one view in which every member of the
+                // rack is unambiguous. A loaded shelf hides its own timber, so a question about
+                // where a post ends can only be settled here.
+                PlayScene.Shoot(camera, empty, 10f, 180f, 4.5f, "Logs/shelf-empty.png");
 
                 // Nearly overhead, which is what decides whether the lower deck's four stacks
                 // survive being looked down on. If the front row is in shadow under the upper

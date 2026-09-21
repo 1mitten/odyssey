@@ -4,8 +4,8 @@ using UnityEngine;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// What a shelf looks like, in one place: an open timber rack — four posts, two decks and a
-    /// back rail — and where the goods on it stand.
+    /// What a shelf looks like, in one place: an open timber rack — four posts and two decks —
+    /// and where the goods on it stand.
     ///
     /// <para><b>One place, for the reason <see cref="BedShape"/> was extracted.</b> The mesher
     /// draws the built thing, the ghost draws the thing being placed, the selection bracket draws
@@ -38,8 +38,8 @@ namespace Odyssey.Presentation.Rendering
     /// </summary>
     public static class ShelfShape
     {
-        /// <summary>Four posts, the lower deck, the upper deck, the back rail.</summary>
-        public const int PartCount = 7;
+        /// <summary>Four posts, the lower deck, the upper deck. Nothing stands above the top.</summary>
+        public const int PartCount = 6;
 
         /// <summary>How many stacks a shelf shows a place for. Matches the def's <c>storageSlots</c>.</summary>
         public const int Slots = 8;
@@ -57,14 +57,19 @@ namespace Odyssey.Presentation.Rendering
         // cell and reaches into it from where she stands — and a box filling its own cell would say
         // the opposite of that.
         //
-        // 1.45 m overall. Raised from 1.24 with the second deck, because two decks inside the old
-        // envelope left 0.5 m between them and drawn goods are about 0.3 m tall, so the rack read
-        // as cramped rather than open. Still well below a colonist on purpose: a 1.7 m thing you
-        // walk through reads as a fault rather than as furniture, and that is the constraint the
-        // height answers to rather than the cell's own 3 m.
+        // 1.19 m of timber. Raised from 1.24 with the second deck and then trimmed back, because
+        // two decks inside the old envelope left 0.5 m between them and drawn goods are about
+        // 0.3 m tall, so the rack read as cramped rather than open. Still well below a colonist on
+        // purpose: a 1.7 m thing you walk through reads as a fault rather than as furniture, and
+        // that is the constraint the height answers to rather than the cell's own 3 m.
         //
-        // The back rail is what gives the silhouette a front and a back. Without it a rack is very
-        // nearly symmetric end to end and the rotate key appears broken.
+        // **The top deck is the top of the thing.** The posts stop dead on it and nothing stands
+        // above it (owner, 2026-09-21: "the legs that go up to the air, they just need to go up
+        // the shelve level"). An earlier cut ran the posts 6 cm proud and put a 26 cm back rail
+        // above the deck, whose job was to make the facing readable — a rack of four equal posts
+        // is symmetric end to end and the rotate key looks broken. That job is now done far
+        // better by the upper deck being half the depth of the lower one, which is a difference
+        // you can see from any angle rather than a plate you can see from one.
 
         /// <summary>Half the frame's width; the footprint runs from -X to +X of this.</summary>
         const float HalfWidth = 1.13f;
@@ -83,29 +88,45 @@ namespace Odyssey.Presentation.Rendering
 
         const float PostSection = 0.09f, DeckThickness = 0.08f;
 
+        /// <summary>The top of the upper deck: the highest timber, and where the posts stop.</summary>
+        const float RackHeight = 1.19f;
+
+        /// <summary>
+        /// How far above the top deck an order mark floats, in metres.
+        ///
+        /// <para><b>Not a drawn part — the one height here that is not the top of a box.</b> A
+        /// deconstruct mark at deck height is buried under the goods standing on that deck, which
+        /// is what <c>AShelfsMarkSitsOnTopOfItAndItsPickSitsOnTheDeck</c> exists to stop. While
+        /// there was a rail above the deck the mark could ride its top and nobody had to think
+        /// about it; with the rail gone the clearance has to be stated, and it is roughly the
+        /// height of a loaded bay so the mark clears a full shelf rather than a bare one.</para>
+        /// </summary>
+        const float MarkClearance = 0.30f;
+
         static readonly Vector3[] Sizes =
         {
-            new Vector3(PostSection, 1.25f, PostSection),   // post, back left
-            new Vector3(PostSection, 1.25f, PostSection),   // post, back right
-            new Vector3(PostSection, 1.25f, PostSection),   // post, front left
-            new Vector3(PostSection, 1.25f, PostSection),   // post, front right
+            new Vector3(PostSection, RackHeight, PostSection),   // post, back left
+            new Vector3(PostSection, RackHeight, PostSection),   // post, back right
+            new Vector3(PostSection, RackHeight, PostSection),   // post, front left
+            new Vector3(PostSection, RackHeight, PostSection),   // post, front right
             new Vector3(2.26f, DeckThickness, FootprintDepth),                 // lower deck
             new Vector3(2.26f, DeckThickness, UpperDeckFront - BackEdge),      // upper deck
-            new Vector3(2.26f, 0.26f, 0.10f),                                  // back rail
         };
 
         static readonly Vector3[] Centres =
         {
-            new Vector3(-1.085f, 0.625f, -1.015f),  // posts: 0.00 .. 1.25, inset into the corners
-            new Vector3(1.085f, 0.625f, -1.015f),
-            new Vector3(-1.085f, 0.625f, -0.085f),
-            new Vector3(1.085f, 0.625f, -0.085f),
+            // Posts: 0.00 .. RackHeight, inset into the corners, stopping dead on the top deck.
+            new Vector3(-1.085f, RackHeight * 0.5f, -1.015f),
+            new Vector3(1.085f, RackHeight * 0.5f, -1.015f),
+            new Vector3(-1.085f, RackHeight * 0.5f, -0.085f),
+            new Vector3(1.085f, RackHeight * 0.5f, -0.085f),
             new Vector3(0f, 0.46f, FootprintCentreZ),                          // lower deck: .. 0.50
-            new Vector3(0f, 1.15f, (BackEdge + UpperDeckFront) * 0.5f),        // upper deck: .. 1.19
-            new Vector3(0f, 1.32f, -1.05f),                                    // rail:  1.19 .. 1.45
+            // Upper deck: its top IS RackHeight, so the posts and the deck end together.
+            new Vector3(0f, RackHeight - DeckThickness * 0.5f,
+                (BackEdge + UpperDeckFront) * 0.5f),
         };
 
-        const int LowerDeck = 4, UpperDeck = 5, BackRail = 6;
+        const int LowerDeck = 4, UpperDeck = 5;
 
         /// <summary>
         /// The top of the upper deck above the shelf's own floor — the highest surface of the
@@ -120,8 +141,13 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The top of the lower deck, where the front four stacks stand.</summary>
         public static float LowerDeckTop => Centres[LowerDeck].y + Sizes[LowerDeck].y * 0.5f;
 
-        /// <summary>The top of the whole thing — where an order mark on a shelf sits.</summary>
-        public static float Top => Centres[BackRail].y + Sizes[BackRail].y * 0.5f;
+        /// <summary>
+        /// Where an order mark on a shelf sits: clear of the top deck and of a full bay on it.
+        ///
+        /// <para>Derived from the deck rather than from a part, because since the back rail went
+        /// there is no drawn timber up here — see <see cref="MarkClearance"/>.</para>
+        /// </summary>
+        public static float Top => DeckTop + MarkClearance;
 
         /// <summary>The box a shelf occupies, for a selection bracket.</summary>
         public static Vector3 Size => new Vector3(HalfWidth * 2f, Top, FootprintDepth + 0.12f);

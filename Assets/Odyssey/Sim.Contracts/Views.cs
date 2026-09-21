@@ -889,6 +889,19 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many units of <see cref="StoredDef"/> are in there.</summary>
         public readonly int StoredUnits;
 
+        /// <summary>
+        /// The cell the store itself stands in, or -1 where no store covers this one.
+        ///
+        /// <para><b>Not always the cell that was clicked.</b> Solid terrain answers for the cell
+        /// above it, so a click on the ground under a shelf is a click on the shelf, and
+        /// <c>StorageZones.StoreCellOf</c> is the one owner of that rule. It is published because
+        /// contained goods are published at their <em>store's</em> cell: without it a reader of
+        /// this row cannot pick its own store's goods out of <see cref="WorldSnapshot.Things"/>,
+        /// and would have to guess with the clicked cell and be wrong exactly where the pane and
+        /// the panel already disagreed once.</para>
+        /// </summary>
+        public readonly int StoreCellIndex;
+
         public const byte StoreNone = 0;
         public const byte StoreZone = 1;
         public const byte StoreShelf = 2;
@@ -899,8 +912,9 @@ namespace Odyssey.Sim.Contracts
             bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
             int storageCells = 0, int storageOrdinal = 0,
             byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
-            byte storedDef = 255, int storedUnits = 0)
+            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1)
         {
+            StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
             StoragePriority = storagePriority;
             StorageCells = storageCells;

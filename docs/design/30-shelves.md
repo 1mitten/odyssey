@@ -156,11 +156,38 @@ pay for. That is `docs/bug-patterns.md` P1, and the register calls it the common
 that assembly and does not compile Presentation, and **a correctness bug with no test in the tier
 that runs in twenty seconds is a correctness bug nobody re-runs.**
 
+### 7a. And reading it back: the Holding list
+
+**The owner could not tell what was in one** (2026-09-21: *"I can't view the contents of the shelve
+easy either — please can that be shown in someway"*). What existed was the header's "3 of 8 stacks"
+and one `holding` row on the **Tile** tab — the tab you are not on, because a store opens on
+**Storage**. And for a shelf holding more than one kind that row printed `46 — 3 of 8 stacks`: a
+bare number, because the single-kind byte is 255 there and the amount was written on its own.
+
+The fix is a **Holding group at the top of the Storage tab**, one row per kind, biggest first, with
+the bay count where a kind occupies more than one. Three things decided it:
+
+| Decision | Why |
+|---|---|
+| on the **Storage** tab, above the filter | it is the tab a store opens on. The filter answers *what will it take*, which is set once; the contents answer *what is in it*, which changes all day |
+| read off `WorldSnapshot.Things` | contained goods are already published at the store's cell with a container id, so the list a player reads and the totals the Build palette and the stores panel count are **the same rows**. A contents channel of its own would be the fifth place to look and the one that drifts |
+| the Tile row says only how many **kinds** | 400 wood and 20 meals are not 420 of anything, so the old line could not be fixed by labelling its number. It defers to the list rather than repeating it |
+
+**`CellDetail` gained one field, `StoreCellIndex`**, and it is the enabling one: solid terrain
+answers for the cell above it, so the cell clicked is not always the cell the store stands in, and
+contained things are published at the store's. Without it the reader would have matched on the
+clicked cell and been wrong in exactly the place the pane and the panel had already disagreed once
+(§4a). It is also the fallback's reason to exist: a `CellDetail` built by hand carries no store
+cell, nothing is scanned, and the row says `mixed` rather than confidently reporting `0 kinds`.
+
+Hidden outright over a painted zone — a stockpile's contents are lying on the board in front of
+you, and a list would be a second, worse view of something already on screen.
+
 ## 8. Drawing it
 
-Seven boxes from `ShelfShape`: **four posts, two decks and a back rail**, standing against the
-**back** of the cell. 1.45 m overall and open at the front, because a shelf is passable and a thing
-you walk through that is taller than you reads as a fault rather than as furniture.
+Six boxes from `ShelfShape`: **four posts and two decks**, standing against the **back** of the
+cell. 1.19 m of timber, open at the front, because a shelf is passable and a thing you walk through
+that is taller than you reads as a fault rather than as furniture.
 
 The same class answers the mesher, the ghost and the selection bracket, so a shelf under the pointer
 and a shelf on the board cannot disagree about where it stands — which would be visible here, because
@@ -185,13 +212,31 @@ Three numbers are held deliberately and are the ones a tidy would undo:
 
 | Held | Why |
 |---|---|
-| 1.45 m, not the cell's 3 m | the owner's *"maybe it takes up the entire wall unit"* was the one part not taken: the shelf is **passable**, and a full-height thing you walk through reads as a fault. 1.45 m is furniture and still well under a colonist |
-| the upper deck is **half the depth** of the lower | the occlusion rule below. It is not a styling choice |
-| the back rail | the silhouette's only front-to-back asymmetry, so the rotate key looks like it does something |
+| 1.19 m, not the cell's 3 m | the owner's *"maybe it takes up the entire wall unit"* was the one part not taken: the shelf is **passable**, and a full-height thing you walk through reads as a fault. This is furniture and still well under a colonist |
+| the upper deck is **half the depth** of the lower | the occlusion rule below, *and* the facing cue. It is not a styling choice |
+| nothing stands above the top deck | below |
 
 `ShelfShapeTests.ItIsARackAndNotACrate` is the guard: posts narrower than a fifth of a metre, decks
-thinner than a fifth, and 0.4 m of air between them. A solid side or a single deck passes every
-other test in that file.
+thinner than a fifth, 0.4 m of air between them, and an upper deck clearly shallower than the lower.
+A solid side or a single deck passes every other test in that file.
+
+#### The second look: the legs went up into the air
+
+The first rack ran its posts 6 cm proud of the top deck and stood a 26 cm **back rail** above it,
+whose job was the facing cue — four equal posts and two equal decks are near enough symmetric end to
+end that the rotate key looks broken. The owner's next words were *"apart from the legs that go up
+to the air, they just need to go up the shelve level"*, and they are right: an upright that carries
+on past the last shelf reads as unfinished carpentry.
+
+**The rail was already redundant and nobody had noticed.** Making the upper deck half the depth of
+the lower — done for the occlusion rule, not for this — is a far stronger front-to-back asymmetry
+than a plate at the back, and it is visible from every angle rather than from one. So the rail went,
+the posts stop dead on the top deck, and `NothingStandsAboveTheTopDeck` walks every part to keep it
+that way.
+
+That leaves one loose end the rail had been quietly covering: an order mark rode the rail's top, and
+a mark at deck height is **buried under the goods**. `Top` is now `DeckTop + MarkClearance` — the
+only height in `ShelfShape` that is not the top of a drawn box, and commented as such.
 
 **Photographed rather than argued about**: `scripts/unity.sh shot Odyssey.EditorTools.ShelfCheck.Run`
 writes four views of a row of four racks holding nothing, two stacks, four and eight, which is the
@@ -399,6 +444,14 @@ instrument behind.
   the drawn boxes. Squaring the two decks up "for symmetry" turns four of eight stacks dark and
   nothing else fails.
 - **`SlotLumps`.** Capping a bay at two bundles is what keeps the frame visible under a full load.
+- **Nothing above the top deck.** The posts stop on it and there is no rail; the facing cue is the
+  upper deck's depth. Adding a finial, a lip or a back board to "finish" it puts the legs back in
+  the air, which is the thing that was reported.
+- **`Top` is not a part.** It is the deck plus `MarkClearance`, so an order mark clears a loaded
+  shelf. Deriving it from the tallest box again buries the mark under the goods.
+- **The Holding list reads `WorldSnapshot.Things`.** Giving contained goods a channel of their own
+  would make it the fifth place to look, and §7 is about why that is the fault that undercounts in
+  silence.
 
 
 - **The ground stays one stack per cell.** The inventory exists so that rule is never touched; a
