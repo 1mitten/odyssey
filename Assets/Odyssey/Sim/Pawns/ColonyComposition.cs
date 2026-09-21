@@ -73,6 +73,10 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // So a site can carry its detour in the navigation flags, and so raising a building
+            // can ask who is standing in it. Set here because this is the one place that holds
+            // both the graph and the grid.
+            construction.Nav = nav;
             // Built here rather than passed in, for the same argument the construction grid's
             // `out` was: an optional growing-zone parameter is how a caller forgets one, and a
             // forgetful build is a paint tool that silently does nothing. Reached through
@@ -117,6 +121,9 @@ namespace Odyssey.Sim.Pawns
                 .AddHashable(edificeSave)
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
+                // After navigation, so it reads the flags this tick's edits produced: nobody is
+                // left standing inside solid world, whatever put the world there.
+                .AddSystem(_ => new TrappedPawnSystem(pawns))
                 .AddSystem(_ => enclosure)
                 // Starting skills (U37), before Needs and the job pipeline for the same reason
                 // they run: a colonist should not be scanned for work on the first tick it is
