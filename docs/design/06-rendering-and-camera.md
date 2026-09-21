@@ -1274,6 +1274,117 @@ not done: it is the next unit, and the sweep above is its before.
 whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
 before it binds, and worth fixing because the fix is cheap and provably invisible.
 
+### 6c.3 The decoration, measured — the surround is 45 per cent of the meadow and the tufts are 7
+
+**2026-09-21.** The owner, watching the game rather than a test: *"it seems that grass tufts and
+surrounding land have some impact of the FPS — is there anything we can explore investigate to
+improve or handle performance, any pre warming of shaders, caching or something that would help."*
+
+Half of that was already answerable and the project could not answer it, which is the finding
+behind the finding. **The surround was charged to `FrameSection.World` along with the chunk
+buckets**, because it is submitted from inside `ChunkRenderer.Render` — deliberately, so the depth
+buffer can reject it before the board is drawn — and nothing bracketed it. So the one pass §6c
+spent a day cutting from 3.65 ms to about 2.2 was the one pass no instrument could name
+afterwards. The tufts were worse off again: they are meshed into the chunks, so they have never had
+a number of their own at all.
+
+**Four instruments, and they are the deliverable.**
+
+| Instrument | What it answers |
+|---|---|
+| `FrameSection.Surround` | the land beyond the board, split out of `World` |
+| `OdysseyBootstrap.GpuFrameMs` / `CpuFrameMs` | is this frame CPU-bound or GPU-bound — see below |
+| Two overlay lines: `cpu … gpu … <resolution>` and `submit split:` | both of the above, at the owner's own resolution, in a real session |
+| `FrameTimeTests.TheDecorationAgainstTheFrame` | one world timed four ways, controls inside one run |
+
+### The numbers
+
+Played meadow, 120 × 120 × 16, no orders, 640 × 480 on an RTX 5070 Ti, four readings of the **same
+built world** in one run — the only way a figure from this machine is worth anything (§6c).
+
+| Case | Frame | Draw calls | Instances |
+|---|---|---|---|
+| As shipped | **2.71 ms** | 1,473 | 41,913 |
+| Tufts off | 2.52 ms (**−0.18**) | 1,279 | 35,421 |
+| Surround off | 1.48 ms (**−1.23**) | 1,197 | 23,983 |
+| Neither | 1.29 ms (**−1.41**) | 1,003 | 17,491 |
+
+**The surround is 45 per cent of the frame on the meadow and the tufts are 7.** Together they are
+more than half of it. The owner named both and one of them is nearly seven times the other.
+
+Three things follow the split across the other arms in the same run, and each is worth stating:
+
+- **The surround is a flat tax, not a scaling one.** It reads 1.14–1.24 ms at every colony size
+  from 8 pawns to 384, where `Figures` goes 0.09 → 8.65 and `Actors` 0.02 → 15.41. It is the
+  largest single item in the draw block on the standard board until about thirty colonists.
+- **It barely grows with the board**: 1.07 ms on standard, 1.78 on large, 2.05 on huge, against
+  `World` going 0.92 → 2.17 → 4.08 over the same three. It scales with the *ring*, which is why
+  a bigger board does not buy proportionally more of it.
+- **The city pays 0.058 ms**, because the ruined city grows no wood outside it. The surround's cost
+  is the trees and nothing else, which §6c had already established by subtraction and this now
+  shows directly.
+
+### Where this measurement stops, and it stops early
+
+Every figure above is **a stopwatch around CPU submission at 640 × 480**. It cannot see fill,
+overdraw or the shadow pass. That matters more here than anywhere else in this document, because
+both suspects are alpha-tested foliage covering the horizon — precisely the geometry §6c predicted
+would be free at 307k pixels and dominant at 1080p. **A tuft reading of "7 per cent" is a statement
+about submission and may be wrong by an order of magnitude about what the owner is actually
+watching.** The ranking could invert at play resolution: the surround is CPU-side batch overhead,
+which barely moves with resolution, while the tufts are pixels, which move with its square.
+
+That is what `GpuFrameMs` is for, and why `enableFrameTimingStats` is on in the player settings
+since this date. **The rule for reading the overlay: if the GPU figure is at or above the frame
+time, the frame is fill-bound and no amount of batching will move it. If it is well under, the cost
+is on this side of the bus and `submit split:` says which pass.**
+
+### What to do, ranked
+
+Nothing here is started; the phase gate holds. In order of what the measurement supports:
+
+1. **Decide which side of the bus the loss is on, at the owner's resolution.** One Play session,
+   backtick for the overlay, read `cpu` against `gpu`. Then the render-scale rung in the Graphics
+   tab is the confirming experiment: if halving it recovers the frame, it is fill; if it does not,
+   it is submission. Both switches already ship. **This costs no code and it decides everything
+   below**, so nothing below should be built first.
+2. **If it is fill:** the tufts want a draw distance, and the hook is already there —
+   `ChunkRenderer.FoliageDrawDistance` is a per-chunk cutoff against the viewer that already
+   works, was already measured at 110 m (116 draw calls and 23,000 instances down to 89 and
+   20,400, `MeadowCheck`, 2026-09-16) and ships as `PositiveInfinity` because the fault it was
+   written for turned out to be the outline shader. It is a lever waiting to be turned, not a
+   feature to build. A tuft is sub-pixel at forty metres and there is no reason to shade one. The surround's near wood wants the same
+   treatment or impostors, and `NearWoodDensityPercent` is the crude version of it that is already
+   wired.
+3. **If it is submission:** the surround is near its measured floor. §6c found the cost tracked the
+   *batch* count and coarsening `TreeSectorMetres` from 80 m to 400 m took it 3.65 → 2.2 ms, and
+   that past 400 m it saturates at about 204 batches because the variants, themes, mute steps and
+   parts cannot merge. The remaining honest lever is **fewer kinds of tree far away** — the same
+   argument `FarTreeVariants` already makes at 4 — applied to the near ring, where sixteen kinds
+   are being told apart by nobody.
+4. **The tufts' 194 draw calls are worth a look whichever way it goes.** They are 13 per cent of
+   the meadow's calls for 7 per cent of its frame, and they are per (chunk, variant, tint). Fewer
+   tuft *variants* would collapse them; that is a look decision, not a performance one, and it
+   should be made by eye.
+
+### On pre-warming shaders, which was asked and is a different question
+
+**Shader warm-up fixes hitches, not frame rate.** A variant compiles the first time it is drawn;
+what that costs is one stalled frame, once, and then nothing for the rest of the session. It cannot
+be what a steady-state readout is showing, and warming every variant at load would move the stall
+into the loading screen rather than remove it. Worth doing for the stutter on its own terms — this
+project has already been bitten three times by the neighbouring problem of variants being *stripped*
+(`ShaderInclusion`, `InstancingKeepAlive`, `SyntyInstancingKeepAlive`, `docs/lessons.md`), and a
+`ShaderVariantCollection` is the natural companion to those — but it is not on the path to this
+report and should not be sold as if it were.
+
+**Caching is already done, and that is worth saying plainly rather than re-proposing it.** The
+surround is built once at startup and submitted unchanged every frame; its instance arrays are
+filled and never refilled, and nothing can dirty them because no simulation stands behind them. The
+tufts are baked into chunk meshes and re-meshed only when the mirror says a chunk changed. There is
+no per-frame rebuild anywhere in either pass to eliminate. **What is left is the submission itself
+and the pixels it costs**, which is why the two numbers above are the ones that matter.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.

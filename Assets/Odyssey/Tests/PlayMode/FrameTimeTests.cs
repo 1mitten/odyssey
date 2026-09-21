@@ -227,10 +227,11 @@ namespace Odyssey.Tests.PlayMode
         /// same order count, one thing different.</para>
         ///
         /// <para><b>Read the split, not the total.</b> <c>FrameSection.World</c> is the chunk
-        /// buckets and the surround — the term that actually scales with the board — and
+        /// buckets — the term that actually scales with the board — <c>FrameSection.Surround</c>
+        /// is the land beyond it, which scales with the ring rather than with the board, and
         /// <c>FrameSection.Doors</c> is <c>DoorDirector</c>, which scans every cell in the world
-        /// for doors whenever anything has been edited. Those two are what a board size buys, and
-        /// the rest of the frame should be flat across all three.</para>
+        /// for doors whenever anything has been edited. Those three are what a board size buys,
+        /// and the rest of the frame should be flat across all three boards.</para>
         ///
         /// <para>It asserts nothing about time. Every number here is 640 x 480 on a development
         /// GPU and the target is a 2022 laptop, so a threshold would be a threshold on the wrong
@@ -249,6 +250,7 @@ namespace Odyssey.Tests.PlayMode
 
             var means = new float[boards.Length];
             var world = new double[boards.Length];
+            var surround = new double[boards.Length];
             var doors = new double[boards.Length];
             var chunks = new int[boards.Length];
 
@@ -268,6 +270,7 @@ namespace Odyssey.Tests.PlayMode
 
                     means[b] = mean;
                     world[b] = Section(split, OdysseyBootstrap.FrameSection.World);
+                    surround[b] = Section(split, OdysseyBootstrap.FrameSection.Surround);
                     doors[b] = Section(split, OdysseyBootstrap.FrameSection.Doors);
                     chunks[b] = boot.Renderer?.ChunksDrawn ?? 0;
 
@@ -291,6 +294,7 @@ namespace Odyssey.Tests.PlayMode
                 Debug.Log($"[FrameTime] board {boards[b].Label} " +
                           $"{boards[b].X}x{boards[b].Z}x{boards[b].Y}: " +
                           $"frame {means[b]:0.00} ms, World {world[b]:0.000} ms, " +
+                          $"Surround {surround[b]:0.000} ms, " +
                           $"Doors {doors[b]:0.000} ms, {chunks[b]} chunks drawn " +
                           $"(x{(means[0] > 0 ? means[b] / means[0] : 0):0.00} frame, " +
                           $"x{(world[0] > 0 ? world[b] / world[0] : 0):0.00} World against standard)");
@@ -302,6 +306,98 @@ namespace Odyssey.Tests.PlayMode
 
         static double Section(double[] split, OdysseyBootstrap.FrameSection section) =>
             split.Length > (int)section ? split[(int)section] : 0d;
+
+        /// <summary>
+        /// What the decoration costs: the grass tufts and the land beyond the board, measured
+        /// against each other and against a board with neither.
+        ///
+        /// <para><b>Why this arm exists.</b> The owner reported (2026-09-21) that the tufts and
+        /// the surround appeared to be costing frames, and the project had no way to answer
+        /// except by opinion: the tufts are baked into the chunk mesh so they hide inside
+        /// <c>FrameSection.World</c>, and until the same day the surround hid there too. Both are
+        /// already player-facing switches (<c>GraphicsOption.GrassTufts</c>,
+        /// <c>GraphicsOption.Surround</c>), so the question is not whether they can be turned off
+        /// but what turning them off is worth.</para>
+        ///
+        /// <para><b>One world, four readings, and that is the whole method.</b> This machine runs
+        /// several editors at once and a frame number taken in one run is not comparable with one
+        /// taken in another — the city canary drifted 2.01 to 4.01 ms in an afternoon on nothing
+        /// but a sibling worktree (§6c). So the same built world is timed with everything on,
+        /// with the tufts off, with the surround off and with both off, in that order and without
+        /// a rebuild between them. Only the differences are quoted.</para>
+        ///
+        /// <para><b>What it cannot see, and the reason it must be read beside a Play session.</b>
+        /// Every number here is a stopwatch around CPU submission at 640 x 480. Alpha-tested
+        /// foliage is exactly the geometry whose cost is nil at 307k pixels and dominant at
+        /// 1080p, so a tuft reading of "free" here is a statement about submission and not about
+        /// fill. <c>OdysseyBootstrap.GpuFrameMs</c> on the developer overlay is the other half.
+        /// </para>
+        ///
+        /// <para>It asserts no times, for the reason every arm in this file gives: the budget is
+        /// for a 2022 laptop and this is not one. What it asserts is that the world really had
+        /// tufts and a surround to take away, because a board that generated neither reports a
+        /// beautifully cheap frame and a difference of zero.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheDecorationAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                float all = 0f, noTufts = 0f, noSurround = 0f, bare = 0f;
+                double[] allSplit = Array.Empty<double>(), bareSplit = Array.Empty<double>();
+
+                // The shipped case first, and the renderer read afterwards: the bootstrap builds
+                // it on its own first Update, so there is nothing to ask before a frame has run.
+                yield return TimeFrames("decoration/all", boot, WarmupFrames,
+                    m => all = m, p => allSplit = p);
+
+                ChunkRenderer renderer = boot.Renderer!;
+                int shippedDensity = renderer.ScatterDensity;
+                int surroundTrees = renderer.Skirt.TreeInstances + renderer.Skirt.FarTreeInstances;
+
+                Assert.That(shippedDensity, Is.GreaterThan(0),
+                    "this board strews no tufts, so there is nothing to take away");
+
+                // The tufts are meshed into the chunks, so taking them away is a re-mesh and not
+                // a flag read at submission — the same rule ScatterDensity's own comment states.
+                renderer.ScatterDensity = 0;
+                boot.Model!.Remesh();
+                yield return null;
+                yield return TimeFrames("decoration/no tufts", boot, WarmupFrames, m => noTufts = m);
+
+                renderer.ScatterDensity = shippedDensity;
+                boot.Model!.Remesh();
+                renderer.Skirt.Enabled = false;
+                yield return null;
+                yield return TimeFrames("decoration/no surround", boot, WarmupFrames, m => noSurround = m);
+
+                renderer.ScatterDensity = 0;
+                boot.Model!.Remesh();
+                yield return null;
+                yield return TimeFrames("decoration/bare", boot, WarmupFrames,
+                    m => bare = m, p => bareSplit = p);
+
+                Assert.That(surroundTrees, Is.GreaterThan(0),
+                    "no wood grew outside this board, so the surround reading is of empty ground");
+
+                Debug.Log($"[FrameTime] decoration on {Screen.width}x{Screen.height}: " +
+                          $"all {all:0.00} ms, no tufts {noTufts:0.00} ms " +
+                          $"(-{all - noTufts:0.00}), no surround {noSurround:0.00} ms " +
+                          $"(-{all - noSurround:0.00}), neither {bare:0.00} ms " +
+                          $"(-{all - bare:0.00}); " +
+                          $"Surround section {Section(allSplit, OdysseyBootstrap.FrameSection.Surround):0.000} " +
+                          $"-> {Section(bareSplit, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                          $"World {Section(allSplit, OdysseyBootstrap.FrameSection.World):0.000} " +
+                          $"-> {Section(bareSplit, OdysseyBootstrap.FrameSection.World):0.000} ms, " +
+                          $"{surroundTrees} surround trees, tuft density {shippedDensity}");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
 
         /// <summary>
         /// Designate the board row-major until a thousand orders stand, the same walk and the

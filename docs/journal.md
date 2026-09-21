@@ -9725,3 +9725,59 @@ designates and then lets the world settle, so the 922k-cell scan never fired. Th
 unmeasured, not absent, and measuring it wants an arm that keeps editing while it times — the same
 shape as `MineOneCell`. Recorded rather than quietly left as a zero, because a zero in a table is
 indistinguishable from a cost that is genuinely nil.
+
+---
+
+## 2026-09-21 — the decoration, measured: the surround was 45 per cent of the frame and nothing could say so
+
+The owner, from a Play session rather than a test: *"it seems that grass tufts and surrounding land
+have some impact of the FPS — is there anything we can explore investigate to improve or handle
+performance, any pre warming of shaders, caching or something that would help."*
+
+**The first answer was that the project could not tell them, and that is the finding behind the
+finding.** The surround is submitted from inside `ChunkRenderer.Render` — deliberately, so it
+reaches the GPU before the board and the depth buffer can reject it — and it was therefore charged
+to `FrameSection.World` along with the chunk buckets from the day the sections were written. So the
+one pass §6c had spent a day cutting from 3.65 ms to about 2.2 was the one pass no instrument could
+name afterwards. The tufts had never had a number at all: they are meshed into the chunks, so they
+are invisible inside the board's own figure by construction.
+
+**Four instruments, and they are the real deliverable.** `FrameSection.Surround`, split out and
+charged by a stopwatch inside the renderer; `GpuFrameMs` and `CpuFrameMs` off `FrameTimingManager`,
+with `enableFrameTimingStats` turned on in the player settings to feed them; two lines on the
+developer overlay — `cpu … gpu … <resolution>` and the whole submit split, largest first; and
+`FrameTimeTests.TheDecorationAgainstTheFrame`, which times one built world four ways.
+
+**One world, four readings, because this machine cannot be trusted across runs.** The played
+meadow, 640 × 480: as shipped **2.71 ms**, tufts off **2.52**, surround off **1.48**, neither
+**1.29**. So the surround is **1.23 ms — 45 per cent of the frame** — and the tufts are **0.18, or
+7**. Together they are more than half of it. The owner named the two together and one of them is
+nearly seven times the other.
+
+Three corroborations fell out of the same run without being asked for. The surround is a **flat
+tax**: 1.14–1.24 ms at every colony size from 8 pawns to 384, while `Figures` goes 0.09 → 8.65 and
+`Actors` 0.02 → 15.41 — it is the largest single item in the draw block on the standard board until
+about thirty colonists. It **barely grows with the board** — 1.07, 1.78, 2.05 ms on standard, large
+and huge, against `World` going 0.92 → 2.17 → 4.08 — because it scales with the ring and not with
+the area. And the **city pays 0.058 ms**, since the ruined city grows no wood outside it, which
+confirms directly what §6c had only established by subtraction: the surround's cost is its trees.
+
+**What was deliberately not concluded.** Every figure is a stopwatch around CPU submission at
+640 × 480, and both suspects are alpha-tested foliage covering the horizon — the exact geometry §6c
+predicted would be free at 307k pixels and dominant at 1080p. The ranking may invert at play
+resolution: batch overhead hardly moves with pixels and fill moves with their square. So the tuft's
+7 per cent is a statement about submission and might be wrong by an order of magnitude about what
+the owner is watching. That is what the GPU readout is for, and the next step is one Play session
+at the owner's own resolution rather than another test on this one.
+
+**Two things in the question were answered rather than built.** *Pre-warming shaders* fixes hitches,
+not frame rate — a variant costs one stalled frame the first time it is drawn and nothing
+afterwards, so it cannot be what a steady readout shows; worth doing for the stutter on its own
+terms, and this project has been bitten three times by the neighbouring problem of variants being
+*stripped*, but it is not on the path to this report. *Caching* is already done: the surround is
+built once and submitted unchanged, the tufts are baked into chunk meshes and re-meshed only on a
+dirty chunk, and there is no per-frame rebuild in either pass to remove. What is left is the
+submission itself and the pixels it costs.
+
+`docs/design/06-rendering-and-camera.md` §6c.3 holds the table, the ranked options and the rule for
+reading the new overlay lines. Nothing is built past the instruments; the phase gate holds.

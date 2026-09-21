@@ -294,8 +294,18 @@ namespace Odyssey.Presentation.Bootstrap
             Mirror = 0,
             /// <summary>The eye-to-colonist lines that ghost whatever stands on them.</summary>
             Sight,
-            /// <summary>The chunk buckets, the surround and the falling items.</summary>
+            /// <summary>The chunk buckets and the falling items. The surround is <b>not</b> here.</summary>
             World,
+            /// <summary>
+            /// The land beyond the board: its ground, its tufts and its wood.
+            ///
+            /// <para>Split out of <see cref="World"/> on 2026-09-21. It is submitted from inside
+            /// <c>ChunkRenderer.Render</c> and had been charged to the board ever since, which
+            /// made the one pass §6c spent a day cutting from 3.65 ms to 2.2 invisible on the
+            /// overlay and in <c>FrameTimeTests</c>. The two scale with different things and want
+            /// separate numbers.</para>
+            /// </summary>
+            Surround,
             /// <summary>The live Synty figures, capped at <c>PawnFigureDirector.FigureCeiling</c>.</summary>
             Figures,
             /// <summary>Sound: what played, what was culled, the ambience.</summary>
@@ -322,7 +332,48 @@ namespace Odyssey.Presentation.Bootstrap
             _sectionTimer.Restart();
         }
         float _smoothedFrameMs;
+        float _smoothedCpuMs;
+        float _smoothedGpuMs;
+        readonly UnityEngine.FrameTiming[] _frameTimings = new UnityEngine.FrameTiming[1];
         string _catalogueNote = string.Empty;
+
+        /// <summary>
+        /// Last frame's GPU time in milliseconds, smoothed, or <c>0</c> where the platform will
+        /// not say.
+        ///
+        /// <para><b>The one number nothing here could previously read, and the reason §6c's
+        /// findings stop where they do.</b> Every timing this class takes is a stopwatch around
+        /// CPU work, so a frame that is entirely GPU-bound — the case §6c predicts for
+        /// alpha-tested foliage at a real resolution, and cannot see at 640 x 480 — reads as a
+        /// cheap frame with a slow clock. Fill, overdraw and the shadow pass are invisible to
+        /// <see cref="SubmitMs"/> by construction.</para>
+        ///
+        /// <para>Needs <c>enableFrameTimingStats</c> in the player settings, which is on since
+        /// 2026-09-21, and a development build or the editor. Where it is unavailable it stays 0
+        /// and the overlay says so rather than printing a zero that looks like a measurement.</para>
+        /// </summary>
+        public float GpuFrameMs => _smoothedGpuMs;
+
+        /// <summary>Last frame's main-thread CPU time, smoothed, from the same source.</summary>
+        public float CpuFrameMs => _smoothedCpuMs;
+
+        /// <summary>
+        /// Ask the platform what the last frame cost on each side of the bus.
+        ///
+        /// <para><c>CaptureFrameTimings</c> gathers what is ready, which lags the current frame by
+        /// a few; that is fine for a readout and useless for attributing a single frame, so the
+        /// numbers are smoothed exactly as the frame time is and read as a trend.</para>
+        /// </summary>
+        void SampleFrameTimings()
+        {
+            FrameTimingManager.CaptureFrameTimings();
+            if (FrameTimingManager.GetLatestTimings(1, _frameTimings) == 0) return;
+
+            float cpu = (float)_frameTimings[0].cpuFrameTime;
+            float gpu = (float)_frameTimings[0].gpuFrameTime;
+            _smoothedCpuMs = _smoothedCpuMs <= 0f ? cpu : Mathf.Lerp(_smoothedCpuMs, cpu, 0.05f);
+            _smoothedGpuMs = _smoothedGpuMs <= 0f ? gpu : Mathf.Lerp(_smoothedGpuMs, gpu, 0.05f);
+        }
 
         public SimWorld? World => _world;
 
@@ -1171,6 +1222,17 @@ namespace Odyssey.Presentation.Bootstrap
             }
             MarkSection(FrameSection.World);
 
+            // And then take the surround back out of it. The skirt is submitted from inside
+            // ChunkRenderer.Render — deliberately, because it must go to the GPU before the board
+            // does (see the comment there) — so it cannot be bracketed by a MarkSection of its
+            // own. Charging it here keeps the two numbers separate without moving the submission.
+            if (_renderer != null)
+            {
+                double surroundMs = _renderer.SurroundMs;
+                _sectionMs[(int)FrameSection.Surround] += surroundMs;
+                _sectionMs[(int)FrameSection.World] -= surroundMs;
+            }
+
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
             _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
@@ -1212,6 +1274,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             float frameMs = Time.unscaledDeltaTime * 1000f;
             _smoothedFrameMs = _smoothedFrameMs <= 0f ? frameMs : Mathf.Lerp(_smoothedFrameMs, frameMs, 0.05f);
+            SampleFrameTimings();
         }
 
         /// <summary>
@@ -2329,6 +2392,13 @@ namespace Odyssey.Presentation.Bootstrap
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
+                // The two lines that answer "is this the CPU or the GPU", which nothing on
+                // this overlay could say until 2026-09-21. Read the GPU figure first: where
+                // it is at or above the frame time the frame is fill-bound and no amount of
+                // batching will move it, and the render-scale rung is the lever. Where it is
+                // well under, the cost is on this side of the bus and the split says which pass.
+                $"cpu {Timing(_smoothedCpuMs)}   gpu {Timing(_smoothedGpuMs)}   {Screen.width}x{Screen.height}\n" +
+                $"submit split: {SubmitSplit()}\n" +
                 $"sound played {_audio?.OneShotsPlayed ?? 0} culled {_audio?.DistanceCulled ?? 0}" +
                 $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +
                 $" noclip {_audio?.ClipMissing ?? 0}" +
@@ -2365,6 +2435,42 @@ namespace Odyssey.Presentation.Bootstrap
             GUI.Label(shadow, text, style);
             GUI.color = Color.white;
             GUI.Label(rect, text, style);
+        }
+
+        /// <summary>
+        /// A millisecond figure, or <c>n/a</c> where the platform declined to give one.
+        ///
+        /// <para>Printed rather than zeroed deliberately. A GPU time of 0.00 ms and a GPU time
+        /// that could not be read look identical, and the second is the likelier of the two on a
+        /// non-development build — a zero there would be read as "the GPU is free", which is the
+        /// exact wrong conclusion to hand somebody hunting a fill-bound frame.</para>
+        /// </summary>
+        static string Timing(float ms) => ms > 0f ? $"{ms:0.00} ms" : "n/a";
+
+        readonly int[] _splitOrder = new int[(int)FrameSection.Count];
+
+        /// <summary>
+        /// Last frame's draw block, section by section, largest first, skipping what rounds to
+        /// nothing.
+        ///
+        /// <para>Largest first because the list is read while something is wrong, and in that
+        /// state the only question is which name is at the front. Enum order would put
+        /// <c>Mirror</c> there every time.</para>
+        /// </summary>
+        string SubmitSplit()
+        {
+            for (int i = 0; i < _splitOrder.Length; i++) _splitOrder[i] = i;
+            System.Array.Sort(_splitOrder, (a, b) => _sectionMs[b].CompareTo(_sectionMs[a]));
+
+            var parts = new System.Text.StringBuilder();
+            for (int i = 0; i < _splitOrder.Length; i++)
+            {
+                double ms = _sectionMs[_splitOrder[i]];
+                if (ms < 0.005d) continue;
+                if (parts.Length > 0) parts.Append("  ");
+                parts.Append((FrameSection)_splitOrder[i]).Append(' ').Append(ms.ToString("0.00"));
+            }
+            return parts.Length > 0 ? parts.ToString() : "nothing measurable";
         }
 
         GUIStyle? _developerOverlayStyle;

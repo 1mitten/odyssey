@@ -23,6 +23,27 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Which side of the bus is the frame losing on?** (`claude/huge-map`,
+  `docs/design/06-rendering-and-camera.md` §6c.3.) **Top of the list, because it decides four other
+  lines and costs one minute.** The owner reported the grass tufts and the surround costing frames;
+  measured on this machine at 640 × 480 the surround is **45 per cent of the meadow's frame** and
+  the tufts are **7** — but that is CPU submission only, and both are alpha-tested foliage, whose
+  cost is nil at 307k pixels and can dominate at 1080p. So the ranking may invert on the owner's
+  own monitor and nothing should be built until it is known which way round it is.
+  **Press backtick for the developer overlay and read the new `cpu … gpu … <resolution>` line.**
+  If `gpu` is at or above the frame time the frame is fill-bound and batching will not move it; if
+  it is well under, the `submit split:` line beneath names the pass. Then confirm with the
+  **render scale** rung in Settings → Graphics: halve it, and if the frame recovers it is fill.
+  A wrong answer looks like reading the numbers without saying what the resolution was — every
+  figure in §6c.3 is 640 × 480 and is not comparable with anything taken at another size.
+- **Are the tufts and the surround worth what they cost?** (Same branch and section.) Settings →
+  Graphics already carries both switches. Turn the **surround** off on the meadow and look at the
+  horizon: 45 per cent of the frame is a large sum for scenery, and the question is whether the
+  board reads as a board or as a diorama floating in fog without it. Then the **tufts**, which cost
+  a seventh of that. A wrong answer looks like both being turned off and left off — that would mean
+  the levers are settings rather than the decoration being worth keeping, and the ranked options in
+  §6c.3 should be spent making the expensive one cheaper instead.
+
 - **Is a Huge board more room, or more walking?** (`claude/huge-map`, `docs/design/28-map-size.md`.)
   New Game → the **Size** control now cycles a fourth board, **Huge, 240 × 240 × 16** — twice
   Standard's ground at Standard's depth. Standard is still the default, so nothing changes unless

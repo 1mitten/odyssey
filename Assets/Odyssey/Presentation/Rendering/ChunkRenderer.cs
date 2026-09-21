@@ -222,6 +222,24 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Total chunks meshed since start. A large number in steady state is a bug.</summary>
         public int TotalChunksMeshed { get; private set; }
 
+        /// <summary>
+        /// What submitting the surround cost last frame, in milliseconds.
+        ///
+        /// <para><b>Its own number because the surround is the one pass whose cost was measured
+        /// and then buried.</b> §6c found it was 3.65 ms of a 5 ms frame and cut it to about 2.2,
+        /// and from that day it was charged to <c>FrameSection.World</c> alongside the chunk
+        /// buckets — so nothing on the overlay or in <c>FrameTimeTests</c> could say which of the
+        /// two a number belonged to. The board and the land beyond it scale with completely
+        /// different things (chunks with the slice and the edits, the surround with the ring and
+        /// the tree sectors), so one figure covering both answers no question anybody asks.</para>
+        ///
+        /// <para>CPU submission only. It cannot see fill or the shadow pass, which is exactly the
+        /// axis §6c.3 says is unmeasured — read it beside the GPU frame time, never instead.</para>
+        /// </summary>
+        public double SurroundMs { get; private set; }
+
+        readonly System.Diagnostics.Stopwatch _surroundTimer = new System.Diagnostics.Stopwatch();
+
         public void Render(int activeLayer, SliceSettings slice)
         {
             DrawCalls = 0;
@@ -238,7 +256,10 @@ namespace Odyssey.Presentation.Rendering
             Skirt.GameObjectLayer = GameObjectLayer;
             Skirt.CastShadows = CastShadows;
             Skirt.SubmitToGpu = SubmitToGpu;
+            _surroundTimer.Restart();
             Skirt.Render(activeLayer);
+            _surroundTimer.Stop();
+            SurroundMs = _surroundTimer.Elapsed.TotalMilliseconds;
             DrawCalls += Skirt.DrawCalls;
             InstancesDrawn += Skirt.InstancesDrawn;
 
