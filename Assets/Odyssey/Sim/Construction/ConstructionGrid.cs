@@ -1649,6 +1649,26 @@ namespace Odyssey.Sim.Construction
         /// <para>What it was is returned, so the caller can pay the refund without asking the world
         /// a question whose answer it has just destroyed.</para>
         /// </summary>
+        /// <summary>
+        /// Does the cell a two-cell record derived actually hold the other half of it?
+        ///
+        /// <para>Either the very same record — a bed, whose two cells both point at one handle —
+        /// or a record whose def is the opposite stair half. Anything else means the facing the
+        /// derivation used was not the one the thing was placed at, which is every stair the
+        /// generator stamped, and the derived cell is somebody else's.</para>
+        /// </summary>
+        bool IsTheOtherHalfOf(int secondHandle, int handle, ushort def)
+        {
+            if (secondHandle == handle) return true;
+            if (secondHandle < 0 || secondHandle >= _edifices.Count) return false;
+
+            ushort partner = def == CoreContent.EdificeStairLower ? CoreContent.EdificeStairUpper
+                : def == CoreContent.EdificeStairUpper ? CoreContent.EdificeStairLower
+                : (ushort)0;
+
+            return partner != 0 && _edifices[secondHandle].Def == partner;
+        }
+
         public bool Demolish(PawnContext ctx, int cell, out PlacedEdifice was)
         {
             int handle = _grid.Edifice[cell];
@@ -1673,6 +1693,24 @@ namespace Odyssey.Sim.Construction
             // before the cells are cleared, because clearing them is what loses the pointer.
             int secondHandle = second >= 0 ? _grid.Edifice[second] : -1;
 
+            // **And the derived cell has to hold the other half**, which is the same guard
+            // RefreshStair carries a few hundred lines up and for the same reason. `Cells()`
+            // answers 2 for either stair half whoever stamped it, and a worldgen stair carries no
+            // facing — so a stamped stair's `SecondCell` is derived from Facing 0 and names
+            // whatever happens to lie north of it. Measured: without this, demolishing one takes
+            // the neighbouring wall out of the grid and flags its record Removed.
+            //
+            // A bed's far cell points at this same handle, so it passes; a built stair's holds the
+            // opposite half; a one-cell thing never gets here, because SecondCell answered -1.
+            // Nothing can reach the bad case through the gesture today, because
+            // DesignationGrid.CanDeconstruct refuses anything the colony did not build — but
+            // nothing ties that refusal to this method, and tying it here costs one comparison.
+            if (second >= 0 && !IsTheOtherHalfOf(secondHandle, handle, was.Def))
+            {
+                second = -1;
+                secondHandle = -1;
+            }
+
             // 1. The thing itself.
             _grid.RemoveEdifice(was.CellIndex);
             if (second >= 0) _grid.RemoveEdifice(second);
@@ -1681,8 +1719,9 @@ namespace Odyssey.Sim.Construction
             _edifices[handle] = gone;
 
             // A second record left standing would be walked by RebuildStairConnectors on the next
-            // load and hand back a connector for a stair that is not there.
-            if (secondHandle >= 0 && secondHandle != handle && secondHandle < _edifices.Count)
+            // load and hand back a connector for a stair that is not there. The cell was already
+            // proved to hold the other half above, so there is nothing more to check here.
+            if (secondHandle >= 0 && secondHandle != handle)
             {
                 PlacedEdifice far = _edifices[secondHandle];
                 far.Removed = true;

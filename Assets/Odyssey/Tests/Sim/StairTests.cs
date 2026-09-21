@@ -199,6 +199,57 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// <b>A stair the generator stamped does not take its neighbour's record down with it.</b>
+        ///
+        /// <para>U44 taught <c>EdificeFootprint.Cells()</c> to answer 2 for either stair half
+        /// <em>whoever</em> stamped it, which is right — a stamped stair and a built one are
+        /// deliberately the same thing to the mesher and the graph. But a stamped stair carries no
+        /// facing (<c>RefreshStair</c> says so in as many words and guards itself against it), so
+        /// <c>SecondCell</c> derived from Facing 0 names whatever happens to lie north of it.
+        /// Without the partner comparison in <c>Demolish</c>, that neighbour's record is flagged
+        /// <c>Removed</c> while the neighbour itself is still standing — a wall that exists in the
+        /// grid and is gone from the save.</para>
+        ///
+        /// <para><b>Nothing reaches it through the gesture today</b>, because
+        /// <c>DesignationGrid.CanDeconstruct</c> refuses anything the colony did not build. This
+        /// test does not go through the gesture, deliberately: the point is that the guard belongs
+        /// to <c>Demolish</c> rather than to a rule three files away that nothing ties to it. Same
+        /// argument as the unchecked index this branch's own review found on the stair fan-out.</para>
+        /// </summary>
+        [Test]
+        public void DemolishingAStampedStairLeavesTheNeighbourItPointsAtStanding()
+        {
+            ColonyWorld colony = Board();
+            int stair = GroundNear(colony, 3);
+            Assume.That(stair, Is.GreaterThanOrEqualTo(0));
+
+            // Facing 0 is north, so a stamped stair's derived far cell is the one along +Z.
+            int north = stair + Size.SizeX;
+            Assume.That(colony.Construction.Allows(north, BuildingHandle.Wall), Is.True);
+            RaiseNow(colony, north, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            int wallHandle = colony.Grid.Edifice[north];
+            Assume.That(wallHandle, Is.GreaterThanOrEqualTo(0));
+
+            // Stamped, not built: a record with no facing, exactly as worldgen leaves one.
+            var records = colony.Construction.Edifices.Records;
+            records.Add(new PlacedEdifice
+            {
+                CellIndex = stair, Def = CoreContent.EdificeStairLower,
+                Stuff = 0, Built = false, Facing = 0,
+            });
+            colony.Grid.Edifice[stair] = records.Count - 1;
+
+            Assert.That(colony.Construction.Demolish(colony.Pawns, stair, out _), Is.True);
+
+            Assert.That(records[wallHandle].Removed, Is.False,
+                "the wall north of a stamped stair is not part of it and its record must survive");
+            Assert.That(colony.Grid.Edifice[north], Is.EqualTo(wallHandle),
+                "and the wall itself is still standing in its cell");
+        }
+
+        /// <summary>
         /// <b>And a player takes one apart by marking it, not by calling Demolish.</b>
         ///
         /// <para>The test above proves the <em>rule</em> — either half names the whole stair — by

@@ -305,6 +305,30 @@ not become unreachable**, and expecting it to was wrong. It is the top of a sing
 colonist can get on to it with a one-block hop whether a stair was ever there or not. The claim
 worth asserting is that the *portal* went, and it does.
 
+## 8c. The second review, and the one thing it found
+
+**`Demolish` took its neighbour down with a stamped stair.** U44 taught
+`EdificeFootprint.Cells()` to answer 2 for either stair half *whoever* stamped it, which is right —
+a stamped stair and a built one are deliberately the same thing to the mesher and the graph. But a
+stamped stair carries **no facing**; `RefreshStair` says so in as many words and guards itself
+against it, and `Demolish` did not. So `SecondCell` derived from Facing 0 named whatever lay north
+of the stair, and `Demolish` cleared that cell and flagged its record `Removed`.
+
+**Measured, because the first guard was half a fix.** Marking only the record was tried first and
+the test still failed on the other assertion: `_grid.RemoveEdifice(second)` runs before any of it,
+so the neighbouring wall was *gone from the world* while its record still said it stood — the worse
+half of the two. The gate belongs at the derivation. `IsTheOtherHalfOf` answers it once: the same
+record (a bed, whose two cells point at one handle), or a record whose def is the opposite stair
+half. Anything else and `second` is -1 and the whole second-cell path is skipped.
+
+**Nothing reaches it through the gesture today**, because `DesignationGrid.CanDeconstruct` refuses
+anything the colony did not build — which is why no tier caught it and why the fix is a guard
+rather than a bug fix. But nothing ties that refusal to this method, and
+`DemolishingAStampedStairLeavesTheNeighbourItPointsAtStanding` does not go through the gesture,
+deliberately: the claim is that `Demolish` is safe on its own terms. Same argument as the unchecked
+index on the stair fan-out that this branch's first review found, and the same shape as
+`docs/bug-patterns.md` P1 — one rule with two owners, where the second owner was three files away.
+
 ## 9. Open
 
 - **`EmitStair` infers facing by scanning for its partner**, which `20-beds.md` §93 says a built
