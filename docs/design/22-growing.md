@@ -660,6 +660,10 @@ several cells from anything in `_fallen` — the slab that came down was holding
   fail and the rest pass — so the tests fail on the reported bug and not on something else.
 - **No golden moved and no save format changed.** Fast tier 935 Sim + 642 Hud, Long tier 34, all
   green with the goldens unbaked: nothing in the three standard seeds mines under a field.
+- **Re-run merged with main on 2026-09-22** (the entombment, cursor and session-lifecycle work):
+  fast tier **945 Sim + 675 Hud**, Long tier **34**, EditMode **2,423 / 2,402 / 0 failed**,
+  PlayMode **98 / 93 / 0 failed** on a machine with no other Unity run on it, so the timing tests
+  in it mean what they say.
 - **The state hash does move** the first time a colony does it, which is correct — `GrowingZones`
   is hashed, and a cancelled cell is a real state change.
 
