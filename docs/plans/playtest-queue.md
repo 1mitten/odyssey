@@ -21,6 +21,16 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Fast a day
+  forward into **Rime** and stand a colonist outdoors at night: the pane should say a freezing
+  tile, the clock a freezing outdoors, and within hours the colonist's work should slow and then
+  her condition. Then build a hut — walls, door, a floor above — put a **campfire** in it (3 wood,
+  furniture beside the bed) and fast again: the room should hold comfortable, the pane should say
+  so, and sleeping there should rest better than the ground outside. Two things only a keyboard
+  decides: whether Wash's chill is *mild* enough that spring feels benign (the bands in
+  `Temperature.xml`), and whether the campfire's heat feels like a fire or like a radiator — the
+  number is `heatPerPass` in `Buildings.xml` and the design says what it was tuned against.
+
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
   fill now goes through one instanced call per colour instead of one submission per cell. Nothing

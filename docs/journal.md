@@ -9196,3 +9196,37 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+## 2026-09-21 — temperature lands (design 28, the a-06 model)
+
+The M4 core pulled forward on the owner's ask. The model is the one `a-06` recommended and the
+design doc restates: per-room scalars, one pass per 120 ticks, conductances in per-mille, buoyancy
+as one asymmetric number on vertical openings, the ground as a boundary that damps the season by
+depth. Three things the implementation itself found, all now amendments in §3 and §4 of the
+design doc:
+
+**The quarter clamp strangled the fire.** ONI's rule bounds how fast two temperatures may
+approach each other; the first cut clamped the room's whole step with it, and a fired room at
+one with the outdoors had a driving difference of zero — a limit of zero — and could never warm.
+Sources are now clamped by nothing; the exchanges alone carry the bound.
+
+**A cellar with a way up was not a room.** The 100%-roofed rule read a ladder shaft as a hole in
+the roof, so any room with a stairwell or a hatch read the outdoor curve — the buoyancy feature
+dead on arrival, the cellar being the whole point. The shaft rule: a hole into *the room above*
+still counts as roofed, and the model carries it as an Opening surface. Rooms then needed the
+sweep to run ascending to fixed point, because each sweep pulls one more layer of a shaft chain
+to life — found as a round-trip divergence, a played world and a loaded one disagreeing about
+which caverns existed three layers down, which is also why rooms resolve their starting
+temperature at solve time rather than at the next pass: the warm half of a split room was
+snapping to the outdoors between the two.
+
+**Heat rises, read the right way round.** The buoyancy experiment's first assertion demanded the
+loft *warmer* than a fired hall below, which equilibrium forbids — the source is downstairs. What
+the 4:1 actually buys is the *gradient*: driven from below, the fast upward coupling keeps the
+loft close behind; driven from above, the slow downward one leaves the cellar far below. The test
+asserts the separation between the two, which is a-06's tie-breaker stated properly.
+
+Balance note: the first climate made a Wash night "bad-band" cold and the session round trip
+found a colony that hauled nothing — 5.8 °C nights against band edges tuned for autumn. The
+shipped table lifts Wash (mean 15/19 °C, ±5 swing) and widens the mild band so spring nights are
+full-rate work and mild mood; Rime still crosses the floor. The numbers are the owner's to tune;
+the shapes are pinned by tests.
