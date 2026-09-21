@@ -14,14 +14,35 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, and the breach is widening.** There are **49 open rows** as of
-2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
-days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
-is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
-rule that is quietly wrong on arrival is a rule the next session learns to ignore.
+**The rule is already breached, and the breach is widening.** There are **57 open rows** as of
+2026-09-21, counted rather than remembered — 28 on the day this file was written, 29 the day
+after, 57 now. Twenty-eight more in two days against a ceiling of about ten, and every one of
+them is a change nobody has looked at. That is the finding, not an oversight: the ceiling is
+where the list should be, not where it is, and a rule that is quietly wrong on arrival is a rule
+the next session learns to ignore.
 
 ## Open
 
+- **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
+  (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
+  across a route colonists are using and let them finish while people are crossing. Three things
+  to judge, none of which a test can answer: whether a builder ever visibly **pauses** at the last
+  blow and whether that reads as sense or as a stall; whether you ever see a colonist **shoved one
+  cell** aside as a wall completes, and whether that reads as "get out of the way" or as a
+  teleport; and whether walling a **doorway** in a corridor still lets people through the site
+  until it is finished. A wrong answer looks like: an order that never completes because somebody
+  is idling in it, or a colonist jumping a cell for no reason you can see.
+
+- **Is the delay building an object gone, or only the glitch?**
+  (Same branch, `docs/design/06-rendering-and-camera.md` §6c.3.) The frame after a build cost
+  12.53 ms and now costs 1.73; the one-to-three second wait before a wall or door *appears* is a
+  separate thing and is **not** explained. The measurement says the wall is drawn on the frame
+  after the tick that raised it. **The experiment:** Project Settings → Editor → Shader Compilation
+  → turn **Asynchronous Shader Compilation off**, press Play, build a wall and then a door, and
+  say what changed. If the delay becomes a brief freeze at the moment of building, it was the
+  editor compiling a shader variant for a material the meadow had never drawn, and the fix is a
+  warm-up rather than anything in the render path. If the delay is unchanged, the candidate is
+  dead and the next move is the developer overlay during a build.
 - **Does a pause give you your speed back?** (`claude/session-lifecycle`,
   `docs/design/09-ui-and-input.md` §12.) Space and the pause button used to resume at ×1 whatever
   you were running at, so every pause taken to give an order undid the speed you had just chosen.
@@ -49,6 +70,19 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
   §13.) It used to lay the settings window over the load list. It should now go back one level,
   and do nothing at all on the root column. A wrong answer looks like two screens on top of each
   other again, or an Escape that goes back further than one level.
+
+- **Is the pointer accurate now, and does the crosshair help or clutter?** (`claude/pointer-cursor`,
+  `docs/design/28-pointer-cursor.md`.) Two changes under one question. The game now draws its own
+  cursor — an arrow, and a **crosshair in the armed order's colour** over the world, reverting to
+  the arrow over the HUD — and, separately, **every pick is now resolved after the camera has
+  moved** instead of a frame before it, which is the actual candidate for *"doesn't seem super
+  accurate"*. **Arm Mine and pan hard with W or the edge while the ghost is up**: that is the
+  gesture the old code was wrong on and a still camera never was. A wrong answer looks like the
+  ghost still trailing behind the pointer while the board slides — in which case the remaining
+  offset is `SlicePicker` marching cell boxes against art drawn off them (section 5), and the next
+  move is the overlay that draws the picked box and the raw ray hit together. Also worth one
+  glance: whether a crosshair over the board is a help or a busy little thing in the way, and
+  whether the arrow coming back over a panel reads as *this click will not reach the world*.
 
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its

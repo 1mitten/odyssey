@@ -77,6 +77,19 @@ namespace Odyssey.Sim.Construction
             _work = new int[grid.Size.CellCount];
         }
 
+        /// <summary>
+        /// The navigation graph, when the colony has one, told two things and asked nothing: that
+        /// a cell now holds an ordered building (<c>NavFlags.BuildSite</c>, which makes a colonist
+        /// with any other route take it), and that the cell changed when the thing goes up.
+        ///
+        /// <para>Set by <c>ColonyComposition.AddColony</c> and null in a fixture with no
+        /// navigation, in which case sites simply carry no detour — which is the right answer for
+        /// a test that never built a graph. It is a property rather than a constructor argument
+        /// because the graph is built before the grid and the grid is built inside the
+        /// composition; a fourth constructor argument would be a fourth thing to forget.</para>
+        /// </summary>
+        public Pathing.NavGraph? Nav { get; set; }
+
         public GridSize Size => _grid.Size;
 
         /// <summary>
@@ -858,6 +871,16 @@ namespace Odyssey.Sim.Construction
             }
 
             bool now = building != BuildingHandle.None;
+
+            // The detour. A site that will block the cell is dearer to walk into than the ground
+            // beside it, so a colonist crossing the room goes round the wall somebody is putting
+            // up rather than through it — which is what makes the eviction in `Raise` a rarity
+            // rather than a thing the player watches. Asked of every write, including a site
+            // replaced by one of a different kind, and cleared when the site goes for any reason:
+            // cancelled, refunded, or raised into a real wall that carries its own flags.
+            Nav?.SetBuildSite(index,
+                now && ConstructionContent.BuildingAt(building).blocking);
+
             if (was == now) return;
 
             int at = _sites.BinarySearch(index);
@@ -900,10 +923,16 @@ namespace Odyssey.Sim.Construction
         /// <para><c>quality</c> is the tier the finishing colonist rolled, for the one def that
         /// takes one; zero, and written as zero, for everything else.</para>
         /// </summary>
-        public void Raise(PawnContext ctx, int cell, byte quality = 0)
+        /// <summary>
+        /// Returns false only when the raise was **refused because somebody is in the way** and is
+        /// worth trying again — see <see cref="RaiseWhenClear"/>, which is what the build driver
+        /// actually calls. Every other outcome, including a site that refunded itself and died, is
+        /// true: the question this answers is "should anybody ask again", not "did a wall appear".
+        /// </summary>
+        public bool Raise(PawnContext ctx, int cell, byte quality = 0)
         {
             int building = _building[cell];
-            if (building == BuildingHandle.None) return;
+            if (building == BuildingHandle.None) return true;
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
             ushort stuff = ConstructionContent.StuffAt(_stuff[cell]).stuff;
@@ -934,7 +963,7 @@ namespace Odyssey.Sim.Construction
             {
                 Refund(cell);
                 Clear(cell);
-                return;
+                return true;
             }
 
             // **The shaft rule, asked again at the moment of truth**, and it is the only rule that
@@ -952,7 +981,7 @@ namespace Odyssey.Sim.Construction
             {
                 Refund(cell);
                 Clear(cell);
-                return;
+                return true;
             }
 
             // **And the support rule, for the same reason and with the opposite answer.**
@@ -972,7 +1001,23 @@ namespace Odyssey.Sim.Construction
             // The work already done stays done, so the retry costs nothing, and nothing falls —
             // which is the owner's rule (2026-09-18): a slab that cannot stand is simply not built
             // yet, and it never leaves rubble.
-            if (!SlabWouldStand(cell)) return;
+            if (!SlabWouldStand(cell)) return true;
+
+            // **And nobody is built into it.** A site is walkable up to this instant, so a
+            // colonist can perfectly well be standing where the wall is about to be, and until
+            // 2026-09-21 the wall simply went up around them: the cell stopped being walkable,
+            // no path could start in it or end in it, and the colonist was sealed in for the life
+            // of the building (owner's report, and `EntombmentTests` is its reproduction).
+            //
+            // Two answers, because the two cases are different. Somebody **walking through** is
+            // gone in a second, so the raise is refused and the last blow lands again later —
+            // the work stays banked and the material is untouched, so waiting costs nothing.
+            // Somebody **standing** there will still be there in an hour, so they are moved
+            // aside; that is the deadlock this must not have, and one cell of shove is cheaper
+            // than an order the colony can never finish. `CanRaiseNow` is the same question
+            // asked without the shove, which is what lets the builder hold the last blow rather
+            // than roll a botch for a wall it is going to build anyway.
+            if (!MakeRoom(ctx, cell, second)) return false;
 
             Clear(cell);
 
@@ -1004,6 +1049,32 @@ namespace Odyssey.Sim.Construction
             // 3. What is walkable changed here, and in the cell above through the floor rule.
             MarkNavAround(ctx, cell);
             if (second >= 0) MarkNavAround(ctx, second);
+            return true;
+        }
+
+        /// <summary>
+        /// Raise the thing, and keep asking on later ticks while somebody is walking through the
+        /// cell it will fill.
+        ///
+        /// <para><b>Because the driver's own check cannot close the window.</b>
+        /// <see cref="CanRaiseNow"/> is asked in the pawn phase and the raise happens in the
+        /// deferred phase at the end of the same tick, so a colonist can step into the cell in
+        /// between — movement runs in that same phase, and pawns after this one in the order have
+        /// not moved yet when the check is made. Without a retry the site would sit finished and
+        /// unraised until a work giver offered it again, and the next builder's first stroke would
+        /// roll for success a **second** time on work that was already done. The roll happens
+        /// once; this is what gets the result of it into the world.</para>
+        ///
+        /// <para>The order it was rolled for is named, so a player who cancels the site or orders
+        /// something else there in the meantime does not get a bed built with a wall's dice.</para>
+        /// </summary>
+        public void RaiseWhenClear(PawnContext ctx, int cell, int building, byte quality = 0)
+        {
+            if (_building[cell] != building) return;
+            if (Raise(ctx, cell, quality)) return;
+
+            // Deferred from inside the deferred phase, which SimWorld.Tick puts on the next tick.
+            ctx.Defer(_ => RaiseWhenClear(ctx, cell, building, quality));
         }
 
         /// <summary>The walkability half of a world edit, both ends of a two-cell thing's "above".</summary>
@@ -1393,6 +1464,72 @@ namespace Odyssey.Sim.Construction
             MarkNavAround(ctx, was.CellIndex);
             if (second >= 0) MarkNavAround(ctx, second);
             return true;
+        }
+
+        /// <summary>
+        /// Is there anybody in the way who will not move by themselves? False means the raise
+        /// must wait: somebody is walking through the cell this building will fill.
+        ///
+        /// <para>Asked by the build driver before the last blow — see <c>BuildJobDriver</c> — so
+        /// that waiting costs a held hammer rather than a fresh success roll on work that is
+        /// already done.</para>
+        /// </summary>
+        public bool CanRaiseNow(PawnContext ctx, int cell)
+        {
+            if (!BlocksTheCell(cell)) return true;
+
+            int second = SecondCellOf(cell);
+            return !PassingThrough(ctx, cell) && (second < 0 || !PassingThrough(ctx, second));
+        }
+
+        /// <summary>
+        /// Clear both of a building's cells of people, or say that it cannot be done yet.
+        /// <see cref="PawnEviction"/> holds the rule about where a displaced colonist goes.
+        /// </summary>
+        bool MakeRoom(PawnContext ctx, int cell, int second)
+        {
+            if (!BlocksTheCell(cell)) return true;
+            if (!MakeRoomIn(ctx, cell)) return false;
+            return second < 0 || MakeRoomIn(ctx, second);
+        }
+
+        static bool MakeRoomIn(PawnContext ctx, int cell)
+        {
+            Pawn? occupant = PawnEviction.Occupant(ctx, cell);
+            if (occupant == null) return true;
+            // Walking through: wait rather than shove, because they will be gone of their own
+            // accord and a shove the player can see is the cost being avoided here.
+            if (occupant.HasPath) return false;
+            // Standing there, and standing there is forever as far as a build order is concerned.
+            // A colonist with nowhere at all to be put — enclosed in solid world — holds the
+            // order up rather than being pushed into rock.
+            return PawnEviction.Evict(ctx, occupant);
+        }
+
+        static bool PassingThrough(PawnContext ctx, int cell)
+        {
+            Pawn? occupant = PawnEviction.Occupant(ctx, cell);
+            return occupant != null && occupant.HasPath;
+        }
+
+        /// <summary>Will the thing ordered here stand in the cell rather than under it?</summary>
+        bool BlocksTheCell(int cell)
+        {
+            int building = _building[cell];
+            return building != BuildingHandle.None
+                   && ConstructionContent.BuildingAt(building).blocking;
+        }
+
+        /// <summary>The far cell of a two-cell site, or -1. Read from the site as it stands.</summary>
+        int SecondCellOf(int cell)
+        {
+            int building = _building[cell];
+            if (building == BuildingHandle.None) return -1;
+
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            if (def.footprint <= 1) return -1;
+
+            return EdificeFootprint.SecondCell(cell, def.edifice, _facing[cell], _grid.Size);
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)

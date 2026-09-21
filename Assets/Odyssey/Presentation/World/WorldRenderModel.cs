@@ -155,6 +155,8 @@ namespace Odyssey.Presentation.World
         {
             Size = size;
             Chunks = chunks;
+            _chunkVersion = new int[chunks.Count];
+            _dirtyThisRefresh = new int[chunks.Count];
             Library = library;
 
             int count = size.CellCount;
@@ -236,6 +238,29 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Bumped whenever any chunk is refreshed, so the renderer can cheaply notice.</summary>
         public int Version { get; private set; }
+
+        /// <summary>
+        /// Per chunk, the version its contents were last written at — and what the renderer
+        /// compares its meshed batch against.
+        ///
+        /// <para><b>Because <see cref="Version"/> is one number for the whole board.</b> A single
+        /// cell changing — one wall raised — bumped it, and every batch in the world then failed
+        /// its equality test and was re-meshed on the next frame it was drawn. Measured on
+        /// 2026-09-21: raising one wall on the meadow re-meshed all 45 drawn chunks and cost
+        /// <b>12.53 ms</b> in the frame after the raise, against 0.7 ms either side of it — a
+        /// visible hitch, and the "little glitch" in the owner's report of that day. With this,
+        /// one changed cell re-meshes the chunks that changed.</para>
+        ///
+        /// <para>A global refresh (<see cref="RefreshAll"/>, <see cref="Remesh"/>) writes the new
+        /// version into every entry, which is a few hundred integers and keeps "everything must
+        /// be re-meshed" expressible.</para>
+        /// </summary>
+        public int ChunkVersion(int chunkIndex) => _chunkVersion[chunkIndex];
+
+        readonly int[] _chunkVersion;
+
+        /// <summary>Scratch: which chunks one <see cref="RefreshDirty"/> copied. Never allocates.</summary>
+        readonly int[] _dirtyThisRefresh;
 
         /// <summary>
         /// The highest layer worth drawing: the top of the geometry, plus the one a colonist
@@ -1220,7 +1245,17 @@ namespace Odyssey.Presentation.World
         /// costs exactly what the renderer already pays after a world edit. No cell is touched, so
         /// nothing here reaches the simulation, the save or the hash.</para>
         /// </summary>
-        public void Remesh() => Version++;
+        public void Remesh()
+        {
+            Version++;
+            BumpEveryChunk();
+        }
+
+        /// <summary>Stamp the current version on every chunk: everything is to be re-meshed.</summary>
+        void BumpEveryChunk()
+        {
+            for (int i = 0; i < _chunkVersion.Length; i++) _chunkVersion[i] = Version;
+        }
 
         /// <summary>Copy every cell. Run once, after generation, before the first frame.</summary>
         public void RefreshAll(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
@@ -1232,6 +1267,7 @@ namespace Odyssey.Presentation.World
             MeasureTheLandscape();
             LastRefreshedChunks = Chunks.Count;
             Version++;
+            BumpEveryChunk();
         }
 
         /// <summary>
@@ -1279,10 +1315,17 @@ namespace Odyssey.Presentation.World
                 if (!Chunks.IsDirty(chunk)) continue;
                 RefreshChunk(grid, edifices, chunk);
                 Chunks.ClearDirty(chunk);
+                _dirtyThisRefresh[refreshed] = chunk;
                 refreshed++;
             }
             LastRefreshedChunks = refreshed;
-            if (refreshed > 0) Version++;
+            if (refreshed > 0)
+            {
+                Version++;
+                // The chunks that actually changed, and only those. Stamped after the version
+                // moves so the number they carry is the new one.
+                for (int i = 0; i < refreshed; i++) _chunkVersion[_dirtyThisRefresh[i]] = Version;
+            }
             return refreshed;
         }
 

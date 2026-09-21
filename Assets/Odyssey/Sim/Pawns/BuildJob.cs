@@ -457,6 +457,19 @@ namespace Odyssey.Sim.Pawns
             }
 
             int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Construction);
+
+            // **The hammer is held while somebody is crossing the cell.** A wall raised on a
+            // colonist's head sealed them in (owner, 2026-09-21); `ConstructionGrid.Raise` is
+            // what guarantees it cannot, and this is what makes the guarantee cost nothing. The
+            // check is here — before the work lands and before the success roll — because a
+            // raise refused *after* the roll would mean rolling for the same wall twice, and a
+            // colony that waits a second for a passer-by should not be paying for the privilege
+            // in botched walls. A colonist merely standing in the cell is not waited for: they
+            // are moved aside when the wall goes up, which is `MakeRoom`'s other half.
+            if (sites.WorkDone(cell) + rate >= sites.WorkFor(cell) * Rates.Scale
+                && !sites.CanRaiseNow(ctx, cell))
+                return JobStatus.Ongoing;
+
             ToilProgress += rate;
             Work(ctx);
             if (sites.AddWork(cell, rate) < sites.WorkFor(cell) * Rates.Scale) return JobStatus.Ongoing;
@@ -490,7 +503,12 @@ namespace Odyssey.Sim.Pawns
                     quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
                 }
 
-                ctx.Defer(_ => grid.Raise(ctx, cell, quality));
+                // RaiseWhenClear rather than Raise: the check above is made in the pawn phase
+                // and this runs at the end of the tick, so somebody can step into the cell in
+                // between. It keeps asking rather than letting the site sit finished and
+                // unraised, which would cost a second success roll on work already done.
+                int ordered = sites.At(cell);
+                ctx.Defer(_ => grid.RaiseWhenClear(ctx, cell, ordered, quality));
 
                 // The wall goes up now; the builder straightens up before walking off.
                 NextToil();

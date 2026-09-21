@@ -39,7 +39,20 @@ namespace Odyssey.Sim.Pathing
 
         Hazard = 1 << 9,
 
-        // 1 << 10 and 1 << 11 were ConnectorClimb and ClimbOnly, removed with climbing
+        /// <summary>
+        /// A building ordered here and not yet standing: a blueprint or a frame that will block
+        /// the cell once it is raised.
+        ///
+        /// <para>The cell is perfectly walkable and stays so — a half-built corridor has to be
+        /// crossable or the colony cannot reach the far end of its own site. It costs
+        /// <see cref="MoveCost.SiteDetour"/> extra to enter, which is what keeps a passer-by out
+        /// of the cell a wall is about to stand in when there is any other way round. It is a
+        /// deterrent and not a rule: <c>ConstructionGrid.Raise</c> is what guarantees nobody is
+        /// entombed.</para>
+        /// </summary>
+        BuildSite = 1 << 10,
+
+        // 1 << 11 was ClimbOnly, removed with climbing
         // (owner, 2026-09-16). A colonist jumps up one block or drops down one; anything deeper
         // needs a ladder, which is a built thing. Nothing grants standing without a floor any
         // more, which is what makes a cell in mid-air impossible rather than merely discouraged.
@@ -51,7 +64,7 @@ namespace Odyssey.Sim.Pathing
         /// Bits owned by registration rather than by the terrain. A flag rebuild recomputes
         /// everything else from the <see cref="CellGrid"/> and preserves these.
         /// </summary>
-        Sticky = Door | DoorOpen | Connector | Hazard,
+        Sticky = Door | DoorOpen | Connector | Hazard | BuildSite,
     }
 
     /// <summary>
@@ -223,6 +236,24 @@ namespace Odyssey.Sim.Pathing
         public const int DoorBash = 400;
 
         public const int HazardPenalty = 500;
+
+        /// <summary>
+        /// What entering a cell with a building ordered in it adds, so that a colonist with
+        /// anywhere else to walk walks there instead.
+        ///
+        /// <para>Written because a wall raised on somebody's head entombed them (owner,
+        /// 2026-09-21: <i>"sometimes they get stuck inside the wall itself"</i>). Eviction at the
+        /// moment of raising is the guarantee; this is what makes eviction rare enough that the
+        /// player never sees the one-cell shove it costs.</para>
+        ///
+        /// <para>Slightly more than a whole extra flat cell, which is the relation that matters:
+        /// a detour of one cell around a site is preferred, a detour of two is not, and a
+        /// doorway under construction in the only corridor is still crossed rather than making
+        /// the far side unreachable. A site is never made impassable — <see cref="Fall"/> is
+        /// what that would look like and it would strand a builder inside their own half-built
+        /// room.</para>
+        /// </summary>
+        public const int SiteDetour = 120;
 
         /// <summary>Effectively forbidden: a fall edge exists so agents route <em>around</em> holes.</summary>
         public const int Fall = 100_000;
@@ -450,6 +481,12 @@ namespace Odyssey.Sim.Pathing
                 int hazardCost = MoveCost.HazardPenalty;
                 if (diagonal) hazardCost = (hazardCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += hazardCost;
+            }
+            if ((f & NavFlags.BuildSite) != 0)
+            {
+                int siteCost = MoveCost.SiteDetour;
+                if (diagonal) siteCost = (siteCost * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += siteCost;
             }
             return cost;
         }

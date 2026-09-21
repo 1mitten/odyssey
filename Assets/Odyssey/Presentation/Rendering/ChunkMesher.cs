@@ -70,7 +70,7 @@ namespace Odyssey.Presentation.Rendering
                 EmitCrop(batch, index, x, z, y);
             }
 
-            batch.Version = _model.Version;
+            batch.Version = _model.ChunkVersion(chunkIndex);
         }
 
         /// <summary>

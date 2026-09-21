@@ -315,8 +315,6 @@ sprite key, an audio clip, an animation state. If the name is a literal and the 
 something should read the file. The project already does this for icons (ADR 0007's validator) and
 for Defs (the content fingerprints); a font is the same question with a different file format.
 
----
-
 ### P14 — A rule that only governs arrival, in a world where things are already there
 
 A gate is written where new things come in — a filter on what a store *accepts*, a check on what
@@ -344,7 +342,67 @@ configures; the eviction has to live in whatever scans for work. Here the filter
 is why "the filter is obviously right" and "the behaviour is obviously wrong" were both true for
 two days.
 
+### P15 — A pick resolved against the frame before the one on screen
+
+A screen position is turned into a world thing by casting a ray through the camera — and the cast
+happens earlier in the frame than the camera's own move. The input pass reads the pointer and
+resolves it immediately, because that is the natural place to write it; the transform is applied
+further down, because that is the natural place to write *that*; and the two were written months
+apart by people each doing the obvious thing.
+
+**The tell is that it is perfectly accurate when nothing is moving.** Every test passes, because a
+test holds the camera still. Every screenshot is right, because a screenshot is one frame with the
+camera parked. The complaint arrives as a feeling — *"it doesn't seem super accurate"* — with no
+reproduction, because the offset exists only while the player is panning, orbiting or zooming, and
+it vanishes the moment they stop to look at it. It does not converge, either: it is a constant one
+frame of lag rather than an error that settles, so a slow pan is off by a little for ever and a
+fast one is off by a lot.
+
+**The question to ask of any input pass:** *what has this frame already changed that the answer
+depends on, and has it happened yet?* A camera is the obvious one; a slice layer, a scroll offset,
+a panel that has just been resized and a world that has just ticked are all the same shape.
+
+**The fix is ordering, and the repair worth making is that the ordering becomes an invariant.**
+Separating *deciding what the gesture was* from *resolving it against the world* is what makes the
+order expressible at all — the decision can be latched as a verb and a screen point, and then
+there is exactly one place that consults the camera instead of one per gesture. Guard it with a
+test, including the "and nowhere else" half: this one was `SliceCameraRig.Update`, and
+`PointerCursorTests` asserts both that the resolve pass runs after the transform and that no other
+line in the file turns a screen point into a cell.
+
 ---
+
+### P15 — One version number for many caches, so every edit invalidates all of them
+
+A cache keyed on "has anything changed" is a cache that rebuilds *everything* whenever *anything*
+changes. It is invisible in review because the code is correct — the picture is always right — and
+invisible to the frame budget because the cost lands in the frame after an edit rather than in the
+steady state a benchmark measures.
+
+`WorldRenderModel.Version` was exactly this: one integer for a board of 45 drawn chunks, compared
+by every `ChunkBatch`. Raising one wall cost **12.53 ms** in the next frame against 0.7 ms either
+side, because all 45 chunks re-meshed to redraw one cell (2026-09-21, `BuildAppearanceTests`). Per
+chunk it is 3 chunks and 1.73 ms.
+
+**The tell is a stat that moves in lockstep with nothing.** `TotalChunksMeshed` went up by the
+whole board on an edit of one cell, and the number was already being counted — nobody had held it
+against the size of the edit. Ask of any invalidation stamp: *what is the smallest edit, and how
+much does it rebuild?*
+
+**It is not the same fault as an unbudgeted rebuild, and the two fixes are complements.** §6c.7's
+meshing budget caps how many chunks may be re-meshed *in one frame*; this caps how many are
+invalidated *at all*. With the budget alone, one wall still dirties all 45 drawn chunks and merely
+spreads the work over four frames of stale geometry. Landing both, one wall re-meshes three chunks
+inside one frame.
+
+**And fixing it makes something else load-bearing.** A global stamp forgives under-marking: a
+system that dirtied too few regions still drew correctly, because everything was rebuilt anyway.
+The day the stamp becomes per-region, every "I changed this cell" must name every region whose
+output depends on it — for terrain, the 3×3×3 neighbourhood, because a face is drawn against what
+is beside it. Check the marks *before* narrowing the stamp, not after a stale tile is reported.
+
+---
+
 
 ---
 
@@ -538,6 +596,28 @@ to empty and a carried thing has no cell.
 
 **No golden moved, and that is the gap rather than the reassurance.** Every zone in every golden is
 founded at *Everything*, so the state never arises there. `docs/design/26-storage.md` §11.
+### 2026-09-21 — A colonist sealed inside a wall, and a board re-meshed to draw one cell
+
+Two reports in one message. *"When colonists build a wall — sometimes they get stuck inside the wall
+itself"*, and *"there is about a second or 3 delay when the object appears when it's built"*.
+
+**The first was real and permanent.** A build site is walkable until the instant the building
+exists, and `ConstructionGrid.Raise` asked nothing about who was standing in it. Once the cell is
+blocking, no path can start in it and none can end in it, so the colonist never got out — the
+owner's own answer to "does it resolve itself" was *"stuck forever"*. Fixed in three parts
+(`docs/design/30-nobody-in-a-wall.md`): a detour that keeps passers-by out of the cell, a guard that
+waits for a walker and moves a loiterer, and a per-tick sweep that frees anybody already inside
+solid world — which is the only thing that can help a save written before the guard existed. **The
+sweep is the part worth copying**: a guard is a rule about one edit, and the owner asked for a
+statement about the world.
+
+**The second was measured rather than reasoned about, and the measurement disagreed with the
+reading.** The publish seam is next-frame — a raised wall is in the mirror on frame 0 and drawn on
+frame 1 — so the seconds are not the sim, the snapshot or the mesher. What the probe did find was
+P15 above: one global version, 45 chunks re-meshed for one cell, 12.53 ms in that frame. That is
+the *glitch* half of the report and it is fixed; the *seconds* half is still open and the leading
+candidate is the editor's asynchronous shader compilation, which a batch run cannot reproduce.
+`docs/design/06-rendering-and-camera.md` §6c.3.
 
 ### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
 

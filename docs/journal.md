@@ -10327,3 +10327,126 @@ enough not to be worth one.
 **What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
 large colony that is a hitch every game morning, and it is the first thing to look at if a daily
 stutter is ever reported.
+## 2026-09-21 — Two reports: sealed in a wall, and a building that takes a second to appear
+
+The owner asked to be interviewed before either was fixed, which was the right instinct for the
+first and the wrong shape for the second: the wall question was a design choice and the delay
+question was a measurement nobody had taken.
+
+**The wall.** The interview asked who gets stuck, and whether they get out. *"Stuck forever — never
+gets out"*, which is what the code says too: once a cell is blocking, a path can neither start in it
+nor end in it, so a colonist inside a wall has no move available that would free them, for ever. I
+offered four rules and the owner took the belt-and-braces one, and it turned out to be three
+genuinely different jobs rather than one with redundancy. The detour stops passers-by walking into
+the cell a wall is about to fill. The guard decides what to do about whoever is there anyway — and
+the two cases are not the same case: somebody *walking through* will be gone in a second, so the
+raise waits; somebody *standing* will still be there in an hour, so they are moved. And the sweep is
+the only part that can help a save that already has somebody entombed in it, which is every save the
+owner has.
+
+The detail worth keeping is where the wait is asked. Refusing inside `Raise` is correct and it is
+not sufficient: the driver had already rolled for success by then, so a wall that politely waited a
+second for a passer-by would have paid for the courtesy by re-rolling, and sometimes botching, work
+that was already done. `CanRaiseNow` exists so the hammer can be held *before* the roll.
+
+**The delay.** My first instinct was to read the publish seam, and reading it said "next frame",
+which is exactly the sort of confident answer this project has been wrong about repeatedly. So I
+measured it in a real player loop instead — and the seam *is* immediate: the wall is in the mirror
+on the next tick's publish and drawn on the frame after that. The first two runs measured nothing at
+all, and both failures were
+instructive. The first raised no wall because my own new guard refused it (a colonist was standing
+in the cell), which is the fixture reproducing the bug I had just fixed; the second told me so only
+because I had added `inGrid` to the log. **Assert the fixture did what it claims before believing
+anything downstream of it** — that is the third time that has cost a run here.
+
+And the assertion I wrote from those runs was wrong in a way only the full tier could show: I
+measured the wait in **frames**, it read 0 alone and 13 in a crowded PlayMode run, and the delay was
+one tick both times. The mirror is written by a snapshot contributor, so it moves once a tick; a rig
+with nothing to draw runs frames far faster than that. A measurement whose unit is the frame rate
+measures the frame rate.
+
+What the probe did find was something nobody was looking for. `WorldRenderModel.Version` is one
+number for the whole board, so a single wall invalidated all 45 drawn chunks and cost 12.53 ms in
+the frame after the raise, against 0.7 ms either side. Per-chunk versions: 3 chunks, 1.73 ms. That
+is the "little glitch" in the report, and it is now P14 in the bug patterns — a cache keyed on "has
+anything changed" rebuilds everything whenever anything changes, and it is invisible to both review
+and the frame budget, because the picture is always right and the cost never lands in the steady
+state a benchmark measures.
+
+It also quietly moved a rule from decorative to load-bearing. A global stamp forgives a system that
+dirties too few chunks; a per-chunk stamp does not. The marks are all correct today — construction
+and mining both dirty the 3×3×3 neighbourhood, and the single-cell marks are all things drawn inside
+their own cell — but that is now a thing to check when adding a world edit, and it is written down
+in §6c.8 rather than left to be rediscovered from a stale tile.
+
+**And main had been at the same wound from the other side.** While this was being written,
+`claude/huge-map` landed a *meshing budget* — at most eleven chunks re-meshed a frame (§6c.6–6c.7),
+found with the new perf trace on a played session. The two are complements rather than duplicates
+and the merge kept both: the budget caps what may be re-meshed in one frame, the per-chunk version
+caps what is invalidated at all. With the budget alone a single wall still dirties 45 chunks and
+spends four frames of stale geometry catching up; with both, it dirties three and they are re-meshed
+inside one frame. My pattern renumbered to **P15** because P14 had been taken in the meantime, and
+the design doc to **30** because 28 and 29 had been.
+
+**The seconds are still unexplained**, and I would rather say so than offer a plausible story. The
+leading candidate is outside the game: the editor compiles shader variants asynchronously, a wall is
+the first thing of its material a meadow ever draws, and the signature of that — nothing, then a
+flicker, then the object — matches the report closely. A batch run cannot reproduce it, because
+`ShaderUtil.allowAsyncCompilation` is false in batch mode and the probe duly recorded zero frames of
+compiling. It needs one toggle flipped in a real editor session, which is a question for the owner
+and not a fix I can measure my way to from here.
+## 2026-09-21 — A proper cursor, and the frame in which a click is resolved
+
+Owner: *"The cursor doesn't seem super accurate but I noticed this issue and we should use a proper
+cursor — Runtime cursors other than the default cursor need to be defined using a texture."* Two
+faults in one sentence, unrelated to each other, and the second one is the interesting half.
+
+**The warning was eighteen inert declarations.** `Hud.uss` carried fifteen `cursor: link`, one
+`cursor: pointer`, one `cursor: default` and one `cursor: initial`. Keyword cursors are Editor-only
+in UI Toolkit; in the runtime panel the game actually has, they set nothing and log once per
+repaint. Every one had been written believing it changed the pointer, and the game has run the bare
+OS arrow since the HUD was written — nothing in the project had ever called `Cursor.SetCursor`.
+Deleted rather than converted to eighteen `url(...)` forms, for the reason `OrderColours` exists
+(eighteen selectors naming a cursor is eighteen owners) and for the reason written in Hud.uss
+itself at the bed-owner row: **hover is not an affordance**, so a per-widget pointer swap is the
+weakest signal available even in the world where it worked.
+
+**The accuracy half was arithmetic, and it was in `SliceCameraRig.Update`.** The order was
+`ReadKeyboard` → `ReadMouse` → `TakeJumpRequest` → `ApplyTransform` → `DrawSelection`, and every
+pointer ray in the game was cast inside `ReadMouse`. `CellAt` goes through `Camera.ScreenPointToRay`,
+which reads the camera's *current* transform — which at that point in the frame is still the one
+written at the end of the previous frame, while the world is then drawn from the new one. **Every
+hover, drag, box and click was resolved against a camera one frame behind the picture.** Exact
+while the camera is still, which is how it survived; a constant one-frame lag the whole time it
+moves, which is half a metre at a 30 m/s pan and more with shift held. Panning while placing is the
+commonest thing a player does with a tool in hand.
+
+The fix is ordering and the ordering is the invariant. `ReadMouse` now *latches* what the frame
+decided — a verb and two screen points, with no cell anywhere in the enum, because a cell is the
+one thing that cannot be worked out yet — and `ResolvePointer` runs after `ApplyTransform` and
+turns the points into cells. Every branch is the one `ReadMouse` took inline, unchanged.
+**Applying the transform above `ReadMouse` was the smaller diff and was rejected**: the wheel and
+the orbit write their targets inside `ReadMouse`, so the camera would answer the player's zoom a
+frame late instead — a different misalignment, not one fewer.
+
+**Three of the four tests read files rather than run code**, and that is the honest shape of it
+rather than a shortcut. A stylesheet asking a runtime panel for the impossible is a log line, and
+log lines are invisible in every gate this project has. The frame ordering cannot be tested at all:
+the PlayMode harness still cannot deliver a synthetic mouse, so nothing here can move a pointer and
+look at where the highlight landed. What can be defended is the invariant, so the invariant is what
+is asserted — including `OnlyTheResolvePassTurnsAScreenPointIntoACell`, because the ordering is
+worth nothing if a second `CellAt` reappears further up.
+
+**The art is baked in code at 32 x 32 and both numbers are load-bearing.** Above 32 px Windows
+cannot carry the cursor and Unity composites a software one, which lags the pointer and freezes
+with the frame — answering an accuracy complaint by making it worse, invisibly, on a machine other
+than the one that reported it. Baking also makes the tool crosshair a function of
+`OrderColours.Hue`, so the pointer is the fifth surface an armed order appears on and the only one
+that would otherwise have guessed at its own colour; a new tool inherits a cursor with no art work.
+And it avoids carving an exception into ADR 0007's absolute rule about interface art, which is how
+that rule would die.
+
+**What is deliberately not fixed** is recorded in `docs/design/28-pointer-cursor.md` section 5:
+`SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
+tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
+both at once would leave the playtest unable to say which one it had judged.

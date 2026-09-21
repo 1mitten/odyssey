@@ -6,6 +6,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.Ui;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Construction;
@@ -1061,8 +1062,18 @@ namespace Odyssey.Presentation.Bootstrap
 
         bool _speedChangePending;
 
+        /// <summary>
+        /// The pointer's one owner. Not part of a session: the menu has a cursor too, and a
+        /// teardown must not leave the player without one.
+        /// </summary>
+        readonly CursorDirector _cursor = new();
+
         void Update()
         {
+            // Before the session guard, deliberately. There is a pointer on the main screen and
+            // during a load, and both of them are this object's to set.
+            UpdatePointerCursor();
+
             if (_world == null) return;
 
             int speed = _world.GameSpeed;
@@ -2757,8 +2768,28 @@ namespace Odyssey.Presentation.Bootstrap
             return _developerOverlayStyle;
         }
 
+        /// <summary>
+        /// Hand the two facts that decide the pointer to <see cref="CursorDirector"/>: where it is,
+        /// and what is in hand. Both are already published for other reasons, which is why this is
+        /// three lines and not a subscription.
+        ///
+        /// <para>With no rig the pointer is treated as being over the interface — on the main
+        /// screen and between sessions the HUD <i>is</i> the whole screen, and the arrow is what
+        /// belongs there.</para>
+        ///
+        /// <para>See <c>docs/design/28-pointer-cursor.md</c>.</para>
+        /// </summary>
+        void UpdatePointerCursor() => _cursor.Update(
+            cameraRig == null || cameraRig.PointerWasOverInterface,
+            _designate != null ? _designate.Director.Tool : DesignateTool.None);
+
         void OnDestroy()
         {
+            // Give the pointer back before anything else goes. `Cursor.SetCursor` outlives play
+            // mode, so a session that exits holding a crosshair leaves the *editor* wearing one.
+            _cursor.Release();
+            CursorArt.Forget();
+
             TeardownSession();
 
             // And the two things teardown deliberately leaves standing, because neither is part
