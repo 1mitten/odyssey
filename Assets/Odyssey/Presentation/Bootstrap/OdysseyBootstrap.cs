@@ -1005,6 +1005,18 @@ namespace Odyssey.Presentation.Bootstrap
                 : $"catalogue {moduleCatalogue.name}: {moduleCatalogue.ResolvedPrefabCount()}/" +
                   $"{moduleCatalogue.Entries.Count} rows have art";
 
+            // Mesh the whole board before the first drawn frame, ignoring the per-frame budget.
+            //
+            // **This is where the meshing stall is meant to be.** Every chunk of a new world is
+            // never-meshed, so a budgeted first frame would draw almost nothing and the board would
+            // arrive in instalments over several hundred frames while the player watched it build
+            // itself. The player is already waiting here — 6c.6 measured 14.7 seconds of worldgen
+            // in this very call on the Huge board — so one more pass costs them nothing they can
+            // tell apart from the wait they are already in, and it buys a first frame that is
+            // whole. Everything after this frame is budgeted (6c.7).
+            if (_renderer != null && cameraRig != null)
+                _renderer.PrimeAll(cameraRig.ActiveLayer, cameraRig.slice);
+
             SessionChanged?.Invoke();
 
             Debug.Log(

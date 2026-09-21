@@ -1600,6 +1600,69 @@ chunks of a Huge board at once.
 **Not built.** It is a renderer change with a visible trade (briefly unmeshed chunks while panning)
 and wants its own unit, its own design note and the owner's eye.
 
+### 6c.7 The meshing budget — the fix for §6c.6
+
+**Decided 2026-09-21.** §6c.6 found the stutter: `ChunkRenderer.BatchFor` meshes every stale chunk
+the draw loop touches, in that frame, unbudgeted. This is what is done about it.
+
+### The rule
+
+**A frame meshes at most `MeshBudgetPerFrame` chunks. A chunk that misses the budget draws whatever
+geometry it already has and is retried next frame.**
+
+The retry needs no queue. A deferred chunk still has `batch.Version != _model.Version`, so the next
+frame's walk finds it again — the staleness *is* the queue, and adding a second list of owed chunks
+would be a copy of state the batch already holds.
+
+### What a deferred chunk looks like
+
+| Case | Geometry it has | What the player sees |
+|---|---|---|
+| Re-meshed (a `Model.Remesh()`, an edit nearby) | the previous mesh, still valid | the world one to three frames out of date |
+| Never meshed (panned into unseen map) | none — `InstanceCount == 0`, so the draw loop skips it | the chunk arrives a frame or two late |
+
+Both are invisible at 150 fps and neither is a 165 ms freeze. **That is the whole trade**, and it is
+the right way round: a chunk two frames late is 13 ms of being slightly wrong; the alternative is a
+sixth of a second of nothing at all.
+
+### The one exception: building a world
+
+On a new game every chunk is never-meshed, and budgeting that would dribble the board in over
+several hundred frames while the player watches. `PrimeAll()` meshes the lot without a budget, and
+the composition root calls it once while the loading screen is up — **where a freeze is expected and
+where §6c.6 already measured 14.7 seconds of one**. Keep the stall where the player is already
+waiting; budget everything after it.
+
+### Choosing the number
+
+§6c.6 measured a 900-chunk re-mesh at about 165 ms, so a chunk costs roughly **0.18 ms**. Against
+the 5 ms frame budget, a meshing frame should not spend more than about 2 ms on it, which is **11
+chunks**. The number ships as a measured constant rather than a guess: `MeshBudgetTests` asserts the
+budget is obeyed, and a frame measurement sets the value.
+
+A full board re-mesh then costs about 82 frames — **half a second at 150 fps**, spread, against 165
+ms in one lump. The total work is unchanged; only its distribution is.
+
+### Measured, with a control in one run
+
+`FrameTimeTests.TheMeshBudgetKeepsAWholeBoardRemeshOutOfOneFrame` makes the same Huge board
+re-mesh twice, once with the budget off and once with it on, and quotes both:
+
+    unbudgeted  156.1 ms  (900 chunks)
+    budgeted      8.8 ms  (11 chunks, cap 11; 889 deferred)
+
+**156 ms to 9.** It reproduces the exact signature the player session caught — 900 chunks, about
+160 ms — which is the best evidence that the arm is measuring the real fault and not a proxy for it.
+No absolute threshold is asserted, for the reason §6c gives: a frame number off this machine is only
+comparable with one taken in the same run.
+
+### What it does not fix
+
+- **Worldgen.** The 439 ms frame at session start is the world being built, and `PrimeAll` keeps it
+  there deliberately.
+- **The cost of meshing itself.** This spreads it; it does not make a chunk cheaper. If 0.18 ms a
+  chunk ever becomes the complaint, that is a mesher change and a different unit.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.

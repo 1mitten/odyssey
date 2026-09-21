@@ -9977,3 +9977,48 @@ The 900-chunk frame arrived later and settled it.
 
 The fix is a per-frame meshing budget, nearest first, and it is not built: it is a renderer change
 with a visible trade and wants its own unit.
+
+---
+
+## 2026-09-21 — the meshing budget: 156 ms to 9, and the stall moves into the loading screen
+
+The owner: *"fold it in and and plan out the performance improvements now and combine into PR ...
+and then execute."* So §6c.6's finding became §6c.7's rule and then the code, in that order.
+
+**The rule is one sentence: a frame meshes at most eleven chunks, and a chunk that misses the budget
+draws what it already has and is retried next frame.** The number is the fault's own arithmetic —
+the player session measured 900 chunks at about 165 ms, so 0.18 ms a chunk, and roughly 2 ms of a
+5 ms frame is eleven.
+
+**The retry needed no queue, and that is the part worth keeping.** A deferred chunk still has
+`batch.Version != _model.Version`, so the next frame's walk finds it again. The staleness *is* the
+queue. A second list of owed chunks would have been a copy of state the batch already holds, and
+the sort of thing that goes out of step with the thing it mirrors.
+
+**One exception, and it is a decision rather than an oversight.** On a new game every chunk is
+never-meshed, so a budgeted first frame would draw almost nothing and the board would arrive in
+instalments over several hundred frames while the player watched it build itself. `PrimeAll` meshes
+the lot unbudgeted and `BuildSession` calls it once — putting the stall inside the loading screen,
+where §6c.6 had already measured 14.7 seconds of worldgen stall sitting. **Keep the freeze where
+the player is already waiting.**
+
+**Measured with a control in one run**, which is the only way a number off this machine means
+anything: the same Huge board re-meshed twice, budget off then on —
+
+    unbudgeted  156.1 ms  (900 chunks)
+    budgeted      8.8 ms  (11 chunks, cap 11; 889 deferred)
+
+It reproduces the exact signature the live session caught, 900 chunks at about 160 ms, which is the
+best evidence that the arm measures the fault and not a proxy for it. No absolute threshold is
+asserted; the assertion is the difference.
+
+**What it does not fix, stated so nobody looks for it later.** The 439 ms frame at session start is
+worldgen and `PrimeAll` deliberately keeps it there. And this spreads the cost of meshing without
+making a chunk cheaper — if 0.18 ms a chunk ever becomes the complaint, that is a mesher change and
+a different unit.
+
+Five EditMode guards (`MeshBudgetTests`), of which the load-bearing one is
+`AWholeBoardRemeshIsSpreadOverFramesInsteadOfLandingInOne`: it guards the *shape* of the fault, a
+frame whose meshing cost is proportional to how much went stale. One of its drafts failed honestly
+first — a 48-cell board is 2 x 2 chunks against `CellGrid.ChunkSize` of 25, and four chunks cannot
+tell a budget of four from no budget at all.

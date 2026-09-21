@@ -319,6 +319,75 @@ namespace Odyssey.Tests.PlayMode
             split.Length > (int)section ? split[(int)section] : 0d;
 
         /// <summary>
+        /// What the meshing budget is worth, measured against itself on one board in one run.
+        ///
+        /// <para><b>This is the negative control for §6c.7.</b> The same world is made to re-mesh
+        /// twice — once with the budget off, once with it on — and the worst frame of each is
+        /// quoted. No absolute threshold, because this machine runs several editors at once and a
+        /// frame number is only comparable with one taken in the same run (§6c); what is asserted
+        /// is the difference, which is the thing the unit claims.</para>
+        ///
+        /// <para><c>Model.Remesh()</c> is exactly what a graphics toggle does, and §6c.6 caught it
+        /// happening sixty-one times in a two-minute player session, each one meshing 900 chunks in
+        /// a single frame for about 165 ms.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeshBudgetKeepsAWholeBoardRemeshOutOfOneFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot, 240, 240, 16);
+            try
+            {
+                for (int i = 0; i < WarmupFrames; i++) yield return null;
+
+                ChunkRenderer renderer = boot.Renderer!;
+                int budget = renderer.MeshBudgetPerFrame;
+                Assert.That(budget, Is.GreaterThan(0), "the shipped budget is off, so this proves nothing");
+
+                float unbudgeted = 0f, budgeted = 0f;
+                int unbudgetedChunks = 0, budgetedChunks = 0;
+
+                // The fault, reproduced: no budget, one Remesh, the whole board in one frame.
+                renderer.MeshBudgetPerFrame = 0;
+                boot.Model!.Remesh();
+                yield return null;
+                unbudgeted = Time.unscaledDeltaTime * 1000f;
+                unbudgetedChunks = renderer.ChunksMeshedThisFrame;
+
+                for (int i = 0; i < 30; i++) yield return null;
+
+                // And the fix, on the same board, the same Remesh, in the same run.
+                renderer.MeshBudgetPerFrame = budget;
+                boot.Model!.Remesh();
+                yield return null;
+                budgeted = Time.unscaledDeltaTime * 1000f;
+                budgetedChunks = renderer.ChunksMeshedThisFrame;
+
+                Debug.Log($"[FrameTime] mesh budget: unbudgeted {unbudgeted:0.0} ms " +
+                          $"({unbudgetedChunks} chunks), budgeted {budgeted:0.0} ms " +
+                          $"({budgetedChunks} chunks, cap {budget}); " +
+                          $"{renderer.ChunksMeshDeferred} deferred to later frames");
+
+                Assert.That(unbudgetedChunks, Is.GreaterThan(budget * 4),
+                    "the unbudgeted pass meshed too little to be the fault this guards against");
+                Assert.That(budgetedChunks, Is.LessThanOrEqualTo(budget),
+                    "the budget did not hold on a real board");
+                Assert.That(renderer.ChunksMeshDeferred, Is.GreaterThan(0),
+                    "nothing was deferred, so the budget never actually bit");
+
+                // The measurement the unit exists for. Half is a wide margin on purpose — the
+                // point is the class of change, not a tuned ratio.
+                Assert.That(budgeted, Is.LessThan(unbudgeted * 0.5d),
+                    $"the budgeted re-mesh cost {budgeted:0.0} ms against {unbudgeted:0.0} ms " +
+                    "unbudgeted, so spreading the work bought nothing measurable");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The performance trace agrees with the arm that timed the same frames.
         ///
         /// <para><b>This test exists because of what happened on 2026-09-21.</b> A

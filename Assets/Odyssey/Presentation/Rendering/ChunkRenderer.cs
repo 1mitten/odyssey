@@ -223,6 +223,49 @@ namespace Odyssey.Presentation.Rendering
         public int TotalChunksMeshed { get; private set; }
 
         /// <summary>
+        /// The most chunks one frame will mesh. Zero or less is no limit.
+        ///
+        /// <para><b>Eleven, and the number came from the fault it fixes.</b> Until 2026-09-21 this
+        /// did not exist: <see cref="BatchFor"/> meshed every stale chunk the draw walk touched, in
+        /// that frame, however many there were. A traced player session on the Huge board at 4K
+        /// measured what that costs — <b>fifty-six seconds and eight thousand frames with no
+        /// meshing produced not one frame over 33 ms, while all 192 slow frames fell in the
+        /// sixty-one seconds where meshing ran</b>. Sixty-one captured stalls meshed on their own
+        /// frame and every one of them meshed 900 chunks: a whole board, in a frame, about 165 ms.
+        /// §6c.6.</para>
+        ///
+        /// <para>165 ms for 900 chunks is about <b>0.18 ms a chunk</b>. Against a 5 ms frame, a
+        /// meshing frame should not spend more than about 2 ms of it here, which is eleven.</para>
+        ///
+        /// <para><b>It breaks nothing to miss the budget.</b> A deferred chunk keeps
+        /// <c>batch.Version != _model.Version</c>, so the next frame's walk finds it again — the
+        /// staleness *is* the queue, and a second list of owed chunks would be a copy of state the
+        /// batch already holds. What the player sees is a chunk one to three frames out of date, or
+        /// one that arrives a frame late if it had no geometry at all. At 150 fps neither is
+        /// visible, and the alternative is a sixth of a second of nothing.</para>
+        /// </summary>
+        public int MeshBudgetPerFrame { get; set; } = DefaultMeshBudgetPerFrame;
+
+        /// <summary>What the game ships with. See <see cref="MeshBudgetPerFrame"/> for the arithmetic.</summary>
+        public const int DefaultMeshBudgetPerFrame = 11;
+
+        /// <summary>
+        /// Chunks the last frame wanted to mesh and would not, because the budget was spent.
+        ///
+        /// <para>Its own counter because "the budget is working" and "the budget is starving the
+        /// board" look identical in <see cref="ChunksMeshedThisFrame"/> — both cap it at the
+        /// budget. A number that stays high for many seconds means the world is being dirtied
+        /// faster than eleven chunks a frame can absorb, which is a different problem from the one
+        /// this budget solves.</para>
+        /// </summary>
+        public int ChunksMeshDeferred { get; private set; }
+
+        /// <summary>Set for the length of <see cref="PrimeAll"/>, which is the one unbudgeted walk.</summary>
+        bool _priming;
+
+        int _meshedThisFrame;
+
+        /// <summary>
         /// What submitting the surround cost last frame, in milliseconds.
         ///
         /// <para><b>Its own number because the surround is the one pass whose cost was measured
@@ -249,6 +292,8 @@ namespace Odyssey.Presentation.Rendering
             InstancesFaded = 0;
             ChunksSightTested = 0;
             CellPlatesDrawn = 0;
+            ChunksMeshDeferred = 0;
+            _meshedThisFrame = 0;
 
             // Before the board, not after it: the surround is the furthest thing in the scene, and
             // submitting it first lets the depth buffer reject it behind the board rather than
@@ -322,6 +367,37 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// Mesh everything the given view would draw, ignoring <see cref="MeshBudgetPerFrame"/>.
+        ///
+        /// <para><b>For the loading screen and nothing else.</b> On a new game every chunk is
+        /// never-meshed, so a budgeted first frame would draw almost nothing and the board would
+        /// arrive in instalments over several hundred frames while the player watched. The
+        /// composition root calls this once, before the first drawn frame, which puts the stall
+        /// where the player is already waiting — and where §6c.6 measured 14.7 seconds of worldgen
+        /// stall already sitting.</para>
+        ///
+        /// <para>It is a <see cref="Render"/> with the budget off rather than a second walk, so
+        /// there is no second copy of the rule about which chunks a view draws.</para>
+        /// </summary>
+        public void PrimeAll(int activeLayer, SliceSettings slice)
+        {
+            bool submitting = SubmitToGpu;
+            _priming = true;
+            try
+            {
+                // Nothing is shown from a priming pass: it exists to fill the batches, and
+                // submitting a frame the player never sees would be a frame's work for nothing.
+                SubmitToGpu = false;
+                Render(activeLayer, slice);
+            }
+            finally
+            {
+                _priming = false;
+                SubmitToGpu = submitting;
+            }
+        }
+
         ChunkBatch BatchFor(int chunkIndex)
         {
             ChunkBatch? batch = _batches[chunkIndex];
@@ -332,7 +408,17 @@ namespace Odyssey.Presentation.Rendering
             }
             if (batch.Version != _model.Version)
             {
+                // The whole of §6c.6's fix. Past the budget the chunk keeps the geometry it has
+                // and stays stale, so the next frame's walk picks it up; nothing is dropped and
+                // nothing is queued.
+                if (!_priming && MeshBudgetPerFrame > 0 && _meshedThisFrame >= MeshBudgetPerFrame)
+                {
+                    ChunksMeshDeferred++;
+                    return batch;
+                }
+
                 _mesher.Mesh(batch, chunkIndex);
+                _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
                 TotalChunksMeshed++;
             }
