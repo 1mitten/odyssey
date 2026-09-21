@@ -1656,6 +1656,26 @@ re-mesh twice, once with the budget off and once with it on, and quotes both:
 No absolute threshold is asserted, for the reason §6c gives: a frame number off this machine is only
 comparable with one taken in the same run.
 
+### Played, and judged (2026-09-21)
+
+The owner played the rebuilt player on Huge at 3840 x 2160. **116 seconds, 14,112 frames after the
+load, 35,678 chunks meshed:**
+
+| | seconds | frames | over 33 ms | share | over 50 ms |
+|---|---|---|---|---|---|
+| meshing | 47 | 4,958 | 1 | **0.02%** | **0** |
+| quiet | 65 | 9,154 | 2 | **0.02%** | 1 |
+
+**Zero frames over 100 ms after the load**, p50 7.05 ms, and the busiest second meshed **1,186
+chunks** for a worst frame of 12.7. The relationship that defined the fault — meshing seconds stall,
+quiet seconds do not — is gone: the two bands are identical, and the session's only frame over 50 ms
+fell in a *quiet* second, so it is not this at all. Against the same board before the fix: 3.77 per
+cent of frames over 33 ms in meshing seconds, against 0.00 in quiet ones.
+
+**And the trade was judged and cost nothing.** The one thing no measurement could answer was whether
+a player can see the board arriving eleven chunks at a time. The owner's verdict: *"The look is
+fine."* So eleven stands, and the number is now a judged figure rather than an arithmetic one.
+
 ### What it does not fix
 
 - **Worldgen.** The 439 ms frame at session start is the world being built, and `PrimeAll` keeps it
