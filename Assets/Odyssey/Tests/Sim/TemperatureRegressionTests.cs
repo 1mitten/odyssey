@@ -16,15 +16,12 @@ using Odyssey.Sim.Worldgen.Natural;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// Review probes for PR #164 (design 28 §12). Each test states a property the design claims
-    /// and checks whether the code has it. <b>Every probe here fails on the branch as reviewed
-    /// on 2026-09-21</b>, which is why the fixture is explicit: a failing probe is an open
-    /// finding, and the fix for one turns its probe into an ordinary test by moving it out of
-    /// this file. Run them with
-    /// <c>scripts/test-fast.sh --filter FullyQualifiedName~TemperatureReviewProbes</c>.
+    /// The 2026-09-21 review of the thermal model (design 28 §12), one test per finding. Each
+    /// began as an explicit probe that failed on the branch as built; the fix for the finding
+    /// is what turned it into a test. The names say what the game must do, not what it did.
     /// </summary>
-    [TestFixture, Explicit, Category("Review")]
-    public class TemperatureReviewProbes
+    [TestFixture]
+    public class TemperatureRegressionTests
     {
         sealed class Fixture
         {
@@ -146,10 +143,10 @@ namespace Odyssey.Tests.Sim
             }
         }
 
-        // ---- (a) the shared slab is charged to the sky as well ------------------------------------
+        // ---- F6: the shared slab ---------------------------------------------------------------
 
         [Test]
-        public void ProbeA_ACellarUnderALoftIsNotChargedForTheSkyThroughTheLoftsFloor()
+        public void ACellarUnderALoftIsNotChargedForTheSkyThroughTheLoftsFloor()
         {
             var f = new Fixture(sy: 4);
             int cellar = f.BuildRoom(2, 2, 7, 7, y: 0, floor: false);       // roof = the loft's floor
@@ -162,8 +159,6 @@ namespace Odyssey.Tests.Sim
             int slabLink = 0;
             foreach (var l in upper.SlabLinks) if (l.Other == cellar) slabLink = l.PerMille;
 
-            TestContext.WriteLine($"cellar: CeilingSkyCells={lower.CeilingSkyCells} CeilingRockCells={lower.CeilingRockCells} " +
-                                  $"| loft SlabLink to cellar = {slabLink} per mille");
             Assert.That(slabLink, Is.EqualTo(16 * TemperatureConductance.SlabPerMille),
                 "the loft records the shared slab as a slab link");
             Assert.That(lower.CeilingSkyCells, Is.EqualTo(0),
@@ -171,7 +166,7 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void ProbeA2_ABuildingAboveNeverMakesTheRoomBelowColder()
+        public void ABuildingAboveNeverMakesTheRoomBelowColder()
         {
             int Equilibrium(bool loftAbove)
             {
@@ -184,15 +179,29 @@ namespace Odyssey.Tests.Sim
             }
             int alone = Equilibrium(false);
             int withLoft = Equilibrium(true);
-            TestContext.WriteLine($"fired cellar alone = {alone / 100.0:F1} C, under a sealed loft = {withLoft / 100.0:F1} C, outdoors -20 C");
             Assert.That(withLoft, Is.GreaterThanOrEqualTo(alone),
-                "a sealed room above should insulate the room below, never chill it");
+                $"a sealed room above insulates the room below, never chills it: alone {alone}, under a loft {withLoft}");
         }
 
-        // ---- (b) merging rooms ----------------------------------------------------------------
+        [Test]
+        public void ARoomsSurfacesFollowTheLayerAboveWithoutARefill()
+        {
+            // The two-phase solve: the cellar's ceiling is classified against the loft's room
+            // table, so when the loft is built after the cellar the cellar's surfaces must move
+            // from sky to shared slab even though nothing on the cellar's own layer changed.
+            var f = new Fixture(sy: 4);
+            int cellar = f.BuildRoom(2, 2, 7, 7, y: 0, floor: false);
+            Assert.That(f.Room(cellar, 0).CeilingSkyCells, Is.EqualTo(16), "alone, the roof is against the sky");
+
+            f.BuildRoom(2, 2, 7, 7, y: 1, floor: false);
+            Assert.That(f.Room(cellar, 0).CeilingSkyCells, Is.EqualTo(0),
+                "once the loft stands, the cellar's roof is the loft's floor");
+        }
+
+        // ---- F5: merging --------------------------------------------------------------------------
 
         [Test]
-        public void ProbeB_KnockingThroughFromAWarmCupboardIntoAColdHallMixesByArea()
+        public void KnockingThroughFromAWarmCupboardIntoAColdHallMixesByArea()
         {
             var f = new Fixture(sx: 30, sz: 20, sy: 3);
             int cupboard = f.BuildRoom(2, 2, 7, 7, y: 0);      // 4x4 interior, the lower key
@@ -208,17 +217,30 @@ namespace Odyssey.Tests.Sim
             for (int z = 3; z <= 6; z++) f.RemoveWall(7, z, 0);
             f.Pass();
             Assert.That(f.Enclosure.RoomAt(f.Cell(15, 6, 0)), Is.EqualTo(cupboard), "one room now, under the cupboard's key");
+
             int merged = f.Temp(15, 6, 0);
             int expectedMix = (warm * 16 + cold * 108) / 124;
-            TestContext.WriteLine($"cupboard {warm / 100.0:F1} C, hall {cold / 100.0:F1} C; after knocking through the hall reads {merged / 100.0:F1} C; area mix would be about {expectedMix / 100.0:F1} C");
             Assert.That(merged, Is.LessThan(warm - 500),
-                "a hall of 108 cold cells does not become as warm as the 16-cell cupboard it was joined to");
+                $"a hall of 108 cold cells does not become as warm as the 16-cell cupboard: merged {merged}, mix about {expectedMix}");
+            Assert.That(merged, Is.GreaterThan(cold + 500), "nor does the cupboard's heat vanish");
         }
 
-        // ---- (c) a room that dissolves and comes back ----------------------------------------------
+        [Test]
+        public void ARoomThatComesThroughASolveUnchangedKeepsItsTemperatureToTheUnit()
+        {
+            var f = new Fixture();
+            f.BuildRoom(2, 2, 7, 7, y: 0);
+            f.BuildCampfire(4, 4, y: 0);
+            f.Passes(300);
+            int before = f.Temp(4, 5, 0);
+            f.BuildWall(15, 15, 0);                // an edit elsewhere on the layer: a re-fill
+            Assert.That(f.Temp(4, 5, 0), Is.EqualTo(before));
+        }
+
+        // ---- F4: resurrection ---------------------------------------------------------------------
 
         [Test]
-        public void ProbeC_ARoomOpenedToTheSkyForADayComesBackCold()
+        public void ARoomOpenedToTheSkyForADayComesBackCold()
         {
             var f = new Fixture();
             int key = f.BuildRoom(2, 2, 7, 7, y: 0);
@@ -235,14 +257,12 @@ namespace Odyssey.Tests.Sim
             f.BuildSlab(3, 3, 1);
             f.Pass();
             Assert.That(f.Enclosure.RoomAt(f.Cell(4, 5, 0)), Is.EqualTo(key), "same cells, same key");
-            int back = f.Temp(4, 5, 0);
-            TestContext.WriteLine($"was {warm / 100.0:F1} C, a day open to -20 C, re-sealed reads {back / 100.0:F1} C");
-            Assert.That(back, Is.LessThan(warm - 1_000),
+            Assert.That(f.Temp(4, 5, 0), Is.LessThan(warm - 1_000),
                 "a room that stood open to a -20 C sky for a day does not come back at its old temperature");
         }
 
         [Test]
-        public void ProbeC2_ThatResurrectionDivergesAcrossASave()
+        public void AResurrectedRoomReadsTheSameOnBothSidesOfASave()
         {
             Fixture Build()
             {
@@ -267,26 +287,53 @@ namespace Odyssey.Tests.Sim
             loaded.BuildWall(4, 2, 0);
             played.Pass();
             loaded.Pass();
-            int a = played.Temp(4, 5, 0), b = loaded.Temp(4, 5, 0);
-            TestContext.WriteLine($"re-sealed after the same history: played {a / 100.0:F1} C, loaded {b / 100.0:F1} C");
-            Assert.That(b, Is.EqualTo(a), "a played world and a loaded one must agree on a re-sealed room");
+            Assert.That(loaded.Temp(4, 5, 0), Is.EqualTo(played.Temp(4, 5, 0)),
+                "a played world and a loaded one must agree on a re-sealed room");
         }
 
-        // ---- (d) the fixed-point sweep runs only over the layers the edit marked -----------------------
+        [Test]
+        public void ALoadedRoomKeepsTheTemperatureTheFileGaveIt()
+        {
+            // The other side of the same rule: the first fill a layer ever has is a save
+            // reattaching, not a room whose cells were outdoors.
+            var f = new Fixture();
+            f.BuildRoom(2, 2, 7, 7, y: 0);
+            f.BuildCampfire(4, 4, y: 0);
+            f.Passes(300);
+            int warm = f.Temp(4, 5, 0);
+
+            using var buffer = new MemoryStream();
+            WorldSave.Save(f.World, buffer, new ISaveable[] { f.Temperature });
+            buffer.Position = 0;
+
+            var g = new Fixture();
+            g.BuildRoom(2, 2, 7, 7, y: 0);    // solved before the load, as the game's is
+            g.BuildCampfire(4, 4, y: 0);
+            WorldSave.Load(g.World, buffer, new ISaveable[] { g.Temperature });
+            Assert.That(g.Temp(4, 5, 0), Is.EqualTo(warm));
+
+            var h = new Fixture();            // and loaded before anything asked
+            h.BuildRoom(2, 2, 7, 7, y: 0);
+            h.BuildCampfire(4, 4, y: 0);
+            buffer.Position = 0;
+            WorldSave.Load(h.World, buffer, new ISaveable[] { h.Temperature });
+            h.Pass();
+            g.Pass();
+            Assert.That(h.Temp(4, 5, 0), Is.EqualTo(g.Temp(4, 5, 0)));
+        }
+
+        // ---- F2: the dirty window ------------------------------------------------------------------
 
         [Test]
-        public void ProbeD_RoofingTheGroundFloorLastEnclosesTheCellarUnderIt()
+        public void RoofingTheGroundFloorLastEnclosesTheCellarUnderIt()
         {
             var f = new Fixture(sy: 5);
-            // The cellar: walls at y=0, no roof of its own; the ground floor's slabs are its roof
-            // but one is left out for the stair.
             f.BuildRoom(2, 2, 7, 7, y: 0, floor: false, roof: false);
             f.BuildRoom(2, 2, 7, 7, y: 1, floor: true, roof: false);   // floor slabs at y=1
             f.RemoveSlab(5, 5, 1);                                     // the stairwell
             Assert.That(f.Enclosure.RoomAt(f.Cell(4, 4, 1)), Is.EqualTo(0), "no roof yet: nothing is enclosed");
             Assert.That(f.Enclosure.RoomAt(f.Cell(4, 4, 0)), Is.EqualTo(0));
 
-            // Now the roof, last — the natural order of building a house.
             for (int x = 3; x <= 6; x++)
             for (int z = 3; z <= 6; z++)
                 f.BuildSlab(x, z, 2);
@@ -294,50 +341,157 @@ namespace Odyssey.Tests.Sim
 
             int groundFloor = f.Enclosure.RoomAt(f.Cell(4, 4, 1));
             int cellar = f.Enclosure.RoomAt(f.Cell(4, 4, 0));
-
-            // The same board, solved from scratch — which is what a load does.
             var fresh = new EnclosureGrid(f.Cells, f.Edifices);
-            int cellarFresh = fresh.RoomAt(f.Cell(4, 4, 0));
-            TestContext.WriteLine($"played: ground floor room {groundFloor}, cellar room {cellar}; a fresh solve of the same board says the cellar is room {cellarFresh}");
             Assert.That(groundFloor, Is.GreaterThan(0), "the ground floor is enclosed once roofed");
-            Assert.That(cellar, Is.EqualTo(cellarFresh),
-                "the played world and a fresh solve of the same board must agree about whether the cellar is a room");
+            Assert.That(cellar, Is.GreaterThan(0), "and so is the cellar that opens into it");
+            Assert.That(cellar, Is.EqualTo(fresh.RoomAt(f.Cell(4, 4, 0))),
+                "the played world and a fresh solve of the same board agree");
         }
 
-        // ---- (e) body heat truncates to nothing in an ordinary room -------------------------------------
+        [Test]
+        public void AShaftThreeDeepComesToLifeFromOneRoofOnOneSolve()
+        {
+            var f = new Fixture(sy: 6);
+            for (int y = 0; y <= 2; y++)
+                f.BuildRoom(2, 2, 7, 7, y, floor: y > 0, roof: false);
+            f.RemoveSlab(5, 5, 1);
+            f.RemoveSlab(5, 5, 2);
+            Assert.That(f.Enclosure.RoomAt(f.Cell(4, 4, 0)), Is.EqualTo(0));
+
+            for (int x = 3; x <= 6; x++)
+            for (int z = 3; z <= 6; z++)
+                f.BuildSlab(x, z, 3);
+            f.World.Tick();
+
+            for (int y = 0; y <= 2; y++)
+                Assert.That(f.Enclosure.RoomAt(f.Cell(4, 4, y)), Is.GreaterThan(0), $"layer {y} is a room");
+            var fresh = new EnclosureGrid(f.Cells, f.Edifices);
+            for (int y = 0; y <= 2; y++)
+                Assert.That(f.Enclosure.RoomAt(f.Cell(4, 4, y)), Is.EqualTo(fresh.RoomAt(f.Cell(4, 4, y))));
+        }
+
+        // ---- F3: the floor that came out ---------------------------------------------------------
 
         [Test]
-        public void ProbeE_OneColonistInAFourByFourRoomWarmsItAtAll()
+        public void TakingARoofSlabOutThroughTheConstructionGridUnroofsTheRoom()
+        {
+            ColonyWorld colony = ColonyWorld.Build(BoardSizes.Small, 7u, ScenarioDef.Bare(),
+                mapType: MapType.Natural, wooded: false);
+            CellGrid cells = colony.Pawns.Cells;
+            GridSize size = cells.Size;
+            EnclosureGrid enclosure = colony.Pawns.Enclosure!;
+
+            // A flat 6x6 patch of the surface: the first column whose neighbourhood stands on
+            // the same layer with air above.
+            int x0 = -1, z0 = -1, y0 = -1;
+            for (int x = 10; x < size.SizeX - 16 && x0 < 0; x++)
+            for (int z = 10; z < size.SizeZ - 16 && x0 < 0; z++)
+            {
+                int y = SurfaceAt(cells, x, z);
+                if (y <= 0 || y + 2 >= size.SizeY) continue;
+                bool flat = true;
+                for (int dx = 0; dx < 6 && flat; dx++)
+                for (int dz = 0; dz < 6 && flat; dz++)
+                    if (SurfaceAt(cells, x + dx, z + dz) != y
+                        || cells.IsSolidTerrain(size.Index(x + dx, z + dz, y + 1))) flat = false;
+                if (flat) { x0 = x; z0 = z; y0 = y; }
+            }
+            Assert.That(x0, Is.GreaterThanOrEqualTo(0), "the barren meadow has a flat patch");
+
+            List<PlacedEdifice> edifices = colony.Pawns.Construction!.Edifices.Records;
+            for (int dx = 0; dx < 6; dx++)
+            for (int dz = 0; dz < 6; dz++)
+            {
+                bool edge = dx == 0 || dx == 5 || dz == 0 || dz == 5;
+                int c = size.Index(x0 + dx, z0 + dz, y0);
+                if (edge)
+                {
+                    edifices.Add(new PlacedEdifice { CellIndex = c, Def = CoreContent.EdificeWall, Stuff = NaturalContent.StuffWood });
+                    cells.Edifice[c] = edifices.Count - 1;
+                    cells.Flags[c] |= CellFlags.BlockingEdifice;
+                }
+                else
+                {
+                    cells.Floor[c + size.LayerStride] = CoreContent.SlabBuilt;
+                }
+                enclosure.MarkDirty(c);
+            }
+            int inside = size.Index(x0 + 2, z0 + 2, y0);
+            Assert.That(enclosure.RoomAt(inside), Is.GreaterThan(0), "the hut is a room");
+
+            // Then the job's own path out, not the fixture's.
+            bool removed = colony.Pawns.Construction!.RemoveSlab(colony.Pawns, inside + size.LayerStride, out _);
+            Assert.That(removed, "the slab was ours to take");
+            colony.World.Tick();
+            Assert.That(enclosure.RoomAt(inside), Is.EqualTo(0),
+                "a roof with a slab out of it is no roof, on the very next solve");
+        }
+
+        static int SurfaceAt(CellGrid cells, int x, int z)
+        {
+            GridSize size = cells.Size;
+            for (int y = size.SizeY - 1; y > 0; y--)
+                if (cells.IsSolidTerrain(size.Index(x, z, y - 1)) && !cells.IsSolidTerrain(size.Index(x, z, y)))
+                    return y;
+            return -1;
+        }
+
+        // ---- F7: the remainder ---------------------------------------------------------------------
+
+        [Test]
+        public void OneColonistInAFourByFourRoomWarmsItAtAll()
         {
             var f = new Fixture(climate: Fixture.Still(-1_000));
-            f.BuildRoom(2, 2, 7, 7, y: 0);                 // 16 cells of air
+            f.BuildRoom(2, 2, 7, 7, y: 0);                 // 16 cells of air, 15 a pass from one body
             f.Ctx.Pawns.Spawn(f.Cell(4, 4, 0));
             int before = f.Temp(3, 3, 0);
             f.Passes(200);
-            int after = f.Temp(3, 3, 0);
-            int perPawn = f.Ctx.Content.Temperature.bodyHeatPerPass;
-            TestContext.WriteLine($"body heat {perPawn} per pass over 16 cells = {perPawn / 16} per pass after integer division; room went {before} -> {after}");
-            Assert.That(after, Is.GreaterThan(before), "one person in a small sealed room warms it a little");
+            Assert.That(f.Temp(3, 3, 0), Is.GreaterThan(before),
+                "one person in a small sealed room warms it a little");
         }
 
-        // ---- (f) how fast the severity bar fills ------------------------------------------------------
+        [Test]
+        public void TheResidualRidesTheSaveAndTheHash()
+        {
+            var f = new Fixture(climate: Fixture.Still(-1_000));
+            f.BuildRoom(2, 2, 7, 7, y: 0);
+            f.Ctx.Pawns.Spawn(f.Cell(4, 4, 0));
+            f.Passes(3);                                   // 45 owed, 2 spent, 13 carried
+
+            using var buffer = new MemoryStream();
+            WorldSave.Save(f.World, buffer, new ISaveable[] { f.Temperature });
+            buffer.Position = 0;
+            var g = new Fixture(climate: Fixture.Still(-1_000));
+            g.BuildRoom(2, 2, 7, 7, y: 0);
+            g.Ctx.Pawns.Spawn(g.Cell(4, 4, 0));
+            WorldSave.Load(g.World, buffer, new ISaveable[] { g.Temperature });
+
+            var a = new StateHash(); f.Temperature.ContributeTo(ref a);
+            var b = new StateHash(); g.Temperature.ContributeTo(ref b);
+            Assert.That(b.Value, Is.EqualTo(a.Value), "the section hashes alike after a round trip");
+
+            f.Passes(20);
+            g.Passes(20);
+            Assert.That(g.Temp(3, 3, 0), Is.EqualTo(f.Temp(3, 3, 0)), "and the two worlds go on warming in step");
+        }
+
+        // ---- F1: how fast the severity bar fills -------------------------------------------------------
 
         [Test]
-        public void ProbeF_ACandleNightFillsTheSeverityBarInAboutFourHours()
+        public void ACandleNightFillsTheSeverityBarInAboutFourHours()
         {
             var tuning = ContentPack.Pawns().Temperature;
             int perInterval = -tuning.SeverityDelta(-1_300);           // a Candle night, -13 C
             int intervals = (1_000 + perInterval - 1) / perInterval;
             long ticks = (long)intervals * ContentPack.Pawns().NeedsIntervalTicks;
-            TestContext.WriteLine($"at -13 C the bar gains {perInterval} an interval: full in {intervals} intervals = {ticks} ticks = {ticks / (double)Calendar.TicksPerHour:F2} game hours (Temperature.xml says about four)");
-            Assert.That(ticks, Is.GreaterThan(2L * Calendar.TicksPerHour),
-                "the XML promises hours of exposure before the bar is full, not minutes");
+            Assert.That(ticks, Is.InRange(3L * Calendar.TicksPerHour, 5L * Calendar.TicksPerHour),
+                $"the XML promises about four hours of exposure before the bar is full; this is {ticks} ticks");
         }
 
-        // ---- (g) the cached ambient does not ride the save ---------------------------------------------
+        // ---- F8: the cached ambient rides the save ------------------------------------------------------
 
         [Test]
-        public void ProbeG_AColonistsAmbientSurvivesASave()
+        public void AColonistsAmbientSurvivesASave()
         {
             var f = new Fixture();
             var pawn = f.Ctx.Pawns.Spawn(f.Cell(10, 10, 0));
@@ -350,9 +504,9 @@ namespace Odyssey.Tests.Sim
             var g = new Fixture();
             WorldSave.Load(g.World, buffer, new ISaveable[] { g.Ctx.Pawns });
             var back = g.Ctx.Pawns.All[0];
-            TestContext.WriteLine($"work rate before save {pawn.WorkRatePerMille(WorkTypeIndex.Haul)}, after load {back.WorkRatePerMille(WorkTypeIndex.Haul)} until the next needs interval");
+            Assert.That(back.AmbientTempC, Is.EqualTo(-2_000));
             Assert.That(back.WorkRatePerMille(WorkTypeIndex.Haul), Is.EqualTo(700),
-                "the work rate a loaded colonist runs at must be the one she was saved at");
+                "the work rate a loaded colonist runs at is the one she was saved at");
         }
     }
 }

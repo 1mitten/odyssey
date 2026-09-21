@@ -14,7 +14,20 @@ namespace Odyssey.Sim.World
     /// A space is strictly enclosed ("Indoors") if it is horizontally bounded on its layer by
     /// walls, doors, or solid terrain, does not touch the map edge, does not exceed the maximum
     /// room size (2,500 cells), and is 100% roofed (every interior cell has solid rock or a built
-    /// floor slab on the layer immediately above).
+    /// floor slab on the layer immediately above) — with the shaft rule: a cell that opens into
+    /// the room above is roofed by that room (design 28 §3).
+    ///
+    /// <para><b>The solve is two phases, and the second reads only settled answers.</b> A layer's
+    /// <i>identity</i> (which cells are in which room) depends on its own walls, on the floors of
+    /// the layer above, and on the room table of the layer above (the shaft rule). Its
+    /// <i>surfaces</i> (what each room exchanges heat through) depend on the room tables of the
+    /// layers above and below it. So identity is solved top-down — every fill reads a layer above
+    /// that is already final — and when a layer's rooms change the layer below is marked and the
+    /// descent continues; surfaces are then built once for every layer whose neighbourhood
+    /// moved. One fill per dirty layer, one surface build per touched layer, and no fixed-point
+    /// sweep — the 2026-09-21 review measured the sweep at five to six times the cost of a
+    /// solve on a wooded board and found it stopped early on a house roofed last
+    /// (design 28 §12, F2 and F9).</para>
     /// </summary>
     public sealed class EnclosureGrid : IWorldSystem
     {
@@ -23,14 +36,28 @@ namespace Odyssey.Sim.World
         readonly CellGrid _cells;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
         readonly bool[] _isIndoors;
+
+        // Identity dirt: this layer's fill must run again. Surface dirt: this layer's rooms must
+        // re-read what is above and below them. A fill dirties surfaces around it; a fill that
+        // changed its rooms dirties the identity of the layer below (whose roof it is).
         readonly bool[] _dirtyLayers;
+        readonly bool[] _surfaceDirty;
+
+        // Whether a layer has ever been filled — the one tell that separates "this room's cells
+        // were outdoors" from "this grid has never looked", which the thermal system needs on a
+        // load: a room found by the first solve keeps the temperature the file gave it, and a
+        // room found by any later solve resolves from what its cells were (design 28 §5).
+        readonly bool[] _layerSolved;
 
         // Room identity, beside the indoors bool: which enclosed region each cell belongs to,
         // keyed by the region's minimum cell index (ThermalRoom.Key). Zero is nobody — outdoors,
-        // a wall, a door, a room that failed one of the enclosure tests. Rebuilt by the same
-        // lazy layer solve that rebuilds _isIndoors, and read by the thermal pass (design 28 §3).
+        // a wall, a door, a room that failed one of the enclosure tests.
         readonly int[] _roomAt;
         readonly List<ThermalRoom>[] _layerRooms;
+
+        // Scratch: the layer's room table before a fill, so a fill can say whether it changed
+        // anything — exactly, cell by cell, rather than by key and count.
+        readonly int[] _oldRoomAt;
 
         readonly int[] _visited;
         int _visitToken;
@@ -38,23 +65,16 @@ namespace Odyssey.Sim.World
         readonly List<int> _currentRoomCells = new List<int>(512);
         readonly List<int> _touchingDoors = new List<int>(32);
 
-        // Boundary records gathered across a whole layer sweep — cell, direction index (0–3)
-        // and the room slot the record belongs to — classified once every fill on the layer has
-        // finished, because the far side of a wall may belong to a room the sweep has not
-        // reached yet. Staged per fill first and only promoted on qualification: a fill that
-        // fails an enclosure test owns no room slot, and a record promoted for it would index
-        // past the list or, worse, into the next room's.
-        readonly List<int> _boundaryCells = new List<int>(128);
-        readonly List<int> _boundaryDirs = new List<int>(128);
-        readonly List<int> _boundaryOwners = new List<int>(128);
-        readonly List<int> _fillBoundaryCells = new List<int>(32);
-        readonly List<int> _fillBoundaryDirs = new List<int>(32);
+        // Boundary records staged per fill — cell and direction index (0–3), packed — and kept
+        // on the room only once the fill has qualified: a fill that fails an enclosure test owns
+        // no room, and a record kept for it would be classified against nothing.
+        readonly List<int> _fillBoundary = new List<int>(64);
 
         /// <summary>
-        /// Raised for every room a solve builds, after its inheritance ledger is written — the
-        /// thermal system's chance to give the room a starting temperature while the rooms it
-        /// overlaps are still known. Null in a world with no thermal pass, which is every bare
-        /// fixture.
+        /// Raised for every room a fill builds, after its inheritance ledger is written and
+        /// before its surfaces are — the thermal system's chance to give the room a starting
+        /// temperature while the rooms it overlaps are still known. Null in a world with no
+        /// thermal pass, which is every bare fixture.
         /// </summary>
         public event Action<ThermalRoom>? RoomResolved;
 
@@ -64,9 +84,12 @@ namespace Odyssey.Sim.World
             _edifices = edifices;
             _isIndoors = new bool[cells.Size.CellCount];
             _dirtyLayers = new bool[cells.Size.SizeY];
+            _surfaceDirty = new bool[cells.Size.SizeY];
+            _layerSolved = new bool[cells.Size.SizeY];
             _roomAt = new int[cells.Size.CellCount];
             _layerRooms = new List<ThermalRoom>[cells.Size.SizeY];
             for (int y = 0; y < _layerRooms.Length; y++) _layerRooms[y] = new List<ThermalRoom>();
+            _oldRoomAt = new int[cells.Size.LayerStride];
             _visited = new int[cells.Size.LayerStride];
             _queue = new int[cells.Size.LayerStride];
             MarkAllDirty();
@@ -92,39 +115,40 @@ namespace Odyssey.Sim.World
         }
 
         /// <summary>
-        /// A structural change on this layer invalidates the rooms of the layers beside it too.
-        /// Below, because this layer's floors and walls are the boundaries of the rooms under
-        /// them; above, because the rooms over this layer hold their cross-layer contacts
-        /// (openings, shared slabs) by looking down at this layer's rooms — a wall that splits a
-        /// cellar the hall above opens into must re-solve the hall's links as well. Over-marking
-        /// costs one flood fill of a layer; under-marking is a room exchanging heat with a room
-        /// that no longer exists.
+        /// A structural change on this layer re-fills this layer and the one below (this layer's
+        /// floors are its roof), and re-reads the surfaces of all three neighbours: the rooms
+        /// above hold their slab links and openings by looking down at this layer's rooms, the
+        /// rooms below classify their ceilings by looking up. A fill that changes its rooms
+        /// carries the marks one layer further down itself (see <see cref="SolveAll"/>).
         /// </summary>
         void MarkLayerDirty(int y)
         {
             _dirtyLayers[y] = true;
-            if (y > 0) _dirtyLayers[y - 1] = true;
-            if (y + 1 < _dirtyLayers.Length) _dirtyLayers[y + 1] = true;
+            _surfaceDirty[y] = true;
+            if (y > 0) { _dirtyLayers[y - 1] = true; _surfaceDirty[y - 1] = true; }
+            if (y + 1 < _dirtyLayers.Length) _surfaceDirty[y + 1] = true;
         }
 
         public void MarkAllDirty()
         {
             for (int y = 0; y < _dirtyLayers.Length; y++)
+            {
                 _dirtyLayers[y] = true;
+                _surfaceDirty[y] = true;
+            }
         }
 
         public bool IsIndoors(int cell)
         {
             if (cell < 0 || cell >= _cells.Size.CellCount) return false;
-            int y = cell / _cells.Size.LayerStride;
-            EnsureSolved(y);
+            EnsureSolved();
             return _isIndoors[cell];
         }
 
         public bool IsIndoors(int x, int z, int y)
         {
             if (!_cells.Size.Contains(x, z, y)) return false;
-            EnsureSolved(y);
+            EnsureSolved();
             return _isIndoors[_cells.Size.Index(x, z, y)];
         }
 
@@ -137,8 +161,7 @@ namespace Odyssey.Sim.World
         public int RoomAt(int cell)
         {
             if (cell < 0 || cell >= _cells.Size.CellCount) return 0;
-            int y = cell / _cells.Size.LayerStride;
-            EnsureSolved(y);
+            EnsureSolved();
             return _roomAt[cell];
         }
 
@@ -149,72 +172,72 @@ namespace Odyssey.Sim.World
         public IReadOnlyList<ThermalRoom> RoomsOn(int y)
         {
             if (y < 0 || y >= _dirtyLayers.Length) return System.Array.Empty<ThermalRoom>();
-            EnsureSolved(y);
+            EnsureSolved();
             return _layerRooms[y];
         }
 
         /// <summary>
-        /// The lazy solve runs the same convergent sweep the tick runs — one discipline, so a
-        /// world asked about before its first tick and one asked after cannot disagree about
-        /// which rooms exist.
+        /// The lazy solve is the whole solve — one discipline, so a world asked about before its
+        /// first tick and one asked after cannot disagree about which rooms exist.
         /// </summary>
-        void EnsureSolved(int y)
+        void EnsureSolved()
         {
-            if (!_dirtyLayers[y]) return;
             SolveAll();
         }
 
         public void Tick(SimWorld world) => SolveAll();
 
+        /// <summary>Re-solve one layer on demand. Kept for callers that edit a layer directly;
+        /// it marks and runs the whole solve, because a layer is never solved alone.</summary>
+        public void SolveLayer(int y)
+        {
+            if (y < 0 || y >= _dirtyLayers.Length) return;
+            MarkLayerDirty(y);
+            SolveAll();
+        }
+
         /// <summary>
-        /// Sweep the dirty layers ascending until a sweep changes nothing. A layer's fills read
-        /// the room table of the layer above (the shaft rule), so each sweep pulls one more
-        /// layer of a shaft chain to life — a cellar under a loft under an attic takes three —
-        /// and stopping before fixed point would leave different worlds disagreeing about
-        /// which rooms exist: the round trip found exactly that, a played world and a loaded
-        /// one hashing apart over caverns three layers deep. The sweeps only run when something
-        /// structural moved, which is every ordinary tick's one branch per layer, and they stop
-        /// the moment a sweep is stable.
+        /// Phase one, identity, top-down: every fill reads a layer above that is already final,
+        /// and a fill that changed its rooms marks the layer below — whose roof and shaft rule
+        /// read this layer — so a house roofed last pulls its cellar to life on the same solve.
+        /// Phase two, surfaces, once per layer whose rooms or neighbours moved, over settled
+        /// room tables in both directions.
         /// </summary>
         void SolveAll()
         {
             bool any = false;
             for (int y = 0; y < _dirtyLayers.Length; y++)
-                if (_dirtyLayers[y]) { any = true; break; }
+                if (_dirtyLayers[y] || _surfaceDirty[y]) { any = true; break; }
             if (!any) return;
 
-            var previous = new List<ThermalRoom>();
-            for (int sweep = 0; sweep < _dirtyLayers.Length; sweep++)
+            for (int y = _dirtyLayers.Length - 1; y >= 0; y--)
             {
-                bool changed = false;
-                for (int y = 0; y < _dirtyLayers.Length; y++)
+                if (!_dirtyLayers[y]) continue;
+                bool changed = FillLayer(y);
+                _dirtyLayers[y] = false;
+                _surfaceDirty[y] = true;
+                if (y + 1 < _dirtyLayers.Length) _surfaceDirty[y + 1] = true;
+                if (y > 0)
                 {
-                    if (!_dirtyLayers[y]) continue;
-                    previous.Clear();
-                    previous.AddRange(_layerRooms[y]);
-                    SolveLayer(y);
-                    // Re-mark for the next sweep: solving y may have changed what the layers
-                    // beside it should read.
-                    _dirtyLayers[y] = true;
-                    if (!SameRooms(previous, _layerRooms[y])) changed = true;
+                    _surfaceDirty[y - 1] = true;
+                    if (changed) _dirtyLayers[y - 1] = true;
                 }
-                if (!changed) break;
             }
 
-            for (int y = 0; y < _dirtyLayers.Length; y++) _dirtyLayers[y] = false;
+            for (int y = 0; y < _surfaceDirty.Length; y++)
+            {
+                if (!_surfaceDirty[y]) continue;
+                BuildSurfaces(y);
+                _surfaceDirty[y] = false;
+            }
         }
 
-        static bool SameRooms(List<ThermalRoom> a, List<ThermalRoom> b)
+        /// <summary>
+        /// Flood-fill one layer into rooms, write the inheritance ledger against the rooms it
+        /// had, raise <see cref="RoomResolved"/>, and say whether any cell changed room.
+        /// </summary>
+        bool FillLayer(int y)
         {
-            if (a.Count != b.Count) return false;
-            for (int i = 0; i < a.Count; i++)
-                if (a[i].Key != b[i].Key || a[i].CellCount != b[i].CellCount) return false;
-            return true;
-        }
-
-        public void SolveLayer(int y)
-        {
-            _dirtyLayers[y] = false;
             GridSize size = _cells.Size;
             int stride = size.LayerStride;
             int baseCell = y * stride;
@@ -225,7 +248,9 @@ namespace Odyssey.Sim.World
             List<ThermalRoom> oldRooms = _layerRooms[y];
             List<ThermalRoom> rooms = new List<ThermalRoom>(oldRooms.Count);
             var byKey = new Dictionary<int, ThermalRoom>(oldRooms.Count + 4);
+            bool firstSolve = !_layerSolved[y];
 
+            Array.Copy(_roomAt, baseCell, _oldRoomAt, 0, stride);
             Array.Clear(_isIndoors, baseCell, stride);
             Array.Clear(_roomAt, baseCell, stride);
 
@@ -235,10 +260,6 @@ namespace Odyssey.Sim.World
                 Array.Clear(_visited, 0, _visited.Length);
                 _visitToken = 1;
             }
-
-            _boundaryCells.Clear();
-            _boundaryDirs.Clear();
-            _boundaryOwners.Clear();
 
             int sizeX = size.SizeX;
             int sizeZ = size.SizeZ;
@@ -252,8 +273,7 @@ namespace Odyssey.Sim.World
 
                 _currentRoomCells.Clear();
                 _touchingDoors.Clear();
-                _fillBoundaryCells.Clear();
-                _fillBoundaryDirs.Clear();
+                _fillBoundary.Clear();
 
                 int head = 0, tail = 0;
                 _queue[tail++] = localIdx;
@@ -304,50 +324,49 @@ namespace Odyssey.Sim.World
                 }
 
                 bool isRoomIndoors = !touchesMapEdge && !lacksRoof && !exceededLimit;
+                if (!isRoomIndoors) continue;
 
-                if (isRoomIndoors)
+                for (int i = 0; i < _currentRoomCells.Count; i++)
                 {
-                    for (int i = 0; i < _currentRoomCells.Count; i++)
-                    {
-                        int roomCell = _currentRoomCells[i];
-                        _isIndoors[roomCell] = true;
-                        _roomAt[roomCell] = minCell;
-                    }
-
-                    for (int i = 0; i < _touchingDoors.Count; i++)
-                    {
-                        int doorCell = _touchingDoors[i];
-                        if (HasRoof(doorCell))
-                            _isIndoors[doorCell] = true;
-                    }
-
-                    var room = BuildRoom(minCell, y, baseCell);
-                    rooms.Add(room);
-                    byKey[minCell] = room;
-
-                    // Promoted only now that the fill has qualified and the slot exists — see
-                    // the fields' own note for why a failed fill must not stage anything.
-                    for (int i = 0; i < _fillBoundaryCells.Count; i++)
-                    {
-                        _boundaryCells.Add(_fillBoundaryCells[i]);
-                        _boundaryDirs.Add(_fillBoundaryDirs[i]);
-                        _boundaryOwners.Add(rooms.Count - 1);
-                    }
+                    int roomCell = _currentRoomCells[i];
+                    _isIndoors[roomCell] = true;
+                    _roomAt[roomCell] = minCell;
                 }
+
+                for (int i = 0; i < _touchingDoors.Count; i++)
+                {
+                    int doorCell = _touchingDoors[i];
+                    if (HasRoof(doorCell))
+                        _isIndoors[doorCell] = true;
+                }
+
+                var room = new ThermalRoom
+                {
+                    Key = minCell,
+                    Layer = y,
+                    CellCount = _currentRoomCells.Count,
+                    FirstSolve = firstSolve,
+                };
+                room.Cells.AddRange(_currentRoomCells);
+                room.Boundary.AddRange(_fillBoundary);
+                rooms.Add(room);
+                byKey[minCell] = room;
             }
 
             // The inheritance ledger, while the old rooms still know their cells: every cell of
-            // every old room votes for the new room that now contains it. A room that came
-            // through a re-solve unchanged votes for itself and is skipped — a self-entry says
-            // nothing the missing key doesn't, and a room that has never been temperature-
-            // resolved would then ask for its own absent temperature.
+            // every old room votes for the new room that now contains it, a room that came
+            // through unchanged voting for itself with every cell. The thermal system reads the
+            // ledger as area weights, so an unchanged room keeps its temperature exactly, a
+            // split carries it to both halves, a merge mixes by area, and a room whose cells
+            // were outdoors since the last fill has no votes and starts from the curve — which
+            // is the review's F4 and F5 (design 28 §12).
             for (int o = 0; o < oldRooms.Count; o++)
             {
                 ThermalRoom old = oldRooms[o];
                 for (int i = 0; i < old.Cells.Count; i++)
                 {
                     int key = _roomAt[old.Cells[i]];
-                    if (key == 0 || key == old.Key) continue;
+                    if (key == 0) continue;
                     if (!byKey.TryGetValue(key, out ThermalRoom? into) || into == null)
                         continue;
                     into.Inherit.TryGetValue(old.Key, out int count);
@@ -355,74 +374,79 @@ namespace Odyssey.Sim.World
                 }
             }
 
-            // Boundary classification, now that every fill on the layer has finished: the far
-            // side of a wall or door may belong to a room the sweep reached later.
-            for (int i = 0; i < _boundaryCells.Count; i++)
-                ClassifyBoundary(_boundaryCells[i], _boundaryDirs[i], rooms[_boundaryOwners[i]]);
-
-            // And the rooms themselves, ledger and surfaces settled — the thermal system's
-            // starting temperatures, which must see the ledger and so run last.
             if (RoomResolved != null)
                 for (int r = 0; r < rooms.Count; r++) RoomResolved(rooms[r]);
 
             _layerRooms[y] = rooms;
+            _layerSolved[y] = true;
+
+            for (int i = 0; i < stride; i++)
+                if (_oldRoomAt[i] != _roomAt[baseCell + i]) return true;
+            return false;
         }
 
         /// <summary>
-        /// Build the room's cached surfaces from the settled fill: ceilings against sky and rock,
-        /// floors against ground and the rooms below, and the cells themselves. Cross-layer
-        /// contacts are recorded from this (upper) room only — layers solve in ascending order,
-        /// so the layer below is always fresh when this one reads it.
+        /// Build every room's cached surfaces on one layer from settled room tables: ceilings
+        /// against sky, rock or the room above; floors against ground, the room below or the
+        /// open air; and the walls and doors the fill met, classified by what is on their far
+        /// side.
         /// </summary>
-        ThermalRoom BuildRoom(int key, int y, int baseCell)
+        void BuildSurfaces(int y)
+        {
+            List<ThermalRoom> rooms = _layerRooms[y];
+            for (int r = 0; r < rooms.Count; r++)
+            {
+                ThermalRoom room = rooms[r];
+                room.ClearSurfaces();
+                ClassifyCells(room);
+                for (int i = 0; i < room.Boundary.Count; i++)
+                    ClassifyBoundary(room.Boundary[i] >> 2, room.Boundary[i] & 3, room);
+            }
+        }
+
+        void ClassifyCells(ThermalRoom room)
         {
             GridSize size = _cells.Size;
             int stride = size.LayerStride;
+            int cellCount = size.CellCount;
 
-            var room = new ThermalRoom
+            for (int i = 0; i < room.Cells.Count; i++)
             {
-                Key = key,
-                Layer = y,
-                CellCount = _currentRoomCells.Count,
-            };
+                int cell = room.Cells[i];
 
-            for (int i = 0; i < _currentRoomCells.Count; i++)
-            {
-                int cell = _currentRoomCells[i];
-                room.Cells.Add(cell);
-
-                // The ceiling: solid rock above is the ground boundary; anything else is this
-                // room's roof against the open air. A room above shares this slab, and records
-                // the contact itself — from above, where the layer order makes it fresh.
+                // The ceiling: solid rock above is the ground boundary; a cell in another room
+                // above is that room's floor, and the contact — a shared slab or an opening — is
+                // recorded once, by the upper room; anything else is this room's roof against
+                // the open air. Counting a shared slab as sky as well made building upstairs
+                // chill downstairs (design 28 §12, F6).
                 int above = cell + stride;
-                if (_cells.IsSolidTerrain(above)) room.CeilingRockCells++;
+                if (above >= cellCount || _cells.IsSolidTerrain(above)) room.CeilingRockCells++;
+                else if (_roomAt[above] != 0) { /* the upper room's link */ }
                 else room.CeilingSkyCells++;
 
                 // The floor: a slab over another room is a shared slab (recorded here, this room
                 // being the upper of the two); a slab or bare ground over anything else is the
                 // ground boundary; no slab over open air is a hole to the outdoors.
+                int below = cell - stride;
                 if (_cells.Floor[cell] != CoreContent.SlabNone)
                 {
-                    int below = cell - stride;
                     int belowRoom = below >= 0 ? _roomAt[below] : 0;
                     if (belowRoom != 0) AddSlabLink(room, belowRoom);
                     else room.FloorRockCells++;
                 }
-                else if (cell - stride < 0 || _cells.IsSolidTerrain(cell - stride))
+                else if (below < 0 || _cells.IsSolidTerrain(below))
                 {
                     room.FloorRockCells++;
                 }
-                else if (_roomAt[cell - stride] != 0)
+                else if (_roomAt[below] != 0)
                 {
-                    room.Openings.Add(new OpeningLink(_roomAt[cell - stride], cell));
+                    room.Openings.Add(new OpeningLink(_roomAt[below], cell));
                 }
                 else
                 {
                     room.FloorHoleCells++;
                 }
             }
-
-            return room;
         }
 
         void AddSlabLink(ThermalRoom room, int lowerKey)
@@ -515,15 +539,13 @@ namespace Odyssey.Sim.World
             if (IsDoor(nCell))
             {
                 _touchingDoors.Add(nCell);
-                _fillBoundaryCells.Add(nCell);
-                _fillBoundaryDirs.Add(dir);
+                _fillBoundary.Add((nCell << 2) | dir);
                 return;
             }
 
             if (IsWallOrRock(nCell))
             {
-                _fillBoundaryCells.Add(nCell);
-                _fillBoundaryDirs.Add(dir);
+                _fillBoundary.Add((nCell << 2) | dir);
                 return;
             }
 
@@ -572,8 +594,8 @@ namespace Odyssey.Sim.World
         /// it opens into is the room above — a stairwell, a ladder shaft, a hatch — because the
         /// thermal model carries that hole as an <c>Opening</c> surface with conductance of its
         /// own, and a cellar with a way up is a cellar and not the sky. Only a hole to open air
-        /// breaks enclosure. Reads the layer above's room table as it last solved, which is why
-        /// <see cref="Tick"/> sweeps twice.
+        /// breaks enclosure. Reads the layer above's room table, which the top-down fill order
+        /// guarantees is final.
         /// </summary>
         bool OpensIntoRoomAbove(int cell)
         {

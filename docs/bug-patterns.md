@@ -350,6 +350,47 @@ two days.
 
 ## The register
 
+### 2026-09-21 — Nine faults in a thermal model that had thirteen green tests (P1, P2, P11)
+
+Reviewed before its first playtest, PR #164, by writing one probe test per suspicion and
+believing none of them until it failed (`docs/design/28-temperature.md` §12, §12a). Four shapes
+this catalogue already has, in new clothes:
+
+**A per-mille applied to the wrong unit (P11).** `severitySlopePerMille` 300, "per centi-degree
+of distance": a Candle night filled the hypothermia bar in fourteen game-minutes while the XML,
+the def comment and the pinning test's own message all promised hours. The number was pinned and
+green; the message beside it said "three" and the value said 300. **A test that pins a number
+under a sentence describing a different number is the tell** — read the message against the
+value, not just the value against the code.
+
+**A fixed point over a fixed set (P2).** The enclosure swept "until nothing changed" over the
+layers the edit had marked, but the change it was converging on propagates *downward* (a layer's
+roof rule reads the layer above), so the cellar under a house roofed last was never re-solved.
+The played world and a loaded one disagreed — the divergence the sweep had been written to end.
+The fix is not a wider window: identity solves top-down, and a layer that changed marks the one
+below itself. **When a solve iterates to a fixed point, ask whether the set it iterates over can
+grow; if the dependency has a direction, solve in that direction and let change carry the mark.**
+
+**One event, several caches, one missed (P1).** `Demolish` and `MineJob` told the enclosure; the
+floor's `RemoveSlab` told nav and the structure solver and not the enclosure. Grepping every
+caller of `Enclosure` in `Sim` took a minute and is the whole check: **list the caches a world
+edit invalidates, then list the edits, and look for the empty cell.** The tick benchmark's own
+edit arm was another empty cell — it marked nav alone, so the enclosure had never been in the
+edit tick (`docs/lessons.md`).
+
+**A shortcut ahead of the rule (P2 again).** "Return the known key's temperature" sat before the
+ledger that knew what the room's cells had been, so a room re-sealed after a day open to the sky
+came back at a season-old temperature, and a hall knocked through to a cupboard took the
+cupboard's. The rule was right; the shortcut in front of it answered first. And the same shape
+once more in the surfaces: a ceiling was "rock or sky", and the third case — another room's
+floor — fell into sky, so building upstairs made downstairs colder.
+
+**What now stops it:** `TemperatureRegressionTests`, fifteen tests, one per finding and one per
+other side of each rule; `EnclosureCostProbe` for the number the benchmark could not see; the
+benchmark's miner marks the enclosure. And the goldens were re-baked only after hashing each
+world *component by component* before and after — five minutes that turned "the hash moved"
+into "only the thermal section moved".
+
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
 ### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)

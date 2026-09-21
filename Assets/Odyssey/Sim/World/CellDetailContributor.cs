@@ -142,7 +142,8 @@ namespace Odyssey.Sim.World
             // room, the outdoor curve where it is not. Read from the thermal system — the same
             // one source the needs system and the growth pass ask — so the pane cannot disagree
             // with the simulation about what a colonist is standing in.
-            int ambientTempC = _temperature?.CellTemp(cell, world.CurrentTick) ?? 0;
+            // No thermal system, nothing to say — the field's own silence, not a reading of 0 °C.
+            int ambientTempC = _temperature?.CellTemp(cell, world.CurrentTick) ?? int.MinValue;
 
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,

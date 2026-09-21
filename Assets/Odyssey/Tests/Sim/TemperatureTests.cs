@@ -396,10 +396,13 @@ namespace Odyssey.Tests.Sim
             Assert.That(tuning.MoodOffset(1_100), Is.EqualTo(tuning.moodMildOffset), "a Wash night");
             Assert.That(tuning.MoodOffset(-400), Is.EqualTo(tuning.moodExtremeOffset), "a Candle night");
             Assert.That(tuning.SeverityDelta(1_000), Is.EqualTo(0), "inside the safe bounds, no bar");
-            Assert.That(tuning.SeverityDelta(-1_300), Is.EqualTo(-300),
-                "ten degrees of cold is three of severity an interval");
-            Assert.That(tuning.SeverityDelta(4_000), Is.EqualTo(150),
-                "five degrees of heat is one and a half");
+            // A Candle night: ten degrees past the floor is fifteen an interval, a full bar in
+            // four game-hours. The review found this pinned at 300 under a message saying
+            // "three" — fourteen minutes to a full bar (design 28 §12, F1).
+            Assert.That(tuning.SeverityDelta(-1_300), Is.EqualTo(-15),
+                "ten degrees of cold is fifteen of severity an interval");
+            Assert.That(tuning.SeverityDelta(4_000), Is.EqualTo(7),
+                "five degrees of heat is seven");
             Assert.That(tuning.WorkPerMille(1_500), Is.EqualTo(1_000), "a working temperature");
             Assert.That(tuning.WorkPerMille(-2_000), Is.EqualTo(tuning.workOutsidePerMille),
                 "outside the band, the reference's own 0.7");

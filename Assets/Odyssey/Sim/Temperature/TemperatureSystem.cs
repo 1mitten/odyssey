@@ -40,6 +40,17 @@ namespace Odyssey.Sim.Temperature
         /// dictionary that never matters.</summary>
         readonly Dictionary<int, int> _tempByKey = new Dictionary<int, int>(64);
 
+        /// <summary>
+        /// Energy owed to a room that its cell count would not yet divide into one centi-degree,
+        /// in centi-degree-cells, 0 ≤ r &lt; cells. Without it a source smaller than the room —
+        /// one colonist's 15 in a 16-cell bedroom — truncated to nothing every pass and warmed
+        /// nobody, and every room had a dead band around equilibrium the size of its own cell
+        /// count (design 28 §12, F7). Saved and hashed beside the temperature, because a pass
+        /// reads it.
+        /// </summary>
+        readonly Dictionary<int, int> _residualByKey = new Dictionary<int, int>(64);
+        readonly List<int> _orphans = new List<int>(16);
+
         // Pass scratch, reused: rooms gathered across the layers, in (layer, solve-slot) order.
         readonly List<ThermalRoom> _rooms = new List<ThermalRoom>(64);
         readonly Dictionary<int, int> _slotByKey = new Dictionary<int, int>(64);
@@ -63,16 +74,27 @@ namespace Odyssey.Sim.Temperature
             _groundByLayer = new int[ctx.Size.SizeY];
 
             // Rooms resolve their starting temperature the moment they are built, not at the
-            // next pass: a re-solve between passes (the enclosure sweep runs twice when a wall
-            // moves) would otherwise replace a room with a copy of itself that has lost the
-            // ledger, and the warm half of a split room would snap to the outdoors instead of
-            // inheriting. A bare fixture's enclosure never gets one, and its rooms are simply
-            // never asked about.
+            // next pass, while the ledger of what their cells used to be is fresh. A room from
+            // a layer's first ever fill keeps whatever this system already holds for its key —
+            // that is a save reattaching — and every later room is the area-weighted mix of the
+            // ledger: itself, exactly, when nothing moved; both old rooms when two were joined;
+            // the curve for cells that were outdoors. The first cut returned any known key
+            // untouched, so a re-sealed room came back at the temperature it had a season ago
+            // and a knocked-through hall took the cupboard's (design 28 §12, F4 and F5).
             if (ctx.Enclosure != null)
                 ctx.Enclosure.RoomResolved += room =>
                 {
-                    if (_tempByKey.ContainsKey(room.Key)) return;
-                    _tempByKey[room.Key] = ResolveInitial(room, ctx.CurrentTick, OutdoorTempC(ctx.CurrentTick));
+                    int outdoor = OutdoorTempC(ctx.CurrentTick);
+                    if (room.FirstSolve)
+                    {
+                        if (!_tempByKey.ContainsKey(room.Key)) _tempByKey[room.Key] = outdoor;
+                        return;
+                    }
+                    _tempByKey[room.Key] = Inherited(room, outdoor);
+                    // The residual is energy owed to a particular volume; a room whose cells
+                    // moved is a different volume and starts square.
+                    if (!room.Inherit.TryGetValue(room.Key, out int self) || self != room.CellCount)
+                        _residualByKey.Remove(room.Key);
                 };
         }
 
@@ -197,18 +219,43 @@ namespace Odyssey.Sim.Temperature
             for (int i = 0; i < count; i++)
             {
                 var room = _rooms[i];
+                int cells = room.CellCount;
 
                 // ONI's rule, per room, on the exchange half only: no step may exceed a quarter
                 // of the largest difference the room faces — the cheapest known guarantee that
-                // a coarse explicit integrator cannot oscillate or overshoot.
-                int exchange = (int)(_deltas[i] / room.CellCount);
-                int limit = _drives[i] / 4;
+                // a coarse explicit integrator cannot oscillate or overshoot. Applied in
+                // centi-degree-cells, before the division, so that what the clamp leaves is
+                // still counted to the last unit.
+                long exchange = _deltas[i];
+                long limit = (long)(_drives[i] / 4) * cells;
                 if (exchange > limit) exchange = limit;
                 if (exchange < -limit) exchange = -limit;
 
-                int updated = _temps[i] + exchange + (int)(_sources[i] / room.CellCount);
+                // Energy in, this pass and what earlier passes could not yet spend; the room
+                // moves by the whole centi-degrees and keeps the change, so nothing is ever
+                // lost to the division (F7).
+                _residualByKey.TryGetValue(room.Key, out int residual);
+                long total = exchange + _sources[i] + residual;
+                long step = total / cells;
+                long rem = total - step * cells;
+                if (rem < 0) { step--; rem += cells; }
+
+                int updated = _temps[i] + (int)step;
                 _temps[i] = updated;
                 _tempByKey[room.Key] = updated;
+                _residualByKey[room.Key] = (int)rem;
+            }
+
+            // Entries for rooms that no longer exist go, so that what is held is what is saved
+            // and hashed, and a room that comes back resolves from what its cells were rather
+            // than from what it was (F4).
+            _orphans.Clear();
+            foreach (var pair in _tempByKey)
+                if (!_slotByKey.ContainsKey(pair.Key)) _orphans.Add(pair.Key);
+            for (int i = 0; i < _orphans.Count; i++)
+            {
+                _tempByKey.Remove(_orphans[i]);
+                _residualByKey.Remove(_orphans[i]);
             }
         }
 
@@ -243,25 +290,28 @@ namespace Odyssey.Sim.Temperature
         }
 
         /// <summary>
-        /// A room's temperature when it has none yet: the area-weighted mix of the old rooms it
-        /// overlaps where the ledger has votes (a rebuild — sealing or splitting a room carries
-        /// its heat rather than recomputing an equilibrium, the fault Going Medieval's own
-        /// players report), and the outdoor curve for the rest, including the whole of a room
-        /// that has simply never been asked about. Inherited keys are always known — entries
-        /// outlive their rooms on purpose — so the mix never guesses.
+        /// A room's temperature at the pass: what the ledger holds for its key, which every
+        /// live room has from the moment it was resolved, or the curve for a room built with no
+        /// enclosure event to hear (a fixture's).
         /// </summary>
-        int ResolveInitial(ThermalRoom room, long tick, int outdoor)
+        int ResolveInitial(ThermalRoom room, long tick, int outdoor) =>
+            _tempByKey.TryGetValue(room.Key, out int known) ? known : outdoor;
+
+        /// <summary>
+        /// A resolved room's starting temperature: the area-weighted mix of the old rooms its
+        /// cells were in — sealing or splitting a room carries its heat rather than recomputing
+        /// an equilibrium, the fault Going Medieval's own players report — and the outdoor curve
+        /// for every cell that was nobody's. A room that came through unchanged votes for itself
+        /// with every cell and so keeps its temperature to the unit.
+        /// </summary>
+        int Inherited(ThermalRoom room, int outdoor)
         {
-            if (_tempByKey.TryGetValue(room.Key, out int known)) return known;
             if (room.Inherit.Count == 0) return outdoor;
 
             long weighted = 0;
             int covered = 0;
             foreach (var pair in room.Inherit)
             {
-                // A key with no temperature — a room that lived and died between two passes —
-                // reads as the outdoors here, which is the only honest answer left for a room
-                // nothing ever warmed.
                 if (!_tempByKey.TryGetValue(pair.Key, out int oldTemp)) continue;
                 weighted += (long)oldTemp * pair.Value;
                 covered += pair.Value;
@@ -400,6 +450,8 @@ namespace Odyssey.Sim.Temperature
             }
         }
 
+        int ResidualOf(int key) => _residualByKey.TryGetValue(key, out int r) ? r : 0;
+
         public void ContributeTo(ref StateHash hash)
         {
             int count = 0;
@@ -409,11 +461,14 @@ namespace Odyssey.Sim.Temperature
             {
                 hash.Add(pair.Key);
                 hash.Add(pair.Value);
+                hash.Add(ResidualOf(pair.Key));
             }
         }
 
         public string SaveKey => "odyssey.temperature";
 
+        /// <summary>Count, then (key, temperature, residual) per live room in gathered order.
+        /// Live rooms only, and the pass prunes the rest, so what is saved is what is held.</summary>
         public void Save(SaveWriter writer)
         {
             int count = 0;
@@ -423,21 +478,25 @@ namespace Odyssey.Sim.Temperature
             {
                 writer.Write(pair.Key);
                 writer.Write(pair.Value);
+                writer.Write(ResidualOf(pair.Key));
             }
         }
 
         public void Load(SaveReader reader)
         {
             _tempByKey.Clear();
+            _residualByKey.Clear();
             int count = reader.ReadInt();
             for (int i = 0; i < count; i++)
             {
                 int key = reader.ReadInt();
                 int temp = reader.ReadInt();
+                int residual = reader.ReadInt();
                 // A key this build cannot place (a save from a build whose rooms differed, which
-                // a format change to worldgen could produce) is kept anyway: it costs nothing,
-                // and a room that ever comes back should come back at its own temperature.
+                // a format change to worldgen could produce) is kept until the first pass, which
+                // prunes what no room claims.
                 _tempByKey[key] = temp;
+                if (residual != 0) _residualByKey[key] = residual;
             }
         }
     }

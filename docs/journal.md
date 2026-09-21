@@ -10285,3 +10285,28 @@ the enclosure was already most of a real edit's cost on Huge before this branch,
 
 Nothing was fixed; the owner asked for a review. The merge with `main` is pushed to the branch,
 the playtest row is held until F1–F4 are in, and the PR carries the review.
+
+## 2026-09-21 — the nine fixed, and the goldens measured before they were re-baked
+
+The temperature review's findings (design 28 §12), fixed in the order the review ranked them and
+recorded in §12a. The one restructure is the enclosure solve: identity top-down with dirtiness
+carried downward on change, surfaces built once after — which is both the correctness fix (the
+cellar under a house roofed last) and the cost fix (no fixed-point sweep). The rest are a number,
+a mark, a ledger that counts a room's own votes, a ceiling that is not sky when a room is above it,
+a remainder that is kept, and a field that is saved.
+
+Two things worth writing down about the method. **The fastest way to know what moved a golden is
+to hash its components separately** — cells, pawns, edifices, the thermal section — before and
+after, on the same worlds: five minutes, and it turned "the Simulated hash changed on two boards"
+into "only the thermal section changed, the colony did nothing different" with no reasoning at
+all. And **disable the new hash fields and re-run before believing a tick-zero move is only the
+hash seeing more**; it was, on all three, and now the sentence in `Golden.cs` can say so.
+
+The playtest row is un-held. The residual and the saved ambient are two more hashed fields; the
+severity slope is one content line; the enclosure's first solve on a wooded board is back near
+what it was.
+
+The edit-tick benchmark ran with the enclosure in it for the first time: Standard's lattice world
+3.86 → 5.76 ms per tick, nav alone against nav and the enclosure. The 0.298 ms `28-map-size.md`
+quotes for Standard is the generated board and never was this arm — one more number that meant a
+different world from the one it was read as.

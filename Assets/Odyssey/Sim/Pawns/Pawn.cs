@@ -141,10 +141,12 @@ namespace Odyssey.Sim.Pawns
         /// refreshed on the needs cadence and read by the rates, so work and rest feel a
         /// temperature that is minutes stale at worst and costs nothing per tick to know.
         ///
-        /// <para><b>Derived, deliberately unsaved and unhashed</b> — the same arrangement
-        /// <see cref="MoveStepCost"/> is: a copy of an answer the world can already give, kept
-        /// only because the question is asked more often than the world should be asked it. The
-        /// room's own air temperature, by contrast, is the thermal system's to keep.</para>
+        /// <para><b>Saved and hashed, because it is a sample and not a derivation.</b> It was
+        /// meant to be the <see cref="MoveStepCost"/> arrangement — a copy of an answer the
+        /// world can give again — but the answer it copies is the one at the colonist's last
+        /// interval, in the cell she stood in then, and the work rate reads it for up to an
+        /// interval after a load. A file without it ran a saved 700‰ colonist at 1000‰ until
+        /// her next interval, and milliwork is hashed (design 28 §12, F8).</para>
         /// </summary>
         public int AmbientTempC { get; internal set; }
 
@@ -741,6 +743,7 @@ namespace Odyssey.Sim.Pawns
             // that put RollSeed here. The severity bar decides condition, and a run that could
             // not see it could diverge by three hundred per-mille of work rate in silence.
             hash.Add(TemperatureSeverity);
+            hash.Add(AmbientTempC);
             for (int i = 0; i < Skills.Length; i++) hash.Add(Skills[i]);
             for (int i = 0; i < Passions.Length; i++) hash.Add(Passions[i]);
             for (int i = 0; i < SkillGainedToday.Length; i++) hash.Add(SkillGainedToday[i]);

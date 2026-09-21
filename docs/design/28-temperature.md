@@ -40,14 +40,20 @@ failed the 100%-roof test and read the outdoor curve, and the buoyancy feature w
 dead on arrival — the cellar is the whole point. A hole to the *sky* still breaks enclosure, and
 the reference's softer ≥25%-unroofed rule remains a recorded refinement.
 
-Because a layer's fills read the layer above's room table, the sweep runs **ascending until a
-sweep changes nothing** — each sweep pulls one more layer of a shaft chain to life, and stopping
-early left a played world and a loaded one disagreeing about which rooms exist (found as a
-round-trip hash divergence over caverns three layers deep). The lazy accessors run the same
-convergent sweep, so a world asked about before its first tick cannot disagree with one asked
-after.
+Because a layer's fills read the layer above's room table, **identity is solved top-down and
+surfaces second** (the review's F2 and F9, §12). A fill on layer y reads only its own walls, the
+floors of y+1 and the room table of y+1, so descending from the highest dirty layer every fill
+reads a layer above that is already final; a fill that changed any cell's room marks the layer
+below, whose roof and shaft rule read it, and the descent carries on. There is no fixed-point
+sweep: one fill per dirty layer. Then the surfaces — which look both up (ceilings) and down
+(slabs, openings) — are built once for every layer whose rooms or neighbours moved, over room
+tables that are all settled. The first version swept ascending to a fixed point over the layers
+the edit had marked, which cost five to six times a solve on a wooded board and still stopped
+one layer short: a house roofed last had a cellar that was a room after a load and not before.
+The lazy accessors run the same solve, so a world asked about before its first tick cannot
+disagree with one asked after.
 
-The same layer solve caches each room's surfaces, because the thermal pass must cost
+The surface build caches each room's surfaces, because the thermal pass must cost
 O(rooms + surfaces), never O(cells):
 
 | Surface | Far side | Conductance (‰/cell/pass) |
@@ -58,7 +64,7 @@ O(rooms + surfaces), never O(cells):
 | Roof slab | open air above | 6 |
 | Ceiling into rock | solid terrain above | 4 (ground) |
 | Floor slab onto ground | solid below | 4 (ground) |
-| Slab between rooms | room above/below | 2 |
+| Slab between rooms | room above/below | 2 — recorded by the upper room only; the lower room's ceiling is neither sky nor rock there (F6) |
 | **Vertical opening** (no slab, room below) | the room below | **k_up 400 / k_down 100** |
 | Floor missing, open air below | outdoors below | 250 (near-open) |
 | Door, closed | its far room or outdoors | 8 |
@@ -112,11 +118,20 @@ board's top layer; on the terraced meadow that overstates depth by a terrace or 
 swing is already negligible. New rooms start at the outdoor curve and relax toward the ground —
 a freshly dug cellar is cold at first, which is true.
 
-**Hysteresis** — when a rebuild changes a room's cell set, the new room inherits the
-area-weighted temperature of the old rooms it overlaps (their cells are still in memory at
-rebuild time). Sealing a room must not reset it to the outdoor answer — the fault Going
-Medieval's own players report. A save needs none of this: rooms recompute identically from the
-same seed, so saved (key, temp) pairs reattach exactly; unknown keys default to the curve.
+**Hysteresis** — when a fill rebuilds a room, the new room's temperature is the area-weighted
+mix of what its cells were: every cell of every old room on the layer votes for the new room
+that contains it, **a room that came through unchanged voting for itself with every cell**, and
+a cell that was nobody's votes for the outdoor curve. So an unchanged room keeps its temperature
+to the unit, a split carries the heat to both halves, a knocked-through wall mixes the two rooms
+by area, and a room that stood open to the sky for a day comes back at the sky's temperature.
+Sealing a room must not reset it to the outdoor answer — the fault Going Medieval's own players
+report — and it does not, because its cells were in the old room. The first version returned any
+known key untouched before consulting the ledger, so a re-sealed room came back at the
+temperature it had a season ago and a cold hall took its cupboard's temperature (F4, F5). A save
+needs none of this: rooms recompute identically from the same seed, so saved (key, temp) pairs
+reattach exactly — a room from a layer's *first ever* fill keeps whatever the ledger already
+holds for its key, which is the one place a known key is trusted. Entries for rooms that no
+longer exist are pruned each pass, so what is held is what is saved.
 
 ## 6. Materials matter
 
@@ -135,6 +150,10 @@ Double-thick walls (the reference's one insulation trick) are a recorded hook, n
 - **Pawn body heat**: 15 centi-degree-cells per pawn per pass, gated off at ≥ 40 °C ambient —
   the reference's own trick for stopping a crowded room running away. Two dozen colonists in a
   sealed 6×6 is half a campfire.
+- **Every unit of energy is spent.** The pass divides centi-degree-cells by the room's cell count
+  and keeps the remainder on the room (`residual`, 0 ≤ r < cells) for the next pass, so a source
+  smaller than the room still warms it and no room has a dead band around equilibrium the size of
+  its own cell count. Before this one colonist's 15 in a 16-cell bedroom was 0 every pass (F7).
 
 ## 8. What temperature feeds
 
@@ -143,22 +162,25 @@ Double-thick walls (the reference's one insulation trick) are a recorded hook, n
 | Mood | situational banded offset: cool/warm −10, cold/hot −50, freezing/sweltering −120 | `TemperatureDef`, `NeedsSystem.UpdateMood` |
 | Sleep | rest effectiveness ×1000 / ×900 / ×750 / ×550 by the same bands | `NeedsSystem.RestEffectiveness` |
 | Work | ×0.70 outside 10–35 °C | `Pawn.WorkRatePerMille` |
-| Condition | `TemperatureSeverity`, signed −1000…+1000 (negative hypothermia, positive heatstroke); gains (distance beyond the safe bound × 3/10) per needs interval, recovers 5 per interval in comfort; bands \|sev\| ≥ 250/500/750 → −100/−200/−300 per mille, floored at 700 — the starvation pattern exactly, real lethality arriving with M6 health | `NeedsSystem`, `Pawn` |
+| Condition | `TemperatureSeverity`, signed −1000…+1000 (negative hypothermia, positive heatstroke); gains (distance beyond the safe bound, in centi-degrees, × 15/1000) per needs interval — 15 at a Candle night's −13 °C, a full bar in four game-hours (F1), recovers 5 per interval in comfort; bands \|sev\| ≥ 250/500/750 → −100/−200/−300 per mille, floored at 700 — the starvation pattern exactly, real lethality arriving with M6 health | `NeedsSystem`, `Pawn` |
 | Sleep memories | `Thought_SleptCold` / `Thought_SleptHot` on waking outside the band | `JobDrivers` wake sites |
 | Growing | `PlantDef` min/optimal/max grow temps (6/42/58 defaults); growth gain scaled by the linear response — slowed below 6 °C, stopped at 0 by the integer floor, dead of heat at 58 | `PlantGrowthSystem` |
 | The pane | `CellDetail.AmbientTempC`, one row, hot/cold tint, on the same frame as the click | `CellDetailContributor`, `InspectModel` |
 | The clock | outdoor temperature beside the date, labelled outdoor (panel A3) | `HudShell.RefreshClock` |
 
-`Pawn.AmbientTempC` is a derived cache refreshed on the needs interval and deliberately unsaved
-and unhashed — the `MoveStepCost` pattern. `TemperatureSeverity` is saved (pawn record, format 9)
-and hashed.
+`Pawn.AmbientTempC` is refreshed on the needs interval and read by the rates between refreshes —
+and because it is a *sample* (the cell she stood in, at her last interval) and not something the
+world can re-derive, it is **saved and hashed** beside `TemperatureSeverity` (pawn record, format
+9). The first version left it out as "the `MoveStepCost` pattern", and a colonist saved at 700‰
+ran at 1000‰ for up to an interval after a load, into hashed milliwork (F8).
 
 ## 9. Save and hash
 
-Section `odyssey.temperature`: count, then (roomKey, tempC) pairs in room-key order. Hash the
-same pairs through `IStateHashable`. Format 8 → 9: the pawn record grew `TemperatureSeverity`,
-read behind a `FormatVersion >= 9` guard; an old file's zero is correct — nobody in it had ever
-been cold.
+Section `odyssey.temperature`: count, then (roomKey, tempC, residual) per live room in gathered
+order. Hash the same triples through `IStateHashable`. Format 8 → 9: the pawn record grew
+`TemperatureSeverity` and `AmbientTempC`, read behind a `FormatVersion >= 9` guard; an old file's
+zero severity is correct — nobody in it had ever been cold — and its ambient is mid-comfort until
+the first interval.
 
 ## 10. Seams left open, on purpose
 
@@ -243,3 +265,59 @@ one room is counted twice on that side of a `WallLink` and once on the other.
 | Content | Defs, wiki, registry, fingerprints | correct after the merge; both `--check`s pass |
 | Events | `WeatherOffsetC` seam, unset | correct |
 | Falling items, storage, pathing | none | — |
+
+### 12a. The fixes, 2026-09-21
+
+All nine landed the same day, on the branch, each one turning its probe into a test in
+`Tests/Sim/TemperatureRegressionTests.cs` (fifteen tests: the nine, plus the other side of
+each rule where one exists — a loaded room keeps the file's temperature, an unchanged room keeps
+its own to the unit, a three-deep shaft lives from one roof, the residual rides the save).
+
+| # | What changed | Where |
+|---|---|---|
+| F1 | `severitySlopePerMille` 300 → **15**; the three comments now agree with each other and the number | `Temperature.xml`, `TemperatureDef` |
+| F2, F9 | The solve is two phases: identity top-down with downward propagation, then surfaces once per touched layer; no fixed-point sweep; a room keeps its boundary records so its surfaces rebuild without a refill | `EnclosureGrid`, `ThermalRoom.Boundary`, §3 |
+| F3 | `RemoveSlab` marks the enclosure, as `Demolish` does | `ConstructionGrid` |
+| F4, F5 | Self-votes in the ledger; the early return on a known key is gone except for a layer's first ever fill (a save reattaching); orphaned entries pruned each pass | `EnclosureGrid.FillLayer`, `TemperatureSystem.Inherited`, `ThermalRoom.FirstSolve`, §5 |
+| F6 | A ceiling whose cell above is in a room is neither sky nor rock | `EnclosureGrid.ClassifyCells` |
+| F7 | A per-room residual in centi-degree-cells, saved and hashed; the quarter clamp is applied before the division | `TemperatureSystem`, §7, §9 |
+| F8 | `AmbientTempC` saved and hashed in the pawn record | `PawnRegistry`, `Pawn`, §8, §9 |
+| lower | A detail with no thermal system stays silent; the benchmark's edit arm marks the enclosure | `CellDetailContributor`, `TickBenchmarkTests.MineOneCell` |
+
+**The cost after the fixes**, `EnclosureCostProbe` again, same machine, same method as the table
+above (main → reviewed branch → fixed):
+
+| Board | Initial solve | One edit, mean | One edit, worst | Whole tick with an edit a tick |
+|---|---|---|---|---|
+| Standard, wooded (120×120×16) | 5.7 → 37.7 → **9.9 ms** | 0.56 → 0.92 → **0.79 ms** | 2.1 → 3.7 → 3.7 ms | 0.61 → 1.03 → **0.87 ms** |
+| Huge, wooded (240×240×16) | 20.8 → 106.5 → **30.8 ms** | 2.58 → 4.26 → **3.85 ms** | 7.1 → 11.3 → 13.3 ms | 2.30 → 3.87 → **3.43 ms** |
+| Scale target, barren (250×250×40) | 28.9 → 33.3 → 43.5 ms | 1.23 → 1.96 → **1.81 ms** | 7.5 → 12.7 → 11.8 ms | 1.31 → 2.23 → **1.96 ms** |
+
+The initial solve is back to one and a half times main's on the wooded boards rather than five
+to six; the per-edit cost is under the reviewed branch's everywhere and about 1.4× main's, which
+is the surface build for the three layers around the edit and the room objects it allocates. The
+worst single edit is the fill of a large layer, as it was on main, plus those surfaces. The
+scale-target initial solve read higher on this run than the last and the machine had an editor
+and a PlayMode batch open beside it, so that one number is noise until it is taken again alone;
+its per-edit figures moved the right way.
+
+**The goldens moved, and it was measured.** Two fields entered the hash (F7's residual, F8's
+ambient), which is the whole of the tick-zero move on all three; with those two lines disabled
+every `Generated` came back to the committed value. `Simulated` moved on the two boards that
+have caverns and not on the barren one, and hashing each golden world component by component —
+cells, pawns, edifices, the thermal section — before and after the fixes, only the thermal
+section differs: a cavern now converges instead of stopping a cell count short, and a cavern
+under a cavern is no longer charged to the sky. Nothing a colonist did changed. `Golden.cs`
+carries the sentence.
+
+Still open from the review's lower list: the clock reads `OutdoorTempC` off the simulation
+object; the lazy solve from a snapshot read writes room state outside the tick, deterministic by
+the current sync order; a wall met from two sides by one room counts twice on that side.
+
+**The edit tick, with the enclosure in it for the first time.** `TickBenchmarkTests.TheEditTickOnEveryOfferedBoard`
+on Standard, same run conditions, the miner marking nav alone and then nav and the enclosure:
+**3.86 → 5.76 ms per tick** (WorldSystems 3.79 → 5.08, and 0.6 ms landing in Pawns, where the
+lazy solve runs when a needs interval asks a room's temperature before the next tick's own
+solve). Note that `28-map-size.md`'s 0.298 ms for Standard is the *generated* board, and this
+arm is the lattice world with nine times its regions, so the two were never one measurement;
+the arm's own note says so and now the number in each column names its world.

@@ -129,5 +129,36 @@ namespace Odyssey.Sim.World
         /// the *next* solve; rooms are few and their cells are bounded by
         /// <see cref="EnclosureGrid.MaxRoomCells"/>.</summary>
         public readonly List<int> Cells = new List<int>(64);
+
+        /// <summary>
+        /// The walls and doors the fill met, packed <c>(cell &lt;&lt; 2) | direction</c>, kept so
+        /// the surfaces can be rebuilt when a neighbouring layer's rooms move without filling
+        /// this layer again — surfaces are the second phase of the solve and identity the first.
+        /// </summary>
+        public readonly List<int> Boundary = new List<int>(32);
+
+        /// <summary>
+        /// True when this room came out of the first fill its layer ever had. The thermal
+        /// system keeps a temperature it already holds for such a room (a save reattaching by
+        /// key) and resolves every later room from the ledger, where "no votes" means the cells
+        /// were outdoors and the room starts from the curve.
+        /// </summary>
+        public bool FirstSolve;
+
+        /// <summary>Drop every cached surface so <see cref="EnclosureGrid"/> can classify the
+        /// room again against settled neighbours. Identity — key, cells, ledger — stays.</summary>
+        public void ClearSurfaces()
+        {
+            CeilingSkyCells = 0;
+            CeilingRockCells = 0;
+            FloorRockCells = 0;
+            FloorHoleCells = 0;
+            WallOutdoorPerMille = 0;
+            WallRockCells = 0;
+            WallLinks.Clear();
+            SlabLinks.Clear();
+            Openings.Clear();
+            Doors.Clear();
+        }
     }
 }

@@ -144,7 +144,7 @@ namespace Odyssey.Tests.Sim
         // starting zone moving to a real `StorageZones` does move them, and that is measured
         // separately. The day a golden window includes a zone, the curve will move a hash and that
         // will be correct.
-        const ulong ContentFingerprint = 1711719411136522227UL;
+        const ulong ContentFingerprint = 3819759943885241130UL;
 
 
         [Test]

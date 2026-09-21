@@ -22,9 +22,6 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
 
 ## Open
 
-- **HELD 2026-09-21 — do not play this row yet.** The review (`docs/design/28-temperature.md`
-  §12) found nine faults; the first four decide what a night outdoors does, so the verdict would be
-  on the faults and not the design. Play it once F1–F4 are in.
 - **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Fast a day
   forward into **Rime** and stand a colonist outdoors at night: the pane should say a freezing
   tile, the clock a freezing outdoors, and within hours the colonist's work should slow and then

@@ -15,8 +15,9 @@
   in the mild band — spring is benign, shelter wanted but not yet needed — while Hollow's
   nights cross the floor and Candle's are deep in the extreme band, where severity builds.
   Severity (hypothermia below −3 °C, heatstroke above 35 °C) mirrors starvation exactly: it
-  builds by distance beyond the bound — 3 per interval per degree, so Candle's nights are a
-  full bar in about four hours and a cold snap's worse — recovers by 5 anywhere inside the
+  builds by distance beyond the bound — 15 per mille per centi-degree, so a Candle night at
+  −13 °C builds 15 an interval and is a full bar in four hours, and a cold snap's −33 °C fills
+  it in an hour and a half — recovers by 5 anywhere inside the
   bounds, and steps condition down in the same thirds starvation does. Real lethality arrives
   with the health milestone; today it slows a colonist to the same floor. Work runs at full
   speed from 8 °C: a cold morning slows nobody, a freezing one slows everyone.
@@ -42,7 +43,7 @@
     <workOutsidePerMille>700</workOutsidePerMille>
     <hypothermiaC>-300</hypothermiaC>
     <heatstrokeC>3500</heatstrokeC>
-    <severitySlopePerMille>300</severitySlopePerMille>
+    <severitySlopePerMille>15</severitySlopePerMille>
     <severityRecoveryPerInterval>5</severityRecoveryPerInterval>
     <bodyHeatPerPass>15</bodyHeatPerPass>
     <bodyHeatGateC>4000</bodyHeatGateC>
