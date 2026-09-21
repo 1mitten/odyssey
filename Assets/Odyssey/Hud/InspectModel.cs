@@ -289,7 +289,6 @@ namespace Odyssey.Hud
             Tabs.Clear();
             Commands.Clear();
             _bedUnderPane = false;
-            _storeUnderPane = false;
             IsStore = false;
 
             if (Subject == InspectSubject.Colonist)
@@ -539,7 +538,6 @@ namespace Odyssey.Hud
             IsStore = detail.StorageZone >= 0;
             if (IsStore)
             {
-                StorePriority = detail.StoragePriority;
                 StoreCells = detail.StorageCells;
                 Title = $"{Registry.Label(PaletteTools.Stockpile)} {detail.StorageOrdinal}";
                 Subtitle = StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
@@ -584,7 +582,6 @@ namespace Odyssey.Hud
                 tileIcon = "ui.overlay.zones";
             }
 
-            StoreTileTitle = tileTitle;
             if (!IsStore)
             {
                 Title = tileTitle;
@@ -643,9 +640,7 @@ namespace Odyssey.Hud
         /// takes. Cleared and set on the same cadence as <see cref="BedUnderPane"/>, so a stale
         /// true cannot outlive the zone it described.
         /// </summary>
-        public bool StoreUnderPane => _storeUnderPane;
 
-        bool _storeUnderPane;
 
         /// <summary>
         /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
@@ -654,14 +649,16 @@ namespace Odyssey.Hud
         /// </summary>
         public bool IsStore { get; private set; }
 
-        /// <summary>The store's rung, for the header chip that makes priority legible unopened.</summary>
-        public int StorePriority { get; private set; }
-
-        /// <summary>How many cells the store covers.</summary>
+        /// <summary>
+        /// How many cells the store covers — the extent the pane's title line carries.
+        ///
+        /// <para>The only one of these the pane turned out to need. <c>StorePriority</c> and
+        /// <c>StoreTileTitle</c> were written beside it for a header chip and a Tile-tab title
+        /// that were never built, and were set on every refresh and read by nothing until they
+        /// were taken out on 2026-09-21. A property whose doc comment describes a feature that
+        /// does not exist is the most expensive kind of dead code: it reads as a contract.</para>
+        /// </summary>
         public int StoreCells { get; private set; }
-
-        /// <summary>What the tile itself is called, for the Tile tab when the store owns the header.</summary>
-        public string StoreTileTitle { get; private set; } = string.Empty;
 
         /// <summary>The two tabs a store's pane carries, by registry key. The shell compares against these rather than against words.</summary>
         public const string TabStorage = "ui.tab.storage";
@@ -707,7 +704,6 @@ namespace Odyssey.Hud
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
-            _storeUnderPane = detail.StorageZone >= 0;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
