@@ -375,11 +375,11 @@ namespace Odyssey.Tests.PlayMode
                 CellRef at = colony.Grid.Size.FromIndex(shelfCell);
 
                 // First selection, then away, then back: the rebuild is what broke.
-                yield return SelectCell(boot, at);
+                yield return SelectCell(boot, doc!, at, wantStore: true);
                 AssertStorePaneReads(doc!, "on first selection");
 
-                yield return SelectCell(boot, new CellRef(at.X, at.Z + 2, at.Y));
-                yield return SelectCell(boot, at);
+                yield return SelectCell(boot, doc!, new CellRef(at.X, at.Z + 2, at.Y), wantStore: false);
+                yield return SelectCell(boot, doc!, at, wantStore: true);
                 AssertStorePaneReads(doc!, "after selecting away and coming back");
             }
             finally
@@ -388,11 +388,46 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        /// <summary>Select a cell the way a click does, and let the pane answer.</summary>
-        static IEnumerator SelectCell(OdysseyBootstrap boot, CellRef cell)
+        /// <summary>
+        /// Select a cell the way a click does, and wait for the pane to answer.
+        ///
+        /// <para><b>The answer is a round trip through the simulation, not a frame.</b>
+        /// <c>SelectionPresenter</c> submits a <c>QueryCell</c> intent; a tick drains it and sets
+        /// <c>Views.QueryCell</c>; the tick <em>after</em> that publishes the one
+        /// <see cref="CellDetail"/> row the pane describes. This harness does not run the clock,
+        /// so yielding frames alone waits for ever — which is exactly how the first cut of this
+        /// test failed, finding no tabs at all and reading like a broken pane.</para>
+        ///
+        /// <para><b>And the question is the presenter's, not the director's.</b>
+        /// <c>SelectionDirector.Pick</c> changes what is selected and asks nothing;
+        /// <c>SelectionPresenter</c> submits the <c>QueryCell</c> intent beside it, on the pointer
+        /// path a test cannot drive (a PlayMode test cannot press a button — see
+        /// <c>InputHarnessTests</c>). Picking through the director alone gives a pane with a
+        /// selection and no detail behind it, which draws as "Ground" over a shelf — which is how
+        /// the second cut of this test failed, and it looked exactly like a broken pane rather
+        /// than a harness that had not asked anything. So the two lines are mirrored here, in the
+        /// presenter's own order.</para>
+        ///
+        /// <para>Polled to a condition rather than run for a fixed count, so the test says what it
+        /// is waiting for instead of encoding how many ticks that happens to take today.</para>
+        /// </summary>
+        static IEnumerator SelectCell(OdysseyBootstrap boot, UIDocument doc, CellRef cell, bool wantStore)
         {
-            boot.Directors!.Selection.Pick(cell, default, boot.World!.Views.Current);
-            for (int i = 0; i < 3; i++) yield return null;
+            if (wantStore) boot.World!.Intents.Submit(new Intent(IntentKind.QueryCell, cell));
+            else boot.World!.Intents.Submit(new Intent(IntentKind.QueryCell, default, -1));
+            boot.World.RepublishViews();
+
+            boot.Directors!.Selection.Pick(cell, default, boot.World.Views.Current);
+
+            for (int i = 0; i < 40; i++)
+            {
+                boot.World!.Tick();
+                yield return null;
+
+                int tabs = doc.rootVisualElement
+                    .Query<VisualElement>(name: HudShell.StoreTabUnderlineName).ToList().Count;
+                if (wantStore ? tabs == 2 : tabs == 0) yield break;
+            }
         }
 
         /// <summary>One tab marked, and the Holding list filled — the two things reported.</summary>
