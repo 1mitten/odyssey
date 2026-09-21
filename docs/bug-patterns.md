@@ -1602,3 +1602,59 @@ nearest frozen one at 134 m, an animated one at 179 m.
 - **The check:** `FigureCapTests` spawns twenty colonists along a line in a *scrambled* order, so id
   order and distance order disagree; the old code fails it. Scrambling is the whole test — spawn
   them nearest-first and taking the first N by id passes without sorting anything.
+
+## A housekeeping rule that only runs while there is something to keep house over
+
+**2026-09-20, found in review of the skills work (SK4), before a player saw it.** The level-up toast
+is detected entirely on the presentation side: `SkillLevelWatch` remembers the last level it saw for
+each colonist and each skill, and reports a rise. It guards the two ways a remembered mark goes
+wrong, and both have tests — **the first sight of a colonist is silent**, so nobody announces her
+starting roll, and **a colonist missing from the frame is forgotten**, so a dead one leaves no mark
+for a later pawn to inherit.
+
+The second guard runs inside `Step`, over the frame it has just been given. **Between two colonies
+there is no frame**: the interface is on the main menu, nothing is published and nothing is stepped.
+So the marks from the last colony survive into the next one, where `PawnId` 1 is a different person
+— and if she is the better miner she announces, on her first frame, a level she was rolled with.
+
+- **The pattern:** a cleanup that is driven by the same pump as the work. It is correct for every
+  case *inside* a session and silent about the boundary between two, because at the boundary the
+  pump is stopped. Ask of any per-frame housekeeping: *what runs it when there are no frames?*
+- **The tell is a `Clear` nobody calls.** `ToastModel.Clear` existed, was unreferenced, and cleared
+  the rows but not the watch — which is the wrong half: the rows expire on a six-second timer
+  anyway, the marks never do. An unreferenced teardown method is a design that expected a boundary
+  and then did not wire one.
+- **The fix goes where the session boundary already is**, not into the watch. `HudShell.OnSessionChanged`
+  is the one place that already takes the in-game interface away with its colony; the clear is one
+  line below it, so the next thing with session state to drop has an obvious home.
+- **The check:** `ToastModelTests.AColonyGoingAwayTakesItsLevelMarksWithIt` — first sight silent,
+  clear, then a *higher* level on the same `PawnId` must say nothing, and the rise after that must
+  still be reported once. Confirmed to fail on the right assertion with the clear commented out,
+  because a test written after a fix is worth nothing until it has seen the bug.
+
+## Two branches that name the same anchor collide in arithmetic (2026-09-20)
+
+**P12.** SK4 added a transient toast stack "under the alerts in the same column". EV added the
+Events panel "under the alerts in the same column". Neither branch knew the other existed, both
+computed their top as `alertsTop + alertsHeight + Gap`, and both were right. Merged, they solve to
+the same origin and the toast draws over the panel.
+
+- **The pattern:** two features written in parallel that anchor to the same landmark in *prose*.
+  The prose is identical on both branches, which is what makes it invisible at review: each reads
+  as a correct sentence about a column that, on that branch, has one new member.
+- **Why the exhaustive test did not catch it.** `HudLayoutTests.NoTwoPanelsOverlap…` sweeps every
+  case in a hand-written list and is genuinely exhaustive over it. SK4's cases set its own row
+  count high and the other's to zero — the parameter did not exist there. EV's did the mirror
+  image. **An exhaustive sweep is only as exhaustive as its case list**, and the conflict
+  resolution that merges two constructors does not write the case that uses both parameters.
+- **Where to look for the next one:** anything a doc comment places relative to a named neighbour
+  rather than at an absolute figure — a column, a docked strip, a stacked overlay. `git log
+  --all --grep` for the anchor's name, or grep the other live branches for the phrase, and if two
+  of them add a member to one stack, the merge owes a case with **every** member at once.
+- **The fix is an ordering decision, not a nudge.** Ask which member comes and goes: the one that
+  appears and disappears goes last, because anything under it steps down and back up every time.
+  Here that is the toast (six seconds, every couple of minutes) against the Events panel (a
+  standing list a player scans).
+- **The check:** `HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and
+  the reason, and two cases in `Cases()` put all three panels in one column at all three
+  resolutions. Both confirmed to fail on the pre-fix arithmetic before the fix went in.

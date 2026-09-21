@@ -59,8 +59,23 @@ namespace Odyssey.Hud
         /// <summary>0 none, 1 minor, 2 major.</summary>
         public int Passion;
 
-        /// <summary>Experience in thousandths of a point, for a progress bar when one is wanted.</summary>
+        /// <summary>Experience in thousandths of a point. The absolute total, which nothing draws
+        /// today: the bar is drawn from <see cref="Progress"/>, because the ladder that turns one
+        /// into the other is simulation content.</summary>
         public int Experience;
+
+        /// <summary>
+        /// How far this skill stands towards its next level, per mille — the bar (SK2).
+        ///
+        /// <para><b>Derived by the simulation, not here.</b> The denominator is
+        /// <c>SkillDef.experienceToAdvance</c>, tuning content that a mod is meant to be able to
+        /// override; a copy of it in this assembly would be a second source of truth for it. So
+        /// this arrives already divided, the way <see cref="Level"/> does.</para>
+        ///
+        /// <para>Full at the top level, where there is no next one to be part of the way
+        /// towards.</para>
+        /// </summary>
+        public int Progress;
 
         public string Reason;
         public string Note;
@@ -867,6 +882,7 @@ namespace Odyssey.Hud
                     row.Level = 0;
                     row.Passion = 0;
                     row.Experience = 0;
+                    row.Progress = 0;
                 }
                 Skills[i] = row;
             }
@@ -891,6 +907,7 @@ namespace Odyssey.Hud
                     if (aspect.Key == entry.Level) row.Level = aspect.Value;
                     else if (aspect.Key == entry.Passion) row.Passion = aspect.Value;
                     else if (aspect.Key == entry.Experience) row.Experience = aspect.Value;
+                    else if (aspect.Key == entry.Progress) row.Progress = aspect.Value;
                     else continue;
                     Skills[r] = row;
                 }

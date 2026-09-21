@@ -64,6 +64,33 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// <b>Every skill the simulation trains is written out here, and the list is the tripwire.</b>
+        ///
+        /// <para>This is the test the growing branch would have failed. <c>SkillCatalogue</c>, over
+        /// in <c>Odyssey.Hud</c>, decides whether a skill's row on the colonist pane is live or
+        /// greyed out with an excuse beside it, and that decision is a claim about <i>this</i>
+        /// assembly. Construction was greyed out from U26 to 2026-09-20 and Growing from U47,
+        /// because adding a skill here touched nothing that would notice.</para>
+        ///
+        /// <para>The two halves cannot reference each other — that is the point of
+        /// <see cref="PawnAspect"/> — so the guard is a pair of pins facing each other across the
+        /// name. This one fails the moment the simulation grows a skill; its message says where to
+        /// go. <c>Odyssey.Tests.Hud.SkillCatalogueTests</c> is the other half.</para>
+        /// </summary>
+        [Test]
+        public void EverySkillTheSimulationTrainsIsNamedHere()
+        {
+            Assert.That(SkillIndex.Names, Is.EqualTo(new[]
+                {
+                    "hauling", "cutting", "mining", "construction", "growing",
+                }),
+                "the simulation's skills have changed. A skill that trains is a skill the " +
+                "colonist pane must stop calling unavailable: add or remove the matching live " +
+                "row in Odyssey.Hud.SkillCatalogue.All and update SkillCatalogueTests, which " +
+                "pins the other end of this contract. Do not simply re-bake this list.");
+        }
+
+        /// <summary>
         /// A colonist's skills are on the published frame, under those names, with the level
         /// derived rather than left for the reader to work out — the ladder that derives it is
         /// simulation content and is not published.
@@ -416,6 +443,139 @@ namespace Odyssey.Tests.Sim
             Assert.That(back.SkillGainedToday, Is.EqualTo(pawn.SkillGainedToday));
             Assert.That(back.SkillDay, Is.EqualTo(pawn.SkillDay));
             Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(original.World.ComputeStateHash().Value));
+        }
+
+        // ------------------------------------------------------------------ progress to next level
+
+        /// <summary>
+        /// SK2: how far a colonist stands towards her next level, per mille, derived where the
+        /// ladder lives so the interface never needs a copy of the table.
+        ///
+        /// <para>The numbers come from a-01's ladder, not from the method: level 0 costs 1,000
+        /// points and level 1 costs 2,000, so 500 points into a fresh skill is half way out of
+        /// level 0, and 500 points past the 1,000 floor is a quarter of the way out of level 1.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void ProgressIsTheFractionOfTheWayToTheNextLevel()
+        {
+            SkillDef def = Content.Skills[SkillIndex.Cutting];
+
+            Assert.That(def.ProgressPerMille(0, out int level), Is.Zero, "a fresh skill has earned nothing");
+            Assert.That(level, Is.Zero);
+
+            // Level 0 spans 1,000 points, so half of it is 500.
+            Assert.That(def.ProgressPerMille(500 * Point, out level), Is.EqualTo(500));
+            Assert.That(level, Is.Zero);
+
+            // The instant level 1 is reached the bar starts again at nothing.
+            Assert.That(def.ProgressPerMille(1_000 * Point, out level), Is.Zero);
+            Assert.That(level, Is.EqualTo(1));
+
+            // Level 1 spans 2,000 points from a floor of 1,000, so 500 into it is a quarter.
+            Assert.That(def.ProgressPerMille(1_500 * Point, out level), Is.EqualTo(250));
+            Assert.That(level, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// The bar never reads full while there is another level to reach, and never reads
+        /// anything but full at the top — the two ends a progress bar is wrong at.
+        /// </summary>
+        [Test]
+        public void ProgressIsFullOnlyAtTheTopLevel()
+        {
+            SkillDef def = Content.Skills[SkillIndex.Cutting];
+
+            // One thousandth of a point below level 1: as close as the ladder can come without
+            // arriving, and still not full.
+            Assert.That(def.ProgressPerMille(1_000 * Point - 1, out int level), Is.LessThan(1_000));
+            Assert.That(level, Is.Zero);
+
+            Assert.That(def.ProgressPerMille(def.MaxExperience, out level), Is.EqualTo(1_000),
+                "at the top there is no next level to be part of the way towards");
+            Assert.That(level, Is.EqualTo(def.maxLevel));
+        }
+
+        /// <summary>
+        /// <b>The overflow this method exists to get right.</b> The top of the ladder is 265,000
+        /// points — 265,000,000 in thousandths — and a thousand times that is eight times an int.
+        /// Done in int arithmetic the fraction reads correctly at low levels and returns nonsense
+        /// at high ones, so the failure would have been invisible in every test above.
+        /// </summary>
+        [Test]
+        public void ProgressStaysInRangeAtEveryLevelOfTheLadder()
+        {
+            SkillDef def = Content.Skills[SkillIndex.Cutting];
+
+            Assert.That(def.MaxExperience, Is.EqualTo(265_000 * Point),
+                "the ladder is not the one whose arithmetic this test is about");
+
+            for (int level = 0; level < def.maxLevel; level++)
+            {
+                int floor = def.ExperienceForLevel(level);
+                int span = def.experienceToAdvance[level];
+
+                Assert.That(def.ProgressPerMille(floor, out int atFloor), Is.Zero,
+                    $"level {level} does not begin empty");
+                Assert.That(atFloor, Is.EqualTo(level));
+
+                int middle = def.ProgressPerMille(floor + span / 2, out int atMiddle);
+                Assert.That(middle, Is.InRange(499, 501), $"level {level} is not half full half way");
+                Assert.That(atMiddle, Is.EqualTo(level));
+
+                Assert.That(def.ProgressPerMille(floor + span - 1, out _), Is.InRange(0, 1_000),
+                    $"level {level} leaves the range just below its ceiling");
+            }
+        }
+
+        /// <summary>
+        /// The level this yields is the same number <see cref="SkillDef.Level"/> yields, at every
+        /// point on the ladder. They are two walks of one table and a disagreement between them
+        /// would put the bar on one row and the number on another.
+        /// </summary>
+        [Test]
+        public void ProgressAgreesWithTheLevelLadder()
+        {
+            SkillDef def = Content.Skills[SkillIndex.Mining];
+
+            for (int points = 0; points <= 265_000; points += 137)
+            {
+                int experience = points * Point;
+                def.ProgressPerMille(experience, out int level);
+                Assert.That(level, Is.EqualTo(def.Level(experience)),
+                    $"the two ladders disagree at {points} points");
+            }
+        }
+
+        /// <summary>
+        /// SK2: the progress reaches the interface under its own name, for every colonist, beside
+        /// the level it belongs to.
+        /// </summary>
+        [Test]
+        public void ThePublishedFrameCarriesProgressTowardsTheNextLevel()
+        {
+            var size = new GridSize(40, 40, 8);
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 1;
+            scenario.beds = 1;
+            ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            // Half way out of level 0, which spans 1,000 points.
+            pawn.Skills[SkillIndex.Mining] = 500 * Point;
+
+            colony.World.Tick();
+            WorldSnapshot frame = colony.World.Views.Current;
+
+            Assert.That(frame.TryGetPawnAspect(
+                pawn.Id, AspectKey.Of("odyssey.pawn.skill.mining.progress"), out int progress),
+                Is.True, "no skill progress reached the frame");
+            Assert.That(progress, Is.EqualTo(500));
+
+            Assert.That(SkillAspects.Name("mining", "progress"),
+                Is.EqualTo("odyssey.pawn.skill.mining.progress"));
+            Assert.That(SkillAspects.Progress[SkillIndex.Mining],
+                Is.EqualTo(AspectKey.Of("odyssey.pawn.skill.mining.progress")));
         }
 
         // ------------------------------------------------------------------ helpers

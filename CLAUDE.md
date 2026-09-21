@@ -160,6 +160,17 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **RP** roster paging | **Done.** Overflow pagination with right-docked toolbar widget (`<` / `>`), mouse wheel page cycling, selection synchronization on 3D click/alerts, right-click drag-and-drop slot swapping (A ↔ B) with drag ghost and edge-paging, and view persistence in `ViewStateSection` v2. |
 | **CL** the carried load | **Merged 2026-09-19, PR #129**, played once, three faults fixed (`docs/design/24-carrying.md`). A load no longer vanishes when it is picked up: it rides the palms, so it travels up out of the lift's crouch with the hands and lowers again on the stow. The stoop and the grasp instant were already there and are untouched. The arms take an authored scoop and the cradle is **measured off the palms**, not solved to a point — arm length varies across the 61 rigs by more than the cradle does. Sim side is one gesture report (`DropCarried` reports the stow, reversing a deliberate silence) and two sparse aspects; neither is saved or hashed, so **no golden moved**. The armful is constant whatever the stack, so the amount now lives on the activity line and nowhere else. **In water the load is hidden**, a placeholder the owner asked for by name. The carry path is **per-nothing**: a new commodity inherits the hold, the turn and both hand-overs, and only opts in to being drawn as an armful (§9a). |
 | **GR** growing zones | **In review — PR #119**, branch `claude/growing-zones` — `U46`–`U50`: carrot crop, a paint-a-zone tool in the palette and the orders strip, sow → daylight-window growth → harvest → auto re-sow. One raw-food commodity; cooking, spoilage, seeds and seasons are recorded hooks (`docs/design/22-growing.md`). **A skill now buys speed at the hoe** — `Work_Growing` carries `rateSkill 4` and cutting's curve, which three comments and this file denied for two days. The debug menu gained **Skip one day** and **Ripen crops**. **Reviewed against main twice on 2026-09-20** (`docs/journal.md`): both givers were missing the `ctx.Reachable` every other giver has, and one unreachable crop cost 159 failed jobs in 2,000 ticks; `PlantDef.yields` was declared and never read; and the zone's translucent cover was both the interior-edge borders the owner photographed and 2,065 draw calls a frame. The zone is a bit on the ground's terrain tint now (`TintCode.TilledBase`), which is no draws at all. |
+| **SK** skills made visible | **Built, merged with `main` 2026-09-20, awaiting its first play — branch `claude/skills-system-design-k3ufis`, PR #139.** `SK2` publishes a per-mille progress-to-next-level aspect, derived where the ladder lives so the interface needs no copy of the tuning table. `SK3` draws it as an absolutely positioned 3 px underline on the four live rows — out of flow, so the fixed-height colonist pane does not grow and no layout test moves — tinted by passion, which is the ×0.35/×1.0/×1.5 it is filling at. `SK4` is a **toast** stack (design 09 §2.3's own word, and the channel it named but nobody built): a level-up is detected wholly on the presentation side by comparing a level already published for every colonist every frame, so **no event, no saved field and no hash**. `SK5` fixed a real bug — `SkillCatalogue` greyed out **Construction and Growing** long after both began training, and nothing was checking that a row's liveness was true. **There is no `SK1`**: it was the growing rate curve, and #119 had already done it. **Traits are out of scope**; `LearningFactorPerMille()` stays the empty seam. `docs/design/15-skills.md` §8. **Reviewed twice.** The first (§8f-bis) found the level watch keeping its marks across a session boundary, so the next colony's `PawnId` 1 announced a level she was rolled with, and found that the liveness guard the work claimed did not exist. The second, on merging `main` 2026-09-20, found that the toast stack and the Events panel (EV, merged meanwhile) **were solved to the same top in the same column** — the toast is last in the column now, under the Events panel, so a six-second row arriving never steps a standing panel up and down. **Played
+2026-09-21** (*"it works great but some visual change"*) and the bar changed three ways (§8i): it
+moved **into** the row between the label and the value rather than being an underline along its
+bottom, it is the needs' **green** (`HudTokens.Good`) rather than tinted by passion, and it is
+**6 px with 8 either side** rather than 3. **No layout constant moved** — the row is still 19 px and
+the pane one height — but the row has a **width budget** now that the bar is in the flow, and
+`HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the name column to 95 px so widening the bar
+cannot silently clip *Construction*. **The toast's level went amber the same day** (§8j): the line
+is three labels split in the model on the `{level}` placeholder rather than one label carrying a
+rich-text tag, because a tag that stopped being interpreted would put markup on screen and **neither
+tier can see that** — P10 again. |
 | **EV** events | **Merged 2026-09-20 (PR #140)** — the incident layer: `IncidentDef` with gates and a named worker, `CanFireNow` / `TryExecute`, the saved and hashed incident ledger, the skyfaller, and the Events panel under the alerts. One event, the **supply drop**: the debug menu's *Events* tab (one row per incident Def, built from the content) drops ten to twenty meals from the sky on to the topmost walkable cell of a random column, anywhere on the board, and the colony hauls them. **No storyteller** (owner: debug menu only for now); the cadence vocabulary is mapped and the seams named in `docs/design/23-events-and-storyteller.md`. **First look 2026-09-20, four fixes** (§9): six seconds at one speed from 120 m, above the camera; the Events row jumps the camera only, not the slice; the Events tab; the chime's tail fades and the music swells back over a second. |
 | **ST** storage | **S0 merged (PR #151); S1 built, in review.** `ZoneGrid` is the zone container, extracted out of `GrowingZones` behaviour-preserving with every golden identical. S1 is the stockpile tool, the zone painted by a drag, the wash it wears on ground *and* on a built floor for no extra draw calls, a settings table zones point at by id, banded destination search, and save format **7 → 8** (written as 7, moved on the merge because the Work tab's schedule had taken it). **The anchor decides and two zones never merge** — a storage zone carries a filter that a fold would silently destroy, which is where it parts company with growing zones (`docs/design/26-storage.md` §2). **The zone pane is built** (PR #155): clicking any cell of a store selects the whole zone, and the inspect pane opens on *Storage* with the tile behind a second tab. Five priority rungs, Everything and Nothing, the six categories expanding to their commodities with tri-state boxes, and a search box that appears once the list passes twenty rows. **Every mark in it is a drawn `HudGlyph`** — neither shipped font has ✓, ▸ or ☑. It is laid out inline rather than on the inspect pane's row classes, which is why the first build had the text overlapping: those classes carry a two-column geometry this pane does not want. Goldens re-baked and **measured** — meadow and city identical in every economy number, the played board differing by one cell because a tree stands in the starting zone (§7). |
 | **HT** hardening | **Audited 2026-09-19; audit and plan merged as PR #136. Nothing built.** `docs/audit/2026-09-19-baseline.md` is the baseline audit — scalability measured at the scale target, the monoliths, the process, and everything not yet addressed — and `docs/plans/vertical-slice.md` §HT is the ordered list of hardening units that came out of it. The first finding with a number: a tick that edits one cell at 250 × 250 × 40 costs 1.19 ms against 0.065 ms at rest, all of it `NavGraph.Rebuild` recomputing every district. **Phase gate: the plan is written and waits for approval; no unit is started.** |
@@ -196,6 +207,7 @@ this file.
 | The debug menu | `docs/design/18-debug-menu.md` |
 | The start screen, saving, loading | `docs/design/17-start-flow.md` |
 | Colonist select | `docs/design/18-colonist-select.md` |
+| Skills, the experience bar, the level-up toast | `docs/design/15-skills.md` (§8i for the bar's width budget) |
 | Naming a colonist, the setup page | `docs/design/19-world-setup.md` §10 |
 | What a colony starts with | `docs/design/22-starting-kit.md` |
 | Growing zones, crops | `docs/design/22-growing.md` (arrives with PR #119) |
@@ -212,6 +224,7 @@ this file.
 | Picking up, carrying, putting down, the armful | `docs/design/24-carrying.md` |
 | The Work tab, work priorities, the schedule grid, its two pagers | `docs/design/27-work-tab.md` |
 | Work and move rates (WS) | `docs/design/17-rates-and-stats.md` |
+| Skills, the experience bar, passion, the level-up toast | `docs/design/15-skills.md` §8 |
 | HUD regions, the orders strip, coverage | `docs/design/14-hud-layout.md` |
 | The build cursor and its drag gesture | `docs/design/19-build-cursor.md` |
 | The white selection cursor sitting flush | `docs/design/23-flush-selection-cursor.md` |
@@ -360,15 +373,24 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **908 Sim + 599 Hud** (2026-09-21,
-  `claude/storage-pane` merged with main); Long tier **23**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **914 Sim + 608 Hud** (2026-09-21,
+  PR #139 merged with a main carrying the almanac and storage zones); Long tier **23**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
-  `claude/storage-pane` after merging main: EditMode **2,283 total, 2,263 passed, 0 failed**;
-  PlayMode **91 total, 86 passed, 0 failed**. The fifty-five new EditMode ones are the storage
-  zone, its settings table and the pane's model. The remainder are `[Explicit]` or ignored. The
-  run before it, on `claude/mark-pass-batching`, was EditMode 2,228 / 2,210 and PlayMode 91 / 86.
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
+  PR #139 merged with main, after the experience bar's first look and the toast's amber level:
+  EditMode **2,298 total, 2,278 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the first attempt and that was the
+  machine, not the branch**: `Assets/Synty` had gone missing, so the two `PortraitLightingTests`,
+  the two `AvatarSheetTests` and `FigureCapTests` each ignored itself and said so in its skip
+  reason. Re-run with the art restored it is 86, matching `main` exactly. **Read the skip reasons
+  before reading a lower *passed* count as a regression** — `failed` is the number that matters and
+  it was 0 both times.
+  The run before it, on `claude/mark-pass-batching` after merging main: EditMode **2,228 total,
+  2,210 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,
+  the guard that a marked board costs draws in colours rather than in cells; the two new PlayMode
+  ones are `FrameTimeTests.TheMarkPassCostsWhatItSubmits` and `TheFrameAgainstColonySize`. The
+  remainder are `[Explicit]` or ignored. The run before it, on the Work tab branch, was EditMode
+  2,211 / 2,193 and PlayMode 89 / 84.
 - **Do not run the PlayMode tier while another Unity batch run is going.** It carries the timing
   tests, and `HudStressTests` failed at 3.770 ms against a 1.167 ms budget beside two other
   `unity.sh` runs and passed at 0.603 ms alone, on the same commit. **The baseline the test logs is
@@ -478,6 +500,12 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 - ~~A skill level buys nothing a player can feel~~ — **stale since WS2/WS3 (2026-09-18) and
   caught by the audit a day later**: work speed reads the skill curve and pace reads condition.
   Kept struck through for one release as the example of the failure this section warns about.
+  **It caught a second session on 2026-09-20**, which branched from a head predating the audit, read
+  this line as live and reported it as a finding. The line is doing its job.
+- **`Skill_Hauling` accrues experience with nowhere to show it.** Hauling is a work type and not a
+  skill by decision (`15-skills.md` §6.2, and the reference agrees), so it has no `ui.skill.*` row and
+  no rate curve — but `Job_Haul` still trains it. Deleting it is a Defs change, a `SkillIndex` change,
+  a save-format change and a hash change. The other four skills all read and all show.
 - **Nothing tests that a click reaches the game.** A PlayMode test cannot press a button (input
   update type `Editor`, so `wasPressedThisFrame` never fires); `FloorToolClickTests` and
   `InputHarnessTests` carry ignored tests. Un-ignore them together the day the harness can. This is

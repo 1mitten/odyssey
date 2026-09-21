@@ -512,6 +512,166 @@ namespace Odyssey.Tests.Hud
                 "an order button is wider than the gutter it stands in");
         }
 
+        /// <summary>
+        /// SK4: the toast stack takes the alerts' column and sits under them, so the things the
+        /// colony is telling the player are one column and not two.
+        /// </summary>
+        [Test]
+        public void TheToastStackSitsUnderTheAlertsInTheSameColumn()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                var content = new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                             toasts: ToastModel.MaxRows);
+                var boxes = HudLayout.Solve(width, height, content);
+
+                HudRect alerts = boxes[HudRegion.Alerts];
+                HudRect toasts = boxes[HudRegion.Toasts];
+
+                Assert.That(toasts.Empty, Is.False, $"the toast stack is missing at {width}x{height}");
+                Assert.That(toasts.X, Is.EqualTo(alerts.X), "the two are not in one column");
+                Assert.That(toasts.Width, Is.EqualTo(alerts.Width), "the two are not one width");
+                Assert.That(toasts.Y, Is.GreaterThanOrEqualTo(alerts.Bottom),
+                    "the toasts are not under the alerts");
+            }
+        }
+
+        /// <summary>
+        /// SK3, after the owner's first look (2026-09-21): the experience bar is a column of the
+        /// skill row, between the name and the level, so the row now has a width budget and its
+        /// parts have to come to exactly the row's width.
+        ///
+        /// <para><b>Why this test exists at all.</b> While the bar was absolutely positioned it
+        /// cost the row no width and could not squeeze anything. In the flow it can: widen the bar
+        /// or its margins and the only flexible part, the name, silently loses the difference until
+        /// "Construction" clips. Nothing else would report that — the panel still lays out, no
+        /// overlap case moves, and the fast tier has no text engine to notice the truncation.</para>
+        ///
+        /// <para><b>What this can and cannot prove.</b> It proves the arithmetic closes and that
+        /// the name column has not been eaten. It cannot prove "Construction" fits in it, because
+        /// that needs a text engine and a font; that question belongs to the Unity tier and
+        /// ultimately to the eye. So the name width is also held to a floor: it is 95 px today, and
+        /// the day somebody wants the bar wider they have to lower that number deliberately and
+        /// look at the result, rather than discover it in a screenshot a week later.</para>
+        /// </summary>
+        [Test]
+        public void TheSkillRowsPartsFitTheRow()
+        {
+            int fixedParts = HudLayout.SkillIconWidth + HudLayout.SkillIconGap
+                           + HudLayout.SkillBarGap + HudLayout.SkillBarWidth + HudLayout.SkillBarGap
+                           + HudLayout.SkillLevelWidth
+                           + HudLayout.SkillPassionGap + HudLayout.SkillPassionWidth;
+
+            Assert.That(fixedParts + HudLayout.SkillNameWidth,
+                Is.EqualTo(HudLayout.SkillRowWidth),
+                "the skill row's parts do not come to the row's width");
+
+            Assert.That(HudLayout.SkillNameWidth, Is.GreaterThanOrEqualTo(95),
+                "the name column has been squeezed; the longest label is \"Construction\" and "
+                + "lowering this is a decision to be looked at, not a side effect of widening the bar");
+
+            // The bar must stay shorter than the row. This is the constraint the absolutely
+            // positioned version was protecting and the only one that survived the move into the
+            // flow: the colonist pane is one fixed height across every tab, so a bar taller than
+            // the row would grow all seven rows and move the pane's top edge on a change of tab.
+            Assert.That(HudLayout.SkillBarHeight, Is.LessThan(HudLayout.SkillRow),
+                "a bar at least as tall as its row grows the row, and the pane with it");
+        }
+
+        /// <summary>
+        /// SK4 against EV: the toast stack is the LAST thing in that column, under the Events
+        /// panel, and that order is the decision rather than an accident of who was written first.
+        /// A toast arrives every couple of minutes and leaves six seconds later; anything below it
+        /// in a stacked column would step down and back up each time it did. Nothing is below it.
+        ///
+        /// <para>Both features were written on branches that did not know about each other and
+        /// both said "under the alerts", so on merging they solved to the same top and drew over
+        /// one another. The overlap sweep in <see cref="Cases"/> catches that; this says why the
+        /// resolution went this way round rather than the other.</para>
+        /// </summary>
+        [Test]
+        public void TheToastStackIsTheLastThingInTheAlertsColumn()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                var content = new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                             bulletins: BulletinModel.MaxRows,
+                                             toasts: ToastModel.MaxRows);
+                var boxes = HudLayout.Solve(width, height, content);
+
+                HudRect alerts = boxes[HudRegion.Alerts];
+                HudRect bulletins = boxes[HudRegion.Bulletins];
+                HudRect toasts = boxes[HudRegion.Toasts];
+
+                Assert.That(bulletins.Empty, Is.False, $"the Events panel is missing at {width}x{height}");
+                Assert.That(toasts.Empty, Is.False, $"the toast stack is missing at {width}x{height}");
+
+                Assert.That(bulletins.Y, Is.GreaterThanOrEqualTo(alerts.Bottom),
+                    "the Events panel is not under the alerts");
+                Assert.That(toasts.Y, Is.GreaterThanOrEqualTo(bulletins.Bottom),
+                    "the toast stack is not under the Events panel");
+                Assert.That(toasts.X, Is.EqualTo(alerts.X), "the three are not in one column");
+                Assert.That(bulletins.X, Is.EqualTo(alerts.X), "the three are not in one column");
+            }
+        }
+
+        /// <summary>
+        /// With no alerts the stack rises to where they would have been rather than leaving their
+        /// gap behind it — a toast on an otherwise quiet screen should not float in the middle of
+        /// the gutter.
+        /// </summary>
+        [Test]
+        public void TheToastStackClosesUpWhenThereAreNoAlerts()
+        {
+            var boxes = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers, 0, toasts: 1));
+
+            HudRect clock = boxes[HudRegion.Clock];
+            HudRect toasts = boxes[HudRegion.Toasts];
+
+            Assert.That(boxes[HudRegion.Alerts].Empty, Is.True, "this case has no alerts");
+            Assert.That(toasts.Y, Is.EqualTo(clock.Bottom + HudLayout.Gap),
+                "with nothing above it the stack should sit straight under the clock");
+        }
+
+        /// <summary>
+        /// A toast costs the coverage budget nothing, because the budget is measured on a resting
+        /// screen and a toast lasts six seconds. This is what makes the stack affordable at all —
+        /// the ceiling is the owner's to reverse and this work does not spend any of it.
+        /// </summary>
+        [Test]
+        public void TheToastStackDoesNotSpendTheCoverageBudget()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                var resting = HudContent.NothingSelected(Colonists, 3, Layers);
+                var boxes = HudLayout.Solve(width, height, resting);
+
+                Assert.That(boxes[HudRegion.Toasts].Empty, Is.True,
+                    "a resting screen is showing a toast, so the coverage figure includes one");
+                Assert.That(HudLayout.Coverage(boxes, width, height),
+                    Is.LessThanOrEqualTo(HudLayout.CoverageCeiling));
+            }
+        }
+
+        /// <summary>
+        /// The stack has no header block, unlike the alerts panel: one row of toast is one row tall
+        /// plus its frame, and a heading would be the tallest thing in it for most of its life.
+        /// </summary>
+        [Test]
+        public void AToastRowIsARowAndNotAPanelWithAHeading()
+        {
+            Assert.That(HudLayout.ToastsHeight(0), Is.Zero, "no toasts is no box at all");
+
+            float one = HudLayout.ToastsHeight(1);
+            float two = HudLayout.ToastsHeight(2);
+
+            Assert.That(two - one, Is.EqualTo(HudLayout.AlertHeight + HudLayout.AlertGap),
+                "a second row should cost exactly one row and one gap");
+            Assert.That(one, Is.LessThan(HudLayout.AlertsHeight(1)),
+                "a toast row is drawing the alerts panel's heading block");
+        }
+
         static IEnumerable<HudContent> Cases()
         {
             yield return HudContent.NothingSelected(Colonists, 3, Layers);          // resting
@@ -532,6 +692,27 @@ namespace Odyssey.Tests.Hud
             // A tile readout: five facts is the fullest the meadow offers (order, walk, floor,
             // support — one of order/minable), and the pane it stands in is the narrow one.
             yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0, cellRows: 5);
+
+            // Toasts (SK4). The stack sits under the alerts in the same column, so the case that
+            // matters is a full stack UNDER a full alerts panel — the tallest that column can get,
+            // and the one that would run off the bottom of a 720p screen if it were going to.
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0,
+                                        toasts: ToastModel.MaxRows);
+            yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                        toasts: ToastModel.MaxRows);
+            yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows, toasts: ToastModel.MaxRows);
+
+            // The right-hand column at its very tallest: clock, a full alerts panel, a full Events
+            // panel and a full toast stack, all at once. SK4 and EV were written on branches that
+            // did not know about each other and both placed their panel "under the alerts", so
+            // both solved to the same top and the toast stack drew over the Events panel. This is
+            // the case that would have caught it.
+            yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2,
+                                        bulletins: BulletinModel.MaxRows, toasts: ToastModel.MaxRows);
+            yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows,
+                                        bulletins: BulletinModel.MaxRows, toasts: ToastModel.MaxRows);
         }
 
         /// <summary>

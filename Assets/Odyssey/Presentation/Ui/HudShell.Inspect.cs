@@ -301,7 +301,8 @@ namespace Odyssey.Presentation.Ui
         /// not a reason for two builders.</para>
         /// </summary>
         static SkillLineView SkillLine(VisualElement grid, string? modifier = null,
-            HudTextRole nameRole = HudTextRole.Body, HudTextRole levelRole = HudTextRole.Meta)
+            HudTextRole nameRole = HudTextRole.Body, HudTextRole levelRole = HudTextRole.Meta,
+            bool withBar = false)
         {
             var view = new SkillLineView();
 
@@ -327,6 +328,29 @@ namespace Odyssey.Presentation.Ui
 
             view.Root.Add(view.Icon);
             view.Root.Add(view.Name);
+
+            // The experience bar (SK3), on the inspect pane only. The setup page's grid shows a
+            // candidate who has not started working, so a part-filled bar there would be a
+            // progress reading for progress nobody has made.
+            //
+            // It goes in HERE, between the name and the level, because that is where the owner
+            // put it (2026-09-21: "the experience bar needs to sit between the skill label and
+            // the skill value"). It was a bar drawn along the row's bottom edge and is a column
+            // of the row now, so the order of these Add calls is the order on screen and is the
+            // whole of the change. Hud.uss carries why that costs the row no height.
+            if (withBar)
+            {
+                view.Track = new VisualElement();
+                view.Track.AddToClassList("skill__track");
+
+                view.Fill = new VisualElement();
+                view.Fill.AddToClassList("skill__fill");
+                view.Fill.style.backgroundColor = ExperienceInk;
+
+                view.Track.Add(view.Fill);
+                view.Root.Add(view.Track);
+            }
+
             view.Root.Add(view.Value);
             view.Root.Add(view.Passion);
 
@@ -365,6 +389,13 @@ namespace Odyssey.Presentation.Ui
                 view.LastLive = row.Live;
                 view.Root.EnableInClassList("skill--off", !row.Live);
                 view.Icon.Inherit(row.Live ? HudTokens.TextMeta : HudTokens.TextFaint);
+
+                // The bar belongs to the rows that have a simulation behind them, and the
+                // stylesheet hides the track by default so a dead row needs nothing done to it —
+                // which matters because this block does not run for a row that was born dead and
+                // stayed dead, LastLive being false to begin with.
+                if (view.Track != null)
+                    view.Track.style.display = row.Live ? DisplayStyle.Flex : DisplayStyle.None;
             }
 
             // A level moves once in a working day, so the string is built on the change and not
@@ -375,12 +406,55 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(view.Value, row.Live ? row.Level.ToString("0") : "—", view.LevelRole);
             }
 
-            if (view.LastPassion == row.Passion) return;
-            view.LastPassion = row.Passion;
-            for (int i = 0; i < view.Passion.childCount; i++)
-                view.Passion[i].style.display =
-                    row.Live && row.Passion > i ? DisplayStyle.Flex : DisplayStyle.None;
+            if (view.LastPassion != row.Passion)
+            {
+                view.LastPassion = row.Passion;
+                for (int i = 0; i < view.Passion.childCount; i++)
+                    view.Passion[i].style.display =
+                        row.Live && row.Passion > i ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            // ---- the bar. Guarded on its own value like everything above it, but the guard is
+            // doing a different job here and the difference is worth knowing before tuning it.
+            //
+            // Every other field on this row changes about once in a working day, so its guard is
+            // almost always taken and the write almost never happens. This one moves roughly seven
+            // per mille a second at a minor passion, so the guard is taken about half the time at a
+            // 15 Hz refresh and the write is the normal case — which is the point, because watching
+            // it creep is the whole reason it exists. Only the width is written; no string is
+            // built, so a selected colonist still costs no allocation.
+            if (view.Fill == null || !row.Live) return;
+            if (view.LastProgress == row.Progress) return;
+            view.LastProgress = row.Progress;
+
+            // Per mille in, per cent out. A width rather than a scale so the bar's left edge stays
+            // put and only its right edge moves.
+            view.Fill.style.width = Length.Percent(row.Progress / 10f);
         }
+
+        /// <summary>
+        /// The experience bar's colour (SK3): the needs' own green, the one a food bar is drawn
+        /// in. Owner, 2026-09-21: <i>"it should also be using the same green as used for the rest,
+        /// food bars"</i>.
+        ///
+        /// <para><b>One colour, not a band.</b> <see cref="HudTokens.NeedBand"/> runs good to bad
+        /// because a need has a bad end and a player has to be told about it. A skill has no bad
+        /// end — a bar three tenths along is not a warning — so it takes the good end of that
+        /// scale and stays there. Asking <c>NeedBand</c> for it would paint a new colonist's
+        /// skills red for being new.</para>
+        ///
+        /// <para><b>It was tinted by passion until the owner's first look</b>, on the argument
+        /// that the fill was the only place the ×0.35/×1.0/×1.5 learning rate was visible while it
+        /// was happening. That argument was wrong about which question the bar answers: a player
+        /// reading this row wants <i>how far along is she</i>, which is what a food bar answers
+        /// and deserves the same colour. The passion is still on the row, in the pips, which is
+        /// where it was always the more legible of the two.</para>
+        ///
+        /// <para>Taken from the token rather than written as a literal, so this row and a food bar
+        /// cannot drift apart — and set once at build rather than per refresh, because unlike a
+        /// need it never changes.</para>
+        /// </summary>
+        static Color ExperienceInk => HudTokens.Good;
 
         void SetNeed(int index, int thousandths)
         {
@@ -621,7 +695,7 @@ namespace Odyssey.Presentation.Ui
                 _skillsGrid = new VisualElement();
                 _skillsGrid.AddToClassList("skills");
                 for (int i = 0; i < _inspect.Skills.Count; i++)
-                    _skills.Add(SkillLine(_skillsGrid));
+                    _skills.Add(SkillLine(_skillsGrid, withBar: true));
                 tabBody.Add(_skillsGrid);
 
                 _inspectBody.Add(tabBody);

@@ -7,16 +7,31 @@ namespace Odyssey.Hud
     /// <summary>
     /// The skills a colonist's record lists, in the order it lists them.
     ///
-    /// <para><b>This is the design's thirteen, not the simulation's three</b> (owner, 2026-09-17).
+    /// <para><b>This is the design's fourteen, not the simulation's four</b> (owner, 2026-09-17).
     /// The list in <c>docs/design/icon-keys.csv</c> is canon; it already has registry names, wiki
     /// entries and icon-map rows, and it is the list the game is being built towards. What the
-    /// simulation can actually train today is three of them, so the other rows draw as
+    /// simulation can actually train today is four of them, so the other rows draw as
     /// unavailable with the reason beside them — which is the idiom this interface already uses
     /// for a tab, a command or a panel that does not exist yet, and is better than a tab that
     /// hides the shape of the game until the last system lands.</para>
     ///
-    /// <para><b>Where the simulation's three go.</b> <c>Skill_Mining</c> is <c>ui.skill.mining</c>
-    /// and needs no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
+    /// <para><b>Construction and Growing were greyed out here long after they began working</b>
+    /// (fixed 2026-09-20, SK5). Construction has been fully simulated since U26 — three jobs
+    /// train it and it drives both a build's speed and its botch roll — and Growing since U47,
+    /// where sowing and harvest both train it. Both rows still said "nothing is built yet" and
+    /// "nothing is planted yet", so the one screen that tells a player what a colonist can do was
+    /// denying two of the four things she actually does. <b>A row's liveness is not documentation,
+    /// it is a claim about the simulation, and nothing was checking it</b> — so two tests now
+    /// do, one on each side of a seam neither can cross. <c>SkillCatalogueTests</c> pins the live
+    /// rows and the aspect names they mint; <c>SkillTests.EverySkillTheSimulationTrainsIsNamedHere</c>
+    /// pins <c>SkillIndex.Names</c>. Adding a skill to the simulation fails the second, whose
+    /// message sends the author to the first, which is the path the growing branch walked straight
+    /// past.</para>
+    ///
+    /// <para><b>Where the simulation's five go, and why only four are rows.</b>
+    /// <c>Skill_Mining</c>, <c>Skill_Construction</c> and <c>Skill_Growing</c> are
+    /// <c>ui.skill.mining</c>, <c>ui.skill.construction</c> and <c>ui.skill.growing</c> and need
+    /// no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
     /// <c>Skill_Hauling</c> has no canon skill at all, deliberately: the design makes hauling a
     /// work type and not a skill, which is also the reference's answer. <b>It is therefore not
     /// listed here, and the open item is on the simulation's side</b> — see
@@ -66,10 +81,13 @@ namespace Odyssey.Hud
             /// <summary>What the row says about itself beyond its name, or empty.</summary>
             public readonly string Note;
 
-            /// <summary>The three names this skill's numbers arrive under.</summary>
+            /// <summary>The four names this skill's numbers arrive under.</summary>
             public readonly AspectKey Level;
             public readonly AspectKey Passion;
             public readonly AspectKey Experience;
+
+            /// <summary>Per mille towards the next level, which the row's bar is drawn from (SK2).</summary>
+            public readonly AspectKey Progress;
 
             public Entry(string key, string skill, string reason, string note = "")
             {
@@ -80,23 +98,24 @@ namespace Odyssey.Hud
                 Level = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".level");
                 Passion = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".passion");
                 Experience = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".experience");
+                Progress = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".progress");
             }
 
             public bool Live => Skill.Length != 0;
         }
 
         /// <summary>
-        /// The thirteen, in <c>icon-keys.csv</c> order — which is roughly the order the systems
+        /// The fourteen, in <c>icon-keys.csv</c> order — which is roughly the order the systems
         /// are planned in rather than alphabetical, so the live ones cluster at the top as the
         /// game fills out.
         /// </summary>
         public static readonly Entry[] All =
         {
-            new Entry("ui.skill.construction", NotSimulated, "nothing is built yet"),
+            new Entry("ui.skill.construction", "construction", string.Empty),
             new Entry("ui.skill.mining", "mining", string.Empty),
             new Entry("ui.skill.salvage", NotSimulated, "salvage is hauled, not stripped"),
             new Entry("ui.skill.cooking", NotSimulated, "meals are found, not made"),
-            new Entry("ui.skill.growing", NotSimulated, "nothing is planted yet"),
+            new Entry("ui.skill.growing", "growing", string.Empty),
             new Entry("ui.skill.cutting", "cutting", string.Empty),
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),
@@ -114,13 +133,15 @@ namespace Odyssey.Hud
         static Entry[]? _alphabetical;
 
         /// <summary>
-        /// The thirteen in the order a player reads them: <b>alphabetical by the word on screen</b>
+        /// The fourteen in the order a player reads them: <b>alphabetical by the word on screen</b>
         /// (owner, 2026-09-17).
         ///
         /// <para><b>By the label, not the key or the internal name.</b> A player scanning for
-        /// "Construction" is scanning the column they are reading, and three of these keys do not
-        /// spell their own label — <c>ui.skill.growing</c> is trained by cutting, and the key is
-        /// the one thing on the row nobody sees.</para>
+        /// "Construction" is scanning the column they are reading, and <c>ui.skill.cutting</c>
+        /// does not spell its own label — it reads <b>Chopping</b>, and the key is the one thing
+        /// on the row nobody sees. (It used to be worse: the key was borrowed from Growing until
+        /// 2026-09-18, so a colonist who spent a day with an axe levelled up a skill called
+        /// Growing.)</para>
         ///
         /// <para><see cref="All"/> keeps its planning order, because that is what the file is a
         /// record of and other readers depend on it. This is the presentation order, and it is
@@ -175,16 +196,17 @@ namespace Odyssey.Hud
         /// left column and then down the right.
         ///
         /// <para><b>Not the same as <see cref="Alphabetical"/>, and that is the whole point.</b> The
-        /// grid is a wrapping flex row — thirteen items at half width, which the engine flows left
+        /// grid is a wrapping flex row — fourteen items at half width, which the engine flows left
         /// to right and then wraps. Appending A, B, C into that gives A and B side by side, which
         /// is across-then-down: the layout the owner refused. So the sequence is interleaved here,
         /// where it can be tested, rather than by giving the stylesheet a column count it would
         /// then own.</para>
         ///
-        /// <para>Thirteen into seven rows leaves the right column one short, so the last row holds
-        /// only the left item and the sequence simply runs out — which is why this is computed
-        /// rather than written as a table of indices that would be wrong the day a skill is
-        /// added.</para>
+        /// <para><see cref="Rows"/> is <c>(All.Length + 1) / 2</c>, so an odd count leaves the
+        /// right column one short and the sequence simply runs out — the <c>index &lt; order.Count</c>
+        /// guard is that case and not a belt-and-braces check. Fourteen happens to divide evenly
+        /// and fill both columns; the day a fifteenth skill is added it will not, which is why this
+        /// is computed rather than written as a table of indices.</para>
         /// </summary>
         public static IReadOnlyList<Entry> ReadingOrder
         {
