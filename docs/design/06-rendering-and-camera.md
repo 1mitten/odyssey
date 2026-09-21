@@ -1719,6 +1719,59 @@ fixed and guarded, and the budget is unverified on the hardware it was written f
 documents, so **a green PlayMode run says nothing about it** — read the printed numbers, not the
 pass. That has always been true and is not a growing-zones matter.
 
+### 6c.8 One edit re-meshed the whole board, and the seconds that are still unexplained
+
+The owner reported *"about a second or 3 delay when the object appears when it's built, IE door,
+walls etc — sometimes a little glitch and it appears"*. `BuildAppearanceTests` was written to
+measure it in a real player loop rather than reason about the seam, and it found two things.
+
+**The publish seam is innocent.** A wall raised in a live session is in the render mirror on the
+**next tick's publish** — one tick, a few milliseconds — and drawn on the frame after that. The
+tick, the dirty chunk marks, the snapshot contributor and the mesher together cost one tick and one
+frame. **In ticks, not frames**, which cost a red run to learn: the mirror is written by a snapshot
+contributor, so a rig running frames faster than the fixed tick sees the wall arrive several frames
+later without anything being slower. The same commit read 0 frames alone and 13 frames in a full
+PlayMode run, with one tick of delay both times. Nothing there can account for
+seconds, and nothing there has been changed.
+
+**`WorldRenderModel.Version` was one number for the entire board.** Every `ChunkBatch` compared its
+own version against it, so *any* cell changing anywhere invalidated *every* batch, and all 45 drawn
+chunks of the meadow were re-meshed on the next frame. **This is the other half of §6c.6–6c.7 and
+not a duplicate of it**: the budget caps how many chunks may be re-meshed in one frame, and this
+caps how many are invalidated at all. With the budget alone a single wall still dirties 45 chunks
+and spreads them over four frames of stale geometry; with both, it dirties three and they are
+re-meshed inside one frame, well under the budget of eleven. Measured, with the contrast taken inside one
+run, which is the only way a frame number on this machine means anything:
+
+| | Chunks re-meshed by one wall | The frame after the raise | The frames either side of it |
+|---|---|---|---|
+| Before | 45 | **12.53 ms** | 0.68–0.85 ms |
+| After | 3 | **1.73 ms** | 0.38–0.43 ms |
+
+**Measured again with both in** (PlayMode on the merged branch, 2026-09-21): one wall is *in the
+mirror one tick and 12.4 ms after the raise, drawn on the next frame, 3 chunks re-meshed*, and the
+twelve frames following it are flat at 0.33–0.43 ms. The spike is not smaller, it is gone.
+
+The fix is a version *per chunk* (`WorldRenderModel.ChunkVersion`), stamped by `RefreshDirty` on the
+chunks it actually copied, with `RefreshAll` and `Remesh` writing the new version into every entry so
+that "re-mesh everything" is still expressible. `Version` itself stays and still means "something
+changed", which is what `DoorDirector` reads it for.
+
+**What this makes load-bearing.** A global version quietly covered under-marking: a system that
+dirtied too few chunks still got the right picture, because everything was re-meshed anyway. Now
+**a cell edit must dirty every chunk whose mesh depends on it** — which for terrain means the 3×3×3
+neighbourhood, because a face is drawn against what is beside it. `ConstructionGrid` and `MineJob`
+both do (`MarkChunksAround`); the per-cell marks that remain — a felled tree, a crop's stage, a
+zone's tint — are all things drawn inside their own cell. The symptom of getting this wrong is a
+stale face at a chunk boundary that corrects itself the next time anything near it changes.
+
+**The seconds are not explained by this**, and the leading candidate is outside the game: the editor
+compiles shader variants asynchronously (`ProjectSettings/EditorSettings.asset`,
+`m_AsyncShaderCompilation: 1`) and a wall is the first thing of its material a meadow ever draws.
+A batch run cannot reproduce it — `ShaderUtil.allowAsyncCompilation` is false in batch mode, and the
+probe recorded zero frames of compilation — so the next move is the owner flipping that one toggle
+in a real editor session and saying whether the delay becomes a brief hitch.
+
 ## 7. Presentation is a reader
 
 The rule that keeps this document honest, and the one that the architecture benchmark treats as a judged phase: **presentation never reads simulation objects and never mutates them.** It reads the immutable snapshot published by the simulation at tick end, keyed by stable handles, and it sends player actions back as intents on a queue consumed at a tick boundary (`docs/design/ui-plan-reconciliation.md`).
