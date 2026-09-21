@@ -23,6 +23,20 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Does a store keep itself to what you asked for?** (`claude/storage-pane`,
+  `docs/design/26-storage.md` §11.) Paint a stockpile over ground that already has something on it
+  — or set a store that is holding stone to meals only — and the colonists should carry out what it
+  refuses and then fill it with what it wants. Three things only a person can judge. **Is the
+  emptying quick enough to read as intent** rather than as the colony forgetting about it: it is
+  scanned with the loose hauling now, not with the tidying, so it should start within a job or two,
+  and if you narrow a filter and wander off and come back to find it unchanged, the pass ordering is
+  wrong. **Where the evicted things end up**: they go to the nearest cell no zone claims, which on a
+  crowded base may be somewhere silly-looking — if you find yourself hunting for what used to be in
+  a store, it needs a dumping zone rather than a nearest-cell search. And **whether a big warehouse
+  can empty itself at all**: the search reaches twelve cells, so a rock in the middle of a store
+  more than about twenty-four wide has nowhere it can legally be put and will stay put. A store that
+  size is exactly what the tool invites you to paint.
+
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
   fill now goes through one instanced call per colour instead of one submission per cell. Nothing

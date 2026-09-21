@@ -76,6 +76,19 @@ worth changing.
 
 **Two tiers.** `scripts/test-fast.sh` runs the same Sim test sources through mirror projects in `tools/dotnet/` with no editor, in about 1.7 seconds warm. `scripts/unity.sh test editmode` takes about 37 seconds with the watchdog and is the authority, because only Unity proves the assembly-definition boundaries hold and only Unity can run editor or PlayMode tests. Work in the fast tier, gate on the slow one. See `docs/setup/local-dev.md` §10.
 
+**An inconclusive test is printed as "Skipped" and counted as nothing.** `Assume.That` answers a
+failed precondition with NUnit's *Inconclusive*, which is the point of it — but `dotnet test`
+prints that as `Skipped <TestName>` and puts it in neither column of the summary, so a run can say
+`Skipped: 0` and list fifteen skipped tests in the same output. Filter down to one of them and the
+summary reads `Failed: 0, Passed: 0, Total: 0`: a green run in which nothing happened. On
+2026-09-21 fifteen Sim tests were in that state, three of them written for specific owner reports
+about the rule that session was fixing; all three failed the same `Assume`, and the oldest threw on
+its first assertion the moment it was allowed to run. **`Assume` is for a precondition that is
+genuinely allowed to be absent** — a board that might have no water, an optional pack. A fixture
+the test builds for itself is not that: if it cannot be built, `Assert` and fail loudly. And
+**grep `^  Skipped` after a full run** and check the list against what is deliberately `[Explicit]`
+or `[Ignore]`; there is no count to watch, so the list is the only signal.
+
 **Unity ships a .NET *runtime*, not an SDK.** `dotnet --list-sdks` against a runtime-only install prints an error to stdout and still exits 0, so the exit code cannot be trusted; check for an actual version line. Install a real SDK without admin rights with the official script, which lands in `%USERPROFILE%\.dotnet`.
 
 **A remote container can run the whole fast tier, and the SDK comes from the distribution, not from Microsoft.** The container images used by Claude Code on the web carry python3 but no dotnet, and the official installer is useless there: `dot.net/v1/dotnet-install.sh` redirects to `builds.dotnet.microsoft.com`, which the egress proxy refuses outright (`CONNECT tunnel failed, response 403` — a policy denial, so retrying it only spends the session's time). The Ubuntu archive *is* reachable, and 24.04 packages the SDK, so `apt-get install -y dotnet-sdk-8.0` puts 8.0.131 on the path in about a minute and `scripts/test-fast.sh` then restores from nuget.org and runs every Sim test — 227 passed, 4 s cold, on 2026-09-16. **So "no Unity" does not mean "no gate" for Sim work:** every row in `docs/plans/overnight-queue.md` tagged **C** can be proved in a container, and only the **W** rows genuinely need the Windows machine. Still, **check `dotnet --version` before promising "fast tier green"** rather than assuming it: if an image ever has neither the SDK nor a reachable archive, the only safe rows are the ones whose done-when needs no test run at all. What the container cannot do at all: Unity itself (assembly-definition boundaries, editor tooling, PlayMode, frame time), and web research — `rimworldwiki.com`, `dwarffortresswiki.org`, `steamcommunity.com` and even `en.wikipedia.org` are blocked for both `curl` and `WebFetch`, leaving only the `WebSearch` tool's own extracts, which is thinner than a research row's format asks for.

@@ -25,6 +25,78 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-21 — A store is a rule about the door, and the rocks were already inside
+
+The owner painted a stockpile, set it to meals, and got two complaints out of it in one sentence:
+the rocks already in it stayed, and the meals lying elsewhere were never fetched. The expectation
+was stated plainly — *"I expect the colonists to ensure that all those tiles are occupied by meals
+or nothing, not leave rocks in there."*
+
+**Measured before diagnosed, and the measurement changed the shape of the problem.** A probe on
+the bare fixture: a two-cell meals-only store with a rock in each took **0 hauls in 10,000 ticks**
+and the meal on the grass never moved; the same store with *one* rock and one free cell hauled the
+meal in perfectly. So the two symptoms are one fault. `CellHasSpace` requires the same def, so a
+cell holding a rock has no room for a meal, and a store whose cells are all held by things it
+refuses has quietly stopped working.
+
+**The filter governed arrival only.** `StorageSettings.Accepts` is asked when choosing where a
+load *goes*; nothing asked it of what was already lying there. The nearly-right half was already
+written — `HaulWorkGiver.StoredPriority` says a refused thing "is not stored at all, only in the
+way" and returns the unstored rank for it. That was enough to let it move to a store that *would*
+have it and nothing more, because of where it was asked: `ColonyItems` buckets loose against
+stored by whether the cell is in a zone (one array read), so a refused thing is bucketed
+**stored**, and the stored pass is the re-stow, which `TryGiveJob` runs only when nothing loose is
+waiting. A colony that is felling or mining always has something loose. When no store would take
+it: `dest < 0; continue`. There was no third answer.
+
+Two candidate fixes. **Re-bucket on a filter edit** is truer to the words and is the worse answer:
+`ColonyItems`' buckets would come to depend on the filter table, ticking one commodity would have
+to walk a zone's items, and the save would have to agree about which lister each thing was in.
+**Or walk both listers in the first pass and split them by the filter** — one branch in a loop
+that already existed, and `Refused` is two array reads. That is what was built; the re-stow pass
+now sees only what its store is content to hold.
+
+The other half is the destination. There was no answer for "no store will have it" beyond
+`continue`, except for one case: a thing standing on tilled soil, which 2026-09-20 gave a
+clearance to open ground. That clause is reached by both cases now, through one predicate
+(`InTheWay`) and one radius (`ClearanceRadius`, 12, which the two sites used to state separately).
+
+**And then the clearance turned out to be the same bug from the other end.** `PawnContext.NotZoned`
+knew only about growing zones, while both of its call sites said in their own comments that they
+wanted ground *"outside every zone"*. So a rock lifted off a field could be set down inside a
+meals-only stockpile — reachable without the player ever narrowing a filter, and stuck there for
+good once it landed. P1 in its purest form: the name, the doc comment and the two call sites were
+three descriptions of one rule, and two of them were wrong. It is `OpenGroundFor(defIndex)` now
+and it asks about the thing as well as the cell, because a store that *accepts* the thing is a
+home rather than an obstruction. The predicate is still allocated once — the def travels in a
+field rather than in a capture, which the 199-bytes-a-tick measurement behind the original
+`NotZoned` is the reason for.
+
+**Proving the new test bites was not free, and the reason is worth keeping.** With the predicate
+temporarily put back to its growing-only form, the field blocker was not cleared *at all* rather
+than cleared into the store — because the clearance fallback, unlike `BestStorageCell`, does not
+check reservations, and by then every store cell near the field was claimed by a meal haul. So the
+wrong predicate produced a permanent no-op, not a visibly wrong answer. Recorded in
+`26-storage.md` §11d: two haulers evicting at once can still pick the same cell, which is
+transient rather than a livelock, but it is a sharp edge that wants knowing.
+
+**No golden moved** — fast tier 922 Sim + 625 Hud, Long tier 23, all green with no re-bake. That
+is correct and it is also the gap: every zone in every golden is founded at *Everything*, so the
+state never arises there, and the eight new tests are the whole of the coverage.
+
+### Three tests in the area were not running, and the tier said so in a way nobody reads
+
+`AFieldBlockerIsClearedToTheGrassWhenNoStoreWillTakeIt` — written for the owner's 2026-09-20 stall
+— was **inconclusive**: it searched the four orthogonal neighbours of the colony's start for a free
+cell, and the scenario's own meal piles occupy all four on the fixture's seed.
+`AThingOnTilledSoilIsClearedBeforeANearerPile` had the same body and the same fate. `dotnet test`
+prints an inconclusive result as `Skipped` and counts it in neither column, so the run reported
+`Skipped: 0` while fifteen Sim tests returned no verdict at all. Allowed to run for the first time,
+the older of the two threw on its first assertion — it waited for the blocker's old cell to empty
+and then asked which zone cell **-1** was in, because a carried thing has no cell. The regression
+guard for the previous report in this exact area had therefore never once executed. Ring search,
+`Assert` rather than `Assume`, and wait for the thing to be *down* again. `docs/lessons.md`.
+
 ## 2026-09-20 — one sentence from a Play session, and the biggest cost in the renderer
 
 The owner read the developer overlay while spawning colonists and said: *"it seemed to hover
