@@ -635,6 +635,9 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeBed:
                     EmitBed(batch, module, tint, index, x, z, y);
                     return;
+                case CoreContent.EdificeShelf:
+                    EmitShelf(batch, module, tint, index, x, z, y);
+                    return;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
                     AddBody(batch, module, tint,
@@ -810,6 +813,22 @@ namespace Odyssey.Presentation.Rendering
                     pillow ? TintCode.Linen() : tint,
                     BedShape.Part(root, facing, part));
             }
+        }
+
+        /// <summary>
+        /// A shelf: three boxes from <see cref="ShelfShape"/>, which the cursor's ghost asks as
+        /// well, so a shelf drawn under the pointer and a shelf drawn on the board cannot disagree.
+        ///
+        /// <para>No head guard, unlike the bed: one cell, one record, one emitter. Three instances
+        /// into the chunk's body buckets, keyed by module, part and tint — so forty wooden shelves
+        /// in a chunk are three buckets and not a hundred and twenty.</para>
+        /// </summary>
+        void EmitShelf(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
+        {
+            int facing = _model.EdificeFacing(index);
+            Matrix4x4 root = ShelfShape.Root(x, z, y, facing);
+            for (int part = 0; part < ShelfShape.PartCount; part++)
+                AddBody(batch, module, tint, ShelfShape.Part(root, facing, part));
         }
 
         int FirstOpenDirection(int x, int z, int y) => _model.DoorFacing(x, z, y);

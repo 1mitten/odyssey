@@ -900,6 +900,58 @@ namespace Odyssey.Presentation.Rendering
 
                 Vector3 floor = CellMetrics.FloorCentre(cell);
 
+                // **On the shelf, not on the floor under it.** A contained thing is published at
+                // its store's cell so that every count of what the colony holds stays right; this
+                // is the one place that has to care which of the two it is looking at.
+                //
+                // It costs no extra draw calls, and that is the point rather than a hope: these
+                // instances land in the per-def bucket that was going to be submitted anyway, so a
+                // forty-shelf warehouse adds matrices and not submissions. The alternative — a pass
+                // of its own over the shelves — is `docs/bug-patterns.md` P10, which cost the
+                // growing zone 2,065 draw calls before it was deleted.
+                if (things[i].Contained)
+                {
+                    int shelfIndex = _model.Size.Index(cell);
+                    Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y,
+                        _model.EdificeFacing(shelfIndex));
+                    Vector3 stand = ShelfShape.SlotCentre(shelf, _model.EdificeFacing(shelfIndex),
+                        things[i].Slot);
+
+                    if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe onShelf))
+                    {
+                        // The same ramp and the same spiral, tightened: ItemHeap's spreads are
+                        // sized for a 2.5 m cell floor and a slot is a fifth of that, so at the
+                        // recipe's own spread neighbouring stacks interleave.
+                        var tight = new ItemHeap.Recipe(onShelf.Fewest, onShelf.Biggest, onShelf.Full,
+                            ShelfShape.SlotSpread, onShelf.SizeJitter, lyingDown: onShelf.LyingDown);
+
+                        int held = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                            stand, tight, _heapPlacements);
+
+                        for (int rock = 0; rock < held; rock++)
+                        {
+                            Matrix4x4 placement = _heapPlacements[rock];
+
+                            // **No GroundRelief.Lift here**, unlike the loose-pile path below.
+                            // ShelfShape.Root is already draped, so lifting again would float the
+                            // goods a few centimetres off their own deck on sloping ground — and
+                            // only on sloping ground, which is the kind of fault nobody
+                            // reproduces.
+                            Vector3 at = (Vector3)placement.GetColumn(3);
+                            placement = Matrix4x4.TRS(at, placement.rotation,
+                                placement.lossyScale * ShelfShape.GoodsScale);
+                            AppendItem(def, placement);
+                        }
+
+                        continue;
+                    }
+
+                    AppendItem(def, Matrix4x4.TRS(stand,
+                        Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
+                        Vector3.one * ShelfShape.GoodsScale));
+                    continue;
+                }
+
                 // **A thing just put down is still falling out of the hands that held it.** The
                 // simulation transfers it in one instant, because a thing is in a cell or in a
                 // pair of hands and there is nothing sensible between — but the hands were a

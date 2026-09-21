@@ -5,6 +5,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Storage;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -873,15 +874,25 @@ namespace Odyssey.Presentation.Ui
             if (_storageRows == null || storage == null) return;
 
             int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
-            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
-            if (slot < 0) { CloseStoragePanel(); return; }
 
-            var settings = storage.SettingsOf(slot);
+            // **SettingsAt, not ZoneAt.** The intents this panel sends already resolve a cell to
+            // whichever store covers it, painted or built — but the panel filled itself by asking
+            // for a *zone*, so over a shelf it would have found none and closed itself on the frame
+            // it opened. The press would have done nothing, visibly, which is the fault design 20
+            // §8 records under "why Assign did nothing, three times".
+            StorageSettings? settings = storage.SettingsAt(storage.StoreCellOf(cell));
+            if (settings == null) { CloseStoragePanel(); return; }
+
+            // How big the store is, for the panel's title: a zone counts its tiles, a shelf its
+            // slots.
+            StorageUnit? unit = _boot.Colony.Pawns.StorageUnits?.AtCell(cell);
+            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
+            int size = unit != null ? unit.Slots : slot >= 0 ? storage.CellsOf(slot).Count : 0;
             var content = _boot.Colony.Pawns.Content;
             var keys = new List<string>(content.Items.Length);
             for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
 
-            _storageSettings.Show(cell, hasStore: true, settings.Priority, storage.CellsOf(slot).Count, keys,
+            _storageSettings.Show(cell, hasStore: true, settings.Priority, size, keys,
                 accepts: settings.Accepts, categoryOf: i => (int)content.Items[i].category);
 
             _storageRows.Clear();
