@@ -193,7 +193,7 @@ namespace Odyssey.Hud.Diagnostics
         /// exists to stop.</para>
         /// </summary>
         public void WriteSpike(double atSeconds, int tick, double frameMs, int collections,
-            IReadOnlyList<double> sections)
+            int remeshed, IReadOnlyList<double> sections)
         {
             _line.Clear();
             _line.Append("{\"kind\":\"spike\"");
@@ -204,6 +204,9 @@ namespace Odyssey.Hud.Diagnostics
             // we caused" from "a pause the runtime imposed", and it is per frame because a
             // per-second count cannot say which frame wore it.
             Number("gc", collections);
+            // And whether it meshed a chunk. The same question as the collection count and asked
+            // for the same reason: a per-second total cannot say which frame wore the cost.
+            Number("remeshed", remeshed);
             for (int i = 0; i < _sectionNames.Length; i++)
                 Number("sect." + _sectionNames[i], i < sections.Count ? sections[i] : 0d);
             _line.Append('}');

@@ -84,6 +84,9 @@ namespace Odyssey.Presentation.Diagnostics
         int _frameGc0, _frameGc1, _frameGc2;
         int _rowProbes;
 
+        /// <summary>Chunks re-meshed since the last row. An event, so it is summed, not sampled.</summary>
+        int _remeshedThisRow;
+
         /// <summary>The file being written, for the overlay and the handover.</summary>
         public string Path { get; }
 
@@ -170,7 +173,10 @@ namespace Odyssey.Presentation.Diagnostics
             _frameGc1 = gc1;
             _frameGc2 = gc2;
 
-            if (IsSpike(frameMs)) WriteSpike(frameMs, sections, counters.Tick, collectedThisFrame);
+            _remeshedThisRow += counters.Remeshed;
+
+            if (IsSpike(frameMs))
+                WriteSpike(frameMs, sections, counters.Tick, collectedThisFrame, counters.Remeshed);
             if (_rowElapsed >= RowSeconds) EmitRow(counters);
         }
 
@@ -191,19 +197,25 @@ namespace Odyssey.Presentation.Diagnostics
             return _lastP50 > 0d && frameMs > _lastP50 * SpikeMultiple;
         }
 
-        void WriteSpike(double frameMs, ReadOnlySpan<double> sections, int tick, int collections)
+        void WriteSpike(double frameMs, ReadOnlySpan<double> sections, int tick, int collections,
+            int remeshed)
         {
             int n = sections.Length < _spikeSplit.Length ? sections.Length : _spikeSplit.Length;
             for (int i = 0; i < _spikeSplit.Length; i++) _spikeSplit[i] = i < n ? sections[i] : 0d;
 
             _spikesThisRow++;
-            Guarded(() => _writer.WriteSpike(_elapsed, tick, frameMs, collections, _spikeSplit));
+            Guarded(() => _writer.WriteSpike(_elapsed, tick, frameMs, collections, remeshed, _spikeSplit));
         }
 
         void EmitRow(in FrameCounters counters)
         {
             _row.Clear();
             counters.WriteTo(_row);
+
+            // Overwrite the last-seen value with the second's total. The counters struct cannot do
+            // this itself: it describes one frame and knows nothing of the second around it.
+            _row.Remeshed = _remeshedThisRow;
+            _remeshedThisRow = 0;
 
             _row.AtSeconds = _elapsed;
             _row.Frames = _window.Frames;

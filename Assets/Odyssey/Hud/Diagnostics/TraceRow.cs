@@ -66,6 +66,21 @@ namespace Odyssey.Hud.Diagnostics
         public int Instances;
         public int Chunks;
         public int CellPlates;
+
+        /// <summary>
+        /// Chunks re-meshed <b>during this second</b>, summed over its frames.
+        ///
+        /// <para><b>A sum, and it was a last-seen counter for one day, which made it a liar.</b>
+        /// Every other counter here is a fact about a moment and is rightly the last value seen —
+        /// a draw-call count halfway through a second is the draw-call count. Re-meshing is not
+        /// like that: it is an *event*, it happens on a handful of frames a second at most, and
+        /// taking the final frame's value reports zero for a second in which eight hundred chunks
+        /// were rebuilt. On 2026-09-21 that zero was quoted three times as evidence that meshing
+        /// was not behind a 150 ms stall, which it could not possibly have shown.</para>
+        ///
+        /// <para>The rule it leaves: <b>a counter of events is summed, a counter of state is
+        /// last-seen</b>, and which one a field is has to be decided when it is added.</para>
+        /// </summary>
         public int Remeshed;
         public int Materials;
         public int SurroundBatches;
