@@ -77,6 +77,13 @@ namespace Odyssey.Presentation.Diagnostics
         int _spikesThisRow;
         int _markers;
 
+        // Collection counts at the last row boundary and at the last frame. Two baselines, because
+        // the two questions are different: a row wants "how many this second" and a spike wants
+        // "did one happen on this very frame", and a per-second count cannot answer the second.
+        int _rowGc0, _rowGc1, _rowGc2;
+        int _frameGc0, _frameGc1, _frameGc2;
+        int _rowProbes;
+
         /// <summary>The file being written, for the overlay and the handover.</summary>
         public string Path { get; }
 
@@ -116,6 +123,10 @@ namespace Odyssey.Presentation.Diagnostics
             _sink = new StreamWriter(new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read));
             _writer = new TraceWriter(_sink, sectionNames, phaseNames);
             _writer.WriteHeader(environment);
+
+            _rowGc0 = _frameGc0 = GC.CollectionCount(0);
+            _rowGc1 = _frameGc1 = GC.CollectionCount(1);
+            _rowGc2 = _frameGc2 = GC.CollectionCount(2);
             Active = true;
         }
 
@@ -151,7 +162,15 @@ namespace Odyssey.Presentation.Diagnostics
             _rowElapsed += deltaSeconds;
             _window.Add(frameMs, gpuMs, submitMs, tickMs, sections);
 
-            if (IsSpike(frameMs)) WriteSpike(frameMs, sections, counters.Tick);
+            // Read before the spike is written, so a slow frame is credited with the collection
+            // that made it slow rather than with the next one.
+            int gc0 = GC.CollectionCount(0), gc1 = GC.CollectionCount(1), gc2 = GC.CollectionCount(2);
+            int collectedThisFrame = (gc0 - _frameGc0) + (gc1 - _frameGc1) + (gc2 - _frameGc2);
+            _frameGc0 = gc0;
+            _frameGc1 = gc1;
+            _frameGc2 = gc2;
+
+            if (IsSpike(frameMs)) WriteSpike(frameMs, sections, counters.Tick, collectedThisFrame);
             if (_rowElapsed >= RowSeconds) EmitRow(counters);
         }
 
@@ -172,13 +191,13 @@ namespace Odyssey.Presentation.Diagnostics
             return _lastP50 > 0d && frameMs > _lastP50 * SpikeMultiple;
         }
 
-        void WriteSpike(double frameMs, ReadOnlySpan<double> sections, int tick)
+        void WriteSpike(double frameMs, ReadOnlySpan<double> sections, int tick, int collections)
         {
             int n = sections.Length < _spikeSplit.Length ? sections.Length : _spikeSplit.Length;
             for (int i = 0; i < _spikeSplit.Length; i++) _spikeSplit[i] = i < n ? sections[i] : 0d;
 
             _spikesThisRow++;
-            Guarded(() => _writer.WriteSpike(_elapsed, tick, frameMs, _spikeSplit));
+            Guarded(() => _writer.WriteSpike(_elapsed, tick, frameMs, collections, _spikeSplit));
         }
 
         void EmitRow(in FrameCounters counters)
@@ -200,6 +219,22 @@ namespace Odyssey.Presentation.Diagnostics
             _row.Over50 = _window.Over(50d);
 
             for (int i = 0; i < _row.Sections.Length; i++) _row.Sections[i] = _window.SectionMean(i);
+
+            // Collections in this second, and the heap after them. GetTotalMemory(false) does not
+            // provoke a collection, which matters: a diagnostic that forced one to measure one
+            // would be causing exactly the pause it is looking for.
+            int gc0 = GC.CollectionCount(0), gc1 = GC.CollectionCount(1), gc2 = GC.CollectionCount(2);
+            _row.Gc0 = gc0 - _rowGc0;
+            _row.Gc1 = gc1 - _rowGc1;
+            _row.Gc2 = gc2 - _rowGc2;
+            _rowGc0 = gc0;
+            _rowGc1 = gc1;
+            _rowGc2 = gc2;
+            _row.HeapMb = GC.GetTotalMemory(false) / (1024d * 1024d);
+
+            // The probe count arrives as a running total and leaves as this second's share.
+            _row.Probes = counters.Probes - _rowProbes;
+            _rowProbes = counters.Probes;
 
             for (int i = 0; i < _segments.Length; i++)
             {

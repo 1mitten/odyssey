@@ -209,7 +209,7 @@ namespace Odyssey.Tests.Hud
             var sink = new StringWriter();
             TraceWriter writer = WriterOver(sink);
             var split = new double[] { 12.0, 0.5 };
-            writer.WriteSpike(atSeconds: 9.0, tick: 100, frameMs: 62.5, split);
+            writer.WriteSpike(atSeconds: 9.0, tick: 100, frameMs: 62.5, collections: 1, sections: split);
 
             string line = Lines(sink)[0];
 

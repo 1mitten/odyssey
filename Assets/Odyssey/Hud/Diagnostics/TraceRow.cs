@@ -74,6 +74,36 @@ namespace Odyssey.Hud.Diagnostics
         public int Pawns;
         public int Layer;
 
+        /// <summary>
+        /// Garbage collections in this second, by generation, and the heap after them.
+        ///
+        /// <para><b>Added 2026-09-21, the day the trace was written, because its first real
+        /// session could not answer its own question.</b> A 254-second play at 4K carried 95 frames
+        /// over 33 ms, and their section splits were <em>ordinary</em> — World 4-6 ms, Surround
+        /// about 1, against frames of 172 ms. So the cost was neither the draw block nor the GPU
+        /// (which peaked at 16 ms), and the trace could say where it was not and not where it was.
+        /// A collection pause is the leading candidate precisely because it is outside every
+        /// section this class measures, and because the hitches grew more frequent as the session
+        /// went on, which is what a filling heap looks like.</para>
+        ///
+        /// <para>Deltas, not totals: what is wanted is "did one happen here", and a running total
+        /// makes the reader do subtraction to find out.</para>
+        /// </summary>
+        public int Gc0;
+        public int Gc1;
+        public int Gc2;
+        public double HeapMb;
+
+        /// <summary>
+        /// Ambient probe re-integrations in this second.
+        ///
+        /// <para>The other candidate for a pause outside the draw block, and the one the daylight
+        /// cycle's own comment already nominates: "the second is the only real cost in the cycle,
+        /// so it is the number to watch if the sky is ever suspected of being expensive". It runs
+        /// in <c>Update</c>, which no <c>FrameSection</c> covers.</para>
+        /// </summary>
+        public int Probes;
+
         /// <summary>Wipe the counters so a row cannot quietly repeat the second before it.</summary>
         public void Clear()
         {
@@ -86,6 +116,8 @@ namespace Odyssey.Hud.Diagnostics
             for (int i = 0; i < PhaseMeanMs.Length; i++) PhaseMeanMs[i] = PhaseP95Ms[i] = 0d;
             DrawCalls = Instances = Chunks = CellPlates = Remeshed = Materials = SurroundBatches = 0;
             Figures = Pawns = Layer = 0;
+            Gc0 = Gc1 = Gc2 = Probes = 0;
+            HeapMb = 0d;
         }
     }
 }

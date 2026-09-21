@@ -47,6 +47,7 @@ namespace Odyssey.Hud.Diagnostics
             "over_33", "over_50",
             "draw_calls", "instances", "chunks", "cell_plates", "remeshed", "materials",
             "surround_batches", "figures", "pawns", "layer",
+            "gc0", "gc1", "gc2", "heap_mb", "probes",
         };
 
         readonly TextWriter _sink;
@@ -147,6 +148,11 @@ namespace Odyssey.Hud.Diagnostics
             Number("figures", row.Figures);
             Number("pawns", row.Pawns);
             Number("layer", row.Layer);
+            Number("gc0", row.Gc0);
+            Number("gc1", row.Gc1);
+            Number("gc2", row.Gc2);
+            Number("heap_mb", row.HeapMb);
+            Number("probes", row.Probes);
 
             for (int i = 0; i < _sectionNames.Length; i++)
                 Number("sect." + _sectionNames[i], At(row.Sections, i));
@@ -186,13 +192,18 @@ namespace Odyssey.Hud.Diagnostics
         /// spike into the second around it is exactly what a mean does and exactly what this trace
         /// exists to stop.</para>
         /// </summary>
-        public void WriteSpike(double atSeconds, int tick, double frameMs, IReadOnlyList<double> sections)
+        public void WriteSpike(double atSeconds, int tick, double frameMs, int collections,
+            IReadOnlyList<double> sections)
         {
             _line.Clear();
             _line.Append("{\"kind\":\"spike\"");
             Number("at", atSeconds);
             Number("tick", tick);
             Number("frame_ms", frameMs);
+            // Whether the collector ran on this very frame. The one fact that separates "a pause
+            // we caused" from "a pause the runtime imposed", and it is per frame because a
+            // per-second count cannot say which frame wore it.
+            Number("gc", collections);
             for (int i = 0; i < _sectionNames.Length; i++)
                 Number("sect." + _sectionNames[i], i < sections.Count ? sections[i] : 0d);
             _line.Append('}');

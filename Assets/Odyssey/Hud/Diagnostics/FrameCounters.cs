@@ -18,8 +18,9 @@ namespace Odyssey.Hud.Diagnostics
     {
         public FrameCounters(int tick, int speed, int drawCalls, int instances, int chunks,
             int cellPlates, int remeshed, int materials, int surroundBatches,
-            int figures, int pawns, int layer)
+            int figures, int pawns, int layer, int probes)
         {
+            Probes = probes;
             Tick = tick;
             Speed = speed;
             DrawCalls = drawCalls;
@@ -47,6 +48,9 @@ namespace Odyssey.Hud.Diagnostics
         public readonly int Pawns;
         public readonly int Layer;
 
+        /// <summary>Ambient probe re-integrations so far. The tracer turns it into a per-row delta.</summary>
+        public readonly int Probes;
+
         /// <summary>Copy onto a row. Here rather than in the tracer so the field list has one owner.</summary>
         public void WriteTo(TraceRow row)
         {
@@ -62,6 +66,7 @@ namespace Odyssey.Hud.Diagnostics
             row.Figures = Figures;
             row.Pawns = Pawns;
             row.Layer = Layer;
+            row.Probes = Probes;
         }
     }
 }

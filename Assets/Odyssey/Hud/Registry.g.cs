@@ -197,6 +197,7 @@ namespace Odyssey.Hud
             { "ui.debug.spawnpawn", "Spawn colonist" },
             { "ui.debug.tab.cheats", "Cheats" },
             { "ui.debug.tab.events", "Events" },
+            { "ui.debug.trace", "Performance trace" },
             { "ui.health.anaesthetic", "Anaesthetic" },
             { "ui.health.arm", "Arm" },
             { "ui.health.blood", "Blood loss" },

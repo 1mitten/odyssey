@@ -57,6 +57,19 @@ namespace Odyssey.Hud
         public const string MarkTraceKey = "ui.debug.marktrace";
 
         /// <summary>
+        /// Stop or start the performance trace for this session.
+        ///
+        /// <para><b>It exists so the tracer can be ruled out of a report about stutter</b>, which
+        /// is not hypothetical: the first session ever traced came back with hitches, and the
+        /// first question anybody sensibly asks is whether the new thing writing a file every
+        /// second is causing them. The trace's own data answered it that time — 59 of 251 rows
+        /// carried a slow frame, where a once-a-second flush would have marked nearly all of them
+        /// — but "the suspect investigated itself" is a poor argument to have to make twice. One
+        /// switch and two sessions settle it.</para>
+        /// </summary>
+        public const string TraceKey = "ui.debug.trace";
+
+        /// <summary>
         /// Every key the panel puts on screen that is its own, so <c>RegistryTests</c> can hold
         /// the panel to the naming CSV the way it holds Settings. The event rows are named by
         /// <see cref="IncidentLabels"/>, which has its own test.
@@ -64,7 +77,7 @@ namespace Odyssey.Hud
         public static readonly string[] IconKeys =
         {
             PanelKey, CheatsKey, EventsKey, SpawnPawnKey, GiveWoodKey, GiveStoneKey, GiveFoodKey,
-            SkipDayKey, SkipMorningKey, RipenCropsKey, MarkTraceKey,
+            SkipDayKey, SkipMorningKey, RipenCropsKey, MarkTraceKey, TraceKey,
         };
 
         public static string TabKey(DebugTab tab) => tab == DebugTab.Events ? EventsKey : CheatsKey;

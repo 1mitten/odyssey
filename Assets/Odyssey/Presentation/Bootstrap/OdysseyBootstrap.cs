@@ -1392,7 +1392,10 @@ namespace Odyssey.Presentation.Bootstrap
                 surroundBatches: _renderer?.Skirt.BatchesDrawn ?? 0,
                 figures: _figures?.FigureCount ?? 0,
                 pawns: _colony?.Pawns.Pawns.Count ?? 0,
-                layer: cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer);
+                layer: cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer,
+                // The daylight cycle's own comment nominates this as "the only real cost in the
+                // cycle", and it runs in Update, which no FrameSection covers.
+                probes: _daylight?.ProbeUpdates ?? 0);
 
             _tracer.Sample(Time.unscaledDeltaTime, frameMs, _smoothedGpuMs, _renderMs, _tickMs,
                 _traceSections, counters);
@@ -1403,6 +1406,21 @@ namespace Odyssey.Presentation.Bootstrap
         /// written.
         /// </summary>
         public int MarkTrace(string note) => _tracer?.Mark(note) ?? 0;
+
+        /// <summary>
+        /// Close the trace this session is writing, leaving the session running.
+        ///
+        /// <para>The phase sink goes back to null first, because it belongs to the tracer and a
+        /// simulation holding a disposed one would be recording into nothing. Turning tracing on
+        /// again opens a new file rather than reopening this one — see the debug row.</para>
+        /// </summary>
+        public void StopTrace()
+        {
+            if (_tracer == null) return;
+            if (_world != null) _world.PhaseSink = null;
+            _tracer.Dispose();
+            _tracer = null;
+        }
 
         /// <summary>
         /// What the trace's header says about this machine and this session.
