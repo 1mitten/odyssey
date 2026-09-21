@@ -681,6 +681,7 @@ namespace Odyssey.Hud
             { "ui.terrain.tree.conifer", "Conifer" },
             { "ui.terrain.water.deep", "Deep Water" },
             { "ui.terrain.water.shallow", "Shallow Water" },
+            { "ui.toast.skillup", "{name} has reached {skill} {level}" },
             { "ui.weather.ashfall", "Ashfall" },
             { "ui.weather.clear", "Clear" },
             { "ui.weather.cloudy", "Cloudy" },

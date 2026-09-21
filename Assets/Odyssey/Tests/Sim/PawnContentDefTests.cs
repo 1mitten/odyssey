@@ -111,18 +111,39 @@ namespace Odyssey.Tests.Sim
         //
         // Moved a ninth time, 2026-09-18, by the merge of the growing and rates branches: both
         // had moved the fingerprint that day, so neither parent's value described the union.
-        // Growing's additions stand beside the rate integers unchanged — Work_Growing carries
-        // no curve yet (design 22 §5) — and the value is taken from a freshly loaded pack.
+        // Growing's additions stand beside the rate integers, and the value is taken from a
+        // freshly loaded pack.
         //
-        // Moved a tenth time, 2026-09-20, by storage S1: `ItemDef` gained `category`, and all
+        // Moved a tenth time, 2026-09-19, when Work_Growing gained a curve: rateSkill 4, base 600,
+        // slope 100 — cutting's numbers exactly, because they are the two plant work types and a
+        // difference would be a claim needing a measurement. The move arrived with the growing work
+        // ("the hoe pays by skill") and had no paragraph of its own, so this is it written down
+        // late rather than a second account of it.
+        //
+        // Moved an eleventh time, 2026-09-20, by storage S1: `ItemDef` gained `category`, and all
         // seven commodities declare one — ration pack and carrots are Food, the other five are
         // Materials, including salvage, which is reclaimer feedstock rather than a made thing
         // (docs/plans/storage.md decision 25). The field defaults to Materials rather than to
         // nought on purpose: nought is Food, so a commodity that forgot to declare itself would
-        // quietly join the pantry. No golden moves from this alone — a category is read only by a
-        // storage filter, and every filter in a golden colony accepts everything — but the
+        // quietly join the pantry.
+        //
+        // This line conflicted on the skills merge, 2026-09-21, and the rule for next time is worth
+        // more than the outcome. A fingerprint is a hash of the whole content set, so when two
+        // branches have each moved it, neither number is the merged one and picking a side is
+        // always wrong: re-measure. Here the re-measurement returned main's value unchanged, and
+        // the reason is the point — the skills branch had edited only the XML COMMENTS in
+        // WorkTypes.xml, and a comment is not loaded, so it is not hashed. Its own older number
+        // predated storage's category field. Checking cost one filtered test run; assuming would
+        // have been wrong in either direction.
+        //
+        // NO GOLDEN MOVED for either change, and that was measured rather than assumed. A rate
+        // change to a work type usually moves every Simulated hash and the growing curve moved
+        // none, because the golden worlds are bare seeds with no growing zone painted on them, so
+        // no sow or harvest job is created and the curve is never consulted. A category is read
+        // only by a storage filter, and every filter in a golden colony accepts everything. The
         // starting zone moving to a real `StorageZones` does move them, and that is measured
-        // separately. Taken from a freshly loaded pack.
+        // separately. The day a golden window includes a zone, the curve will move a hash and that
+        // will be correct.
         const ulong ContentFingerprint = 9529039565603056167UL;
 
 

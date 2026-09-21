@@ -799,6 +799,12 @@ namespace Odyssey.Presentation.Ui
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
 
+            // The toast stack belongs to a colony and goes away with it (SK4). Not for the rows —
+            // those expire on their own — but for the levels the watch is holding: nothing steps
+            // it while there is no world, so without this the next colony's PawnId 1 is measured
+            // against the last one's and announces a level she arrived with.
+            _toasts.Clear();
+
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {
                 Detach();

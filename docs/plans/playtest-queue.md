@@ -14,7 +14,9 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, on the day it was written.** There are 28 open rows. That is the
+**The rule is already breached, on the day it was written.** There are 29 open rows — 28 on the day
+this file was written, and the skills work added the twenty-ninth the day after, which is the rule
+being broken again by the very next session rather than an old number left uncorrected. That is the
 finding, not an oversight — the ceiling is where the list should be, not where it is, and the first
 sessions after this one take verdicts and fixes rather than features until it comes down. A rule
 that is quietly wrong on arrival is a rule the next session learns to ignore.
@@ -244,6 +246,57 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   to see a harvest without the four-day wait. Open questions a picture cannot answer: whether four
   calendar days to a harvest reads as slow, and whether the interim green tint reads as "growing here"
   or as a texture fault (`22-growing.md` §9). **This row blocks a merge**, which is why it is first.
+
+- **The toast's level number is amber now** (owner, 2026-09-21, `15-skills.md` §8j). The line is
+  three labels rather than one — the words, the level in `HudTokens.Warn`, and anything after it —
+  split in the model on the `{level}` placeholder so the view parses nothing. Deliberately **not** a
+  rich-text tag: if rich text were ever off the player would read the tag itself and neither tier
+  could catch it (P10). **Look for:** the number standing out at a glance without the line reading
+  as two colours fighting; a wrong answer is the amber looking like a warning rather than emphasis.
+
+- **The experience bar has had its first look and three changes** (owner, 2026-09-21: *"it works
+  great but some visual change"*). The bar moved out of the row's bottom edge and **into** the row,
+  between the label and the value; it is the needs' **green** now rather than tinted by passion; and
+  it is **6 px rather than 3** with 8 px either side. No layout constant moved — the row is still
+  19 px and the pane still one height — but the row has a **width budget** now, and
+  `HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the name column to 95 px so a future widening
+  cannot silently clip *Construction*. `docs/design/15-skills.md` §8i. **What is still unjudged is
+  the same list below**, minus the passion tint which no longer exists: whether the creep reads as
+  progress, whether four bars on fourteen rows read as "four skills you have", and whether the
+  toast reads as good news.
+
+- **Nobody has seen the experience bar or heard a level-up** (2026-09-20, PR #139,
+  `docs/design/15-skills.md` §8). A live skill's row now carries a 3 px underline that fills towards
+  the next level, tinted by passion; reaching a level raises a **toast** under the alerts and chimes
+  `alert-normal`. Four rows are live — Chopping, Mining, Construction, Growing — the last two having
+  been greyed out as "nothing is built yet" and "nothing is planted yet" long after both began
+  training, which is the bug this work actually found.
+  The bar is computed to creep about **1.5 px a second** at level 0 with a minor passion, and a level
+  lands after roughly two and a half minutes of solid work; by level 9→10 it is a pixel every seven
+  seconds. Open questions a still cannot answer: whether that reads as progress or as a static line,
+  whether the passion tint carries the four-fold spread between no passion and a burning one, whether
+  an underline on four of fourteen rows reads as "four skills you have" or as a broken grid, and
+  whether the toast reads as good news — `alert-normal` was chosen because it is what `Notice`
+  already maps to, not because anybody judged it against a level-up.
+  **The per-stroke pip was deliberately not built**: the bar's continuous movement is what the
+  request was about, and a flash timed to the drawn stroke would couple the pane to the world's
+  stroke clock for a decoration. If the bar reads as static, that pip is the first thing to try.
+  **Compiled and reviewed on the owner's machine, 2026-09-20** (`claude/skills-review`): EditMode
+  1,989 / 1,971 / 0 and PlayMode 85 / 80 / 0, so the bar, the toast row and its click handler do
+  build and the shell does frame the stack. The review also found the one fault a test had not:
+  the level watch kept its marks across a session boundary, so a new colony's first colonist
+  announced a level she was rolled with (§8f-bis). **The fastest way to see a toast is the debug
+  menu's Skip one day** — it runs a real day of ticks, so a working colonist levels inside it and
+  should raise **one** row per skill, not a stack of them.
+  **Merged with `main` on 2026-09-20 and re-run there** (`D:\code\odyssey-review-139`): #119 has
+  landed, so nothing blocks this now. EditMode 2,257 / 2,236 / 0, PlayMode 91 / 86 / 0, the same
+  as main. **The merge found one fault neither branch could have**: EV's Events panel and
+  this toast stack both placed themselves "under the alerts" and solved to the same top, so with an
+  event on screen the toast drew over the panel. The toast is last in that column now
+  (§8h). **So there is a fifth thing to look at**: fire a supply drop from the debug menu's Events
+  tab and then skip a day, and say whether the toast arriving under the Events panel reads as one
+  column or as two things fighting — a wrong answer looks like the Events row jumping down the
+  screen when a toast lands, which is exactly what the ordering is meant to prevent.
 
 - **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
   `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three

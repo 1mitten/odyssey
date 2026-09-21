@@ -8013,8 +8013,6 @@ with nowhere to be stored is cleared to the nearest free cell off the zone now, 
 can have it back when it has room. The lesson the flat sheet earned went into lessons already:
 an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
 board's amplitude and the blindness is recorded beside it.
-
-
 ### The third border day: the light was the border (2026-09-20)
 
 The borders survived the same-mesh cover, and the cause was not geometry at all: the bracket
@@ -9196,6 +9194,352 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+
+---
+
+## 2026-09-21 — The toast's level goes amber, and why it is a split and not a tag
+
+The owner, after the bar: *"make a small change to the notification to make the value of level (IE
+the number) a yellow tinted colour for effect so you can see the value clear."* Small, and the
+implementation choice inside it is not.
+
+**Rich text was the obvious answer and was rejected on how it fails.** A `<color>` tag inside the
+one label is less code and one element instead of three. But if rich text is ever off on that label
+the player reads the tag itself, and **neither tier can see that** — the fast tier has no text
+engine and the Unity tier asserts no pixels. That is the exact shape of `docs/bug-patterns.md` P10,
+which this project has now met twice, once shipping to `main` undrawn. A split into three plain
+strings is assertable in the fast tier, and its worst failure is a number in the wrong colour.
+
+**The split happens in the model, before `{level}` is substituted.** Replace it first and find the
+digits afterwards and you find the wrong "5" the day a colonist is called Level5. Splitting on the
+placeholder means the view never parses anything and a reworded CSV line still works.
+
+**And the identity is asserted, because it is the one thing the rest of the tests cannot see.**
+Every other test in `ToastTests` reads `ToastRow.Lead`, which is built from the pieces — so a
+dropped space or a duplicated piece would leave `Lead` correct while the three labels on screen went
+wrong. `TheLineComesInThreePiecesThatStillMakeTheLine` asserts the concatenation directly, and was
+confirmed to fail by making the model pass the unsplit string as `Lead`.
+
+**The merge with main that came with it produced the one conflict where taking a side is always
+wrong.** Both branches had moved the content fingerprint — this one when `Work_Growing` gained a
+curve, main when `ItemDef` gained a category — so neither number was the merged one. I wrote the
+comment saying a fresh value had been measured *before* running it. Re-measuring returned main's
+value unchanged, because this branch's remaining Def edits are XML **comments**, and a comment is
+never loaded so it is never hashed. The comment is corrected in place with the rule beside it. The
+lesson is the ordinary one and it keeps recurring: write the claim after the measurement, not
+before.
+
+Fast tier 914 Sim + 608 Hud, EditMode **2,298 / 2,278 / 0**, PlayMode **91 / 86 / 0**.
+
+## 2026-09-21 — The experience bar's first look: an underline becomes a column
+
+The owner played PR #139 and asked for three things: the bar between the label and the value, the
+needs' green instead of the passion tint, and slightly thicker with good spacing.
+
+**The first one quietly changes what kind of thing the bar is.** It shipped absolutely positioned
+along the row's bottom edge, and §8 of `15-skills.md` argued hard for that: `.skill` is 19 px, the
+colonist pane is one fixed height across every tab, and a bar in the flow would grow all seven rows
+and move the pane's top edge on a change of tab. Moving it looks like undoing a recorded decision.
+
+It is not, and the distinction is worth having written down. **That argument is about a bar stacked
+under the text.** A bar beside the text costs no height at all while it is shorter than the row. So
+the constraint survives intact — no layout constant moved, `.skill` is still 19, no overlap case or
+coverage figure changed — and only the means changed. The stylesheet now says so at the point
+somebody would be tempted to tidy it.
+
+**What is genuinely new is that the row has a width budget.** Out of the flow the bar could not
+squeeze anything; in the flow it can, and the thing it squeezes is the only flexible part, the name,
+silently, until *Construction* clips. Nothing would have reported that: the panel still lays out,
+no overlap case moves, and the fast tier has no text engine to see a truncation. So the parts are
+named in `HudLayout` and `SkillNameWidth` is derived from them rather than written down, and
+`TheSkillRowsPartsFitTheRow` holds the sum to 256 px and the name to a floor of 95.
+
+**That floor is a ratchet, not a measurement, and the test says which it is.** The fast tier cannot
+prove *Construction* fits in 95 px — that needs a font and a text engine. What it can do is make
+widening the bar a deliberate edit to a number somebody then looks at, rather than a discovery in a
+screenshot a week later. Confirmed to fail on the right assertion by widening the bar to 96 and
+watching the name column report 71.
+
+**The passion tint was defended in §8 and is gone.** The argument was that the fill was the only
+place the ×0.35/×1.0/×1.5 learning rate was visible while it was happening. It was wrong about which
+question the bar answers: a player reading the row wants *how far along is she*, which is what a
+food bar answers and deserves the same colour. The passion is a different fact and is still on the
+row in the pips, where it was always the more legible of the two. `HudTokens.Good`, from the token
+so the bar and a food bar cannot drift — and **one colour rather than a band**, because `NeedBand`
+runs good to bad and a skill has no bad end, so asking it would paint a new colonist's skills red
+for being new. Set once at build now rather than on every passion change.
+
+Fast tier 898 Sim + 586 Hud, EditMode **2,258 / 2,240 / 0**, PlayMode **91 / 86 / 0**.
+
+## 2026-09-20 — Two branches, one anchor: the toast stack and the Events panel
+
+PR #139 (SK, skills made visible) was based on #119 and written while EV, the incident layer, was
+being written on another branch. #119 merged; EV merged as #140; #145 and #150 merged. This is the
+record of merging #139 onto that main.
+
+**Ten files conflicted and nine were ordinary** — two features appending to the same enum, a
+comment corrected differently on both sides, a journal both had appended to, a generated wiki that
+is rebuilt rather than resolved.
+
+**The tenth was not, and nothing on either branch could have caught it.** SK4 put a transient toast
+stack in the right-hand gutter *under the alerts*. EV put the Events panel in the right-hand gutter
+*under the alerts*. Both computed their top as `alertsTop + alertsHeight + Gap`, both said so in
+prose in the same words, and neither knew the other existed. Merged, they solve to the same origin:
+with an event on screen, the toast draws over the panel.
+
+**Why the layout sweep did not see it.** `HudLayoutTests.NoTwoPanelsOverlapAtAnyOfTheThreeResolutions`
+is exhaustive over its case list and the case list is hand-written. SK4's cases set `toasts` high and
+`bulletins` to zero — the parameter did not exist on that branch. EV's cases did the mirror image.
+The sweep passed on both branches and would have passed on the merge, because the conflict resolution
+that puts both parameters in one constructor does not write the case that uses both. **An exhaustive
+sweep is only as exhaustive as the list it is given**, and that is the lesson worth generalising:
+when a branch adds a region to a shared column, the merge owes a case with every member of that
+column at once, and the prose in each branch is the grep that finds them.
+
+**The resolution, and it is a decision rather than a tie-break.** The column is clock, alerts, Events,
+toasts. The toast is last because it is the only one that comes and goes: it arrives every couple of
+minutes and leaves six seconds later, so anything below it would step down and back up each time.
+The Events panel is a standing list a player scans, and a list that shuffles while being read is a
+list that gets misread. Two tests, both confirmed to fail on the pre-fix arithmetic before the fix
+went in: `TheToastStackIsTheLastThingInTheAlertsColumn` states the order and why, and two new sweep
+cases put all three panels in one column at all three resolutions. `HudGeometryTests` counts
+`.bulletin` rows as well as `.toast` ones now, so the PlayMode model is told about the panel that is
+actually on screen. `docs/design/15-skills.md` §8h.
+
+**Four stale numbers in `SkillCatalogue`, found on the way and fixed.** Its remarks said *"where the
+simulation's three go"* (five, four of them rows), *"thirteen items at half width"* (fourteen), and
+*"Thirteen into seven rows leaves the right column one short"* — which is not merely a wrong number
+but a wrong description of the code, since fourteen into seven fills both columns exactly and the
+`index < order.Count` guard is now the odd case rather than the normal one. The citation
+*"fixed 2026-09-20, SK1/SK5"* named a unit the same PR says does not exist. None of these change
+behaviour; all of them are what the next session would have believed.
+
+**One comment in `HudShell.Inspect` said the opposite of the line under it.** The experience bar's
+block opened *"it is deliberately NOT guarded the way everything above is"* and the next line is
+`if (view.LastProgress == row.Progress) return;`, which is exactly that guard. The guard is right and
+the field's own doc comment already explained it correctly; the call-site comment was reaching for a
+different point — that the guard is *taken* about half the time here and almost always elsewhere —
+and stated it as an absence. This is `docs/bug-patterns.md`'s *one rule with two owners* in its
+cheapest form: a comment and the line beneath it.
+
+**Verified.** Fast tier 898 Sim + 585 Hud, Long tier 23, both content gates clean, wiki rebuilt.
+Unity EditMode **2,257 / 2,236 / 0 failed**; PlayMode **91 / 81 / 0 failed**, five short of main's
+86 passes because that run had no `Assets/Synty` — see the note below.
+
+**And the machine lost the art packs during this session, then got them back.** `D:\code\odyssey-audio`
+was a worktree, and six checkouts — including this one — junctioned their `Assets/Synty` at it
+rather than at the canonical `D:\code\odyssey\Assets\Synty`. That worktree was removed while this
+session was running: it read the packs successfully at the start and found the directory gone later,
+and `git worktree list` now calls it prunable along with five others. All six junctions went
+dangling at once.
+
+**The symptom was a skip count, not an error.** Both tiers stayed green with `failed=0`; what moved
+was PlayMode's *passed*, 81 against main's 86, with five tests ignoring themselves for reasons like
+*"the colonist rows resolved to no art"*. A lower pass count with nothing failed is the tell, and it
+is a question about the machine rather than the branch. Re-run with the packs back it is **86**,
+matching main exactly — which is the confirmation, since guessing that five skips explain a gap of
+five is not the same as watching them come back.
+
+**Recovered.** A deleted worktree lands in `D:\$RECYCLE.BIN`, and the COM recycle-bin listing does not
+show these — enumerating the `$R*` directories on disk found eleven copies of `Assets\Synty`, ten of
+them junctions that restore nothing and one a real directory with the right 15,868 files and
+1.54 GB. The canonical path had been restored from it by the time this session looked; the six
+dangling junctions were repointed at it, `.meta` included, and PlayMode re-run with the art present.
+
+**The lesson is not the recovery, it is the arrangement.** Sixteen checkouts, one copy, no
+duplication — which is why it looked right. Its one non-obvious property is that **the real packs
+were inside something whose whole purpose is to be disposable**. They belong in a plain directory
+outside every checkout, with every checkout including the main one a junction into it; then a
+worktree removal can only ever take a link. `docs/lessons.md`.
+
+**And the disk is the next thing to bite.** `D:` is at 100% with about 8 GB free of 1.9 TB, across
+twenty-seven worktrees each carrying its own multi-gigabyte Unity `Library`. It failed an ordinary
+840 KB file write mid-way during this session and left the file zero bytes — recoverable only
+because it was committed. Anything that writes to that disk should assume the write can fail:
+write to a temporary file in the same directory and `os.replace` it into place, which is what the
+session's own edit helper does now.
+
+## 2026-09-20 — Skills made visible, and a session that checked its base once (SK2–SK5)
+
+The ask was to "enable skills for chopping, mining and plants/gardening", add a bar in the colonist
+card that fills as the work is done, and raise a positive notification on a level-up. Almost none of
+that was missing: chopping and mining had driven work speed since WS2, gardening was built and open
+as PR #119, and passion was rolled, multiplied and drawn as pips already. What was missing was a way
+to see any of it, and one bug.
+
+**The lesson is not about skills. It is that this session checked `main` and #119's head once, at
+the start, and never again across several hours — and was wrong three times because of it.**
+
+**One: it claimed a finding the audit had already made.** `CLAUDE.md`'s gap said *"a skill level buys
+nothing a player can feel"*, this session reported it as stale, and it was — but the baseline audit
+had caught it on 2026-09-19 and already struck it through on `main`, deliberately kept as the worked
+example of exactly this failure. The branch was based on a head predating that, so it read a stale
+copy of the file whose own warning is *"check the code before you trust any status line"* and then
+did not check the code. The line caught its second session and is annotated to say so.
+
+**Two: it wrote a unit that already existed.** `SK1` was to give `Work_Growing` a rate curve. While
+it was being written, `claude/growing-zones` added the identical curve — same `rateSkill`, same base
+and slope, the same re-baked fingerprint, because it is byte-for-byte the same content change. A test
+over there carries the giveaway: *"another agent is addressing skills"*. Both sessions read the same
+"no curve yet" note and neither looked at the other's branch again. `SK1` was dropped on merge; there
+is no `SK1`, and the curve is #119's.
+
+**Three: it worked around a bug that was already fixed.** `build_wiki.py` used a Python 3.12-only
+f-string, the container's `python3` is 3.11, so this session ran the gate under `python3.13`. `main`
+had repaired that line the day before, in the same audit commit.
+
+**The rule worth writing down: re-check the base branch before claiming a finding, not only before
+starting work.** All three failures share one cause and one cheap fix, and a session that runs for
+hours against a moving `main` needs the check more than once.
+
+**What this work did find, and it is unrecorded anywhere else:** `SkillCatalogue` greyed out
+**Construction** as "nothing is built yet" and **Growing** as "nothing is planted yet". Construction
+had been simulated since U26 and growing since U47. The one screen whose job is telling a player what
+a colonist can do was denying half of what she does — so **a row's liveness is not documentation, it
+is a claim about the simulation, and nothing was checking it.** Two features shipped past it,
+including growing, which added the skill and the jobs in one branch and left its own row dead.
+
+CLAUDE.md's warning — *"check the code before you trust any status line"* — applies to the design
+documents too, and to the branch you are sitting on.
+
+**One measurement survived being wrong about everything else, and it is worth keeping.** The plan
+said the growing curve would move the growing goldens. It moved none — the golden worlds are bare
+seeds with no zone painted on them, so no sow or harvest job is ever created and the curve is never
+consulted. #119 had changed that fingerprint without recording the move at all, leaving its previous
+note reading *"Work_Growing carries no curve yet"* directly above a def that had one, so this
+branch's paragraph stays as the record of that move — re-attributed, and with the measurement kept.
+A comment asserting a measurement nobody took is worse than no comment; so is a value nobody
+explained.
+
+**A level-up needs nothing from the simulation, and that is the nicest thing here.** Every colonist's
+level in every skill is already published every frame, not just the selected one. So a rise is found
+by comparing against what was last seen: no event, no flag, no serial, no saved field, no hash. The
+reason it cannot be missed is worth keeping straight — `PawnGesture` needs a sticky flag *and* a serial
+because a gesture is an *instant* a poll can sit between, whereas a level is a *standing value*, so the
+next read always says what it is now. The worst a 4 Hz poll can do is see two levels as one rise, and
+the watch reports the level *reached* rather than the number of steps so that case needs no handling.
+
+**The notification is a toast, and the design had already named it.** Looking for somewhere to put it
+turned up `ui.bulletin.*` — fifteen keys, a registry, and panel A6 in the catalogue, "right edge, below
+the alerts". Nearly right, but a bulletin is *kept until dismissed*, and a level lands every couple of
+minutes per colonist, so it would become a stack cleared as a chore — and the chore would teach the
+player to clear the raid warning beside it without reading it. **Frequency decides the channel.** Then
+09 §2.3 turned out to use the exact word for the third thing: a rejected intent *"surfaces as a
+transient toast rather than a bulletin"*. The channel was named in the design and never built. So this
+builds it rather than inventing `ui.message.*`, and rejections — today only counted into a log — are
+its obvious second customer.
+
+`AlertSeverity` gained no fourth "good" value: `AlertChime.ForSeverity` already maps `Notice` to
+`alert-normal`, so the chime needed no new audio code, and **the channel is what makes a toast good
+news, not its severity**. The sound reads the model's row count rather than detecting a level-up
+itself, because `AlertChimeWatch`'s own remarks record what a second copy of a model's rule cost the
+last time: its private starvation threshold drifted and the chime fired at a hundredth of the intended
+level, which is to say never.
+
+**The bar cost the layout nothing, and the trick is worth stealing again.** It is an absolutely
+positioned 3 px underline. `.skill` is 19 px, `HudLayout.SkillRow` says so, and the colonist pane is
+one fixed height across every tab on purpose so changing tab does not move its top edge. In the flow a
+bar would have grown all seven rows and undone that. Out of flow, no layout constant, overlap case or
+coverage figure moves — **and that is also what made "live rows only" safe**, since uneven row heights
+were the one thing that would have forced a bar onto all fourteen.
+
+It is the one field on the row deliberately *not* guarded against change: everything else writes only
+when it changes because a level moves once in a working day, and the bar wants all fifteen refreshes a
+second. Only the width is written, so nothing allocates.
+
+**Two numbers computed before building rather than hoped for.** At 60 ticks a second a working colonist
+earns 6,600 experience a second before passion, so level 0→1 is about 2.5 minutes of solid work at a
+minor passion and the bar creeps about 1.5 px a second. Had that come out at a hundredth of the figure
+the bar would not have been worth drawing. The same arithmetic confirmed the daily soft cap's tuning:
+4,000,000 is reached after ~10 minutes against a 16.7-minute day, the two-thirds relationship
+`Jobs.xml` claims for it.
+
+The second was an overflow. `ProgressPerMille` divides into the ladder, and the top of the ladder is
+265,000,000; a thousand times that is eight times an `int`. In int arithmetic it reads correctly at low
+levels and returns nonsense at high ones, which is the worst shape a bug can have, and it is the one
+thing in the unit with a test written specifically against it.
+
+**Two recorded decisions reversed, both on purpose.** §6.3 chose no progress bar, *"thirteen bars is a
+lot of furniture"* — narrowed rather than overruled: four bars, not fourteen. And §3e of the rates
+document refuses per-strike mechanics, so the owner's "experience with every hit" was met by the thing
+already true — experience accrues every *tick*, finer than per hit — with the bar supplying the only
+part that was missing, which was being able to see it.
+
+**Left undone on purpose:** the per-stroke pip. It would couple the inspect pane to the world's stroke
+clock for a decoration over a bar that is already correct, and the continuous movement is what the
+request was about. Also unbuilt: traits. Passion turned out to be the "1/2 stars" — three tiers, rolled
+from the colonist's own seed, already drawn as pips — so the bar's fill takes its colour from the
+passion and `LearningFactorPerMille()` stays the empty seam it has always been.
+
+**The container could not run Unity, and said so rather than guessing.** The .NET SDK went in from
+Ubuntu's own repositories, the Microsoft download host being blocked by the egress policy — worth
+knowing, because `main`'s own fast-tier line already recorded "dotnet 8.0.131 in the remote
+container", so a previous session had solved the same problem and this one rediscovered it. The wiki
+gate was run under `python3.13`, which was unnecessary: `main` had already fixed the 3.12-only
+f-string, and after merging, both gates run on plain `python3`.
+
+So the fast tier and both content gates are real evidence here: 791 Sim, 475 Hud, 23 Long, all green.
+The Presentation and PlayMode assemblies are compiled by none of it, so the bar and the toast stack
+are **unproven** until the Unity tier runs on the owner's machine. One Unity-tier failure was found by
+reading rather than running — `HudSmokeTests` asserts the exact set of framed panels the shell builds,
+and would have rejected the new `toasts` one.
+
+
+### Reviewing the skills work on the owner's machine (2026-09-20)
+
+Picked up on `claude/skills-review`, a worktree of #139 with the base branch merged up — #119 had
+moved five commits since the fork, and the only collision was two sessions appending to the end of
+this file on the same day.
+
+**The first job of the review was the thing the PR itself said was unproven.** Its description leads
+with "no presentation code in this PR has been compiled", and that is where the risk was: the fast
+tier builds neither `Odyssey.Presentation` nor the PlayMode assembly, so the bar, the toast row and
+the click handler had never been through a compiler. Running the Unity tier was therefore the review,
+not a formality after it.
+
+**One real fault, and it is the shape this project keeps meeting: a rule with a door nobody was
+watching.** `SkillLevelWatch` is careful about the two ways a mark can go wrong — the first sight of
+a colonist is silent, and a colonist missing from the frame is forgotten — and both have tests. But
+`Forget` can only drop who is missing from a frame it has been *given*, and **between two colonies
+there is no frame at all**: the interface is on the main menu and nothing steps. So the marks survive
+into the next colony, where `PawnId` 1 is a different person. Load a save whose first colonist mines
+better than the last one's and she announces a level she was rolled with — the exact failure the
+first-sight rule exists to prevent, arriving by the one door that rule does not watch. `ToastModel`
+already had a `Clear`; nothing had ever called it, and it cleared the rows but not the watch. It
+clears both now, and `HudShell.OnSessionChanged` calls it, one line below where the in-game interface
+already goes away with its colony. Verified by breaking it: with `_levels.Clear()` commented out the
+new test fails on the right assertion.
+
+**And a guard that was described but not written.** `SkillCatalogue`'s remarks said
+`SkillCatalogueTests` "now asserts the live set against the published aspect names" — there was no
+such file, and the assembly seam means there cannot be one that reads the simulation directly. That
+matters more than a wrong cross-reference: the bug this work is proudest of finding is *a row's
+liveness is a claim about the simulation and nothing was checking it*, and nothing still was. It is
+two pins facing each other across the aspect name now, one on each side of the seam:
+`SkillTests.EverySkillTheSimulationTrainsIsNamedHere` pins `SkillIndex.Names` and fails the moment a
+skill is added, with a message sending the author to `SkillCatalogueTests`, which pins the live rows,
+their empty excuses and the four keys each mints. Adding a skill and forgetting the row — which is
+precisely what the growing branch did — now fails a test that says so.
+
+Three stale comments fell out of the same read: the catalogue still said "the thirteen" twice against
+fourteen entries and still said `ui.skill.growing` was trained by cutting, and `WorkTypes.xml` still
+said the growing curve "belongs to the skills work when it lands" when #119 had landed it. Small, but
+this is the file that told two sessions the curve was missing.
+
+**Nothing moved a golden and nothing moved the fingerprint.** The XML edit is a comment, the tests are
+tests, and the one behaviour change is presentation state cleared at a session boundary. Long tier 23,
+green, on the merged branch.
+
+
+**The Unity tier ran, and that was the review's real deliverable.** EditMode **1,989 total, 1,971
+passed, 0 failed**; PlayMode **85 total, 80 passed, 0 failed**, with `HudSmokeTests` naming thirteen
+framed regions and the toast stack among them. So the bar, the toast row and its click handler
+compile and the shell frames them — none of which the fast tier can say, and all of which the PR
+correctly flagged as unproven. Worth recording once: **Unity's own runner exits 2 whenever anything
+is inconclusive**, which it was eighteen times (the `[Explicit]` benchmarks, the ignored allocation
+probes and the four `GrowingJobTests` the fast tier also skips). `unity.sh` reads `failed=` out of
+the results XML and exited 0; a log line saying "Exiting with code 2 (Failed)" beside `failed="0"`
+is not a failure.
 
 ---
 
