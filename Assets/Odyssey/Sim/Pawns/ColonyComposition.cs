@@ -99,6 +99,12 @@ namespace Odyssey.Sim.Pawns
             pawns.Doors = doors;
             var enclosure = new World.EnclosureGrid(pawns.Cells, edifices);
             pawns.Enclosure = enclosure;
+            // The thermal pass, after the enclosure it reads rooms from and after the items and
+            // construction it reads sources through. Built here for the same argument as every
+            // other seam on the context: an optional one is how a caller forgets it, and a
+            // colony that forgot it would be a colony where nothing is ever cold.
+            var temperature = new Temperature.TemperatureSystem(pawns, edifices, Worldgen.WorldContent.Climate);
+            pawns.Temperature = temperature;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -132,13 +138,16 @@ namespace Odyssey.Sim.Pawns
                 // line of this chain it sits on, which is the whole point of the schedule.
                 .AddSystem(_ => new PlantGrowthSystem(pawns, growing))
                 .AddSystem(_ => doors)
+                // The thermal pass, beside the other world systems: Order 50 puts it after the
+                // enclosure solve (30) whatever line of this chain it sits on.
+                .AddSystem(_ => temperature)
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
-                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure, storage))
+                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure, storage, temperature))
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a

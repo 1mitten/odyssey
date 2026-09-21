@@ -144,6 +144,11 @@ namespace Odyssey.Sim.Pawns
                 // from before storage has neither, and loads with no zones and an empty table.
                 pawns.Storage!.Settings,
                 pawns.Storage!,
+                // Appended, as every section since the first has been: the room temperatures,
+                // keyed by room. A save from before temperature has no section and loads with
+                // every room at the outdoor curve — which is what it was, in a world where
+                // nothing was ever cold (design 28 §9).
+                pawns.Temperature!,
             };
         }
 
