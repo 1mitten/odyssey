@@ -1048,11 +1048,16 @@ namespace Odyssey.Presentation.Bootstrap
         void OnGameSpeedRequested(int speed)
         {
             if (_world == null) return;
-            // Space toggles: asking for pause while already paused means "start again".
-            int next = speed == 0 && _world.GameSpeed == 0 ? 1 : speed;
+            // Space toggles: asking for pause while already paused means "start again" — at the
+            // speed the player was last running at, not at normal. SpeedControl owns that rule
+            // and the memory behind it.
+            int next = _speed.Resolve(speed, _world.GameSpeed);
             _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, next));
             _speedChangePending = true;
         }
+
+        /// <summary>What an unpause comes back to. See <see cref="Odyssey.Hud.SpeedControl"/>.</summary>
+        readonly Odyssey.Hud.SpeedControl _speed = new();
 
         bool _speedChangePending;
 
@@ -1109,6 +1114,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             ReportRejections();
+            ConsiderAutosave();
 
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
@@ -2852,6 +2858,61 @@ namespace Odyssey.Presentation.Bootstrap
             return path;
         }
 
+        // ==================================================================== the autosave
+
+        /// <summary>
+        /// When the colony next writes itself. The rule and the day bookkeeping are
+        /// <see cref="Odyssey.Hud.AutosaveClock"/>, in the assembly the fast tier compiles; this
+        /// field is only where the running one lives.
+        /// </summary>
+        readonly Odyssey.Hud.AutosaveClock _autosave = new();
+
+        /// <summary>
+        /// Raised after the game has written the colony by itself, with the save's own name. The
+        /// HUD puts a line on the Events panel from it; nothing else listens, and nothing in the
+        /// simulation hears about it at all.
+        /// </summary>
+        public event Action<string>? Autosaved;
+
+        /// <summary>
+        /// A day has turned. Write the colony over its own save, keeping one previous generation.
+        ///
+        /// <para><b>A colony that has never been named is named here rather than skipped.</b> The
+        /// owner's call (2026-09-21): a brand-new colony is exactly the one a crash hurts most, so
+        /// the first autosave takes the name <see cref="SuggestedSaveName"/> would have offered,
+        /// binds the session to it, and says so on the Events panel. From then on it is "the same
+        /// game" every following autosave overwrites.</para>
+        ///
+        /// <para>Returns the path written, or null when there was no session to write.</para>
+        /// </summary>
+        public string? Autosave()
+        {
+            if (_world == null || _colony == null) return null;
+
+            string path = BoundSavePath ?? SaveFiles.PathForName(SuggestedSaveName());
+            SaveFiles.KeepPrevious(path);
+            SaveSession(path);
+
+            Autosaved?.Invoke(System.IO.Path.GetFileNameWithoutExtension(path));
+            return path;
+        }
+
+        /// <summary>
+        /// Asked once a frame: has the clock come round? Arithmetic on every frame it has not,
+        /// and the disk is touched only on the one it has.
+        ///
+        /// <para>After the ticks rather than before them, so the day the save records is the day
+        /// the frame ended on — and never while paused, because a paused world's tick does not
+        /// move and the clock reads the tick.</para>
+        /// </summary>
+        void ConsiderAutosave()
+        {
+            if (_world == null || Directors == null) return;
+            if (!_autosave.Due(_world.CurrentTick, Directors.Settings.AutosaveDays)) return;
+
+            Autosave();
+        }
+
         /// <summary>The same, to a path of the caller's choosing. What a test uses.</summary>
         public void SaveSession(string path)
         {
@@ -2971,6 +3032,10 @@ namespace Odyssey.Presentation.Bootstrap
             // copy" for every session after the first.
             BoundSavePath = path;
 
+            // The day this colony arrives on counts as already saved: a save opened and left alone
+            // must not be written straight back over the file it came out of.
+            _autosave.Begin(_world!.CurrentTick);
+
             RefreshAfterLoad();
         }
 
@@ -3011,7 +3076,13 @@ namespace Odyssey.Presentation.Bootstrap
                 var hud = GetComponent<Ui.HudShell>();
                 _view.Apply(cameraRig, Directors,
                     setGameSpeed: speed =>
-                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed)),
+                    {
+                        // Straight to the intent, bypassing the toggle, so a colony saved paused
+                        // comes back paused — but the memory still hears about it, or the first
+                        // unpause of a colony saved at triple speed would drop it to normal.
+                        _speed.Remember(speed);
+                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed));
+                    },
                     hud: hud);
             }
 
@@ -3080,6 +3151,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the last one's file would overwrite it on its first Save, which is the worst of both
             // behaviours: a lost save and no prompt.
             BoundSavePath = null;
+            _autosave.Forget();
 
             // Last, and after everything is null: whoever listens is about to ask whether a
             // session exists, and the answer has to already be no.

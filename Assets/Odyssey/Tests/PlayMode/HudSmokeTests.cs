@@ -81,11 +81,14 @@ namespace Odyssey.Tests.PlayMode
                 // "almanac-panel" is the reference browser (2026-09-20): full-bleed over the dark
                 // wash, built and hidden at startup exactly as "settings" and "debug" are, and a
                 // framed region whatever the colony is doing.
+                // "leaveprompt" is the confirmation asked on the way out of a colony
+                // (2026-09-21): a modal built beside "saveprompt" at startup and hidden until
+                // Quit or Quit to main menu raises it, so it joins the list on the same terms.
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "inspect",
                     "build", "menu", "settings", "debug", "work", "start", "saveprompt",
-                    "almanac-panel",
+                    "leaveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);
