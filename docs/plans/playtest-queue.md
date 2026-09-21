@@ -14,13 +14,21 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, and the breach is widening.** There are **48 open rows** as of
+**The rule is already breached, and the breach is widening.** There are **49 open rows** as of
 2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
 days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
 is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
 rule that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
+
+- **Does a pause give you your speed back?** (`claude/session-lifecycle`,
+  `docs/design/09-ui-and-input.md` §12.) Space and the pause button used to resume at ×1 whatever
+  you were running at, so every pause taken to give an order undid the speed you had just chosen.
+  It now returns to the speed the world last actually ran at. **Press 3, Space, Space**; then
+  **pause, pick ×2 from the clock, pause, unpause** — that second one should be ×2, because picking
+  a speed while paused is a choice and not a toggle. A wrong answer looks like ×1 again, or the lit
+  button and the actual clock rate disagreeing.
 
 - **Does the autosave land without being felt, and does one line on the Events panel tell you
   enough?** (`claude/session-lifecycle`, `docs/design/17-start-flow.md` §14b.) Every game day it
