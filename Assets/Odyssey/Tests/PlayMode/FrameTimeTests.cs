@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
@@ -396,7 +397,7 @@ namespace Odyssey.Tests.PlayMode
             double tracedP50 = traced[traced.Count / 2];
 
             Debug.Log($"[FrameTime] trace: {traced.Count} rows, trace p50 {tracedP50:0.00} ms " +
-                      $"against arm mean {armMean:0.00} ms, file {System.IO.Path.GetFileName(path)}");
+                      $"against arm mean {armMean:0.00} ms, file {System.IO.Path.GetFileName(path!)}");
 
             Assert.That(tracedP50, Is.GreaterThan(0d), "the trace recorded a zero frame time");
             Assert.That(tracedP50, Is.InRange(armMean * 0.5d, armMean * 2d),

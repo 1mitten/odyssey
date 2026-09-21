@@ -344,8 +344,17 @@ namespace Odyssey.Presentation.Bootstrap
         /// whole value of a trace is catching what does not reproduce, and a tracer that has to be
         /// switched on before the interesting thing happens never is. It costs a dozen doubles a
         /// frame and a kilobyte a second, and a released player has nobody to read it.</para>
+        ///
+        /// <para><b>And off in batch mode, which is not a detail.</b> A batch run is the test
+        /// tiers, and leaving it on there would do two bad things at once: every arm in
+        /// <c>FrameTimeTests</c> would silently start carrying the tracer's own cost in the numbers
+        /// this project quotes as budgets, and a PlayMode run would drop a dozen traces of its own
+        /// into the folder beside the ones somebody took by playing — where the newest file is no
+        /// longer theirs. The one arm that wants tracing sets this itself and puts it back in a
+        /// <c>finally</c>.</para>
         /// </summary>
-        public static bool TraceEnabled { get; set; } = Application.isEditor || Debug.isDebugBuild;
+        public static bool TraceEnabled { get; set; } =
+            !Application.isBatchMode && (Application.isEditor || Debug.isDebugBuild);
 
         /// <summary>The trace this session is writing, or null when it is not writing one.</summary>
         public Diagnostics.PerfTracer? Trace => _tracer;
