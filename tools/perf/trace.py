@@ -229,6 +229,15 @@ def summarise(path: str, top: int) -> int:
         print(f"   {label:<12} {cell(trace.typical(field)):>9} {cell(trace.worst(field)):>13}")
     print()
 
+    # The figure that named the 2026-09-21 hitch, and the reason it is computed here rather
+    # than recorded: it is a subtraction, and a recorder that wrote it would be inventing a
+    # number instead of reporting one.
+    unaccounted = trace.typical("frame_p50") - trace.typical("submit_p50") - trace.typical("tick_p50")
+    print(f"-- unaccounted --   {unaccounted:.2f} ms of the typical frame is neither submit nor "
+          f"tick:\n"
+          f"                    Unity's own frame, the editor, and anything outside LateUpdate.")
+    print()
+
     over33, over50 = trace.over("over_33"), trace.over("over_50")
     share = 100.0 * over33 / trace.frames if trace.frames else 0.0
     print(f"-- stutter --   {over33} frames over 33 ms ({share:.2f}% of {trace.frames}), "
@@ -260,11 +269,19 @@ def summarise(path: str, top: int) -> int:
 
     if trace.spikes:
         print(f"-- the worst {min(top, len(trace.spikes))} frames --")
+        print(f"   {'at':>6}  {'frame':>9}  {'in sections':>11}  {'elsewhere':>9}  {'gc':>3}   biggest section")
         for spike in sorted(trace.spikes, key=lambda s: -float(s.get("frame_ms", 0)))[:top]:
             split = sorted(((k[5:], float(v)) for k, v in spike.items() if k.startswith("sect.")),
                            key=lambda pair: -pair[1])
-            worst = "  ".join(f"{n} {v:.2f}" for n, v in split[:4] if v >= 0.005)
-            print(f"   {spike.get('at', 0):>6.0f}s  {float(spike.get('frame_ms', 0)):>7.1f} ms   {worst}")
+            ms = float(spike.get("frame_ms", 0))
+            inside = sum(v for _, v in split)
+            top_name = f"{split[0][0]} {split[0][1]:.2f}" if split else ""
+            print(f"   {spike.get('at', 0):>6.0f}s {ms:>9.1f} {inside:>12.2f} {ms - inside:>10.1f} "
+                  f"{int(spike.get('gc', 0)):>4}   {top_name}")
+        print()
+        print("   'elsewhere' is the part of that frame no section, no tick phase and no GPU")
+        print("   figure accounts for. Where it is most of the frame, nothing this game measures")
+        print("   is responsible and the next suspect is outside it — start with the editor.")
     return 0
 
 
