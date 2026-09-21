@@ -1039,10 +1039,19 @@ namespace Odyssey.Presentation.Rendering
 
                     if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe onShelf))
                     {
-                        // The same ramp and the same spiral, tightened: ItemHeap's spreads are
+                        // The same ramp and the same spiral, tightened: ItemHeap's recipes are
                         // sized for a 2.5 m cell floor and a slot is a fifth of that, so at the
-                        // recipe's own spread neighbouring stacks interleave.
-                        var tight = new ItemHeap.Recipe(onShelf.Fewest, onShelf.Biggest, onShelf.Full,
+                        // recipe's own numbers neighbouring stacks interleave.
+                        //
+                        // **The count as well as the spread.** Tightening only the spread left
+                        // each heap with its cell-floor population, so eight full slots of wood
+                        // drew twenty-four bundles in one cell's footprint and the rack was
+                        // invisible under them. A bay holds one stack and reads as one or two
+                        // bundles; the fill tell on a shelf is how many bays are taken.
+                        var tight = new ItemHeap.Recipe(
+                            Mathf.Min(onShelf.Fewest, ShelfShape.SlotLumps),
+                            Mathf.Min(onShelf.Biggest, ShelfShape.SlotLumps),
+                            onShelf.Full,
                             ShelfShape.SlotSpread, onShelf.SizeJitter, lyingDown: onShelf.LyingDown);
 
                         int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,

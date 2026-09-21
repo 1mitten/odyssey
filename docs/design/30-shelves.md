@@ -158,13 +158,45 @@ that runs in twenty seconds is a correctness bug nobody re-runs.**
 
 ## 8. Drawing it
 
-Three boxes from `ShelfShape`: a carcass against the **back** of the cell, a deck overhanging it, a
-back lip. 1.24 m overall and open at the front, because a shelf is passable and a thing you walk
-through that is taller than you reads as a fault rather than as furniture.
+Seven boxes from `ShelfShape`: **four posts, two decks and a back rail**, standing against the
+**back** of the cell. 1.45 m overall and open at the front, because a shelf is passable and a thing
+you walk through that is taller than you reads as a fault rather than as furniture.
 
 The same class answers the mesher, the ghost and the selection bracket, so a shelf under the pointer
 and a shelf on the board cannot disagree about where it stands — which would be visible here, because
 it does not stand in the middle of its cell.
+
+### 8a0. It was a crate, and the owner said so
+
+The first cut was a solid carcass with one deck on top and a lip: three boxes, 1.24 m. The deck
+overhung the carcass by 8 cm and a comment claimed that was what made it read as a shelf rather than
+as a crate. At the play camera's 48°, 8 cm reads as nothing, and the report came back the first time
+anybody looked at one (owner, 2026-09-21, with a photograph of a timber garage rack): *"shelve looks
+like a storage unit"*, then *"maybe there should be 2 shelves and not 1 thick container … something
+like this is more suitable than just 1 thick ledge"*.
+
+**The name was never the problem, and renaming it would have buried the one that was.** The reply
+that nearly went out was a costing of `Shelf` → `Storage unit`, which is one cell of
+`icon-keys.csv`. What the picture actually says is that a rack is legible because of the daylight
+through it: posts rather than sides, and a gap you can see between two loaded decks. A solid box
+called a storage unit is still a solid box.
+
+Three numbers are held deliberately and are the ones a tidy would undo:
+
+| Held | Why |
+|---|---|
+| 1.45 m, not the cell's 3 m | the owner's *"maybe it takes up the entire wall unit"* was the one part not taken: the shelf is **passable**, and a full-height thing you walk through reads as a fault. 1.45 m is furniture and still well under a colonist |
+| the upper deck is **half the depth** of the lower | the occlusion rule below. It is not a styling choice |
+| the back rail | the silhouette's only front-to-back asymmetry, so the rotate key looks like it does something |
+
+`ShelfShapeTests.ItIsARackAndNotACrate` is the guard: posts narrower than a fifth of a metre, decks
+thinner than a fifth, and 0.4 m of air between them. A solid side or a single deck passes every
+other test in that file.
+
+**Photographed rather than argued about**: `scripts/unity.sh shot Odyssey.EditorTools.ShelfCheck.Run`
+writes four views of a row of four racks holding nothing, two stacks, four and eight, which is the
+progression that shows whether the goods read as the fill tell. It is how the two rounds of tuning
+below were judged, and it costs the owner no playtest.
 
 ### 8a. Two things it does not copy from `BedShape`, both silent
 
@@ -195,22 +227,41 @@ land in a bucket that was going to be submitted anyway: **forty shelves add matr
 submissions.** The alternative — a pass over the shelves — is `docs/bug-patterns.md` **P10**, which
 cost the growing zone 2,065 draw calls and 3.67 ms of a 5 ms budget before it was deleted.
 
+#### A bay is one or two bundles, not a heap
+
+Tightening only the *spread* was half the job, and the half that was missing did not show until a
+full shelf was photographed. `ItemHeap`'s counts and sizes are tuned for a 2.5 m cell floor, so
+eight full slots of wood drew twenty-four bundles at 0.55 scale inside one cell's footprint and
+**the rack disappeared under its own goods** — a heap of timber with a plank in it. `SlotLumps`
+caps a bay at two and `GoodsScale` came down to 0.45, and the rack is legible loaded.
+
+Losing the within-a-stack ramp costs nothing here: on the ground a heap's size is the only thing
+that can say how much is in the cell, but a shelf meters itself in **bays taken**, which is what
+the pane's "3 of 8 stacks" says too.
+
 **Measured, 2026-09-21** (`FrameTimeTests.TheWarehouseCostsWhatItHolds`), with a control inside
 one run: the same board bare, then with 320 full stacks of wood lying on the floor, then with the
-same 320 stacks on forty shelves, seconds apart.
+same 320 stacks on forty shelves, seconds apart. Re-measured after the rack, on a machine with an
+editor open beside it — so read the *deltas*, not the absolutes.
 
 | Board | Frame | Over bare | Instances | Draw calls |
 |---|---|---|---|---|
-| bare meadow | 1.96 ms | — | 43,935 | 1,125 |
-| 320 stacks on the floor | 2.36 ms | +0.40 | 45,015 | 1,128 |
-| the same 320 stacks on 40 shelves | 2.39 ms | +0.43 | 45,015 | 1,128 |
+| bare meadow | 2.34 ms | — | 43,935 | — |
+| 320 stacks on the floor | 2.74 ms | +0.40 | 45,175 | 1,128 |
+| the same 320 stacks on 40 shelves | 2.72 ms | +0.38 | 44,855 | 1,128 |
 
-**The shelf path costs what the floor path costs** — 0.03 ms between them over 180 frames is inside
-the run's own noise — and the whole warehouse is 0.4 ms, all of it in the `Actors` section where the
-things are drawn (0.016 to 0.387 ms). The instance count is the same shelved as loose, which is the
-"matrices, not submissions" claim above with a number on it: 1,080 instances for 320 stacks, about
-three and a half a stack, because wood's recipe never reaches `ItemHeap.Most`. The three extra draw
-calls are the shelf bodies themselves, three body buckets in the chunk they stand in.
+**The shelf path costs what the floor path costs** — the 0.02 ms between them is inside the run's
+own noise, and the sign has flipped between runs — and the whole warehouse is 0.4 ms.
+
+The instance counts decompose exactly, which is the check that the numbers are describing what is
+believed rather than agreeing by luck:
+
+- floor: `1,240 = 40 × 7` frame parts `+ 320 × 3` lumps on the ground
+- shelved: `920 = 40 × 7` frame parts `+ 320 × 2` lumps in a bay
+
+**Draw calls are 1,128 either way**, which is the "matrices, not submissions" claim with a number
+on it: the rack went from three boxes to seven and a warehouse submits exactly what it did before,
+because every part is the same module in the same per-def bucket.
 
 **It only runs where the packs are, and it says so rather than failing.** Without `Assets/Synty`
 every stack takes `ChunkRenderer`'s stand-in marker path, which costs a draw call and no instance,
@@ -342,6 +393,13 @@ instrument behind.
 - **No frame cost for drawn contents beyond the floor path's** — measured, §8b.
 
 ## 14. Things not to undo by tidying
+
+- **The upper deck's depth.** It is half the lower deck's so that looking down at 48° does not
+  hide the front row under it; `TheFrontRowIsNotHiddenUnderTheUpperDeck` asserts the margin off
+  the drawn boxes. Squaring the two decks up "for symmetry" turns four of eight stacks dark and
+  nothing else fails.
+- **`SlotLumps`.** Capping a bay at two bundles is what keeps the frame visible under a full load.
+
 
 - **The ground stays one stack per cell.** The inventory exists so that rule is never touched; a
   "simplification" that makes cells multi-slot re-opens six call sites that currently throw.

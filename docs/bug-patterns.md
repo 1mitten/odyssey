@@ -352,6 +352,40 @@ two days.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-21 — Every screenshot tool has been photographing an empty sky (P3-adjacent)
+
+Writing `ShelfCheck` to look at the new rack produced four pictures of blue sky with the goods
+floating in it: no ground, no trees, no shelf. The reflex was to debug the new script. **Running
+`WallCheck` instead — a tool that has worked for days — produced the same empty sky**, and that
+control is the whole diagnosis.
+
+`8b5ecfee` gave the renderer a **meshing budget**: eleven chunks a frame, so that an edit cannot
+stall the frame remeshing nine hundred. It is correct, it is measured, and it shipped with the one
+exception it needs — `PrimeAll`, an unbudgeted walk the composition root calls before the first
+drawn frame, whose own doc comment says a budgeted first frame *"would draw almost nothing and the
+board would arrive in instalments"*. **The composition root is the only caller.** A check script
+builds its own renderer and camera, renders four or five frames, meshes forty-odd chunks of several
+hundred, and photographs the rest of the board as sky. There are twenty-one such scripts and the
+game itself is unaffected, which is why nothing went red.
+
+**The general shape: a new budget needs an audit of everyone who drives the thing by hand, not just
+the one caller you were thinking about.** The exception was written for the loading screen and the
+loading screen got it. Nobody asked who else renders without a composition root — and the harnesses
+that answer "how does this look" are exactly the callers that do, because not having the game's
+wiring is the point of them.
+
+**And a broken screenshot tool does not look broken.** It returns a well-formed PNG of a plausible
+sky at the requested angle, and this project's runbook for a report about how something looks
+starts by taking one. The failure mode is a confident wrong answer drawn from a real photograph of
+the wrong thing, which is `docs/lessons.md`'s "a plausibly wrong result is worse than an obviously
+broken one" with a camera attached.
+
+**What now stops it:** `ShelfCheck` calls `renderer.PrimeAll(start.Y, slice)` before its first
+shot, with a comment saying why. **The other twenty scripts in `Assets/Editor/Odyssey/` still need
+the same one line and are still blind** — a mechanical fix held out of a shelf PR rather than
+forgotten. The durable version is for the shot harness to own the prime instead of each script, so
+that the twenty-second tool cannot be written without it.
+
 ### 2026-09-21 — The warehouse measurement failed on the one machine that draws no warehouse (P13)
 
 CI's Unity tier went red on `FrameTimeTests.TheWarehouseCostsWhatItHolds` — the measurement
