@@ -663,6 +663,8 @@ namespace Odyssey.Hud
             { "ui.tab.menu", "Menu" },
             { "ui.tab.research", "Research" },
             { "ui.tab.schedule", "Schedule" },
+            { "ui.tab.storage", "Storage" },
+            { "ui.tab.tile", "Tile" },
             { "ui.tab.trade", "Trade" },
             { "ui.tab.wildlife", "Wildlife" },
             { "ui.tab.work", "Work" },

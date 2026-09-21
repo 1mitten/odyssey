@@ -14,14 +14,37 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, on the day it was written.** There are 29 open rows — 28 on the day
-this file was written, and the skills work added the twenty-ninth the day after, which is the rule
-being broken again by the very next session rather than an old number left uncorrected. That is the
-finding, not an oversight — the ceiling is where the list should be, not where it is, and the first
-sessions after this one take verdicts and fixes rather than features until it comes down. A rule
-that is quietly wrong on arrival is a rule the next session learns to ignore.
+**The rule is already breached, and the breach is widening.** There are **45 open rows** as of
+2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
+days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
+is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
+rule that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
+
+- **Does the storage pane sit still now?** (`claude/storage-pane`,
+  `docs/design/26-storage.md` §12.) Untick every category and the warning appears under the list
+  rather than in it, and the list gives up 92 px to make room, so nothing above it moves. **Is
+  losing a third of the list worth the message staying put** — or would you rather the band were
+  one line, or a colour on the header? And **press Allow all and Clear all with the game running,
+  not paused**: until today the pane did not change until you pressed something else, so the
+  presses want a look at normal speed as well as at zero. The counts on the category rows are a
+  step bigger and set in the mono face; if that was not what "the numbers" meant, say which and it
+  is a one-line change.
+
+- **Does a store keep itself to what you asked for?** (`claude/storage-pane`,
+  `docs/design/26-storage.md` §11.) Paint a stockpile over ground that already has something on it
+  — or set a store that is holding stone to meals only — and the colonists should carry out what it
+  refuses and then fill it with what it wants. Three things only a person can judge. **Is the
+  emptying quick enough to read as intent** rather than as the colony forgetting about it: it is
+  scanned with the loose hauling now, not with the tidying, so it should start within a job or two,
+  and if you narrow a filter and wander off and come back to find it unchanged, the pass ordering is
+  wrong. **Where the evicted things end up**: they go to the nearest cell no zone claims, which on a
+  crowded base may be somewhere silly-looking — if you find yourself hunting for what used to be in
+  a store, it needs a dumping zone rather than a nearest-cell search. And **whether a big warehouse
+  can empty itself at all**: the search reaches twelve cells, so a rock in the middle of a store
+  more than about twenty-four wide has nowhere it can legally be put and will stay put. A store that
+  size is exactly what the tool invites you to paint.
 
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build

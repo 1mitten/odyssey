@@ -907,15 +907,28 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void OnlyThePanelLabelIsTrackedAndUpperCased()
+        public void OnlyTheTwoHeadingRolesAreTrackedAndUpperCased()
         {
+            // Capitals and tracking travel together and mark a heading. Two roles carry
+            // them: the label that titles a panel from outside its content, and the heading
+            // of a group inside a list. Nothing else may, because a third would stop the
+            // pair meaning "this is a heading" and start meaning "this is emphasis".
             foreach (HudTextRole role in HudType.Roles)
             {
                 HudTextStyle style = HudType.Of(role);
-                bool label = role == HudTextRole.PanelLabel;
-                Assert.That(style.Uppercase, Is.EqualTo(label), $"{role} upper-casing");
-                Assert.That(style.LetterSpacing > 0f, Is.EqualTo(label), $"{role} tracking");
+                bool heading = role == HudTextRole.PanelLabel || role == HudTextRole.ListHeading;
+                Assert.That(style.Uppercase, Is.EqualTo(heading), $"{role} upper-casing");
+                Assert.That(style.LetterSpacing > 0f, Is.EqualTo(heading), $"{role} tracking");
             }
+
+            // And the two are distinguishable: a heading inside a list out-ranks the body
+            // rows it opens onto, which is the whole reason it is not the 11px panel label.
+            Assert.That(HudType.Of(HudTextRole.ListHeading).Size,
+                Is.GreaterThan(HudType.Of(HudTextRole.Body).Size),
+                "a list heading that does not out-rank its own rows is not a heading");
+            Assert.That(HudType.Of(HudTextRole.ListHeading).Size,
+                Is.GreaterThan(HudType.Of(HudTextRole.PanelLabel).Size),
+                "a list heading sits above the panel label, not at it");
         }
 
         [Test]

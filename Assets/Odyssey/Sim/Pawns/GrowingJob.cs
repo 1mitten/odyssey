@@ -368,7 +368,7 @@ namespace Odyssey.Sim.Pawns
 
             int at = ctx.Items.NearestCellWithSpace(
                 ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 12,
-                accept: ctx.NotZoned);
+                accept: ctx.OpenGroundFor(yield));
             if (at < 0)
                 at = ctx.Items.NearestCellWithSpace(
                     ctx.Cells, cell, yield, plant.yieldCount, maxRadius: 3);

@@ -545,7 +545,7 @@ changes the frame buffer that every channel shares.
 
 The allocation line is honest too: 199 bytes a tick with six colonists, and **zero gen-0
 collections over 4,000 ticks**, so it is churn rather than a cost. Two per-call allocations were
-removed on the way (a captured lambda in both yield searches, now `PawnContext.NotZoned`, and a
+removed on the way (a captured lambda in both yield searches, now `PawnContext.OpenGroundFor`, and a
 `new HaulWorkGiver()` inside the sow scan, now one shared stateless instance) — both are right,
 and **neither moved this number**, so the source is elsewhere and is not worth hunting until it
 collects something.
