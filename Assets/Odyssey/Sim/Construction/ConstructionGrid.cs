@@ -984,6 +984,18 @@ namespace Odyssey.Sim.Construction
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
             if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
 
+            // 1a. A store that was built rather than painted. The cell leaves whatever zone held
+            //     it *first*, so nothing can ever observe a cell that is in two stores at once: a
+            //     shelf carries its own filter and its own rung, and a cell with two answers to
+            //     "what goes here" is the fault the zones' own anchor rule exists to prevent. The
+            //     other direction is already closed — StorageZones.SiteAllows refuses to paint over
+            //     an edifice — so this is the half that was missing.
+            if (def.storageSlots > 0)
+            {
+                ctx.Storage?.LeaveCell(cell);
+                ctx.StorageUnits?.Raise(_grid.Edifice[cell], def.storageSlots);
+            }
+
             // 2. The cells and everything touching them must be re-meshed: a thing changes how its
             // neighbours draw their own faces, and the vertical neighbours are in other chunks.
             MarkChunksAround(ctx, cell);
@@ -1357,6 +1369,12 @@ namespace Odyssey.Sim.Construction
 
             if (was.Def == CoreContent.EdificeDoor) ctx.Nav.SetDoor(was.CellIndex, isDoor: false, open: false);
             if (was.Def == CoreContent.EdificeBed) _items.RemoveBed(was.CellIndex);
+
+            // A store coming down spills what the board will take and loses the rest. That this
+            // destroys is right here and refused one level up: the deconstruct job will not finish
+            // a shelf whose contents have nowhere to go, so by the time this runs either the shelf
+            // is empty or the building fell on it.
+            if (ConstructionContent.SlotsOf(was.Def) > 0) ctx.StorageUnits?.Dissolve(ctx, handle);
 
             // 2. The cells and everything touching them must be re-meshed: a thing coming down
             // changes how its neighbours draw their own faces, and the vertical neighbours are in

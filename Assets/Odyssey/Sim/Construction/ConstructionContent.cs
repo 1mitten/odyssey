@@ -111,6 +111,16 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int workToBuild = 135;
 
+        /// <summary>
+        /// How many stacks this thing holds, or 0 for anything that is not a store.
+        ///
+        /// <para>A field rather than a rule keyed off the edifice id, for the same reason
+        /// <see cref="needsClearCell"/> is one: it is a fact about the shape of the thing, and the
+        /// table is where facts about things live. It is also what makes a second, larger store one
+        /// row of content rather than a second code path.</para>
+        /// </summary>
+        public int storageSlots;
+
         /// <summary>Construction level a colonist needs before it may take the job. 0 for a wall.</summary>
         public int minSkill;
 
@@ -321,6 +331,18 @@ namespace Odyssey.Sim.Construction
         /// edifice id rather than a building handle, because a standing thing is a
         /// <c>PlacedEdifice</c> and the handle it was ordered from is not kept.
         /// </summary>
+        /// <summary>
+        /// How many stacks the thing standing as this edifice holds, or 0 where it is not a store.
+        /// Asked by edifice id because that is what a cell carries.
+        /// </summary>
+        public static int SlotsOf(ushort edifice)
+        {
+            for (int i = 0; i < Buildings.Count; i++)
+                if (Buildings[i].edifice == edifice && Buildings[i].storageSlots > 0)
+                    return Buildings[i].storageSlots;
+            return 0;
+        }
+
         public static bool NeedsClearCell(ushort edifice)
         {
             for (int i = 0; i < Buildings.Count; i++)
@@ -448,8 +470,8 @@ namespace Odyssey.Sim.Construction
                 new BuildingDef
                 {
                     defName = "Building_Shelf", label = "shelf", edifice = CoreContent.EdificeShelf,
-                    blocking = false, rotates = true, needsClearCell = true, costCount = 5,
-                    workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
+                    blocking = false, rotates = true, needsClearCell = true, storageSlots = 8,
+                    costCount = 5, workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
                 },
             };
         }

@@ -220,6 +220,7 @@
     <blocking>false</blocking>
     <rotates>true</rotates>
     <needsClearCell>true</needsClearCell>
+    <storageSlots>8</storageSlots>
     <costCount>5</costCount>
     <workToBuild>180</workToBuild>
     <minSkill>0</minSkill>

@@ -65,7 +65,11 @@ namespace Odyssey.Tests.Sim
         // drawn with its carcass against one side of its cell, so a shelf that could not be turned
         // would face the same way in every room. It takes no quality — a container's tier would be
         // read by nothing, and the pane's owner row keys off a non-zero quality.
-        const ulong BuildingFingerprint = 17614175513786600872UL;
+        // Same day, same row: BuildingDef gained `storageSlots`, and the shelf declares 8. A field
+        // rather than a rule keyed off the edifice id, for the reason `needsClearCell` is one — it
+        // is a fact about the shape of the thing — and it is what makes a second, larger store one
+        // row of content rather than a second code path.
+        const ulong BuildingFingerprint = 18276317653320036380UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
