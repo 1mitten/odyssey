@@ -22,8 +22,12 @@ namespace Odyssey.Presentation.Diagnostics
     /// written, and a path under <c>AppData\LocalLow\…</c> is a path somebody has to be told. So in
     /// the editor it goes to <b><c>Logs/perf/</c> at the repository root</b>, which is gitignored,
     /// is where every other editor-side artefact already goes (<c>Logs/one-day.txt</c>,
-    /// <c>Logs/shot-*.png</c>, <c>Logs/hud-*.png</c>), and can be handed over as one short path. A
-    /// built player has no repository to write to and falls back to the persistent data path.</para>
+    /// <c>Logs/shot-*.png</c>, <c>Logs/hud-*.png</c>), and can be handed over as one short path.</para>
+    ///
+    /// <para>A <b>development</b> player writes beside its own executable for the same reason: it
+    /// is the build somebody made to compare against the editor, and <c>Build/Win64/perf</c> is a
+    /// folder they are already looking at. Only a shipped player, which does not trace at all,
+    /// falls through to the persistent data path.</para>
     ///
     /// <para>Static, because there is one such folder per machine and nothing about it varies.</para>
     /// </summary>
@@ -38,13 +42,36 @@ namespace Odyssey.Presentation.Diagnostics
         public const int Keep = 20;
 
         /// <summary>
-        /// The folder. <c>Logs/perf</c> under the project root in the editor, otherwise
-        /// <c>&lt;persistentDataPath&gt;/perf</c>.
+        /// The folder: <c>Logs/perf</c> under the project root in the editor, <c>perf</c> beside
+        /// the executable in a development player, and <c>&lt;persistentDataPath&gt;/perf</c>
+        /// otherwise.
         /// </summary>
-        public static string Folder =>
-            Application.isEditor
-                ? Path.Combine(Path.GetFullPath("Logs"), FolderName)
-                : Path.Combine(Application.persistentDataPath, FolderName);
+        public static string Folder
+        {
+            get
+            {
+                if (Application.isEditor) return Path.Combine(Path.GetFullPath("Logs"), FolderName);
+
+                // A development player writes beside its own executable. That is the build somebody
+                // made to compare against the editor, and `AppData\LocalLow\...\perf` is a path
+                // they would have to be told; `Build/Win64/perf` is one they are already looking at,
+                // and it is inside the gitignored Build folder either way.
+                if (Debug.isDebugBuild)
+                {
+                    string beside = Path.GetFullPath(Path.Combine(Application.dataPath, "..", FolderName));
+                    try
+                    {
+                        Directory.CreateDirectory(beside);
+                        return beside;
+                    }
+                    catch (IOException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
+
+                // A shipped player, or a development one installed somewhere unwritable.
+                return Path.Combine(Application.persistentDataPath, FolderName);
+            }
+        }
 
         /// <summary>The folder, made if it is not there. On demand, as <c>SaveFiles</c> does it.</summary>
         public static string EnsureFolder()
