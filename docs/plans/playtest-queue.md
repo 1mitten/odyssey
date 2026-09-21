@@ -14,13 +14,41 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, and the breach is widening.** There are **45 open rows** as of
+**The rule is already breached, and the breach is widening.** There are **49 open rows** as of
 2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
 days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
 is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
 rule that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
+
+- **Does a pause give you your speed back?** (`claude/session-lifecycle`,
+  `docs/design/09-ui-and-input.md` §12.) Space and the pause button used to resume at ×1 whatever
+  you were running at, so every pause taken to give an order undid the speed you had just chosen.
+  It now returns to the speed the world last actually ran at. **Press 3, Space, Space**; then
+  **pause, pick ×2 from the clock, pause, unpause** — that second one should be ×2, because picking
+  a speed while paused is a choice and not a toggle. A wrong answer looks like ×1 again, or the lit
+  button and the actual clock rate disagreeing.
+
+- **Does the autosave land without being felt, and does one line on the Events panel tell you
+  enough?** (`claude/session-lifecycle`, `docs/design/17-start-flow.md` §14b.) Every game day it
+  writes the colony over its own save and keeps `<name>-previous.odyssey` beside it, and says so on
+  the Events panel. Three things only play can answer. **Is there a hitch on the day boundary** —
+  the write is synchronous inside one frame and is not measured, so look at the clock rolling over
+  at ×3 on a full colony. **Does the line tell you what you need before quitting**, or do you still
+  open the load list to check. And **is the previous copy reassuring or clutter** in that list. A
+  wrong answer looks like a stutter every morning, or a load screen you have to read twice to find
+  the save you meant.
+- **Does the leave prompt ask the right question at the right moment?**
+  (`claude/session-lifecycle`, §14a.) Quit to main menu and Quit no longer arm; they raise a modal
+  with *Save and leave · Leave without saving · Cancel*. **Quit with a colony you care about and
+  read the note under the title** — it names the file saving would write to. A wrong answer looks
+  like hesitating over which of the two "leave" rows is which, or being unsure whether "Save and
+  leave" is about to overwrite the save you actually wanted to keep.
+- **Escape on the main screen, on Load and on the character screen.** (`claude/session-lifecycle`,
+  §13.) It used to lay the settings window over the load list. It should now go back one level,
+  and do nothing at all on the root column. A wrong answer looks like two screens on top of each
+  other again, or an Escape that goes back further than one level.
 
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its

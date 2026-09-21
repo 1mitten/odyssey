@@ -241,6 +241,8 @@ namespace Odyssey.Presentation.Ui
         VisualElement _graphicsSection = null!;
         VisualElement _audioSection = null!;
         VisualElement _keysSection = null!;
+        VisualElement _gameplaySection = null!;
+        readonly Dictionary<int, Label> _autosaveRungs = new();
         VisualElement _exitRow = null!;
         Label _exitLabel = null!;
         readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
@@ -640,12 +642,17 @@ namespace Odyssey.Presentation.Ui
             // from in game today, but the two are both modals and the one raised last should win.
             BuildSavePrompt();
 
+            // And the leave prompt after it, on the same argument: two modals cannot be up at
+            // once today, and if that ever changes the later one should be the one on top.
+            BuildLeavePrompt();
+
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
 
             // A session coming or going is the one thing that decides whether the start screen is
             // on screen, so it is driven by the event rather than polled: Update returns early
             // with no world, which is exactly when the start screen has to be visible.
             _boot!.SessionChanged += OnSessionChanged;
+            _boot.Autosaved += OnAutosaved;
             OnSessionChanged();
         }
 
@@ -654,6 +661,7 @@ namespace Odyssey.Presentation.Ui
             if (_boot != null)
             {
                 _boot.SessionChanged -= OnSessionChanged;
+                _boot.Autosaved -= OnAutosaved;
                 // The preferences outlive every session and this component, so a subscription left
                 // on them is a leak that survives the scene.
                 _boot.Preferences.Changed -= OnPreferencesChanged;
@@ -680,6 +688,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ResolutionChanged += OnResolutionChanged;
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
+            _directors.Settings.AutosaveDaysChanged += OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
@@ -707,6 +716,7 @@ namespace Odyssey.Presentation.Ui
             OnSettingsChanged();
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
+            OnAutosaveDaysChanged(_directors.Settings.AutosaveDays);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
             OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
             OnDeveloperOverlayChanged();
@@ -739,6 +749,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.ResolutionChanged -= OnResolutionChanged;
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
+            _directors.Settings.AutosaveDaysChanged -= OnAutosaveDaysChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
             _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;

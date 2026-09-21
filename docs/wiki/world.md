@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-94 entries, 68 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+96 entries, 70 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -127,6 +127,8 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Display mode** | `ui.settings.displaymode` | Fullscreen, borderless or a window | no art | M3 |
 | **Resolution** | `ui.settings.resolution` | How many pixels the game is drawn at. Only a built game can change it | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
+| **Gameplay** | `ui.settings.gameplay` | What the game does for you while you play | no art | MS |
+| **Autosave** | `ui.settings.autosave` | How often the colony is written over its own save. Off writes nothing unless you ask | no art | MS |
 | **Master volume** | `ui.settings.volume.master` | Everything at once | no art | M3 |
 | **Music volume** | `ui.settings.volume.music` | What plays under the game | no art | M3 |
 | **Ambience volume** | `ui.settings.volume.ambience` | The sound of the place itself | no art | M3 |

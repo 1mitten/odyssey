@@ -290,6 +290,43 @@ namespace Odyssey.Sim.Saving
             return stem + Extension;
         }
 
+        /// <summary>
+        /// The suffix marking the copy an autosave keeps of what it is about to write over.
+        /// </summary>
+        public const string PreviousSuffix = "-previous";
+
+        /// <summary>
+        /// The file the *last* autosave of this save should be kept as —
+        /// <c>ashford.odyssey</c> becomes <c>ashford-previous.odyssey</c>.
+        ///
+        /// <para><b>Why one copy is kept at all.</b> The autosave writes over the colony's own
+        /// file, which is what the owner asked for (2026-09-21) and what stops a folder filling
+        /// up. But an autosave taken thirty seconds after a disaster would then be the only copy
+        /// there is, and a save interrupted halfway would be the only copy there is <i>and</i>
+        /// unreadable. One previous generation costs one file per colony and answers both.</para>
+        ///
+        /// <para><b>It is an ordinary save file and it is listed like one.</b> A backup nobody can
+        /// see is a backup nobody can use — the load screen shows it, named for what it is, and it
+        /// opens like any other.</para>
+        ///
+        /// <para>A colony the player has literally named "Ashford previous" would slug to the same
+        /// file. That is the same many-to-one the naming rules already surface as an overwrite
+        /// question (<see cref="FileNameForName"/>), and it is recorded rather than defended
+        /// against.</para>
+        /// </summary>
+        public static string PreviousFileName(string? fileName)
+        {
+            string name = fileName ?? string.Empty;
+            string stem = name.EndsWith(Extension, StringComparison.OrdinalIgnoreCase)
+                ? name.Substring(0, name.Length - Extension.Length)
+                : name;
+
+            if (stem.Length == 0) stem = FallbackSlug;
+            if (stem.EndsWith(PreviousSuffix, StringComparison.Ordinal)) return stem + Extension;
+
+            return stem + PreviousSuffix + Extension;
+        }
+
         /// <summary>Whether the file <paramref name="saveName"/> maps to is already in
         /// <paramref name="taken"/>. Case-insensitive, for the reason <see cref="FreeName"/>
         /// is: the folder may be case-insensitive and may hold files a player renamed by
