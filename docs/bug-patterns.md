@@ -1632,6 +1632,48 @@ So the marks from the last colony survive into the next one, where `PawnId` 1 is
   still be reported once. Confirmed to fail on the right assertion with the clear commented out,
   because a test written after a fix is worth nothing until it has seen the bug.
 
+## An instrument that summarises an event (2026-09-21)
+
+**P14.** A performance trace was written to find a stutter, and then hid it three separate times —
+each time because a field had been given the shape of a *cost* when the thing it measured was an
+*event*.
+
+1. **`remeshed` was last-seen.** Every other counter in a row is a fact about a moment and is
+   rightly the final frame's value: a draw-call count halfway through a second *is* the draw-call
+   count. Re-meshing is not like that. It happens on a handful of frames a second at most, so the
+   final frame's value is almost always zero — and a second in which eight hundred chunks were
+   rebuilt reported `0`. That zero was quoted **three times in one afternoon** as evidence that
+   meshing was not behind a 150 ms stall, which it could never have shown. It was caught only
+   because one full re-mesh happened to land on a row's last frame and printed `800` against a wall
+   of zeroes.
+2. **The tick had a median and no maximum.** The frame carried p50, p95, p99 and max from the first
+   line of the class, because the entire argument for the trace was that *a mean cannot see
+   stutter*. The tick was then given `tick_p50` alone. At 3x speed a second holds about a hundred
+   and eighty ticks, so one bad tick sits at the 99.4th percentile and is invisible.
+3. **The phases had a mean and a p95 and no maximum** — and `PhaseTrace` had offered `MaxMs` since
+   the day it was written. The trace simply never asked.
+
+- **The pattern:** a distribution was designed for the headline figure and summaries were added for
+  everything underneath it. Each addition looks reasonable on its own; the class of fault only
+  appears when something rare and expensive happens in one of the summarised terms.
+- **Why it is worse than an ordinary blind spot.** A missing field is obvious. A field that reports
+  `0`, or a plausible median, reads as *evidence of absence* — and it was used that way, repeatedly
+  and confidently, against the correct hypothesis.
+- **What makes it likely here.** The tick is **not inside any `FrameSection`**: it runs before the
+  draw block, so an expensive one lands in the part of a frame with no name at all. A term that no
+  section covers and no maximum records cannot be seen by anything.
+- **The rule:** **a counter of events is summed, a counter of state is last-seen, and anything
+  timed carries a maximum as well as a middle.** Which one a field is has to be decided when it is
+  added, not discovered when it lies. The question to ask of any new field: *if this went badly
+  once in two hundred samples, would this column change?*
+- **The check:** `TraceWriterTests.TheHeaderNamesEveryFieldARowCarries` stops a field arriving
+  undeclared, and `FrameTimeTests.TheTraceAgreesWithTheArmThatTimedIt` stops the headline figure
+  drifting from an independently-taken one. **Neither would have caught any of these three**, and
+  that is worth knowing: both guard a field's *existence* and its *accuracy*, and this fault is in a
+  field's *shape*. The reader's "elsewhere" column is the nearest thing to a guard — it makes the
+  unexplained remainder impossible to overlook, which is what eventually forced each of the three
+  into the open.
+
 ## Two branches that name the same anchor collide in arithmetic (2026-09-20)
 
 **P12.** SK4 added a transient toast stack "under the alerts in the same column". EV added the
