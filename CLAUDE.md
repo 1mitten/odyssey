@@ -383,8 +383,9 @@ invisible where the game is played.
   round on 2026-09-21: a callback parameter in `FrameTimeTests` shadowed a local, the fast tier was
   green in twenty seconds, and only the Unity tier saw it.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
-  `claude/huge-map` *before* this merge: EditMode **2,285 total, 2,262 passed, 0 failed**;
-  PlayMode **92 total, 87 passed, 0 failed**. The run on `main` the same day, PR #139 merged with
+  `claude/huge-map` **after merging main**: EditMode **2,317 total, 2,294 passed, 0 failed**;
+  PlayMode **92 total, 87 passed, 0 failed**. Before that merge the same branch was EditMode
+  **2,285 / 2,262 / 0**. The run on `main` the same day, PR #139 merged with
   main after the experience bar's first look and the toast's amber level: EditMode **2,298 total,
   2,278 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the
   first attempt and that was the machine, not the branch**: `Assets/Synty` had gone missing, so the
