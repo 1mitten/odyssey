@@ -1602,3 +1602,43 @@ nearest frozen one at 134 m, an animated one at 179 m.
 - **The check:** `FigureCapTests` spawns twenty colonists along a line in a *scrambled* order, so id
   order and distance order disagree; the old code fails it. Scrambling is the whole test — spawn
   them nearest-first and taking the first N by id passes without sorting anything.
+
+### P14 — An instrument that cannot see the thing it is comparing, and passes
+
+**Symptom.** A before/after comparison reports a small, plausible difference and the test goes
+green. The change looks proven.
+
+**The real cause.** The instrument was never looking at the subject. Two of these on 2026-09-21,
+both in the frustum-culling work, and **neither was found by a failing assertion** — one was found
+by a control, one by reading a log line that looked fine.
+
+1. **The measurement was overwritten before it ran.** An arm set
+   `ChunkRenderer.ShadowCasterMarginMetres = 0f` to price the shadow correction, but the composition
+   root re-derives that property from `QualitySettings.shadowDistance` **every frame**. The test's
+   value was gone before the first timed frame, so the arm timed the same configuration twice and
+   reported the difference — 0.07 ms — as the price of correct shadows. **The tell was in its own
+   log line:** both readings printed the identical 2,053 draw calls. A comparison whose
+   *deterministic* half does not move is not a comparison, whatever its timings say.
+2. **The capture never saw the board.** `CullingDoesNotChangeThePicture` rendered the scene culled
+   and unculled, compared pixels, and would have reported 2.58% moved as "close enough". Its control
+   — the same scene with a frustum admitting *nothing* — moved 3.22%. Rejecting every chunk in the
+   world cannot move 3% of a picture of that world, so both figures were noise from a nearly-empty
+   buffer. **Without the control the test passes and certifies a blind comparison.**
+
+**Why it is this project's shape.** A timing or pixel comparison has no natural failure. A unit test
+asserts a value and is wrong loudly; an instrument asserts a *difference*, and a difference between
+two readings of nothing is indistinguishable from a difference between two readings of something.
+
+**The check, and it is two rules rather than one test.**
+
+- **Every comparison carries a control that must show a difference.** Not "the feature changed
+  nothing" alone — also "the deliberately broken case changed plenty". One assertion says the answer;
+  the other says the instrument could have noticed another answer. `docs/process.md` already asks for
+  the negative control; this is what it buys.
+- **Assert on the deterministic half, not only the timed half.** Draw calls, chunk counts, instances
+  and mined-cell counts do not move with the machine's mood. `MineOneCell.Mined == Ticks` and
+  `callsOn < callsOff` catch a fixture that stopped doing its job; a millisecond figure never will.
+
+**Where to look for more:** any property a per-frame system re-derives from settings — a test that
+writes it is writing into the next frame's overwrite. And any capture-and-compare: ask what the
+picture looks like when the subject is removed entirely, and make the test assert that answer.

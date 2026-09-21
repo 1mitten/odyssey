@@ -379,3 +379,59 @@ The measurement and the change are the same code behind one flag, the way
 `ChunkRenderer.InstanceCellPlates` already does it: `CullToFrustum` off counts what *would* be
 skipped and skips nothing, on actually skips it. That is what lets before and after be taken inside
 one run on a machine that cannot be trusted between runs.
+
+## 9. What culling is worth, measured
+
+Built 2026-09-21 on `claude/frustum-culling`, **off by default** and not yet merged. EditMode
+2,285 / 2,262 / 0. The numbers below are from the same machine and the same caveats as §2 — read
+the ratios, and read them against §2's uncut figures taken minutes earlier.
+
+### 9.1 The figures that can be quoted
+
+At the real shadow margin, which is `QualitySettings.shadowDistance` and measured **40 m** on this
+project:
+
+| Board | Chunks culled | Frame | Draw calls |
+|---|---|---|---|
+| Standard 120 × 120 × 16 | 33 of 104 (31.7%) | 3.02 → **2.63 ms** | 1,475 → 1,111 |
+| **Huge 240 × 240 × 16** | **317 of 443 (71.6%)** | **8.43 → 4.57 ms** | **5,392 → 2,053** |
+
+**Huge goes under the 5 ms budget**, and the shape is the one predicted in §8.3: Standard is
+nearly all in view and saves little, Huge is mostly off-screen and saves a great deal. If the two
+had saved alike, the test would have been measuring the machine rather than the board.
+
+**The shadow margin costs most of the headline.** Without it 93.7% of Huge's chunks are outside the
+frustum and the frame reads 3.35 ms — **and that figure is not shippable and must not be quoted as
+the result**. It drops off-screen shadow casters, which is the regression §8.7 exists to prevent.
+The honest saving is 71.6% and 4.57 ms.
+
+### 9.2 Two instruments that were wrong, and how they were caught
+
+Neither was found by a failing test. Both were found by reading output that looked plausible, which
+is the habit this section exists to encourage.
+
+**A reading that measured nothing.** The arm reported *"correct shadows cost 0.07 ms"*. They cost
+nothing measurable there, because the third reading never happened: the composition root re-derives
+`ShadowCasterMarginMetres` from `QualitySettings.shadowDistance` **every frame**, so a test that set
+it on the renderer was overwritten before the first timed frame. **The tell was in the log** — both
+readings reported the identical 2,053 draw calls, and a comparison in which the deterministic half
+does not move is not a comparison. The arm now drives the *setting* instead, and asserts the margin
+is non-zero so it can never again quietly price a cull that would not ship.
+
+**A proof that proved nothing.** `CullingDoesNotChangeThePicture` failed on **its own control**: a
+frustum admitting nothing moved 3.22% of pixels, which is not the difference between two pictures of
+a world. The 2.58% beside it was therefore noise of the same size. **Had the control not been there
+the test would have passed**, and the picture would have been reported as proven identical on the
+strength of a blind comparison. That is the argument for the control in one sentence, and it is why
+`docs/process.md` asks for the negative control every time.
+
+The capture now writes `Logs/cull-{off,on,blind}.png` and logs chunks, instances and draw calls
+taken *during* each shot, which separates "the cull is wrong" from "the camera never rendered the
+board into the target". **Open, at the time of writing.**
+
+### 9.3 What is not settled
+
+- **Whether the picture is unchanged.** Until the control passes, the saving above is a number
+  attached to an unproven claim. `CullToFrustum` stays off and the branch stays unmerged.
+- **Play resolution and the target laptop**, as everywhere else in this document.
+- **`FrameSection.Doors`**, still 0.000 because no arm edits the world while it times (§2).
