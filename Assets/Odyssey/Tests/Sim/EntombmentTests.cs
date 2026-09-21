@@ -121,6 +121,42 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.Cell, Is.EqualTo(cell), "and nobody was moved");
         }
 
+        /// <summary>
+        /// And the wall goes up by itself once they have gone. The success roll happened once, in
+        /// the tick the last blow landed; <c>RaiseWhenClear</c> is what carries its result into
+        /// the world however many ticks the passer-by takes to leave.
+        /// </summary>
+        [Test]
+        public void TheWallGoesUpOnItsOwnOnceThePasserByHasGone()
+        {
+            ColonyWorld colony = Fresh();
+            int cell = FreeCellNearTheStart(colony);
+
+            Pawn pawn = StandIn(colony, cell);
+            int goal = FreeCellNearTheStart(colony, skip: 3);
+            colony.Pawns.Paths.Enqueue(new PathRequest(pawn.Id.Value, pawn.Cell, goal, pawn.Mode));
+            for (int i = 0; i < 10 && !pawn.HasPath; i++) colony.World.Tick();
+            Assert.That(pawn.HasPath, Is.True, "the fixture has a colonist on the move");
+            pawn.Cell = cell;
+
+            Assume.That(colony.Construction.Place(colony.Grid.Size.FromIndex(cell),
+                BuildingHandle.Wall, StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+
+            // Exactly what the build driver does on its last stroke.
+            colony.Pawns.Defer(_ => colony.Construction.RaiseWhenClear(
+                colony.Pawns, cell, BuildingHandle.Wall, (byte)QualityHandle.Normal));
+            colony.World.Tick();
+            Assert.That(colony.Grid.IsBlockedByEdifice(cell), Is.False, "it waited");
+
+            // They arrive, and the retry lands the wall without anybody rolling for it again.
+            for (int i = 0; i < 400 && !colony.Grid.IsBlockedByEdifice(cell); i++) colony.World.Tick();
+
+            Assert.That(colony.Grid.IsBlockedByEdifice(cell), Is.True,
+                "the wall the colonist finished goes up once the cell is clear");
+            Assert.That(colony.Construction.At(cell), Is.EqualTo(BuildingHandle.None),
+                "and the order is gone with it");
+        }
+
         // ---- the safety net ---------------------------------------------------------------
 
         /// <summary>

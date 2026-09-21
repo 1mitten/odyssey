@@ -494,7 +494,12 @@ namespace Odyssey.Sim.Pawns
                     quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
                 }
 
-                ctx.Defer(_ => grid.Raise(ctx, cell, quality));
+                // RaiseWhenClear rather than Raise: the check above is made in the pawn phase
+                // and this runs at the end of the tick, so somebody can step into the cell in
+                // between. It keeps asking rather than letting the site sit finished and
+                // unraised, which would cost a second success roll on work already done.
+                int ordered = sites.At(cell);
+                ctx.Defer(_ => grid.RaiseWhenClear(ctx, cell, ordered, quality));
 
                 // The wall goes up now; the builder straightens up before walking off.
                 NextToil();

@@ -923,10 +923,16 @@ namespace Odyssey.Sim.Construction
         /// <para><c>quality</c> is the tier the finishing colonist rolled, for the one def that
         /// takes one; zero, and written as zero, for everything else.</para>
         /// </summary>
-        public void Raise(PawnContext ctx, int cell, byte quality = 0)
+        /// <summary>
+        /// Returns false only when the raise was **refused because somebody is in the way** and is
+        /// worth trying again — see <see cref="RaiseWhenClear"/>, which is what the build driver
+        /// actually calls. Every other outcome, including a site that refunded itself and died, is
+        /// true: the question this answers is "should anybody ask again", not "did a wall appear".
+        /// </summary>
+        public bool Raise(PawnContext ctx, int cell, byte quality = 0)
         {
             int building = _building[cell];
-            if (building == BuildingHandle.None) return;
+            if (building == BuildingHandle.None) return true;
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
             ushort stuff = ConstructionContent.StuffAt(_stuff[cell]).stuff;
@@ -957,7 +963,7 @@ namespace Odyssey.Sim.Construction
             {
                 Refund(cell);
                 Clear(cell);
-                return;
+                return true;
             }
 
             // **The shaft rule, asked again at the moment of truth**, and it is the only rule that
@@ -975,7 +981,7 @@ namespace Odyssey.Sim.Construction
             {
                 Refund(cell);
                 Clear(cell);
-                return;
+                return true;
             }
 
             // **And the support rule, for the same reason and with the opposite answer.**
@@ -995,7 +1001,7 @@ namespace Odyssey.Sim.Construction
             // The work already done stays done, so the retry costs nothing, and nothing falls —
             // which is the owner's rule (2026-09-18): a slab that cannot stand is simply not built
             // yet, and it never leaves rubble.
-            if (!SlabWouldStand(cell)) return;
+            if (!SlabWouldStand(cell)) return true;
 
             // **And nobody is built into it.** A site is walkable up to this instant, so a
             // colonist can perfectly well be standing where the wall is about to be, and until
@@ -1011,7 +1017,7 @@ namespace Odyssey.Sim.Construction
             // than an order the colony can never finish. `CanRaiseNow` is the same question
             // asked without the shove, which is what lets the builder hold the last blow rather
             // than roll a botch for a wall it is going to build anyway.
-            if (!MakeRoom(ctx, cell, second)) return;
+            if (!MakeRoom(ctx, cell, second)) return false;
 
             Clear(cell);
 
@@ -1031,6 +1037,32 @@ namespace Odyssey.Sim.Construction
             // 3. What is walkable changed here, and in the cell above through the floor rule.
             MarkNavAround(ctx, cell);
             if (second >= 0) MarkNavAround(ctx, second);
+            return true;
+        }
+
+        /// <summary>
+        /// Raise the thing, and keep asking on later ticks while somebody is walking through the
+        /// cell it will fill.
+        ///
+        /// <para><b>Because the driver's own check cannot close the window.</b>
+        /// <see cref="CanRaiseNow"/> is asked in the pawn phase and the raise happens in the
+        /// deferred phase at the end of the same tick, so a colonist can step into the cell in
+        /// between — movement runs in that same phase, and pawns after this one in the order have
+        /// not moved yet when the check is made. Without a retry the site would sit finished and
+        /// unraised until a work giver offered it again, and the next builder's first stroke would
+        /// roll for success a **second** time on work that was already done. The roll happens
+        /// once; this is what gets the result of it into the world.</para>
+        ///
+        /// <para>The order it was rolled for is named, so a player who cancels the site or orders
+        /// something else there in the meantime does not get a bed built with a wall's dice.</para>
+        /// </summary>
+        public void RaiseWhenClear(PawnContext ctx, int cell, int building, byte quality = 0)
+        {
+            if (_building[cell] != building) return;
+            if (Raise(ctx, cell, quality)) return;
+
+            // Deferred from inside the deferred phase, which SimWorld.Tick puts on the next tick.
+            ctx.Defer(_ => RaiseWhenClear(ctx, cell, building, quality));
         }
 
         /// <summary>The walkability half of a world edit, both ends of a two-cell thing's "above".</summary>

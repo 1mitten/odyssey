@@ -89,6 +89,15 @@ question separate from `Raise`: a raise refused *after* the success roll would m
 same wall twice, and a colony that politely waits a second for a passer-by would pay for the
 courtesy in botched walls.
 
+**And the retry closes the window the check cannot.** `CanRaiseNow` is asked in the pawn phase;
+the raise itself happens in the deferred phase at the end of the same tick, and movement runs in
+between — so a colonist can step into the cell after the check and before the wall. `Raise`
+therefore reports whether it was refused, and `RaiseWhenClear` asks again on the next tick, naming
+the order it was rolled for so a cancelled or replaced site is dropped rather than built with the
+old dice. **The success roll happens once**; the retry is only what carries its result into the
+world. Without it the site would sit finished and unraised until a work giver offered it again, and
+the next builder's first stroke would roll for it a second time.
+
 ### 2c. The sweep is a statement about the world
 
 `TrappedPawnSystem` runs in `TickPhase.WorldSystems` at order 25 — after navigation has rebuilt
