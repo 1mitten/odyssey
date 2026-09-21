@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.IO;
 using System.Collections;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
@@ -344,23 +345,40 @@ namespace Odyssey.Tests.PlayMode
                     yield return TimeFrames($"cull/{label}/on", boot, WarmupFrames, m => on = m);
                     int callsOn = boot.Renderer!.DrawCalls;
 
-                    // And without it — NOT shippable, because a wall outside the frustum stops
-                    // casting into it and shadows pop as the camera pans. Measured anyway, because
-                    // the difference between these two IS the price of correct shadows, and a
-                    // price nobody has measured is a price somebody will later assume is zero.
-                    boot.Renderer!.ShadowCasterMarginMetres = 0f;
-                    float noMargin = 0f;
-                    yield return TimeFrames($"cull/{label}/no-margin", boot, WarmupFrames, m => noMargin = m);
-                    int callsNoMargin = boot.Renderer!.DrawCalls;
-                    boot.Renderer!.ShadowCasterMarginMetres = margin;
+                    // What the top shadow rung costs, which is the player-facing version of the
+                    // same question: a longer shadow distance means a wider margin, so fewer
+                    // chunks are culled AND more of them cast. Driven through the setting rather
+                    // than through the renderer, because the bootstrap re-derives the margin from
+                    // QualitySettings every frame — an earlier version of this arm set the margin
+                    // directly, was silently overwritten, and reported two identical readings with
+                    // the same draw-call count as though they were a comparison.
+                    float wasShadowDistance = QualitySettings.shadowDistance;
+                    float farShadows = 0f;
+                    int callsFarShadows;
+                    int outsideFarShadows;
+                    try
+                    {
+                        QualitySettings.shadowDistance = 120f;   // the top rung the settings offer
+                        yield return TimeFrames($"cull/{label}/shadows120", boot, WarmupFrames, m => farShadows = m);
+                        callsFarShadows = boot.Renderer!.DrawCalls;
+                        outsideFarShadows = boot.Renderer!.ChunksOutsideFrustum;
+                    }
+                    finally
+                    {
+                        QualitySettings.shadowDistance = wasShadowDistance;
+                    }
 
                     Debug.Log($"[FrameTime] cull {label} {x}x{z}x{y}: " +
                               $"{outside} of {drawn} chunks outside the frustum " +
                               $"({(drawn > 0 ? 100f * outside / drawn : 0f):0.0}%) at a {margin:0} m " +
                               $"shadow margin; frame {off:0.00} -> {on:0.00} ms " +
                               $"(saves {off - on:0.00}); draw calls {callsOff} -> {callsOn}. " +
-                              $"Without the margin {noMargin:0.00} ms / {callsNoMargin} calls, so " +
-                              $"correct shadows cost {on - noMargin:0.00} ms of the saving");
+                              $"At a 120 m shadow distance {farShadows:0.00} ms, " +
+                              $"{outsideFarShadows} culled, {callsFarShadows} calls");
+
+                    Assert.That(margin, Is.GreaterThan(0f),
+                        "the shadow margin is zero, so this arm measured a cull that would drop " +
+                        "off-screen shadow casters and is not the one that would ship");
 
                     // The control. If the test never rejected a chunk it measured the same thing
                     // twice and the difference is this machine's mood, not the cull.
@@ -421,11 +439,11 @@ namespace Odyssey.Tests.PlayMode
                 {
                     boot.Renderer!.CullToFrustum = false;
                     Color32[] off = null!;
-                    yield return Shoot(target, p => off = p);
+                    yield return Shoot("off", boot, target, p => off = p);
 
                     boot.Renderer!.CullToFrustum = true;
                     Color32[] on = null!;
-                    yield return Shoot(target, p => on = p);
+                    yield return Shoot("on", boot, target, p => on = p);
 
                     // The control: a frustum nothing can be inside.
                     Plane[] real = boot.Renderer!.Frustum!;
@@ -434,7 +452,7 @@ namespace Odyssey.Tests.PlayMode
                         nowhere[i] = new Plane(Vector3.up, -1e6f);
                     boot.Renderer!.Frustum = nowhere;
                     Color32[] blind = null!;
-                    yield return Shoot(target, p => blind = p);
+                    yield return Shoot("blind", boot, target, p => blind = p);
                     boot.Renderer!.Frustum = real;
 
                     float culled = Difference(off, on);
@@ -443,8 +461,12 @@ namespace Odyssey.Tests.PlayMode
                               $"a frustum admitting nothing moved {blinded * 100f:0.00}%");
 
                     Assert.That(blinded, Is.GreaterThan(0.05f),
-                        "rejecting every chunk did not change the picture, so this comparison " +
-                        "cannot see a difference and its other assertion proves nothing");
+                        $"rejecting every chunk moved only {blinded * 100f:0.00}% of pixels, so this " +
+                        "comparison cannot see a difference and its other assertion proves " +
+                        "nothing. Compare Logs/cull-off.png with Logs/cull-blind.png and check the " +
+                        "chunk counts logged during each capture: equal counts mean the cull is " +
+                        "not reaching the submission path, and a near-empty picture in both means " +
+                        "the camera never rendered the board into the target");
                     Assert.That(culled, Is.LessThan(0.005f),
                         $"culling moved {culled * 100f:0.00}% of pixels: it is not only skipping " +
                         "submissions the camera could not see");
@@ -462,11 +484,26 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        /// <summary>Let the normal loop draw into the target, then read it back.</summary>
-        IEnumerator Shoot(RenderTexture target, Action<Color32[]> pixels)
+        /// <summary>
+        /// Let the normal loop draw into the target, read it back, and say what the renderer did
+        /// while it was drawing.
+        ///
+        /// <para><b>The counters and the file are why this is not a guessing game.</b> The first
+        /// run of <see cref="CullingDoesNotChangeThePicture"/> failed on its own control: a
+        /// frustum admitting nothing moved 3.22% of pixels, which is not a difference between two
+        /// pictures of a world — it is what two pictures of *nearly nothing* look like. Chunk
+        /// counts taken during the capture separate "the cull is wrong" from "the capture never
+        /// saw the board", and the written frame lets a person settle it in one look, which is
+        /// what this project does with anything that is about how something appears.</para>
+        /// </summary>
+        IEnumerator Shoot(string name, OdysseyBootstrap boot, RenderTexture target, Action<Color32[]> pixels)
         {
             // Several frames: the submission is rebuilt every frame and the post stack settles.
             for (int i = 0; i < 8; i++) yield return null;
+
+            int chunks = boot.Renderer?.ChunksDrawn ?? -1;
+            int instances = boot.Renderer?.InstancesDrawn ?? -1;
+            int calls = boot.Renderer?.DrawCalls ?? -1;
 
             RenderTexture previous = RenderTexture.active;
             RenderTexture.active = target;
@@ -474,7 +511,19 @@ namespace Odyssey.Tests.PlayMode
             image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
             image.Apply();
             RenderTexture.active = previous;
-            pixels(image.GetPixels32());
+
+            Color32[] read = image.GetPixels32();
+            long sum = 0;
+            for (int i = 0; i < read.Length; i++) sum += read[i].r + read[i].g + read[i].b;
+
+            Directory.CreateDirectory(Path.GetFullPath("Logs"));
+            File.WriteAllBytes(Path.GetFullPath($"Logs/cull-{name}.png"), image.EncodeToPNG());
+            Debug.Log($"[FrameTime] cull shot {name}: {chunks} chunks, {instances} instances, " +
+                      $"{calls} calls while capturing; mean channel " +
+                      $"{(read.Length > 0 ? sum / (double)(read.Length * 3) : 0):0.0} " +
+                      $"-> Logs/cull-{name}.png");
+
+            pixels(read);
             UnityEngine.Object.Destroy(image);
         }
 
