@@ -128,6 +128,31 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Storage.StorageZones? Storage { get; set; }
 
+        /// <summary>
+        /// The colony's built stores — shelves — or null where it has none and in a bare fixture.
+        /// Null-guarded at every read, exactly as <see cref="Storage"/> is, so a colony that was
+        /// never given one simply has no containers rather than throwing.
+        /// </summary>
+        public Storage.StorageUnits? StorageUnits { get; set; }
+
+        /// <summary>
+        /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
+        /// holding it, or -1 while it is in a pair of hands.
+        ///
+        /// <para><b>One owner, because five scans want it.</b> Every one of them used to write
+        /// <c>item.Cell</c> and mean "where is it", and that was true while a thing was either on
+        /// the floor or carried. With a third home the expression is wrong in a way that reads as
+        /// right — a contained thing answers -1, so a distance to it is garbage and a reachability
+        /// test against it is nonsense — and five copies of a wrong expression is five places to
+        /// fix it.</para>
+        /// </summary>
+        public int WhereIs(ColonyItem item)
+        {
+            if (item.Cell >= 0) return item.Cell;
+            if (item.ContainerId == 0) return -1;
+            return StorageUnits?.CellOfContainer(item.ContainerId) ?? -1;
+        }
+
 
         /// <summary>The def <see cref="OpenGroundFor"/> was last asked about.</summary>
         int _openGroundDef;

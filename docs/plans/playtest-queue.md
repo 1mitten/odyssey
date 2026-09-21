@@ -180,7 +180,17 @@ the next session learns to ignore.
   can empty itself at all**: the search reaches twelve cells, so a rock in the middle of a store
   more than about twenty-four wide has nowhere it can legally be put and will stay put. A store that
   size is exactly what the tool invites you to paint.
-
+- **Does a shelf earn its place?** (`claude/storage-shelves`, `docs/design/30-shelves.md`.) Build one
+  from the Build palette's Furniture row — it is wood or stone, five material, and it turns with R.
+  Then judge three things a test cannot. **Is eight stacks the right size?** One shelf does the job
+  of eight tiles of painted zone; if it feels like it ends the storage game, it is too big, and if
+  you find yourself building six in a row, too small. **Is Preferred the right default?** A new shelf
+  outranks every painted zone, so the colony starts moving goods on to it the moment it is finished —
+  that should read as the shelf working, and if instead you watch haulers cross the map to fill a
+  shelf you put somewhere silly, it wants to be Normal. **Can you read what is on one from across
+  the room?** The goods stand on the deck at a bit over half size, up to four stacks along the front;
+  a wrong answer looks like porridge you have to click to identify, and the fallback is fewer,
+  bigger visual slots.
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
   fill now goes through one instanced call per colour instead of one submission per cell. Nothing

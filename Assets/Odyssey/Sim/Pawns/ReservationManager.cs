@@ -9,6 +9,19 @@ namespace Odyssey.Sim.Pawns
     {
         Cell = 0,
         Item = 1,
+
+        /// <summary>
+        /// A built store, keyed on its edifice index. What stops two haulers both aiming a load at
+        /// the last free slot of one shelf — the race a destination claim exists to prevent, one
+        /// level up from the cell claim that does the same for the floor.
+        ///
+        /// <para><b>One hauler per shelf at a time, in this first cut.</b> Eight slots and one
+        /// claim bit is coarse, and deliberately the conservative reading:
+        /// <see cref="ReservationManager.Reserve"/> already takes a <c>maxPawns</c> and a stack
+        /// count that nothing uses, so per-slot claims are a change of arguments rather than of
+        /// machinery on the day a shelf is measured to be a bottleneck.</para>
+        /// </summary>
+        Container = 2,
     }
 
     /// <summary>

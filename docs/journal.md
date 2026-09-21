@@ -10152,6 +10152,111 @@ Five EditMode guards (`MeshBudgetTests`), of which the load-bearing one is
 frame whose meshing cost is proportional to how much went stale. One of its drafts failed honestly
 first — a 48-cell board is 2 x 2 chunks against `CellGrid.ChunkSize` of 25, and four chunks cannot
 tell a budget of four from no budget at all.
+## 2026-09-21 — Shelves: a store you build, and the five faults that only a test could see
+
+The colony could **paint** storage and not **build** it. S2 of the storage line closes that: a shelf,
+one cell, eight stacks, driven by the storage control the player already has.
+
+**The whole thing was already architected, and that is the finding worth keeping.** Three pieces of
+S1 were built to be pointed at a container later and said so in their own doc comments —
+`ColonyItem.ContainerId` saved and hashed and written by nothing, `StorageSettings` describing itself
+as "the record a zone points at, and the one a crate will point at when crates exist", and the
+settings popover saying it was built so "the same control drive[s] a crate the day crates exist". A
+fourth, `WorldRenderModel.StandHeight`, had written down what the *next* non-occluding thing that
+stands up would have to do and what would happen if it did not. Reading those four before writing
+anything is most of why this unit went in without re-opening a decision.
+
+**The design plan was on an unmerged branch.** `docs/plans/storage.md` is cited by five places in
+`main`'s code and design docs and had never left `claude/storage-plan-technical`. It came across on
+this branch. A plan the code points at and nobody can read is worse than no plan.
+
+### The five things reading did not find
+
+1. **`LiftToil` could never grasp a shelved thing.** Both its guards compared `item.Cell` to the
+   pawn's cell, and a contained thing has no cell — so a colonist sent to a shelf would have bent
+   over it for ever. Found by a test that required a wall to rise from material that existed only on
+   a shelf. The fix is `JobDriver.AtHand`, one owner of "within reach where she stands".
+
+2. **An ordered shelf deadlocked.** Its contents rank below every real store so they want to leave,
+   but with no other store on the board the destination scan found nothing and they stayed — while
+   the deconstruct gate refused to take the shelf apart until they had gone. Nothing moved and
+   nothing said why. An emptying store now gives its contents up to the floor when no store will
+   take them.
+
+3. **The test that should have caught (2) was passing for the wrong reason.** It ran blind to the end
+   and asserted the shelf was empty — which it was, because the colonist had finished the deconstruct
+   and `Dissolve` had spilled the lot. Tightened to require the shelf empty **while still standing**,
+   it went red and stayed red until the deadlock was fixed. A test that cannot fail for the reason it
+   names is not a test.
+
+4. **`StorageZones.Units` was wired one way.** The property existed and the composition never set it,
+   so `SettingsAt` answered null over a shelf and the settings panel would have opened and closed on
+   the same frame — the press doing nothing, visibly, which is the shape `20-beds.md` §8 records as
+   "why Assign did nothing, three times". The test that caught it asserts the record is the shelf's
+   own instance, not merely non-null.
+
+5. **`default(StorageSlot)` is a valid cell.** `Stand` defaults to 0, and 0 is the corner of the
+   board, so a failed destination search falling back on `default` sent every unhaulable load there.
+   `StorageSlot.None` is spelled out now.
+
+A sixth was mine and went the other way: `TryMakeReservations` claimed the item before checking the
+destination, so a full destination walked away holding the claim. The original order — every question
+first, then every claim — was quietly doing the right thing, and rewriting it lost that. The leak
+showed up as `ActiveClaims` not empty after a soak, which is exactly the assertion
+`ReservationManager`'s own doc says is there for this.
+
+### The golden re-bake, and the instrument that is now committed
+
+All six numbers moved, because a hashed component contributes its count on every board including the
+three goldens, none of which has a shelf. `GoldenColonyProbe` prints what each colony is *made of* at
+generation and after the run, is written against nothing newer than `main` so the same file runs on
+both branches, and the two outputs diff clean. Earlier re-bakes used a throwaway probe and had to
+describe it afterwards; this one leaves the instrument behind for the next one.
+
+### What was decided rather than inherited
+
+Eleven owner decisions, 37–47, taken in a three-round interview before any code: one container kind;
+named Shelf because the key already existed; passable; the existing popover; **Preferred** by default
+so building one visibly does something; the cell refuses loose stacks; a shelf takes its cell out of
+any zone; the goods are the fill tell; eating, building and hauling all learn containers; deconstruct
+refuses rather than destroys; groups deferred.
+
+Two were corrected against the code afterwards and both are recorded in `30-shelves.md`: the pane
+says **stacks** rather than "400 of 600", because 600 is eight times wood's stack limit and a shelf
+full of meals would read as nearly empty; and the deconstruct refusal needed a **giver gate** in
+front of it, because a refusal at the last tick against work banked on the cell is a loop that ends
+in the think tree's circuit breaker and reads as idleness.
+
+## 2026-09-21 — Shelves reviewed for cost before the playtest: the warehouse measured, one allocation gone
+
+A review of PR #158 for performance, with `main` (the storage pane, huge maps and the trace) already
+merged in. The sim side is cheap by construction and reading it confirmed it: the third lister is
+walked with the stored one in the haul scan and every question a contained thing adds is a
+dictionary probe or a walk of at most eight slots; the destination walk asks the units the same three
+questions in the same order the zone cells are asked; the snapshot's slot index is a scan of at most
+eight. Nothing there needed a measurement to dismiss.
+
+**The presentation side owed one and it is taken.** `30-shelves.md` §8b said the draw calls were
+unchanged by construction and the per-frame cost of the matrices was not measured. It is now:
+`FrameTimeTests.TheWarehouseCostsWhatItHolds` times the bare meadow, then 320 full stacks of wood on
+the floor, then the same stacks on forty shelves, in one run. The shelf path costs what the floor
+path costs (2.36 against 2.39 ms, inside the noise); the warehouse as a whole is 0.4 ms, all of it
+in the `Actors` section; and the instance count is identical shelved or loose, which is the
+"matrices, not submissions" argument with a number on it. The fixture raises finished shelves
+through `Construction.Raise` and moves the piles in through `StorageUnits.PutIn`, and forbids
+everything it puts down and everything already lying there, because the colony is ticking underneath
+and a Preferred store that accepts everything would otherwise fill itself with the starting kit
+while the frame was being timed.
+
+**One thing was wrong and it was the one thing reading found:** `ShelfShape.SlotCentre` declared
+its two slot tables as local arrays, so every stack on every shelf cost two heap allocations a frame
+— 640 a frame for the warehouse above, a gen-0 collection every few seconds, for two tables that
+never change. They are static fields now. Not visible in the mean frame time, which is exactly why
+allocation on a per-frame path is checked by reading rather than by timing: it shows as a hitch
+every few seconds, and a 180-frame mean is the instrument least able to see one.
+
+Tiers on the worktree with `main` in: fast 963 Sim + 650 Hud, Long 34, EditMode 2,421 / 2,397 / 0,
+PlayMode 98 / 93 / 0, both content gates current. The branch is ready for the owner's Play.
 
 ## 2026-09-21 — session lifecycle: Escape on the main screen, the leave prompt, the autosave
 

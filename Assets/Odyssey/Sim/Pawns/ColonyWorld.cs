@@ -144,6 +144,11 @@ namespace Odyssey.Sim.Pawns
                 // from before storage has neither, and loads with no zones and an empty table.
                 pawns.Storage!.Settings,
                 pawns.Storage!,
+                // The built stores, appended after the painted ones. A shelf points at a record in
+                // the table above, so the table has to be read before this is useful — but the two
+                // are only ever read together at the end of the load, not during it, so this is an
+                // ordering of convenience rather than one anything depends on.
+                pawns.StorageUnits!,
             };
         }
 
@@ -240,6 +245,13 @@ namespace Odyssey.Sim.Pawns
                 // is lying in a zone that was not put there through the zones.
                 Pawns.Storage.RebucketAll();
             }
+
+            // And anything that came back naming a shelf which is not there. Unlike the zones this
+            // needs no hand-over — an item's own record says which container holds it, so the
+            // listers were already right when the items section finished — but a file whose units
+            // and items disagree is a file, and a stack that is in a container nothing can open is
+            // worse than one on the floor.
+            Pawns.StorageUnits?.AdoptContents(Pawns);
 
             _nav.Rebuild();
         }
