@@ -593,27 +593,37 @@ namespace Odyssey.Sim.Pawns
             int best = -1;
             int bestDistance = int.MaxValue;
 
+            int bestCell = -1;
+
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                if (item.Despawned || item.Cell < 0 || item.Forbidden) continue;
+                if (item.Despawned || item.Forbidden) continue;
                 if (ctx.Content.Items[item.DefIndex].nutrition <= 0) continue;
+
+                // **A meal in a shelf is a meal.** This line read `item.Cell < 0` until shelves
+                // existed, and that was right while "no cell" meant "in somebody's hands". A
+                // colonist who cannot see into a store starves beside a full pantry, which is why
+                // this scan is not optional once a shelf accepts food.
+                int at = ctx.WhereIs(item);
+                if (at < 0) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                if (!ctx.Reachable(pawn, item.Cell)) continue;
+                if (!ctx.Reachable(pawn, at)) continue;
 
-                int distance = ctx.Distance(pawn.Cell, item.Cell);
+                int distance = ctx.Distance(pawn.Cell, at);
                 if (distance >= bestDistance) continue;
                 bestDistance = distance;
                 best = i;
+                bestCell = at;
             }
 
             if (best < 0) return false;
 
             job.Reset(JobIndex.Eat);
             job.TargetItem = items[best].Id;
-            job.TargetCell = items[best].Cell;
+            job.TargetCell = bestCell;
             return true;
         }
 
@@ -860,6 +870,25 @@ namespace Odyssey.Sim.Pawns
                     dest = ctx.Items.NearestCellWithSpace(
                         ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: 12,
                         accept: ctx.NotZoned);
+
+                // **A store being emptied gives its contents up to the floor when no other store
+                // will take them**, and without this the order deadlocks: the contents rank below
+                // every real store, so they want to leave, but with nowhere better to go the scan
+                // finds no destination and they stay — while the deconstruct gate refuses to take
+                // the store apart until they have gone. Nothing moves and nothing says why.
+                //
+                // Hauled out rather than spilled, deliberately. The same load ends up on the same
+                // sort of cell either way, but a colonist carries it, which is the difference
+                // between a colony emptying a shelf and a shelf emptying itself.
+                if (dest < 0 && item.ContainerId != 0 && ctx.StorageUnits != null)
+                {
+                    Storage.StorageUnit? from = ctx.StorageUnits.ByContainerId(item.ContainerId);
+                    if (from != null && ctx.StorageUnits.IsEmptying(from))
+                        dest = ctx.Items.NearestCellWithSpace(
+                            ctx.Cells, at, item.DefIndex, item.Stack,
+                            maxRadius: Storage.StorageUnits.SpillRadius);
+                }
+
                 if (dest < 0) continue;
 
                 bestDistance = distance;

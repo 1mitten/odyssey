@@ -171,10 +171,22 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(IntentRejection.None));
 
             int before = LiveStackOf(colony, Wood);
-            Run(colony, 4_000);
 
-            Assert.That(colony.Pawns.Items.ResidentIn(StorageUnits.ContainerIdOf(unit.Edifice), Wood),
-                Is.Null, "the shelf has been emptied by ordinary hauling");
+            // Watched tick by tick, and the assertion is that the shelf is empty **while it is
+            // still standing**. Run blind to the end and this test passes either way: the colonist
+            // goes on to finish the deconstruct, and Dissolve spills whatever is left — so a haul
+            // path that did not work at all would look exactly like one that did.
+            bool emptiedWhileStanding = false;
+            for (int i = 0; i < 4_000 && !emptiedWhileStanding; i++)
+            {
+                colony.World.Tick();
+                emptiedWhileStanding =
+                    colony.Pawns.StorageUnits!.AtCell(shelf) != null
+                    && colony.Pawns.Items.ResidentIn(StorageUnits.ContainerIdOf(unit.Edifice), Wood) == null;
+            }
+
+            Assert.That(emptiedWhileStanding, Is.True,
+                "the shelf was emptied by ordinary hauling before it came down");
             // Not equal: the colonist goes on to finish the deconstruct, and a shelf is made of
             // wood, so the colony ends the run with its own timber back. What matters is that the
             // twenty that were on the shelf are still in the world.
@@ -228,6 +240,41 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.StorageUnits!.StacksIn(unit), Is.EqualTo(1),
                 "a full shelf takes nothing else");
             Assert.That(items.CellHasSpace(shelf), Is.False, "and nothing lands on the floor under it");
+        }
+
+        [Test]
+        public void AFullShelfIsNeverOfferedToADeconstructor()
+        {
+            // With nobody willing to haul, a shelf ordered taken apart simply stands there full.
+            // That is the gate doing its job, and the reason it exists: the deconstruct work is
+            // banked on the cell, so a colonist allowed to start and then refused at the last tick
+            // would be handed the same site again on every think, for ever, and the fault would
+            // read as idleness rather than as a shelf that cannot be emptied.
+            ColonyWorld colony = Fresh();
+            int shelf = OpenCell(colony);
+            Assume.That(shelf, Is.GreaterThanOrEqualTo(0));
+            StorageUnit unit = RaiseShelf(colony, shelf);
+
+            ColonyItems items = colony.Pawns.Items;
+            ColonyItem wood = items.Get(items.Spawn(Wood, FreeGround(colony, 0), 20))!;
+            items.PickUp(wood, new PawnId(1));
+            items.PutIn(wood, StorageUnits.ContainerIdOf(unit.Edifice));
+
+            // Nobody hauls, so nothing can empty it.
+            for (int i = 0; i < colony.Pawns.Pawns.All.Count; i++)
+                colony.Pawns.Pawns.All[i].WorkPriorities[WorkTypeIndex.Haul] = 0;
+
+            Assume.That(colony.Pawns.Designations!.Designate(Size.FromIndex(shelf), DesignationKind.Deconstruct),
+                Is.EqualTo(IntentRejection.None));
+
+            Run(colony, 4_000);
+
+            Assert.That(colony.Pawns.StorageUnits!.AtCell(shelf), Is.Not.Null,
+                "the shelf still stands");
+            Assert.That(items.ResidentIn(StorageUnits.ContainerIdOf(unit.Edifice), Wood)!.Stack,
+                Is.EqualTo(20), "with everything still on it");
+            Assert.That(colony.Pawns.Designations!.At(shelf),
+                Is.EqualTo(DesignationKind.Deconstruct), "and the order still standing");
         }
 
         static int LiveStackOf(ColonyWorld colony, int defIndex)

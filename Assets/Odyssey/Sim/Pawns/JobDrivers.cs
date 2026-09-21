@@ -132,8 +132,11 @@ namespace Odyssey.Sim.Pawns
         public override bool TryMakeReservations(PawnContext ctx)
         {
             var item = ctx.Items.Get(Job.TargetItem);
-            if (item == null || item.Cell < 0) return false;
+            if (item == null || ctx.WhereIs(item) < 0) return false;
 
+            // The item, and **not the store it is in**. Eating takes no slot and leaves the shelf
+            // no fuller than it found it, so two colonists helping themselves from one pantry is
+            // fine; the per-item claim is what keeps them off the same meal.
             long key = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
             if (!ctx.Reservations.Reserve(Pawn.Id, key)) return false;
             Pawn.HeldReservations.Add(key);
@@ -147,7 +150,7 @@ namespace Odyssey.Sim.Pawns
 
             if (ToilIndex == 0)
             {
-                if (item.Cell != Job.TargetCell) return JobStatus.Failed;
+                if (!StillAt(ctx, item, Job.TargetCell)) return JobStatus.Failed;
                 JobStatus walk = GotoCell(ctx, Job.TargetCell);
                 if (walk == JobStatus.Succeeded) NextToil();
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
