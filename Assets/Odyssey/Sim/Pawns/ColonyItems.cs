@@ -91,6 +91,22 @@ namespace Odyssey.Sim.Pawns
         readonly Dictionary<int, int> _itemAtCell = new Dictionary<int, int>();
         readonly List<int> _loose = new List<int>();
         readonly List<int> _stored = new List<int>();
+
+        /// <summary>
+        /// Everything inside any container, ascending. The third lister, beside
+        /// <see cref="LooseItems"/> and <see cref="StoredItems"/>.
+        /// </summary>
+        readonly List<int> _contained = new List<int>();
+
+        /// <summary>
+        /// Container id to the items it holds, ascending. Probed, never iterated in a tick — the
+        /// rule <c>ReservationManager</c> states for the same reason: the iteration order of a
+        /// hash table is not a simulation input.
+        /// </summary>
+        readonly Dictionary<int, List<int>> _inContainer = new Dictionary<int, List<int>>();
+
+        static readonly List<int> NoContents = new List<int>();
+
         readonly List<int> _beds = new List<int>();
 
         /// <summary>
@@ -126,6 +142,51 @@ namespace Odyssey.Sim.Pawns
         /// is the lowest job there is (a-14 §3).
         /// </summary>
         public IReadOnlyList<int> StoredItems => _stored;
+
+        /// <summary>
+        /// The third lister: item indices inside a container, ascending. What lets a shelf be
+        /// re-stowed <em>out of</em> — a thing in a shelf that a better store would accept, or a
+        /// thing in a shelf that is being emptied — and scanned last, because taking something out
+        /// of a store is a lower job than tidying the floor.
+        /// </summary>
+        public IReadOnlyList<int> ContainedItems => _contained;
+
+        /// <summary>The items in one container, ascending. Empty for a container holding nothing.</summary>
+        public IReadOnlyList<int> ContentsOf(int containerId) =>
+            _inContainer.TryGetValue(containerId, out var slots) ? slots : NoContents;
+
+        /// <summary>
+        /// How many distinct stacks a container holds — its slot count, asked of the things rather
+        /// than kept as a number that could disagree with them.
+        /// </summary>
+        public int StacksIn(int containerId) =>
+            _inContainer.TryGetValue(containerId, out var slots) ? slots.Count : 0;
+
+        /// <summary>The stack of this def already in this container, or null.</summary>
+        public ColonyItem? ResidentIn(int containerId, int defIndex)
+        {
+            if (!_inContainer.TryGetValue(containerId, out var slots)) return null;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                ColonyItem held = _items[slots[i]];
+                if (held.DefIndex == defIndex) return held;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Would this load merge into a stack the container already holds? The per-def half of
+        /// "has it room"; how many slots the container has is the container's own half, and
+        /// <c>StorageUnits.HasSpaceFor</c> is where the two meet.
+        ///
+        /// <para>Whole load or nothing, the same rule <see cref="CellHasSpace(int, int, int)"/>
+        /// keeps one level up: a shelf never splits a load across two slots.</para>
+        /// </summary>
+        public bool ContainerStackHasRoom(int containerId, int defIndex, int count)
+        {
+            ColonyItem? resident = ResidentIn(containerId, defIndex);
+            return resident != null && Fits(resident, defIndex, count);
+        }
 
         /// <summary>
         /// Which cells are storage, or null where the colony has no zones at all. Set by the
@@ -216,6 +277,14 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Is this cell inside a storage zone? False everywhere when the colony has none.</summary>
         public bool IsStockpileCell(int cell) => Membership != null && Membership.IsStorage(cell);
 
+        /// <summary>
+        /// Take a thing into a pair of hands, from wherever it is.
+        ///
+        /// <para><b>The one door for all three homes</b> — a cell, a container, or already carried
+        /// — which is what lets <c>JobDriver.LiftToil</c> stay one motion whether a colonist is
+        /// stooping to the floor or reaching into a shelf. A second "take out of a container" entry
+        /// beside this one would be the same rule with two owners.</para>
+        /// </summary>
         public void PickUp(ColonyItem item, PawnId carrier)
         {
             if (item.Cell >= 0)
@@ -223,8 +292,72 @@ namespace Odyssey.Sim.Pawns
                 _itemAtCell.Remove(item.Cell);
                 Unlist(item.Id.Value - 1);
             }
+            else if (item.ContainerId != 0)
+            {
+                // Unlist reads the container off the record, so it is zeroed afterwards.
+                Unlist(item.Id.Value - 1);
+                item.ContainerId = 0;
+            }
+
             item.Cell = -1;
             item.CarriedBy = carrier.Value;
+        }
+
+        /// <summary>
+        /// Put a carried thing into a container. <see cref="Drop"/>'s twin, and it carries
+        /// <see cref="Drop"/>'s contract and its trap: onto a stack of the same def with room it
+        /// merges, the resident grows, and <b>the carried thing is despawned</b> — so the thing
+        /// returned is <em>not</em> the one passed in when a merge happened, and a caller holding
+        /// the old reference is holding a tombstone.
+        ///
+        /// <para>The caller asks <c>StorageUnits.HasSpaceFor</c> first. A load that cannot merge
+        /// and has no free slot is the container's business to refuse; what throws here is the
+        /// per-def overflow, because that is the half this class owns.</para>
+        /// </summary>
+        public ColonyItem PutIn(ColonyItem item, int containerId)
+        {
+            if (containerId == 0)
+                throw new System.InvalidOperationException("a container id of 0 is 'no container'");
+
+            ColonyItem? resident = ResidentIn(containerId, item.DefIndex);
+            if (resident != null)
+            {
+                if (!Fits(resident, item.DefIndex, item.Stack))
+                    throw new System.InvalidOperationException(
+                        $"container {containerId} holds {resident.Stack} of def {resident.DefIndex} " +
+                        $"and cannot take {item.Stack} more");
+                resident.Stack += item.Stack;
+                item.Stack = 0;
+                Despawn(item);
+                return resident;
+            }
+
+            if (item.Cell >= 0)
+            {
+                _itemAtCell.Remove(item.Cell);
+                Unlist(item.Id.Value - 1);
+            }
+
+            item.Cell = -1;
+            item.CarriedBy = 0;
+            item.ContainerId = containerId;
+            EnlistInContainer(containerId, item.Id.Value - 1);
+            return item;
+        }
+
+        /// <summary>
+        /// A contained thing back on to the ground, merging where it lands exactly as a drop does.
+        /// What a spill uses, and what empties a shelf that is coming apart.
+        /// </summary>
+        public ColonyItem TakeOutTo(ColonyItem item, int cell)
+        {
+            if (item.ContainerId == 0)
+                throw new System.InvalidOperationException("that thing is not in a container");
+
+            Unlist(item.Id.Value - 1);
+            item.ContainerId = 0;
+            item.Cell = -1;
+            return Drop(item, cell);
         }
 
         /// <summary>
@@ -236,6 +369,12 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public ColonyItem Drop(ColonyItem item, int cell)
         {
+            // A contained thing leaves through TakeOutTo or PickUp, never straight on to a cell:
+            // dropping one from here would leave it listed in its container for ever.
+            if (item.ContainerId != 0)
+                throw new System.InvalidOperationException(
+                    $"thing {item.Id.Value} is in container {item.ContainerId}; take it out first");
+
             if (_itemAtCell.TryGetValue(cell, out int resident))
             {
                 var here = _items[resident];
@@ -273,6 +412,9 @@ namespace Odyssey.Sim.Pawns
         public ColonyItem MoveTo(ColonyItem item, int cell)
         {
             if (item.Cell == cell || item.Despawned) return item;
+            if (item.ContainerId != 0)
+                throw new System.InvalidOperationException(
+                    $"thing {item.Id.Value} is in container {item.ContainerId}; take it out first");
 
             if (item.Cell >= 0)
             {
@@ -287,7 +429,11 @@ namespace Odyssey.Sim.Pawns
         public void Despawn(ColonyItem item)
         {
             if (item.Cell >= 0) _itemAtCell.Remove(item.Cell);
+            // Before the container id is cleared, because that is what Unlist looks it up by. An
+            // eaten meal that kept its id here would leave a ghost in the shelf's lister and a slot
+            // nothing could ever use again.
             Unlist(item.Id.Value - 1);
+            item.ContainerId = 0;
             item.Cell = -1;
             item.CarriedBy = 0;
             item.Despawned = true;
@@ -442,10 +588,28 @@ namespace Odyssey.Sim.Pawns
         /// <summary>A thing at a cell is on exactly one of the two listers, by where the cell is.</summary>
         void Enlist(int cell, int itemIndex) => InsertInto(IsStockpileCell(cell) ? _stored : _loose, itemIndex);
 
+        /// <summary>A thing inside a container is on the contained lister and on its container's own.</summary>
+        void EnlistInContainer(int containerId, int itemIndex)
+        {
+            InsertInto(_contained, itemIndex);
+            if (!_inContainer.TryGetValue(containerId, out var slots))
+                _inContainer[containerId] = slots = new List<int>();
+            InsertInto(slots, itemIndex);
+        }
+
+        /// <summary>
+        /// Take a thing off every lister it can be on. It reads the container off the record, so
+        /// callers clear <c>ContainerId</c> <em>after</em> calling this and never before.
+        /// </summary>
         void Unlist(int itemIndex)
         {
             RemoveFrom(_loose, itemIndex);
             RemoveFrom(_stored, itemIndex);
+
+            int container = _items[itemIndex].ContainerId;
+            if (container == 0) return;
+            RemoveFrom(_contained, itemIndex);
+            if (_inContainer.TryGetValue(container, out var slots)) RemoveFrom(slots, itemIndex);
         }
 
         static void InsertInto(List<int> lister, int itemIndex)
@@ -599,12 +763,25 @@ namespace Odyssey.Sim.Pawns
             // components list, and a lister that is right only when two sections are written in
             // one particular order is a bug waiting for the next appended section.
             // `StorageZones.RebucketAll`, through `ColonyWorld.RebuildDerived`, is what sorts them.
+            // Three homes, and the container one needs no other section: an item's own record says
+            // which container holds it, so unlike zone membership this is answerable right here.
             for (int i = 0; i < _items.Count; i++)
             {
                 var item = _items[i];
-                if (item.Despawned || item.Cell < 0) continue;
-                _itemAtCell[item.Cell] = i;
-                _loose.Add(i);
+                if (item.Despawned) continue;
+
+                if (item.Cell >= 0)
+                {
+                    _itemAtCell[item.Cell] = i;
+                    _loose.Add(i);
+                }
+                else if (item.ContainerId != 0)
+                {
+                    _contained.Add(i);
+                    if (!_inContainer.TryGetValue(item.ContainerId, out var slots))
+                        _inContainer[item.ContainerId] = slots = new List<int>();
+                    slots.Add(i);
+                }
             }
         }
     }
