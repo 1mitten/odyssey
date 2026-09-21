@@ -27,6 +27,7 @@ namespace Odyssey.Hud.Diagnostics
             Sections = new double[sections];
             PhaseMeanMs = new double[phases];
             PhaseP95Ms = new double[phases];
+            PhaseMaxMs = new double[phases];
         }
 
         /// <summary>Seconds since the trace was opened. The trace's own clock, not the world's.</summary>
@@ -51,6 +52,25 @@ namespace Odyssey.Hud.Diagnostics
         public double SubmitP50;
         public double TickP50;
 
+        /// <summary>
+        /// The worst single tick and the worst single frame's submission in this second.
+        ///
+        /// <para><b>Added 2026-09-21, third time of asking, and the pattern is the lesson.</b>
+        /// The frame has carried p50, p95, p99 and max since the first line of this class, because
+        /// the whole argument for the trace was that a mean cannot see stutter. The tick was then
+        /// given a <em>median</em> and its phases a mean and a p95, and nothing else — so a single
+        /// 150 ms tick among the hundred and eighty in a second at 3x speed sits at the 99.4th
+        /// percentile and is invisible in every column. The same blind spot as the last-seen
+        /// re-mesh counter, wearing different clothes.</para>
+        ///
+        /// <para>It matters because <b>the tick is not inside any <c>FrameSection</c></b>: it runs
+        /// before the draw block, so an expensive one lands in the part of the frame the reader
+        /// calls "elsewhere" — which is exactly where the 146-175 ms stalls were found to be.
+        /// </para>
+        /// </summary>
+        public double TickMax;
+        public double SubmitMax;
+
         /// <summary>Frames over a 30 Hz tick, and over 50 ms. Counted, not inferred from the ranks.</summary>
         public int Over33;
         public int Over50;
@@ -61,6 +81,12 @@ namespace Odyssey.Hud.Diagnostics
         /// <summary>From <c>PhaseTrace</c>, one per <c>TickSegment</c>, over the ticks in this second.</summary>
         public readonly double[] PhaseMeanMs;
         public readonly double[] PhaseP95Ms;
+
+        /// <summary>
+        /// And the worst single tick each phase had. <c>PhaseTrace</c> has offered this since it
+        /// was written; the trace simply never asked for it.
+        /// </summary>
+        public readonly double[] PhaseMaxMs;
 
         public int DrawCalls;
         public int Instances;
@@ -125,10 +151,11 @@ namespace Odyssey.Hud.Diagnostics
             AtSeconds = 0d;
             Tick = Speed = Frames = 0;
             FrameP50 = FrameP95 = FrameP99 = FrameMax = 0d;
-            GpuP50 = GpuMax = SubmitP50 = TickP50 = 0d;
+            GpuP50 = GpuMax = SubmitP50 = TickP50 = TickMax = SubmitMax = 0d;
             Over33 = Over50 = 0;
             for (int i = 0; i < Sections.Length; i++) Sections[i] = 0d;
-            for (int i = 0; i < PhaseMeanMs.Length; i++) PhaseMeanMs[i] = PhaseP95Ms[i] = 0d;
+            for (int i = 0; i < PhaseMeanMs.Length; i++)
+                PhaseMeanMs[i] = PhaseP95Ms[i] = PhaseMaxMs[i] = 0d;
             DrawCalls = Instances = Chunks = CellPlates = Remeshed = Materials = SurroundBatches = 0;
             Figures = Pawns = Layer = 0;
             Gc0 = Gc1 = Gc2 = Probes = 0;

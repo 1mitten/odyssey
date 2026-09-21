@@ -52,6 +52,7 @@ METRICS = (
     ("gpu_max", "gpu max"),
     ("submit_p50", "submit p50"),
     ("tick_p50", "tick p50"),
+    ("tick_max", "tick max"),
 )
 
 
@@ -128,7 +129,10 @@ class Trace:
         for name in names:
             avg = mean([float(r[f"phase.{name}.mean"]) for r in self.rows if f"phase.{name}.mean" in r])
             p95 = max([float(r[f"phase.{name}.p95"]) for r in self.rows if f"phase.{name}.p95" in r] or [0.0])
-            out.append((name, avg, p95))
+            # The worst single tick the phase ever had. A p95 over a second of ticks cannot see
+            # one bad tick in two hundred, which is the shape the 2026-09-21 stalls have.
+            mx = max([float(r[f"phase.{name}.max"]) for r in self.rows if f"phase.{name}.max" in r] or [0.0])
+            out.append((name, avg, max(p95, mx)))
         out.sort(key=lambda row: row[1], reverse=True)
         return out
 

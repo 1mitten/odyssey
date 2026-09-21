@@ -226,7 +226,9 @@ namespace Odyssey.Presentation.Diagnostics
             _row.GpuP50 = _window.GpuPercentile(0.50);
             _row.GpuMax = _window.GpuMax;
             _row.SubmitP50 = _window.SubmitPercentile(0.50);
+            _row.SubmitMax = _window.SubmitMax;
             _row.TickP50 = _window.TickPercentile(0.50);
+            _row.TickMax = _window.TickMax;
             _row.Over33 = _window.Over(33d);
             _row.Over50 = _window.Over(50d);
 
@@ -252,6 +254,7 @@ namespace Odyssey.Presentation.Diagnostics
             {
                 _row.PhaseMeanMs[i] = _phases.MeanMs(_segments[i]);
                 _row.PhaseP95Ms[i] = _phases.P95Ms(_segments[i]);
+                _row.PhaseMaxMs[i] = _phases.MaxMs(_segments[i]);
             }
 
             Guarded(() => _writer.WriteRow(_row));

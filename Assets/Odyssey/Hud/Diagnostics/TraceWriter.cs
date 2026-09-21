@@ -43,7 +43,7 @@ namespace Odyssey.Hud.Diagnostics
         {
             "at", "tick", "speed", "frames",
             "frame_p50", "frame_p95", "frame_p99", "frame_max",
-            "gpu_p50", "gpu_max", "submit_p50", "tick_p50",
+            "gpu_p50", "gpu_max", "submit_p50", "submit_max", "tick_p50", "tick_max",
             "over_33", "over_50",
             "draw_calls", "instances", "chunks", "cell_plates", "remeshed", "materials",
             "surround_batches", "figures", "pawns", "layer",
@@ -69,6 +69,7 @@ namespace Odyssey.Hud.Diagnostics
             {
                 fields.Add("phase." + phase + ".mean");
                 fields.Add("phase." + phase + ".p95");
+                fields.Add("phase." + phase + ".max");
             }
             _fields = fields.ToArray();
         }
@@ -135,7 +136,9 @@ namespace Odyssey.Hud.Diagnostics
             Number("gpu_p50", row.GpuP50);
             Number("gpu_max", row.GpuMax);
             Number("submit_p50", row.SubmitP50);
+            Number("submit_max", row.SubmitMax);
             Number("tick_p50", row.TickP50);
+            Number("tick_max", row.TickMax);
             Number("over_33", row.Over33);
             Number("over_50", row.Over50);
             Number("draw_calls", row.DrawCalls);
@@ -161,6 +164,7 @@ namespace Odyssey.Hud.Diagnostics
             {
                 Number("phase." + _phaseNames[i] + ".mean", At(row.PhaseMeanMs, i));
                 Number("phase." + _phaseNames[i] + ".p95", At(row.PhaseP95Ms, i));
+                Number("phase." + _phaseNames[i] + ".max", At(row.PhaseMaxMs, i));
             }
 
             _line.Append('}');

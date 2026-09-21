@@ -105,6 +105,15 @@ namespace Odyssey.Hud.Diagnostics
 
         public double FrameMax => Max(_frame);
         public double GpuMax => Max(_gpu);
+        public double SubmitMax => Max(_submit);
+
+        /// <summary>
+        /// The worst single tick in the window.
+        ///
+        /// <para>The tick runs outside every <c>FrameSection</c>, so this is the only figure that
+        /// can tell an expensive tick apart from an expensive engine frame.</para>
+        /// </summary>
+        public double TickMax => Max(_tick);
 
         /// <summary>The mean of one section over the window, or 0 where nothing was added.</summary>
         public double SectionMean(int section)
