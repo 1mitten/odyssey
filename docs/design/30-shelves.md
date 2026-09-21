@@ -286,26 +286,28 @@ the pane's "3 of 8 stacks" says too.
 
 **Measured, 2026-09-21** (`FrameTimeTests.TheWarehouseCostsWhatItHolds`), with a control inside
 one run: the same board bare, then with 320 full stacks of wood lying on the floor, then with the
-same 320 stacks on forty shelves, seconds apart. Re-measured after the rack, on a machine with an
-editor open beside it — so read the *deltas*, not the absolutes.
+same 320 stacks on forty shelves, seconds apart. Re-measured after the rack lost its rail, on a
+machine with no other Unity batch run on it.
 
 | Board | Frame | Over bare | Instances | Draw calls |
 |---|---|---|---|---|
-| bare meadow | 2.34 ms | — | 43,935 | — |
-| 320 stacks on the floor | 2.74 ms | +0.40 | 45,175 | 1,128 |
-| the same 320 stacks on 40 shelves | 2.72 ms | +0.38 | 44,855 | 1,128 |
+| bare meadow | 2.05 ms | — | 43,935 | — |
+| 320 stacks on the floor | 2.50 ms | +0.45 | 45,135 | 1,128 |
+| the same 320 stacks on 40 shelves | 2.46 ms | +0.41 | 44,815 | 1,128 |
 
-**The shelf path costs what the floor path costs** — the 0.02 ms between them is inside the run's
-own noise, and the sign has flipped between runs — and the whole warehouse is 0.4 ms.
+**The shelf path costs what the floor path costs** — the 0.04 ms between them is inside the run's
+own noise, and the sign has flipped between runs — and the whole warehouse is under half a
+millisecond. Read the *deltas* rather than the absolutes: this machine runs several editors at
+once and the bare figure has been anywhere between 1.96 and 2.34 ms on that alone.
 
-The instance counts decompose exactly, which is the check that the numbers are describing what is
+The instance counts decompose exactly, which is the check that the numbers describe what is
 believed rather than agreeing by luck:
 
-- floor: `1,240 = 40 × 7` frame parts `+ 320 × 3` lumps on the ground
-- shelved: `920 = 40 × 7` frame parts `+ 320 × 2` lumps in a bay
+- floor: `1,200 = 40 × 6` frame parts `+ 320 × 3` lumps on the ground
+- shelved: `880 = 40 × 6` frame parts `+ 320 × 2` lumps in a bay
 
 **Draw calls are 1,128 either way**, which is the "matrices, not submissions" claim with a number
-on it: the rack went from three boxes to seven and a warehouse submits exactly what it did before,
+on it: the rack went from three boxes to six and a warehouse submits exactly what it did before,
 because every part is the same module in the same per-def bucket.
 
 **It only runs where the packs are, and it says so rather than failing.** Without `Assets/Synty`
