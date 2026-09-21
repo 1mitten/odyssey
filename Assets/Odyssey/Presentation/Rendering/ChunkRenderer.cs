@@ -222,6 +222,67 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Total chunks meshed since start. A large number in steady state is a bug.</summary>
         public int TotalChunksMeshed { get; private set; }
 
+        /// <summary>
+        /// The most chunks one frame will mesh. Zero or less is no limit.
+        ///
+        /// <para><b>Eleven, and the number came from the fault it fixes.</b> Until 2026-09-21 this
+        /// did not exist: <see cref="BatchFor"/> meshed every stale chunk the draw walk touched, in
+        /// that frame, however many there were. A traced player session on the Huge board at 4K
+        /// measured what that costs — <b>fifty-six seconds and eight thousand frames with no
+        /// meshing produced not one frame over 33 ms, while all 192 slow frames fell in the
+        /// sixty-one seconds where meshing ran</b>. Sixty-one captured stalls meshed on their own
+        /// frame and every one of them meshed 900 chunks: a whole board, in a frame, about 165 ms.
+        /// §6c.6.</para>
+        ///
+        /// <para>165 ms for 900 chunks is about <b>0.18 ms a chunk</b>. Against a 5 ms frame, a
+        /// meshing frame should not spend more than about 2 ms of it here, which is eleven.</para>
+        ///
+        /// <para><b>It breaks nothing to miss the budget.</b> A deferred chunk keeps
+        /// <c>batch.Version != _model.Version</c>, so the next frame's walk finds it again — the
+        /// staleness *is* the queue, and a second list of owed chunks would be a copy of state the
+        /// batch already holds. What the player sees is a chunk one to three frames out of date, or
+        /// one that arrives a frame late if it had no geometry at all. At 150 fps neither is
+        /// visible, and the alternative is a sixth of a second of nothing.</para>
+        /// </summary>
+        public int MeshBudgetPerFrame { get; set; } = DefaultMeshBudgetPerFrame;
+
+        /// <summary>What the game ships with. See <see cref="MeshBudgetPerFrame"/> for the arithmetic.</summary>
+        public const int DefaultMeshBudgetPerFrame = 11;
+
+        /// <summary>
+        /// Chunks the last frame wanted to mesh and would not, because the budget was spent.
+        ///
+        /// <para>Its own counter because "the budget is working" and "the budget is starving the
+        /// board" look identical in <see cref="ChunksMeshedThisFrame"/> — both cap it at the
+        /// budget. A number that stays high for many seconds means the world is being dirtied
+        /// faster than eleven chunks a frame can absorb, which is a different problem from the one
+        /// this budget solves.</para>
+        /// </summary>
+        public int ChunksMeshDeferred { get; private set; }
+
+        /// <summary>Set for the length of <see cref="PrimeAll"/>, which is the one unbudgeted walk.</summary>
+        bool _priming;
+
+        int _meshedThisFrame;
+
+        /// <summary>
+        /// What submitting the surround cost last frame, in milliseconds.
+        ///
+        /// <para><b>Its own number because the surround is the one pass whose cost was measured
+        /// and then buried.</b> §6c found it was 3.65 ms of a 5 ms frame and cut it to about 2.2,
+        /// and from that day it was charged to <c>FrameSection.World</c> alongside the chunk
+        /// buckets — so nothing on the overlay or in <c>FrameTimeTests</c> could say which of the
+        /// two a number belonged to. The board and the land beyond it scale with completely
+        /// different things (chunks with the slice and the edits, the surround with the ring and
+        /// the tree sectors), so one figure covering both answers no question anybody asks.</para>
+        ///
+        /// <para>CPU submission only. It cannot see fill or the shadow pass, which is exactly the
+        /// axis §6c.3 says is unmeasured — read it beside the GPU frame time, never instead.</para>
+        /// </summary>
+        public double SurroundMs { get; private set; }
+
+        readonly System.Diagnostics.Stopwatch _surroundTimer = new System.Diagnostics.Stopwatch();
+
         public void Render(int activeLayer, SliceSettings slice)
         {
             DrawCalls = 0;
@@ -231,6 +292,8 @@ namespace Odyssey.Presentation.Rendering
             InstancesFaded = 0;
             ChunksSightTested = 0;
             CellPlatesDrawn = 0;
+            ChunksMeshDeferred = 0;
+            _meshedThisFrame = 0;
 
             // Before the board, not after it: the surround is the furthest thing in the scene, and
             // submitting it first lets the depth buffer reject it behind the board rather than
@@ -238,7 +301,10 @@ namespace Odyssey.Presentation.Rendering
             Skirt.GameObjectLayer = GameObjectLayer;
             Skirt.CastShadows = CastShadows;
             Skirt.SubmitToGpu = SubmitToGpu;
+            _surroundTimer.Restart();
             Skirt.Render(activeLayer);
+            _surroundTimer.Stop();
+            SurroundMs = _surroundTimer.Elapsed.TotalMilliseconds;
             DrawCalls += Skirt.DrawCalls;
             InstancesDrawn += Skirt.InstancesDrawn;
 
@@ -311,6 +377,37 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// Mesh everything the given view would draw, ignoring <see cref="MeshBudgetPerFrame"/>.
+        ///
+        /// <para><b>For the loading screen and nothing else.</b> On a new game every chunk is
+        /// never-meshed, so a budgeted first frame would draw almost nothing and the board would
+        /// arrive in instalments over several hundred frames while the player watched. The
+        /// composition root calls this once, before the first drawn frame, which puts the stall
+        /// where the player is already waiting — and where §6c.6 measured 14.7 seconds of worldgen
+        /// stall already sitting.</para>
+        ///
+        /// <para>It is a <see cref="Render"/> with the budget off rather than a second walk, so
+        /// there is no second copy of the rule about which chunks a view draws.</para>
+        /// </summary>
+        public void PrimeAll(int activeLayer, SliceSettings slice)
+        {
+            bool submitting = SubmitToGpu;
+            _priming = true;
+            try
+            {
+                // Nothing is shown from a priming pass: it exists to fill the batches, and
+                // submitting a frame the player never sees would be a frame's work for nothing.
+                SubmitToGpu = false;
+                Render(activeLayer, slice);
+            }
+            finally
+            {
+                _priming = false;
+                SubmitToGpu = submitting;
+            }
+        }
+
         ChunkBatch BatchFor(int chunkIndex)
         {
             ChunkBatch? batch = _batches[chunkIndex];
@@ -321,7 +418,17 @@ namespace Odyssey.Presentation.Rendering
             }
             if (batch.Version != _model.Version)
             {
+                // The whole of §6c.6's fix. Past the budget the chunk keeps the geometry it has
+                // and stays stale, so the next frame's walk picks it up; nothing is dropped and
+                // nothing is queued.
+                if (!_priming && MeshBudgetPerFrame > 0 && _meshedThisFrame >= MeshBudgetPerFrame)
+                {
+                    ChunksMeshDeferred++;
+                    return batch;
+                }
+
                 _mesher.Mesh(batch, chunkIndex);
+                _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
                 TotalChunksMeshed++;
             }
@@ -737,6 +844,23 @@ namespace Odyssey.Presentation.Rendering
             if (TintCode.IsTilled(tintCode))
                 tint = new Color(tint.r * TilledGrade.r, tint.g * TilledGrade.g,
                     tint.b * TilledGrade.b, tint.a);
+
+            // A store's ground: the surface it already is, washed towards the store's own hue.
+            // A lerp rather than the multiply above, and the difference is the difference between
+            // the two features. Tilled earth IS a different material — a field is soil somebody
+            // turned over, and a multiply says "this ground, darker". A store changes nothing
+            // about the ground: the stone is still stone and the planks are still planks under
+            // however many crates, so the wash has to sit *over* the surface and leave it
+            // recognisable. Kept light for the same reason the hue is desaturated: a mine order is
+            // worked off and a field becomes a crop, but a warehouse floor is a warehouse floor
+            // for the rest of the colony's life, and a heavy wash over fifty cells for a hundred
+            // hours is a screen the player stops seeing past.
+            if (TintCode.IsStored(tintCode))
+                tint = new Color(
+                    tint.r + (StoredGrade.r - tint.r) * StoredWash,
+                    tint.g + (StoredGrade.g - tint.g) * StoredWash,
+                    tint.b + (StoredGrade.b - tint.b) * StoredWash,
+                    tint.a);
 
             // Open to the sky means the depth shade has nothing to say. The shade measures how far
             // you are peering *through* the world, and there is nothing over an outdoor surface —
@@ -1845,6 +1969,31 @@ namespace Odyssey.Presentation.Rendering
         /// the warmth, and dropping it took the brown out of the brown.</para>
         /// </summary>
         public static readonly Color TilledGrade = new Color(0.305f, 0.276f, 0.245f);
+
+        /// <summary>
+        /// The colour a store's ground is washed towards — <c>OrderColours.StoreHue</c>, the same
+        /// blue-grey the chip, the drag cursor and the armed banner wear.
+        ///
+        /// <para><b>The order's colour and the result's are the same one here, and that is not an
+        /// oversight.</b> A growing zone is deliberately the other way round: its chip is the
+        /// Zones brown and its committed ground is <see cref="TilledGrade"/>, because a painted
+        /// field turns into worked soil and the soil is the result rather than the order — exactly
+        /// as a built wall is not the blue of its blueprint. A store has no result: the ground
+        /// under a warehouse is the ground it always was, and the wash <i>is</i> the standing
+        /// order, still in force, for as long as the zone exists.</para>
+        ///
+        /// <para>Written as the same three bytes <c>OrderColours.StoreHue</c> carries rather than
+        /// reached for across the assembly boundary: <c>Odyssey.Hud</c> has no Unity types and
+        /// this file has nothing else. <c>OrderColoursTests</c> holds the pair together.</para>
+        /// </summary>
+        public static readonly Color StoredGrade = new Color(0x7f / 255f, 0x96 / 255f, 0xa8 / 255f);
+
+        /// <summary>
+        /// How far a store's ground is pulled towards <see cref="StoredGrade"/>. A third: enough
+        /// that the edge of a zone is unmistakable at the play camera, little enough that a stone
+        /// floor still reads as stone and a wooden one as wood.
+        /// </summary>
+        public const float StoredWash = 0.33f;
 
         /// <summary>
         /// The seed specks on a sown zone cell (owner, 2026-09-18: "speckled white tiny dots to

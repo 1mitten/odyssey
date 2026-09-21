@@ -99,6 +99,12 @@ namespace Odyssey.Presentation.World
         int _zoneAppliedCount;
         int[] _zoneScratch = Array.Empty<int>();
 
+        /// <summary>Which cells are inside a storage zone. The twin of <see cref="_zoned"/>, and deliberately a second array: a cell can be neither or either and never both.</summary>
+        readonly bool[] _storage;
+
+        /// <summary>The storage cells <see cref="UpdateStorage"/> last stamped, ascending — the merge twin of the next frame's store list.</summary>
+        readonly List<int> _storageApplied = new List<int>();
+
 
 
         /// <summary>
@@ -163,6 +169,7 @@ namespace Odyssey.Presentation.World
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
             _zoned = new bool[count];
+            _storage = new bool[count];
 
             // The plant table is content, not world state, and content is written once: the ids
             // come from the Defs the simulation itself loads, so a stage renamed in the XML needs
@@ -425,6 +432,65 @@ namespace Odyssey.Presentation.World
         {
             int above = index + Size.LayerStride;
             return above < _zoned.Length && _zoned[above];
+        }
+
+        /// <summary>
+        /// Whether a storage zone covers the cell a colonist would stand in here — asked two ways,
+        /// because a store is drawn on two different surfaces and they are a layer apart.
+        ///
+        /// <para>The terrain quad of a solid ground cell is drawn for the cell <em>below</em> the
+        /// one a pawn walks in, exactly as <see cref="IsZoned"/> describes, so it asks one layer
+        /// up. A slab is drawn at the lower boundary of the walked cell itself, so it asks that
+        /// cell. Getting these the wrong way round is the fault that made every tilled tile the
+        /// owner ever saw an overlay rather than soil, and it took a photo sheet to find.</para>
+        /// </summary>
+        public bool IsStoredAbove(int index)
+        {
+            int above = index + Size.LayerStride;
+            return above < _storage.Length && _storage[above];
+        }
+
+        /// <summary>Whether a storage zone covers this cell itself — what a slab at its own floor asks.</summary>
+        public bool IsStoredHere(int index) =>
+            (uint)index < (uint)_storage.Length && _storage[index];
+
+        /// <summary>
+        /// Restamp the storage mirror from the published frame, as a merge walk over two
+        /// ascending lists — the twin of <see cref="UpdateZones"/>, and for its reasons: both
+        /// sides are in cell-index order by contract, so a warehouse of a thousand cells costs
+        /// O(stored) a frame rather than O(board).
+        ///
+        /// <para>No dirty marks are raised here. The simulation marks the chunk when a cell joins
+        /// or leaves a zone and when a zone's priority changes, because it is the only side that
+        /// knows which of those changes what is drawn.</para>
+        /// </summary>
+        public void UpdateStorage(ReadOnlySpan<StoreView> stores)
+        {
+            int old = 0, now = 0;
+            while (old < _storageApplied.Count || now < stores.Length)
+            {
+                int priorCell = old < _storageApplied.Count ? _storageApplied[old] : int.MaxValue;
+                int nowCell = now < stores.Length ? stores[now].CellIndex : int.MaxValue;
+
+                if (priorCell < nowCell)
+                {
+                    if ((uint)priorCell < (uint)_storage.Length) _storage[priorCell] = false;
+                    old++;
+                }
+                else if (nowCell < priorCell)
+                {
+                    if ((uint)nowCell < (uint)_storage.Length) _storage[nowCell] = true;
+                    now++;
+                }
+                else
+                {
+                    old++;
+                    now++;
+                }
+            }
+
+            _storageApplied.Clear();
+            for (int i = 0; i < stores.Length; i++) _storageApplied.Add(stores[i].CellIndex);
         }
         /// <summary>
         /// Restamp the crop mirror from the published snapshot's crop channel.

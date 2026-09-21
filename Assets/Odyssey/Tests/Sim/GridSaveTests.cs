@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using NUnit.Framework;
@@ -163,26 +164,48 @@ namespace Odyssey.Tests.Sim
         {
             Check("ruined city", City(ScaleTarget));
             Check("natural", Natural(ScaleTarget));
+        }
 
-            static void Check(string label, CellGrid grid)
-            {
-                var watch = Stopwatch.StartNew();
-                byte[] bytes = SaveOf(grid);
-                long saveMs = watch.ElapsedMilliseconds;
+        /// <summary>
+        /// Every board the menu offers round-trips, and says what it costs on disk.
+        ///
+        /// <para>The budget is the scale target's 4 MiB, unchanged, because it is a ceiling on the
+        /// largest board rather than a per-size figure. What this arm is actually for is the
+        /// bytes-per-cell column: the encoding is a per-chunk palette with bit-packed indices, so
+        /// a board that is mostly uniform rock and air compresses to almost nothing and a board
+        /// that is mostly surface does not. A wider board is more surface per cell than a deeper
+        /// one, and that shows up here and nowhere else.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void EveryOfferedBoardRoundTripsAndFitsTheBudget(
+            [ValueSource(nameof(OfferedBoards))] GridSize size)
+            => Check("natural", Natural(size));
 
-                watch.Restart();
-                var loaded = LoadInto(grid.Size, bytes);
-                long loadMs = watch.ElapsedMilliseconds;
+        static IEnumerable<GridSize> OfferedBoards()
+        {
+            yield return BoardSizes.Standard;
+            yield return BoardSizes.Large;
+            yield return BoardSizes.Huge;
+        }
 
-                double mib = bytes.Length / (1024.0 * 1024.0);
-                TestContext.WriteLine(
-                    $"{label} {grid.Size}: {bytes.Length:N0} bytes ({mib:F2} MiB), " +
-                    $"save {saveMs} ms, load {loadMs} ms — " +
-                    $"{(double)bytes.Length / grid.Terrain.Length:F2} bytes/cell over 5 fields");
+        static void Check(string label, CellGrid grid)
+        {
+            var watch = Stopwatch.StartNew();
+            byte[] bytes = SaveOf(grid);
+            long saveMs = watch.ElapsedMilliseconds;
 
-                Assert.That(HashOf(loaded), Is.EqualTo(HashOf(grid)), $"{label}: grid hash differs after a round trip");
-                Assert.That(bytes.Length, Is.LessThan(4 * 1024 * 1024), $"{label}: over the 4 MiB budget");
-            }
+            watch.Restart();
+            var loaded = LoadInto(grid.Size, bytes);
+            long loadMs = watch.ElapsedMilliseconds;
+
+            double mib = bytes.Length / (1024.0 * 1024.0);
+            TestContext.WriteLine(
+                $"{label} {grid.Size}: {bytes.Length:N0} bytes ({mib:F2} MiB), " +
+                $"save {saveMs} ms, load {loadMs} ms — " +
+                $"{(double)bytes.Length / grid.Terrain.Length:F2} bytes/cell over 5 fields");
+
+            Assert.That(HashOf(loaded), Is.EqualTo(HashOf(grid)), $"{label}: grid hash differs after a round trip");
+            Assert.That(bytes.Length, Is.LessThan(4 * 1024 * 1024), $"{label}: over the 4 MiB budget");
         }
 
         // ---------------------------------------------------------------- what is not saved

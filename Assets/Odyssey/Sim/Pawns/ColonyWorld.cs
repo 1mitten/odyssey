@@ -138,6 +138,12 @@ namespace Odyssey.Sim.Pawns
                 // neither and loads with an empty ledger and nothing in the air (design 23 §7).
                 pawns.Incidents!.Ledger,
                 pawns.Incidents!.Skyfallers,
+                // Appended, as every section since the first has been. Two of them, because what a
+                // store accepts and where a store is are answered by two components: the table is
+                // shared — one record can be two zones' — and the zones point at it by id. A save
+                // from before storage has neither, and loads with no zones and an empty table.
+                pawns.Storage!.Settings,
+                pawns.Storage!,
             };
         }
 
@@ -218,6 +224,23 @@ namespace Odyssey.Sim.Pawns
             // And which cells hold furniture nothing may be put down in — derived from the same
             // edifice list, for the same reason.
             Construction.RebuildItemBlocks();
+
+            if (Pawns.Storage != null)
+            {
+                // A v6 save's zones, which the items section had to read and could not apply: the
+                // component that owns zones is a different section, and a lister that depended on
+                // which of two sections was written first would be a bug waiting for the next
+                // appended one. Drained here, where both have finished loading.
+                var legacy = Pawns.Items.PendingLegacyZones;
+                for (int i = 0; i < legacy.Count; i++)
+                    Pawns.Storage.AdoptLegacyZone(legacy[i].Priority, legacy[i].Allow, legacy[i].Cells);
+                legacy.Clear();
+
+                // Everything came back loose; the zoned cells move to the stored lister now that
+                // the zones are known. On the generation path this does nothing, because nothing
+                // is lying in a zone that was not put there through the zones.
+                Pawns.Storage.RebucketAll();
+            }
 
             _nav.Rebuild();
         }

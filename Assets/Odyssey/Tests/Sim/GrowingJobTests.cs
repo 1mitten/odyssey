@@ -2,7 +2,9 @@
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Growing;
+using System.Collections.Generic;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.Storage;
 
 namespace Odyssey.Tests.Sim
 {
@@ -290,15 +292,8 @@ namespace Odyssey.Tests.Sim
             // A second zone tile, chosen free: the scenario's meal store fills the cells
             // right beside the start, and the thing this test piles onto the dirt has to be
             // the only thing there.
-            CellRef beside = default; bool found = false;
-            foreach (var step in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
-            {
-                var cand = new CellRef(plot.X + step.Item1, plot.Z + step.Item2, plot.Y);
-                if (colony.Pawns.Items.ItemAt(Size.Index(cand)) != null) continue;
-                if (zones.Designate(cand, PlantHandle.Carrot) != IntentRejection.None) continue;
-                beside = cand; found = true; break;
-            }
-            Assume.That(found, Is.True, "no free, zone-able cell beside the start");
+            CellRef beside = FreePlotBeside(colony, plot);
+            Assert.That(beside.X, Is.GreaterThanOrEqualTo(0), "no free, zone-able cell near the start");
 
             // The blocked tile already sown, so the colony has no growing work at all and the
             // haul is the first job anyone takes. Salvage stands on the zoned tile; wood is
@@ -339,42 +334,131 @@ namespace Odyssey.Tests.Sim
             CellRef plot = colony.Start;
             Sow(colony, plot);
 
-            // Fill every stockpile cell to its limit, so no destination exists for anything.
-            var pile = colony.Pawns.Items.Stockpiles[0];
+            // Fill every storage cell to its limit, so no destination exists for anything.
+            var storage = colony.Pawns.Storage!;
             int wood = ItemIndex.Wood;
             int limit = colony.Pawns.Content.Items[wood].stackLimit;
-            for (int i = 0; i < pile.Cells.Length; i++)
+            var storageCells = new List<int>(storage.Cells);
+            for (int i = 0; i < storageCells.Count; i++)
             {
-                if (colony.Pawns.Items.ItemAt(pile.Cells[i]) != null) continue;
-                colony.Pawns.Items.Spawn(wood, pile.Cells[i], limit);
+                if (colony.Pawns.Items.ItemAt(storageCells[i]) != null) continue;
+                colony.Pawns.Items.Spawn(wood, storageCells[i], limit);
             }
 
             // And stand the blocker on a second, sown tile of the field.
-            CellRef beside = default; bool found = false;
-            foreach (var step in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
-            {
-                var cand = new CellRef(plot.X + step.Item1, plot.Z + step.Item2, plot.Y);
-                if (colony.Pawns.Items.ItemAt(Size.Index(cand)) != null) continue;
-                if (zones.Designate(cand, PlantHandle.Carrot) != IntentRejection.None) continue;
-                beside = cand; found = true; break;
-            }
-            Assume.That(found, Is.True, "no free, zone-able cell beside the start");
+            CellRef beside = FreePlotBeside(colony, plot);
+            Assert.That(beside.X, Is.GreaterThanOrEqualTo(0), "no free, zone-able cell near the start");
             zones.Sow(Size.Index(beside));
             colony.Pawns.Items.Spawn(ItemIndex.Stone, Size.Index(beside), 50);
 
-            bool cleared = false, stillOnTheField = true;
-            for (int tick = 0; tick < 20_000 && !cleared; tick++)
+            // Waited for until it is *down* again, not until its old cell is empty. A carried
+            // thing has no cell at all, so the moment the hauler lifts it the old test called
+            // the job done and asked which zone cell -1 was in - which is what it did the first
+            // time it was ever allowed to run.
+            int landed = Settled(colony, Size.Index(beside));
+
+            Assert.That(landed, Is.GreaterThanOrEqualTo(0),
+                "the stone on the tilled soil was never taken off it, store or no store");
+            Assert.That(zones.ZonePlantAt(landed), Is.LessThan(0),
+                "the stone was set down on the field it was clearing");
+        }
+
+        [Test]
+        public void AFieldBlockerIsNotClearedIntoAStoreThatRefusesIt()
+        {
+            // The same clearance, against a store that has been narrowed rather than filled.
+            // Until 2026-09-21 the predicate this search accepts cells through knew only about
+            // growing zones, although both of its call sites said in their comments that they
+            // wanted ground "outside every zone" - so the stone came off the dirt and was set
+            // down inside a meals-only stockpile, where nothing would ever pick it up again.
+            // One line of code, and it produced the owner's stockpile report from the other end.
+            ColonyWorld colony = Field(colonists: 1);
+            var zones = colony.Growing!;
+            CellRef plot = colony.Start;
+            Sow(colony, plot);
+
+            CellRef beside = FreePlotBeside(colony, plot);
+            Assert.That(beside.X, Is.GreaterThanOrEqualTo(0), "no free, zone-able cell near the start");
+            zones.Sow(Size.Index(beside));
+            colony.Pawns.Items.Spawn(ItemIndex.Stone, Size.Index(beside), 50);
+
+            // A meals-only store wrapped round the blocker, two rings deep, so every cell the
+            // clearance would otherwise reach for first belongs to a store that will not have
+            // stone. The bare field fixture paints no store at all, which is why the sibling
+            // test above proves only the no-store case.
+            var storage = colony.Pawns.Storage!;
+            int anchorCell = -1;
+            for (int radius = 1; radius <= 2; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
             {
-                colony.World.Tick();
-                cleared = colony.Pawns.Items.ItemAt(Size.Index(beside)) == null;
-                if (cleared)
-                    stillOnTheField = zones.ZonePlantAt(LastStoneCell(colony)) >= 0;
+                if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != radius) continue;
+                var cand = new CellRef(beside.X + dx, beside.Z + dz, beside.Y);
+                if (!Size.Contains(cand.X, cand.Z, cand.Y)) continue;
+                if (zones.ZonePlantAt(Size.Index(cand)) >= 0) continue;
+                int at = anchorCell >= 0 ? anchorCell : Size.Index(cand);
+                if (storage.Designate(cand, at, StoragePreset.Everything) != IntentRejection.None) continue;
+                anchorCell = at;
+            }
+            Assert.That(storage.Cells, Is.Not.Empty, "no store could be painted round the blocker");
+            for (int slot = 0; slot < storage.ZoneCount; slot++)
+            {
+                StorageSettings settings = storage.SettingsOf(slot);
+                settings.ApplyPreset(StoragePreset.Nothing);
+                settings.SetDef(ItemIndex.Meal, true);
             }
 
-            Assert.That(cleared, Is.True,
-                "the stone on the tilled soil was never taken off it, store or no store");
-            Assert.That(stillOnTheField, Is.False,
-                "the stone was set down on the field it was clearing");
+            int landed = Settled(colony, Size.Index(beside));
+
+            Assert.That(landed, Is.GreaterThanOrEqualTo(0), "the stone was never taken off the tilled soil");
+            Assert.That(zones.ZonePlantAt(landed), Is.LessThan(0), "set down on the field it was clearing");
+            Assert.That(storage.IsStorage(landed), Is.False,
+                "set down inside a store that will not have it, which is where it would stay");
+        }
+
+        /// <summary>
+        /// A free cell near the plot that will take a carrot zone, searched ring by ring.
+        ///
+        /// <para><b>It was the four orthogonal neighbours, and that is why two of these tests
+        /// were not running.</b> The scenario's own meal piles crowd the start, so on the
+        /// fixture's seed every one of the four was occupied; the <c>Assume</c> behind it then
+        /// made the test inconclusive, which <c>dotnet test</c> reports as "Skipped" and counts
+        /// as nothing at all. Both tests sat green and proved nothing - including the one
+        /// written for the owner's 2026-09-20 stall. A widening search finds a cell on every
+        /// seed, and the caller asserts rather than assumes, so a fixture that cannot be built
+        /// fails loudly instead of disappearing.</para>
+        /// </summary>
+        static CellRef FreePlotBeside(ColonyWorld colony, CellRef plot, int maxRadius = 6)
+        {
+            var zones = colony.Growing!;
+            for (int radius = 1; radius <= maxRadius; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != radius) continue;
+                var cand = new CellRef(plot.X + dx, plot.Z + dz, plot.Y);
+                if (!Size.Contains(cand.X, cand.Z, cand.Y)) continue;
+                if (colony.Pawns.Items.ItemAt(Size.Index(cand)) != null) continue;
+                if (zones.Designate(cand, PlantHandle.Carrot) != IntentRejection.None) continue;
+                return cand;
+            }
+            return new CellRef(-1, -1, -1);
+        }
+
+        /// <summary>
+        /// Ticks until the stone is standing on a cell that is not <paramref name="from"/>, and
+        /// answers that cell; -1 if it never moves. A stone in somebody's arms has no cell, so
+        /// "the old cell is empty" is not the same question and answers too early.
+        /// </summary>
+        static int Settled(ColonyWorld colony, int from, int maxTicks = 20_000)
+        {
+            for (int tick = 0; tick < maxTicks; tick++)
+            {
+                colony.World.Tick();
+                int at = LastStoneCell(colony);
+                if (at >= 0 && at != from) return at;
+            }
+            return -1;
         }
 
         static int LastStoneCell(ColonyWorld colony)

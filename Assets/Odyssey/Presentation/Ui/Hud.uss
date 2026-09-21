@@ -21,12 +21,21 @@
  * — HudStyleSheetTests parses the declarations named in its own table and compares them against
  * HudTheme, so a colour nobody agreed to cannot reach the screen.
  *
- * ONE THING IN THE SPEC THIS ENGINE CANNOT DO. The panel fill is specified as
- * rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop filter and no
- * way to sample what is behind an element, so the blur is simply absent. The fill is unchanged;
- * what is lost is the softening of bright terrain seen through a panel. The two scrims carry the
- * contrast that mattered, so the omission costs legibility nothing — see HudContrast, which
- * measures it.
+ * ONE THING IN THE SPEC THIS ENGINE CANNOT DO, AND WHAT WAS DONE ABOUT IT. The panel fill was
+ * specified as rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop
+ * filter and no way to sample what is behind an element, so the blur is simply absent — and for
+ * a while the fill was kept at .86 anyway, on the reasoning that the scrims carried the
+ * contrast and HudContrast could prove it. That was true about contrast and wrong about
+ * reading: the ratio held while the panel still had a moving, detailed world showing through
+ * every letter of it, which is a different complaint and the one the owner made
+ * (2026-09-21, of the storage pane: "remove the transparency so we get clarity").
+ *
+ * The fill is therefore opaque. Translucency without the blur is not the spec at reduced
+ * fidelity; it is the half of the effect that costs legibility keeping none of the half that
+ * bought depth. HudTheme.PanelFill is the one owner of the value — .panel and .card both read
+ * it and HudStyleSheetTests checks them against it, so the alpha cannot be changed in one
+ * place only. The nearly-opaque surfaces above it (BarFill .90, PopoverFill .96) are left
+ * alone: at 4–10% they never showed the world, which is the thing that was wrong here.
  */
 
 /* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
@@ -85,7 +94,7 @@
 
 .panel {
     position: absolute;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
@@ -248,7 +257,7 @@
        is what lets the layout model state the strip's height as rows and gaps and be right. */
     margin: 0 3.5px 7px 3.5px;
     padding: 8px;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
@@ -353,7 +362,7 @@
     height: 24px;
     margin: 0 0 7px 0.5px;
     padding: 0 2px;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 4px;
@@ -510,6 +519,80 @@
 .alert__detail {
     color: rgba(255, 255, 255, 0.60);
     white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- toasts (SK4)
+
+   The transient stack, under the alerts in the same column. Design 09 §2.3 calls this a "transient
+   toast" and distinguishes it from a bulletin; §3.1 keeps alerts and bulletins apart because
+   "merging them produces a system that is wrong for both", and this is the third of the three.
+
+   No header row, unlike .alerts: a heading earns its place over a standing list a player returns
+   to, and would be the tallest thing in this stack for most of its life. HudLayout.ToastsHeight
+   models it without one. */
+.toasts {
+    position: relative;
+    width: 100%;
+    margin-top: 9px;
+}
+
+/* The negative bottom margin cancels the last row's own gap, exactly as .alerts__rows does, so the
+   realised box is rows * height + (rows - 1) * gap and matches HudLayout.ToastsHeight. */
+.toasts__rows { margin-bottom: -4px; }
+
+/* One line, sized like an alert row so the two stacks read as one column. No dismiss control and no
+   justify-content: space-between — there is nothing on the right to push away from. */
+.toast {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-left: 4px;
+    padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
+}
+
+.toast:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.toast__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+/* The line is three labels, not one: the words before the level, the level, and anything after it
+   (owner, 2026-09-21 - the number reads in its own colour). They sit flush against each other, so
+   the spaces between the words are the registry sentence's own and none of these may add margin.
+
+   Only the FIRST one shrinks. The number is the thing the owner asked to be able to see, so it is
+   the last thing that may be dropped if a long name ever crowds the row - "Constance has reached
+   Construction 7" truncating to "Constance has reach... 7" is the right failure, and
+   "Constance has reached Construc" is the wrong one. */
+.toast__lead {
+    color: #eef3f6;
+    white-space: nowrap;
+    overflow: hidden;
+    flex-shrink: 1;
+    margin: 0;
+}
+
+/* Colour is set from code (HudTokens.Warn) so this and the passion pip cannot drift apart - the
+   declaration here is a placeholder and is never seen, as .skill__fill's is. */
+.toast__level {
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.toast__trail {
+    color: #eef3f6;
+    white-space: nowrap;
+    flex-shrink: 0;
+    flex-grow: 1;
+    margin: 0;
 }
 
 .alert__dismiss {
@@ -859,6 +942,18 @@
 }
 
 .inspect__close:hover { border-color: #e06a5c; }
+.inspect__info {
+    width: 26px;
+    height: 26px;
+    margin-left: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+    cursor: link;
+}
+.inspect__info:hover { border-color: #7fd0e0; }
 
 .inspect__tabs {
     flex-direction: row;
@@ -945,8 +1040,13 @@
    catalogue's "disabled with a reason" rule — but visibly not a number you have. */
 .skill--off { opacity: 0.45; }
 
+/* The one flexible part of the row. Everything else is a fixed width, so this is what absorbs a
+   change to any of them - HudLayout.SkillNameWidth is that arithmetic, and
+   HudLayoutTests.TheSkillRowsPartsFitTheRow is what stops this being squeezed until "Construction"
+   clips. */
 .skill__name {
     flex-grow: 1;
+    flex-shrink: 1;
     margin-left: 9px;
     color: #eef3f6;
     white-space: nowrap;
@@ -975,6 +1075,58 @@
     margin-right: 3px;
     border-radius: 3px;
     background-color: #e8b55c;
+}
+
+/* The experience bar (SK3). A column of the row, between the name and the level, on the owner's
+   first look at it (2026-09-21: "the experience bar needs to sit between the skill label and the
+   skill value"). It shipped as a 3px underline absolutely positioned along the row's bottom edge.
+
+   WHAT THE OLD POSITIONING WAS PROTECTING, because it still has to be protected. `.skill` is 19px,
+   HudLayout.SkillRow says so, and the colonist pane is one fixed height across every tab; a bar
+   stacked UNDER the text would have grown all seven rows and moved the pane's top edge on every
+   change of tab, which is the exact thing that fixed height exists to stop. A bar placed BESIDE
+   the text costs no height at all as long as it is shorter than the row, which at 6px in a 19px
+   row it is. The constraint is kept; only the means changed. Do not read "it is in the flow now"
+   as permission to make it taller than the row.
+
+   Fixed width, and the NAME is what flexes. Everything to the bar's right is a fixed width, so a
+   fixed bar sits at a fixed offset from the row's right edge and every bar in the grid lines up on
+   both edges without anything measuring text. The numbers are HudLayout's - SkillBarWidth,
+   SkillBarGap, SkillBarHeight - and TheSkillRowsPartsFitTheRow holds them to the row's width.
+
+   Hidden by default so a row with no simulation behind it needs nothing done to it, which also
+   covers the row that is born dead and never changes: the code only touches this when liveness
+   changes, and for that row it never does. `display: none` on a flex child takes its width back
+   too, so a dead row's name simply runs on through where the bar would have been. */
+.skill__track {
+    display: none;
+    width: 72px;
+    height: 6px;
+    margin-left: 8px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Width is set from code, per mille in and per cent out. The colour is the needs' own green
+   (HudTokens.Good), set from code so this row and a food bar cannot drift apart - owner,
+   2026-09-21: "it should also be using the same green as used for the rest, food bars".
+
+   It was tinted by passion until then, on the argument that the fill was the only place the
+   x0.35/x1.0/x1.5 learning rate was visible while it was happening. That argument was wrong about
+   which question the bar answers: a player reading this row wants "how far along is she", which is
+   the same question a food bar answers and deserves the same colour. The passion is still on the
+   row, in the pips, which is where it was always legible.
+
+   The colour declared below is never seen. Every .skill__fill is built in one place and given
+   ExperienceInk on the next line, so this is a placeholder rather than the white the bar is drawn
+   in - do not "fix" it to a green literal, which would be a second owner for HudTheme.Good. */
+.skill__fill {
+    height: 6px;
+    width: 0;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.55);
 }
 
 .need__line {
@@ -2519,3 +2671,481 @@
     -unity-text-align: middle-left;
 }
 .bedowner__mark--this { color: rgb(238, 250, 253); }
+
+/* =========================================================================
+   Almanac Reference Browser
+   Full-bleed, 3-column reference browser (Category Rail, Index, Detail Pane)
+   ========================================================================= */
+
+.almanac-panel {
+    background-color: rgba(8, 12, 10, 0.96);
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.22);
+}
+
+.almanac-hdr {
+    height: 54px;
+    padding: 0 16px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.22);
+    background-color: rgba(0, 0, 0, 0.4);
+    justify-content: space-between;
+}
+
+.almanac-hdr__title {
+    color: #ffffff;
+    margin-right: 12px;
+}
+
+.almanac-search {
+    height: 34px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+    background-color: rgba(235, 240, 242, 0.6);
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.almanac-search__input {
+    flex-grow: 1;
+    height: 100%;
+    border-width: 0;
+    background-color: transparent;
+    color: #000000;
+}
+
+/* Unity's TextField draws the typed text in a nested element under the field; the
+   outer class alone does not reach it, which left the text invisible (owner, 2026-09-20). */
+.almanac-search__input .unity-base-text-field__input,
+.almanac-search__input .unity-text-input__field,
+.almanac-search__input .unity-base-text-field__input .unity-text-element {
+    color: #000000;
+}
+
+.almanac-search__hint {
+    color: rgba(0, 0, 0, 0.45);
+    margin-left: 4px;
+}
+
+/* The search box and its reset docked to the box's right edge, one middle element of the
+   header so the header's space-between spread is unchanged by the reset appearing. */
+.almanac-search-group {
+    flex-direction: row;
+    align-items: center;
+}
+
+/* Transparent until hovered, so the panel's chrome stays quiet while the search is
+   doing its job. */
+.almanac-search-reset {
+    width: 28px;
+    height: 34px;
+    margin-left: 4px;
+    align-items: center;
+    justify-content: center;
+}
+
+.almanac-search-reset:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 4px;
+}
+
+.almanac-hdr__btn {
+    width: 32px;
+    height: 32px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    margin-left: 6px;
+    justify-content: center;
+    align-items: center;
+    cursor: link;
+}
+
+.almanac-hdr__btn:hover {
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.12);
+}
+
+.almanac-hdr__btn--off {
+    opacity: 0.35;
+}
+
+.almanac-hdr__close:hover {
+    border-color: #e06a5c;
+    background-color: rgba(224, 106, 92, 0.12);
+}
+
+.almanac-rail {
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.22);
+    padding: 8px 0;
+}
+
+.almanac-cat {
+    height: 38px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 16px;
+    cursor: link;
+}
+
+.almanac-cat:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.almanac-cat--active {
+    background-color: rgba(127, 208, 224, 0.14);
+    border-left-width: 3px;
+    border-left-color: #7fd0e0;
+}
+
+.almanac-cat__icon {
+    margin-right: 10px;
+}
+
+.almanac-cat__name {
+    flex-grow: 1;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.almanac-cat--active .almanac-cat__name {
+    color: #7fd0e0;
+}
+
+.almanac-cat__count {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.almanac-index {
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.22);
+}
+
+.almanac-index__hdr {
+    height: 34px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(0, 0, 0, 0.25);
+}
+
+.almanac-index__title {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.almanac-index__sort {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.almanac-idx-row {
+    height: 52px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    cursor: link;
+}
+
+.almanac-idx-row:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.almanac-idx-row--active {
+    background-color: rgba(127, 208, 224, 0.14);
+    border-left-width: 3px;
+    border-left-color: #7fd0e0;
+}
+
+.almanac-idx-row__sq {
+    width: 26px;
+    height: 26px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+    margin-right: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.almanac-idx-row__texts {
+    flex-grow: 1;
+}
+
+.almanac-idx-row__name {
+    color: #ffffff;
+}
+
+.almanac-idx-row--active .almanac-idx-row__name {
+    color: #7fd0e0;
+}
+
+.almanac-idx-row__summary {
+    color: rgba(255, 255, 255, 0.45);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.almanac-detail {
+    padding: 24px 32px;
+}
+
+.almanac-band1 {
+    flex-direction: row;
+    margin-bottom: 28px;
+}
+
+.almanac-sq96 {
+    width: 96px;
+    height: 96px;
+    border-width: 1.5px;
+    border-color: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+    margin-right: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.almanac-id-col {
+    flex-grow: 1;
+    max-width: 820px;
+}
+
+.almanac-title-line {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.almanac-detail__title {
+    color: #ffffff;
+    margin-right: 12px;
+}
+
+.almanac-chip {
+    padding: 3px 8px;
+    border-width: 1px;
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.15);
+    color: #7fd0e0;
+    border-radius: 3px;
+    margin-right: 6px;
+}
+
+.almanac-chip--nature {
+    border-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.almanac-definition {
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 8px;
+}
+
+.almanac-live {
+    color: #7fd0e0;
+}
+
+.almanac-actions-col {
+    margin-left: 20px;
+    align-items: flex-end;
+}
+
+.almanac-action-btn {
+    padding: 8px 16px;
+    border-width: 1px;
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.16);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    cursor: link;
+}
+
+.almanac-action-btn:hover {
+    background-color: rgba(127, 208, 224, 0.28);
+}
+
+.almanac-pin-btn {
+    padding: 4px 10px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    cursor: link;
+}
+
+/* Picking is off in code as well; this says so in ink. */
+.almanac-pin-btn--off {
+    border-color: rgba(255, 255, 255, 0.08);
+    opacity: 0.38;
+    cursor: default;
+}
+
+.almanac-grid {
+    flex-direction: row;
+}
+
+.almanac-sec-label {
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 12px;
+}
+
+.almanac-props-col {
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.15);
+    padding-right: 24px;
+}
+
+.almanac-prop-row {
+    height: 34px;
+    flex-direction: row;
+    align-items: center;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-prop-key {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.almanac-prop-val {
+    color: rgba(255, 255, 255, 0.9);
+    flex-grow: 1;
+}
+
+.almanac-body-col {
+    padding-left: 24px;
+}
+
+.almanac-body-paragraph {
+    color: rgba(255, 255, 255, 0.78);
+    margin-bottom: 16px;
+}
+
+.almanac-card {
+    padding: 12px 16px;
+    border-radius: 4px;
+    border-width: 1px;
+    margin-bottom: 10px;
+}
+
+.almanac-card--best {
+    border-color: rgba(77, 158, 90, 0.5);
+    background-color: rgba(77, 158, 90, 0.08);
+}
+
+.almanac-card--avoid {
+    border-color: rgba(200, 70, 70, 0.5);
+    background-color: rgba(200, 70, 70, 0.08);
+}
+
+.almanac-card__title {
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.almanac-card__text {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.almanac-level-row {
+    height: 30px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-level-badge {
+    width: 50px;
+    color: #7fd0e0;
+}
+
+.almanac-level-name {
+    width: 140px;
+    color: #ffffff;
+}
+
+.almanac-level-note {
+    color: rgba(255, 255, 255, 0.55);
+    flex-grow: 1;
+}
+
+.almanac-spec-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-spec-hdr {
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 2px;
+}
+
+.almanac-spec-val {
+    color: #ffffff;
+}
+
+.almanac-spec-detail {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.almanac-eff-row {
+    padding: 8px 0;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.almanac-eff-title {
+    color: #7fd0e0;
+    margin-bottom: 2px;
+}
+
+.almanac-eff-desc {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.almanac-rel-chip {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 12px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.04);
+    margin-right: 8px;
+    margin-bottom: 8px;
+    cursor: link;
+}
+
+.almanac-rel-chip:hover {
+    border-color: #7fd0e0;
+    background-color: rgba(127, 208, 224, 0.14);
+}
+
+.almanac-rel-thumb {
+    width: 20px;
+    height: 20px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin-right: 8px;
+    justify-content: center;
+    align-items: center;
+}
+
+.almanac-rel-name {
+    color: #ffffff;
+}
+
+.almanac-rel-reason {
+    color: rgba(255, 255, 255, 0.45);
+    margin-left: 6px;
+}
+

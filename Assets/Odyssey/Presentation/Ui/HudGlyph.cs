@@ -53,6 +53,32 @@ namespace Odyssey.Presentation.Ui
         Cross,
 
         /// <summary>
+        /// A single centred bar: a tri-state box that is <b>partly</b> ticked (design brief,
+        /// 2026-09-21). Its own kind rather than a reused dash, because the fonts have no
+        /// character that reads as "some of these" at 16 px and a glyph that means two things is
+        /// a glyph that gets restyled for one of them.
+        /// </summary>
+        TriState,
+
+        /// <summary>
+        /// The six item categories, as the storage pane draws them beside their names (design
+        /// brief, 2026-09-21): a lidded bowl, a cross, plank courses, an open spine, a crate and a
+        /// blade.
+        ///
+        /// <para>Drawn rather than keyed for the reason the palette's forty-two are: the ADR 0007
+        /// pipeline has no sheet that covers a single one of them, and a placeholder square beside
+        /// six coloured names would be six squares. The keys still exist and still name the
+        /// categories; the day a sheet covers them <c>IconBadge</c> takes the slot back with
+        /// nothing about the layout moving.</para>
+        /// </summary>
+        CategoryFood,
+        CategoryMedicine,
+        CategoryMaterials,
+        CategoryBooks,
+        CategoryItems,
+        CategoryWeapons,
+
+        /// <summary>
         /// A circular arrow: put this back the way it was. The Work tab's reset, which drops a
         /// column sort and returns the rows to the roster's own order.
         /// </summary>
@@ -155,11 +181,13 @@ namespace Odyssey.Presentation.Ui
 
         HudGlyphKind _kind;
         Color _tint = Color.white;
+        readonly float _strokeScale = 1f;
 
-        public HudGlyph(HudGlyphKind kind, float size, Color tint)
+        public HudGlyph(HudGlyphKind kind, float size, Color tint, float strokeScale = 1f)
         {
             _kind = kind;
             _tint = tint;
+            _strokeScale = strokeScale;
             pickingMode = PickingMode.Ignore;
             style.width = size;
             style.height = size;
@@ -233,7 +261,7 @@ namespace Odyssey.Presentation.Ui
             painter.fillColor = _tint;
             painter.lineCap = LineCap.Round;
             painter.lineJoin = LineJoin.Round;
-            painter.lineWidth = Mathf.Max(1f, LucideStroke * scale);
+            painter.lineWidth = Mathf.Max(1f, LucideStroke * scale * _strokeScale);
 
             switch (_kind)
             {
@@ -314,6 +342,56 @@ namespace Odyssey.Presentation.Ui
 
                 case HudGlyphKind.Check:
                     Polyline(painter, true, P(4.5f, 12.4f), P(9.6f, 17.5f), P(19.5f, 6.5f));
+                    return;
+
+                case HudGlyphKind.CategoryFood:
+                    // A lidded bowl: a shallow cup with a domed lid and a knob.
+                    Polyline(painter, false, P(4f, 13f), P(20f, 13f), P(17f, 20f), P(7f, 20f), P(4f, 13f));
+                    Polyline(painter, true, P(7f, 13f), P(9f, 8f), P(15f, 8f), P(17f, 13f));
+                    Polyline(painter, true, P(12f, 8f), P(12f, 5f));
+                    return;
+
+                case HudGlyphKind.CategoryMedicine:
+                    // A cross, equal arms, hollow — the one shape nobody has to be taught.
+                    Polyline(painter, false,
+                        P(9f, 4f), P(15f, 4f), P(15f, 9f), P(20f, 9f), P(20f, 15f), P(15f, 15f),
+                        P(15f, 20f), P(9f, 20f), P(9f, 15f), P(4f, 15f), P(4f, 9f), P(9f, 9f), P(9f, 4f));
+                    return;
+
+                case HudGlyphKind.CategoryMaterials:
+                    // Plank courses: three staggered boards, the way a stack of sawn timber ends up.
+                    Polyline(painter, false, P(4f, 6f), P(20f, 6f), P(20f, 11f), P(4f, 11f), P(4f, 6f));
+                    Polyline(painter, false, P(4f, 13f), P(14f, 13f), P(14f, 18f), P(4f, 18f), P(4f, 13f));
+                    Polyline(painter, false, P(16f, 13f), P(20f, 13f), P(20f, 18f), P(16f, 18f), P(16f, 13f));
+                    return;
+
+                case HudGlyphKind.CategoryBooks:
+                    // An open spine seen end on: two leaves rising from a centre fold.
+                    Polyline(painter, true, P(12f, 7f), P(12f, 19f));
+                    Polyline(painter, false, P(12f, 7f), P(5f, 5f), P(5f, 17f), P(12f, 19f));
+                    Polyline(painter, false, P(12f, 7f), P(19f, 5f), P(19f, 17f), P(12f, 19f));
+                    return;
+
+                case HudGlyphKind.CategoryItems:
+                    // A crate in three-quarter view: a box with its top face and one edge showing.
+                    Polyline(painter, false, P(4f, 9f), P(12f, 5f), P(20f, 9f), P(12f, 13f), P(4f, 9f));
+                    Polyline(painter, true, P(4f, 9f), P(4f, 16f), P(12f, 20f), P(20f, 16f), P(20f, 9f));
+                    Polyline(painter, true, P(12f, 13f), P(12f, 20f));
+                    return;
+
+                case HudGlyphKind.CategoryWeapons:
+                    // A blade: a long edge with a short guard across it.
+                    Polyline(painter, true, P(6f, 19f), P(18f, 6f));
+                    Polyline(painter, true, P(15f, 4f), P(20f, 9f));
+                    Polyline(painter, true, P(5f, 15f), P(9f, 19f));
+                    return;
+
+                case HudGlyphKind.TriState:
+                    // One bar, centred, the width of the tick it sits beside. The design brief is
+                    // specific and right about why it is this and not a dash character, a minus or
+                    // a square-in-square: at 16 px a bar is the only mark that reads as "partly"
+                    // rather than as "off" or as a second kind of tick.
+                    Polyline(painter, true, P(6f, 12f), P(18f, 12f));
                     return;
 
                 case HudGlyphKind.Cross:

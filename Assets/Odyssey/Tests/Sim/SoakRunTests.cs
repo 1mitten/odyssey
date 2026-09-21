@@ -86,7 +86,16 @@ namespace Odyssey.Tests.Sim
                          Action<ColonyWorld>? seedWorld = null,
                          Action<ColonyWorld>? afterRun = null)
         {
-            ColonyWorld colony = ColonyWorld.Build(PlaySize, seed, ScenarioDef.Bare());
+            // The soak's whole claim is that a colony left alone for ten days keeps working, and
+            // hauling is a third of the work it checks — so the fixture asks for the nine cells of
+            // storage the scenario shipped until 2026-09-20, when a default store was taken out of
+            // the game (owner: "there shouldn't be a default stockpile zone"). Without it the run
+            // is honest and measures a different colony: one that fells and mines and then leaves
+            // everything where it fell.
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.stockpileCells = 9;
+
+            ColonyWorld colony = ColonyWorld.Build(PlaySize, seed, scenario);
             int pawnCount = colony.Pawns.Pawns.Count;
             Assert.That(pawnCount, Is.EqualTo(5), colony.Placement.ToString());
 

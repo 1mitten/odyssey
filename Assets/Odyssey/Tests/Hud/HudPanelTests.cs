@@ -572,5 +572,14 @@ namespace Odyssey.Tests.Hud
             Assert.That(settings.Escape(toolArmed: false), Is.EqualTo(EscapeAction.ClosePanel));
             Assert.That(settings.Escape(toolArmed: true), Is.EqualTo(EscapeAction.DisarmTool));
         }
+
+        [Test]
+        public void TheAlmanacUnwindsWithTheRest()
+        {
+            var settings = new SettingsDirector();
+            settings.SetOpen(true);
+            Assert.That(settings.Escape(false, false, false, false, almanacOpen: true),
+                Is.EqualTo(EscapeAction.CloseAlmanac));
+        }
     }
 }

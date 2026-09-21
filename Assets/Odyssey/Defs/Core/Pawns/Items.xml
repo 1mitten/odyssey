@@ -21,12 +21,20 @@
     <label>ration pack</label>
     <nutrition>900</nutrition>
     <stackLimit>20</stackLimit>
+    <category>Food</category>
   </ItemDef>
 
-  <!-- A heap in its own right, one to a cell, until the things line decides what it is made of. -->
+  <!--
+    A heap in its own right, one to a cell, until the things line decides what it is made of.
+
+    Filed under Materials rather than Items: it is what the reclaimer eats, and the wiki has
+    described it as "mixed unsorted salvage" since before the reclaimer was designed. A player
+    ticking Materials means "the raw stuff", and this is raw stuff.
+  -->
   <ItemDef>
     <defName>Item_Salvage</defName>
     <label>salvage</label>
+    <category>Materials</category>
   </ItemDef>
 
   <!-- Wood's 75 is the one limit the research states outright (a-14 section 4). -->
@@ -34,6 +42,7 @@
     <defName>Item_Wood</defName>
     <label>wood</label>
     <stackLimit>75</stackLimit>
+    <category>Materials</category>
   </ItemDef>
 
 
@@ -46,18 +55,21 @@
     <defName>Item_Stone</defName>
     <label>stone</label>
     <stackLimit>75</stackLimit>
+    <category>Materials</category>
   </ItemDef>
 
   <ItemDef>
     <defName>Item_IronOre</defName>
     <label>iron ore</label>
     <stackLimit>75</stackLimit>
+    <category>Materials</category>
   </ItemDef>
 
   <ItemDef>
     <defName>Item_Coal</defName>
     <label>coal</label>
     <stackLimit>75</stackLimit>
+    <category>Materials</category>
   </ItemDef>
 
   <!--
@@ -72,6 +84,7 @@
     <label>carrots</label>
     <nutrition>180</nutrition>
     <stackLimit>75</stackLimit>
+    <category>Food</category>
   </ItemDef>
 
 </Defs>

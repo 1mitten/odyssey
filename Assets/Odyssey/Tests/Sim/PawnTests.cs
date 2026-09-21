@@ -8,6 +8,7 @@ using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.Storage;
 using Odyssey.Sim.World;
 
 namespace Odyssey.Tests.Sim
@@ -28,6 +29,7 @@ namespace Odyssey.Tests.Sim
         public readonly NeedsSystem Needs;
         public readonly JobSystem Jobs;
         public readonly MovementSystem Movement;
+        public readonly StorageZones Storage;
 
         Colony(int sx, int sz, int sy, uint seed)
         {
@@ -39,6 +41,13 @@ namespace Odyssey.Tests.Sim
             var finder = new PathFinder(Nav);
             var paths = new PathService(finder);
             Ctx = new PawnContext(Cells, Nav, paths, ContentPack.Pawns());
+
+            // The storage zones, wired exactly as `ColonyComposition` wires them — the zones hold
+            // the membership and the items ask it back — so a test cannot exercise a colony the
+            // game could not produce, which is what the note at the top of this class is for.
+            Storage = new StorageZones(Cells, new StorageSettingsTable(Ctx.Content), Ctx.Items);
+            Ctx.Storage = Storage;
+            Ctx.Items.Membership = Storage;
 
             Needs = new NeedsSystem(Ctx);
             Jobs = new JobSystem(Ctx);
@@ -53,6 +62,11 @@ namespace Odyssey.Tests.Sim
                 .AddSystem(_ => Jobs)
                 .AddSystem(_ => Movement)
                 .AddTickable(_ => new SkillSystem(Ctx))
+                // Hashed the way the game hashes them — the zones through the tickable, what they
+                // accept through the table beside it — so that a fixture's save proves what the
+                // game's save has to prove rather than something weaker.
+                .AddTickable(_ => Storage)
+                .AddHashable(Storage.Settings)
                 .Build();
 
             RebuildNav();
@@ -82,13 +96,27 @@ namespace Odyssey.Tests.Sim
             RebuildNav();
         }
 
-        public Stockpile Stockpile(int priority, params int[] cells)
+        /// <summary>
+        /// A storage zone over these cells, at this priority, accepting everything — a real one,
+        /// painted through the intent path with the first cell as its anchor, so a test's zone
+        /// obeys the same anchor rule a player's drag does.
+        /// </summary>
+        public StorageSettings Stockpile(int priority, params int[] cells)
         {
-            var allow = new bool[ItemIndex.Count];
-            for (int i = 0; i < allow.Length; i++) allow[i] = true;
-            var pile = new Stockpile(priority, cells, allow);
-            Ctx.Items.AddStockpile(pile);
-            return pile;
+            // The ladder is five rungs now and the destination scan walks them by name, so a test
+            // asking for priority 9 is asking for a rung that does not exist — which used to work
+            // silently, because the priority was a bare integer nothing bounded. It is worth
+            // failing loudly here rather than in a haul that mysteriously never happens.
+            Assert.That(priority, Is.InRange(0, StoragePriority.Count - 1),
+                "a storage priority is one of the five rungs, 0 (Last) to 4 (Urgent)");
+
+            int anchor = cells[0];
+            for (int i = 0; i < cells.Length; i++)
+                Storage.Designate(Size.FromIndex(cells[i]), anchor, StoragePreset.Everything);
+
+            StorageSettings settings = Storage.SettingsAt(cells[0])!;
+            settings.Priority = priority;
+            return settings;
         }
 
         /// <summary>
@@ -96,7 +124,8 @@ namespace Odyssey.Tests.Sim
         /// here because its per-def counters are hashed: a hashed field that is not saved is a
         /// save that resumes wrongly, and this list is where the two are kept in step.
         /// </summary>
-        public IReadOnlyList<ISaveable> SaveComponents => new ISaveable[] { Ctx.Pawns, Ctx.Items, Jobs };
+        public IReadOnlyList<ISaveable> SaveComponents =>
+            new ISaveable[] { Ctx.Pawns, Ctx.Items, Jobs, Storage.Settings, Storage };
     }
 
     public class PawnNeedsTests
@@ -365,8 +394,8 @@ namespace Odyssey.Tests.Sim
             colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
             int near = colony.Cell(8, 2, 0);
             int far = colony.Cell(20, 20, 0);
-            colony.Stockpile(1, near);
-            colony.Stockpile(5, far);
+            colony.Stockpile(StoragePriority.Low, near);
+            colony.Stockpile(StoragePriority.Urgent, far);
 
             ThingId scrap = colony.Ctx.Items.Spawn(ItemIndex.Salvage, colony.Cell(4, 2, 0));
             for (int i = 0; i < 6_000 && colony.Ctx.Items.Get(scrap)!.Cell != far; i++) colony.World.Tick();
@@ -649,6 +678,9 @@ namespace Odyssey.Tests.Sim
             restored.AddStair(12, 12, 0);
             using var input = new MemoryStream(bytes);
             WorldSave.Load(restored.World, input, restored.SaveComponents);
+            // What `ColonyWorld.RebuildDerived` does for a real colony: the listers are derived
+            // from the items and the zones together, and both have only just finished loading.
+            restored.Storage.RebucketAll();
 
             Assert.That(restored.World.CurrentTick, Is.EqualTo(original.World.CurrentTick));
             Assert.That(restored.World.ComputeStateHash().Value, Is.EqualTo(expected));

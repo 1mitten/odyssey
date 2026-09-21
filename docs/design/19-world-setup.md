@@ -177,7 +177,7 @@ backstory. Clean room: invented here, nothing lifted.~~ Dropped, and the list be
 | Runner | carried messages between holdings |
 | Archivist | kept records nobody reads now |
 
-Three map sizes, named rather than numeric — "120 × 120 × 16" is a fact about an array and
+Four map sizes, named rather than numeric — "120 × 120 × 16" is a fact about an array and
 "Standard" is a choice about a game:
 
 | Name | Cells | Note |
@@ -185,6 +185,7 @@ Three map sizes, named rather than numeric — "120 × 120 × 16" is a fact abou
 | Small | 80 × 80 × 16 | |
 | Standard | 120 × 120 × 16 | today's board |
 | Large | 180 × 180 × 24 | |
+| Huge | 240 × 240 × 16 | twice Standard's ground, Standard's depth (`28-map-size.md`) |
 
 ---
 

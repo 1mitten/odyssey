@@ -120,7 +120,8 @@ namespace Odyssey.Presentation.Bootstrap
                         _designate != null && _designate.ToolArmed,
                         _shell != null && _shell.BuildPaletteOpen,
                         _shell != null && _shell.MenuOpen,
-                        _bootstrap?.Directors?.Work.Open == true))
+                        _bootstrap?.Directors?.Work.Open == true,
+                        _bootstrap?.Directors?.Almanac.Open == true))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
@@ -143,6 +144,9 @@ namespace Odyssey.Presentation.Bootstrap
                     // so it unwinds at the same rung. Without this it was the one panel in the
                     // game with no key that shut it — the X and F1 again, and nothing else.
                     _bootstrap?.Directors?.Work.SetOpen(false);
+                    break;
+                case EscapeAction.CloseAlmanac:
+                    _bootstrap?.Directors?.Almanac.SetOpen(false);
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);

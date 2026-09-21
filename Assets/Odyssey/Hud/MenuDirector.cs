@@ -135,6 +135,7 @@ namespace Odyssey.Hud
             new Choice("ui.newgame.size.small", 80, 80, 16),
             new Choice("ui.newgame.size.standard", 120, 120, 16),
             new Choice("ui.newgame.size.large", 180, 180, 24),
+            new Choice("ui.newgame.size.huge", 240, 240, 16),
         };
 
         /// <summary>Standard: the board every measurement on record was taken on, and the one the
@@ -527,8 +528,8 @@ namespace Odyssey.Hud
         public int Size { get; private set; } = MapSizes.Default;
 
         /// <summary>
-        /// Step to the next size, wrapping. One control rather than three rows: there are three
-        /// sizes and a player picking one is cycling, not navigating.
+        /// Step to the next size, wrapping. One control rather than a row each: there are
+        /// few sizes and a player picking one is cycling, not navigating.
         /// </summary>
         public void NextSize()
         {

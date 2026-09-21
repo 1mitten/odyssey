@@ -234,7 +234,27 @@ namespace Odyssey.Sim.Saving
         /// that knows which versions wrote what about the header itself. A save newer than this
         /// build is refused outright rather than read hopefully.</para>
         /// </summary>
-        public const int CurrentFormatVersion = 7;
+        /// <remarks>
+        /// <para>8 (S1, storage): two changes to one section and two new ones. The item record
+        /// gained <c>ContainerId</c> — 0 in every world that has one, because storage units are
+        /// S2 — and the storage zones <b>left</b> the items section for
+        /// <c>odyssey.storage.zones</c>, with what they accept in <c>odyssey.storage.settings</c>
+        /// beside it. A file at 7 or below still carries its zones in the items section, so
+        /// <c>ColonyItems.Load</c> reads them there and stashes them, and
+        /// <c>ColonyWorld.RebuildDerived</c> hands them to the zones once both have loaded —
+        /// which is what keeps this from depending on the order of the components list.</para>
+        ///
+        /// <para>Adding the two sections needed no version at all: sections are keyed and
+        /// length-prefixed, so a reader skips what it does not know and a new reader simply never
+        /// calls <c>Load</c> for a section an old file does not have. What forced the bump is the
+        /// item record's layout, which no key can rescue.</para>
+        ///
+        /// <para><b>It was written as 7 and became 8 on the merge</b>, because the Work tab's
+        /// schedule reached <c>main</c> first and took that number. The version is a save contract
+        /// and two branches cannot both have it; the later branch is the one that moves, which is
+        /// the same rule <c>BuildingHandle.Bed</c> records for handle order.</para>
+        /// </remarks>
+        public const int CurrentFormatVersion = 8;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
