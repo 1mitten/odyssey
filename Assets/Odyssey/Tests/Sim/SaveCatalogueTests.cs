@@ -532,6 +532,28 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        /// <summary>
+        /// The copy an autosave keeps of what it is about to write over (2026-09-21).
+        /// </summary>
+        [Test]
+        public void ThePreviousCopyIsTheSameNameWithOneSuffix()
+        {
+            Assert.That(SaveCatalogue.PreviousFileName("ashford.odyssey"),
+                Is.EqualTo("ashford-previous.odyssey"));
+
+            // Idempotent, so an autosave that somehow ran against its own backup cannot build
+            // ashford-previous-previous-previous.
+            Assert.That(SaveCatalogue.PreviousFileName("ashford-previous.odyssey"),
+                Is.EqualTo("ashford-previous.odyssey"));
+
+            // A name with no extension is still a file name, and an empty one still has to become
+            // something a filesystem will take.
+            Assert.That(SaveCatalogue.PreviousFileName("ashford"),
+                Is.EqualTo("ashford-previous.odyssey"));
+            Assert.That(SaveCatalogue.PreviousFileName(""),
+                Is.EqualTo("colony-previous.odyssey"));
+        }
+
         [Test]
         public void AFolderThatDoesNotExistListsAsEmptyRatherThanThrowing()
         {

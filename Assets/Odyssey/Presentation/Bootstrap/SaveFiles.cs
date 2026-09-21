@@ -135,6 +135,48 @@ namespace Odyssey.Presentation.Bootstrap
             Path.Combine(EnsureFolder(), SaveCatalogue.FileNameForName(name));
 
         /// <summary>
+        /// Keep what is at <paramref name="path"/> as this save's previous generation, and say
+        /// whether there was anything to keep.
+        ///
+        /// <para><b>Copied rather than moved.</b> If the write that follows fails or is cut off,
+        /// a move would leave the colony's own file missing and the only copy under another name;
+        /// a copy leaves both, and the worst case is two files holding the same thing. The naming
+        /// rule is <see cref="SaveCatalogue.PreviousFileName"/>, in the assembly the fast tier can
+        /// read — all that is here is the filesystem.</para>
+        ///
+        /// <para>A failure to copy is swallowed deliberately: the backup is a courtesy and the
+        /// save is the job, so a locked or read-only previous file must not stop the colony being
+        /// written. It is logged, because a backup that silently never happens is worse than one
+        /// that says so.</para>
+        /// </summary>
+        public static bool KeepPrevious(string path)
+        {
+            if (!File.Exists(path)) return false;
+
+            string previous = Path.Combine(
+                Path.GetDirectoryName(path)!,
+                SaveCatalogue.PreviousFileName(Path.GetFileName(path)));
+
+            if (string.Equals(previous, path, StringComparison.OrdinalIgnoreCase)) return false;
+
+            try
+            {
+                File.Copy(path, previous, overwrite: true);
+                return true;
+            }
+            catch (IOException e)
+            {
+                Debug.LogWarning($"[Odyssey] could not keep a previous copy of {path}: {e.Message}");
+                return false;
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                Debug.LogWarning($"[Odyssey] could not keep a previous copy of {path}: {e.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Whether a save of this name already exists — so the prompt can say "Overwrite" and ask
         /// twice rather than discovering it after the file is gone.
         ///

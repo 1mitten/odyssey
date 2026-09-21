@@ -139,6 +139,50 @@ namespace Odyssey.Hud
 
         public bool IsDismissed(int id) => _dismissed.Contains(id);
 
+        /// <summary>
+        /// The id every presentation-side notice carries. <b>Negative, so it can never collide
+        /// with a ledger id</b>, which is how a row the simulation never raised can live on a
+        /// panel whose whole edge rule is "an id above the highest seen is new".
+        /// </summary>
+        public const int NoticeId = -1;
+
+        /// <summary>Whether a row is a notice rather than something that happened in the world —
+        /// so a view knows there is no place to jump the camera to.</summary>
+        public static bool IsNotice(in BulletinRow row) => row.Id < 0;
+
+        /// <summary>
+        /// Put a notice on the panel: something the *game* did rather than something the colony
+        /// did. The autosave is the first and at present the only one.
+        ///
+        /// <para><b>There is only ever one.</b> A new notice replaces the one already there rather
+        /// than stacking, because the panel keeps six rows and a colony played for a week would
+        /// otherwise hold six autosaves and no events — the notice would crowd out the thing the
+        /// panel is for. What a player wants from it is *is my file current*, which is a fact with
+        /// one current value, not a history.</para>
+        ///
+        /// <para>It is not counted in <see cref="Arrived"/>, so it does not chime: the game saving
+        /// itself on schedule is not news that wants the room's attention.</para>
+        /// </summary>
+        public void PostNotice(string key, string title, string stamp)
+        {
+            for (int i = 0; i < Rows.Count; i++)
+            {
+                if (!IsNotice(Rows[i])) continue;
+                Rows.RemoveAt(i);
+                break;
+            }
+
+            _dismissed.Remove(NoticeId);
+            Rows.Insert(0, new BulletinRow(NoticeId, key, title, stamp, default, 0, -1, 0));
+            Version++;
+
+            while (Rows.Count > MaxRows)
+            {
+                Rows.RemoveAt(Rows.Count - 1);
+                Version++;
+            }
+        }
+
         static BulletinRow Make(in BulletinView view)
         {
             string key = IncidentLabels.IconKey(view.IncidentDef);

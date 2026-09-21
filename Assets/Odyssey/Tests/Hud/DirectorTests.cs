@@ -1054,29 +1054,39 @@ namespace Odyssey.Tests.Hud
                     $"whole dB {db} does not survive the seat");
         }
 
+        /// <summary>
+        /// The exit row asks on the first press now, and the asking is <c>LeavePrompt</c>'s.
+        ///
+        /// <para>It armed and fired on a second press until 2026-09-21, when the owner asked for a
+        /// confirmation that offers to save. The arming went with it: the prompt is the question,
+        /// and a row that arms in front of one asks twice before asking properly.</para>
+        /// </summary>
         [Test]
-        public void TheExitRowAsksBeforeItLeavesAndThePanelClosingStandsItDown()
+        public void TheExitRowRaisesItsRequestOnTheFirstPressNow()
         {
             var settings = new SettingsDirector();
-            int armed = 0, asked = 0;
-            settings.ExitChanged += () => armed++;
+            int asked = 0;
             settings.ExitRequested += () => asked++;
 
             settings.RequestExit();
-            Assert.That(settings.ExitArmed, Is.True, "the first click asks to be sure");
-            Assert.That(asked, Is.Zero);
-            settings.RequestExit();
-            Assert.That(asked, Is.EqualTo(1), "the second click is the promise kept");
-            Assert.That(settings.ExitArmed, Is.False, "a fired exit is not still armed");
+            Assert.That(asked, Is.EqualTo(1), "the press is the request; the prompt does the asking");
+            Assert.That(settings.ExitArmed, Is.False, "nothing arms any more");
+        }
 
-            // Nothing is saved, so an armed row must not outlive the panel it lives in.
+        /// <summary>
+        /// Load in game is the last row that still arms, and the rule is still the table's.
+        /// </summary>
+        [Test]
+        public void TheRowThatStillArmsStandsDownWhenThePanelCloses()
+        {
+            var settings = new SettingsDirector();
             settings.SetOpen(true);
-            settings.RequestExit();
-            Assert.That(settings.ExitArmed, Is.True);
+            settings.Request(SessionCommands.LoadKey);
+            Assert.That(settings.ArmedRow, Is.EqualTo(SessionCommands.LoadKey));
+
             settings.SetOpen(false);
-            Assert.That(settings.ExitArmed, Is.False,
+            Assert.That(settings.ArmedRow, Is.Null,
                 "closing the panel stands the row down, Escape included");
-            Assert.That(asked, Is.EqualTo(1), "standing down is not leaving");
         }
 
         [Test]
@@ -1089,6 +1099,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(SettingsDirector.TabKey(SettingsTab.Graphics), Is.EqualTo(SettingsDirector.GraphicsKey));
             Assert.That(SettingsDirector.TabKey(SettingsTab.Audio), Is.EqualTo(SettingsDirector.AudioKey));
             Assert.That(SettingsDirector.TabKey(SettingsTab.Keys), Is.EqualTo(HotkeyDirector.KeysKey));
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Gameplay), Is.EqualTo(SettingsDirector.GameplayKey));
         }
     }
 }
