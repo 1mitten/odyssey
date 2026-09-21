@@ -21,12 +21,21 @@
  * — HudStyleSheetTests parses the declarations named in its own table and compares them against
  * HudTheme, so a colour nobody agreed to cannot reach the screen.
  *
- * ONE THING IN THE SPEC THIS ENGINE CANNOT DO. The panel fill is specified as
- * rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop filter and no
- * way to sample what is behind an element, so the blur is simply absent. The fill is unchanged;
- * what is lost is the softening of bright terrain seen through a panel. The two scrims carry the
- * contrast that mattered, so the omission costs legibility nothing — see HudContrast, which
- * measures it.
+ * ONE THING IN THE SPEC THIS ENGINE CANNOT DO, AND WHAT WAS DONE ABOUT IT. The panel fill was
+ * specified as rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop
+ * filter and no way to sample what is behind an element, so the blur is simply absent — and for
+ * a while the fill was kept at .86 anyway, on the reasoning that the scrims carried the
+ * contrast and HudContrast could prove it. That was true about contrast and wrong about
+ * reading: the ratio held while the panel still had a moving, detailed world showing through
+ * every letter of it, which is a different complaint and the one the owner made
+ * (2026-09-21, of the storage pane: "remove the transparency so we get clarity").
+ *
+ * The fill is therefore opaque. Translucency without the blur is not the spec at reduced
+ * fidelity; it is the half of the effect that costs legibility keeping none of the half that
+ * bought depth. HudTheme.PanelFill is the one owner of the value — .panel and .card both read
+ * it and HudStyleSheetTests checks them against it, so the alpha cannot be changed in one
+ * place only. The nearly-opaque surfaces above it (BarFill .90, PopoverFill .96) are left
+ * alone: at 4–10% they never showed the world, which is the thing that was wrong here.
  */
 
 /* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
@@ -85,7 +94,7 @@
 
 .panel {
     position: absolute;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
@@ -248,7 +257,7 @@
        is what lets the layout model state the strip's height as rows and gaps and be right. */
     margin: 0 3.5px 7px 3.5px;
     padding: 8px;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
@@ -353,7 +362,7 @@
     height: 24px;
     margin: 0 0 7px 0.5px;
     padding: 0 2px;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 4px;

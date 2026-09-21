@@ -123,7 +123,7 @@ namespace Odyssey.Hud
 
         /// <summary>Panel fill. Translucent over the world and blurred behind, so a panel reads as
         /// glass laid on the board rather than as a hole cut in it.</summary>
-        public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 0.86f);
+        public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 1f);
 
         /// <summary>The command bar's fill: the same colour, a little more opaque, because the
         /// bar is always on screen and always carries text.</summary>
