@@ -668,6 +668,39 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One built store — a shelf — as the interface needs to know it.
+    ///
+    /// <para><b>Its own channel rather than a bit on <see cref="StoreView"/>,</b> which is one row
+    /// per <i>cell</i> of a painted zone and exists to tint the ground. A shelf's ground is not
+    /// tinted: the goods standing on it are the tell, and its cells are one each. The two answer
+    /// different questions about different things.</para>
+    ///
+    /// <para>Sparse, one row per store, and it exists so that the alert bar can say a store is
+    /// stuck without the simulation having to decide when to say so. What is published is the
+    /// state; the latch that turns a state into a row is the interface's own, exactly as it is for
+    /// an idle colonist.</para>
+    /// </summary>
+    public readonly struct StorageUnitView
+    {
+        /// <summary>The cell it stands in, as a whole-world index.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>Slots in use, and slots it has.</summary>
+        public readonly byte Stacks, Slots;
+
+        /// <summary>Ordered taken apart, so its contents should be leaving.</summary>
+        public readonly bool Emptying;
+
+        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying)
+        {
+            CellIndex = cellIndex;
+            Stacks = stacks;
+            Slots = slots;
+            Emptying = emptying;
+        }
+    }
+
+    /// <summary>
     /// One standing crop: a planted cell, what grows there, and how far it has got.
     ///
     /// <para><b>Quantised growth, and it is not <see cref="SiteView"/>'s argument repeated.</b>
@@ -880,6 +913,7 @@ namespace Odyssey.Sim.Contracts
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
+        StorageUnitView[] _units = Array.Empty<StorageUnitView>();
         PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
@@ -944,6 +978,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many storage-zone cells the world holds, anywhere in it.</summary>
         public int StoreCount { get; private set; }
 
+        /// <summary>How many built stores this frame carries.</summary>
+        public int StorageUnitCount { get; private set; }
+
         /// <summary>How many planted cells are standing.</summary>
         public int PlantCount { get; private set; }
 
@@ -998,6 +1035,10 @@ namespace Odyssey.Sim.Contracts
         /// drawn none. See <see cref="StoreView"/>.
         /// </summary>
         public ReadOnlySpan<StoreView> Stores => new ReadOnlySpan<StoreView>(_stores, 0, StoreCount);
+
+        /// <summary>Every built store on the board. See <see cref="StorageUnitView"/>.</summary>
+        public ReadOnlySpan<StorageUnitView> StorageUnits =>
+            new ReadOnlySpan<StorageUnitView>(_units, 0, StorageUnitCount);
 
         /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
         public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
@@ -1088,6 +1129,7 @@ namespace Odyssey.Sim.Contracts
             SiteCount = 0;
             ZoneCount = 0;
             StoreCount = 0;
+            StorageUnitCount = 0;
             PlantCount = 0;
 
             AspectCount = 0;
@@ -1149,6 +1191,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _stores, StoreCount + 1);
             _stores[StoreCount++] = view;
+        }
+
+        internal void AddStorageUnit(in StorageUnitView view)
+        {
+            Grow(ref _units, StorageUnitCount + 1);
+            _units[StorageUnitCount++] = view;
         }
 
         internal void AddPlant(in PlantView view)

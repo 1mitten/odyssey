@@ -61,7 +61,7 @@ namespace Odyssey.Sim.Storage
     /// record's layout — was changed once in S1, with <c>ContainerId</c> already in it and written
     /// by nothing, precisely so that this unit would not have to change it again.</para>
     /// </summary>
-    public sealed class StorageUnits : ITickable, IStateHashable, ISaveable
+    public sealed class StorageUnits : ITickable, IStateHashable, ISaveable, ISnapshotContributor
     {
         readonly CellGrid _grid;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
@@ -307,7 +307,27 @@ namespace Odyssey.Sim.Storage
         public SimWorldBuilder Attach(SimWorldBuilder builder) =>
             // Registered as a tickable that never ticks, exactly as the zones are: it is how a
             // component that only holds state reaches the hash and the save.
-            builder.AddTickable(_ => this);
+            builder.AddTickable(_ => this).AddSnapshotContributor(this);
+
+        /// <summary>
+        /// Every live store, and how full it is.
+        ///
+        /// <para><b>The state, not the verdict.</b> Whether a stuck store is worth telling the
+        /// player about — and after how long — is the alert bar's own latch, exactly as it is for
+        /// an idle colonist. Deciding it here would put a wall-clock rule inside a fixed-tick
+        /// simulation.</para>
+        /// </summary>
+        public void Contribute(SimWorld world, SnapshotWriter writer)
+        {
+            for (int i = 0; i < _units.Count; i++)
+            {
+                StorageUnit unit = _units[i];
+                if (unit.Removed) continue;
+
+                writer.AddStorageUnit(new StorageUnitView(
+                    CellOf(unit), (byte)StacksIn(unit), (byte)unit.Slots, IsEmptying(unit)));
+            }
+        }
 
         public TickGroup TickGroup => TickGroup.Never;
         public int TickPhaseOffset => 0;

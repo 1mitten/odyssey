@@ -129,6 +129,46 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.BedUnderPane, Is.False);
         }
 
+        // ---------------------------------------------------------------- the alert
+
+        [Test]
+        public void AStoreThatCannotBeEmptiedSaysSoAfterAWhile()
+        {
+            // The state comes from the simulation and the latch is the interface's, exactly as it
+            // is for an idle colony. The wait matters: a shelf ordered taken apart is full until a
+            // hauler has walked to it, so saying it is stuck at once would be crying wolf.
+            WorldSnapshot frame = Snapshot();
+            frame.AddStorageUnit(new StorageUnitView(cellIndex: 9, stacks: 2, slots: 8, emptying: true));
+
+            var alerts = new AlertModel();
+            alerts.Refresh(frame, seconds: 0.0);
+            Assert.That(HasAlert(alerts, AlertModel.StoreStuckKey), Is.False, "not while somebody may be on their way");
+
+            alerts.Refresh(frame, seconds: AlertModel.StoreStuckSustain + 0.1);
+            Assert.That(HasAlert(alerts, AlertModel.StoreStuckKey), Is.True);
+        }
+
+        [Test]
+        public void AStoreBeingEmptiedNormallyNeverRaisesIt()
+        {
+            WorldSnapshot frame = Snapshot();
+            frame.AddStorageUnit(new StorageUnitView(cellIndex: 9, stacks: 0, slots: 8, emptying: true));
+
+            var alerts = new AlertModel();
+            alerts.Refresh(frame, seconds: 0.0);
+            alerts.Refresh(frame, seconds: AlertModel.StoreStuckSustain + 0.1);
+
+            Assert.That(HasAlert(alerts, AlertModel.StoreStuckKey), Is.False,
+                "an emptied shelf is not a stuck one");
+        }
+
+        static bool HasAlert(AlertModel alerts, string key)
+        {
+            for (int i = 0; i < alerts.Rows.Count; i++)
+                if (alerts.Rows[i].Key == key) return true;
+            return false;
+        }
+
         static string RowValue(InspectModel model, string name)
         {
             for (int i = 0; i < model.CellRows.Count; i++)

@@ -2,7 +2,7 @@
 
 Alerts are conditions that persist until fixed. Bulletins are things that happened. Both carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
 
-38 entries, 14 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+39 entries, 15 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -30,6 +30,7 @@ Alerts are conditions that persist until fixed. Bulletins are things that happen
 | **Spoiling** | `ui.alert.spoilage` | Food is going off | sheet 02 (food), low | M2 |
 | **No light** | `ui.alert.darkness` | Work is slowed for want of a lamp | sheet 06 (action tiles), low | M2 |
 | **Trapped** | `ui.alert.trapped` | Someone cannot reach the colony <br>**Needs:** a colonist cut off from the colony | no art | M2 |
+| **Store cannot be emptied** | `ui.alert.storagestuck` | A shelf is marked for removal and there is nowhere to put what is in it | no art | M3 |
 
 ## Bulletins
 
