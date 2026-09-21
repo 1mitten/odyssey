@@ -25,6 +25,136 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-21 — The storage pane's first look: four notes, and a panel with no free edge
+
+The owner opened the pane and sent four things. Three were small. The first was not, and the fifth
+was found by the test written for the first.
+
+**"A message appeared … but this moved the controls/components."** The warning was pushed in as
+the first children of the scrolling list, so unticking the last category dropped every row by the
+height of the band — under a cursor that was working down them. The owner asked for it below the
+control, which is right, and **moving it there made things worse**: the inspect panel is anchored
+to the bottom of the screen and grows upward, so the band shoved every control **up by 90 px**.
+Measured, not reasoned — the test asserted the list's top edge had not moved, and it had, by 90.
+
+That is the general lesson and it is worth more than the fix: **a panel that grows from an anchor
+has no free edge.** "Put the message somewhere else" is not a layout change unless something gives
+up the same space. Here the list gives it up: `StorageWarningHeight` is both the band's height and
+the height the scroll view loses to make room, so the pane is the same height either way. 92 px,
+measured — 77.1 of text and rule plus 12 of padding; a first guess of 64 clipped the hint and the
+test said so.
+
+**"Nothing and everything is the same as allow all and clear all."** They were, and §9b Q1 had
+already decided they should go, and the build kept them anyway — with a comment in the chip handler
+explaining that they routed through the same two model calls as the header buttons "rather than a
+third path that could drift from them". A comment explaining why a duplicate is safe is a duplicate
+nobody re-examined. Gone. `StoragePreset` stays in the simulation, where a zone is still founded at
+Everything.
+
+**"The x button appears twice … the square icon next to it does nothing."** A store added a
+disabled Rename, drawn as a placeholder square to hold a place for named stores, and a Close six
+pixels from the Close every pane already ends with. Both gone. An affordance for something that
+does not exist yet is worse than a gap: it told its story in a tooltip nobody hovers and read as a
+broken button.
+
+**"Make the numbers bigger."** The category member count was Meta 12 — the step for a qualifying
+aside, the smallest text in the pane — beside a 14/600 heading. Row 14/500 with `numeric` set, so
+it takes the mono face and tabular figures and matches the heading it answers to.
+
+### And the fifth, which nobody had reported
+
+Driving the pane's own Clear all with the game **running**, the simulation accepted 0 of 7
+commodities and the pane still showed all seven ticked and no warning. `SendStorageCommand`
+submits an intent and refills on the spot, on the strength of a comment saying a storage intent
+"applies while paused, so the answer is already true by the time the next frame draws". True while
+paused. While running the intent queues for the next tick, and nothing refilled the pane again —
+so **every press was one action stale**, which from the chair is indistinguishable from a button
+that does not work. It had presumably never been seen because the pane is a thing you open while
+paused, which is exactly the mode the comment is right about.
+
+`SyncStoragePanel` covers the other half, on the refresh that already runs fifteen times a second,
+rebuilding only when a signature moves — the zone, its rung, its cell count, its filter. Not an
+unconditional refill: thirteen elements of garbage a frame for a panel that changes when somebody
+presses something is the fault the Work tab was pooled to avoid.
+
+**All of it is invisible to every tier but one.** The fast tier has no visual tree and the model
+does not know where anything is drawn, so a layout that shifts under the pointer and a pane that
+lags the world by one action are both things only a person at the keyboard — or a PlayMode test
+that reads `worldBound` — can see. That is why `ZoneInspectTests` gained a test rather than the
+Hud tier.
+
+## 2026-09-21 — A store is a rule about the door, and the rocks were already inside
+
+The owner painted a stockpile, set it to meals, and got two complaints out of it in one sentence:
+the rocks already in it stayed, and the meals lying elsewhere were never fetched. The expectation
+was stated plainly — *"I expect the colonists to ensure that all those tiles are occupied by meals
+or nothing, not leave rocks in there."*
+
+**Measured before diagnosed, and the measurement changed the shape of the problem.** A probe on
+the bare fixture: a two-cell meals-only store with a rock in each took **0 hauls in 10,000 ticks**
+and the meal on the grass never moved; the same store with *one* rock and one free cell hauled the
+meal in perfectly. So the two symptoms are one fault. `CellHasSpace` requires the same def, so a
+cell holding a rock has no room for a meal, and a store whose cells are all held by things it
+refuses has quietly stopped working.
+
+**The filter governed arrival only.** `StorageSettings.Accepts` is asked when choosing where a
+load *goes*; nothing asked it of what was already lying there. The nearly-right half was already
+written — `HaulWorkGiver.StoredPriority` says a refused thing "is not stored at all, only in the
+way" and returns the unstored rank for it. That was enough to let it move to a store that *would*
+have it and nothing more, because of where it was asked: `ColonyItems` buckets loose against
+stored by whether the cell is in a zone (one array read), so a refused thing is bucketed
+**stored**, and the stored pass is the re-stow, which `TryGiveJob` runs only when nothing loose is
+waiting. A colony that is felling or mining always has something loose. When no store would take
+it: `dest < 0; continue`. There was no third answer.
+
+Two candidate fixes. **Re-bucket on a filter edit** is truer to the words and is the worse answer:
+`ColonyItems`' buckets would come to depend on the filter table, ticking one commodity would have
+to walk a zone's items, and the save would have to agree about which lister each thing was in.
+**Or walk both listers in the first pass and split them by the filter** — one branch in a loop
+that already existed, and `Refused` is two array reads. That is what was built; the re-stow pass
+now sees only what its store is content to hold.
+
+The other half is the destination. There was no answer for "no store will have it" beyond
+`continue`, except for one case: a thing standing on tilled soil, which 2026-09-20 gave a
+clearance to open ground. That clause is reached by both cases now, through one predicate
+(`InTheWay`) and one radius (`ClearanceRadius`, 12, which the two sites used to state separately).
+
+**And then the clearance turned out to be the same bug from the other end.** `PawnContext.NotZoned`
+knew only about growing zones, while both of its call sites said in their own comments that they
+wanted ground *"outside every zone"*. So a rock lifted off a field could be set down inside a
+meals-only stockpile — reachable without the player ever narrowing a filter, and stuck there for
+good once it landed. P1 in its purest form: the name, the doc comment and the two call sites were
+three descriptions of one rule, and two of them were wrong. It is `OpenGroundFor(defIndex)` now
+and it asks about the thing as well as the cell, because a store that *accepts* the thing is a
+home rather than an obstruction. The predicate is still allocated once — the def travels in a
+field rather than in a capture, which the 199-bytes-a-tick measurement behind the original
+`NotZoned` is the reason for.
+
+**Proving the new test bites was not free, and the reason is worth keeping.** With the predicate
+temporarily put back to its growing-only form, the field blocker was not cleared *at all* rather
+than cleared into the store — because the clearance fallback, unlike `BestStorageCell`, does not
+check reservations, and by then every store cell near the field was claimed by a meal haul. So the
+wrong predicate produced a permanent no-op, not a visibly wrong answer. Recorded in
+`26-storage.md` §11d: two haulers evicting at once can still pick the same cell, which is
+transient rather than a livelock, but it is a sharp edge that wants knowing.
+
+**No golden moved** — fast tier 922 Sim + 625 Hud, Long tier 23, all green with no re-bake. That
+is correct and it is also the gap: every zone in every golden is founded at *Everything*, so the
+state never arises there, and the eight new tests are the whole of the coverage.
+
+### Three tests in the area were not running, and the tier said so in a way nobody reads
+
+`AFieldBlockerIsClearedToTheGrassWhenNoStoreWillTakeIt` — written for the owner's 2026-09-20 stall
+— was **inconclusive**: it searched the four orthogonal neighbours of the colony's start for a free
+cell, and the scenario's own meal piles occupy all four on the fixture's seed.
+`AThingOnTilledSoilIsClearedBeforeANearerPile` had the same body and the same fate. `dotnet test`
+prints an inconclusive result as `Skipped` and counts it in neither column, so the run reported
+`Skipped: 0` while fifteen Sim tests returned no verdict at all. Allowed to run for the first time,
+the older of the two threw on its first assertion — it waited for the blocker's old cell to empty
+and then asked which zone cell **-1** was in, because a carried thing has no cell. The regression
+guard for the previous report in this exact area had therefore never once executed. Ring search,
+`Assert` rather than `Assume`, and wait for the thing to be *down* again. `docs/lessons.md`.
+
 ## 2026-09-20 — one sentence from a Play session, and the biggest cost in the renderer
 
 The owner read the developer overlay while spawning colonists and said: *"it seemed to hover
@@ -8013,8 +8143,6 @@ with nowhere to be stored is cleared to the nearest free cell off the zone now, 
 can have it back when it has room. The lesson the flat sheet earned went into lessons already:
 an instrument that cannot reproduce the fault cannot certify its fix - CropCheck sets the
 board's amplitude and the blindness is recorded beside it.
-
-
 ### The third border day: the light was the border (2026-09-20)
 
 The borders survived the same-mesh cover, and the cause was not geometry at all: the bracket
@@ -9197,6 +9325,903 @@ built, and that the collector does not run at all while the panel sits open.
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
 
+---
+
+## 2026-09-21 — The toast's level goes amber, and why it is a split and not a tag
+
+The owner, after the bar: *"make a small change to the notification to make the value of level (IE
+the number) a yellow tinted colour for effect so you can see the value clear."* Small, and the
+implementation choice inside it is not.
+
+**Rich text was the obvious answer and was rejected on how it fails.** A `<color>` tag inside the
+one label is less code and one element instead of three. But if rich text is ever off on that label
+the player reads the tag itself, and **neither tier can see that** — the fast tier has no text
+engine and the Unity tier asserts no pixels. That is the exact shape of `docs/bug-patterns.md` P10,
+which this project has now met twice, once shipping to `main` undrawn. A split into three plain
+strings is assertable in the fast tier, and its worst failure is a number in the wrong colour.
+
+**The split happens in the model, before `{level}` is substituted.** Replace it first and find the
+digits afterwards and you find the wrong "5" the day a colonist is called Level5. Splitting on the
+placeholder means the view never parses anything and a reworded CSV line still works.
+
+**And the identity is asserted, because it is the one thing the rest of the tests cannot see.**
+Every other test in `ToastTests` reads `ToastRow.Lead`, which is built from the pieces — so a
+dropped space or a duplicated piece would leave `Lead` correct while the three labels on screen went
+wrong. `TheLineComesInThreePiecesThatStillMakeTheLine` asserts the concatenation directly, and was
+confirmed to fail by making the model pass the unsplit string as `Lead`.
+
+**The merge with main that came with it produced the one conflict where taking a side is always
+wrong.** Both branches had moved the content fingerprint — this one when `Work_Growing` gained a
+curve, main when `ItemDef` gained a category — so neither number was the merged one. I wrote the
+comment saying a fresh value had been measured *before* running it. Re-measuring returned main's
+value unchanged, because this branch's remaining Def edits are XML **comments**, and a comment is
+never loaded so it is never hashed. The comment is corrected in place with the rule beside it. The
+lesson is the ordinary one and it keeps recurring: write the claim after the measurement, not
+before.
+
+Fast tier 914 Sim + 608 Hud, EditMode **2,298 / 2,278 / 0**, PlayMode **91 / 86 / 0**.
+
+## 2026-09-21 — The experience bar's first look: an underline becomes a column
+
+The owner played PR #139 and asked for three things: the bar between the label and the value, the
+needs' green instead of the passion tint, and slightly thicker with good spacing.
+
+**The first one quietly changes what kind of thing the bar is.** It shipped absolutely positioned
+along the row's bottom edge, and §8 of `15-skills.md` argued hard for that: `.skill` is 19 px, the
+colonist pane is one fixed height across every tab, and a bar in the flow would grow all seven rows
+and move the pane's top edge on a change of tab. Moving it looks like undoing a recorded decision.
+
+It is not, and the distinction is worth having written down. **That argument is about a bar stacked
+under the text.** A bar beside the text costs no height at all while it is shorter than the row. So
+the constraint survives intact — no layout constant moved, `.skill` is still 19, no overlap case or
+coverage figure changed — and only the means changed. The stylesheet now says so at the point
+somebody would be tempted to tidy it.
+
+**What is genuinely new is that the row has a width budget.** Out of the flow the bar could not
+squeeze anything; in the flow it can, and the thing it squeezes is the only flexible part, the name,
+silently, until *Construction* clips. Nothing would have reported that: the panel still lays out,
+no overlap case moves, and the fast tier has no text engine to see a truncation. So the parts are
+named in `HudLayout` and `SkillNameWidth` is derived from them rather than written down, and
+`TheSkillRowsPartsFitTheRow` holds the sum to 256 px and the name to a floor of 95.
+
+**That floor is a ratchet, not a measurement, and the test says which it is.** The fast tier cannot
+prove *Construction* fits in 95 px — that needs a font and a text engine. What it can do is make
+widening the bar a deliberate edit to a number somebody then looks at, rather than a discovery in a
+screenshot a week later. Confirmed to fail on the right assertion by widening the bar to 96 and
+watching the name column report 71.
+
+**The passion tint was defended in §8 and is gone.** The argument was that the fill was the only
+place the ×0.35/×1.0/×1.5 learning rate was visible while it was happening. It was wrong about which
+question the bar answers: a player reading the row wants *how far along is she*, which is what a
+food bar answers and deserves the same colour. The passion is a different fact and is still on the
+row in the pips, where it was always the more legible of the two. `HudTokens.Good`, from the token
+so the bar and a food bar cannot drift — and **one colour rather than a band**, because `NeedBand`
+runs good to bad and a skill has no bad end, so asking it would paint a new colonist's skills red
+for being new. Set once at build now rather than on every passion change.
+
+Fast tier 898 Sim + 586 Hud, EditMode **2,258 / 2,240 / 0**, PlayMode **91 / 86 / 0**.
+
+## 2026-09-20 — Two branches, one anchor: the toast stack and the Events panel
+
+PR #139 (SK, skills made visible) was based on #119 and written while EV, the incident layer, was
+being written on another branch. #119 merged; EV merged as #140; #145 and #150 merged. This is the
+record of merging #139 onto that main.
+
+**Ten files conflicted and nine were ordinary** — two features appending to the same enum, a
+comment corrected differently on both sides, a journal both had appended to, a generated wiki that
+is rebuilt rather than resolved.
+
+**The tenth was not, and nothing on either branch could have caught it.** SK4 put a transient toast
+stack in the right-hand gutter *under the alerts*. EV put the Events panel in the right-hand gutter
+*under the alerts*. Both computed their top as `alertsTop + alertsHeight + Gap`, both said so in
+prose in the same words, and neither knew the other existed. Merged, they solve to the same origin:
+with an event on screen, the toast draws over the panel.
+
+**Why the layout sweep did not see it.** `HudLayoutTests.NoTwoPanelsOverlapAtAnyOfTheThreeResolutions`
+is exhaustive over its case list and the case list is hand-written. SK4's cases set `toasts` high and
+`bulletins` to zero — the parameter did not exist on that branch. EV's cases did the mirror image.
+The sweep passed on both branches and would have passed on the merge, because the conflict resolution
+that puts both parameters in one constructor does not write the case that uses both. **An exhaustive
+sweep is only as exhaustive as the list it is given**, and that is the lesson worth generalising:
+when a branch adds a region to a shared column, the merge owes a case with every member of that
+column at once, and the prose in each branch is the grep that finds them.
+
+**The resolution, and it is a decision rather than a tie-break.** The column is clock, alerts, Events,
+toasts. The toast is last because it is the only one that comes and goes: it arrives every couple of
+minutes and leaves six seconds later, so anything below it would step down and back up each time.
+The Events panel is a standing list a player scans, and a list that shuffles while being read is a
+list that gets misread. Two tests, both confirmed to fail on the pre-fix arithmetic before the fix
+went in: `TheToastStackIsTheLastThingInTheAlertsColumn` states the order and why, and two new sweep
+cases put all three panels in one column at all three resolutions. `HudGeometryTests` counts
+`.bulletin` rows as well as `.toast` ones now, so the PlayMode model is told about the panel that is
+actually on screen. `docs/design/15-skills.md` §8h.
+
+**Four stale numbers in `SkillCatalogue`, found on the way and fixed.** Its remarks said *"where the
+simulation's three go"* (five, four of them rows), *"thirteen items at half width"* (fourteen), and
+*"Thirteen into seven rows leaves the right column one short"* — which is not merely a wrong number
+but a wrong description of the code, since fourteen into seven fills both columns exactly and the
+`index < order.Count` guard is now the odd case rather than the normal one. The citation
+*"fixed 2026-09-20, SK1/SK5"* named a unit the same PR says does not exist. None of these change
+behaviour; all of them are what the next session would have believed.
+
+**One comment in `HudShell.Inspect` said the opposite of the line under it.** The experience bar's
+block opened *"it is deliberately NOT guarded the way everything above is"* and the next line is
+`if (view.LastProgress == row.Progress) return;`, which is exactly that guard. The guard is right and
+the field's own doc comment already explained it correctly; the call-site comment was reaching for a
+different point — that the guard is *taken* about half the time here and almost always elsewhere —
+and stated it as an absence. This is `docs/bug-patterns.md`'s *one rule with two owners* in its
+cheapest form: a comment and the line beneath it.
+
+**Verified.** Fast tier 898 Sim + 585 Hud, Long tier 23, both content gates clean, wiki rebuilt.
+Unity EditMode **2,257 / 2,236 / 0 failed**; PlayMode **91 / 81 / 0 failed**, five short of main's
+86 passes because that run had no `Assets/Synty` — see the note below.
+
+**And the machine lost the art packs during this session, then got them back.** `D:\code\odyssey-audio`
+was a worktree, and six checkouts — including this one — junctioned their `Assets/Synty` at it
+rather than at the canonical `D:\code\odyssey\Assets\Synty`. That worktree was removed while this
+session was running: it read the packs successfully at the start and found the directory gone later,
+and `git worktree list` now calls it prunable along with five others. All six junctions went
+dangling at once.
+
+**The symptom was a skip count, not an error.** Both tiers stayed green with `failed=0`; what moved
+was PlayMode's *passed*, 81 against main's 86, with five tests ignoring themselves for reasons like
+*"the colonist rows resolved to no art"*. A lower pass count with nothing failed is the tell, and it
+is a question about the machine rather than the branch. Re-run with the packs back it is **86**,
+matching main exactly — which is the confirmation, since guessing that five skips explain a gap of
+five is not the same as watching them come back.
+
+**Recovered.** A deleted worktree lands in `D:\$RECYCLE.BIN`, and the COM recycle-bin listing does not
+show these — enumerating the `$R*` directories on disk found eleven copies of `Assets\Synty`, ten of
+them junctions that restore nothing and one a real directory with the right 15,868 files and
+1.54 GB. The canonical path had been restored from it by the time this session looked; the six
+dangling junctions were repointed at it, `.meta` included, and PlayMode re-run with the art present.
+
+**The lesson is not the recovery, it is the arrangement.** Sixteen checkouts, one copy, no
+duplication — which is why it looked right. Its one non-obvious property is that **the real packs
+were inside something whose whole purpose is to be disposable**. They belong in a plain directory
+outside every checkout, with every checkout including the main one a junction into it; then a
+worktree removal can only ever take a link. `docs/lessons.md`.
+
+**And the disk is the next thing to bite.** `D:` is at 100% with about 8 GB free of 1.9 TB, across
+twenty-seven worktrees each carrying its own multi-gigabyte Unity `Library`. It failed an ordinary
+840 KB file write mid-way during this session and left the file zero bytes — recoverable only
+because it was committed. Anything that writes to that disk should assume the write can fail:
+write to a temporary file in the same directory and `os.replace` it into place, which is what the
+session's own edit helper does now.
+
+## 2026-09-20 — Skills made visible, and a session that checked its base once (SK2–SK5)
+
+The ask was to "enable skills for chopping, mining and plants/gardening", add a bar in the colonist
+card that fills as the work is done, and raise a positive notification on a level-up. Almost none of
+that was missing: chopping and mining had driven work speed since WS2, gardening was built and open
+as PR #119, and passion was rolled, multiplied and drawn as pips already. What was missing was a way
+to see any of it, and one bug.
+
+**The lesson is not about skills. It is that this session checked `main` and #119's head once, at
+the start, and never again across several hours — and was wrong three times because of it.**
+
+**One: it claimed a finding the audit had already made.** `CLAUDE.md`'s gap said *"a skill level buys
+nothing a player can feel"*, this session reported it as stale, and it was — but the baseline audit
+had caught it on 2026-09-19 and already struck it through on `main`, deliberately kept as the worked
+example of exactly this failure. The branch was based on a head predating that, so it read a stale
+copy of the file whose own warning is *"check the code before you trust any status line"* and then
+did not check the code. The line caught its second session and is annotated to say so.
+
+**Two: it wrote a unit that already existed.** `SK1` was to give `Work_Growing` a rate curve. While
+it was being written, `claude/growing-zones` added the identical curve — same `rateSkill`, same base
+and slope, the same re-baked fingerprint, because it is byte-for-byte the same content change. A test
+over there carries the giveaway: *"another agent is addressing skills"*. Both sessions read the same
+"no curve yet" note and neither looked at the other's branch again. `SK1` was dropped on merge; there
+is no `SK1`, and the curve is #119's.
+
+**Three: it worked around a bug that was already fixed.** `build_wiki.py` used a Python 3.12-only
+f-string, the container's `python3` is 3.11, so this session ran the gate under `python3.13`. `main`
+had repaired that line the day before, in the same audit commit.
+
+**The rule worth writing down: re-check the base branch before claiming a finding, not only before
+starting work.** All three failures share one cause and one cheap fix, and a session that runs for
+hours against a moving `main` needs the check more than once.
+
+**What this work did find, and it is unrecorded anywhere else:** `SkillCatalogue` greyed out
+**Construction** as "nothing is built yet" and **Growing** as "nothing is planted yet". Construction
+had been simulated since U26 and growing since U47. The one screen whose job is telling a player what
+a colonist can do was denying half of what she does — so **a row's liveness is not documentation, it
+is a claim about the simulation, and nothing was checking it.** Two features shipped past it,
+including growing, which added the skill and the jobs in one branch and left its own row dead.
+
+CLAUDE.md's warning — *"check the code before you trust any status line"* — applies to the design
+documents too, and to the branch you are sitting on.
+
+**One measurement survived being wrong about everything else, and it is worth keeping.** The plan
+said the growing curve would move the growing goldens. It moved none — the golden worlds are bare
+seeds with no zone painted on them, so no sow or harvest job is ever created and the curve is never
+consulted. #119 had changed that fingerprint without recording the move at all, leaving its previous
+note reading *"Work_Growing carries no curve yet"* directly above a def that had one, so this
+branch's paragraph stays as the record of that move — re-attributed, and with the measurement kept.
+A comment asserting a measurement nobody took is worse than no comment; so is a value nobody
+explained.
+
+**A level-up needs nothing from the simulation, and that is the nicest thing here.** Every colonist's
+level in every skill is already published every frame, not just the selected one. So a rise is found
+by comparing against what was last seen: no event, no flag, no serial, no saved field, no hash. The
+reason it cannot be missed is worth keeping straight — `PawnGesture` needs a sticky flag *and* a serial
+because a gesture is an *instant* a poll can sit between, whereas a level is a *standing value*, so the
+next read always says what it is now. The worst a 4 Hz poll can do is see two levels as one rise, and
+the watch reports the level *reached* rather than the number of steps so that case needs no handling.
+
+**The notification is a toast, and the design had already named it.** Looking for somewhere to put it
+turned up `ui.bulletin.*` — fifteen keys, a registry, and panel A6 in the catalogue, "right edge, below
+the alerts". Nearly right, but a bulletin is *kept until dismissed*, and a level lands every couple of
+minutes per colonist, so it would become a stack cleared as a chore — and the chore would teach the
+player to clear the raid warning beside it without reading it. **Frequency decides the channel.** Then
+09 §2.3 turned out to use the exact word for the third thing: a rejected intent *"surfaces as a
+transient toast rather than a bulletin"*. The channel was named in the design and never built. So this
+builds it rather than inventing `ui.message.*`, and rejections — today only counted into a log — are
+its obvious second customer.
+
+`AlertSeverity` gained no fourth "good" value: `AlertChime.ForSeverity` already maps `Notice` to
+`alert-normal`, so the chime needed no new audio code, and **the channel is what makes a toast good
+news, not its severity**. The sound reads the model's row count rather than detecting a level-up
+itself, because `AlertChimeWatch`'s own remarks record what a second copy of a model's rule cost the
+last time: its private starvation threshold drifted and the chime fired at a hundredth of the intended
+level, which is to say never.
+
+**The bar cost the layout nothing, and the trick is worth stealing again.** It is an absolutely
+positioned 3 px underline. `.skill` is 19 px, `HudLayout.SkillRow` says so, and the colonist pane is
+one fixed height across every tab on purpose so changing tab does not move its top edge. In the flow a
+bar would have grown all seven rows and undone that. Out of flow, no layout constant, overlap case or
+coverage figure moves — **and that is also what made "live rows only" safe**, since uneven row heights
+were the one thing that would have forced a bar onto all fourteen.
+
+It is the one field on the row deliberately *not* guarded against change: everything else writes only
+when it changes because a level moves once in a working day, and the bar wants all fifteen refreshes a
+second. Only the width is written, so nothing allocates.
+
+**Two numbers computed before building rather than hoped for.** At 60 ticks a second a working colonist
+earns 6,600 experience a second before passion, so level 0→1 is about 2.5 minutes of solid work at a
+minor passion and the bar creeps about 1.5 px a second. Had that come out at a hundredth of the figure
+the bar would not have been worth drawing. The same arithmetic confirmed the daily soft cap's tuning:
+4,000,000 is reached after ~10 minutes against a 16.7-minute day, the two-thirds relationship
+`Jobs.xml` claims for it.
+
+The second was an overflow. `ProgressPerMille` divides into the ladder, and the top of the ladder is
+265,000,000; a thousand times that is eight times an `int`. In int arithmetic it reads correctly at low
+levels and returns nonsense at high ones, which is the worst shape a bug can have, and it is the one
+thing in the unit with a test written specifically against it.
+
+**Two recorded decisions reversed, both on purpose.** §6.3 chose no progress bar, *"thirteen bars is a
+lot of furniture"* — narrowed rather than overruled: four bars, not fourteen. And §3e of the rates
+document refuses per-strike mechanics, so the owner's "experience with every hit" was met by the thing
+already true — experience accrues every *tick*, finer than per hit — with the bar supplying the only
+part that was missing, which was being able to see it.
+
+**Left undone on purpose:** the per-stroke pip. It would couple the inspect pane to the world's stroke
+clock for a decoration over a bar that is already correct, and the continuous movement is what the
+request was about. Also unbuilt: traits. Passion turned out to be the "1/2 stars" — three tiers, rolled
+from the colonist's own seed, already drawn as pips — so the bar's fill takes its colour from the
+passion and `LearningFactorPerMille()` stays the empty seam it has always been.
+
+**The container could not run Unity, and said so rather than guessing.** The .NET SDK went in from
+Ubuntu's own repositories, the Microsoft download host being blocked by the egress policy — worth
+knowing, because `main`'s own fast-tier line already recorded "dotnet 8.0.131 in the remote
+container", so a previous session had solved the same problem and this one rediscovered it. The wiki
+gate was run under `python3.13`, which was unnecessary: `main` had already fixed the 3.12-only
+f-string, and after merging, both gates run on plain `python3`.
+
+So the fast tier and both content gates are real evidence here: 791 Sim, 475 Hud, 23 Long, all green.
+The Presentation and PlayMode assemblies are compiled by none of it, so the bar and the toast stack
+are **unproven** until the Unity tier runs on the owner's machine. One Unity-tier failure was found by
+reading rather than running — `HudSmokeTests` asserts the exact set of framed panels the shell builds,
+and would have rejected the new `toasts` one.
+
+
+### Reviewing the skills work on the owner's machine (2026-09-20)
+
+Picked up on `claude/skills-review`, a worktree of #139 with the base branch merged up — #119 had
+moved five commits since the fork, and the only collision was two sessions appending to the end of
+this file on the same day.
+
+**The first job of the review was the thing the PR itself said was unproven.** Its description leads
+with "no presentation code in this PR has been compiled", and that is where the risk was: the fast
+tier builds neither `Odyssey.Presentation` nor the PlayMode assembly, so the bar, the toast row and
+the click handler had never been through a compiler. Running the Unity tier was therefore the review,
+not a formality after it.
+
+**One real fault, and it is the shape this project keeps meeting: a rule with a door nobody was
+watching.** `SkillLevelWatch` is careful about the two ways a mark can go wrong — the first sight of
+a colonist is silent, and a colonist missing from the frame is forgotten — and both have tests. But
+`Forget` can only drop who is missing from a frame it has been *given*, and **between two colonies
+there is no frame at all**: the interface is on the main menu and nothing steps. So the marks survive
+into the next colony, where `PawnId` 1 is a different person. Load a save whose first colonist mines
+better than the last one's and she announces a level she was rolled with — the exact failure the
+first-sight rule exists to prevent, arriving by the one door that rule does not watch. `ToastModel`
+already had a `Clear`; nothing had ever called it, and it cleared the rows but not the watch. It
+clears both now, and `HudShell.OnSessionChanged` calls it, one line below where the in-game interface
+already goes away with its colony. Verified by breaking it: with `_levels.Clear()` commented out the
+new test fails on the right assertion.
+
+**And a guard that was described but not written.** `SkillCatalogue`'s remarks said
+`SkillCatalogueTests` "now asserts the live set against the published aspect names" — there was no
+such file, and the assembly seam means there cannot be one that reads the simulation directly. That
+matters more than a wrong cross-reference: the bug this work is proudest of finding is *a row's
+liveness is a claim about the simulation and nothing was checking it*, and nothing still was. It is
+two pins facing each other across the aspect name now, one on each side of the seam:
+`SkillTests.EverySkillTheSimulationTrainsIsNamedHere` pins `SkillIndex.Names` and fails the moment a
+skill is added, with a message sending the author to `SkillCatalogueTests`, which pins the live rows,
+their empty excuses and the four keys each mints. Adding a skill and forgetting the row — which is
+precisely what the growing branch did — now fails a test that says so.
+
+Three stale comments fell out of the same read: the catalogue still said "the thirteen" twice against
+fourteen entries and still said `ui.skill.growing` was trained by cutting, and `WorkTypes.xml` still
+said the growing curve "belongs to the skills work when it lands" when #119 had landed it. Small, but
+this is the file that told two sessions the curve was missing.
+
+**Nothing moved a golden and nothing moved the fingerprint.** The XML edit is a comment, the tests are
+tests, and the one behaviour change is presentation state cleared at a session boundary. Long tier 23,
+green, on the merged branch.
+
+
+**The Unity tier ran, and that was the review's real deliverable.** EditMode **1,989 total, 1,971
+passed, 0 failed**; PlayMode **85 total, 80 passed, 0 failed**, with `HudSmokeTests` naming thirteen
+framed regions and the toast stack among them. So the bar, the toast row and its click handler
+compile and the shell frames them — none of which the fast tier can say, and all of which the PR
+correctly flagged as unproven. Worth recording once: **Unity's own runner exits 2 whenever anything
+is inconclusive**, which it was eighteen times (the `[Explicit]` benchmarks, the ignored allocation
+probes and the four `GrowingJobTests` the fast tier also skips). `unity.sh` reads `failed=` out of
+the results XML and exited 0; a log line saying "Exiting with code 2 (Failed)" beside `failed="0"`
+is not a failure.
+
+---
+
+## 2026-09-21 — a bigger board, and the number that turned out to be measuring the wrong world
+
+The owner asked for a map twice the size in every direction, for an honest answer about how big we
+could realistically go, and to be interviewed first. The interview settled four things: **twice the
+ground, not the depth** (240 × 240 × 16); a **fourth size** rather than a new default; **measure
+first and change behaviour second**; and the ceiling to be answered against the **2022 laptop** the
+docs still name as the target.
+
+**The first thing grounding found was that the feature already existed.** A board-size picker has
+been on the setup page since 2026-09-17 — Small, Standard, Large — so "a bigger map" is a fourth
+entry in a three-element array. `MapSizes.Default` is an index and Huge goes after Large, so nothing
+shifts; the index is not persisted anywhere (not `PlayerPrefs`, not `ViewStateSection`, not
+`SaveRecipe` — a save carries `SaveHeader.Size`), so a fourth entry cannot invalidate a save.
+`MenuDirectorTests` already iterates `MapSizes.All`, so the cycle, the clamp and the label came for
+free. The content change is three lines and a CSV row.
+
+**The second thing it found is worth more: Large already ships and nothing has ever run it.**
+180 × 180 × 24 is 777,600 cells against Huge's 921,600 — 84% — and 1,536 render chunks against
+1,600, which is 96%. So "four times Standard" is true of cells and of almost nothing that costs,
+because a chunk is 25 × 25 *within one layer* and Large carries eight more layers. The multiplier
+somebody will quote at a frame number is wrong before the frame is measured. Every arm written this
+session runs Large too, for that reason.
+
+### The measurement that mattered, and the one that was lying
+
+The plan was to take the edit tick — the audit's one finding that scales with the board rather than
+with what is happening on it — at each board size. `TickBenchmarkTests` was the obvious place: it
+already runs fifty pawns at the scale target and reports per-phase timing. It also, as the audit had
+noted, **never edits the world**, which is the one state in which `NavGraph.Rebuild` returns on its
+first line. So it got `MineOneCell` and a busy arm.
+
+The first numbers were alarming: 5.23 ms per tick on Standard, 17.78 on Huge, 40.4 at the scale
+target, against the audit's 0.414 and 1.187. Twelve to thirty-four times worse, on a machine several
+times faster than the audit's container. Either the audit was wrong or the new arm was.
+
+**Neither. The benchmark does not build the game's world.** `BuildColony` lays an 11 × 11 room
+lattice with 8% rubble scattered through it, which fragments every block: **19,606 regions at
+120 × 120 × 16 against a generated map's 2,110**, and 207,293 at the scale target against 24,141.
+The rebuild's cost tracks the region count almost exactly — the isolated diagnostic confirmed it,
+19,606 regions → 6.0 ms and 207,293 → 40.1 ms — so the arm was reporting roughly an order of
+magnitude more than the same edit costs in the game, and reporting it under a label that read like
+the game.
+
+That is the failure this project keeps meeting in different clothes: **a measurement that is correct
+about the thing it measures and wrong about the thing it is named after.** The fix is not to delete
+the arm — a heavily built colony tends towards exactly that lattice, so it is a fair floor to hold —
+but to make it say its own region count in its report line and to name, in its summary, which arm to
+quote instead.
+
+The figure a board size is actually bought with went where the real boards already are:
+`NavGraphStatisticsTests`, which generates each map and walks its graph, gained `TimePerEdit`. On a
+board the generator made:
+
+| Board | Regions | Links | Rebuild per mined cell |
+|---|---|---|---|
+| Standard 120 × 120 × 16 | 2,110 | 1,477 | 0.298 ms |
+| Large 180 × 180 × 24 | 7,360 | 3,511 | 0.587 ms |
+| Huge 240 × 240 × 16 | 8,406 | 6,180 | 0.883 ms |
+| Scale target 250 × 250 × 40 | 24,141 | 6,772 | 1.047 ms |
+
+**The audit is corroborated** — it read 0.449 and 1.150 on a 4-core Xeon; this reads 0.298 and 1.047
+on a faster machine, same shape. Huge costs 2.96× Standard's edit tick, which at speed 3 is about
+2.6 ms of a 16.6 ms frame against 0.9 ms today. Real, and nowhere near fatal.
+
+One prediction worth recording because it held: before measuring, live regions were estimated at
+~8,500 for Huge from the live-block count. Measured 8,406. The model — regions track live 10 × 10 × 1
+blocks, not cells — is sound enough to price a board that has not been built.
+
+### What else the numbers said
+
+**Memory is 69.8 bytes a cell** and flat across every board, so Huge is 61.3 MiB simulation-side and
+about 78 MiB with the presentation mirror. The estimate going in was 67 B/cell. `CellGrid`'s
+docstring claiming "22 MB at 2.5M cells" is stale by 1.7× and has been for a while — its six arrays
+are fifteen bytes wide.
+
+**Generation is 90 ms** median over five seeds, and **nothing throws**. That mattered more than it
+sounds: `minReachablePercent` and `maxForcedFords` are per-map absolutes while `pondsPer10000Columns`
+is per-area, so Huge draws roughly four times the ponds against the same three-ford budget, and
+`EnsureReachable` can throw *"The water shapes have severed the map"*. Twenty boards, four sizes by
+five seeds, and it did not — but that arm is now the cheapest thing that can veto a board size, and
+it runs first for exactly that reason.
+
+The same per-map/per-area split shows up where the generator is not broken but is arguably wrong:
+`streamCount = 2`, so Standard puts four water bodies on 300 m and Huge puts five on 600 m. A Huge
+board is drier per acre. And every noise period is in **cells** — `surfacePeriod = 34`,
+`treeClumpPeriod = 11` — so a bigger board is *more map at the same grain* rather than the same map
+enlarged. Both are owner calls, both are in the playtest table, neither was changed.
+
+### The frame half is owed, and saying so is the point
+
+A Unity editor was open on this machine from 00:39 onwards. `CLAUDE.md` is explicit that a frame
+number taken beside a sibling Unity is worthless — the city canary drifted 2.01 to 4.01 ms on
+nothing else — and the rule about not killing a process that might be somebody's editor is there
+because it has been wrong before. So `TheBoardSizeAgainstTheFrame` is written and compiled and
+unrun.
+
+It is written as **one test and not three arms**, which is the whole design of it: all three boards
+timed seconds apart inside one run, so the answer is a ratio that survives a noisy machine even
+though the absolutes will not. And it **holds the colony fixed**, because the largest open cost in
+the frame is not board-shaped at all — `PawnPose.Of`'s crowd scan is 13.3 ms of a 22.5 ms frame at
+384 colonists, larger than every board-scaled term put together, and an arm that varied both would
+read one as the other.
+
+The prior is stated in the design doc before the measurement, deliberately: `FrameSection.World` is
+flat at 1.9–2.5 ms across a 48-fold colony at Standard, so Huge is 4× a ~2 ms term and not 4× a 5 ms
+frame. That is a much less alarming starting position than the audit implied, and it is worth
+writing down *first* so the result reads as confirmation or surprise rather than as whatever it
+happens to be.
+
+### A number that was retired on the way past
+
+The plan going in priced the standing-order marks at ~4.6 us a submission, making a 300-cell drag
+~1.4 ms and the first thing to fix. That was **wrong by about forty times**, and the branch that
+fixed it had already merged: a mark plate's submission costs about 0.1 us, the whole pass is 0.40 ms
+at 901 orders, and the 4.6 us constant is what a *loaded* submission costs. The consequence is that
+**frustum culling is now the only behaviour change HT8's numbers decide.** A plan is allowed to
+carry a wrong number; it is not allowed to carry it into a design document.
+
+### So how big, honestly
+
+Three things set the ceiling and only the first is about cells: the four global navigation passes
+(HT1 removes the board from the term entirely), per-frame work that scales with the board rather
+than the view (five rows, all fixable to scale with what is visible, none fixed), and the colony
+rather than the board — which is already the binding term at Standard.
+
+With HT1 and view-scaled rendering, the 250 × 250 × 40 design target is reachable and the board
+stops being the limiting number; memory puts a hard stop near 400 × 400 × 40 on an 8 GB laptop.
+Without either, 240 × 240 × 16 is comfortable, which is what the measurements say.
+
+Depth is the axis to be careful of, and the reason is ours rather than inherent: the region graph
+allocates a region for solid rock too, because rooms and atmosphere want a substrate. Only 6.8% of
+the wilderness's regions are walkable, so skipping all-impassable blocks would cut the count roughly
+tenfold — at the cost of M4's substrate. A design decision, not an optimisation.
+
+The outside reading converged from four directions on the same sentence, and it is the one to keep:
+**what makes a large colony map expensive is connected, reachable, searchable area — not cells, not
+bytes, not triangles.** RimWorld bounds a region to its 12 × 12 square so one edit costs one flood;
+Dwarf Fortress tells you to *seal* cavern levels rather than delete them; HPA\* recomputes one
+cluster; voxel storage pays off because most of the world is uniform and can be skipped. We already
+have the hard half of the first — `NavGraph.BlockSize = 10` is exactly that bound. What we lack is
+the incremental relink, which is HT1, which is already written down and waiting.
+
+### The frame half, run after all — and a prior of mine that was wrong
+
+The editor that made the frame measurement untrustworthy turned out to be on another project, and
+the run went ahead once EditMode was clear. The arm is built to survive a noisy machine anyway —
+three boards timed seconds apart inside one run — and every timing test in the same PlayMode run
+passed, which is the tell that contention was not gross.
+
+| Board | Frame | `World` | Draw calls | Chunks drawn | Surround batches |
+|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 3.18 ms | 2.146 | 1,475 | 104 | 266 |
+| Large 180 × 180 × 24 | 6.09 ms | 4.513 | 3,205 | 250 | 430 |
+| Huge 240 × 240 × 16 | **7.82 ms** | 5.950 | 5,392 | 443 | 464 |
+
+**Huge is over the 5 ms budget**, at 640 × 480 on a 5070 Ti, before the target laptop is considered
+at all. So the answer splits: comfortable in the tick, over budget in the frame. Large is over too,
+at 6.09 — and Large has shipped for days.
+
+**And the cost is one term.** `FrameSection.World` goes 2.146 → 5.950 while `Figures`, `Overlays`,
+`Mirror`, `Sight`, `Audio` and `Actors` are flat to two decimal places across all three boards. That
+is the cleanest signal this renderer has produced: the board shows up in draw submission and
+nowhere else.
+
+**I had stated the opposite prior, in writing, before measuring — and keeping the correction is the
+point of having stated it.** The mark-pass work found `World` flat at 1.9–2.5 ms across a *48-fold
+colony*, and I reasoned from that to "Huge is 4× a ~2 ms term, not 4× a 5 ms frame". `World` is flat
+in the colony and is not flat in the board. It should have been obvious: a term that does not move
+with what is *happening* is exactly the term that moves with *how much there is*. Writing the
+prediction down first is what turned that into a correction instead of a silently revised memory.
+
+**The decision HT8 existed to make is now made.** `ChunkRenderer.Render` has no frustum or distance
+test, so all 443 of Huge's drawn chunks are submitted wherever the camera points — and on a 600 m
+board seen through a 160 m camera most of them are off-screen. Culling goes ahead, with a number
+behind it rather than a suspicion.
+
+**One thing the arm did not measure, and says so.** `FrameSection.Doors` read 0.000 on every board.
+`DoorDirector.EnsureDoorList` only rescans when `WorldRenderModel.Version` moves, and this arm
+designates and then lets the world settle, so the 922k-cell scan never fired. The hazard is
+unmeasured, not absent, and measuring it wants an arm that keeps editing while it times — the same
+shape as `MineOneCell`. Recorded rather than quietly left as a zero, because a zero in a table is
+indistinguishable from a cost that is genuinely nil.
+
+---
+
+## 2026-09-21 — the decoration, measured: the surround was 45 per cent of the frame and nothing could say so
+
+The owner, from a Play session rather than a test: *"it seems that grass tufts and surrounding land
+have some impact of the FPS — is there anything we can explore investigate to improve or handle
+performance, any pre warming of shaders, caching or something that would help."*
+
+**The first answer was that the project could not tell them, and that is the finding behind the
+finding.** The surround is submitted from inside `ChunkRenderer.Render` — deliberately, so it
+reaches the GPU before the board and the depth buffer can reject it — and it was therefore charged
+to `FrameSection.World` along with the chunk buckets from the day the sections were written. So the
+one pass §6c had spent a day cutting from 3.65 ms to about 2.2 was the one pass no instrument could
+name afterwards. The tufts had never had a number at all: they are meshed into the chunks, so they
+are invisible inside the board's own figure by construction.
+
+**Four instruments, and they are the real deliverable.** `FrameSection.Surround`, split out and
+charged by a stopwatch inside the renderer; `GpuFrameMs` and `CpuFrameMs` off `FrameTimingManager`,
+with `enableFrameTimingStats` turned on in the player settings to feed them; two lines on the
+developer overlay — `cpu … gpu … <resolution>` and the whole submit split, largest first; and
+`FrameTimeTests.TheDecorationAgainstTheFrame`, which times one built world four ways.
+
+**One world, four readings, because this machine cannot be trusted across runs.** The played
+meadow, 640 × 480: as shipped **2.71 ms**, tufts off **2.52**, surround off **1.48**, neither
+**1.29**. So the surround is **1.23 ms — 45 per cent of the frame** — and the tufts are **0.18, or
+7**. Together they are more than half of it. The owner named the two together and one of them is
+nearly seven times the other.
+
+Three corroborations fell out of the same run without being asked for. The surround is a **flat
+tax**: 1.14–1.24 ms at every colony size from 8 pawns to 384, while `Figures` goes 0.09 → 8.65 and
+`Actors` 0.02 → 15.41 — it is the largest single item in the draw block on the standard board until
+about thirty colonists. It **barely grows with the board** — 1.07, 1.78, 2.05 ms on standard, large
+and huge, against `World` going 0.92 → 2.17 → 4.08 — because it scales with the ring and not with
+the area. And the **city pays 0.058 ms**, since the ruined city grows no wood outside it, which
+confirms directly what §6c had only established by subtraction: the surround's cost is its trees.
+
+**What was deliberately not concluded.** Every figure is a stopwatch around CPU submission at
+640 × 480, and both suspects are alpha-tested foliage covering the horizon — the exact geometry §6c
+predicted would be free at 307k pixels and dominant at 1080p. The ranking may invert at play
+resolution: batch overhead hardly moves with pixels and fill moves with their square. So the tuft's
+7 per cent is a statement about submission and might be wrong by an order of magnitude about what
+the owner is watching. That is what the GPU readout is for, and the next step is one Play session
+at the owner's own resolution rather than another test on this one.
+
+**Two things in the question were answered rather than built.** *Pre-warming shaders* fixes hitches,
+not frame rate — a variant costs one stalled frame the first time it is drawn and nothing
+afterwards, so it cannot be what a steady readout shows; worth doing for the stutter on its own
+terms, and this project has been bitten three times by the neighbouring problem of variants being
+*stripped*, but it is not on the path to this report. *Caching* is already done: the surround is
+built once and submitted unchanged, the tufts are baked into chunk meshes and re-meshed only on a
+dirty chunk, and there is no per-frame rebuild in either pass to remove. What is left is the
+submission itself and the pixels it costs.
+
+`docs/design/06-rendering-and-camera.md` §6c.3 holds the table, the ranked options and the rule for
+reading the new overlay lines. Nothing is built past the instruments; the phase gate holds.
+
+---
+
+## 2026-09-21 — the surround halved, and a constant that had been guarding the wrong factor
+
+The owner, after the measurement: *"Ok what can we do about the surround and focus on this"*.
+
+**The instrument came before the fix, and it is what made the fix findable.** A census of the
+skirt's three batch lists on the played meadow: ground 24 batches for 12,832 instances, tufts 12 for
+1,191 — both fine — and **trees 230 batches for 3,907 instances, mean 17 a call, 192 of the 230
+holding fewer than thirty-two**. The wood was 230 of the 266 batches and it was submitting them
+nearly empty.
+
+**And the key those 230 came out of was 115 sectors × 4 mutes × 1 part × 2 tints × 16 themes.**
+§6c had cut this pass once, 80 m sectors to 400, 760 batches to 266, and then recorded that the
+ladder saturated and that the remaining floor was "the variants, themes, mute steps and parts,
+which no sector size can merge". The first half was right. The second named the right factor for
+the wrong reason and was never measured: four mute steps, two tints and one part are not splitting
+anything. `SectorOf` **folds the variant into the sector number**, so those 115 sectors are spatial
+cells times tree kinds, and a sixteen-kind wood cannot fall below sixteen batches a spatial cell
+however coarse the cells are. That is the whole explanation of the saturation, and it had sat there
+for a day disguised as a floor.
+
+**Then a sweep rather than another judged constant.** The two sector sizes and the near variant
+count were `const` and a const cannot be swept, which is exactly how the 400 came to be chosen once
+and believed. They are settable statics now, written by nothing but the sweep, which restores them
+in a `finally`. One built world, rebuilt only in the skirt, six readings in one run — surround
+section in ms: 400/800 ×16 **1.080** at 266 batches; 800/1600 ×16 **0.952** at 230; 1600/3200 ×16
+**0.935** at 230; 800/1600 ×8 **0.576** at 151; ×6 **0.483** at 129; ×4 **0.371** at 104. **Space is
+the cheap half and one step spends all of it** — 1600 m and a single 100 km sector measure the same
+as 800 — and the kinds go on paying the whole way down. Cost tracked batches throughout, 4.06 µs a
+batch at 266 and 3.81 at 104, the 4.6 µs constant behaving as §6c says a *loaded* submission does.
+
+**Shipped: 800 m near, 1600 far, eight kinds.** The surround is 1.08 → **0.58 ms** on the meadow and
+the whole frame 2.71 → **2.14**, with every one of the 3,907 trees still standing. It is now **flat
+at about 0.6 ms on every board** where it used to grow with the ring: Large 1.78 → 0.60, Huge
+2.05 → 0.63, and Huge's whole frame 8.07 → 6.09, which matters because §28 measured Huge as over
+budget.
+
+**Four was measured, is cheaper again, and was not taken.** A slot is a (module, theme) pair sampled
+from the board's own wood by frequency, and the census says the meadow's surround uses **2 tints and
+16 themes** — so sixteen slots were buying sixteen colour palettes over two silhouettes, not sixteen
+kinds of tree. Halving the palettes ought to be invisible; quartering them might not be, and that is
+an eye on the horizon rather than another reading. So 8 ships and 4 waits for a verdict.
+
+**The guard is on the factor, not the number.**
+`SurroundCostTests.HalvingTheVariantsHalvesTheWoodsBatchesAndNotTheWood` builds one board twice
+differing in the slot count alone and fails if the wood changes or the batches do not. Its first
+draft asserted something else — that a thicker wood rides in the batches already open — and it
+failed honestly: a denser board pushes the surround further out and opens real new spatial cells,
+so batches grew faster than instances and the premise was wrong. Worth recording, because the
+failing version looked like the more general guard and was simply untrue of this geometry.
+
+**And the caveat is undiminished.** All of it is CPU submission at 640 × 480. Halving a batch count
+halves per-call overhead and does nothing at all for fill, so if the owner's report turns out to be
+GPU-bound at play resolution this has moved a number they were not watching. It was still worth
+doing unconditionally — half a millisecond off every board for nobody's trade — but the Play session
+with the GPU readout is still what decides everything after it.
+
+---
+
+## 2026-09-21 — 4K on the owner's machine: the surround is six per cent, the GPU is the frame, and my CPU readout was wrong
+
+Three screenshots, a real Play session, **3840 x 2160** — twenty-seven times the pixels every number
+in §6c was taken at, and the first reading this project has at a resolution anybody plays at.
+
+**The surround work paid and is done.** It reads **0.91–0.98 ms of a 16 ms frame, about six per
+cent**, where before §6c.4 it was forty-five per cent of a 2.7 ms frame. It does not scale with
+resolution, which is the shape it should have: per-call overhead, the same calls whatever the pixels.
+
+**The GPU is now the largest single item — about 8.5 ms against 5.5 of CPU submission.** §6c
+predicted exactly this and could not test it, and the prediction was right. So the tuft question
+§6c.3 could not answer is still open and is now the one worth asking, because tufts are pixels
+rather than calls. And on the CPU side what is left is **`World`: 4.1–4.7 ms of the 5.1–5.7 ms
+submit**, four to five times the surround, over 3,747 draw calls and 413 chunks. The next unit on
+this side of the bus is the chunk buckets, and `claude/frustum-culling` is already sitting there
+measured.
+
+**8.40 + 5.55 does not make 16.79, and that gap is the finding underneath the finding.** 60, 64 and
+57 fps across three shots is a frame paced by a display, not by work. So the fps number in those
+shots is not evidence of headroom in either direction — it hides both the spare capacity and the
+real cost. The overlay prints `vsync` and the frame `cap` beside the GPU figure now, because a
+reading taken without them is not comparable with anything.
+
+**And `CpuFrameMs`, which I added that morning, was wrong on screen in its first real session.**
+16.81 ms beside a 16.79 ms frame in the first shot — right — then 296.32, then 17,898.04, climbing
+over about twenty-five seconds, so a stream of bad samples and not one spike decaying out of an
+average. Deleted rather than repaired, because nothing is lost by deleting it: `frame` and `submit`
+are our own stopwatches, they agree with each other, and between them they say everything a CPU
+figure would have. `GpuFrameMs` stays — it is the one number nothing else here can get, it read
+8.40, 8.15 and 9.12 across the three shots, and it is guarded against implausible samples now.
+
+The lesson is worth more than the figure was: **a number the platform hands you is not a
+measurement until it has been seen beside a number taken independently.** That one shipped on the
+strength of looking plausible in a batch run at 640 x 480 — inside the very document that says
+640 x 480 proves nothing.
+
+---
+
+## 2026-09-21 — the game records what it costs, so the next question does not need a batch run
+
+The owner, after three performance questions in one day had each cost a Unity batch run or a
+photograph: *"Is there any logging/monitoring or tooling we can implement now to understand
+everything, log the details so you can get your information quicker and easier?.. plan it out if
+need be"*. Interviewed first, as the working agreement says: all four goals wanted — turnaround,
+catching stutters, a regression record, and understanding the simulation — and **the loop only** in
+this pass, with summaries rather than a raw file to read.
+
+**The exploration found the most useful thing already written and unused.**
+`Assets/Odyssey/Sim/Diagnostics/PhaseTrace.cs` is a finished per-phase tick tracer — nearest-rank
+percentiles, `Clear()`, an `ITickPhaseSink` seam on `SimWorld`, UnityEngine-free — with **no
+consumer in the running game**, only `TickBenchmarkTests`. Attaching it gives the sim half of a
+trace for nothing and covers part of the fourth goal without any new machinery, and
+`TimingATickCannotChangeIt` already asserts that attaching it is harmless. Reusing it also settled
+the ranking rule by force: the new `FrameWindow` copies `PhaseTrace.Rank` exactly, so a p95 in a
+trace and a p95 in a tick benchmark cannot come to mean two different things.
+
+**What was built.** A row a second into `Logs/perf/` — frame p50/p95/p99/max, gpu, submit, tick,
+every `FrameSection`, every `TickSegment`, the counters — behind a header naming the machine, the
+screen, the board and every graphics setting, walked through `SettingsDirector.All` and
+`AllLadders` so a setting added later appears without anybody remembering. Any frame over 50 ms or
+three times the previous second's median is **captured whole with its own split**, rather than
+averaged into the second it interrupted, which is precisely what a mean does and precisely what
+this exists to stop. A *Mark this moment* row in the debug menu. And `tools/perf/trace.py`, stdlib
+only like every other tool here, with `summarise`, `compare` and `list`.
+
+**Three decisions worth the space.**
+
+*It measures nothing.* Every number it writes is already a public property. That is the safeguard
+rather than a limitation: a recorder that invented a figure could become the next `CpuFrameMs`,
+which is the field that shipped that morning and read 16.81, then 296.32, then 17,898.04.
+
+*`compare` refuses.* Two traces whose headers disagree about the GPU, the screen, vsync, the cap or
+the board are not compared without `--force`. `docs/process.md` says a timing without its machine is
+a rumour; this is that sentence executable, and it is aimed at the mistake §6c records costing an
+afternoon, when a canary drifted 2.01 → 4.01 ms on nothing but a sibling worktree. A move under one
+per cent gets no verdict either, for the same reason.
+
+*The marker is a menu row and not a key.* A binding is a `HotkeyAction`, and those are player
+controls that appear in the Keys tab and the wiki — a developer's trace marker is not game content.
+The reader makes the timing forgiving instead: it shows the seconds either side of a mark and leans
+the window **backwards**, two behind for every one ahead, because nobody reaches anything mid-hitch.
+
+**The test that matters is the one the day earned.**
+`FrameTimeTests.TheTraceAgreesWithTheArmThatTimedIt` runs the trace and `TimeFrames` over the same
+frames and requires their answers to meet within a factor of two. The band is wide on purpose —
+a mean over 180 frames and a median of per-second medians are not the same statistic — so what it
+catches is a tracer reading a different quantity, a different unit, or nothing. It is the morning's
+lesson as an assertion: *a number the platform hands you is not a measurement until it has been seen
+beside a number taken independently.* The fast tier's half is
+`TraceWriterTests.TheHeaderNamesEveryFieldARowCarries`, which fails the moment a field appears in a
+row without being declared.
+
+**One test was wrong before the code was.** The first draft of the percentile test used a sample
+list with a repeated value and asserted the median of the *distinct* values. The code was right and
+matched `PhaseTrace`; the test was rewritten with ten distinct samples and a note saying why,
+because a percentile convention quietly changed to match a mistaken test is exactly the kind of
+thing nothing else would catch.
+
+---
+
+## 2026-09-21 — the stutter, found: chunk meshing has no per-frame budget
+
+The owner had reported hitches all day. `ChunkRenderer.BatchFor` meshes every stale chunk the draw
+loop touches, in the frame it touches it, with no budget and no deferral. A camera sweep into unseen
+map brings hundreds due at once; a graphics toggle calls `Model.Remesh()` and brings all eight
+hundred of a Huge board.
+
+**The evidence is a clean separation.** Eighty-seven seconds of traced player: fifty-six seconds
+with no meshing produced **zero** stalls over 100 ms, and every stall in the session fell in one of
+the eleven seconds where meshing ran, at a rate that tracks the meshing rate. The frame-level
+confirmation is one record — a **180 ms frame that meshed 900 chunks** — and `submit_max` reached
+200 ms, the draw block wearing it.
+
+**It took four wrong answers, and that is the part worth keeping.** Editor-only, then the collector,
+then shader compilation, then the tick. Each survived longer than it deserved because the trace was
+reporting *summaries of events*: `remeshed` was last-seen and read 0 through a second that meshed
+eight hundred; the tick had a median and no maximum; the phases had a mean and a p95 and no maximum.
+Every one of those zeroes and plausible medians was quoted as evidence of absence, against the
+correct hypothesis, more than once. `docs/bug-patterns.md` P14 holds the pattern and the rule: **a
+counter of events is summed, a counter of state is last-seen, and anything timed carries a maximum
+as well as a middle.**
+
+The two eliminations that survive and should not be re-litigated: **not the simulation** (`tick_max`
+4.90 ms and worst phase 3.58 ms across the session, against frames of 180-439; and 3x speed with the
+camera still produced no stalls at all), and **not the collector** (zero of the captured stalls
+collected on their own frame, across three sessions, one of which had 21 collections in a second
+whose worst frame was 19 ms).
+
+One methodological note against myself. The captured spike records all showed `remesh=0` on their
+own frame, and I said so — but `MaxSpikesPerRow` caps capture at four a second and those seconds had
+thirty-eight. **A capped sample is not a sample**, and the unbiased `submit_max` said the opposite.
+The 900-chunk frame arrived later and settled it.
+
+The fix is a per-frame meshing budget, nearest first, and it is not built: it is a renderer change
+with a visible trade and wants its own unit.
+
+---
+
+## 2026-09-21 — the meshing budget: 156 ms to 9, and the stall moves into the loading screen
+
+The owner: *"fold it in and and plan out the performance improvements now and combine into PR ...
+and then execute."* So §6c.6's finding became §6c.7's rule and then the code, in that order.
+
+**The rule is one sentence: a frame meshes at most eleven chunks, and a chunk that misses the budget
+draws what it already has and is retried next frame.** The number is the fault's own arithmetic —
+the player session measured 900 chunks at about 165 ms, so 0.18 ms a chunk, and roughly 2 ms of a
+5 ms frame is eleven.
+
+**The retry needed no queue, and that is the part worth keeping.** A deferred chunk still has
+`batch.Version != _model.Version`, so the next frame's walk finds it again. The staleness *is* the
+queue. A second list of owed chunks would have been a copy of state the batch already holds, and
+the sort of thing that goes out of step with the thing it mirrors.
+
+**One exception, and it is a decision rather than an oversight.** On a new game every chunk is
+never-meshed, so a budgeted first frame would draw almost nothing and the board would arrive in
+instalments over several hundred frames while the player watched it build itself. `PrimeAll` meshes
+the lot unbudgeted and `BuildSession` calls it once — putting the stall inside the loading screen,
+where §6c.6 had already measured 14.7 seconds of worldgen stall sitting. **Keep the freeze where
+the player is already waiting.**
+
+**Measured with a control in one run**, which is the only way a number off this machine means
+anything: the same Huge board re-meshed twice, budget off then on —
+
+    unbudgeted  156.1 ms  (900 chunks)
+    budgeted      8.8 ms  (11 chunks, cap 11; 889 deferred)
+
+It reproduces the exact signature the live session caught, 900 chunks at about 160 ms, which is the
+best evidence that the arm measures the fault and not a proxy for it. No absolute threshold is
+asserted; the assertion is the difference.
+
+**What it does not fix, stated so nobody looks for it later.** The 439 ms frame at session start is
+worldgen and `PrimeAll` deliberately keeps it there. And this spreads the cost of meshing without
+making a chunk cheaper — if 0.18 ms a chunk ever becomes the complaint, that is a mesher change and
+a different unit.
+
+Five EditMode guards (`MeshBudgetTests`), of which the load-bearing one is
+`AWholeBoardRemeshIsSpreadOverFramesInsteadOfLandingInOne`: it guards the *shape* of the fault, a
+frame whose meshing cost is proportional to how much went stale. One of its drafts failed honestly
+first — a 48-cell board is 2 x 2 chunks against `CellGrid.ChunkSize` of 25, and four chunks cannot
+tell a budget of four from no budget at all.
+
+## 2026-09-21 — session lifecycle: Escape on the main screen, the leave prompt, the autosave
+
+Three things the owner asked for in two messages, all of them about the moments either side of
+playing: pausing and coming back, backing out of a menu, and putting a colony down.
+
+**Escape on the main screen had no rung at all.** `SettingsDirector.Escape` is the single owner of
+that key and its ladder knew five in-game things — tool, palette, Work tab, Almanac, Menu popover —
+and nothing about the start screen's own Load and New game screens. So the key fell past all five to
+the last rung, `OpenPanel`, and opened the *in-game settings window on top of the load list*. That
+is the "gets confused": two screens at once, and no obvious way out of the pair. The fix is two
+rungs below `ClosePanel`, taking the main screen's state as a nullable `MenuScreen` (null means a
+colony is running, which is every caller that existed before). Below `ClosePanel` rather than above
+it, because on the main screen the settings panel stands *in* the menu's place — closing the panel
+is what leaves that screen, and a `MenuBack` above it would unwind the navigation out from under a
+panel still on screen. `Nothing` is a rung rather than a fall-through: the root column is the one
+place in the game with nothing behind it, and a named answer beats reading the order to predict one.
+
+**The pause resumed at the literal 1.** Space is a toggle — asking to pause an already-paused world
+means start again — and the answer to *start again at what* was hard-coded. A player at ×3 who
+paused to give an order, which is the reason the paused world drains orders at all, was dropped back
+to normal on every unpause. `Odyssey.Hud.SpeedControl` owns the rule and the memory now: a request
+for a speed is granted and remembered, a pause remembers the speed it stopped, and the toggle
+returns it. The memory is never zero, or the toggle would resume into a pause and the clock would
+look stuck. The one path that bypasses the toggle is deliberate — restoring a saved view writes the
+speed straight to the intent queue so a colony saved paused comes back paused — and it calls
+`Remember` instead, or a colony saved at ×3 would lose it on its first unpause. In `Odyssey.Hud`
+rather than the composition root because it is a rule and that assembly is what the fast tier
+compiles. (Its own branch and PR, `claude/resume-speed`.)
+
+**Leaving now asks a question with three answers rather than arming a row.** The arm-twice rows
+asked *are you sure* and could not offer the thing the owner actually wanted — a save on the way
+out. `LeavePrompt` is that question, and the arming went with it: a row that arms in front of a
+prompt asks twice before asking properly. The in-game Quit rows are `AsksTwice: false` now and Load
+is the last row that still arms. The main screen's Quit still arms, which is not an inconsistency —
+with no colony there is nothing to offer to save and no prompt to raise in its place.
+
+`SettingsPresenter.Quit` had to **stand aside** while a session is running: the exit row raises
+`ExitRequested` (which quits) *and* `RowRequested` (which the shell turns into the prompt), so
+without it the game would close out from under its own question. A stand-aside rather than a
+rewiring, because the main screen's exit row still comes through that path and has nothing to ask.
+
+**The autosave is a day, not a minute.** Five real minutes means something different at ×1 and at
+×3; a day is the same amount of *colony* at any speed, it is on the clock the player is already
+reading, and it never comes round while paused — which is right, because nothing changed. What it
+counts is the **day, not the crossing**: a frame at ×3 retires several ticks, so a rule watching for
+"the tick where the day changed" would miss the day a batch stepped over midnight.
+
+It writes **over the colony's own file**, which is the binding rule from U38, and keeps one previous
+generation beside it — because an autosave taken thirty seconds after a disaster would otherwise be
+the only copy there is, and one cut off halfway would be the only copy *and* unreadable. The
+previous copy is an ordinary save file the load screen lists: a backup nobody can see is a backup
+nobody can use. It is **copied** before the write rather than moved, so a failed write leaves the
+colony's own file intact and the worst case is two files holding the same thing.
+
+**Two decisions inside it that could have gone the other way.** A colony that has never been saved
+is **named automatically** on its first autosave rather than skipped — a brand-new colony is exactly
+the one a crash hurts most — and the name goes on the Events panel, because a file written under a
+name nobody was told is a file nobody will find. And the notice **replaces the previous notice**
+rather than stacking: the panel keeps six rows, and a week of play would otherwise hold six
+autosaves and no events, so the feature would crowd out the thing it lives on. It does not chime;
+the game saving itself on schedule is not news that wants the room's attention.
+
+**No dirty flag, deliberately.** The quit prompt always asks. "Has anything happened since the last
+save" is a second source of truth about the colony, and with the autosave on the quiet case is rare
+enough not to be worth one.
+
+**What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
+large colony that is a hitch every game morning, and it is the first thing to look at if a daily
+stutter is ever reported.
 ## 2026-09-21 — Two reports: sealed in a wall, and a building that takes a second to appear
 
 The owner asked to be interviewed before either was fixed, which was the right instinct for the
@@ -9247,7 +10272,16 @@ It also quietly moved a rule from decorative to load-bearing. A global stamp for
 dirties too few chunks; a per-chunk stamp does not. The marks are all correct today — construction
 and mining both dirty the 3×3×3 neighbourhood, and the single-cell marks are all things drawn inside
 their own cell — but that is now a thing to check when adding a world edit, and it is written down
-in §6c.3 rather than left to be rediscovered from a stale tile.
+in §6c.8 rather than left to be rediscovered from a stale tile.
+
+**And main had been at the same wound from the other side.** While this was being written,
+`claude/huge-map` landed a *meshing budget* — at most eleven chunks re-meshed a frame (§6c.6–6c.7),
+found with the new perf trace on a played session. The two are complements rather than duplicates
+and the merge kept both: the budget caps what may be re-meshed in one frame, the per-chunk version
+caps what is invalidated at all. With the budget alone a single wall still dirties 45 chunks and
+spends four frames of stale geometry catching up; with both, it dirties three and they are re-meshed
+inside one frame. My pattern renumbered to **P15** because P14 had been taken in the meantime, and
+the design doc to **30** because 28 and 29 had been.
 
 **The seconds are still unexplained**, and I would rather say so than offer a plausible story. The
 leading candidate is outside the game: the editor compiles shader variants asynchronously, a wall is

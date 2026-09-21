@@ -144,8 +144,11 @@ namespace Odyssey.Tests.Hud
                 "writing a file loses nothing");
             Assert.That(SessionCommands.AsksTwice(SessionCommands.LoadKey, SessionContext.InGame), Is.True,
                 "the colony on screen is discarded");
-            Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitToMenuKey, SessionContext.InGame), Is.True);
-            Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitKey, SessionContext.InGame), Is.True);
+            // The two quits stopped arming on 2026-09-21: each raises LeavePrompt, which asks
+            // whether to save on the way out, and an armed row in front of a prompt is one
+            // question too many.
+            Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitToMenuKey, SessionContext.InGame), Is.False);
+            Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitKey, SessionContext.InGame), Is.False);
 
             Assert.That(SessionCommands.AsksTwice(SessionCommands.SaveKey, SessionContext.MainScreen), Is.False,
                 "a row nobody draws cannot be armed");

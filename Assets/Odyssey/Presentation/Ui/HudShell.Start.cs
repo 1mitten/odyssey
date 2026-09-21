@@ -318,7 +318,7 @@ namespace Odyssey.Presentation.Ui
             reroll.AddToClassList("setup__inline");
             board.Add(reroll);
 
-            // One control that cycles rather than three rows: there are three sizes and a player
+            // One control that cycles rather than a row each: there are few sizes and a player
             // picking one is cycling, not navigating.
             var size = new VisualElement();
             size.AddToClassList("setup__size");
@@ -799,6 +799,12 @@ namespace Odyssey.Presentation.Ui
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
 
+            // The toast stack belongs to a colony and goes away with it (SK4). Not for the rows —
+            // those expire on their own — but for the levels the watch is holding: nothing steps
+            // it while there is no world, so without this the next colony's PawnId 1 is measured
+            // against the last one's and announces a level she arrived with.
+            _toasts.Clear();
+
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {
                 Detach();
@@ -1061,6 +1067,119 @@ namespace Odyssey.Presentation.Ui
             _prompt.Confirmed += OnSaveNamed;
         }
 
+        readonly LeavePrompt _leave = new LeavePrompt();
+        HudModal _leaveModal = null!;
+        Label _leaveTitle = null!;
+        Label _leaveNote = null!;
+        Label _leaveSaveLabel = null!;
+
+        /// <summary>Whether the leave prompt is up, for whoever owns the Escape key.</summary>
+        public bool LeavePromptOpen => _leave.Showing;
+
+        /// <summary>Take the leave prompt down. The Escape half, called by <c>SettingsPresenter</c>.</summary>
+        public void CancelLeavePrompt() => _leave.Cancel();
+
+        /// <summary>
+        /// The confirmation asked before a colony is put down (2026-09-21): <b>save and leave,
+        /// leave without saving, or stay</b>.
+        ///
+        /// <para>Three answers, so it is a prompt rather than the arm-twice row it replaces — a
+        /// second press on a red row can only mean "yes", and the thing the owner asked for is the
+        /// offer to save. The note under the title names the file saving would write to, because
+        /// "Save and leave" is a promise about a file and a player is entitled to know which.</para>
+        ///
+        /// <para>The same modal chrome as the naming prompt, built after it so that if both were
+        /// ever up the later one wins — they cannot both be up today, because leaving is refused
+        /// while the naming prompt holds the screen.</para>
+        /// </summary>
+        void BuildLeavePrompt()
+        {
+            _leaveModal = Modal("leaveprompt", Registry.Label(LeavePrompt.ToMenuTitleKey),
+                () => _leave.Cancel(), "prompt");
+
+            // The header's own label, so the title can say which of the two leavings this is.
+            _leaveTitle = _leaveModal.Panel.Q<Label>(className: "panel__label");
+
+            _leaveNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "prompt__note");
+            _leaveModal.Panel.Add(_leaveNote);
+
+            var answers = new VisualElement();
+            answers.AddToClassList("prompt__answers");
+
+            var saveAndLeave = new VisualElement();
+            saveAndLeave.AddToClassList("prompt__answer");
+            _leaveSaveLabel = HudText.Make(Registry.Label(LeavePrompt.SaveAndLeaveKey), HudTextRole.Row);
+            saveAndLeave.Add(_leaveSaveLabel);
+            saveAndLeave.RegisterCallback<ClickEvent>(_ => _leave.Choose(save: true));
+            answers.Add(saveAndLeave);
+
+            var leave = new VisualElement();
+            leave.AddToClassList("prompt__answer");
+            leave.Add(HudText.Make(Registry.Label(LeavePrompt.LeaveKey), HudTextRole.Row));
+            leave.RegisterCallback<ClickEvent>(_ => _leave.Choose(save: false));
+            answers.Add(leave);
+
+            var cancel = new VisualElement();
+            cancel.AddToClassList("prompt__answer");
+            cancel.Add(HudText.Make(Registry.Label(LeavePrompt.CancelKey), HudTextRole.Row));
+            cancel.RegisterCallback<ClickEvent>(_ => _leave.Cancel());
+            answers.Add(cancel);
+
+            _leaveModal.Panel.Add(answers);
+
+            _leave.Changed += RefreshLeavePrompt;
+            _leave.Confirmed += OnLeaveChosen;
+        }
+
+        /// <summary>
+        /// Ask whether to save before putting this colony down. The settings panel goes first, for
+        /// the reason the naming prompt closes it: a question asked through two stacked windows is
+        /// a question about which window.
+        /// </summary>
+        void AskToLeave(LeaveTo to)
+        {
+            if (_boot?.World == null) return;
+
+            _boot.Preferences.SetOpen(false);
+            _leave.Ask(to, _boot.SuggestedSaveName());
+        }
+
+        void RefreshLeavePrompt()
+        {
+            _leaveModal.Show(_leave.Showing);
+            if (!_leave.Showing) return;
+
+            HudText.Set(_leaveTitle, Registry.Label(_leave.TitleKey), HudTextRole.PanelLabel);
+            HudText.Set(_leaveNote,
+                _boot?.BoundSavePath == null
+                    ? "This colony has never been saved. Saving writes a new file, " + _leave.Target
+                    : "Saving writes over " + _leave.Target,
+                HudTextRole.Meta);
+        }
+
+        /// <summary>
+        /// The player answered. Write first if they asked for it, then go where they said.
+        ///
+        /// <para><b>The save is over the colony's own file</b>, the same rule the Save row and the
+        /// autosave both keep; a colony that has never been saved is named here the way the first
+        /// autosave names one, rather than opening a second prompt over the answer to the first.
+        /// </para>
+        /// </summary>
+        void OnLeaveChosen(LeaveTo to, bool save)
+        {
+            if (_boot == null) return;
+
+            if (save)
+            {
+                string? path = _boot.SaveSession() ?? _boot.SaveSessionAs(_boot.SuggestedSaveName());
+                Debug.Log($"[Odyssey] saved to {path} on the way out");
+            }
+
+            if (to == LeaveTo.Desktop) { Quit(); return; }
+
+            _boot.TeardownSession();
+        }
+
         /// <summary>
         /// What the folder makes of a name. The prompt cannot look at a disk — it is compiled
         /// without one — so the presenter answers, on every keystroke.
@@ -1199,12 +1318,17 @@ namespace Odyssey.Presentation.Ui
                 }
 
                 case SessionCommands.QuitToMenuKey:
-                    _boot!.Preferences.SetOpen(false);
-                    _boot.TeardownSession();
+                    // It used to tear the world down on the second press of an armed row. The
+                    // prompt is the ask now, and it offers to save first (owner, 2026-09-21).
+                    AskToLeave(LeaveTo.MainMenu);
                     break;
 
-                // The exit row keeps its own path: SettingsPresenter has listened to
-                // ExitRequested since before this panel had any other session row.
+                case SettingsDirector.ExitKey:
+                    // Leaving the application while a colony is running is the same question with
+                    // a further destination. SettingsPresenter still owns the quit itself and
+                    // stands aside while there is a session, so this is the only place that asks.
+                    AskToLeave(LeaveTo.Desktop);
+                    break;
             }
         }
 

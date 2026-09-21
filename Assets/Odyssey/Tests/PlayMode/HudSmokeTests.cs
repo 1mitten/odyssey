@@ -74,13 +74,21 @@ namespace Odyssey.Tests.PlayMode
                 // command bar, built and hidden at startup exactly as "settings" and "debug" are.
                 // "bulletins" is the Events panel (design 23, 2026-09-20): under the alerts in
                 // their column, hidden until something has happened, a framed region all the same.
+                // "toasts" is the transient stack (SK4), at the foot of that same column. Like
+                // "alerts" it is built once and hidden until it has something to say, so it belongs
+                // in this list whatever the colony is doing — the list is every framed region the
+                // shell BUILDS, not every one on screen.
                 // "almanac-panel" is the reference browser (2026-09-20): full-bleed over the dark
                 // wash, built and hidden at startup exactly as "settings" and "debug" are, and a
                 // framed region whatever the colony is doing.
+                // "leaveprompt" is the confirmation asked on the way out of a colony
+                // (2026-09-21): a modal built beside "saveprompt" at startup and hidden until
+                // Quit or Quit to main menu raises it, so it joins the list on the same terms.
                 string[] expected =
                 {
-                    "stores", "clock", "alerts", "bulletins", "rail", "orders", "inspect", "build", "menu",
-                    "settings", "debug", "work", "start", "saveprompt", "almanac-panel",
+                    "stores", "clock", "alerts", "bulletins", "toasts", "rail", "orders", "inspect",
+                    "build", "menu", "settings", "debug", "work", "start", "saveprompt",
+                    "leaveprompt", "almanac-panel",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);

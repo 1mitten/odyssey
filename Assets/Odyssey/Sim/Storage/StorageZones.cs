@@ -102,6 +102,36 @@ namespace Odyssey.Sim.Storage
         public IReadOnlyList<int> CellsOf(int slot) => _zones.CellsOf(slot);
 
         /// <summary>
+        /// This store's place among the colony's, from 1 — what an unnamed zone is called.
+        ///
+        /// <para>Counted in <b>cell order</b>: how many stores begin at a lower cell than this one.
+        /// A slot index would have been free and is the wrong answer — slots move when a zone
+        /// dissolves, so a store would be renamed by the deletion of an unrelated one across the
+        /// map. Cell order moves only when a store that begins earlier goes, which is at least a
+        /// change the player made near the one they are looking at.</para>
+        ///
+        /// <para>Derived rather than stored, so it is the same on both sides of a save with nothing
+        /// written down. A typed name is what finally stops it drifting.</para>
+        /// </summary>
+        public int OrdinalOf(int slot)
+        {
+            if ((uint)slot >= (uint)_zones.Count) return 0;
+
+            IReadOnlyList<int> mine = _zones.CellsOf(slot);
+            int first = mine.Count > 0 ? mine[0] : int.MaxValue;
+
+            int ordinal = 1;
+            for (int other = 0; other < _zones.Count; other++)
+            {
+                if (other == slot) continue;
+                IReadOnlyList<int> cells = _zones.CellsOf(other);
+                if (cells.Count > 0 && cells[0] < first) ordinal++;
+            }
+
+            return ordinal;
+        }
+
+        /// <summary>
         /// Does this cell accept this def? Answered here rather than by reaching for the settings,
         /// because "there is no zone here" and "the zone here refuses it" are the same answer to
         /// the caller and two different lookups.

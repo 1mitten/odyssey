@@ -1274,6 +1274,415 @@ not done: it is the next unit, and the sweep above is its before.
 whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
 before it binds, and worth fixing because the fix is cheap and provably invisible.
 
+### 6c.3 The decoration, measured — the surround is 45 per cent of the meadow and the tufts are 7
+
+**2026-09-21.** The owner, watching the game rather than a test: *"it seems that grass tufts and
+surrounding land have some impact of the FPS — is there anything we can explore investigate to
+improve or handle performance, any pre warming of shaders, caching or something that would help."*
+
+Half of that was already answerable and the project could not answer it, which is the finding
+behind the finding. **The surround was charged to `FrameSection.World` along with the chunk
+buckets**, because it is submitted from inside `ChunkRenderer.Render` — deliberately, so the depth
+buffer can reject it before the board is drawn — and nothing bracketed it. So the one pass §6c
+spent a day cutting from 3.65 ms to about 2.2 was the one pass no instrument could name
+afterwards. The tufts were worse off again: they are meshed into the chunks, so they have never had
+a number of their own at all.
+
+**Four instruments, and they are the deliverable.**
+
+| Instrument | What it answers |
+|---|---|
+| `FrameSection.Surround` | the land beyond the board, split out of `World` |
+| `OdysseyBootstrap.GpuFrameMs` / `CpuFrameMs` | is this frame CPU-bound or GPU-bound — see below |
+| Two overlay lines: `cpu … gpu … <resolution>` and `submit split:` | both of the above, at the owner's own resolution, in a real session |
+| `FrameTimeTests.TheDecorationAgainstTheFrame` | one world timed four ways, controls inside one run |
+
+### The numbers
+
+Played meadow, 120 × 120 × 16, no orders, 640 × 480 on an RTX 5070 Ti, four readings of the **same
+built world** in one run — the only way a figure from this machine is worth anything (§6c).
+
+| Case | Frame | Draw calls | Instances |
+|---|---|---|---|
+| As shipped | **2.71 ms** | 1,473 | 41,913 |
+| Tufts off | 2.52 ms (**−0.18**) | 1,279 | 35,421 |
+| Surround off | 1.48 ms (**−1.23**) | 1,197 | 23,983 |
+| Neither | 1.29 ms (**−1.41**) | 1,003 | 17,491 |
+
+**The surround is 45 per cent of the frame on the meadow and the tufts are 7.** Together they are
+more than half of it. The owner named both and one of them is nearly seven times the other.
+
+Three things follow the split across the other arms in the same run, and each is worth stating:
+
+- **The surround is a flat tax, not a scaling one.** It reads 1.14–1.24 ms at every colony size
+  from 8 pawns to 384, where `Figures` goes 0.09 → 8.65 and `Actors` 0.02 → 15.41. It is the
+  largest single item in the draw block on the standard board until about thirty colonists.
+- **It barely grows with the board**: 1.07 ms on standard, 1.78 on large, 2.05 on huge, against
+  `World` going 0.92 → 2.17 → 4.08 over the same three. It scales with the *ring*, which is why
+  a bigger board does not buy proportionally more of it.
+- **The city pays 0.058 ms**, because the ruined city grows no wood outside it. The surround's cost
+  is the trees and nothing else, which §6c had already established by subtraction and this now
+  shows directly.
+
+### Where this measurement stops, and it stops early
+
+Every figure above is **a stopwatch around CPU submission at 640 × 480**. It cannot see fill,
+overdraw or the shadow pass. That matters more here than anywhere else in this document, because
+both suspects are alpha-tested foliage covering the horizon — precisely the geometry §6c predicted
+would be free at 307k pixels and dominant at 1080p. **A tuft reading of "7 per cent" is a statement
+about submission and may be wrong by an order of magnitude about what the owner is actually
+watching.** The ranking could invert at play resolution: the surround is CPU-side batch overhead,
+which barely moves with resolution, while the tufts are pixels, which move with its square.
+
+That is what `GpuFrameMs` is for, and why `enableFrameTimingStats` is on in the player settings
+since this date. **The rule for reading the overlay: if the GPU figure is at or above the frame
+time, the frame is fill-bound and no amount of batching will move it. If it is well under, the cost
+is on this side of the bus and `submit split:` says which pass.**
+
+### What to do, ranked
+
+Nothing here is started; the phase gate holds. In order of what the measurement supports:
+
+1. **Decide which side of the bus the loss is on, at the owner's resolution.** One Play session,
+   backtick for the overlay, read `cpu` against `gpu`. Then the render-scale rung in the Graphics
+   tab is the confirming experiment: if halving it recovers the frame, it is fill; if it does not,
+   it is submission. Both switches already ship. **This costs no code and it decides everything
+   below**, so nothing below should be built first.
+2. **If it is fill:** the tufts want a draw distance, and the hook is already there —
+   `ChunkRenderer.FoliageDrawDistance` is a per-chunk cutoff against the viewer that already
+   works, was already measured at 110 m (116 draw calls and 23,000 instances down to 89 and
+   20,400, `MeadowCheck`, 2026-09-16) and ships as `PositiveInfinity` because the fault it was
+   written for turned out to be the outline shader. It is a lever waiting to be turned, not a
+   feature to build. A tuft is sub-pixel at forty metres and there is no reason to shade one. The surround's near wood wants the same
+   treatment or impostors, and `NearWoodDensityPercent` is the crude version of it that is already
+   wired.
+3. **If it is submission:** the surround is near its measured floor. §6c found the cost tracked the
+   *batch* count and coarsening `TreeSectorMetres` from 80 m to 400 m took it 3.65 → 2.2 ms, and
+   that past 400 m it saturates at about 204 batches because the variants, themes, mute steps and
+   parts cannot merge. The remaining honest lever is **fewer kinds of tree far away** — the same
+   argument `FarTreeVariants` already makes at 4 — applied to the near ring, where sixteen kinds
+   are being told apart by nobody.
+4. **The tufts' 194 draw calls are worth a look whichever way it goes.** They are 13 per cent of
+   the meadow's calls for 7 per cent of its frame, and they are per (chunk, variant, tint). Fewer
+   tuft *variants* would collapse them; that is a look decision, not a performance one, and it
+   should be made by eye.
+
+### On pre-warming shaders, which was asked and is a different question
+
+**Shader warm-up fixes hitches, not frame rate.** A variant compiles the first time it is drawn;
+what that costs is one stalled frame, once, and then nothing for the rest of the session. It cannot
+be what a steady-state readout is showing, and warming every variant at load would move the stall
+into the loading screen rather than remove it. Worth doing for the stutter on its own terms — this
+project has already been bitten three times by the neighbouring problem of variants being *stripped*
+(`ShaderInclusion`, `InstancingKeepAlive`, `SyntyInstancingKeepAlive`, `docs/lessons.md`), and a
+`ShaderVariantCollection` is the natural companion to those — but it is not on the path to this
+report and should not be sold as if it were.
+
+**Caching is already done, and that is worth saying plainly rather than re-proposing it.** The
+surround is built once at startup and submitted unchanged every frame; its instance arrays are
+filled and never refilled, and nothing can dirty them because no simulation stands behind them. The
+tufts are baked into chunk meshes and re-meshed only when the mirror says a chunk changed. There is
+no per-frame rebuild anywhere in either pass to eliminate. **What is left is the submission itself
+and the pixels it costs**, which is why the two numbers above are the ones that matter.
+
+### 6c.4 The surround, halved — and the constant that was guarding the wrong factor
+
+**2026-09-21, the same day, after the owner said to focus on it.** §6c.3 found the surround was 45
+per cent of the meadow's frame. This is what was done about it: **1.08 ms → 0.58 ms with every one
+of the 3,907 trees still standing**, and the meadow's whole frame 2.71 → 2.14 ms.
+
+### The census, which is what made it findable
+
+§6c cut this pass once, from 760 batches to 266, by coarsening the spatial half of the batch key
+from 80 m to 400 m. It then recorded that the ladder saturates past 400 m and that what was left
+was "the variants, themes, mute steps and parts, which no sector size can merge". **The first half
+was right; the second was believed rather than measured, and it named the right factor for the
+wrong reason.**
+
+A census of the three batch lists on the played meadow:
+
+| List | Batches | Instances | Mean | Thin (<32) |
+|---|---|---|---|---|
+| Ground | 24 | 12,832 | 534.7 | 0 |
+| Tufts | 12 | 1,191 | 99.3 | 3 |
+| **Trees** | **230** | **3,907** | **17.0** | **192** |
+
+The wood was 230 of the 266 batches, at seventeen trees a draw call, with five in six of them
+holding fewer than thirty-two. And the key those 230 came from was
+**115 sectors × 4 mutes × 1 part × 2 tints × 16 themes**. Four mute steps, two tints, one part: the
+three factors the earlier note blamed were not splitting anything. **`SectorOf` folds the variant
+into the sector number**, so the 115 "sectors" are spatial cells multiplied by tree kinds, and a
+sixteen-kind wood cannot fall below sixteen batches per spatial cell however coarse the cells get.
+That is why the sector ladder saturated, and it is the whole explanation.
+
+### The sweep
+
+One built world, rebuilt only in the skirt, six readings in one run
+(`FrameTimeTests.TheSurroundSectorSweep`) — the rule every frame number off this machine is subject
+to. Surround section in milliseconds:
+
+| Sectors (near/far) | Kinds | Batches | Surround | Frame |
+|---|---|---|---|---|
+| 400 / 800 (shipped to today) | 16 | 266 | 1.080 | 2.71 |
+| 800 / 1600 | 16 | 230 | 0.952 | 2.62 |
+| 1600 / 3200 | 16 | 230 | 0.935 | 2.57 |
+| **800 / 1600 (shipped)** | **8** | **151** | **0.576** | **2.14** |
+| 800 / 1600 | 6 | 129 | 0.483 | 2.04 |
+| 800 / 1600 | 4 | 104 | 0.371 | 1.92 |
+
+**Space was the cheap half and it is now spent**: one step from 400 to 800 m takes all of it, and
+1600 m and a single 100 km sector both measure identically to 800. **The kinds are where the rest
+is**, and they go on paying all the way down. The cost tracks the batch count throughout — 4.06 µs
+a batch at 266 and 3.81 at 104 — which is the 4.6 µs constant behaving exactly as §6c says a
+*loaded* submission does.
+
+### What shipped, and why 8 rather than 4
+
+`TerrainSkirt.DefaultTreeSectorMetres` 400 → **800**, `DefaultFarTreeSectorMetres` 800 → **1600**,
+`DefaultTreeVariantSlots` 16 → **8**.
+
+| Board | Surround was | Surround is | Frame was | Frame is |
+|---|---|---|---|---|
+| Standard 120² | 1.08 ms | **0.58** | 2.71 ms | **2.14** |
+| Large 180² | 1.78 ms | **0.60** | 5.57 ms | **3.92** |
+| Huge 240² | 2.05 ms | **0.63** | 8.07 ms | **6.09** |
+
+The surround is now **flat at about 0.6 ms on every board**, where it used to grow with the ring.
+Huge gains the most in absolute terms, which matters because Huge is the board §28 measured as over
+budget.
+
+**Four is available, measured and cheaper again, and was not taken.** The reason is what a slot
+actually is. A slot is a (module, theme) pair sampled from the board's own wood by frequency, and
+the census finds the meadow's surround using **2 tints and 16 themes** — so sixteen slots were
+buying sixteen colour palettes over two silhouettes, not sixteen kinds of tree. Halving them halves
+the palettes and leaves the silhouettes alone, which is a change that ought to be invisible.
+Quartering them might not be. That is a judgement for an eye on the horizon, not another reading,
+so 8 ships and 4 waits for a verdict.
+
+### The guard
+
+`SurroundCostTests.HalvingTheVariantsHalvesTheWoodsBatchesAndNotTheWood` builds one board twice,
+differing in the slot count alone, and fails if the wood changes or the batches do not. It guards
+the *factor*, not the number: what it catches is somebody taking the variant back out of the key's
+cost, and that saving would otherwise go silently, because **nothing else in either tier can see a
+batch count**. `TerrainSkirt.CensusOf` and `KeySpreadOf` are the instruments behind it and are
+worth reaching for before any further guess about this pass.
+
+### What this does not answer
+
+The same caveat as §6c.3, undiminished: all of it is CPU submission at 640 × 480. Halving the
+batch count halves per-call overhead and does nothing whatever for fill, so if the owner's report
+turns out to be GPU-bound at play resolution this work will have moved a number they were not
+watching. **It was still worth doing unconditionally** — 0.5 ms off every board, on the CPU side,
+costs nothing and is nobody's trade — but the Play session with the GPU readout is still the next
+step and still decides what comes after.
+
+### 6c.5 4K, measured on the owner's machine — and the answer to the question §6c left open
+
+**2026-09-21, three screenshots from a real Play session.** Every number in §6c, §6c.3 and §6c.4 is
+640 × 480 in a batch runner, and each of them says so and says it may not transfer. This is the
+first reading at a play resolution, and it is **3840 × 2160 — 27 times the pixels**.
+
+| | Shot 1 | Shot 2 | Shot 3 |
+|---|---|---|---|
+| frame | 16.79 ms (60 fps) | 15.66 ms (64) | ~17.5 ms (57) |
+| **gpu** | **8.40 ms** | **8.15** | **9.12** |
+| submit | 5.55 ms | 5.11 | 5.74 |
+| tick | 0.19 ms | 0.20 | 0.20 |
+| World | 4.46 ms | 4.09 | 4.66 |
+| **Surround** | **0.98 ms** | **0.91** | **0.97** |
+| draw calls | 3,747 | 3,747 | 3,748 |
+| chunks | 413 | 413 | 413 |
+
+### What it settles
+
+**The surround is no longer the problem, and the §6c.4 work is why.** It is about **0.95 ms of a
+16 ms frame — six per cent** — where before that work it was 45 per cent of a 2.7 ms frame. It does
+not scale with resolution, which is the expected shape: it is per-call overhead and there are the
+same number of calls whatever the pixels.
+
+**The GPU is now the largest single item: about 8.5 ms.** §6c predicted this and could not test it
+— "1080p is 6.75× the pixels; the alpha-tested foliage that covers the horizon is exactly the kind
+of geometry whose cost is invisible at 640 × 480 and dominant at 1080p." At 4K it is 8.5 ms against
+5.5 of CPU submission. **The prediction was right and the axis is real**, so the tuft question
+§6c.3 could not answer is still live and is now the one worth answering: the tufts were 7 per cent
+of a CPU frame and they are pixels, not calls.
+
+**And `World` is the CPU term that is left**: 4.1–4.7 ms of the 5.1–5.7 ms submit, four to five
+times the surround, across 3,747 draw calls and 413 chunks. Whatever comes next on this side of the
+bus is the chunk buckets, not the decoration. `claude/frustum-culling` already exists and is
+measured (`docs/design/`, `odyssey-bigmaps`), which is the obvious first thing to weigh against it.
+
+### Read the frame time with vsync in view, or do not read it at all
+
+8.40 + 5.55 does not make 16.79, and the gap is the point. A frame sitting at 16.7 ms with 8.4 ms
+of GPU and 5.5 ms of submit inside it is a frame that is **waiting**, and 60/64/57 fps across three
+shots is the shape of a frame paced by a display rather than by work. **So the fps number in these
+shots is not evidence of headroom in either direction** — it hides how much is spare and it hides
+what the work actually costs. The overlay now prints `vsync` and the frame `cap` beside the GPU
+figure for exactly this reason; a reading taken without them is not comparable with anything.
+
+### The CPU figure was wrong and has been removed
+
+`CpuFrameMs`, added the same day off `FrameTiming.cpuFrameTime`, **failed in its first real
+session**: 16.81 ms beside a 16.79 ms frame in shot 1, which is right, then **296.32** in shot 2 and
+**17,898.04** in shot 3 — climbing over about twenty-five seconds, so a stream of bad samples rather
+than one spike decaying out of an average. It is deleted rather than repaired, because nothing is
+lost: `frame` and `submit` are this class's own stopwatches, they agree with each other, and
+between them they say what a CPU figure would have. `GpuFrameMs` is kept — it is the one number
+nothing else here can get, and the same three shots show it steady and plausible — and it is now
+guarded against implausible samples.
+
+**The lesson is the general one and is worth more than the figure was.** A number the platform
+hands over is not a measurement until it has been seen beside a number taken independently. This
+one shipped on the strength of looking plausible in a batch run at 640 × 480, in the very document
+that warns that 640 × 480 proves nothing.
+
+### 6c.6 The stutter, found: chunk meshing has no per-frame budget
+
+**2026-09-21, from a traced player session on the Huge board at 3840 x 2160.** The owner had been
+reporting hitches all day. They are **`ChunkRenderer.BatchFor` meshing every stale chunk it meets,
+in one frame, however many that is.**
+
+```csharp
+if (batch.Version != _model.Version)
+{
+    _mesher.Mesh(batch, chunkIndex);      // no budget, no deferral, no limit
+    ChunksMeshedThisFrame++;
+}
+```
+
+### The measurement
+
+Eighty-seven seconds of play, per-second rows, stalls counted as frames over 100 ms:
+
+| chunks meshed in the second | seconds | stalls | stalls a second |
+|---|---|---|---|
+| **0** | 56 | **0** | 0.00 |
+| 150+ | 11 | 36 | 3.3 |
+| 1,725 | 1 | 22 | — |
+| 2,507 | 1 | 38 | — |
+
+**Fifty-six seconds with no meshing produced no stall at all.** Every stall in the session fell in a
+second where meshing ran, and the rate tracks the meshing rate. The frame-level confirmation is a
+single record: **a 180 ms frame that meshed 900 chunks**.
+
+`submit_max` reached **200 ms** — the draw block itself, which is where meshing happens.
+
+### Why it took four wrong answers to get here
+
+Recorded because the route matters more than the destination. The stalls were blamed on the editor,
+then the collector, then shader compilation, then the tick, and each survived longer than it should
+because **the trace was reporting summaries of events** (`docs/bug-patterns.md` P14): `remeshed` was
+last-seen so it read 0 through a second that meshed 800; the tick had a median and no maximum; the
+phases had a mean and a p95 and no maximum. Each fix to the instrument moved the answer.
+
+Two eliminations that now stand on good evidence, and are worth keeping:
+
+- **Not the simulation.** `tick_max` 4.90 ms and the worst tick phase 3.58 ms across the whole
+  session, against frames of 180–439 ms. Game speed alone provokes nothing: a stretch at 3x with the
+  camera still produced **zero** stalls.
+- **Not the collector.** Zero of the captured stalls had a collection on their frame, in three
+  separate sessions, including one where 21 collections a second coincided with a worst frame of
+  19 ms.
+
+### What to do about it
+
+**A per-frame meshing budget**: mesh at most N chunks — or M milliseconds — a frame, nearest to the
+camera first, and let the rest arrive over the following frames. A chunk one frame late while
+panning is invisible; a 200 ms stall is not.
+
+It is the project's own standing rule being broken: *presentation per-frame work scales with what is
+visible*, and this scales with **what became stale**, which a camera sweep or any `Model.Remesh()`
+makes unbounded. A full re-mesh — which every non-ladder graphics toggle triggers — dirties all 800
+chunks of a Huge board at once.
+
+**Not built.** It is a renderer change with a visible trade (briefly unmeshed chunks while panning)
+and wants its own unit, its own design note and the owner's eye.
+
+### 6c.7 The meshing budget — the fix for §6c.6
+
+**Decided 2026-09-21.** §6c.6 found the stutter: `ChunkRenderer.BatchFor` meshes every stale chunk
+the draw loop touches, in that frame, unbudgeted. This is what is done about it.
+
+### The rule
+
+**A frame meshes at most `MeshBudgetPerFrame` chunks. A chunk that misses the budget draws whatever
+geometry it already has and is retried next frame.**
+
+The retry needs no queue. A deferred chunk still has `batch.Version != _model.Version`, so the next
+frame's walk finds it again — the staleness *is* the queue, and adding a second list of owed chunks
+would be a copy of state the batch already holds.
+
+### What a deferred chunk looks like
+
+| Case | Geometry it has | What the player sees |
+|---|---|---|
+| Re-meshed (a `Model.Remesh()`, an edit nearby) | the previous mesh, still valid | the world one to three frames out of date |
+| Never meshed (panned into unseen map) | none — `InstanceCount == 0`, so the draw loop skips it | the chunk arrives a frame or two late |
+
+Both are invisible at 150 fps and neither is a 165 ms freeze. **That is the whole trade**, and it is
+the right way round: a chunk two frames late is 13 ms of being slightly wrong; the alternative is a
+sixth of a second of nothing at all.
+
+### The one exception: building a world
+
+On a new game every chunk is never-meshed, and budgeting that would dribble the board in over
+several hundred frames while the player watches. `PrimeAll()` meshes the lot without a budget, and
+the composition root calls it once while the loading screen is up — **where a freeze is expected and
+where §6c.6 already measured 14.7 seconds of one**. Keep the stall where the player is already
+waiting; budget everything after it.
+
+### Choosing the number
+
+§6c.6 measured a 900-chunk re-mesh at about 165 ms, so a chunk costs roughly **0.18 ms**. Against
+the 5 ms frame budget, a meshing frame should not spend more than about 2 ms on it, which is **11
+chunks**. The number ships as a measured constant rather than a guess: `MeshBudgetTests` asserts the
+budget is obeyed, and a frame measurement sets the value.
+
+A full board re-mesh then costs about 82 frames — **half a second at 150 fps**, spread, against 165
+ms in one lump. The total work is unchanged; only its distribution is.
+
+### Measured, with a control in one run
+
+`FrameTimeTests.TheMeshBudgetKeepsAWholeBoardRemeshOutOfOneFrame` makes the same Huge board
+re-mesh twice, once with the budget off and once with it on, and quotes both:
+
+    unbudgeted  156.1 ms  (900 chunks)
+    budgeted      8.8 ms  (11 chunks, cap 11; 889 deferred)
+
+**156 ms to 9.** It reproduces the exact signature the player session caught — 900 chunks, about
+160 ms — which is the best evidence that the arm is measuring the real fault and not a proxy for it.
+No absolute threshold is asserted, for the reason §6c gives: a frame number off this machine is only
+comparable with one taken in the same run.
+
+### Played, and judged (2026-09-21)
+
+The owner played the rebuilt player on Huge at 3840 x 2160. **116 seconds, 14,112 frames after the
+load, 35,678 chunks meshed:**
+
+| | seconds | frames | over 33 ms | share | over 50 ms |
+|---|---|---|---|---|---|
+| meshing | 47 | 4,958 | 1 | **0.02%** | **0** |
+| quiet | 65 | 9,154 | 2 | **0.02%** | 1 |
+
+**Zero frames over 100 ms after the load**, p50 7.05 ms, and the busiest second meshed **1,186
+chunks** for a worst frame of 12.7. The relationship that defined the fault — meshing seconds stall,
+quiet seconds do not — is gone: the two bands are identical, and the session's only frame over 50 ms
+fell in a *quiet* second, so it is not this at all. Against the same board before the fix: 3.77 per
+cent of frames over 33 ms in meshing seconds, against 0.00 in quiet ones.
+
+**And the trade was judged and cost nothing.** The one thing no measurement could answer was whether
+a player can see the board arriving eleven chunks at a time. The owner's verdict: *"The look is
+fine."* So eleven stands, and the number is now a judged figure rather than an arithmetic one.
+
+### What it does not fix
+
+- **Worldgen.** The 439 ms frame at session start is the world being built, and `PrimeAll` keeps it
+  there deliberately.
+- **The cost of meshing itself.** This spreads it; it does not make a chunk cheaper. If 0.18 ms a
+  chunk ever becomes the complaint, that is a mesher change and a different unit.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.
@@ -1310,7 +1719,7 @@ fixed and guarded, and the budget is unverified on the hardware it was written f
 documents, so **a green PlayMode run says nothing about it** — read the printed numbers, not the
 pass. That has always been true and is not a growing-zones matter.
 
-### 6c.3 One edit re-meshed the whole board (2026-09-21)
+### 6c.8 One edit re-meshed the whole board, and the seconds that are still unexplained
 
 The owner reported *"about a second or 3 delay when the object appears when it's built, IE door,
 walls etc — sometimes a little glitch and it appears"*. `BuildAppearanceTests` was written to
@@ -1327,7 +1736,11 @@ seconds, and nothing there has been changed.
 
 **`WorldRenderModel.Version` was one number for the entire board.** Every `ChunkBatch` compared its
 own version against it, so *any* cell changing anywhere invalidated *every* batch, and all 45 drawn
-chunks of the meadow were re-meshed on the next frame. Measured, with the contrast taken inside one
+chunks of the meadow were re-meshed on the next frame. **This is the other half of §6c.6–6c.7 and
+not a duplicate of it**: the budget caps how many chunks may be re-meshed in one frame, and this
+caps how many are invalidated at all. With the budget alone a single wall still dirties 45 chunks
+and spreads them over four frames of stale geometry; with both, it dirties three and they are
+re-meshed inside one frame, well under the budget of eleven. Measured, with the contrast taken inside one
 run, which is the only way a frame number on this machine means anything:
 
 | | Chunks re-meshed by one wall | The frame after the raise | The frames either side of it |

@@ -14,15 +14,16 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, on the day it was written.** There are 28 open rows. That is the
-finding, not an oversight — the ceiling is where the list should be, not where it is, and the first
-sessions after this one take verdicts and fixes rather than features until it comes down. A rule
-that is quietly wrong on arrival is a rule the next session learns to ignore.
+**The rule is already breached, and the breach is widening.** There are **49 open rows** as of
+2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
+days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
+is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
+rule that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
-  (`claude/build-appearance-and-entombment`, `docs/design/28-nobody-in-a-wall.md`.) Order walls
+  (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
   across a route colonists are using and let them finish while people are crossing. Three things
   to judge, none of which a test can answer: whether a builder ever visibly **pauses** at the last
   blow and whether that reads as sense or as a stall; whether you ever see a colonist **shoved one
@@ -41,6 +42,120 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   editor compiling a shader variant for a material the meadow had never drawn, and the fix is a
   warm-up rather than anything in the render path. If the delay is unchanged, the candidate is
   dead and the next move is the developer overlay during a build.
+- **Does a pause give you your speed back?** (`claude/session-lifecycle`,
+  `docs/design/09-ui-and-input.md` §12.) Space and the pause button used to resume at ×1 whatever
+  you were running at, so every pause taken to give an order undid the speed you had just chosen.
+  It now returns to the speed the world last actually ran at. **Press 3, Space, Space**; then
+  **pause, pick ×2 from the clock, pause, unpause** — that second one should be ×2, because picking
+  a speed while paused is a choice and not a toggle. A wrong answer looks like ×1 again, or the lit
+  button and the actual clock rate disagreeing.
+
+- **Does the autosave land without being felt, and does one line on the Events panel tell you
+  enough?** (`claude/session-lifecycle`, `docs/design/17-start-flow.md` §14b.) Every game day it
+  writes the colony over its own save and keeps `<name>-previous.odyssey` beside it, and says so on
+  the Events panel. Three things only play can answer. **Is there a hitch on the day boundary** —
+  the write is synchronous inside one frame and is not measured, so look at the clock rolling over
+  at ×3 on a full colony. **Does the line tell you what you need before quitting**, or do you still
+  open the load list to check. And **is the previous copy reassuring or clutter** in that list. A
+  wrong answer looks like a stutter every morning, or a load screen you have to read twice to find
+  the save you meant.
+- **Does the leave prompt ask the right question at the right moment?**
+  (`claude/session-lifecycle`, §14a.) Quit to main menu and Quit no longer arm; they raise a modal
+  with *Save and leave · Leave without saving · Cancel*. **Quit with a colony you care about and
+  read the note under the title** — it names the file saving would write to. A wrong answer looks
+  like hesitating over which of the two "leave" rows is which, or being unsure whether "Save and
+  leave" is about to overwrite the save you actually wanted to keep.
+- **Escape on the main screen, on Load and on the character screen.** (`claude/session-lifecycle`,
+  §13.) It used to lay the settings window over the load list. It should now go back one level,
+  and do nothing at all on the root column. A wrong answer looks like two screens on top of each
+  other again, or an Escape that goes back further than one level.
+
+- **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
+  (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
+  batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now
+  draws **eight**, which took it from 1.08 ms to 0.58 with all 3,907 trees still standing and the
+  meadow frame from 2.71 to 2.14. **A slot is a colour palette over one of two silhouettes**, not a
+  kind of tree, so halving them ought to be invisible: look along the rim and at the hills behind
+  it, from the play camera and from a low orbit. **A wrong answer looks like a stripe** — the same
+  colour of tree recurring at a regular spacing along a ridge, which is the failure this number has.
+  If it reads clean, **×4 is measured at 0.371 ms** and is the next rung; if it stripes, 12 is
+  untested and sits between.
+- **Is vsync on, and what is the frame with it off?** (`claude/huge-map`,
+  `docs/design/06-rendering-and-camera.md` §6c.5.) **Answered half of the old "which side of the
+  bus" row and raised this one.** Your three 4K shots read frame 16.79 / 15.66 / ~17.5 ms at
+  60 / 64 / 57 fps with gpu 8.4 and submit 5.5 inside them — 8.4 + 5.5 is not 16.79, so those
+  frames are waiting on something. The overlay now prints `vsync` and `cap` beside the GPU
+  figure. **Turn vsync off in Settings → Graphics and read the frame again**: that is the first
+  number in this project that would be a real headroom figure. A wrong answer looks like quoting
+  fps with vsync on — it hides the spare capacity and the true cost at the same time.
+- **Do the tufts cost pixels?** (Same section.) At 640 x 480 they were 7 per cent of a CPU frame
+  and dismissed; at 4K the **GPU is the largest single item at ~8.5 ms**, and tufts are
+  alpha-tested foliage covering the ground — pixels, not calls. With vsync off, toggle
+  **Grass tufts** in Settings → Graphics and read `gpu`. A wrong answer looks like reading
+  `frame` instead of `gpu`, which vsync or a cap will flatten.
+- **Are the tufts and the surround worth what they cost?** (Same branch and section.) Settings →
+  Graphics already carries both switches. Turn the **surround** off on the meadow and look at the
+  horizon: 45 per cent of the frame is a large sum for scenery, and the question is whether the
+  board reads as a board or as a diorama floating in fog without it. Then the **tufts**, which cost
+  a seventh of that. A wrong answer looks like both being turned off and left off — that would mean
+  the levers are settings rather than the decoration being worth keeping, and the ranked options in
+  §6c.3 should be spent making the expensive one cheaper instead.
+
+- **Is a Huge board more room, or more walking?** (`claude/huge-map`, `docs/design/28-map-size.md`.)
+  New Game → the **Size** control now cycles a fourth board, **Huge, 240 × 240 × 16** — twice
+  Standard's ground at Standard's depth. Standard is still the default, so nothing changes unless
+  you pick it. The simulation is measured and comfortable (0.883 ms per edited cell against
+  Standard's 0.298, 69.8 bytes a cell, 90 ms to generate); **what no test can answer is whether the
+  board is worth crossing.** Five things to look at, in the order they will hit:
+
+  1. **Zoom out as far as it goes.** `maxDistance` is 160 m and the board is 600 m across, so you
+     will see about an eighth of it. This is *already* true at Standard — "see the whole map" has
+     never actually worked — but Huge is where it stops being ignorable. A wrong answer looks like:
+     you cannot tell where your colony is relative to anything, in which case zoom wants to scale
+     with the board and that is its own unit.
+  2. **Pan corner to corner without the fast modifier.** 23 seconds at `panSpeed = 26`. A wrong
+     answer looks like: you reach for the fast key every time, so the base speed is wrong for this
+     board and not just slow.
+  3. **Play twenty minutes.** A wrong answer looks like: colonists spend the session in transit and
+     the extra ground is a tax rather than a choice — in which case Large (180 × 180 × 24, which
+     ships and which nobody has ever played either) may be the size that was actually wanted.
+  4. **Look for water.** `streamCount` is a per-map absolute, so Huge gets 5 water bodies on 600 m
+     where Standard gets 4 on 300 m. A wrong answer looks like: the board reads as arid, or you walk
+     a long way to find a pond.
+  5. **Walk the wilderness for a minute.** Every noise period is in cells, not fractions of the
+     board, so Huge is *more map at the same grain* rather than the same map enlarged. A wrong
+     answer looks like: the same copse and the same hillside keep recurring, which means the
+     periods want to scale.
+
+  **Not a playtest item, and please do not treat it as one:** whether the frame holds. That is
+  measured — Huge is **7.82 ms against a 5 ms budget** at 640 x 480 on a 5070 Ti, against Standard's
+  3.18 and Large's 6.09, and all of the difference is `FrameSection.World`. **Frustum culling in
+  `ChunkRenderer.Render` is the named fix and it is HT8's last open decision.** So if Huge feels
+  heavy, that is expected and already has a work item; what is wanted from the keyboard is whether
+  the board is worth crossing, not whether it is fast.
+- **Does the storage pane sit still now?** (`claude/storage-pane`,
+  `docs/design/26-storage.md` §12.) Untick every category and the warning appears under the list
+  rather than in it, and the list gives up 92 px to make room, so nothing above it moves. **Is
+  losing a third of the list worth the message staying put** — or would you rather the band were
+  one line, or a colour on the header? And **press Allow all and Clear all with the game running,
+  not paused**: until today the pane did not change until you pressed something else, so the
+  presses want a look at normal speed as well as at zero. The counts on the category rows are a
+  step bigger and set in the mono face; if that was not what "the numbers" meant, say which and it
+  is a one-line change.
+
+- **Does a store keep itself to what you asked for?** (`claude/storage-pane`,
+  `docs/design/26-storage.md` §11.) Paint a stockpile over ground that already has something on it
+  — or set a store that is holding stone to meals only — and the colonists should carry out what it
+  refuses and then fill it with what it wants. Three things only a person can judge. **Is the
+  emptying quick enough to read as intent** rather than as the colony forgetting about it: it is
+  scanned with the loose hauling now, not with the tidying, so it should start within a job or two,
+  and if you narrow a filter and wander off and come back to find it unchanged, the pass ordering is
+  wrong. **Where the evicted things end up**: they go to the nearest cell no zone claims, which on a
+  crowded base may be somewhere silly-looking — if you find yourself hunting for what used to be in
+  a store, it needs a dumping zone rather than a nearest-cell search. And **whether a big warehouse
+  can empty itself at all**: the search reaches twelve cells, so a rock in the middle of a store
+  more than about twenty-four wide has nowhere it can legally be put and will stay put. A store that
+  size is exactly what the tool invites you to paint.
 
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
@@ -232,6 +347,57 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   to see a harvest without the four-day wait. Open questions a picture cannot answer: whether four
   calendar days to a harvest reads as slow, and whether the interim green tint reads as "growing here"
   or as a texture fault (`22-growing.md` §9). **This row blocks a merge**, which is why it is first.
+
+- **The toast's level number is amber now** (owner, 2026-09-21, `15-skills.md` §8j). The line is
+  three labels rather than one — the words, the level in `HudTokens.Warn`, and anything after it —
+  split in the model on the `{level}` placeholder so the view parses nothing. Deliberately **not** a
+  rich-text tag: if rich text were ever off the player would read the tag itself and neither tier
+  could catch it (P10). **Look for:** the number standing out at a glance without the line reading
+  as two colours fighting; a wrong answer is the amber looking like a warning rather than emphasis.
+
+- **The experience bar has had its first look and three changes** (owner, 2026-09-21: *"it works
+  great but some visual change"*). The bar moved out of the row's bottom edge and **into** the row,
+  between the label and the value; it is the needs' **green** now rather than tinted by passion; and
+  it is **6 px rather than 3** with 8 px either side. No layout constant moved — the row is still
+  19 px and the pane still one height — but the row has a **width budget** now, and
+  `HudLayoutTests.TheSkillRowsPartsFitTheRow` holds the name column to 95 px so a future widening
+  cannot silently clip *Construction*. `docs/design/15-skills.md` §8i. **What is still unjudged is
+  the same list below**, minus the passion tint which no longer exists: whether the creep reads as
+  progress, whether four bars on fourteen rows read as "four skills you have", and whether the
+  toast reads as good news.
+
+- **Nobody has seen the experience bar or heard a level-up** (2026-09-20, PR #139,
+  `docs/design/15-skills.md` §8). A live skill's row now carries a 3 px underline that fills towards
+  the next level, tinted by passion; reaching a level raises a **toast** under the alerts and chimes
+  `alert-normal`. Four rows are live — Chopping, Mining, Construction, Growing — the last two having
+  been greyed out as "nothing is built yet" and "nothing is planted yet" long after both began
+  training, which is the bug this work actually found.
+  The bar is computed to creep about **1.5 px a second** at level 0 with a minor passion, and a level
+  lands after roughly two and a half minutes of solid work; by level 9→10 it is a pixel every seven
+  seconds. Open questions a still cannot answer: whether that reads as progress or as a static line,
+  whether the passion tint carries the four-fold spread between no passion and a burning one, whether
+  an underline on four of fourteen rows reads as "four skills you have" or as a broken grid, and
+  whether the toast reads as good news — `alert-normal` was chosen because it is what `Notice`
+  already maps to, not because anybody judged it against a level-up.
+  **The per-stroke pip was deliberately not built**: the bar's continuous movement is what the
+  request was about, and a flash timed to the drawn stroke would couple the pane to the world's
+  stroke clock for a decoration. If the bar reads as static, that pip is the first thing to try.
+  **Compiled and reviewed on the owner's machine, 2026-09-20** (`claude/skills-review`): EditMode
+  1,989 / 1,971 / 0 and PlayMode 85 / 80 / 0, so the bar, the toast row and its click handler do
+  build and the shell does frame the stack. The review also found the one fault a test had not:
+  the level watch kept its marks across a session boundary, so a new colony's first colonist
+  announced a level she was rolled with (§8f-bis). **The fastest way to see a toast is the debug
+  menu's Skip one day** — it runs a real day of ticks, so a working colonist levels inside it and
+  should raise **one** row per skill, not a stack of them.
+  **Merged with `main` on 2026-09-20 and re-run there** (`D:\code\odyssey-review-139`): #119 has
+  landed, so nothing blocks this now. EditMode 2,257 / 2,236 / 0, PlayMode 91 / 86 / 0, the same
+  as main. **The merge found one fault neither branch could have**: EV's Events panel and
+  this toast stack both placed themselves "under the alerts" and solved to the same top, so with an
+  event on screen the toast drew over the panel. The toast is last in that column now
+  (§8h). **So there is a fifth thing to look at**: fire a supply drop from the debug menu's Events
+  tab and then skip a day, and say whether the toast arriving under the Events panel reads as one
+  column or as two things fighting — a wrong answer looks like the Events row jumping down the
+  screen when a toast lands, which is exactly what the ordering is meant to prevent.
 
 - **Nobody has pressed Play on the pile and bed clarity of 2026-09-19** (`claude/pile-and-bed-clarity`,
   `docs/design/24-pile-reading.md` and `20-beds.md` §13). A wood tile now draws one, two or three

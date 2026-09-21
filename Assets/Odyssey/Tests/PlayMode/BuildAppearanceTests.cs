@@ -127,7 +127,7 @@ namespace Odyssey.Tests.PlayMode
                 int cell = size.Index(x, z, start.Y);
                 if (!colony.Grid.IsWalkable(cell)) continue;
                 if (!colony.Construction.Allows(cell, BuildingHandle.Wall)) continue;
-                // Nobody in it and nobody walking into it, or the guard of design 28 refuses the
+                // Nobody in it and nobody walking into it, or the guard of design 30 refuses the
                 // raise and this fixture measures nothing at all.
                 if (PawnEviction.Occupant(colony.Pawns, cell) != null) continue;
                 return new CellRef(x, z, start.Y);

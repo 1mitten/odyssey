@@ -16,7 +16,7 @@ namespace Odyssey.Tests.Sim
     /// <para>These are the three parts of the answer, in the order they act: the detour that keeps
     /// a passer-by out of the cell, the guard at the moment the building goes up, and the sweep
     /// that frees anybody already walled in — including in a save written before any of this
-    /// existed. See <c>docs/design/28-nobody-in-a-wall.md</c>.</para>
+    /// existed. See <c>docs/design/30-nobody-in-a-wall.md</c>.</para>
     /// </summary>
     public class EntombmentTests
     {

@@ -1,4 +1,4 @@
-# 28 — Nobody in a wall: who may be standing where a building goes
+# 30 — Nobody in a wall: who may be standing where a building goes
 
 **Status: built, tested, not yet played.** Written 2026-09-21 on branch
 `claude/build-appearance-and-entombment`, out of an owner report:
@@ -133,7 +133,7 @@ not scale with the board.
 ## 5. The other half of the report: how long a built thing takes to appear
 
 The same session carried a second report — *"there is about a second or 3 delay when the object
-appears when it's built"* — and the answer to it lives in `06-rendering-and-camera.md` §6c.3 rather
+appears when it's built"* — and the answer to it lives in `06-rendering-and-camera.md` §6c.8 rather
 than here, because it is a rendering fault and not a construction one. Two things came out of
 measuring it (`BuildAppearanceTests`):
 

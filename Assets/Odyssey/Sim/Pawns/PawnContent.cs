@@ -352,6 +352,53 @@ namespace Odyssey.Sim.Pawns
         public int MaxExperience => ExperienceForLevel(maxLevel);
 
         /// <summary>
+        /// How far an amount of experience stands between the level it buys and the next one, in
+        /// per mille, and the level itself — both out of one walk of the ladder.
+        ///
+        /// <para><b>Published rather than the table it comes from</b> (SK2). The interface wants a
+        /// bar, a bar wants a denominator, and the denominator is
+        /// <see cref="experienceToAdvance"/>, which is tuning content: mirroring it into the
+        /// presentation assembly would be a second copy of a number a mod is meant to be able to
+        /// override. So the fraction is derived where the ladder lives, exactly as
+        /// <see cref="Level"/> already is, and the table stays here.</para>
+        ///
+        /// <para><b>One scan, two answers.</b> <see cref="Level"/> and
+        /// <see cref="ExperienceForLevel"/> each walk up to twenty entries, and the publish loop
+        /// already asks for the level every tick for every skill of every colonist. Asking for the
+        /// progress separately would walk the same ladder twice more, so the floor is carried out
+        /// of the one walk that has already found it.</para>
+        ///
+        /// <para><b>The multiply is a long on purpose.</b> The top of the ladder is 265,000,000
+        /// and a thousand times that overflows a signed 32-bit integer about eight times over. In
+        /// int arithmetic this reads correctly at low levels and silently returns nonsense at high
+        /// ones, which is the worst shape a bug can have.</para>
+        ///
+        /// <para>At <see cref="maxLevel"/> it is full: there is no next level to be part of the
+        /// way towards, and <see cref="Pawn.GainExperience"/> pins experience to
+        /// <see cref="MaxExperience"/> there.</para>
+        /// </summary>
+        public int ProgressPerMille(int experience, out int level)
+        {
+            int floor = 0;
+            for (level = 0; level < maxLevel; level++)
+            {
+                int span = experienceToAdvance[level];
+                if (experience < floor + span)
+                {
+                    if (span <= 0) return 1_000;
+                    long into = (long)experience - floor;
+                    if (into <= 0) return 0;
+                    long permille = into * 1_000L / span;
+                    return permille > 1_000L ? 1_000 : (int)permille;
+                }
+                floor += span;
+            }
+
+            level = maxLevel;
+            return 1_000;
+        }
+
+        /// <summary>
         /// Decay for one tick of the decay cadence at a level, or zero below
         /// <see cref="decayFromLevel"/>. The per-day figure is divided down to the cadence, so
         /// thirty Long ticks lose a day's worth, give or take the integer remainder.

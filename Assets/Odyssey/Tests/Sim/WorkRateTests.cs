@@ -124,7 +124,7 @@ namespace Odyssey.Tests.Sim
         // ---- the table -----------------------------------------------------------------------
 
         [Test]
-        public void TheCurveTableIsTheEightAcceptedIntegers()
+        public void TheCurveTableIsTheTenAcceptedIntegers()
         {
             var content = ContentPack.Pawns();
 
@@ -144,11 +144,31 @@ namespace Odyssey.Tests.Sim
                 "the shallowest curve: skill buys quality here as well");
             Assert.That(construction.workRateSlopePerLevel, Is.EqualTo(75));
 
+            // Growing took cutting's curve exactly when it got one (2026-09-19, with the growing
+            // work): the two plant work types, and the design once had felling training Growing
+            // outright, so a difference between them would need a justification nobody has
+            // measured. Asserted against cutting's own fields rather than against 600 and 100, so
+            // retuning chopping cannot silently leave the two plant crafts disagreeing.
+            var growing = content.WorkTypes[WorkTypeIndex.Growing];
+            Assert.That(growing.rateSkill, Is.EqualTo(SkillIndex.Growing));
+            Assert.That(growing.workRateBasePerMille, Is.EqualTo(cutting.workRateBasePerMille),
+                "growing and chopping are the two plant work types and share one curve");
+            Assert.That(growing.workRateSlopePerLevel, Is.EqualTo(cutting.workRateSlopePerLevel));
+
             var hauling = content.WorkTypes[WorkTypeIndex.Haul];
             Assert.That(hauling.rateSkill, Is.EqualTo(-1),
                 "hauling is a work type and not a skill (15-skills §6, and the reference agrees)");
             Assert.That(hauling.workRateBasePerMille, Is.EqualTo(Rates.Scale));
             Assert.That(hauling.workRateSlopePerLevel, Is.EqualTo(0));
+
+            // Every work type that names a skill must name one that exists, or the rate lookup
+            // reads off the end of the skill table the first time somebody works at it.
+            for (int w = 0; w < content.WorkTypes.Length; w++)
+            {
+                int skill = content.WorkTypes[w].rateSkill;
+                Assert.That(skill, Is.InRange(-1, SkillIndex.Count - 1),
+                    $"work type {w} drives its rate from a skill that does not exist");
+            }
         }
 
         [Test]
@@ -163,6 +183,14 @@ namespace Odyssey.Tests.Sim
 
             var construction = ContentPack.Pawns().WorkTypes[WorkTypeIndex.Construction];
             Assert.That(construction.WorkRatePerMille(20), Is.EqualTo(2_200), "2.20x");
+
+            // A novice grower breaks ground at 0.60x and a master at 2.60x, which is what makes
+            // the Growing skill worth levelling at all — before the curve landed it bought
+            // nothing. The def is pinned in the table above; this pins what the curve computes.
+            var growing = ContentPack.Pawns().WorkTypes[WorkTypeIndex.Growing];
+            Assert.That(growing.WorkRatePerMille(0), Is.EqualTo(600), "a novice grower, 0.60x");
+            Assert.That(growing.WorkRatePerMille(1), Is.EqualTo(700), "the modal colonist, 0.70x");
+            Assert.That(growing.WorkRatePerMille(20), Is.EqualTo(2_600), "mastery, 2.60x");
         }
 
         [Test]
