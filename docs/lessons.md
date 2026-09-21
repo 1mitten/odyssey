@@ -2489,3 +2489,14 @@ git worktree remove D:\code\<worktree>
 ```
 
 `rmdir` on a junction removes the link. A recursive delete follows it.
+
+
+## A benchmark that edits the grid directly bypasses every cache a real edit invalidates
+
+`TickBenchmarkTests.MineOneCell` flips a cell and marks the nav grid, and that was the whole
+"edit tick" the map-size numbers were taken on. A colonist's mined cell also marks the enclosure,
+the structure solver and the chunks — and the enclosure solve was the largest of them on Huge
+(2.3 ms of a real edit against 0.9 ms measured) before temperature made it larger. **When a
+benchmark stands in for a game action, list every mark the real action sets and set them all**,
+or the number is of a different action than the one it is named after. Found reviewing PR #164
+(2026-09-21); `EnclosureCostProbe` is the explicit arm that measures the missing one.

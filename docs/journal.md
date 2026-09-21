@@ -10256,3 +10256,32 @@ enough not to be worth one.
 **What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
 large colony that is a hitch every game morning, and it is the first thing to look at if a daily
 stutter is ever reported.
+
+## 2026-09-21 — temperature reviewed: nine findings, the playtest held
+
+PR #164 reviewed on its own worktree with `main` merged in (seven conflicts, all docs, the wiki
+and one fingerprint; the code merged clean). The method was the one this project keeps having to
+relearn: **a probe test per suspicion, before believing any of them** — nine were written, one
+passed for a reason that turned out to be the probe's own (an unroofed gap), and after that fix
+all nine fail on the branch. They are `[Explicit]` in `TemperatureReviewProbes.cs`; a fix turns
+its probe into a test. The findings and the numbers are `docs/design/28-temperature.md` §12.
+
+The one that would have decided the playtest on its own: the severity bar fills in fourteen
+game-minutes at a Candle night, against the four hours every comment promises — a per-mille
+applied per centi-degree, so the shipped 300 is ten to twenty times the intent, and the test
+that pins it says "three" in its message while pinning 300. The two that matter for the record
+are both load divergences the round trip cannot see because it runs in Wash: the fixed-point
+sweep only re-solves the layers the edit marked, so a house roofed last has a cellar that is a
+room after a load and not before; and a re-sealed room resumes its old temperature in play and
+resolves from the outdoors after a load, because only live rooms are saved. And a surface one
+that the buoyancy test hides: a shared slab is charged to the sky *and* to the room above, so
+building upstairs makes downstairs colder.
+
+The cost was measured because the benchmark could not: `TickBenchmarkTests`' edit arm marks nav
+alone, so the enclosure has never been in the edit tick. Same probe on both, one after the
+other: the per-edit solve is up 1.6× (0.56 → 0.92 ms Standard, 2.6 → 4.3 ms Huge), the initial
+solve 5–6× on the wooded boards (37 ms and 106 ms), the worst single edit on Huge 11 ms — and
+the enclosure was already most of a real edit's cost on Huge before this branch, invisible.
+
+Nothing was fixed; the owner asked for a review. The merge with `main` is pushed to the branch,
+the playtest row is held until F1–F4 are in, and the PR carries the review.
