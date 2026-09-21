@@ -173,6 +173,56 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public SightLines? Sight { get; set; }
 
+        /// <summary>
+        /// The camera's frustum planes, six of them, or null for "draw the whole band".
+        ///
+        /// <para>Set per frame by the composition root, the same way <see cref="Sight"/> is, so
+        /// this class still knows nothing about a <c>Camera</c>. Null is the ordinary case for a
+        /// headless or probe render and costs one null test per chunk.</para>
+        /// </summary>
+        public Plane[]? Frustum { get; set; }
+
+        /// <summary>
+        /// Whether a chunk outside <see cref="Frustum"/> is actually skipped, or merely counted.
+        ///
+        /// <para><b>Off by default, and the off state is a measurement rather than a stub.</b>
+        /// With it off every chunk is submitted exactly as before and
+        /// <see cref="ChunksOutsideFrustum"/> reports what culling *would* have saved; with it on
+        /// the same test skips them. One flag, two readings, taken seconds apart inside one run —
+        /// which is the only comparison this machine supports, and the same shape as
+        /// <see cref="InstanceCellPlates"/>.</para>
+        /// </summary>
+        public bool CullToFrustum { get; set; }
+
+        /// <summary>Chunks the frustum test rejected last frame, whether or not they were skipped.</summary>
+        public int ChunksOutsideFrustum { get; private set; }
+
+        /// <summary>
+        /// How far outside the frustum a chunk must be before it may be skipped, in metres.
+        ///
+        /// <para><b>This is the shadow correction, and without it culling is a visible
+        /// regression.</b> A wall outside the camera's frustum still casts into it: the sun sits
+        /// at 30 degrees in play and sweeps lower at both ends of the day, so a twelve-metre wall
+        /// throws twenty-one metres of shadow at noon and far more at dusk. Skipping its
+        /// submission removes it from the shadow map as well as from the picture, and what a
+        /// player sees is shadows appearing and vanishing at the screen edge as they pan.</para>
+        ///
+        /// <para><b>The bound is the shadow distance, not the sun angle</b>, which is what makes
+        /// this simple: the pipeline renders no shadow at all from a caster further from the
+        /// camera than <c>shadowDistance</c>, so however long a low sun makes a shadow, a caster
+        /// beyond that distance contributes nothing. The margin therefore never needs to exceed
+        /// it, and no trigonometry is involved.</para>
+        ///
+        /// <para>Terrain never casts and foliage does not cast by default, which is why the
+        /// existing <c>FoliageDrawDistance</c> cull needed none of this. Walls, buildings and
+        /// stairs do. <b>Raising the shadow distance makes culling worth less</b>, which is a real
+        /// trade and is measured rather than assumed — see <c>FrameTimeTests</c>.</para>
+        ///
+        /// <para>Defaults to the widest rung the settings offer, so a caller that sets
+        /// <see cref="Frustum"/> and forgets this one is merely slower and never wrong.</para>
+        /// </summary>
+        public float ShadowCasterMarginMetres { get; set; } = 120f;
+
         /// <summary>How solid an occluder in the way is left. Zero would be invisible; this is a
         /// hint of what is there, in the same idiom as a ghosted storey above the slice.</summary>
         public float SightFadeAlpha { get; set; } = DefaultSightFadeAlpha;
@@ -188,6 +238,37 @@ namespace Odyssey.Presentation.Rendering
         /// feature would do nothing at all while every per-instance test still passed.</para>
         /// </summary>
         public const float TallestModuleMetres = 12f;
+
+        /// <summary>
+        /// Whether a chunk's box, grown upwards, meets the camera's frustum.
+        ///
+        /// <para><b>Grown by <see cref="TallestModuleMetres"/>, and that is the load-bearing part.</b>
+        /// A chunk's bounds are one layer plus padding — about seven metres — while a tree rooted
+        /// in that layer carries its crown twelve metres up. The box therefore does not contain
+        /// everything drawn from the chunk, which is the same gap <see cref="Sight"/> allows for
+        /// and the reason that constant exists.</para>
+        ///
+        /// <para>Growing it makes this test <b>strictly more conservative than the one Unity is
+        /// already applying</b>: <c>RenderParams.worldBounds</c> is <c>batch.Bounds</c> unpadded at
+        /// both submission sites, so anything this rejects, the GPU-side cull was rejecting
+        /// already. The change can only remove work, never a picture. <b>Do not "tidy" the
+        /// allowance away</b> — without it a chunk whose tree tops are on screen and whose ground
+        /// is not would stop drawing, and that is a horrible fault to find because the geometry is
+        /// provably correct.</para>
+        /// </summary>
+        bool InFrustum(in Bounds bounds)
+        {
+            Vector3 centre = bounds.center;
+            Vector3 size = bounds.size;
+            centre.y += TallestModuleMetres * 0.5f;
+            size.y += TallestModuleMetres;
+
+            // And outwards, so an off-screen caster keeps its shadow on screen.
+            float margin = ShadowCasterMarginMetres;
+            if (margin > 0f) size += new Vector3(margin * 2f, margin * 2f, margin * 2f);
+
+            return GeometryUtility.TestPlanesAABB(Frustum, new Bounds(centre, size));
+        }
 
         /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
         /// and the ones that are not. Partitioning in place would corrupt the mesher's array.</summary>
@@ -230,6 +311,7 @@ namespace Odyssey.Presentation.Rendering
             ChunksMeshedThisFrame = 0;
             InstancesFaded = 0;
             ChunksSightTested = 0;
+            ChunksOutsideFrustum = 0;
             CellPlatesDrawn = 0;
 
             // Before the board, not after it: the surround is the furthest thing in the scene, and
@@ -286,6 +368,14 @@ namespace Odyssey.Presentation.Rendering
                 {
                     ChunkBatch batch = BatchFor(first + i);
                     if (batch.InstanceCount == 0) continue;
+
+                    // Off-screen chunks. Counted always, skipped only when asked.
+                    if (Frustum != null && !InFrustum(batch.Bounds))
+                    {
+                        ChunksOutsideFrustum++;
+                        if (CullToFrustum) continue;
+                    }
+
                     ChunksDrawn++;
 
                     // The coarse half of the sight test, asked once for the whole chunk. A layer

@@ -269,3 +269,113 @@ principle; it costs us today only because §3.1 and the impassable regions make 
   drifting. Change a board in one place and that test says so; do not answer it by deleting it.
 - **`TheBoardSizeAgainstTheFrame` is one test and not three arms**, and it holds the colony fixed.
   Both are deliberate (§2, §3.3).
+
+## 8. "A main area of activity, and a cheaper beyond"
+
+Asked by the owner, 2026-09-21, alongside streaming chunks, load screens and a procedurally
+generated outer zone. Written down because it is the obvious idea, it will be proposed again, and
+**three of its four halves are already built** — so the answer is mostly a map of where to look
+rather than a refusal.
+
+### 8.1 On the simulation side it is already true, and measured
+
+`TickGroup` is `Never / Normal / Rare (250) / Long (2000)` with hash-offset phase spreading, so
+twenty thousand rare tickers cost eighty a tick rather than twenty thousand every two hundred and
+fiftieth (`Sim/Ticking.cs`). **Cost scales with ticking things, not with cells.** The measurement:
+
+| Board | Cells | Tick at rest, 50 colonists |
+|---|---|---|
+| Standard | 230,400 | 0.065 ms |
+| Large | 777,600 | **0.068 ms** |
+
+Three and a bit times the cells for four per cent of the cost. **An empty corner of the board
+already costs essentially nothing**, so there is no per-tick work out there to switch off and an
+activity radius would be switching off nothing.
+
+### 8.2 The one sim cost that does scale is the one an activity radius must not touch
+
+`NavGraph.Rebuild` (§3.1) genuinely tracks the board. But reachability is the single worst
+candidate for a distance approximation: a hauler has to know it can reach a far stockpile and a
+colonist has to know the route round the lake. Make that fuzzy past a radius and jobs fail
+silently — which is precisely the fault the growing-zone review found, where one unreachable crop
+cost 159 failed jobs in 2,000 ticks.
+
+**HT1's local rebuild is correct everywhere *and* cheap.** An activity radius would be less correct
+and more code. Not a close call.
+
+### 8.3 On the presentation side the "main area" already has an exact definition
+
+It is the camera. A frustum plus distance test is an activity radius that is precise, costs an
+AABB test per chunk, and follows the player without being told. **An explicit radius would be a
+guess at something the camera already knows exactly.**
+
+And the coarsen-with-distance idea ships in three places already:
+
+| Where | What it already does |
+|---|---|
+| `TerrainSkirt` / `SkirtLayout` | a never-simulated landscape **900 m past the board edge**, in rings of tiles coarsening outwards, trees thinning to haze. On Huge that is a ~2,400 m visual world around a 600 m played one, for **464 of 5,392 draw calls** |
+| `PawnFigureDirector` | live animated figures capped at 64, **nearest kept**, the rest drawn as instanced stand-ins |
+| `SliceSettings` | the drawn layer band, which already discards 72% of Huge's chunks before anything else looks at them |
+
+So the outer-zone half of the question is built, shipping, and is not what costs.
+
+### 8.4 Where the idea does pay, and it is worth taking
+
+**The region graph allocates a region for solid rock.** Only **6.8%** of the wilderness's regions
+are walkable; the rest are `RegionKind.Impassable`, kept so rooms and atmosphere have a substrate.
+Short-circuiting all-impassable blocks would cut the live region count roughly **tenfold**, and
+since the rebuild tracks regions almost exactly (§3.1), that is most of the one board-scaled
+simulation cost gone — *and* it is what makes **depth** affordable, which is the axis a future
+240 × 240 × 32 would need.
+
+This is the owner's idea applied where it actually costs: the boring, uniform, nobody-goes-there
+parts of the world stop being represented at all. **The price is M4's atmosphere losing its
+substrate, so it is a design decision and not an optimisation**, and it is the deferred
+chunk-uniform work `02-world-and-layers.md` §2 already names.
+
+The second candidate is **coarser chunk meshes at distance**. Real, but larger, and worth measuring
+only after culling — which may remove those chunks altogether and leave nothing to coarsen.
+
+### 8.5 Rejected, with reasons
+
+- **Streaming chunks in and out.** Solves memory, and memory is not the constraint — 61.3 MiB
+  simulation plus ~17 of mirror at Huge (§2). Worse, a colony sim cannot unload simulation state:
+  pawns walk, crops grow, incidents fire and stockpiles sit off-screen, and a colonist who stops
+  existing because nobody is looking is a different game. If it ever *does* become necessary it is
+  the **presentation mirror** that streams, keyed on the drawn band and the frustum — which makes
+  culling step one of streaming anyway. Nothing is lost by doing culling first.
+- **Load screens, or sub-areas within one map.** Breaks the one continuous colony the game is
+  about, adds a modality the start-flow work is already trying to reduce, and **does not fix the
+  frame**: you pay for what is visible, and what is visible does not change.
+- **An explicit activity radius for rendering.** Strictly worse than the frustum, which is exact.
+- **More variety in the outer band**, unless it obeys the façade rule. `CLAUDE.md`: a façade must
+  never fill a cell the simulation could fill. Worldgen grew trees inside terrace banks on
+  2026-09-18 for exactly this reason. Anything drawn where a colonist could stand needs a sim-side
+  copy of the rule.
+
+### 8.6 The recommendation
+
+1. **Frustum and distance culling** in `ChunkRenderer.Render` — the camera is the activity radius,
+   and it is exact.
+2. **HT1** — correct everywhere beats a radius.
+3. Re-measure. If the navigation rebuild is still the top term, **§8.4's uniform-block
+   short-circuit is the "cheaper beyond"**, and it is the version of the idea that pays.
+
+**The reason this keeps landing in the same place:** everywhere a main-area/beyond split would
+help, the engine already has a *better* answer than a radius — one that is exact rather than
+heuristic. The two places it does not are both already specced and both small.
+
+### 8.7 Why the culling change is safe, which is not obvious
+
+`batch.Bounds` is already passed as `RenderParams.worldBounds` at both submission sites
+(`ChunkRenderer.cs:372, 403`), so **Unity is already culling against precisely this box on the
+GPU**. A CPU-side test against the same box can therefore only skip submissions whose draws were
+going to be rejected anyway: it changes what is *submitted*, never what is *seen*. The box is
+padded (`ChunkMesher.BoundsPadding`, plus `ReliefReach()`) because modules overhang their cells and
+the relief lifts and tilts them — and that padding is load-bearing for exactly this reason, so
+**do not tighten it to make culling look better**.
+
+The measurement and the change are the same code behind one flag, the way
+`ChunkRenderer.InstanceCellPlates` already does it: `CullToFrustum` off counts what *would* be
+skipped and skips nothing, on actually skips it. That is what lets before and after be taken inside
+one run on a machine that cannot be trusted between runs.

@@ -121,6 +121,9 @@ namespace Odyssey.Presentation.Bootstrap
         public ModuleCatalogue? moduleCatalogue;
         public AudioCatalogue? audioCatalogue;
         public SliceCameraRig? cameraRig;
+
+        /// <summary>The six frustum planes, refilled every frame. Allocated once; see the call site.</summary>
+        readonly Plane[] _frustumPlanes = new Plane[6];
         public bool castShadows = true;
 
         [Tooltip("The sun to move through the day. Left empty, the cycle finds the first directional light in the scene.")]
@@ -1167,6 +1170,24 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 _renderer.FallingItems.UpdateSnapshot(_world.Views.Current);
                 _renderer.FallingItems.Advance(Time.deltaTime);
+
+                // The camera's frustum, handed to the renderer the way the sight lines are, so
+                // that class still knows nothing about a Camera. Recomputed every frame into the
+                // same six planes rather than allocated: the non-allocating overload exists for
+                // exactly this call site, and the rig's camera is cached behind its property.
+                if (cameraRig != null)
+                {
+                    GeometryUtility.CalculateFrustumPlanes(cameraRig.Camera, _frustumPlanes);
+                    _renderer.Frustum = _frustumPlanes;
+
+                    // The shadow margin follows the setting, because the player can move it: a
+                    // caster further from the camera than the shadow distance casts nothing the
+                    // pipeline will draw, so that distance is exactly how far outside the frustum
+                    // a chunk must be before dropping it is invisible.
+                    _renderer.ShadowCasterMarginMetres =
+                        _renderer.CastShadows ? QualitySettings.shadowDistance : 0f;
+                }
+
                 _renderer.Render(activeLayer, slice);
             }
             MarkSection(FrameSection.World);

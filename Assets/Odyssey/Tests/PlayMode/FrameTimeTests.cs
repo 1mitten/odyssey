@@ -300,6 +300,200 @@ namespace Odyssey.Tests.PlayMode
                 "not take and all three readings are the same board");
         }
 
+        /// <summary>
+        /// What frustum culling is worth, measured with a control inside one run, on the board
+        /// where it matters.
+        ///
+        /// <para><b>The same world timed twice, seconds apart</b>, with
+        /// <c>ChunkRenderer.CullToFrustum</c> the only thing that changes between the readings —
+        /// the shape <c>TheMarkPassCostsWhatItSubmits</c> established, and the only comparison a
+        /// machine running several editors supports. The off arm also reports
+        /// <c>ChunksOutsideFrustum</c>, so the saving can be predicted from the chunk count and
+        /// then checked against the clock rather than inferred from it.</para>
+        ///
+        /// <para>Huge, because that is where the cost is: the board is 600 m across and the camera
+        /// reaches 160 m, so most of what the band admits cannot be on screen. On Standard the
+        /// whole board is nearly in view and the honest expectation is that this buys little —
+        /// which is the point, and why the standard reading is taken too.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WhatFrustumCullingIsWorth()
+        {
+            foreach ((string label, int x, int z, int y) in new[]
+                     { ("standard", 120, 120, 16), ("huge", 240, 240, 16) })
+            {
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                    out OdysseyBootstrap boot, x, z, y);
+                try
+                {
+                    yield return SeedOrders(boot);
+
+                    float margin = boot.Renderer!.ShadowCasterMarginMetres;
+
+                    boot.Renderer!.CullToFrustum = false;
+                    float off = 0f;
+                    yield return TimeFrames($"cull/{label}/off", boot, WarmupFrames, m => off = m);
+
+                    int drawn = boot.Renderer!.ChunksDrawn;
+                    int outside = boot.Renderer!.ChunksOutsideFrustum;
+                    int callsOff = boot.Renderer!.DrawCalls;
+
+                    // As it would actually ship: the margin keeps off-screen shadow casters.
+                    boot.Renderer!.CullToFrustum = true;
+                    float on = 0f;
+                    yield return TimeFrames($"cull/{label}/on", boot, WarmupFrames, m => on = m);
+                    int callsOn = boot.Renderer!.DrawCalls;
+
+                    // And without it — NOT shippable, because a wall outside the frustum stops
+                    // casting into it and shadows pop as the camera pans. Measured anyway, because
+                    // the difference between these two IS the price of correct shadows, and a
+                    // price nobody has measured is a price somebody will later assume is zero.
+                    boot.Renderer!.ShadowCasterMarginMetres = 0f;
+                    float noMargin = 0f;
+                    yield return TimeFrames($"cull/{label}/no-margin", boot, WarmupFrames, m => noMargin = m);
+                    int callsNoMargin = boot.Renderer!.DrawCalls;
+                    boot.Renderer!.ShadowCasterMarginMetres = margin;
+
+                    Debug.Log($"[FrameTime] cull {label} {x}x{z}x{y}: " +
+                              $"{outside} of {drawn} chunks outside the frustum " +
+                              $"({(drawn > 0 ? 100f * outside / drawn : 0f):0.0}%) at a {margin:0} m " +
+                              $"shadow margin; frame {off:0.00} -> {on:0.00} ms " +
+                              $"(saves {off - on:0.00}); draw calls {callsOff} -> {callsOn}. " +
+                              $"Without the margin {noMargin:0.00} ms / {callsNoMargin} calls, so " +
+                              $"correct shadows cost {on - noMargin:0.00} ms of the saving");
+
+                    // The control. If the test never rejected a chunk it measured the same thing
+                    // twice and the difference is this machine's mood, not the cull.
+                    Assert.That(outside, Is.GreaterThan(0),
+                        $"{label}: no chunk was outside the frustum, so the two readings are the " +
+                        "same submission and the comparison is meaningless");
+                    Assert.That(callsOn, Is.LessThan(callsOff),
+                        $"{label}: culling did not reduce draw calls, so CullToFrustum is not " +
+                        "reaching the submission path");
+                }
+                finally
+                {
+                    UnityEngine.Object.Destroy(root);
+                }
+
+                yield return null;
+                GC.Collect();
+                yield return null;
+            }
+        }
+
+        /// <summary>
+        /// Culling changes what is submitted and not what is seen — proved against pixels, with a
+        /// control that proves the comparison can see a difference at all.
+        ///
+        /// <para><b>Why this test has to exist.</b> The saving is enormous — 93.7% of Huge's
+        /// chunks are outside the frustum — and a broken frustum that rejected everything would
+        /// report exactly the same triumph. Nothing else here looks at the picture:
+        /// <c>FrameTimeTests</c> times frames, the Unity tier asserts no pixels, and the fault
+        /// this guards against is invisible in a still and only shows as shadows and geometry
+        /// popping at the screen edge while panning. That is the worst kind of bug to find late,
+        /// so it is found here.</para>
+        ///
+        /// <para><b>The control is the point.</b> A pixel comparison that always passes proves
+        /// nothing, so the same scene is also rendered with a frustum that admits nothing, and the
+        /// test fails if *that* still matches. One assertion says culling changed nothing; the
+        /// other says the instrument could have noticed if it had.</para>
+        ///
+        /// <para>A small tolerance is allowed because the pipeline is not bit-deterministic frame
+        /// to frame — post-processing and the light rig both jitter slightly. The control clears
+        /// it by two orders of magnitude, which is the gap that makes the tolerance safe rather
+        /// than convenient.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CullingDoesNotChangeThePicture()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot, 240, 240, 16);
+            var target = new RenderTexture(320, 240, 24) { name = "cull-proof" };
+            try
+            {
+                yield return SeedOrders(boot);
+
+                UnityEngine.Camera cam = boot.cameraRig!.Camera;
+                RenderTexture previousTarget = cam.targetTexture;
+                cam.targetTexture = target;
+                try
+                {
+                    boot.Renderer!.CullToFrustum = false;
+                    Color32[] off = null!;
+                    yield return Shoot(target, p => off = p);
+
+                    boot.Renderer!.CullToFrustum = true;
+                    Color32[] on = null!;
+                    yield return Shoot(target, p => on = p);
+
+                    // The control: a frustum nothing can be inside.
+                    Plane[] real = boot.Renderer!.Frustum!;
+                    var nowhere = new Plane[6];
+                    for (int i = 0; i < nowhere.Length; i++)
+                        nowhere[i] = new Plane(Vector3.up, -1e6f);
+                    boot.Renderer!.Frustum = nowhere;
+                    Color32[] blind = null!;
+                    yield return Shoot(target, p => blind = p);
+                    boot.Renderer!.Frustum = real;
+
+                    float culled = Difference(off, on);
+                    float blinded = Difference(off, blind);
+                    Debug.Log($"[FrameTime] cull proof: culling moved {culled * 100f:0.00}% of pixels, " +
+                              $"a frustum admitting nothing moved {blinded * 100f:0.00}%");
+
+                    Assert.That(blinded, Is.GreaterThan(0.05f),
+                        "rejecting every chunk did not change the picture, so this comparison " +
+                        "cannot see a difference and its other assertion proves nothing");
+                    Assert.That(culled, Is.LessThan(0.005f),
+                        $"culling moved {culled * 100f:0.00}% of pixels: it is not only skipping " +
+                        "submissions the camera could not see");
+                }
+                finally
+                {
+                    cam.targetTexture = previousTarget;
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+                target.Release();
+                UnityEngine.Object.Destroy(target);
+            }
+        }
+
+        /// <summary>Let the normal loop draw into the target, then read it back.</summary>
+        IEnumerator Shoot(RenderTexture target, Action<Color32[]> pixels)
+        {
+            // Several frames: the submission is rebuilt every frame and the post stack settles.
+            for (int i = 0; i < 8; i++) yield return null;
+
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+            pixels(image.GetPixels32());
+            UnityEngine.Object.Destroy(image);
+        }
+
+        /// <summary>The fraction of pixels that differ by more than a channel of noise.</summary>
+        static float Difference(Color32[] a, Color32[] b)
+        {
+            if (a.Length != b.Length) return 1f;
+            int moved = 0;
+            for (int i = 0; i < a.Length; i++)
+            {
+                int dr = Mathf.Abs(a[i].r - b[i].r);
+                int dg = Mathf.Abs(a[i].g - b[i].g);
+                int db = Mathf.Abs(a[i].b - b[i].b);
+                if (dr + dg + db > 12) moved++;
+            }
+
+            return a.Length == 0 ? 0f : (float)moved / a.Length;
+        }
+
         static double Section(double[] split, OdysseyBootstrap.FrameSection section) =>
             split.Length > (int)section ? split[(int)section] : 0d;
 
