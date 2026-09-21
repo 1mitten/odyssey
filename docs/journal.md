@@ -25,6 +25,64 @@ work itself.
 > later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
 > later entry says so.
 
+## 2026-09-21 — The storage pane's first look: four notes, and a panel with no free edge
+
+The owner opened the pane and sent four things. Three were small. The first was not, and the fifth
+was found by the test written for the first.
+
+**"A message appeared … but this moved the controls/components."** The warning was pushed in as
+the first children of the scrolling list, so unticking the last category dropped every row by the
+height of the band — under a cursor that was working down them. The owner asked for it below the
+control, which is right, and **moving it there made things worse**: the inspect panel is anchored
+to the bottom of the screen and grows upward, so the band shoved every control **up by 90 px**.
+Measured, not reasoned — the test asserted the list's top edge had not moved, and it had, by 90.
+
+That is the general lesson and it is worth more than the fix: **a panel that grows from an anchor
+has no free edge.** "Put the message somewhere else" is not a layout change unless something gives
+up the same space. Here the list gives it up: `StorageWarningHeight` is both the band's height and
+the height the scroll view loses to make room, so the pane is the same height either way. 92 px,
+measured — 77.1 of text and rule plus 12 of padding; a first guess of 64 clipped the hint and the
+test said so.
+
+**"Nothing and everything is the same as allow all and clear all."** They were, and §9b Q1 had
+already decided they should go, and the build kept them anyway — with a comment in the chip handler
+explaining that they routed through the same two model calls as the header buttons "rather than a
+third path that could drift from them". A comment explaining why a duplicate is safe is a duplicate
+nobody re-examined. Gone. `StoragePreset` stays in the simulation, where a zone is still founded at
+Everything.
+
+**"The x button appears twice … the square icon next to it does nothing."** A store added a
+disabled Rename, drawn as a placeholder square to hold a place for named stores, and a Close six
+pixels from the Close every pane already ends with. Both gone. An affordance for something that
+does not exist yet is worse than a gap: it told its story in a tooltip nobody hovers and read as a
+broken button.
+
+**"Make the numbers bigger."** The category member count was Meta 12 — the step for a qualifying
+aside, the smallest text in the pane — beside a 14/600 heading. Row 14/500 with `numeric` set, so
+it takes the mono face and tabular figures and matches the heading it answers to.
+
+### And the fifth, which nobody had reported
+
+Driving the pane's own Clear all with the game **running**, the simulation accepted 0 of 7
+commodities and the pane still showed all seven ticked and no warning. `SendStorageCommand`
+submits an intent and refills on the spot, on the strength of a comment saying a storage intent
+"applies while paused, so the answer is already true by the time the next frame draws". True while
+paused. While running the intent queues for the next tick, and nothing refilled the pane again —
+so **every press was one action stale**, which from the chair is indistinguishable from a button
+that does not work. It had presumably never been seen because the pane is a thing you open while
+paused, which is exactly the mode the comment is right about.
+
+`SyncStoragePanel` covers the other half, on the refresh that already runs fifteen times a second,
+rebuilding only when a signature moves — the zone, its rung, its cell count, its filter. Not an
+unconditional refill: thirteen elements of garbage a frame for a panel that changes when somebody
+presses something is the fault the Work tab was pooled to avoid.
+
+**All of it is invisible to every tier but one.** The fast tier has no visual tree and the model
+does not know where anything is drawn, so a layout that shifts under the pointer and a pane that
+lags the world by one action are both things only a person at the keyboard — or a PlayMode test
+that reads `worldBound` — can see. That is why `ZoneInspectTests` gained a test rather than the
+Hud tier.
+
 ## 2026-09-21 — A store is a rule about the door, and the rocks were already inside
 
 The owner painted a stockpile, set it to meals, and got two complaints out of it in one sentence:

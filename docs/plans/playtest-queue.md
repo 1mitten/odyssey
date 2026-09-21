@@ -23,6 +23,16 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 
+- **Does the storage pane sit still now?** (`claude/storage-pane`,
+  `docs/design/26-storage.md` §12.) Untick every category and the warning appears under the list
+  rather than in it, and the list gives up 92 px to make room, so nothing above it moves. **Is
+  losing a third of the list worth the message staying put** — or would you rather the band were
+  one line, or a colour on the header? And **press Allow all and Clear all with the game running,
+  not paused**: until today the pane did not change until you pressed something else, so the
+  presses want a look at normal speed as well as at zero. The counts on the category rows are a
+  step bigger and set in the mono face; if that was not what "the numbers" meant, say which and it
+  is a one-line change.
+
 - **Does a store keep itself to what you asked for?** (`claude/storage-pane`,
   `docs/design/26-storage.md` §11.) Paint a stockpile over ground that already has something on it
   — or set a store that is holding stone to meals only — and the colonists should carry out what it

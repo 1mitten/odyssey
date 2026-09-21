@@ -446,3 +446,86 @@ correct — the behaviour changes only where a store is holding something it ref
 zone in every golden is founded at *Everything***, so the state never arises. It also means the
 goldens do not cover this at all, and the six tests in `StockpileTests` under *what a store
 refuses* are the whole of the coverage.
+
+## 12. The pane's first look — 2026-09-21
+
+Four things from one session at the keyboard, and a fifth the first of them uncovered.
+
+### 12a. A message about what you just did must not move what you did it with
+
+> *"When I clicked off all the categories a message appeared about colonists ignoring the zone —
+> but this moved the controls/components — these should stay fixed — make the error message appear
+> below the stockpile component."*
+
+The two warning notes were pushed in as the first children of the scrolling list, so the moment the
+last category came off, every category row dropped by the height of the band — under a cursor that
+was working down them. **Moving it below the list was not enough on its own, and the test is what
+said so.** The inspect panel is anchored to the *bottom* of the screen and grows upward, so a band
+added at the end pushed every control **up by 90 px** — the same fault in the other direction, and
+a worse one, because the rows moved further and the way nobody expects.
+
+So the band's height comes out of the **list** rather than out of the screen:
+`StorageWarningHeight` is both the height of the band and the height the scroll view gives up to
+make room for it, and the pane is the same height whether the band is there or not. The list's top
+edge does not move, the rows in it do not move, and the only thing that changes is how much of the
+list you can see at once — which is what a scroll view is for.
+
+**92, measured rather than reckoned.** Two sentences and the rule above them come to 77.1 px at the
+pane's width, plus 12 px of the band's own padding. A first guess of 64 clipped the hint, and
+`ZoneInspectTests.ClearingEveryCategoryDoesNotMoveTheRowsThatDidIt` is what caught it — the same
+test asserts the band's contents still fit, so the constant cannot quietly become a clip when
+somebody rewords the sentence.
+
+### 12b. One action should not have two names
+
+> *"Nothing and everything is the same as allow all and clear all — so remove nothing and
+> everything if this makes sense."*
+
+It makes sense, and §9b Q1 had already decided it — *"Agreed: the preset chips are gone"* — and the
+build did not follow. Worse, the code **knew**: the chip handler carried a comment saying the two
+were the same two actions as the header buttons and routed through the same two model calls "rather
+than a third path that could drift from them". A comment explaining why a duplicate is safe is a
+duplicate nobody re-examined.
+
+The chips are gone. `StoragePreset` and `StorageSettingsModel.PresetKeys` stay: a zone is still
+*founded* at Everything and the simulation still names the presets. Nothing draws them.
+
+### 12c. Two closes and a square that does nothing
+
+> *"The x button appears twice in the control — keep the one in the very top right, the square icon
+> next to it does nothing."*
+
+A store added two header buttons of its own: a disabled Rename, drawn as a placeholder square to
+hold a place for named stores, and a Close — six pixels from the Close every pane already ends
+with. Both are gone. **An affordance for something that does not exist yet is worse than a gap**:
+the square told its story in a tooltip nobody hovers and read as a broken button, and the second
+Close asked the player to choose between two identical things. Named stores bring their own control
+when they bring the name (§9a, SZ4).
+
+### 12d. The one number on a row was the smallest thing on it
+
+> *"Make the numbers bigger in the stock control component."*
+
+The member count was `Meta` — 12 px, the step for a qualifying aside, and the smallest text in the
+pane — sitting beside a 14/600 heading, so the row's only figure read as a footnote to its own row.
+It is `Row` now, 14/500, the same step as the heading it answers to, with `numeric` set so it takes
+the mono face and tabular figures and a column of counts lines up whatever the digits are. Both
+come from the shared scale; no size is written in the pane.
+
+### 12e. And the one the test found: every press was an action stale
+
+`SendStorageCommand` submits an intent and then refills the rows on the spot, on the strength of a
+comment saying a storage intent *"applies while paused, so the answer is already true by the time
+the next frame draws"*. **True while paused, false the rest of the time.** Unpaused, the intent
+queues for the next tick, so the synchronous refill reads the state the player has just changed
+away from — and nothing refilled the pane again, because nothing else ever did.
+
+Measured by asking both sides after a press of Clear all with the game running: **the simulation
+accepted 0 of 7 commodities and the pane was still showing all seven ticked, with no warning.** A
+press that makes no visible difference is indistinguishable from a button that does not work.
+
+`SyncStoragePanel` covers the other half, hung off the refresh that already runs fifteen times a
+second, and rebuilds only when a signature — the zone, its rung, its cell count and its filter —
+has actually moved. Not an unconditional refill: thirteen elements of garbage a frame for a panel
+that changes when a person presses something is the fault the Work tab was pooled to avoid. The
+synchronous refill stays, because on a paused board no tick is coming to catch it.

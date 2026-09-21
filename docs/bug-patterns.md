@@ -352,6 +352,40 @@ two days.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)
+
+Owner, on the storage pane's first look: *"when I clicked off all the categories a message appeared
+about colonists ignoring the zone — but this moved the controls/components — these should stay
+fixed."*
+
+**The obvious fix was half of it.** The two notes were the first children of the scrolling list, so
+unticking the last category dropped every row by the height of the band, under the cursor that was
+working down them. Moving the band below the list made it **worse**: the inspect panel is anchored
+to the bottom of the screen and grows upward, so the band shoved every control **up by 90 px**. The
+answer is that the band's height comes out of the *list*, not out of the screen — the pane is the
+same height either way, the list's top edge does not move, and the scroll view simply shows less.
+
+**The general shape: a panel that grows from an anchor has no free edge.** Adding anything to a
+bottom-anchored panel moves everything in it. "Put the message somewhere else" is not a layout fix
+unless something else gives up the same space. Ask where the space is coming from, and if the
+answer is "the panel gets taller", ask which way it grows.
+
+**And the test found a fault nobody had reported.** Driving the pane's own Clear all button with the
+game running, the simulation accepted 0 of 7 commodities and the pane still showed all seven ticked
+and no warning. `SendStorageCommand` refilled synchronously after submitting, on a comment saying a
+storage intent "applies while paused, so the answer is already true by the time the next frame
+draws" — true while paused, false while running, when the intent queues for the next tick. Nothing
+refilled the pane again, so **every press was one action stale**, which is indistinguishable from a
+button that does not work. P1: one rule with a comment that was right about one mode and quoted as
+though it were right about both. `SyncStoragePanel` now rebuilds on a signature change, hung off the
+refresh that already runs fifteen times a second.
+
+**What now stops it:** `ZoneInspectTests.ClearingEveryCategoryDoesNotMoveTheRowsThatDidIt` — the
+list's top edge, the first row's top edge and the pane's top edge are all unmoved across the press,
+the warning is below the list, and its text fits the reserved band. Nothing else can see any of it:
+the fast tier has no visual tree and the model does not know where anything is drawn, which is why
+a layout that shifts under the pointer reached a playtest. `docs/design/26-storage.md` §12.
+
 ### 2026-09-21 — A meals-only store kept its rocks, and then took no meals (P14, P1)
 
 Owner, after painting a stockpile and setting it to meals: *"the colonists left the rocks already
