@@ -447,13 +447,42 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many are in the pile. A ledger counts these, never the piles.</summary>
         public readonly int Stack;
 
-        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1)
+        /// <summary>
+        /// The store holding this thing, or 0 when it is lying on the floor.
+        ///
+        /// <para><b>A contained thing is still published, at the store's own cell.</b> That is the
+        /// decision, and it is what keeps every consumer of "what does the colony hold" correct
+        /// without being told anything: the stores panel counts stacks and not piles, the build
+        /// palette sums the material it can afford, and the almanac's find-it jumps to a cell.
+        /// Publishing shelved goods on a channel of their own would have given all four a second
+        /// place to look, and the one that was forgotten would have undercounted in silence — a
+        /// player refused a wall they can pay for.</para>
+        ///
+        /// <para>Two consumers must therefore <em>exclude</em> these rows rather than include them,
+        /// and both are about position rather than quantity: the renderer draws them on the shelf
+        /// instead of on the floor, and the picker does not offer them as click targets, because
+        /// clicking a shelf selects the shelf.</para>
+        /// </summary>
+        public readonly int Container;
+
+        /// <summary>
+        /// Which of the store's slots this thing sits in, so the drawn goods have somewhere to
+        /// stand. Meaningless where <see cref="Container"/> is 0.
+        /// </summary>
+        public readonly byte Slot;
+
+        public bool Contained => Container != 0;
+
+        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
+            int container = 0, byte slot = 0)
         {
             Id = id;
             Cell = cell;
             DefIndex = defIndex;
             StuffIndex = stuffIndex;
             Stack = stack;
+            Container = container;
+            Slot = slot;
         }
     }
 
@@ -772,16 +801,52 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int StorageZone;
 
-        /// <summary>The storage zone's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StorageZone"/> is -1.</summary>
+        /// <summary>The store's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StoreKind"/> is 0.</summary>
         public readonly byte StoragePriority;
+
+        /// <summary>
+        /// What kind of store covers this cell: 0 none, 1 a painted zone, 2 a built one.
+        ///
+        /// <para><b>A byte rather than "a capacity of nought means a zone".</b> The pane says
+        /// different words for the two — a zone is so many tiles, a shelf is so many stacks of so
+        /// many — and deriving the kind from a magic zero is how a shelf with nothing in it comes
+        /// to read as a stockpile.</para>
+        /// </summary>
+        public readonly byte StoreKind;
+
+        /// <summary>How many of a built store's slots are in use. 0 for anything else.</summary>
+        public readonly byte StoredStacks;
+
+        /// <summary>How many slots a built store has. 0 for anything else.</summary>
+        public readonly byte StoreSlots;
+
+        /// <summary>
+        /// The one commodity a built store holds, as an <c>ItemHandle</c> — or 255 where it is
+        /// empty or holds more than one kind.
+        /// </summary>
+        public readonly byte StoredDef;
+
+        /// <summary>How many units of <see cref="StoredDef"/> are in there.</summary>
+        public readonly int StoredUnits;
+
+        public const byte StoreNone = 0;
+        public const byte StoreZone = 1;
+        public const byte StoreShelf = 2;
 
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
-            bool isIndoors = false, int storageZone = -1, byte storagePriority = 0)
+            bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
+            byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
+            byte storedDef = 255, int storedUnits = 0)
         {
             StorageZone = storageZone;
             StoragePriority = storagePriority;
+            StoreKind = storeKind;
+            StoredStacks = storedStacks;
+            StoreSlots = storeSlots;
+            StoredDef = storedDef;
+            StoredUnits = storedUnits;
             CellIndex = cellIndex;
             Terrain = terrain;
             Edifice = edifice;

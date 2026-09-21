@@ -564,6 +564,10 @@ namespace Odyssey.Hud
         /// answer, and a guard that could not tell it from "no store at all" would leave the row
         /// standing over a cell the player had just un-zoned.
         /// </summary>
+        byte _cellRowsStoreKind;
+        byte _cellRowsStoredStacks;
+        byte _cellRowsStoredDef;
+        int _cellRowsStoredUnits;
         int _cellRowsStoragePriority;
 
         static int StoragePriorityOf(CellDetail detail) =>
@@ -629,11 +633,16 @@ namespace Odyssey.Hud
             // took this return, and never set it again. The row went on reading "Assign…" for ever
             // over a control that was dead, and the owner reported being unable to assign a bed
             // three times across two sessions before a test could say why (BedOwnerPickerTests).
-            _bedUnderPane = detail.EdificeQuality > 0;
+            // **And it asks what the thing is, not only whether it has a tier.** A quality above
+            // nought used to be a good enough proxy for "this is a bed" because a bed was the only
+            // thing that took one. The shelf takes none, so it does not trip this — but the next
+            // piece of quality-bearing furniture would, and the row it grew would open the *bed*
+            // picker over it. Three characters against a report.
+            _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
-            _storeUnderPane = detail.StorageZone >= 0;
+            _storeUnderPane = detail.StoreKind != CellDetail.StoreNone;
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -649,6 +658,10 @@ namespace Odyssey.Hud
                 && _cellRowsCropGrowth == detail.CropGrowth
                 && _cellRowsZoneYield == detail.ZoneYield
                 && _cellRowsStoragePriority == StoragePriorityOf(detail)
+                && _cellRowsStoreKind == detail.StoreKind
+                && _cellRowsStoredStacks == detail.StoredStacks
+                && _cellRowsStoredUnits == detail.StoredUnits
+                && _cellRowsStoredDef == detail.StoredDef
                 && _cellRowsIndoors == detail.IsIndoors) return;
 
             _cellRowsFor = detail.CellIndex;
@@ -665,6 +678,10 @@ namespace Odyssey.Hud
             _cellRowsCropGrowth = detail.CropGrowth;
             _cellRowsZoneYield = detail.ZoneYield;
             _cellRowsStoragePriority = StoragePriorityOf(detail);
+            _cellRowsStoreKind = detail.StoreKind;
+            _cellRowsStoredStacks = detail.StoredStacks;
+            _cellRowsStoredUnits = detail.StoredUnits;
+            _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
@@ -714,12 +731,36 @@ namespace Odyssey.Hud
             // player changes and the thing that decides where the next armful goes; the size
             // follows it, because a zone has no name until storage groups arrive (S2) and "how
             // big" is the only other thing that tells two of them apart.
-            if (detail.StorageZone >= 0)
+            if (detail.StoreKind != CellDetail.StoreNone)
                 // "…" for the same reason the bed's owner row carries "Assign…": a row that can be
                 // pressed has to say it is one. That row looked exactly like the facts above and
                 // below it for two days and the owner could not find the feature at all.
                 Row(n++, "storage",
                     Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]) + " …");
+
+            // What a built store is actually holding, which a painted one has no equivalent of:
+            // its cells are the board and what is on them is read off the board.
+            //
+            // **Counted in stacks, not against a unit total.** "400 of 600" was the recorded form
+            // and it has no honest denominator: 600 is eight times wood's stack limit, and a shelf
+            // full of meals — which stack to twenty — would read "160 of 600" and look nearly
+            // empty. Stacks is the thing a shelf actually meters, and the `× n` form carries the
+            // amount beside it (docs/design/24-pile-reading.md §2).
+            if (detail.StoreKind == CellDetail.StoreShelf)
+            {
+                string holding;
+                if (detail.StoredStacks == 0)
+                    holding = "empty — " + detail.StoreSlots + " stacks free";
+                else
+                {
+                    string what = detail.StoredDef == 255
+                        ? detail.StoredUnits.ToString()
+                        : Registry.Label(ItemLabels.IconKey(detail.StoredDef)) + " × " + detail.StoredUnits;
+                    holding = what + " — " + detail.StoredStacks + " of " + detail.StoreSlots + " stacks";
+                }
+
+                Row(n++, "holding", holding);
+            }
 
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");

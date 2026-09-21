@@ -336,8 +336,36 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                if (item.Despawned || item.Cell < 0) continue;
-                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                if (item.Despawned) continue;
+
+                if (item.Cell >= 0)
+                {
+                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                    continue;
+                }
+
+                // In a store: published at the store's cell, carrying the store's id. A thing in a
+                // pair of hands is still skipped — it is drawn by the carrier, through the carry
+                // aspects above.
+                if (item.ContainerId == 0) continue;
+
+                int where = _ctx.WhereIs(item);
+                if (where < 0) continue;
+
+                // The slot is the thing's place in its store's own ordered contents. It is a
+                // drawing position and nothing more: the simulation does not number slots, because
+                // which shelf a jar sits on is not a fact the colony has an opinion about.
+                IReadOnlyList<int> holds = _ctx.Items.ContentsOf(item.ContainerId);
+                int slot = 0;
+                for (int h = 0; h < holds.Count; h++)
+                {
+                    if (holds[h] != i) continue;
+                    slot = h;
+                    break;
+                }
+
+                writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
+                    item.Stack, item.ContainerId, (byte)slot));
             }
         }
 

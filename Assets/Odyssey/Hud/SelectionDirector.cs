@@ -289,10 +289,15 @@ namespace Odyssey.Hud
         /// </summary>
         static void ThingAt(WorldSnapshot snapshot, CellRef cell, out ThingId id, out int def)
         {
+            // **Contained things are not click targets.** They are published at their store's own
+            // cell so that every count of what the colony holds stays right without being taught
+            // anything — but a click on a shelf means the shelf, not whichever of its eight stacks
+            // happens to come first in id order, which is a choice no player made. The same rule a
+            // bed follows: clicking one selects the bed and not the sleeper.
             var things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
             {
-                if (things[i].Cell != cell) continue;
+                if (things[i].Contained || things[i].Cell != cell) continue;
                 id = things[i].Id;
                 def = things[i].DefIndex;
                 return;
@@ -303,7 +308,7 @@ namespace Odyssey.Hud
                 CellRef above = cell.Above;
                 for (int i = 0; i < things.Length; i++)
                 {
-                    if (things[i].Cell != above) continue;
+                    if (things[i].Contained || things[i].Cell != above) continue;
                     id = things[i].Id;
                     def = things[i].DefIndex;
                     return;
