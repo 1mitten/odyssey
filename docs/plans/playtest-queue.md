@@ -14,9 +14,9 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, and the breach is widening.** There are **57 open rows** as of
-2026-09-21, counted rather than remembered — 28 on the day this file was written, 29 the day
-after, 57 now. Twenty-eight more in two days against a ceiling of about ten, and every one of
+**The rule is already breached, and the breach is widening.** There are **58 open rows** as of
+2026-09-22, counted rather than remembered — 28 on the day this file was written, 29 the day
+after, 58 now. Twenty-nine more in three days against a ceiling of about ten, and every one of
 them is a change nobody has looked at. That is the finding, not an oversight: the ceiling is
 where the list should be, not where it is, and a rule that is quietly wrong on arrival is a rule
 the next session learns to ignore.
@@ -83,6 +83,16 @@ the next session learns to ignore.
   move is the overlay that draws the picked box and the raw ray hit together. Also worth one
   glance: whether a crosshair over the board is a help or a busy little thing in the way, and
   whether the arrow coming back over a panel reads as *this click will not reach the world*.
+
+- **Does a quarried field read as a loss or as a bug?** (`claude/floating-crops`,
+  `docs/design/22-growing.md` §10.) The reported fault is fixed: mine the soil under a sown cell
+  and the seed and the zone paint go with it rather than hanging in the air. What nobody has judged
+  is the *silence* — there is no confirmation before the dig and no alert after it, so a player who
+  quarries under their own field finds out by looking. **Paint a few cells, sow them, mark the soil
+  under two of them to mine, and watch.** A wrong answer looks like you not noticing the field
+  shrank until much later, or noticing and thinking the game ate your zone by mistake; either sends
+  this to an alert or a confirmation. The other half is the shape left behind: the surviving cells
+  of the field stay zoned, so a field with a bite taken out of it should still read as one field.
 
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
