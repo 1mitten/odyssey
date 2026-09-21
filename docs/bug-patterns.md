@@ -317,11 +317,127 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 ---
 
+### P14 — A rule that only governs arrival, in a world where things are already there
+
+A gate is written where new things come in — a filter on what a store *accepts*, a check on what
+may be *placed*, a validator on what may be *entered* — and it is correct about every one of them.
+Nothing governs what was already sitting inside the boundary when the rule was written, or was
+there before the player narrowed it. The rule reads as total and is not: it is a rule about the
+door.
+
+**The tell is that the state is stable and nobody is misbehaving.** Every actor is obeying a rule
+it can see. A store refuses stone, so no hauler brings stone; a hauler will only take a thing
+somewhere that will have it, and nowhere will; so the stone that is already in the store is
+touched by nobody, for ever. There is no error, no failed job to count, no alert — the colony just
+quietly stops being able to use those cells, and the second symptom (*"and the meals were never
+hauled either"*) arrives later and looks like a different bug, because the occupied cells have no
+space for what the store does want.
+
+**The question to ask of any filter, gate or predicate:** *what is already on the wrong side of
+this, and who moves it?* If the answer is "nobody", the rule needs an eviction half, and the
+eviction needs a destination that the same rule would accept — or it will put the thing straight
+back into trouble somewhere else.
+
+**And the two halves are usually written a long way apart.** The filter lives with the thing it
+configures; the eviction has to live in whatever scans for work. Here the filter was in
+`StorageSettings` and the fix was in `HaulWorkGiver`, two assemblies' worth of intent apart, which
+is why "the filter is obviously right" and "the behaviour is obviously wrong" were both true for
+two days.
+
+---
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)
+
+Owner, on the storage pane's first look: *"when I clicked off all the categories a message appeared
+about colonists ignoring the zone — but this moved the controls/components — these should stay
+fixed."*
+
+**The obvious fix was half of it.** The two notes were the first children of the scrolling list, so
+unticking the last category dropped every row by the height of the band, under the cursor that was
+working down them. Moving the band below the list made it **worse**: the inspect panel is anchored
+to the bottom of the screen and grows upward, so the band shoved every control **up by 90 px**. The
+answer is that the band's height comes out of the *list*, not out of the screen — the pane is the
+same height either way, the list's top edge does not move, and the scroll view simply shows less.
+
+**The general shape: a panel that grows from an anchor has no free edge.** Adding anything to a
+bottom-anchored panel moves everything in it. "Put the message somewhere else" is not a layout fix
+unless something else gives up the same space. Ask where the space is coming from, and if the
+answer is "the panel gets taller", ask which way it grows.
+
+**And the test found a fault nobody had reported.** Driving the pane's own Clear all button with the
+game running, the simulation accepted 0 of 7 commodities and the pane still showed all seven ticked
+and no warning. `SendStorageCommand` refilled synchronously after submitting, on a comment saying a
+storage intent "applies while paused, so the answer is already true by the time the next frame
+draws" — true while paused, false while running, when the intent queues for the next tick. Nothing
+refilled the pane again, so **every press was one action stale**, which is indistinguishable from a
+button that does not work. P1: one rule with a comment that was right about one mode and quoted as
+though it were right about both. `SyncStoragePanel` now rebuilds on a signature change, hung off the
+refresh that already runs fifteen times a second.
+
+**What now stops it:** `ZoneInspectTests.ClearingEveryCategoryDoesNotMoveTheRowsThatDidIt` — the
+list's top edge, the first row's top edge and the pane's top edge are all unmoved across the press,
+the warning is below the list, and its text fits the reserved band. Nothing else can see any of it:
+the fast tier has no visual tree and the model does not know where anything is drawn, which is why
+a layout that shifts under the pointer reached a playtest. `docs/design/26-storage.md` §12.
+
+### 2026-09-21 — A meals-only store kept its rocks, and then took no meals (P14, P1)
+
+Owner, after painting a stockpile and setting it to meals: *"the colonists left the rocks already
+there and left the meals not hauled out in another place … I expect the colonists to ensure that
+all those tiles are occupied by meals or nothing, not leave rocks in there."*
+
+**Two symptoms, one cause.** A cell holding a rock has no space for a meal, so every cell a
+refused thing squats in is a cell the store cannot use. Reproduced on the bare fixture before
+touching anything: a two-cell meals-only store with a rock in each took **0 hauls in 10,000
+ticks**, and the meal on the grass never moved. With one rock and one free cell the meal *was*
+hauled — which is why the report read as two faults.
+
+**The filter was a rule about the door.** `StorageSettings.Accepts` governed what could be carried
+*in* and nothing at all about what was already lying there. `HaulWorkGiver.StoredPriority` already
+said in its own comment that a refused thing "is not stored at all, only in the way" — but that
+only ever let it move to a store that *would* take it, because of where it was asked: `ColonyItems`
+buckets loose against stored by whether the cell is in a zone, so a refused thing is bucketed
+**stored**, and the stored pass is the re-stow, which `TryGiveJob` runs only when nothing loose is
+waiting. When no store would take it, `dest < 0; continue` — there was no third answer.
+
+**The fix has two halves.** A refused thing is scanned in the *first* pass beside the loose things
+(not re-bucketed: that would make `ColonyItems`' buckets depend on the filter table and put the
+lister split into the save). And when no store will have it, it is carried out to open ground —
+the clause that already existed for a thing standing on tilled soil, now reached by both cases
+through `HaulWorkGiver.InTheWay` and one `ClearanceRadius`.
+
+**And the same bug had a second entrance (P1).** `PawnContext.NotZoned`, the predicate the
+clearance searched through, knew only about **growing** zones — while both of its call sites said
+in their own comments that they wanted ground *"outside every zone"*. A rock lifted off a field
+could be set down inside a meals-only stockpile and stay there for ever. One rule, two owners: the
+name and the doc comment said one thing, the call sites said another, and neither was tested. It is
+`PawnContext.OpenGroundFor(defIndex)` now and it asks about the thing as well as the cell — a store
+that *accepts* the thing is a home, not an obstruction.
+
+**What now stops it:** six tests in `StockpileTests` under *what a store refuses*, including the
+compound case, the do-not-evict-into-another-refusing-store case, the prefer-a-real-home case, a
+shuttling guard, and the player's actual gesture (narrowing a filter on a store that already holds
+something); plus `GrowingJobTests.AFieldBlockerIsNotClearedIntoAStoreThatRefusesIt` end to end and
+`OpenGroundIsNotAStoreThatRefusesTheThingButMayBeOneThatWantsIt` on the predicate alone.
+
+**Three tests in the area were not running at all.** `AFieldBlockerIsClearedToTheGrassWhenNoStore-
+WillTakeIt` — written for the owner's 2026-09-20 stall — `AThingOnTilledSoilIsClearedBeforeANearer-
+Pile`, and the new one, all searched the four orthogonal neighbours of the start for a free cell,
+and the scenario's own meal piles occupy all four on the fixture's seed. The `Assume` behind it
+made them **inconclusive**, which `dotnet test` prints as "Skipped" and the summary counts as
+nothing: the tier said `Skipped: 0` while fifteen tests returned no verdict. They search ring by
+ring now and assert rather than assume. The first one, allowed to run for the first time, threw
+immediately — it asked which zone cell **-1** was in, because it waited for the blocker's old cell
+to empty and a carried thing has no cell.
+
+**No golden moved, and that is the gap rather than the reassurance.** Every zone in every golden is
+founded at *Everything*, so the state never arises there. `docs/design/26-storage.md` §11.
 
 ### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
 
@@ -1602,3 +1718,101 @@ nearest frozen one at 134 m, an animated one at 179 m.
 - **The check:** `FigureCapTests` spawns twenty colonists along a line in a *scrambled* order, so id
   order and distance order disagree; the old code fails it. Scrambling is the whole test — spawn
   them nearest-first and taking the first N by id passes without sorting anything.
+
+## A housekeeping rule that only runs while there is something to keep house over
+
+**2026-09-20, found in review of the skills work (SK4), before a player saw it.** The level-up toast
+is detected entirely on the presentation side: `SkillLevelWatch` remembers the last level it saw for
+each colonist and each skill, and reports a rise. It guards the two ways a remembered mark goes
+wrong, and both have tests — **the first sight of a colonist is silent**, so nobody announces her
+starting roll, and **a colonist missing from the frame is forgotten**, so a dead one leaves no mark
+for a later pawn to inherit.
+
+The second guard runs inside `Step`, over the frame it has just been given. **Between two colonies
+there is no frame**: the interface is on the main menu, nothing is published and nothing is stepped.
+So the marks from the last colony survive into the next one, where `PawnId` 1 is a different person
+— and if she is the better miner she announces, on her first frame, a level she was rolled with.
+
+- **The pattern:** a cleanup that is driven by the same pump as the work. It is correct for every
+  case *inside* a session and silent about the boundary between two, because at the boundary the
+  pump is stopped. Ask of any per-frame housekeeping: *what runs it when there are no frames?*
+- **The tell is a `Clear` nobody calls.** `ToastModel.Clear` existed, was unreferenced, and cleared
+  the rows but not the watch — which is the wrong half: the rows expire on a six-second timer
+  anyway, the marks never do. An unreferenced teardown method is a design that expected a boundary
+  and then did not wire one.
+- **The fix goes where the session boundary already is**, not into the watch. `HudShell.OnSessionChanged`
+  is the one place that already takes the in-game interface away with its colony; the clear is one
+  line below it, so the next thing with session state to drop has an obvious home.
+- **The check:** `ToastModelTests.AColonyGoingAwayTakesItsLevelMarksWithIt` — first sight silent,
+  clear, then a *higher* level on the same `PawnId` must say nothing, and the rise after that must
+  still be reported once. Confirmed to fail on the right assertion with the clear commented out,
+  because a test written after a fix is worth nothing until it has seen the bug.
+
+## An instrument that summarises an event (2026-09-21)
+
+**P14.** A performance trace was written to find a stutter, and then hid it three separate times —
+each time because a field had been given the shape of a *cost* when the thing it measured was an
+*event*.
+
+1. **`remeshed` was last-seen.** Every other counter in a row is a fact about a moment and is
+   rightly the final frame's value: a draw-call count halfway through a second *is* the draw-call
+   count. Re-meshing is not like that. It happens on a handful of frames a second at most, so the
+   final frame's value is almost always zero — and a second in which eight hundred chunks were
+   rebuilt reported `0`. That zero was quoted **three times in one afternoon** as evidence that
+   meshing was not behind a 150 ms stall, which it could never have shown. It was caught only
+   because one full re-mesh happened to land on a row's last frame and printed `800` against a wall
+   of zeroes.
+2. **The tick had a median and no maximum.** The frame carried p50, p95, p99 and max from the first
+   line of the class, because the entire argument for the trace was that *a mean cannot see
+   stutter*. The tick was then given `tick_p50` alone. At 3x speed a second holds about a hundred
+   and eighty ticks, so one bad tick sits at the 99.4th percentile and is invisible.
+3. **The phases had a mean and a p95 and no maximum** — and `PhaseTrace` had offered `MaxMs` since
+   the day it was written. The trace simply never asked.
+
+- **The pattern:** a distribution was designed for the headline figure and summaries were added for
+  everything underneath it. Each addition looks reasonable on its own; the class of fault only
+  appears when something rare and expensive happens in one of the summarised terms.
+- **Why it is worse than an ordinary blind spot.** A missing field is obvious. A field that reports
+  `0`, or a plausible median, reads as *evidence of absence* — and it was used that way, repeatedly
+  and confidently, against the correct hypothesis.
+- **What makes it likely here.** The tick is **not inside any `FrameSection`**: it runs before the
+  draw block, so an expensive one lands in the part of a frame with no name at all. A term that no
+  section covers and no maximum records cannot be seen by anything.
+- **The rule:** **a counter of events is summed, a counter of state is last-seen, and anything
+  timed carries a maximum as well as a middle.** Which one a field is has to be decided when it is
+  added, not discovered when it lies. The question to ask of any new field: *if this went badly
+  once in two hundred samples, would this column change?*
+- **The check:** `TraceWriterTests.TheHeaderNamesEveryFieldARowCarries` stops a field arriving
+  undeclared, and `FrameTimeTests.TheTraceAgreesWithTheArmThatTimedIt` stops the headline figure
+  drifting from an independently-taken one. **Neither would have caught any of these three**, and
+  that is worth knowing: both guard a field's *existence* and its *accuracy*, and this fault is in a
+  field's *shape*. The reader's "elsewhere" column is the nearest thing to a guard — it makes the
+  unexplained remainder impossible to overlook, which is what eventually forced each of the three
+  into the open.
+
+## Two branches that name the same anchor collide in arithmetic (2026-09-20)
+
+**P12.** SK4 added a transient toast stack "under the alerts in the same column". EV added the
+Events panel "under the alerts in the same column". Neither branch knew the other existed, both
+computed their top as `alertsTop + alertsHeight + Gap`, and both were right. Merged, they solve to
+the same origin and the toast draws over the panel.
+
+- **The pattern:** two features written in parallel that anchor to the same landmark in *prose*.
+  The prose is identical on both branches, which is what makes it invisible at review: each reads
+  as a correct sentence about a column that, on that branch, has one new member.
+- **Why the exhaustive test did not catch it.** `HudLayoutTests.NoTwoPanelsOverlap…` sweeps every
+  case in a hand-written list and is genuinely exhaustive over it. SK4's cases set its own row
+  count high and the other's to zero — the parameter did not exist there. EV's did the mirror
+  image. **An exhaustive sweep is only as exhaustive as its case list**, and the conflict
+  resolution that merges two constructors does not write the case that uses both parameters.
+- **Where to look for the next one:** anything a doc comment places relative to a named neighbour
+  rather than at an absolute figure — a column, a docked strip, a stacked overlay. `git log
+  --all --grep` for the anchor's name, or grep the other live branches for the phrase, and if two
+  of them add a member to one stack, the merge owes a case with **every** member at once.
+- **The fix is an ordering decision, not a nudge.** Ask which member comes and goes: the one that
+  appears and disappears goes last, because anything under it steps down and back up every time.
+  Here that is the toast (six seconds, every couple of minutes) against the Events panel (a
+  standing list a player scans).
+- **The check:** `HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and
+  the reason, and two cases in `Cases()` put all three panels in one column at all three
+  resolutions. Both confirmed to fail on the pre-fix arithmetic before the fix went in.

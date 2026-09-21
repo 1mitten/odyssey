@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Hud;
+using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Events;
@@ -82,6 +83,15 @@ namespace Odyssey.Presentation.Ui
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
                 RipenCrops));
+            _debugTraceRow = DebugToggleRow(DebugDirector.TraceKey,
+                "Stops or starts this session's performance trace. Off, then a second session on, "
+                    + "is how the tracer itself gets ruled out of a report about stutter",
+                ToggleTrace);
+            _debugCheats.Add(_debugTraceRow);
+            _debugCheats.Add(DebugActionRow(DebugDirector.MarkTraceKey,
+                "Writes a marker into this session's performance trace, so the seconds around "
+                    + "this moment can be found afterwards - press it when something felt wrong",
+                MarkTrace));
             _debugPanel.Add(_debugCheats);
 
             // Filled when the panel opens, from the colony that is open: the content is the
@@ -96,6 +106,35 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>A toggle row: the pip idiom Settings already uses for the graphics options and
         /// used to use for this exact row, before it moved here.</summary>
+        /// <summary>
+        /// Mark this moment in the trace.
+        ///
+        /// <para>Nothing is said back here, and nothing needs to be: the developer overlay prints
+        /// the trace file and its marker count, so a mark that landed is visible and a mark that
+        /// had nowhere to land is visible too — the overlay says the trace is off.</para>
+        /// </summary>
+        void MarkTrace() => _boot?.MarkTrace("debug menu");
+
+        VisualElement? _debugTraceRow;
+
+        /// <summary>
+        /// Turn tracing off or on, and show which it is.
+        ///
+        /// <para>Off takes effect at once — the file is closed and the phase sink detached. On
+        /// takes effect on the next frame, which opens a <em>new</em> file rather than reopening
+        /// the old one: two halves of one session in one file would be indistinguishable from a
+        /// single session, and the whole point of the switch is to tell the two apart.</para>
+        /// </summary>
+        void ToggleTrace()
+        {
+            OdysseyBootstrap.TraceEnabled = !OdysseyBootstrap.TraceEnabled;
+            if (!OdysseyBootstrap.TraceEnabled) _boot?.StopTrace();
+            RefreshTraceRow();
+        }
+
+        void RefreshTraceRow() => _debugTraceRow?.EnableInClassList(
+            "settings__row--on", OdysseyBootstrap.TraceEnabled);
+
         VisualElement DebugToggleRow(string key, string tooltip, System.Action onClick)
         {
             var row = new VisualElement();
@@ -183,6 +222,10 @@ namespace Odyssey.Presentation.Ui
                 ToggleMenu(false);
                 _directors?.Settings.SetOpen(false);
                 RefreshDebugEvents();
+                // Seeded on open rather than at build: tracing is a process-wide static that a
+                // previous session, or a test, may have left either way round, and a pip showing
+                // the opposite of the truth is worse than no pip.
+                RefreshTraceRow();
             }
         }
 

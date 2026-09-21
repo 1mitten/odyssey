@@ -277,6 +277,7 @@ move from a level-8 anchor to a level-1 one:
 | **Mining** | 550 | 105 | 0.55× | 0.66× | 1.08× | 1.60× | 2.65× | 4.8× |
 | **Cutting** (felling) | 600 | 100 | 0.60× | 0.70× | 1.10× | 1.60× | 2.60× | 4.3× |
 | **Construction** | 700 | 75 | 0.70× | 0.78× | 1.08× | 1.45× | 2.20× | 3.1× |
+| **Growing** | 600 | 100 | 0.60× | 0.70× | 1.10× | 1.60× | 2.60× | 4.3× |
 | **Hauling** | 1000 | 0 | 1.00× | 1.00× | 1.00× | 1.00× | 1.00× | 1× |
 
 A novice is meaningfully slow, a mean starting colonist is 20–30% slower than the game is today, a
@@ -289,8 +290,17 @@ concluded — from the icon sheet, of all things — that **hauling is a work ty
 Two lines of reasoning arriving at the same place is the strongest evidence in this document, and
 it means this work neither needs nor blocks the skill-table reshuffle that §6 leaves open.
 
+**Growing arrived on 2026-09-19 with the growing work itself and took cutting's row verbatim**,
+which is why the two lines are identical. It is the "plant-work curve" `22-growing.md` §5 named as
+pending: growing shipped with `Work_Growing` carrying no `rateSkill` at all, so a master grower
+sowed at exactly a novice's speed and the whole Growing skill bought nothing. The reasoning for copying rather than inventing is
+that **they are the two plant work types**, and the design had felling training Growing outright until
+2026-09-18 (`15-skills.md` §6.2) — so a difference between them is not a default, it is a claim, and
+there is no measurement to support one. It scales the labour of sowing and reaping only; a plant's
+`growTicks` is untouched, so a skilled grower works a field faster without hurrying the season.
+
 **Accepted by the owner, 2026-09-17** — *"sure we start somewhere"*. They are a starting point and
-eight integers in a Def file; the judgement that matters comes at the keyboard, not here.
+ten integers in a Def file; the judgement that matters comes at the keyboard, not here.
 
 **The full work rate is the curve times condition:**
 

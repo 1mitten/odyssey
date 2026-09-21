@@ -110,8 +110,30 @@ namespace Odyssey.Hud
         /// <summary>Close the settings panel.</summary>
         ClosePanel,
 
+        /// <summary>
+        /// Back out of the main screen's Load or New game screen to its root column.
+        ///
+        /// <para>Added 2026-09-21 on the owner's report: *"On the main menu when I go to load game
+        /// or character screen and push escape — it doesn't close down menus and it gets
+        /// confused."* The start screen's own screens had no rung here at all, so Escape fell
+        /// through to <see cref="OpenPanel"/> and dropped the settings window on top of the load
+        /// list — two screens at once, which is the exact stack `17-start-flow.md` §4 exists to
+        /// avoid.</para>
+        /// </summary>
+        MenuBack,
+
         /// <summary>Nothing is open and nothing is held, so Escape is the way into the menu.</summary>
         OpenPanel,
+
+        /// <summary>
+        /// Escape means nothing here, and doing nothing is the answer.
+        ///
+        /// <para>The main screen's root column is the one place in the game with no "behind" to go
+        /// to. Opening the settings panel over it would be wrong — Options is a row on that column
+        /// already — and closing it is not possible, so the honest answer is a rung that says so
+        /// rather than a fall-through somebody has to read the order to predict.</para>
+        /// </summary>
+        Nothing,
     }
 
     /// <summary>
@@ -163,6 +185,17 @@ namespace Odyssey.Hud
         Graphics,
         Audio,
         Keys,
+
+        /// <summary>
+        /// What the <em>game</em> does rather than what the machine does: at the moment, the
+        /// autosave and nothing else (2026-09-21).
+        ///
+        /// <para><b>Last in the enum, and that is deliberate.</b> The order here is the order of
+        /// the tab strip and the first member is what the panel opens on, so a new tab at the
+        /// front would quietly move the page every player already knows. It joins the end until
+        /// there is a reason to rank it.</para>
+        /// </summary>
+        Gameplay,
     }
 
     /// <summary>
@@ -242,6 +275,14 @@ namespace Odyssey.Hud
 
         public const string ExitKey = "ui.settings.exit";
 
+        /// <summary>The registry key naming the gameplay section.</summary>
+        public const string GameplayKey = "ui.settings.gameplay";
+
+        /// <summary>The registry key naming the autosave row. Deliberately
+        /// <see cref="AutosaveClock.SettingKey"/> rather than a second spelling of it: the rungs,
+        /// their words and the preference are one thing and the clock owns it.</summary>
+        public const string AutosaveKey = AutosaveClock.SettingKey;
+
         static readonly GraphicsOption[] Order =
         {
             GraphicsOption.Shadows,
@@ -308,6 +349,7 @@ namespace Odyssey.Hud
             SettingsTab.Graphics => GraphicsKey,
             SettingsTab.Audio => AudioKey,
             SettingsTab.Keys => HotkeyDirector.KeysKey,
+            SettingsTab.Gameplay => GameplayKey,
             _ => PanelKey,
         };
 
@@ -806,6 +848,31 @@ namespace Odyssey.Hud
 
         public void Toggle(GraphicsOption option) => Set(option, !IsOn(option));
 
+        // ======================================================================== the autosave
+
+        /// <summary>
+        /// How many game days between autosaves, or zero for none. Always a rung
+        /// <see cref="AutosaveClock.DayRungs"/> offers, whatever was stored.
+        /// </summary>
+        public int AutosaveDays { get; private set; } = AutosaveClock.DefaultDays;
+
+        /// <summary>Raised when the autosave interval changes, with the new number of days.</summary>
+        public event Action<int>? AutosaveDaysChanged;
+
+        /// <summary>
+        /// Set the autosave interval. Snapped to a rung for the reason every ladder here is
+        /// snapped: a value stored by a build with different rungs must never leave the panel
+        /// showing a number none of its own buttons can reproduce.
+        /// </summary>
+        public void SetAutosaveDays(int days)
+        {
+            int snapped = Nearest(AutosaveClock.DayRungs, days);
+            if (AutosaveDays == snapped) return;
+            AutosaveDays = snapped;
+            _store?.WriteInt(AutosaveKey, snapped);
+            AutosaveDaysChanged?.Invoke(snapped);
+        }
+
         // ==================================================================== the number ladders
 
         /// <summary>Which rung a ladder rests on. Always a member of its own
@@ -1036,13 +1103,18 @@ namespace Odyssey.Hud
         public int BusDb(SettingsBus bus) => _db[bus];
 
         /// <summary>
-        /// The exit row: click once to arm, twice to leave.
+        /// The exit row.
         ///
-        /// <para>Two clicks because nothing is saved — there is no save system yet — so the
-        /// row must not be a key the player can hit by reaching past it for the close button.
-        /// No timeout, because a clock the director does not have would be a clock it could
-        /// not test; the armed row says what it wants and the panel closing stands it
-        /// down.</para>
+        /// <para><b>It used to arm on the first click and leave on the second</b>, because nothing
+        /// was saved and the row must not be a key the player can hit while reaching past it for
+        /// the close button. Since 2026-09-21 it asks properly instead: in game the shell raises
+        /// <c>LeavePrompt</c> off this row, which asks the same question and offers to save first.
+        /// Whether it still arms is <see cref="SessionCommands"/>'s to say, as it has been since
+        /// U38, and there it now says no — a row that opens a question should not ask one of its
+        /// own before it.</para>
+        ///
+        /// <para>The main screen's Quit row is a different placement and still arms twice: there
+        /// is no colony there, so there is nothing to offer to save and no prompt to raise.</para>
         /// </summary>
         public void RequestExit() => Request(ExitKey);
 
@@ -1148,6 +1220,9 @@ namespace Odyssey.Hud
             bool? developer = store.Read(DeveloperKey);
             if (developer.HasValue) SetDeveloperOverlay(developer.Value);
 
+            int? autosave = store.ReadInt(AutosaveKey);
+            if (autosave.HasValue) SetAutosaveDays(autosave.Value);
+
             int? layout = store.ReadInt(BuildLayoutKey);
             if (layout.HasValue && BuildPaletteModel.IsLayout(layout.Value))
                 SetBuildPaletteLayout((BuildPaletteLayout)layout.Value);
@@ -1218,14 +1293,36 @@ namespace Odyssey.Hud
         /// from the info button on an inspect card). Like the Work tab, "every window can be
         /// escaped", and it unwinds before the options panel behind it.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen, bool almanacOpen)
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen, bool almanacOpen) =>
+            Escape(toolArmed, paletteOpen, menuOpen, workOpen, almanacOpen, startScreen: null);
+
+        /// <summary>
+        /// The same rule with the main screen in it as well.
+        ///
+        /// <para><paramref name="startScreen"/> is the screen the main menu is showing, or null
+        /// when the main menu is not up — which is to say, when a colony is running. It is a
+        /// nullable screen rather than a sixth bool because "in game" and "on the main screen" are
+        /// the two halves of the session's life and no bool pair can be in both at once.</para>
+        ///
+        /// <para>It sits <b>below</b> the settings panel deliberately. On the main screen the panel
+        /// stands in the menu's place (<see cref="MenuScreen.Settings"/>), so closing it is what
+        /// backs out of that screen and the menu follows on its own; a rung above the panel would
+        /// unwind the navigation out from under a panel still on screen.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen, bool workOpen,
+            bool almanacOpen, MenuScreen? startScreen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
             if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
             if (workOpen) return EscapeAction.CloseWork;
             if (almanacOpen) return EscapeAction.CloseAlmanac;
-            return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
+            if (Open) return EscapeAction.ClosePanel;
+
+            if (startScreen != null)
+                return startScreen == MenuScreen.Root ? EscapeAction.Nothing : EscapeAction.MenuBack;
+
+            return EscapeAction.OpenPanel;
         }
     }
 }

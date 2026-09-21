@@ -21,12 +21,21 @@
  * — HudStyleSheetTests parses the declarations named in its own table and compares them against
  * HudTheme, so a colour nobody agreed to cannot reach the screen.
  *
- * ONE THING IN THE SPEC THIS ENGINE CANNOT DO. The panel fill is specified as
- * rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop filter and no
- * way to sample what is behind an element, so the blur is simply absent. The fill is unchanged;
- * what is lost is the softening of bright terrain seen through a panel. The two scrims carry the
- * contrast that mattered, so the omission costs legibility nothing — see HudContrast, which
- * measures it.
+ * ONE THING IN THE SPEC THIS ENGINE CANNOT DO, AND WHAT WAS DONE ABOUT IT. The panel fill was
+ * specified as rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop
+ * filter and no way to sample what is behind an element, so the blur is simply absent — and for
+ * a while the fill was kept at .86 anyway, on the reasoning that the scrims carried the
+ * contrast and HudContrast could prove it. That was true about contrast and wrong about
+ * reading: the ratio held while the panel still had a moving, detailed world showing through
+ * every letter of it, which is a different complaint and the one the owner made
+ * (2026-09-21, of the storage pane: "remove the transparency so we get clarity").
+ *
+ * The fill is therefore opaque. Translucency without the blur is not the spec at reduced
+ * fidelity; it is the half of the effect that costs legibility keeping none of the half that
+ * bought depth. HudTheme.PanelFill is the one owner of the value — .panel and .card both read
+ * it and HudStyleSheetTests checks them against it, so the alpha cannot be changed in one
+ * place only. The nearly-opaque surfaces above it (BarFill .90, PopoverFill .96) are left
+ * alone: at 4–10% they never showed the world, which is the thing that was wrong here.
  */
 
 /* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
@@ -85,7 +94,7 @@
 
 .panel {
     position: absolute;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
@@ -248,7 +257,7 @@
        is what lets the layout model state the strip's height as rows and gaps and be right. */
     margin: 0 3.5px 7px 3.5px;
     padding: 8px;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 5px;
@@ -353,7 +362,7 @@
     height: 24px;
     margin: 0 0 7px 0.5px;
     padding: 0 2px;
-    background-color: rgba(12, 16, 20, 0.86);
+    background-color: rgba(12, 16, 20, 1);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 4px;
@@ -510,6 +519,80 @@
 .alert__detail {
     color: rgba(255, 255, 255, 0.60);
     white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- toasts (SK4)
+
+   The transient stack, under the alerts in the same column. Design 09 §2.3 calls this a "transient
+   toast" and distinguishes it from a bulletin; §3.1 keeps alerts and bulletins apart because
+   "merging them produces a system that is wrong for both", and this is the third of the three.
+
+   No header row, unlike .alerts: a heading earns its place over a standing list a player returns
+   to, and would be the tallest thing in this stack for most of its life. HudLayout.ToastsHeight
+   models it without one. */
+.toasts {
+    position: relative;
+    width: 100%;
+    margin-top: 9px;
+}
+
+/* The negative bottom margin cancels the last row's own gap, exactly as .alerts__rows does, so the
+   realised box is rows * height + (rows - 1) * gap and matches HudLayout.ToastsHeight. */
+.toasts__rows { margin-bottom: -4px; }
+
+/* One line, sized like an alert row so the two stacks read as one column. No dismiss control and no
+   justify-content: space-between — there is nothing on the right to push away from. */
+.toast {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-left: 4px;
+    padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
+}
+
+.toast:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.toast__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+/* The line is three labels, not one: the words before the level, the level, and anything after it
+   (owner, 2026-09-21 - the number reads in its own colour). They sit flush against each other, so
+   the spaces between the words are the registry sentence's own and none of these may add margin.
+
+   Only the FIRST one shrinks. The number is the thing the owner asked to be able to see, so it is
+   the last thing that may be dropped if a long name ever crowds the row - "Constance has reached
+   Construction 7" truncating to "Constance has reach... 7" is the right failure, and
+   "Constance has reached Construc" is the wrong one. */
+.toast__lead {
+    color: #eef3f6;
+    white-space: nowrap;
+    overflow: hidden;
+    flex-shrink: 1;
+    margin: 0;
+}
+
+/* Colour is set from code (HudTokens.Warn) so this and the passion pip cannot drift apart - the
+   declaration here is a placeholder and is never seen, as .skill__fill's is. */
+.toast__level {
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.toast__trail {
+    color: #eef3f6;
+    white-space: nowrap;
+    flex-shrink: 0;
+    flex-grow: 1;
+    margin: 0;
 }
 
 .alert__dismiss {
@@ -957,8 +1040,13 @@
    catalogue's "disabled with a reason" rule — but visibly not a number you have. */
 .skill--off { opacity: 0.45; }
 
+/* The one flexible part of the row. Everything else is a fixed width, so this is what absorbs a
+   change to any of them - HudLayout.SkillNameWidth is that arithmetic, and
+   HudLayoutTests.TheSkillRowsPartsFitTheRow is what stops this being squeezed until "Construction"
+   clips. */
 .skill__name {
     flex-grow: 1;
+    flex-shrink: 1;
     margin-left: 9px;
     color: #eef3f6;
     white-space: nowrap;
@@ -987,6 +1075,58 @@
     margin-right: 3px;
     border-radius: 3px;
     background-color: #e8b55c;
+}
+
+/* The experience bar (SK3). A column of the row, between the name and the level, on the owner's
+   first look at it (2026-09-21: "the experience bar needs to sit between the skill label and the
+   skill value"). It shipped as a 3px underline absolutely positioned along the row's bottom edge.
+
+   WHAT THE OLD POSITIONING WAS PROTECTING, because it still has to be protected. `.skill` is 19px,
+   HudLayout.SkillRow says so, and the colonist pane is one fixed height across every tab; a bar
+   stacked UNDER the text would have grown all seven rows and moved the pane's top edge on every
+   change of tab, which is the exact thing that fixed height exists to stop. A bar placed BESIDE
+   the text costs no height at all as long as it is shorter than the row, which at 6px in a 19px
+   row it is. The constraint is kept; only the means changed. Do not read "it is in the flow now"
+   as permission to make it taller than the row.
+
+   Fixed width, and the NAME is what flexes. Everything to the bar's right is a fixed width, so a
+   fixed bar sits at a fixed offset from the row's right edge and every bar in the grid lines up on
+   both edges without anything measuring text. The numbers are HudLayout's - SkillBarWidth,
+   SkillBarGap, SkillBarHeight - and TheSkillRowsPartsFitTheRow holds them to the row's width.
+
+   Hidden by default so a row with no simulation behind it needs nothing done to it, which also
+   covers the row that is born dead and never changes: the code only touches this when liveness
+   changes, and for that row it never does. `display: none` on a flex child takes its width back
+   too, so a dead row's name simply runs on through where the bar would have been. */
+.skill__track {
+    display: none;
+    width: 72px;
+    height: 6px;
+    margin-left: 8px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Width is set from code, per mille in and per cent out. The colour is the needs' own green
+   (HudTokens.Good), set from code so this row and a food bar cannot drift apart - owner,
+   2026-09-21: "it should also be using the same green as used for the rest, food bars".
+
+   It was tinted by passion until then, on the argument that the fill was the only place the
+   x0.35/x1.0/x1.5 learning rate was visible while it was happening. That argument was wrong about
+   which question the bar answers: a player reading this row wants "how far along is she", which is
+   the same question a food bar answers and deserves the same colour. The passion is still on the
+   row, in the pips, which is where it was always legible.
+
+   The colour declared below is never seen. Every .skill__fill is built in one place and given
+   ExperienceInk on the next line, so this is a placeholder rather than the white the bar is drawn
+   in - do not "fix" it to a green literal, which would be a second owner for HudTheme.Good. */
+.skill__fill {
+    height: 6px;
+    width: 0;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.55);
 }
 
 .need__line {

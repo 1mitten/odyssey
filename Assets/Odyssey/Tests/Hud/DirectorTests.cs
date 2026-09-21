@@ -787,6 +787,55 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// Escape on the main screen backs out one level, and does nothing at its root.
+        ///
+        /// Owner, 2026-09-21: *"On the main menu when I go to load game or character screen and
+        /// push escape — it doesn't close down menus and it gets confused."* The start screen's
+        /// screens had no rung at all, so the key fell through to <c>OpenPanel</c> and laid the
+        /// in-game settings window over the load list.
+        /// </summary>
+        [Test]
+        public void EscapeBacksOutOfTheMainScreenAndDoesNothingAtItsRoot()
+        {
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Load),
+                Is.EqualTo(EscapeAction.MenuBack));
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.NewGame),
+                Is.EqualTo(EscapeAction.MenuBack),
+                "the character screen is the other half of the report");
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Root),
+                Is.EqualTo(EscapeAction.Nothing),
+                "the one screen with nothing behind it — and Options is a row on it already");
+        }
+
+        [Test]
+        public void TheSettingsPanelUnwindsBeforeTheScreenItStandsIn()
+        {
+            // On the main screen the panel takes the menu's place rather than sitting over it, so
+            // closing the panel is what leaves that screen and the menu follows on its own. A rung
+            // above the panel would move the navigation out from under a panel still on screen.
+            var settings = new SettingsDirector();
+            settings.SetOpen(true);
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Settings),
+                Is.EqualTo(EscapeAction.ClosePanel));
+        }
+
+        [Test]
+        public void InGameEscapeIsUnchangedByTheMainScreenRung()
+        {
+            // Null start screen is "a colony is running", which is every existing caller.
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, false, false, false, false, startScreen: null),
+                Is.EqualTo(EscapeAction.OpenPanel));
+            Assert.That(settings.Escape(false, false, false, false, false),
+                Is.EqualTo(EscapeAction.OpenPanel), "the five-argument overload means the same");
+        }
+
+        /// <summary>
         /// Every option starts as <see cref="SettingsDirector.DefaultOn"/> says, and the panel
         /// knows which ones cost a remesh to change.
         ///
@@ -1005,29 +1054,39 @@ namespace Odyssey.Tests.Hud
                     $"whole dB {db} does not survive the seat");
         }
 
+        /// <summary>
+        /// The exit row asks on the first press now, and the asking is <c>LeavePrompt</c>'s.
+        ///
+        /// <para>It armed and fired on a second press until 2026-09-21, when the owner asked for a
+        /// confirmation that offers to save. The arming went with it: the prompt is the question,
+        /// and a row that arms in front of one asks twice before asking properly.</para>
+        /// </summary>
         [Test]
-        public void TheExitRowAsksBeforeItLeavesAndThePanelClosingStandsItDown()
+        public void TheExitRowRaisesItsRequestOnTheFirstPressNow()
         {
             var settings = new SettingsDirector();
-            int armed = 0, asked = 0;
-            settings.ExitChanged += () => armed++;
+            int asked = 0;
             settings.ExitRequested += () => asked++;
 
             settings.RequestExit();
-            Assert.That(settings.ExitArmed, Is.True, "the first click asks to be sure");
-            Assert.That(asked, Is.Zero);
-            settings.RequestExit();
-            Assert.That(asked, Is.EqualTo(1), "the second click is the promise kept");
-            Assert.That(settings.ExitArmed, Is.False, "a fired exit is not still armed");
+            Assert.That(asked, Is.EqualTo(1), "the press is the request; the prompt does the asking");
+            Assert.That(settings.ExitArmed, Is.False, "nothing arms any more");
+        }
 
-            // Nothing is saved, so an armed row must not outlive the panel it lives in.
+        /// <summary>
+        /// Load in game is the last row that still arms, and the rule is still the table's.
+        /// </summary>
+        [Test]
+        public void TheRowThatStillArmsStandsDownWhenThePanelCloses()
+        {
+            var settings = new SettingsDirector();
             settings.SetOpen(true);
-            settings.RequestExit();
-            Assert.That(settings.ExitArmed, Is.True);
+            settings.Request(SessionCommands.LoadKey);
+            Assert.That(settings.ArmedRow, Is.EqualTo(SessionCommands.LoadKey));
+
             settings.SetOpen(false);
-            Assert.That(settings.ExitArmed, Is.False,
+            Assert.That(settings.ArmedRow, Is.Null,
                 "closing the panel stands the row down, Escape included");
-            Assert.That(asked, Is.EqualTo(1), "standing down is not leaving");
         }
 
         [Test]
@@ -1040,6 +1099,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(SettingsDirector.TabKey(SettingsTab.Graphics), Is.EqualTo(SettingsDirector.GraphicsKey));
             Assert.That(SettingsDirector.TabKey(SettingsTab.Audio), Is.EqualTo(SettingsDirector.AudioKey));
             Assert.That(SettingsDirector.TabKey(SettingsTab.Keys), Is.EqualTo(HotkeyDirector.KeysKey));
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Gameplay), Is.EqualTo(SettingsDirector.GameplayKey));
         }
     }
 }

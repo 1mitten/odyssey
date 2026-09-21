@@ -64,14 +64,41 @@ namespace Odyssey.Tests.Sim
         const int RegionBudget = 50_000;
 
         [Test, Category("Long")]
-        public void TheNaturalMapAtTheScaleTarget() => Measure(MapType.Natural, "natural", seed: 4242u);
+        public void TheNaturalMapAtTheScaleTarget() => Measure(MapType.Natural, "natural", seed: 4242u, Scale);
 
         [Test, Category("Long")]
-        public void TheRuinedCityAtTheScaleTarget() => Measure(MapType.RuinedCity, "ruined city", seed: 4242u);
+        public void TheRuinedCityAtTheScaleTarget() => Measure(MapType.RuinedCity, "ruined city", seed: 4242u, Scale);
 
-        static void Measure(MapType type, string label, uint seed)
+        /// <summary>
+        /// The same walk over each board the menu offers.
+        ///
+        /// <para><b>The region count is the number the edit tick is priced in.</b>
+        /// <c>NavGraph.Rebuild</c> floods only the dirty blocks and then runs four passes over
+        /// every region and link in the world, so what an edit costs tracks the board's live
+        /// region count and nothing else about it. That count is a property of what the generator
+        /// made, not arithmetic on the dimensions, so it has to be measured before any
+        /// per-board edit-tick figure means anything. This arm is where it comes from, and
+        /// <c>docs/design/28-map-size.md</c> quotes it beside the tick benchmark's.</para>
+        ///
+        /// <para>Large is here because it ships and nothing had ever run it, and because it is
+        /// the control that separates layers from columns: it has fewer cells than Huge and more
+        /// layers, so if depth drives regions rather than ground area, this pair says so.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void EveryOfferedBoard(
+            [ValueSource(nameof(OfferedBoards))] GridSize size)
+            => Measure(MapType.Natural, "natural", seed: 4242u, size);
+
+        static IEnumerable<GridSize> OfferedBoards()
         {
-            var grid = new CellGrid(Scale);
+            yield return BoardSizes.Standard;
+            yield return BoardSizes.Large;
+            yield return BoardSizes.Huge;
+        }
+
+        static void Measure(MapType type, string label, uint seed, GridSize size)
+        {
+            var grid = new CellGrid(size);
             var generation = Stopwatch.StartNew();
             MapGenOutcome outcome = MapGenerator.Generate(grid, seed, type);
             generation.Stop();
@@ -86,13 +113,18 @@ namespace Odyssey.Tests.Sim
             nav.Rebuild();
             rebuild.Stop();
 
-            Stats s = Gather(nav, Scale);
+            Stats s = Gather(nav, size);
+
+            // What one mined cell costs, on the board a player is actually given. Taken after
+            // Gather, because it digs.
+            double perEdit = TimePerEdit(grid, nav, seed);
 
             var report = new StringBuilder();
-            report.AppendLine($"--- {label} {Scale.SizeX} x {Scale.SizeZ} x {Scale.SizeY} (seed {seed}) ---");
+            report.AppendLine($"--- {label} {size.SizeX} x {size.SizeZ} x {size.SizeY} (seed {seed}) ---");
             report.AppendLine($"generated in {generation.ElapsedMilliseconds} ms; full nav rebuild {rebuild.ElapsedMilliseconds} ms");
+            report.AppendLine($"rebuild after one mined cell: {perEdit:F3} ms mean of 200");
             report.AppendLine($"regions {s.Regions} live of {nav.RegionCapacity} allocated; links {s.Links}");
-            report.AppendLine($"cells in regions {s.CellsInRegions} of {Scale.CellCount} ({Percent(s.CellsInRegions, Scale.CellCount)}); " +
+            report.AppendLine($"cells in regions {s.CellsInRegions} of {size.CellCount} ({Percent(s.CellsInRegions, size.CellCount)}); " +
                               $"mean region {Mean(s.CellsInRegions, s.Regions)} cells, largest {s.LargestRegion}");
             report.AppendLine($"blocks {s.LiveBlocks} live of {nav.BlockCount} " +
                               $"({Percent(s.LiveBlocks, nav.BlockCount)} live, {Percent(nav.BlockCount - s.LiveBlocks, nav.BlockCount)} uniform)");
@@ -104,7 +136,7 @@ namespace Odyssey.Tests.Sim
                 report.AppendLine($"districts ({mode}): {nav.DistrictCount(mode)}");
 
             report.AppendLine("layer: regions / links / vertical links / live blocks");
-            for (int y = 0; y < Scale.SizeY; y++)
+            for (int y = 0; y < size.SizeY; y++)
             {
                 if (s.RegionsPerLayer[y] == 0 && s.LiveBlocksPerLayer[y] == 0) continue;
                 report.AppendLine($"  {y,2}: {s.RegionsPerLayer[y],6} / {s.LinksPerLayer[y],6} / " +
@@ -141,6 +173,56 @@ namespace Odyssey.Tests.Sim
         /// One pass over the live regions and their adjacency. Links are de-duplicated by id
         /// because the adjacency lists an undirected link from both of its ends.
         /// </summary>
+        /// <summary>
+        /// The mean cost of <see cref="NavGraph.Rebuild"/> after a single cell is mined, on this
+        /// generated board.
+        ///
+        /// <para><b>This is the figure a board size is bought with, and it belongs here rather
+        /// than in the tick benchmark, because it has to be taken on a board the generator made.</b>
+        /// <c>TickBenchmarkTests</c> builds a synthetic lattice of rooms with rubble scattered
+        /// through it, which fragments every block and carries roughly nine times the regions a
+        /// generated map of the same size does — 19,606 against 2,110 at 120 x 120 x 16. That is
+        /// a fair stress world and a poor answer to "what does the board the player is given
+        /// cost", and the rebuild's cost tracks the region count almost exactly, so the two differ
+        /// by about an order of magnitude.</para>
+        ///
+        /// <para>The dirty cell is re-marked before every call. <c>Rebuild</c> returns on its
+        /// first line when no block is dirty, so timing repeated calls after a single mark would
+        /// measure an early return one hundred and ninety-nine times.</para>
+        /// </summary>
+        static double TimePerEdit(CellGrid grid, NavGraph nav, uint seed)
+        {
+            const int Samples = 200;
+            uint s = seed == 0 ? 1u : seed;
+            GridSize size = grid.Size;
+            var watch = new Stopwatch();
+            int taken = 0;
+
+            for (int i = 0; i < Samples; i++)
+            {
+                bool dirtied = false;
+                for (int attempt = 0; attempt < 128; attempt++)
+                {
+                    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+                    int idx = (int)(s % (uint)size.CellCount);
+                    if ((grid.Flags[idx] & CellFlags.SolidTerrain) == 0) continue;
+                    grid.Flags[idx] &= ~CellFlags.SolidTerrain;
+                    nav.MarkDirty(idx);
+                    dirtied = true;
+                    break;
+                }
+
+                if (!dirtied) break;
+
+                watch.Start();
+                nav.Rebuild();
+                watch.Stop();
+                taken++;
+            }
+
+            return taken == 0 ? 0 : watch.Elapsed.TotalMilliseconds / taken;
+        }
+
         static Stats Gather(NavGraph nav, GridSize size)
         {
             var s = new Stats(size.SizeY);

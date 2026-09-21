@@ -896,3 +896,33 @@ What would change once the size is known:
 - The in-world label size for world-space text, which is R8 and is deferred anyway.
 
 Nothing in §2, §3, §5, §7 or §8 depends on the cell size at all. That is by construction.
+
+## 12. The speed control, and what a pause comes back to
+
+The clock panel has four buttons — pause, play, fast, very fast — and four keys, Space and
+1/2/3. **Space is a toggle**: asking to pause an already-paused world means "start again". The
+question that toggle has to answer is *start again at what*, and until 2026-09-21 the answer was
+the literal 1. So a player running at triple speed who paused to give an order — which is the
+reason the paused world drains orders at all (§6, `PausedIntents.AppliesWhilePaused`) — was
+dropped back to normal on every unpause, silently undoing a choice made a moment earlier. The
+owner reported it in those words.
+
+**An unpause returns to the last speed the world was actually running at.** The rule and its
+memory are `Odyssey.Hud.SpeedControl`, one instance held by the composition root, and every
+request goes through `Resolve(requested, current)`:
+
+| Asked for | World is | Result | Remembered |
+|---|---|---|---|
+| a speed | anything | that speed | that speed |
+| pause | running | paused | the speed it was running at |
+| pause | paused | the remembered speed | unchanged |
+
+It lives in `Odyssey.Hud` rather than in the bootstrap because it is a rule and that assembly is
+the one the fast tier compiles; `SpeedControlTests` is five cases and runs in seconds.
+
+**The memory is of running, never of stopping** — `Resume` is never zero, or the toggle would
+resume into a pause and the clock would look stuck. There is one path that does not go through
+the toggle, and it is deliberate: restoring a saved view writes `SetGameSpeed` straight to the
+intent queue so a colony saved paused comes back paused. That path calls `Remember` instead, or
+the first unpause of a colony saved at triple speed would drop it to normal — the same bug one
+step further out.
