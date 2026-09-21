@@ -1816,3 +1816,38 @@ the same origin and the toast draws over the panel.
 - **The check:** `HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and
   the reason, and two cases in `Cases()` put all three panels in one column at all three
   resolutions. Both confirmed to fail on the pre-fix arithmetic before the fix went in.
+
+## A guard on one side of an asymmetry names the bug on the other (2026-09-21)
+
+**P15.** The owner photographed sown seeds hanging in mid-air over a quarry the colony had dug out
+from under them. `Falling` — the one place that answers *"what happens to whatever is in a cell when
+the thing it was standing on goes away"* — knew **pawns** and **loose items** and nothing else. A
+crop is neither; it is rooted in the soil rather than resting on it, so nothing had ever asked.
+
+**The tell was already written down, one cell away.** `DesignationGrid.CanMine` refuses the ground
+under a standing **tree**, and its comment says why in as many words: digging it away *"would leave
+the tree rooted in mid-air, and the right answer is to fell it first rather than to invent a falling
+rule here."* The same sentence describes a sown cell exactly. One of the two rooted kinds had a
+guard and the other had nothing, and the guard's own prose was the specification of the missing one.
+
+- **The pattern:** a rule written for a set of kinds, and a new kind that joins the set without
+  joining the rule. It does not read as a gap, because every line of the rule is correct — what is
+  missing is a *case*, and a case that was never there leaves no trace in the code to notice.
+- **Where to look for more:** anywhere a guard exists for one member of an obvious pair or family.
+  Ask which siblings it does **not** name, and why not. A comment that explains a refusal in general
+  language (*"rooted in mid-air"*) while the code names one specific thing is the strongest version
+  of this signal.
+- **And the second question: guard, or consequence?** The tree's answer is a guard (the order is
+  refused); the crop's is a consequence (the dig is allowed and the seed goes with the soil). That
+  is a judgement about which side the player would rather be surprised on, and it was the owner's to
+  make — a painted field blocking the pick is worse than losing a seed you chose to dig out. Do not
+  assume symmetry of mechanism just because the situations are symmetric.
+- **The fix went into the shared answer, not the caller.** `Falling.PlantsOutOf` and
+  `Falling.TreesOutOf` are called from `Falling.OutOf`, so mining, `ConstructionGrid.RemoveSlab` and
+  the collapse solver all inherited them at once — and `UprootFloatingPlants` is the sweep for the
+  case no caller is told about, the sibling of `DropFloatingItems`. Three callers, one new rule, no
+  copy.
+- **The check:** `FallingTests.MiningTheSoilUnderAFieldTakesTheSeedWithIt` and its four neighbours,
+  plus `ATreeGoesWithTheGroundAndLeavesNoWood`. **Run with the two lines removed from `OutOf`**: the
+  three mining tests fail and the rest pass, which is what says the tests fail on the reported bug
+  and not on something adjacent.

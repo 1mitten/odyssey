@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.Pawns
@@ -23,6 +24,14 @@ namespace Odyssey.Sim.Pawns
     /// navigation — that is what lets a colonist be on a rock face at all — but there is nothing
     /// under it, so it is not somewhere to leave anybody. Measured without this rule: two of five
     /// colonists spent the last 12,600 ticks of a 40,000-tick run standing still in mid-air.</para>
+    ///
+    /// <para><b>Not everything in a cell falls.</b> A crop and a tree are rooted in the ground
+    /// rather than resting on it, so when the ground goes they go with it — added 2026-09-21 after
+    /// a quarry dug out from under a sown field left the seeds hanging in the air. Both are the
+    /// same shape as the item rule and neither is a drop, which is why they live beside it here
+    /// rather than growing a falling rule of their own: the question "what was this standing on"
+    /// has one place to be asked, and the next kind that can be orphaned should be a few lines in
+    /// <see cref="OutOf"/> rather than a fourth site that remembers half of it.</para>
     /// </summary>
     public static class Falling
     {
@@ -31,7 +40,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// Everything in this cell has lost what it was standing on. Pawns first, then loose
-        /// things, both to the first real floor at or below.
+        /// things, both to the first real floor at or below — and then the two kinds that do not
+        /// fall at all, because they were rooted in the ground that went.
+        ///
+        /// <para><b>Four kinds, two answers.</b> A colonist and a sack of carrots are <em>on</em>
+        /// the floor and land on the next one down. A crop and a tree are <em>in</em> the soil, and
+        /// when the soil is carried away there is nothing left to land: they go with it. That is
+        /// the owner's call of 2026-09-21, from a screenshot of sown seeds hanging over a quarry
+        /// the colony had dug out from under them (docs/design/22-growing.md §10).</para>
         ///
         /// <para>Whether a colonist <em>remembers</em> the fall is the caller's to say, and the two
         /// callers disagree on purpose. A collapse is a frightening event and passes a thought; a
@@ -45,6 +61,8 @@ namespace Odyssey.Sim.Pawns
 
             int moved = PawnsOutOf(ctx, cell, thought, tick);
             ItemsOutOf(ctx, cell);
+            PlantsOutOf(ctx, cell);
+            TreesOutOf(ctx, cell);
             return moved;
         }
 
@@ -127,6 +145,97 @@ namespace Odyssey.Sim.Pawns
                 }
             }
             return dropped;
+        }
+
+        /// <summary>
+        /// The crop and the zone paint in this cell go with the ground that held them.
+        ///
+        /// <para><b>Nothing is dropped, and nothing is salvaged.</b> A seed put in soil that is
+        /// then quarried away is gone, at any stage of its growth — the owner's answer of
+        /// 2026-09-21 to the alternative of yielding a ripe crop, which would have made mining
+        /// under a field a harvesting technique.</para>
+        ///
+        /// <para><b>The paint goes too.</b> A zone square left hanging over the hole would draw
+        /// tilled rows on nothing and re-sow itself the moment a colonist could reach it, and the
+        /// board would be telling the player a field is there when it is not. Repainting a
+        /// rebuilt floor is one drag, and it is the player saying they meant it.</para>
+        ///
+        /// <para><b>The floor is the question, not the site.</b> A zone is deliberately <em>not</em>
+        /// cancelled by every change that would have refused it at painting time — a roof raised
+        /// over a field does not unzone it, and the sowing giver asks again for itself
+        /// (<see cref="Growing.GrowingZones.SiteAllows"/>). The one condition that ends a zone cell
+        /// from the outside is the one that leaves it drawn in mid-air, which is exactly the
+        /// condition <see cref="DropFloatingItems"/> asks about items.</para>
+        /// </summary>
+        /// <returns>Whether a zone cell or a crop was taken.</returns>
+        public static bool PlantsOutOf(PawnContext ctx, int cell)
+        {
+            var zones = ctx.Growing;
+            if (zones == null) return false;
+            if ((uint)cell >= (uint)ctx.Size.CellCount) return false;
+            if (ctx.Cells.HasFloor(cell)) return false;
+
+            return zones.CancelAt(cell);
+        }
+
+        /// <summary>
+        /// A tree standing in this cell goes with the ground it was rooted in, leaving no wood.
+        ///
+        /// <para><b>Mining cannot reach this, and that is deliberate.</b>
+        /// <c>DesignationGrid.CanMine</c> refuses the cell under a standing tree outright — "the
+        /// right answer is to fell it first rather than to invent a falling rule here". This is
+        /// the rule for the two callers that never asked: a collapsing slab and a deconstructed
+        /// floor, neither of which consults the designation grid about what is standing on the
+        /// thing it is taking away. It costs nothing when there is no tree, and it means the next
+        /// caller of <see cref="OutOf"/> inherits the answer instead of rediscovering it.</para>
+        ///
+        /// <para>No wood, for the same reason a crop leaves no carrot: what is lost is lost with
+        /// the ground. Felling is still the way to get the timber, and now the only way.</para>
+        /// </summary>
+        /// <returns>Whether a tree was taken.</returns>
+        public static bool TreesOutOf(PawnContext ctx, int cell)
+        {
+            var designations = ctx.Designations;
+            if (designations == null) return false;
+            if ((uint)cell >= (uint)ctx.Size.CellCount) return false;
+            if (ctx.Cells.HasFloor(cell)) return false;
+            if (!designations.IsTree(cell)) return false;
+
+            // A felled tree's teardown minus the yield: the handle goes and the chunk re-meshes.
+            // Navigation is not marked, because a tree blocks nothing and never did.
+            ctx.Cells.RemoveEdifice(cell);
+            designations.Clear(cell);
+            ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
+            return true;
+        }
+
+        /// <summary>
+        /// Safety sweep for the rooted kinds, the sibling of <see cref="DropFloatingItems"/>.
+        ///
+        /// <para>Walks the <em>zoned</em> cells rather than the board — a sparse list that is empty
+        /// in most colonies and a few thousand long in a big farm, against 250 × 250 × 40 cells if
+        /// this asked the grid. Planted cells are a subset of zoned cells, because sowing needs a
+        /// zone, so one walk covers both. The cells are collected before any is cancelled: a
+        /// cancel writes to the very list being read.</para>
+        /// </summary>
+        /// <returns>How many zone cells were taken.</returns>
+        public static int UprootFloatingPlants(PawnContext ctx)
+        {
+            var zones = ctx.Growing;
+            if (zones == null) return 0;
+
+            var cells = zones.Cells;
+            List<int>? doomed = null;
+            for (int i = 0; i < cells.Count; i++)
+            {
+                int cell = cells[i];
+                if (ctx.Cells.HasFloor(cell)) continue;
+                (doomed ??= new List<int>()).Add(cell);
+            }
+
+            if (doomed == null) return 0;
+            for (int i = 0; i < doomed.Count; i++) zones.CancelAt(doomed[i]);
+            return doomed.Count;
         }
     }
 }

@@ -22,6 +22,16 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
 
 ## Open
 
+- **Does a quarried field read as a loss or as a bug?** (`claude/floating-crops`,
+  `docs/design/22-growing.md` §10.) The reported fault is fixed: mine the soil under a sown cell
+  and the seed and the zone paint go with it rather than hanging in the air. What nobody has judged
+  is the *silence* — there is no confirmation before the dig and no alert after it, so a player who
+  quarries under their own field finds out by looking. **Paint a few cells, sow them, mark the soil
+  under two of them to mine, and watch.** A wrong answer looks like you not noticing the field
+  shrank until much later, or noticing and thinking the game ate your zone by mistake; either sends
+  this to an alert or a confirmation. The other half is the shape left behind: the surviving cells
+  of the field stay zoned, so a field with a bite taken out of it should still read as one field.
+
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
   batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now
