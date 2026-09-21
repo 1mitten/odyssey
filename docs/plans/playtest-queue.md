@@ -33,19 +33,19 @@ that is quietly wrong on arrival is a rule the next session learns to ignore.
   colour of tree recurring at a regular spacing along a ridge, which is the failure this number has.
   If it reads clean, **×4 is measured at 0.371 ms** and is the next rung; if it stripes, 12 is
   untested and sits between.
-- **Which side of the bus is the frame losing on?** (`claude/huge-map`,
-  `docs/design/06-rendering-and-camera.md` §6c.3.) **Top of the list, because it decides four other
-  lines and costs one minute.** The owner reported the grass tufts and the surround costing frames;
-  measured on this machine at 640 × 480 the surround is **45 per cent of the meadow's frame** and
-  the tufts are **7** — but that is CPU submission only, and both are alpha-tested foliage, whose
-  cost is nil at 307k pixels and can dominate at 1080p. So the ranking may invert on the owner's
-  own monitor and nothing should be built until it is known which way round it is.
-  **Press backtick for the developer overlay and read the new `cpu … gpu … <resolution>` line.**
-  If `gpu` is at or above the frame time the frame is fill-bound and batching will not move it; if
-  it is well under, the `submit split:` line beneath names the pass. Then confirm with the
-  **render scale** rung in Settings → Graphics: halve it, and if the frame recovers it is fill.
-  A wrong answer looks like reading the numbers without saying what the resolution was — every
-  figure in §6c.3 is 640 × 480 and is not comparable with anything taken at another size.
+- **Is vsync on, and what is the frame with it off?** (`claude/huge-map`,
+  `docs/design/06-rendering-and-camera.md` §6c.5.) **Answered half of the old "which side of the
+  bus" row and raised this one.** Your three 4K shots read frame 16.79 / 15.66 / ~17.5 ms at
+  60 / 64 / 57 fps with gpu 8.4 and submit 5.5 inside them — 8.4 + 5.5 is not 16.79, so those
+  frames are waiting on something. The overlay now prints `vsync` and `cap` beside the GPU
+  figure. **Turn vsync off in Settings → Graphics and read the frame again**: that is the first
+  number in this project that would be a real headroom figure. A wrong answer looks like quoting
+  fps with vsync on — it hides the spare capacity and the true cost at the same time.
+- **Do the tufts cost pixels?** (Same section.) At 640 x 480 they were 7 per cent of a CPU frame
+  and dismissed; at 4K the **GPU is the largest single item at ~8.5 ms**, and tufts are
+  alpha-tested foliage covering the ground — pixels, not calls. With vsync off, toggle
+  **Grass tufts** in Settings → Graphics and read `gpu`. A wrong answer looks like reading
+  `frame` instead of `gpu`, which vsync or a cap will flatten.
 - **Are the tufts and the surround worth what they cost?** (Same branch and section.) Settings →
   Graphics already carries both switches. Turn the **surround** off on the meadow and look at the
   horizon: 45 per cent of the frame is a large sum for scenery, and the question is whether the

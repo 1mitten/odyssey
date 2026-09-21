@@ -332,7 +332,6 @@ namespace Odyssey.Presentation.Bootstrap
             _sectionTimer.Restart();
         }
         float _smoothedFrameMs;
-        float _smoothedCpuMs;
         float _smoothedGpuMs;
         readonly UnityEngine.FrameTiming[] _frameTimings = new UnityEngine.FrameTiming[1];
         string _catalogueNote = string.Empty;
@@ -354,8 +353,19 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public float GpuFrameMs => _smoothedGpuMs;
 
-        /// <summary>Last frame's main-thread CPU time, smoothed, from the same source.</summary>
-        public float CpuFrameMs => _smoothedCpuMs;
+        // There was a CpuFrameMs here for one day, off FrameTiming.cpuFrameTime, and it was
+        // **wrong on screen in its first real session** (owner's 4K shots, 2026-09-21): it read
+        // 16.81 ms beside a 16.79 ms frame, which is right, then 296.32, then 17,898.04 over about
+        // twenty-five seconds — climbing, so not one poisoned sample decaying out of an average
+        // but a stream of bad ones. It is removed rather than repaired because **nothing was lost
+        // by removing it**: `frame` and `submit` are this class's own stopwatches, they agree with
+        // each other, and between them they say everything a CPU figure would have. The GPU time
+        // is kept because it is the one number nothing else here can get, and because the same
+        // shots show it steady and plausible — 8.40, 8.15, 9.12 ms at 3840 x 2160.
+        //
+        // The lesson, which is the general one: a figure the platform hands over is not a
+        // measurement until it has been seen beside a figure taken independently. This one was
+        // shipped on the strength of being plausible in a batch run at 640 x 480.
 
         /// <summary>
         /// Ask the platform what the last frame cost on each side of the bus.
@@ -364,14 +374,17 @@ namespace Odyssey.Presentation.Bootstrap
         /// a few; that is fine for a readout and useless for attributing a single frame, so the
         /// numbers are smoothed exactly as the frame time is and read as a trend.</para>
         /// </summary>
+        /// <summary>The largest a sample may be and still be a frame. Anything over is rejected.</summary>
+        const float PlausibleFrameMs = 500f;
+
         void SampleFrameTimings()
         {
             FrameTimingManager.CaptureFrameTimings();
             if (FrameTimingManager.GetLatestTimings(1, _frameTimings) == 0) return;
 
-            float cpu = (float)_frameTimings[0].cpuFrameTime;
             float gpu = (float)_frameTimings[0].gpuFrameTime;
-            _smoothedCpuMs = _smoothedCpuMs <= 0f ? cpu : Mathf.Lerp(_smoothedCpuMs, cpu, 0.05f);
+            if (gpu <= 0f || gpu > PlausibleFrameMs || float.IsNaN(gpu)) return;
+
             _smoothedGpuMs = _smoothedGpuMs <= 0f ? gpu : Mathf.Lerp(_smoothedGpuMs, gpu, 0.05f);
         }
 
@@ -2392,12 +2405,20 @@ namespace Odyssey.Presentation.Bootstrap
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
-                // The two lines that answer "is this the CPU or the GPU", which nothing on
-                // this overlay could say until 2026-09-21. Read the GPU figure first: where
-                // it is at or above the frame time the frame is fill-bound and no amount of
-                // batching will move it, and the render-scale rung is the lever. Where it is
-                // well under, the cost is on this side of the bus and the split says which pass.
-                $"cpu {Timing(_smoothedCpuMs)}   gpu {Timing(_smoothedGpuMs)}   {Screen.width}x{Screen.height}\n" +
+                // The line that answers "is this the CPU or the GPU", which nothing on this
+                // overlay could say until 2026-09-21. Read `gpu` against `frame` and `submit`:
+                // where it is at or above the frame time the frame is fill-bound, no amount of
+                // batching will move it, and the render-scale rung is the lever; where it is well
+                // under, the cost is on this side of the bus and the split below says which pass.
+                //
+                // **VSync and the frame cap are printed beside them because without those two the
+                // frame time is not evidence of anything.** A frame pinned at 16.7 ms with 8.4 ms
+                // of GPU and 5.5 ms of submit in it is a frame spending three milliseconds waiting
+                // for a monitor, and reading that as "we are at budget" is the wrong conclusion
+                // twice over — it hides both the headroom and the real cost.
+                $"gpu {Timing(_smoothedGpuMs)}   {Screen.width}x{Screen.height}" +
+                $"   vsync {(QualitySettings.vSyncCount > 0 ? $"on/{QualitySettings.vSyncCount}" : "off")}" +
+                $"   cap {(Application.targetFrameRate > 0 ? Application.targetFrameRate.ToString() : "none")}\n" +
                 $"submit split: {SubmitSplit()}\n" +
                 $"sound played {_audio?.OneShotsPlayed ?? 0} culled {_audio?.DistanceCulled ?? 0}" +
                 $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +

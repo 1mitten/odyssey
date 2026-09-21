@@ -1477,6 +1477,67 @@ watching. **It was still worth doing unconditionally** — 0.5 ms off every boar
 costs nothing and is nobody's trade — but the Play session with the GPU readout is still the next
 step and still decides what comes after.
 
+### 6c.5 4K, measured on the owner's machine — and the answer to the question §6c left open
+
+**2026-09-21, three screenshots from a real Play session.** Every number in §6c, §6c.3 and §6c.4 is
+640 × 480 in a batch runner, and each of them says so and says it may not transfer. This is the
+first reading at a play resolution, and it is **3840 × 2160 — 27 times the pixels**.
+
+| | Shot 1 | Shot 2 | Shot 3 |
+|---|---|---|---|
+| frame | 16.79 ms (60 fps) | 15.66 ms (64) | ~17.5 ms (57) |
+| **gpu** | **8.40 ms** | **8.15** | **9.12** |
+| submit | 5.55 ms | 5.11 | 5.74 |
+| tick | 0.19 ms | 0.20 | 0.20 |
+| World | 4.46 ms | 4.09 | 4.66 |
+| **Surround** | **0.98 ms** | **0.91** | **0.97** |
+| draw calls | 3,747 | 3,747 | 3,748 |
+| chunks | 413 | 413 | 413 |
+
+### What it settles
+
+**The surround is no longer the problem, and the §6c.4 work is why.** It is about **0.95 ms of a
+16 ms frame — six per cent** — where before that work it was 45 per cent of a 2.7 ms frame. It does
+not scale with resolution, which is the expected shape: it is per-call overhead and there are the
+same number of calls whatever the pixels.
+
+**The GPU is now the largest single item: about 8.5 ms.** §6c predicted this and could not test it
+— "1080p is 6.75× the pixels; the alpha-tested foliage that covers the horizon is exactly the kind
+of geometry whose cost is invisible at 640 × 480 and dominant at 1080p." At 4K it is 8.5 ms against
+5.5 of CPU submission. **The prediction was right and the axis is real**, so the tuft question
+§6c.3 could not answer is still live and is now the one worth answering: the tufts were 7 per cent
+of a CPU frame and they are pixels, not calls.
+
+**And `World` is the CPU term that is left**: 4.1–4.7 ms of the 5.1–5.7 ms submit, four to five
+times the surround, across 3,747 draw calls and 413 chunks. Whatever comes next on this side of the
+bus is the chunk buckets, not the decoration. `claude/frustum-culling` already exists and is
+measured (`docs/design/`, `odyssey-bigmaps`), which is the obvious first thing to weigh against it.
+
+### Read the frame time with vsync in view, or do not read it at all
+
+8.40 + 5.55 does not make 16.79, and the gap is the point. A frame sitting at 16.7 ms with 8.4 ms
+of GPU and 5.5 ms of submit inside it is a frame that is **waiting**, and 60/64/57 fps across three
+shots is the shape of a frame paced by a display rather than by work. **So the fps number in these
+shots is not evidence of headroom in either direction** — it hides how much is spare and it hides
+what the work actually costs. The overlay now prints `vsync` and the frame `cap` beside the GPU
+figure for exactly this reason; a reading taken without them is not comparable with anything.
+
+### The CPU figure was wrong and has been removed
+
+`CpuFrameMs`, added the same day off `FrameTiming.cpuFrameTime`, **failed in its first real
+session**: 16.81 ms beside a 16.79 ms frame in shot 1, which is right, then **296.32** in shot 2 and
+**17,898.04** in shot 3 — climbing over about twenty-five seconds, so a stream of bad samples rather
+than one spike decaying out of an average. It is deleted rather than repaired, because nothing is
+lost: `frame` and `submit` are this class's own stopwatches, they agree with each other, and
+between them they say what a CPU figure would have. `GpuFrameMs` is kept — it is the one number
+nothing else here can get, and the same three shots show it steady and plausible — and it is now
+guarded against implausible samples.
+
+**The lesson is the general one and is worth more than the figure was.** A number the platform
+hands over is not a measurement until it has been seen beside a number taken independently. This
+one shipped on the strength of looking plausible in a batch run at 640 × 480, in the very document
+that warns that 640 × 480 proves nothing.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.

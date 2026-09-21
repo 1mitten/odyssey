@@ -9839,3 +9839,41 @@ halves per-call overhead and does nothing at all for fill, so if the owner's rep
 GPU-bound at play resolution this has moved a number they were not watching. It was still worth
 doing unconditionally — half a millisecond off every board for nobody's trade — but the Play session
 with the GPU readout is still what decides everything after it.
+
+---
+
+## 2026-09-21 — 4K on the owner's machine: the surround is six per cent, the GPU is the frame, and my CPU readout was wrong
+
+Three screenshots, a real Play session, **3840 x 2160** — twenty-seven times the pixels every number
+in §6c was taken at, and the first reading this project has at a resolution anybody plays at.
+
+**The surround work paid and is done.** It reads **0.91–0.98 ms of a 16 ms frame, about six per
+cent**, where before §6c.4 it was forty-five per cent of a 2.7 ms frame. It does not scale with
+resolution, which is the shape it should have: per-call overhead, the same calls whatever the pixels.
+
+**The GPU is now the largest single item — about 8.5 ms against 5.5 of CPU submission.** §6c
+predicted exactly this and could not test it, and the prediction was right. So the tuft question
+§6c.3 could not answer is still open and is now the one worth asking, because tufts are pixels
+rather than calls. And on the CPU side what is left is **`World`: 4.1–4.7 ms of the 5.1–5.7 ms
+submit**, four to five times the surround, over 3,747 draw calls and 413 chunks. The next unit on
+this side of the bus is the chunk buckets, and `claude/frustum-culling` is already sitting there
+measured.
+
+**8.40 + 5.55 does not make 16.79, and that gap is the finding underneath the finding.** 60, 64 and
+57 fps across three shots is a frame paced by a display, not by work. So the fps number in those
+shots is not evidence of headroom in either direction — it hides both the spare capacity and the
+real cost. The overlay prints `vsync` and the frame `cap` beside the GPU figure now, because a
+reading taken without them is not comparable with anything.
+
+**And `CpuFrameMs`, which I added that morning, was wrong on screen in its first real session.**
+16.81 ms beside a 16.79 ms frame in the first shot — right — then 296.32, then 17,898.04, climbing
+over about twenty-five seconds, so a stream of bad samples and not one spike decaying out of an
+average. Deleted rather than repaired, because nothing is lost by deleting it: `frame` and `submit`
+are our own stopwatches, they agree with each other, and between them they say everything a CPU
+figure would have. `GpuFrameMs` stays — it is the one number nothing else here can get, it read
+8.40, 8.15 and 9.12 across the three shots, and it is guarded against implausible samples now.
+
+The lesson is worth more than the figure was: **a number the platform hands you is not a
+measurement until it has been seen beside a number taken independently.** That one shipped on the
+strength of looking plausible in a batch run at 640 x 480 — inside the very document that says
+640 x 480 proves nothing.
