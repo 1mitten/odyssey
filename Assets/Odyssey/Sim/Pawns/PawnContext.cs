@@ -125,6 +125,13 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Storage.StorageZones? Storage { get; set; }
 
+        /// <summary>
+        /// The colony's built stores — shelves — or null where it has none and in a bare fixture.
+        /// Null-guarded at every read, exactly as <see cref="Storage"/> is, so a colony that was
+        /// never given one simply has no containers rather than throwing.
+        /// </summary>
+        public Storage.StorageUnits? StorageUnits { get; set; }
+
 
         /// <summary>
         /// "This cell is in no growing zone" as a delegate that already exists.

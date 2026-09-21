@@ -88,6 +88,14 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, new Storage.StorageSettingsTable(pawns.Content), pawns.Items, pawns.Chunks);
             pawns.Storage = storage;
             pawns.Items.Membership = storage;
+            // And the built stores, sharing the zones' own settings table rather than keeping a
+            // second one: "what the colony accepts where" stays one table, one save section and
+            // one walk of the hash, whether the store in question was painted or raised. It takes
+            // the designations because a shelf being emptied is derived from the deconstruct order
+            // standing on it, rather than from a flag that could disagree with the order.
+            var units = new Storage.StorageUnits(
+                pawns.Cells, edifices, storage.Settings, pawns.Items, designations);
+            pawns.StorageUnits = units;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -168,6 +176,7 @@ namespace Odyssey.Sim.Pawns
             incidents.Attach(builder);
             growing.Attach(builder);
             storage.Attach(builder);
+            units.Attach(builder);
             return builder;
         }
     }
