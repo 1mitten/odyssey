@@ -353,7 +353,25 @@ namespace Odyssey.Presentation.Bootstrap
         /// longer theirs. The one arm that wants tracing sets this itself and puts it back in a
         /// <c>finally</c>.</para>
         /// </summary>
-        public static bool TraceEnabled { get; set; } =
+        /// <para><b>Worked out on first use, not in a field initialiser, and that is not a
+        /// style choice.</b> A static field initialiser on a <see cref="MonoBehaviour"/> runs in
+        /// the serialisation context, where Unity forbids most of its own API — asking
+        /// <c>Application.isBatchMode</c> there throws <c>UnityException: get_isBatchMode is not
+        /// allowed to be called from a MonoBehaviour constructor (or instance field
+        /// initializer)</c>, and because it throws inside the static constructor the whole type
+        /// fails to initialise, so every later touch of it rethrows
+        /// <c>TypeInitializationException</c>. It shipped that way for one commit on 2026-09-21
+        /// and filled the console. Nothing reads this before the first frame, so a lazy default
+        /// costs nothing and cannot be asked at a moment Unity objects to.</para>
+        public static bool TraceEnabled
+        {
+            get => _traceEnabled ??= DefaultTracing();
+            set => _traceEnabled = value;
+        }
+
+        static bool? _traceEnabled;
+
+        static bool DefaultTracing() =>
             !Application.isBatchMode && (Application.isEditor || Debug.isDebugBuild);
 
         /// <summary>The trace this session is writing, or null when it is not writing one.</summary>

@@ -136,6 +136,19 @@ class Trace:
         return sum(int(row.get(field, 0)) for row in self.rows)
 
 
+def cell(value: float) -> str:
+    """A figure, or ``n/a`` where nothing was recorded.
+
+    A zero and "the platform declined to say" look identical in a column of numbers, and
+    the second is the likelier of the two for the GPU time — ``FrameTimingManager`` gives
+    nothing in a headless batch run.  Reporting that as ``0.00`` would read as "the GPU is
+    free", which is exactly the wrong conclusion to hand somebody hunting a fill-bound
+    frame.  The developer overlay makes the same distinction for the same reason, and the
+    two must not disagree.
+    """
+    return f"{value:.2f}" if value > 0 else "n/a"
+
+
 def median(values: list[float]) -> float:
     if not values:
         return 0.0
@@ -213,7 +226,7 @@ def summarise(path: str, top: int) -> int:
     print("-- the frame, in milliseconds --")
     print(f"   {'':<12} {'typical':>9} {'worst second':>13}")
     for field, label in METRICS:
-        print(f"   {label:<12} {trace.typical(field):>9.2f} {trace.worst(field):>13.2f}")
+        print(f"   {label:<12} {cell(trace.typical(field)):>9} {cell(trace.worst(field)):>13}")
     print()
 
     over33, over50 = trace.over("over_33"), trace.over("over_50")

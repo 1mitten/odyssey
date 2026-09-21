@@ -134,6 +134,16 @@ namespace Odyssey.Tests.PlayMode
         const int OrderCells = 1_000;
 
         /// <summary>
+        /// How long the trace arm will wait for its rows before giving up, in frames.
+        ///
+        /// <para>Generous: a row is a second of wall clock and the arm wants two, so on a machine
+        /// drawing this world at four hundred frames a second that is about eight hundred frames.
+        /// The cap exists so a tracer that has stopped fails the test in seconds rather than
+        /// hanging the tier.</para>
+        /// </summary>
+        const int MaxFramesWaitingForRows = 5_000;
+
+        /// <summary>
         /// What a colony costs as it grows: the frame at eight colony sizes, in one world.
         ///
         /// <para><b>Written from a Play report, 2026-09-20.</b> The owner watched the overlay
@@ -353,13 +363,24 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(tracer!.Active, Is.True, $"tracing stopped: {tracer.Fault}");
                 Assert.That(boot.MarkTrace("from the test"), Is.EqualTo(1), "the marker did not land");
 
+                // **Frames are not seconds, and the first draft of this test assumed they were.**
+                // A row covers one second of wall clock; 180 frames on this machine is 0.39 s, so
+                // the arm asserted on a trace that had correctly written nothing yet. Wait for real
+                // time instead, and for two rows rather than one — a single row could be produced
+                // by a tracer that emits on its first sample and never again.
+                float waited = 0f;
+                for (int frame = 0; frame < MaxFramesWaitingForRows && tracer.Rows < 2; frame++)
+                {
+                    yield return null;
+                    waited += Time.unscaledDeltaTime;
+                }
+
                 path = tracer.Path;
                 rows = tracer.Rows;
 
-                // A row is written a second apart, so 180 frames must have produced some. A window
-                // that produced none would make every assertion below vacuously true.
-                Assert.That(rows, Is.GreaterThan(0),
-                    "180 frames went by and the trace wrote no row, so it is not sampling");
+                Assert.That(rows, Is.GreaterThanOrEqualTo(2),
+                    $"{waited:0.0}s of frames went by and the trace wrote {rows} row(s), so it is " +
+                    "not sampling on the clock it claims to");
             }
             finally
             {
