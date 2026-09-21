@@ -29,6 +29,14 @@ Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
 
 A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
 
+**And one way an orphan is made: Unity deadlocks on a stale `bee_backend` lock and never exits** (2026-09-21, twenty-five minutes). A run of `unity.sh test editmode` sat at 0 bytes of test output with its `Unity.exe` alive and idle. The wrapper's log was not empty — it ended on the line that says exactly what happened:
+
+```
+bee_backend: error: More than one copy of bee_backend running in <project> -- PID 8644 waiting
+```
+
+PID 8644 was already gone. Unity waited on a process that had died, wrote nothing more, and held `Temp/UnityLockfile` until it was killed; the next `unity.sh` refused with the lock message and so looked like the editor being open. **Read the tail of the run's own log before deciding a silent batch run is merely slow** — a genuine reimport keeps writing, and a deadlock says so in one line. The cure is to stop the orphan, delete `Temp/UnityLockfile` and run it again; the second run took about four minutes with the import already done.
+
 **Editing any `.cs` while a batch run is in flight makes its result meaningless, and the run still
 says "passed"** (2026-09-20, two wasted runs). Unity refreshes the asset database once at startup
 and compiles from what it found; a file saved after that point is simply not in the run. The exit
