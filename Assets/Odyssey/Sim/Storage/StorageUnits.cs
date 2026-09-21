@@ -180,6 +180,28 @@ namespace Odyssey.Sim.Storage
             !unit.Removed && _designations != null
             && _designations.At(CellOf(unit)) == DesignationKind.Deconstruct;
 
+        /// <summary>
+        /// Put a carried thing into this store.
+        ///
+        /// <para><b>The one door, because it is the only place that knows the slot count.</b>
+        /// <see cref="ColonyItems.PutIn"/> cannot refuse an overfull store — it has never heard of
+        /// slots — so a caller that reached past this and forgot <see cref="HasSpaceFor"/> would
+        /// quietly put a ninth stack on an eight-stack shelf and nothing anywhere would say so.
+        /// Throwing here is the same contract <c>ColonyItems.Spawn</c> keeps for a cell.</para>
+        ///
+        /// <para>Returns the thing now in the store, which is <b>not</b> the one passed in when it
+        /// merged into a stack already there.</para>
+        /// </summary>
+        public ColonyItem PutIn(StorageUnit unit, ColonyItem item)
+        {
+            if (!HasSpaceFor(unit, item.DefIndex, item.Stack))
+                throw new System.InvalidOperationException(
+                    $"store {unit.Edifice} holds {StacksIn(unit)} of {unit.Slots} stacks and cannot " +
+                    $"take {item.Stack} of def {item.DefIndex}");
+
+            return _items.PutIn(item, ContainerIdOf(unit.Edifice));
+        }
+
         // ---- raising and dissolving ----------------------------------------------------------
 
         /// <summary>

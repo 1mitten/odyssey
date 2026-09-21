@@ -102,7 +102,7 @@ namespace Odyssey.Sim.Pawns
                     {
                         if (!ctx.StorageUnits!.HasSpaceFor(into, item.DefIndex, item.Stack))
                             return JobStatus.Failed;
-                        PutInto(ctx, item, Storage.StorageUnits.ContainerIdOf(into.Edifice));
+                        PutInto(ctx, item, into);
                     }
                     else
                     {

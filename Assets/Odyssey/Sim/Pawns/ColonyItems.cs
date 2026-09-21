@@ -333,9 +333,10 @@ namespace Odyssey.Sim.Pawns
         /// returned is <em>not</em> the one passed in when a merge happened, and a caller holding
         /// the old reference is holding a tombstone.
         ///
-        /// <para>The caller asks <c>StorageUnits.HasSpaceFor</c> first. A load that cannot merge
-        /// and has no free slot is the container's business to refuse; what throws here is the
-        /// per-def overflow, because that is the half this class owns.</para>
+        /// <para><b>It refuses nothing, and cannot.</b> This class has never heard of slots, so
+        /// whether a store has room is <c>StorageUnits.PutIn</c>'s to say — and that is the door
+        /// every caller goes through. Reaching straight past it puts a ninth stack on an
+        /// eight-stack shelf and nothing anywhere says so.</para>
         /// </summary>
         public ColonyItem PutIn(ColonyItem item, int containerId)
         {

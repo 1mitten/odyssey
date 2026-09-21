@@ -155,6 +155,30 @@ namespace Odyssey.Tests.Sim
             Assert.That(units.HasSpaceFor(unit, Meal, 1), Is.False, "as is anything else");
         }
 
+        [Test]
+        public void AFullShelfRefusesAStackRatherThanGrowing()
+        {
+            // The guard has to live where the slot count is known. ColonyItems has never heard of
+            // slots, so if the store did not refuse here nothing would: a ninth stack would simply
+            // appear on an eight-stack shelf, and the only sign of it would be a pane saying
+            // "9 of 8 stacks".
+            ColonyWorld colony = Fresh();
+            int cell = OpenCell(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+            StorageUnit unit = RaiseShelf(colony, cell);
+            StorageUnits units = colony.Pawns.StorageUnits!;
+            unit.Slots = 1;
+
+            Stow(colony, unit, Wood, colony.Pawns.Content.Items[Wood].stackLimit, FreeGround(colony, 0));
+
+            ColonyItems items = colony.Pawns.Items;
+            ColonyItem more = items.Get(items.Spawn(Meal, FreeGround(colony, 1), 2))!;
+            items.PickUp(more, new PawnId(1));
+
+            Assert.That(() => units.PutIn(unit, more), Throws.InvalidOperationException);
+            Assert.That(units.StacksIn(unit), Is.EqualTo(1), "and the shelf is as it was");
+        }
+
         static int WoodIn(ColonyWorld colony, StorageUnit unit)
         {
             int total = 0;

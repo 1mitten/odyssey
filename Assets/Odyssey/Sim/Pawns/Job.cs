@@ -427,9 +427,9 @@ namespace Odyssey.Sim.Pawns
         /// the stoop on to the floor and the reach into a shelf are one motion, so they report one
         /// thing and a watcher cannot tell which happened from the animation alone.
         /// </summary>
-        protected void PutInto(PawnContext ctx, ColonyItem item, int containerId)
+        protected void PutInto(PawnContext ctx, ColonyItem item, Storage.StorageUnit into)
         {
-            ctx.Items.PutIn(item, containerId);
+            ctx.StorageUnits!.PutIn(into, item);
             Pawn.BeginGesture(PawnGesture.Stow);
         }
 

@@ -1216,6 +1216,30 @@ other bed test places facing 0, which is also what a lost facing looks like.
 
 ---
 
+## Every test used one of each, so the cap was never reached (2026-09-21)
+
+**Symptom.** None, for a day. Three tiers green, the feature demonstrably working, and the number in
+the decision, the handover, the status file and the design document was wrong by a factor of eight.
+
+**The real cause.** A shelf was specified as eight *stacks* — 600 wood. `PutIn` merged a load into
+*the* stack of its def, and `HasSpaceFor` refused a fresh slot for a def already present, so a shelf
+held one stack per **commodity**: 75 wood, one tile's worth. A warehouse unit had quietly become a
+spice rack.
+
+**Why nothing caught it.** Every test put *one stack of each kind* into a shelf — because that is the
+obvious way to fill eight slots when seven commodities exist, and because the capacity question reads
+as answered once "the ninth is refused" passes. The cap that was wrong is the one nobody exercised:
+the second stack of the same thing.
+
+**The check that catches the next one.** `EightStacksOfOneCommodityFillAShelf` fills a store with one
+commodity and asserts the headline number itself — 600 — rather than a slot count.
+
+**The general shape.** When a container is specified by a *quantity* ("eight stacks", "600 wood"),
+test the quantity, not the slot arithmetic. And be suspicious of any test that fills a capacity with
+one of each: it exercises the dimension you were thinking about and not the one a player will use.
+The tell here was that the feature's own playtest question — *does one shelf do the job of eight
+tiles of painted zone?* — was answerable "no" from the code, and nobody asked the code.
+
 ## A guard that compares a position, when the thing has stopped having one (2026-09-21)
 
 **Symptom.** A colonist walks to a shelf to fetch wood from it and then stands there. No error, no
