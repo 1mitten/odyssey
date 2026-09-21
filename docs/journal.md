@@ -9196,3 +9196,78 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+
+## 2026-09-21 — Shelves: a store you build, and the five faults that only a test could see
+
+The colony could **paint** storage and not **build** it. S2 of the storage line closes that: a shelf,
+one cell, eight stacks, driven by the storage control the player already has.
+
+**The whole thing was already architected, and that is the finding worth keeping.** Three pieces of
+S1 were built to be pointed at a container later and said so in their own doc comments —
+`ColonyItem.ContainerId` saved and hashed and written by nothing, `StorageSettings` describing itself
+as "the record a zone points at, and the one a crate will point at when crates exist", and the
+settings popover saying it was built so "the same control drive[s] a crate the day crates exist". A
+fourth, `WorldRenderModel.StandHeight`, had written down what the *next* non-occluding thing that
+stands up would have to do and what would happen if it did not. Reading those four before writing
+anything is most of why this unit went in without re-opening a decision.
+
+**The design plan was on an unmerged branch.** `docs/plans/storage.md` is cited by five places in
+`main`'s code and design docs and had never left `claude/storage-plan-technical`. It came across on
+this branch. A plan the code points at and nobody can read is worse than no plan.
+
+### The five things reading did not find
+
+1. **`LiftToil` could never grasp a shelved thing.** Both its guards compared `item.Cell` to the
+   pawn's cell, and a contained thing has no cell — so a colonist sent to a shelf would have bent
+   over it for ever. Found by a test that required a wall to rise from material that existed only on
+   a shelf. The fix is `JobDriver.AtHand`, one owner of "within reach where she stands".
+
+2. **An ordered shelf deadlocked.** Its contents rank below every real store so they want to leave,
+   but with no other store on the board the destination scan found nothing and they stayed — while
+   the deconstruct gate refused to take the shelf apart until they had gone. Nothing moved and
+   nothing said why. An emptying store now gives its contents up to the floor when no store will
+   take them.
+
+3. **The test that should have caught (2) was passing for the wrong reason.** It ran blind to the end
+   and asserted the shelf was empty — which it was, because the colonist had finished the deconstruct
+   and `Dissolve` had spilled the lot. Tightened to require the shelf empty **while still standing**,
+   it went red and stayed red until the deadlock was fixed. A test that cannot fail for the reason it
+   names is not a test.
+
+4. **`StorageZones.Units` was wired one way.** The property existed and the composition never set it,
+   so `SettingsAt` answered null over a shelf and the settings panel would have opened and closed on
+   the same frame — the press doing nothing, visibly, which is the shape `20-beds.md` §8 records as
+   "why Assign did nothing, three times". The test that caught it asserts the record is the shelf's
+   own instance, not merely non-null.
+
+5. **`default(StorageSlot)` is a valid cell.** `Stand` defaults to 0, and 0 is the corner of the
+   board, so a failed destination search falling back on `default` sent every unhaulable load there.
+   `StorageSlot.None` is spelled out now.
+
+A sixth was mine and went the other way: `TryMakeReservations` claimed the item before checking the
+destination, so a full destination walked away holding the claim. The original order — every question
+first, then every claim — was quietly doing the right thing, and rewriting it lost that. The leak
+showed up as `ActiveClaims` not empty after a soak, which is exactly the assertion
+`ReservationManager`'s own doc says is there for this.
+
+### The golden re-bake, and the instrument that is now committed
+
+All six numbers moved, because a hashed component contributes its count on every board including the
+three goldens, none of which has a shelf. `GoldenColonyProbe` prints what each colony is *made of* at
+generation and after the run, is written against nothing newer than `main` so the same file runs on
+both branches, and the two outputs diff clean. Earlier re-bakes used a throwaway probe and had to
+describe it afterwards; this one leaves the instrument behind for the next one.
+
+### What was decided rather than inherited
+
+Eleven owner decisions, 37–47, taken in a three-round interview before any code: one container kind;
+named Shelf because the key already existed; passable; the existing popover; **Preferred** by default
+so building one visibly does something; the cell refuses loose stacks; a shelf takes its cell out of
+any zone; the goods are the fill tell; eating, building and hauling all learn containers; deconstruct
+refuses rather than destroys; groups deferred.
+
+Two were corrected against the code afterwards and both are recorded in `28-shelves.md`: the pane
+says **stacks** rather than "400 of 600", because 600 is eight times wood's stack limit and a shelf
+full of meals would read as nearly empty; and the deconstruct refusal needed a **giver gate** in
+front of it, because a refusal at the last tick against work banked on the cell is a loop that ends
+in the think tree's circuit breaker and reads as idleness.

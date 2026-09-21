@@ -1100,6 +1100,49 @@ other bed test places facing 0, which is also what a lost facing looks like.
 
 ---
 
+## A guard that compares a position, when the thing has stopped having one (2026-09-21)
+
+**Symptom.** A colonist walks to a shelf to fetch wood from it and then stands there. No error, no
+failed job, no stuck flag — the toil simply never advances.
+
+**The real cause.** `JobDriver.LiftToil` had two guards reading `item.Cell == Pawn.Cell`, which asks
+"is the thing still at my feet". That was a complete question while a thing was on the floor or in a
+pair of hands. A thing in a store has **no cell at all**, so the comparison is false for a stack
+sitting perfectly still on the shelf being reached into, and the grasp can never happen.
+
+**Why it survived a reading.** The site does not look wrong. It looks like exactly the defensive
+check it is, and the three obvious sites — the work giver, the reservation, the walk — had all been
+found and fixed. The one that had not was inside a shared toil two layers down, in a file that is not
+about storage at all.
+
+**The measurement that found it.** A control that built a wall from material that existed *only* on a
+shelf. It failed loudly with the delivery never completing, and a probe printing the job tallies
+showed `deliverDone=0` — a job started and never finished, which points at a toil rather than at a
+giver.
+
+**The check that catches the next one.** `PawnContext.WhereIs` and `JobDriver.AtHand` are now the two
+owners of "where is that thing" and "can she reach it from here". The general shape: **when a thing
+gains a third place it can be, every comparison against its position is a question with a stale
+answer, including the ones that look like defensive noise.** Grep for the field, not for the concept.
+
+## A test that could not fail for the reason it named (2026-09-21)
+
+**Symptom.** None. The test was green.
+
+**The real cause.** `AnEmptyingShelfGivesUpItsContents` ran a colony to the end of a fixed number of
+ticks and then asserted the shelf was empty. It was — but not because haulers had emptied it. The
+colonist had finished the deconstruct and `Dissolve` had spilled the contents on the way out. A haul
+path that did not work at all produced exactly the same final state.
+
+**What changed.** The test watches tick by tick and requires the shelf to be empty **while it is
+still standing**. It went red immediately, and the deadlock it then exposed — an emptying store whose
+contents rank below every store and have nowhere to go, against a gate that will not remove the store
+until they have gone — was a real one that no other test could see.
+
+**The general shape.** A test that asserts an **end state** reachable by two paths tests neither.
+Ask what else could produce the state you are asserting; if the answer is "the thing going wrong",
+assert a state only the right path passes through.
+
 ## The method, which is the real lesson
 
 **Measure, do not read.** Reading the code has been wrong on every hard bug in this project, and

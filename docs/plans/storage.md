@@ -811,6 +811,16 @@ disagrees.
 | 31 | **Decision 21 confirmed: the tri-state tree is deferred out of S1.** `ItemDef.category` and the six registry rows still land in S1. |
 | 32 | **Spoilage is its own unit, its own interview, after S2.** Not a rider on a storage branch. |
 
+**S2 is built, 2026-09-21** — `claude/storage-shelves`, `docs/design/28-shelves.md`. The container is
+a **Shelf** rather than a Crate, because `ui.arch.tool.shelf` already existed in the registry, in the
+icon map, as a glyph and as a dim chip in the palette's Furniture row; decisions 37–47 are the third
+interview round and are recorded in the design doc rather than here. Everything §7 predicted held
+except two things, both corrected there: the pane counts **stacks** rather than units against a
+total (600 has no honest denominator — a shelf of meals would read as nearly empty), and the
+deconstruct refusal needed a **giver gate** in front of it (§7d's refusal alone is a think-loop
+against work banked on the cell). §7b's table of nine readings was right about all nine and missed a
+tenth, `JobDriver.LiftToil`, which no reading found and a control did.
+
 **S0 is built.** `ZoneGrid` is extracted, `GrowingZones` sits on it, and the container's two
 historical bugs are asserted directly — **PR #151**, `claude/zone-container`. Fast tier 867 Sim +
 484 Hud, the Long tier and all three goldens 23 passed and identical to `main`, Unity EditMode
