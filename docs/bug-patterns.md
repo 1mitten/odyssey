@@ -317,11 +317,127 @@ for Defs (the content fingerprints); a font is the same question with a differen
 
 ---
 
+### P14 — A rule that only governs arrival, in a world where things are already there
+
+A gate is written where new things come in — a filter on what a store *accepts*, a check on what
+may be *placed*, a validator on what may be *entered* — and it is correct about every one of them.
+Nothing governs what was already sitting inside the boundary when the rule was written, or was
+there before the player narrowed it. The rule reads as total and is not: it is a rule about the
+door.
+
+**The tell is that the state is stable and nobody is misbehaving.** Every actor is obeying a rule
+it can see. A store refuses stone, so no hauler brings stone; a hauler will only take a thing
+somewhere that will have it, and nowhere will; so the stone that is already in the store is
+touched by nobody, for ever. There is no error, no failed job to count, no alert — the colony just
+quietly stops being able to use those cells, and the second symptom (*"and the meals were never
+hauled either"*) arrives later and looks like a different bug, because the occupied cells have no
+space for what the store does want.
+
+**The question to ask of any filter, gate or predicate:** *what is already on the wrong side of
+this, and who moves it?* If the answer is "nobody", the rule needs an eviction half, and the
+eviction needs a destination that the same rule would accept — or it will put the thing straight
+back into trouble somewhere else.
+
+**And the two halves are usually written a long way apart.** The filter lives with the thing it
+configures; the eviction has to live in whatever scans for work. Here the filter was in
+`StorageSettings` and the fix was in `HaulWorkGiver`, two assemblies' worth of intent apart, which
+is why "the filter is obviously right" and "the behaviour is obviously wrong" were both true for
+two days.
+
+---
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)
+
+Owner, on the storage pane's first look: *"when I clicked off all the categories a message appeared
+about colonists ignoring the zone — but this moved the controls/components — these should stay
+fixed."*
+
+**The obvious fix was half of it.** The two notes were the first children of the scrolling list, so
+unticking the last category dropped every row by the height of the band, under the cursor that was
+working down them. Moving the band below the list made it **worse**: the inspect panel is anchored
+to the bottom of the screen and grows upward, so the band shoved every control **up by 90 px**. The
+answer is that the band's height comes out of the *list*, not out of the screen — the pane is the
+same height either way, the list's top edge does not move, and the scroll view simply shows less.
+
+**The general shape: a panel that grows from an anchor has no free edge.** Adding anything to a
+bottom-anchored panel moves everything in it. "Put the message somewhere else" is not a layout fix
+unless something else gives up the same space. Ask where the space is coming from, and if the
+answer is "the panel gets taller", ask which way it grows.
+
+**And the test found a fault nobody had reported.** Driving the pane's own Clear all button with the
+game running, the simulation accepted 0 of 7 commodities and the pane still showed all seven ticked
+and no warning. `SendStorageCommand` refilled synchronously after submitting, on a comment saying a
+storage intent "applies while paused, so the answer is already true by the time the next frame
+draws" — true while paused, false while running, when the intent queues for the next tick. Nothing
+refilled the pane again, so **every press was one action stale**, which is indistinguishable from a
+button that does not work. P1: one rule with a comment that was right about one mode and quoted as
+though it were right about both. `SyncStoragePanel` now rebuilds on a signature change, hung off the
+refresh that already runs fifteen times a second.
+
+**What now stops it:** `ZoneInspectTests.ClearingEveryCategoryDoesNotMoveTheRowsThatDidIt` — the
+list's top edge, the first row's top edge and the pane's top edge are all unmoved across the press,
+the warning is below the list, and its text fits the reserved band. Nothing else can see any of it:
+the fast tier has no visual tree and the model does not know where anything is drawn, which is why
+a layout that shifts under the pointer reached a playtest. `docs/design/26-storage.md` §12.
+
+### 2026-09-21 — A meals-only store kept its rocks, and then took no meals (P14, P1)
+
+Owner, after painting a stockpile and setting it to meals: *"the colonists left the rocks already
+there and left the meals not hauled out in another place … I expect the colonists to ensure that
+all those tiles are occupied by meals or nothing, not leave rocks in there."*
+
+**Two symptoms, one cause.** A cell holding a rock has no space for a meal, so every cell a
+refused thing squats in is a cell the store cannot use. Reproduced on the bare fixture before
+touching anything: a two-cell meals-only store with a rock in each took **0 hauls in 10,000
+ticks**, and the meal on the grass never moved. With one rock and one free cell the meal *was*
+hauled — which is why the report read as two faults.
+
+**The filter was a rule about the door.** `StorageSettings.Accepts` governed what could be carried
+*in* and nothing at all about what was already lying there. `HaulWorkGiver.StoredPriority` already
+said in its own comment that a refused thing "is not stored at all, only in the way" — but that
+only ever let it move to a store that *would* take it, because of where it was asked: `ColonyItems`
+buckets loose against stored by whether the cell is in a zone, so a refused thing is bucketed
+**stored**, and the stored pass is the re-stow, which `TryGiveJob` runs only when nothing loose is
+waiting. When no store would take it, `dest < 0; continue` — there was no third answer.
+
+**The fix has two halves.** A refused thing is scanned in the *first* pass beside the loose things
+(not re-bucketed: that would make `ColonyItems`' buckets depend on the filter table and put the
+lister split into the save). And when no store will have it, it is carried out to open ground —
+the clause that already existed for a thing standing on tilled soil, now reached by both cases
+through `HaulWorkGiver.InTheWay` and one `ClearanceRadius`.
+
+**And the same bug had a second entrance (P1).** `PawnContext.NotZoned`, the predicate the
+clearance searched through, knew only about **growing** zones — while both of its call sites said
+in their own comments that they wanted ground *"outside every zone"*. A rock lifted off a field
+could be set down inside a meals-only stockpile and stay there for ever. One rule, two owners: the
+name and the doc comment said one thing, the call sites said another, and neither was tested. It is
+`PawnContext.OpenGroundFor(defIndex)` now and it asks about the thing as well as the cell — a store
+that *accepts* the thing is a home, not an obstruction.
+
+**What now stops it:** six tests in `StockpileTests` under *what a store refuses*, including the
+compound case, the do-not-evict-into-another-refusing-store case, the prefer-a-real-home case, a
+shuttling guard, and the player's actual gesture (narrowing a filter on a store that already holds
+something); plus `GrowingJobTests.AFieldBlockerIsNotClearedIntoAStoreThatRefusesIt` end to end and
+`OpenGroundIsNotAStoreThatRefusesTheThingButMayBeOneThatWantsIt` on the predicate alone.
+
+**Three tests in the area were not running at all.** `AFieldBlockerIsClearedToTheGrassWhenNoStore-
+WillTakeIt` — written for the owner's 2026-09-20 stall — `AThingOnTilledSoilIsClearedBeforeANearer-
+Pile`, and the new one, all searched the four orthogonal neighbours of the start for a free cell,
+and the scenario's own meal piles occupy all four on the fixture's seed. The `Assume` behind it
+made them **inconclusive**, which `dotnet test` prints as "Skipped" and the summary counts as
+nothing: the tier said `Skipped: 0` while fifteen tests returned no verdict. They search ring by
+ring now and assert rather than assume. The first one, allowed to run for the first time, threw
+immediately — it asked which zone cell **-1** was in, because it waited for the blocker's old cell
+to empty and a carried thing has no cell.
+
+**No golden moved, and that is the gap rather than the reassurance.** Every zone in every golden is
+founded at *Everything*, so the state never arises there. `docs/design/26-storage.md` §11.
 
 ### 2026-09-20 — "it hovers, then frames drop", and the quadratic underneath
 

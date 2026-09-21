@@ -120,6 +120,8 @@ namespace Odyssey.Sim.World
             // is a store that the tool would refuse, or the other way round.
             int storageZone = -1;
             byte storagePriority = 0;
+            int storageCells = 0;
+            int storageOrdinal = 0;
             if (_storage != null)
             {
                 int slot = _storage.ZoneAt(_storage.StoreCellOf(cell));
@@ -127,6 +129,8 @@ namespace Odyssey.Sim.World
                 {
                     storageZone = slot;
                     storagePriority = (byte)_storage.SettingsOf(slot).Priority;
+                    storageCells = _storage.CellsOf(slot).Count;
+                    storageOrdinal = _storage.OrdinalOf(slot);
                 }
             }
 
@@ -134,7 +138,7 @@ namespace Odyssey.Sim.World
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
-                storageZone, storagePriority));
+                storageZone, storagePriority, storageCells, storageOrdinal));
         }
     }
 }

@@ -29,6 +29,14 @@ Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
 
 A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
 
+**And one way an orphan is made: Unity deadlocks on a stale `bee_backend` lock and never exits** (2026-09-21, twenty-five minutes). A run of `unity.sh test editmode` sat at 0 bytes of test output with its `Unity.exe` alive and idle. The wrapper's log was not empty — it ended on the line that says exactly what happened:
+
+```
+bee_backend: error: More than one copy of bee_backend running in <project> -- PID 8644 waiting
+```
+
+PID 8644 was already gone. Unity waited on a process that had died, wrote nothing more, and held `Temp/UnityLockfile` until it was killed; the next `unity.sh` refused with the lock message and so looked like the editor being open. **Read the tail of the run's own log before deciding a silent batch run is merely slow** — a genuine reimport keeps writing, and a deadlock says so in one line. The cure is to stop the orphan, delete `Temp/UnityLockfile` and run it again; the second run took about four minutes with the import already done.
+
 **Editing any `.cs` while a batch run is in flight makes its result meaningless, and the run still
 says "passed"** (2026-09-20, two wasted runs). Unity refreshes the asset database once at startup
 and compiles from what it found; a file saved after that point is simply not in the run. The exit
@@ -67,6 +75,19 @@ worth changing.
 **The tests are not the slow part.** The suite executes in about 40 ms. A Unity EditMode cycle takes minutes, and essentially all of it is Unity booting, refreshing the asset database (~7 s) and reloading the script domain (~3 s compile). **Filtering which tests run therefore saves nothing.** The only thing that helps is not starting Unity.
 
 **Two tiers.** `scripts/test-fast.sh` runs the same Sim test sources through mirror projects in `tools/dotnet/` with no editor, in about 1.7 seconds warm. `scripts/unity.sh test editmode` takes about 37 seconds with the watchdog and is the authority, because only Unity proves the assembly-definition boundaries hold and only Unity can run editor or PlayMode tests. Work in the fast tier, gate on the slow one. See `docs/setup/local-dev.md` §10.
+
+**An inconclusive test is printed as "Skipped" and counted as nothing.** `Assume.That` answers a
+failed precondition with NUnit's *Inconclusive*, which is the point of it — but `dotnet test`
+prints that as `Skipped <TestName>` and puts it in neither column of the summary, so a run can say
+`Skipped: 0` and list fifteen skipped tests in the same output. Filter down to one of them and the
+summary reads `Failed: 0, Passed: 0, Total: 0`: a green run in which nothing happened. On
+2026-09-21 fifteen Sim tests were in that state, three of them written for specific owner reports
+about the rule that session was fixing; all three failed the same `Assume`, and the oldest threw on
+its first assertion the moment it was allowed to run. **`Assume` is for a precondition that is
+genuinely allowed to be absent** — a board that might have no water, an optional pack. A fixture
+the test builds for itself is not that: if it cannot be built, `Assert` and fail loudly. And
+**grep `^  Skipped` after a full run** and check the list against what is deliberately `[Explicit]`
+or `[Ignore]`; there is no count to watch, so the list is the only signal.
 
 **Unity ships a .NET *runtime*, not an SDK.** `dotnet --list-sdks` against a runtime-only install prints an error to stdout and still exits 0, so the exit code cannot be trusted; check for an actual version line. Install a real SDK without admin rights with the official script, which lands in `%USERPROFILE%\.dotnet`.
 

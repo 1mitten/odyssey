@@ -700,3 +700,5 @@ ui.res.category.materials,Materials,ui.res.category,M3,"What things are made of,
 ui.res.category.books,Books,ui.res.category,M3,Research obtained elsewhere rather than worked out here
 ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, worn or used"
 ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with
+ui.tab.storage,Storage,ui.tab,M3,"What a store takes, and how much it matters"
+ui.tab.tile,Tile,ui.tab,M3,"The ground itself, under whatever is standing on it"

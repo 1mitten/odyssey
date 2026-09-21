@@ -292,17 +292,263 @@ verbs, not one**: Copy duplicates the values into another zone, Link points both
 record — which is S2's storage group, already the reason settings are a handle (§4). Copy is S; Link
 folds into S2.
 
+## 9b. The design brief, 2026-09-21 — the four questions, and five colours
+
+The owner commissioned a full interface specification for the pane and handed it back. It asks
+four questions before building, and they are answered here rather than left open.
+
+| | Question | Answer |
+|---|---|---|
+| 1 | *Allow all / Clear all and Everything / Nothing are the same two actions under two sets of words.* | **Agreed: the preset chips are gone.** The header buttons win because they sit where the list they act on begins, and because a chip row costs 26 px of a pane with a 640 ceiling to say a second time what two text buttons already say. `StoragePreset` stays in the simulation — every zone is founded at *Everything* — and stops being drawn. |
+| 2 | Can the six categories grow? | **No.** `ItemCategory` is an enum in `Sim.Contracts`, fixed at six by decision 23. The category strip needs no scroll of its own and the sticky-header rule is not load-bearing. |
+| 3 | What happens when a store is full, and does priority affect **retrieval**? | **Priority is deposit-only, and that is checkable rather than asserted**: it is read in exactly two places, `BestStorageCell` (which destination) and `StoredPriority` (what a re-stow must beat). Nothing consults it when *taking* — the eat scan and the build-delivery giver choose by distance. A full zone simply stops offering cells (`CellHasSpace` fails per cell), the load goes to the next band down, and with no band left it lies where it fell. The pane needs to show neither today; the "No storage" alert is S3. |
+| 4 | Can a zone ever appear in the 280 px pane? | **No.** 280 is the bare-tile variant: a tile click with no zone keeps it, and a zone always opens the 560. |
+
+### 9c. Five of the brief's colours failed its own acceptance criteria
+
+The brief sets two floors — **4.5:1** for a label against the panel, and *distinguishable with the
+labels masked*. Its palette was measured against both rather than trusted, by
+`StorageThemeTests`, and five values did not clear them:
+
+| Value | Was | Measured | Is | Why |
+|---|---|---|---|---|
+| Last | `#6b737a` | **2.71:1** | `#c6c9cb` | The hue is a *label* colour when a rung is selected, so it has to read as text. Lightening it towards slate then left the two 41 points apart — under the 60 the order hues are held to, and they are adjacent rows — so it went the other way: a pale neutral, far from slate, reading as inactive, which is what the bottom rung means. |
+| Low | `#7f9ab0` | **4.45:1** | `#8ca6bb` | Near enough to pass by eye; not near enough to pass. |
+| Medicine | `#d95a6a` | **3.50:1** | `#f086a8` | Dark saturated reds are the hardest thing to read as a label on a dark panel, and these are labels. Pushed pink rather than lighter red, because lightening alone put it 51 points from Weapons. |
+| Materials | `#b0793f` | **4.08:1**, and 55 from Weapons | `#c4a05a` | Failed both floors at once. |
+| Weapons | `#c85a3f` | **4.03:1** | `#e88d66` | |
+
+Food `#7fb85a`, Books lightened to `#bb94dd` for the same reason, Normal, Preferred and Urgent
+stand as written. **The test is the record**: every pair of categories and every pair of rungs is
+held to 60 channel-points, and all eleven to the contrast floor.
+
+**And one of the brief's claims about its own palette is not true.** *"Cool to warm as urgency
+rises"* does not hold step by step — Normal's cyan is cooler than Low's slate by red-minus-blue,
+because cyan gets its presence from brightness rather than from warmth. Rather than bend five
+colours to satisfy a metric nobody looks at, the test asserts what is both true and meaningful:
+**the two urgent rungs are warmer than all three unurgent ones**, and the split falls exactly
+where the meaning does.
+
+### 9d. What is built, and what is not
+
+**Built:** the whole decision layer — `StorageSettingsModel` — and the palette. Registry order for
+categories and alphabetical order inside them, capitalised display labels, the tri-state cycle with
+the **remembered mixture** (a mis-click must not destroy a hand-built selection), Allow all / Clear
+all with Clear dimming at nothing-accepted, the search that turns itself on above twenty flattened
+rows and marks matches **at their real offset**, the match count, the no-match copy, the footer, the
+warning band, and empty categories that keep a live box and grow no caret. (**The footer is
+modelled and drawn by nothing** — see §12f; the status line beside it already carries a count.) Twenty-seven fast-tier
+tests, which is where most of the brief's acceptance list can actually be checked. Plus
+`HudGlyphKind.TriState`, the one mark the set did not have.
+
+**Written before the pane was built, and left standing for two days after it was** — the frame,
+the title row, the tab strip with **Tile** second, the scrolling viewport, the search field and the
+collapsed state all landed in `e575ce32` and `079b1c05` on this same branch, and the popover they
+replaced is gone. What is still owed: **zone selection** (`InspectSubject` gains a fifth value), the eight-hue rotation with no
+two touching zones alike, the name plate, and the selection tint at 34% — none of which may cost a
+per-cell draw (§6, and the brief agrees).
+
+A zone's title is `Stockpile N` by **cell order** — how many zones begin at a lower cell — so it is
+the same answer on both sides of a save with nothing written down, at the price of renumbering when
+an earlier zone is deleted. A typed name is the fix and it is the unit after the pane.
+
 ## 10. What S1 does not do
 
-- **No panel yet.** The four intents exist, are applied while paused and are tested, and
-  `StorageSettingsModel` is the whole control — the rungs, the two presets, the six category rows,
-  one row per commodity, and what every press means — Unity-free and covered by the fast tier. What
-  is not built is the **popover in `HudShell`** that raises it from the inspect pane's storage row.
-  Until it lands, a painted zone accepts everything at Normal, which is what a new zone is anyway
-  (decision 22), and the pane says which rung it is on.
+- ~~**No panel yet.**~~ **Built** — the Storage tab of the inspect pane, on this branch
+  (`e575ce32`), and the popover it was going to be is gone. Struck through rather than deleted
+  because this list and §9d both said "not built" for two days after it was, which is the failure
+  mode `CLAUDE.md` warns about at the top of its status section.
 - **No containers.** `ColonyItem.ContainerId` exists and nothing writes it: it is in S1 so the item
   record's byte layout changes once rather than twice. Crates are S2.
-- **No category tree.** Four of the six categories have no commodity in them, so the rows are flat
-  (decisions 21 and 31). `CategoryRow.State` already carries the three-way answer, so the tree is a
-  layout change when it comes rather than a model change.
+- ~~**No category tree.**~~ **Built** — decision 35 overturned 21 and 31, and the six category
+  rows expand to their commodities. `CategoryRow.State` carried the three-way answer already, so it
+  was the layout change this bullet predicted.
 - **No "no storage" alert**, and no haul-urgently: S3.
+
+## 11. What a store does with what it refuses — 2026-09-21
+
+The filter was a rule about what could be carried **in** and said nothing at all about what was
+already lying there. The owner painted a store, set it to meals, and reported both halves of the
+consequence in one sentence: *"the colonists left the rocks already there and left the meals not
+hauled out in another place … I expect the colonists to ensure that all those tiles are occupied
+by meals or nothing, not leave rocks in there."*
+
+**They are one fault, not two.** A cell holding a rock has no space for a meal
+(`ColonyItems.CellHasSpace` requires the same def), so every cell the refused things squat in is a
+cell the store cannot use. Fill a small store with rocks it will not take and it accepts nothing
+ever again. Measured on the bare fixture before the fix: a two-cell meals-only store with a rock
+in each took **0 hauls in 10,000 ticks** and the meal on the grass never moved.
+
+### 11a. Why it survived a filter that already knew the answer
+
+`HaulWorkGiver.StoredPriority` has said since it was written that *"a thing lying in a pile whose
+filter no longer accepts it is not stored at all, only in the way"*, and it returns the implicit
+unstored rank for one. That was enough to let a refused thing move to a store that **would** have
+it, and not enough for anything else, because of where it was asked:
+
+| | |
+|---|---|
+| **The lister it was in** | `ColonyItems` buckets loose against stored by whether the cell is inside a zone — the question it can answer in one array read. A refused thing is bucketed *stored*. |
+| **The pass that walks that lister** | the re-stow, and `TryGiveJob` runs it only when the loose pass has found nothing, because *tidying is the lowest job there is*. A colony that is felling or mining always has something loose. |
+| **What happened when no store would take it** | `dest < 0`, `continue`. There was no third answer. |
+
+So the thing was scanned last, if at all, and when it was scanned the scan had nowhere to send it.
+
+### 11b. The fix, in two halves
+
+**A thing its own store refuses is scanned with the loose things.** Not re-bucketed — that was the
+other candidate and it is the worse one, because `ColonyItems`' buckets would come to depend on the
+filter table, so ticking one commodity would have to walk a zone's items and the save would have to
+agree about which lister each thing was in. Instead the first pass walks both listers and takes
+from the stored one only what is refused; the re-stow pass takes only what is accepted. One extra
+branch in a loop that was already there, and `Refused` is two array reads.
+
+**And when no store will have it, it is carried out to open ground** — the clause that already
+existed for a thing standing on tilled soil, now reached by both cases through one predicate,
+`HaulWorkGiver.InTheWay`. It goes to the nearest cell within `ClearanceRadius` (12, one constant
+for both cases now) that neither wants to be empty nor refuses it, and becomes an ordinary loose
+pile there: the stockpile's business again the moment one has room.
+
+### 11c. The second fault, which was the same fault from the other end
+
+`PawnContext.NotZoned` was the predicate that clearance searched through, and it knew only about
+**growing** zones — while both of its call sites said in their own comments that they wanted ground
+*"outside every zone"*. A rock lifted off a field could therefore be set down inside a meals-only
+stockpile, where nothing would ever pick it up again. One line of code, reachable without the
+player ever narrowing a filter.
+
+It is `PawnContext.OpenGroundFor(defIndex)` now, and it asks about the **thing** as well as the
+cell: a store that *accepts* the thing is not excluded, because that is a home rather than an
+obstruction — and the destination scan would have chosen it first anyway.
+`StockpileTests.OpenGroundIsNotAStoreThatRefusesTheThingButMayBeOneThatWantsIt` is the rule on its
+own; `GrowingJobTests.AFieldBlockerIsNotClearedIntoAStoreThatRefusesIt` is it end to end.
+
+### 11d. What is deliberately not done
+
+- **Open ground is the last answer, not the first.** A store that accepts the thing wins, and
+  `AThingAStoreRefusesGoesToAStoreThatWantsItRatherThanToTheGround` is the guard — a rock evicted
+  onto the grass beside a rock store is the obvious way to get this wrong.
+- **Nothing is re-checked on a filter edit.** The haul scan asks the filter afresh every think, so
+  narrowing a store is what sets its contents moving with no notification anywhere.
+  `NarrowingAStoresFilterIsWhatSetsItsContentsMoving` asserts exactly that, because a future
+  optimisation that caches the answer would break it silently.
+- **Where even twelve cells finds nowhere, the thing stays.** A board packed that solid is one
+  nothing in the game can produce, and the alternative is a hauler walking the map for a rock.
+- **The clearance fallback does not check reservations**, unlike `BestStorageCell`. Two haulers
+  evicting at once can pick the same cell; the loser fails its reservation and re-scans, and by
+  then the winner's load is down and the search moves on. Transient, not a livelock — but it is
+  why the unfixed predicate produced *no* clearance rather than a wrong one when the store cells
+  were all claimed by meal hauls, which is how the regression test was proved to bite.
+
+### 11e. No golden moved, and that is a gap rather than a reassurance
+
+The full fast tier (922 Sim, 625 Hud) and the Long tier (23) are green with no re-bake. That is
+correct — the behaviour changes only where a store is holding something it refuses, and **every
+zone in every golden is founded at *Everything***, so the state never arises. It also means the
+goldens do not cover this at all, and the six tests in `StockpileTests` under *what a store
+refuses* are the whole of the coverage.
+
+## 12. The pane's first look — 2026-09-21
+
+Four things from one session at the keyboard, and a fifth the first of them uncovered.
+
+### 12a. A message about what you just did must not move what you did it with
+
+> *"When I clicked off all the categories a message appeared about colonists ignoring the zone —
+> but this moved the controls/components — these should stay fixed — make the error message appear
+> below the stockpile component."*
+
+The two warning notes were pushed in as the first children of the scrolling list, so the moment the
+last category came off, every category row dropped by the height of the band — under a cursor that
+was working down them. **Moving it below the list was not enough on its own, and the test is what
+said so.** The inspect panel is anchored to the *bottom* of the screen and grows upward, so a band
+added at the end pushed every control **up by 90 px** — the same fault in the other direction, and
+a worse one, because the rows moved further and the way nobody expects.
+
+So the band's height comes out of the **list** rather than out of the screen:
+`StorageWarningHeight` is both the height of the band and the height the scroll view gives up to
+make room for it, and the pane is the same height whether the band is there or not. The list's top
+edge does not move, the rows in it do not move, and the only thing that changes is how much of the
+list you can see at once — which is what a scroll view is for.
+
+**92, measured rather than reckoned.** Two sentences and the rule above them come to 77.1 px at the
+pane's width, plus 12 px of the band's own padding. A first guess of 64 clipped the hint, and
+`ZoneInspectTests.ClearingEveryCategoryDoesNotMoveTheRowsThatDidIt` is what caught it — the same
+test asserts the band's contents still fit, so the constant cannot quietly become a clip when
+somebody rewords the sentence.
+
+### 12b. One action should not have two names
+
+> *"Nothing and everything is the same as allow all and clear all — so remove nothing and
+> everything if this makes sense."*
+
+It makes sense, and §9b Q1 had already decided it — *"Agreed: the preset chips are gone"* — and the
+build did not follow. Worse, the code **knew**: the chip handler carried a comment saying the two
+were the same two actions as the header buttons and routed through the same two model calls "rather
+than a third path that could drift from them". A comment explaining why a duplicate is safe is a
+duplicate nobody re-examined.
+
+The chips are gone. `StoragePreset` and `StorageSettingsModel.PresetKeys` stay: a zone is still
+*founded* at Everything and the simulation still names the presets. Nothing draws them.
+
+### 12c. Two closes and a square that does nothing
+
+> *"The x button appears twice in the control — keep the one in the very top right, the square icon
+> next to it does nothing."*
+
+A store added two header buttons of its own: a disabled Rename, drawn as a placeholder square to
+hold a place for named stores, and a Close — six pixels from the Close every pane already ends
+with. Both are gone. **An affordance for something that does not exist yet is worse than a gap**:
+the square told its story in a tooltip nobody hovers and read as a broken button, and the second
+Close asked the player to choose between two identical things. Named stores bring their own control
+when they bring the name (§9a, SZ4).
+
+### 12d. The one number on a row was the smallest thing on it
+
+> *"Make the numbers bigger in the stock control component."*
+
+The member count was `Meta` — 12 px, the step for a qualifying aside, and the smallest text in the
+pane — sitting beside a 14/600 heading, so the row's only figure read as a footnote to its own row.
+It is `Row` now, 14/500, the same step as the heading it answers to, with `numeric` set so it takes
+the mono face and tabular figures and a column of counts lines up whatever the digits are. Both
+come from the shared scale; no size is written in the pane.
+
+### 12e. And the one the test found: every press was an action stale
+
+`SendStorageCommand` submits an intent and then refills the rows on the spot, on the strength of a
+comment saying a storage intent *"applies while paused, so the answer is already true by the time
+the next frame draws"*. **True while paused, false the rest of the time.** Unpaused, the intent
+queues for the next tick, so the synchronous refill reads the state the player has just changed
+away from — and nothing refilled the pane again, because nothing else ever did.
+
+Measured by asking both sides after a press of Clear all with the game running: **the simulation
+accepted 0 of 7 commodities and the pane was still showing all seven ticked, with no warning.** A
+press that makes no visible difference is indistinguishable from a button that does not work.
+
+`SyncStoragePanel` covers the other half, hung off the refresh that already runs fifteen times a
+second, and rebuilds only when a signature — the zone, its rung, its cell count and its filter —
+has actually moved. Not an unconditional refill: thirteen elements of garbage a frame for a panel
+that changes when a person presses something is the fault the Work tab was pooled to avoid. The
+synchronous refill stays, because on a paused board no tick is coming to catch it.
+
+### 12f. What is deliberately left standing, and why
+
+Three things a merge review will notice and should not "tidy".
+
+**`StorageSettingsModel.FooterText` is modelled, tested and drawn by nothing.** §9d said the footer
+was built; it never was. Drawing it is one line, and it is left undone rather than done quietly,
+because the status line on the same row already carries a count and a second one is a judgement
+about the pane rather than a gap in it. The property says so at its own declaration.
+
+**`StorageSettingsModel.PresetKeys` is drawn by nothing** since §12b took the chips away. It stays
+because the preset is real simulation state — a zone is *founded* at Everything, and
+`StorageSettings.AllowUnknown` is set from a preset, which is what decides what a commodity added
+after the save gets (§4a). `StorageSettingsModelTests` still asserts both keys resolve in the
+registry.
+
+**`ui.storage.preset.everything` and `.nothing` stay in `icon-keys.csv`, so the wiki still lists
+them.** They name a thing the simulation has and the interface no longer shows. Removing them
+would take `Registry.Label` away from the model, break the test above, and churn the hosted wiki
+snapshot for a name the game still uses internally — so the wiki goes on being the reference for
+the game's vocabulary rather than an inventory of strings currently on a screen. Worth revisiting
+when the Def set generates the registry (`CLAUDE.md`, the content wiki section).

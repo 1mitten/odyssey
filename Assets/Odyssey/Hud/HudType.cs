@@ -47,6 +47,18 @@ namespace Odyssey.Hud
         /// that it does not compete with the label it belongs to.</para>
         /// </summary>
         Hotkey,
+
+        /// <summary>
+        /// 14 / 600, letter-spaced and upper-cased: the heading of a group inside a list, as the
+        /// six item categories are in the storage pane.
+        ///
+        /// <para>A second tracked, upper-cased step above <see cref="PanelLabel"/> rather than a
+        /// reuse of it, because the two do different jobs: a panel label titles the whole panel
+        /// from outside the content, and this one is <i>in</i> the list, carrying a count and a
+        /// box, and has to out-rank the <see cref="Body"/> rows it opens onto. At 11 px it read
+        /// as a quieter thing than its own children.</para>
+        /// </summary>
+        ListHeading,
     }
 
     /// <summary>How a piece of text is set: a size, a weight, a family and two typographic flags.</summary>
@@ -121,6 +133,16 @@ namespace Odyssey.Hud
         /// <summary>The spec's .14em tracking on the 11 px panel label, resolved to pixels.</summary>
         public const float PanelLabelTracking = 11f * 0.14f;
 
+        /// <summary>
+        /// The tracking on a list heading, .08em at 14 px.
+        ///
+        /// <para>Deliberately tighter as a ratio than <see cref="PanelLabelTracking"/>: tracking
+        /// buys separation in capitals and the need for it falls as the step rises, so .14em at
+        /// 14 px would set the word nearly two pixels apart per letter and read as a gap rather
+        /// than a heading.</para>
+        /// </summary>
+        public const float ListHeadingTracking = 14f * 0.08f;
+
         static readonly Dictionary<HudTextRole, HudTextStyle> Scale =
             new Dictionary<HudTextRole, HudTextStyle>
             {
@@ -131,6 +153,7 @@ namespace Odyssey.Hud
                 { HudTextRole.Name, new HudTextStyle(19, 600, false, 0f, false) },
                 { HudTextRole.Clock, new HudTextStyle(24, 500, true, 0f, false) },
                 { HudTextRole.Hotkey, new HudTextStyle(11, MonoWeight, true, 0f, false) },
+                { HudTextRole.ListHeading, new HudTextStyle(14, 600, false, ListHeadingTracking, true) },
             };
 
         /// <summary>
