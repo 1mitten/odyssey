@@ -195,10 +195,28 @@ land in a bucket that was going to be submitted anyway: **forty shelves add matr
 submissions.** The alternative — a pass over the shelves — is `docs/bug-patterns.md` **P10**, which
 cost the growing zone 2,065 draw calls and 3.67 ms of a 5 ms budget before it was deleted.
 
-**Not measured, and owed:** the matrix count of a real warehouse. `ItemHeap.Most` is 12, so eight
-slots could reach 96 matrices a shelf and forty shelves 3,840. The draw calls are unchanged by
-construction; the per-frame cost of building those matrices is not, and no benchmark fixture has a
-shelf in it yet. §11.
+**Measured, 2026-09-21** (`FrameTimeTests.TheWarehouseCostsWhatItHolds`), with a control inside
+one run: the same board bare, then with 320 full stacks of wood lying on the floor, then with the
+same 320 stacks on forty shelves, seconds apart.
+
+| Board | Frame | Over bare | Instances | Draw calls |
+|---|---|---|---|---|
+| bare meadow | 1.96 ms | — | 43,935 | 1,125 |
+| 320 stacks on the floor | 2.36 ms | +0.40 | 45,015 | 1,128 |
+| the same 320 stacks on 40 shelves | 2.39 ms | +0.43 | 45,015 | 1,128 |
+
+**The shelf path costs what the floor path costs** — 0.03 ms between them over 180 frames is inside
+the run's own noise — and the whole warehouse is 0.4 ms, all of it in the `Actors` section where the
+things are drawn (0.016 to 0.387 ms). The instance count is the same shelved as loose, which is the
+"matrices, not submissions" claim above with a number on it: 1,080 instances for 320 stacks, about
+three and a half a stack, because wood's recipe never reaches `ItemHeap.Most`. The three extra draw
+calls are the shelf bodies themselves, three body buckets in the chunk they stand in.
+
+The review that took the measurement also found the one allocation on the path: `SlotCentre` built
+its two slot tables as locals, which was two heap allocations per stack per frame — 640 a frame for
+this warehouse — for tables that never change. They are static now. Still unmeasured: a warehouse at
+a play resolution on the target laptop, which is the renderer's standing open question rather than
+this unit's.
 
 ### 8c. No `GroundRelief.Lift` on the goods
 
@@ -313,7 +331,7 @@ instrument behind.
   that reason, and a locker is that row plus the bed's `Owner`, which `PlacedEdifice` already carries.
 - **No spoilage**, so the "food goes stale in a sealed box" half of decision 24 is still a multiplier
   on a clock that does not exist.
-- **No measured frame cost for drawn contents.** §8b.
+- **No frame cost for drawn contents beyond the floor path's** — measured, §8b.
 
 ## 14. Things not to undo by tidying
 

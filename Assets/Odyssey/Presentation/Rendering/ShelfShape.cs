@@ -127,15 +127,19 @@ namespace Odyssey.Presentation.Rendering
         /// comes back turned with the shelf, so the goods ride the facing with the thing holding
         /// them rather than staying square to the world.</para>
         /// </summary>
+        // Static, not locals: this is asked once per stack on every shelf on every frame, and two
+        // arrays built inside it were two heap allocations a stack a frame — a warehouse of 320
+        // stacks is 640 allocations a frame and a gen-0 collection every few seconds, for two
+        // tables that never change.
+        static readonly float[] Across = { -0.82f, -0.27f, 0.27f, 0.82f };
+        static readonly float[] Along = { -0.78f, -0.32f };
+
         public static Vector3 SlotCentre(in Matrix4x4 root, int facing, int slot)
         {
             if (slot < 0) slot = 0;
             slot %= Slots;
 
-            float[] across = { -0.82f, -0.27f, 0.27f, 0.82f };
-            float[] along = { -0.78f, -0.32f };
-
-            var local = new Vector3(across[slot & 3], DeckTop, along[(slot >> 2) & 1]);
+            var local = new Vector3(Across[slot & 3], DeckTop, Along[(slot >> 2) & 1]);
             Matrix4x4 yaw = Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f));
             return root.MultiplyPoint3x4(yaw.MultiplyPoint3x4(local));
         }

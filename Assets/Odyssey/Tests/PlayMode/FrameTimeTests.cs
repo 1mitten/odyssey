@@ -128,6 +128,167 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
+        /// same three hundred and twenty stacks lying on the floor, in one world.
+        ///
+        /// <para><b>The measurement <c>30-shelves.md</c> §8b owed.</b> A shelf's goods are drawn
+        /// by the loose-pile path — the same ramp, the same spiral, tightened to a slot — so by
+        /// construction they add matrices and not submissions. That is an argument, and this is
+        /// the number: the frame with the stacks on the floor, then the frame with the same
+        /// stacks on shelves, seconds apart in one session so that whatever the machine is doing
+        /// cancels out. The difference is what the shelf path itself costs over the floor path
+        /// it was copied from — the draped root, the turned slot and the second facing lookup,
+        /// paid once per stack rather than once per shelf.</para>
+        ///
+        /// <para>Every stack is forbidden and so is the starting kit, because the colony is
+        /// running underneath this and a Preferred store that accepts everything would otherwise
+        /// be filled with the colonists' own belongings while the frame was being timed.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWarehouseCostsWhatItHolds()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                Assert.That(colony.Pawns.StorageUnits, Is.Not.Null, "the session has no built stores");
+
+                ForbidWhatIsLying(colony);
+
+                float bare = 0f;
+                yield return TimeFrames("warehouse/none", boot, WarmupFrames, x => bare = x);
+                int bareInstances = boot.Renderer!.InstancesDrawn;
+
+                // The shelves first, empty, so the piles are put down on cells no shelf will want.
+                var shelves = new List<int>();
+                RaiseShelves(colony, WarehouseShelves, shelves);
+                Assert.That(shelves.Count, Is.EqualTo(WarehouseShelves),
+                    $"only {shelves.Count} shelves found room near the start");
+
+                var stacks = new List<ThingId>();
+                SpawnPiles(colony, WarehouseShelves * ShelfShape.Slots, shelves, stacks);
+                Assert.That(stacks.Count, Is.EqualTo(WarehouseShelves * ShelfShape.Slots),
+                    $"only {stacks.Count} piles found ground near the start");
+                colony.World.Tick();
+
+                float floor = 0f;
+                yield return TimeFrames("warehouse/floor", boot, WarmupFrames, x => floor = x);
+                int floorInstances = boot.Renderer!.InstancesDrawn;
+                int floorCalls = boot.Renderer!.DrawCalls;
+
+                int shelved = Shelve(colony, shelves, stacks);
+                Assert.That(shelved, Is.EqualTo(stacks.Count), "not every pile fitted on a shelf");
+                colony.World.Tick();
+
+                float onShelves = 0f;
+                yield return TimeFrames("warehouse/shelved", boot, WarmupFrames, x => onShelves = x);
+                int shelvedInstances = boot.Renderer!.InstancesDrawn;
+                int shelvedCalls = boot.Renderer!.DrawCalls;
+
+                Debug.Log($"[FrameTime] warehouse of {shelves.Count} shelves, {stacks.Count} stacks: " +
+                          $"bare {bare:0.00} ms, on the floor {floor:0.00} ms (+{floor - bare:0.00}), " +
+                          $"on shelves {onShelves:0.00} ms (+{onShelves - bare:0.00}); " +
+                          $"shelf path over floor path {onShelves - floor:0.00} ms; " +
+                          $"instances {bareInstances} -> {floorInstances} -> {shelvedInstances}, " +
+                          $"draw calls {floorCalls} -> {shelvedCalls}");
+
+                // The goods were drawn, or this measured an empty warehouse. Each stack is at
+                // least one instance whether it lies on the floor or stands on a deck.
+                Assert.That(shelvedInstances, Is.GreaterThanOrEqualTo(bareInstances + stacks.Count),
+                    "the shelved goods were not drawn, so the shelf path was not measured");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>A warehouse at the size the design document reasons about (§8b).</summary>
+        const int WarehouseShelves = 40;
+
+        /// <summary>The player's own veto, so the colony underneath leaves the fixture alone.</summary>
+        static void ForbidWhatIsLying(Odyssey.Sim.Pawns.ColonyWorld colony)
+        {
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned) items[i].Forbidden = true;
+        }
+
+        /// <summary>Cells on the start's layer, nearest first, in the order a spiral visits them.</summary>
+        static IEnumerable<int> AroundTheStart(Odyssey.Sim.Pawns.ColonyWorld colony, int maxRadius)
+        {
+            CellRef start = colony.Start;
+            GridSize size = colony.Grid.Size;
+            for (int radius = 1; radius < maxRadius; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (Math.Abs(dx) != radius && Math.Abs(dz) != radius) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+                yield return size.Index(x, z, start.Y);
+            }
+        }
+
+        /// <summary>Raise this many wooden shelves, finished, on the nearest cells that allow one.</summary>
+        static void RaiseShelves(Odyssey.Sim.Pawns.ColonyWorld colony, int wanted, List<int> shelves)
+        {
+            GridSize size = colony.Grid.Size;
+            foreach (int cell in AroundTheStart(colony, 30))
+            {
+                if (shelves.Count >= wanted) break;
+                if (!colony.Construction.Allows(cell, BuildingHandle.Shelf)) continue;
+                if (colony.Construction.Place(size.FromIndex(cell), BuildingHandle.Shelf, StuffHandle.Wood)
+                    != IntentRejection.None) continue;
+                colony.Construction.Raise(colony.Pawns, cell);
+                shelves.Add(cell);
+            }
+            colony.RebuildDerived();
+        }
+
+        /// <summary>Full stacks of wood on the nearest open ground that is not a shelf, forbidden.</summary>
+        static void SpawnPiles(Odyssey.Sim.Pawns.ColonyWorld colony, int wanted, List<int> shelves,
+            List<ThingId> stacks)
+        {
+            var items = colony.Pawns.Items;
+            int wood = Odyssey.Sim.Pawns.ItemIndex.Wood;
+            int full = colony.Pawns.Content.Items[wood].stackLimit;
+            foreach (int cell in AroundTheStart(colony, 40))
+            {
+                if (stacks.Count >= wanted) break;
+                if (shelves.Contains(cell)) continue;
+                if (colony.Grid.Edifice[cell] >= 0) continue;
+                if (!colony.Pawns.Cells.IsWalkable(cell)) continue;
+                if (!items.CellHasSpace(cell)) continue;
+
+                ThingId id = items.Spawn(wood, cell, full);
+                items.Get(id)!.Forbidden = true;
+                stacks.Add(id);
+            }
+        }
+
+        /// <summary>Move the piles on to the shelves, eight to a shelf. Returns how many went.</summary>
+        static int Shelve(Odyssey.Sim.Pawns.ColonyWorld colony, List<int> shelves, List<ThingId> stacks)
+        {
+            var units = colony.Pawns.StorageUnits!;
+            var items = colony.Pawns.Items;
+            int put = 0;
+            for (int i = 0; i < stacks.Count; i++)
+            {
+                Odyssey.Sim.Storage.StorageUnit? unit = units.AtCell(shelves[i / ShelfShape.Slots]);
+                Odyssey.Sim.Pawns.ColonyItem? item = items.Get(stacks[i]);
+                if (unit == null || item == null || item.Despawned) continue;
+                if (!units.HasSpaceFor(unit, item.DefIndex, item.Stack)) continue;
+                units.PutIn(unit, item);
+                put++;
+            }
+            return put;
+        }
+
         /// <summary>How many cells the order case marks. A wood is hundreds; this is the round
         /// number above it, and it is the same order of magnitude as the field's 2,000 so the two
         /// can be read against each other.</summary>

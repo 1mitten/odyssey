@@ -10226,3 +10226,34 @@ says **stacks** rather than "400 of 600", because 600 is eight times wood's stac
 full of meals would read as nearly empty; and the deconstruct refusal needed a **giver gate** in
 front of it, because a refusal at the last tick against work banked on the cell is a loop that ends
 in the think tree's circuit breaker and reads as idleness.
+
+## 2026-09-21 — Shelves reviewed for cost before the playtest: the warehouse measured, one allocation gone
+
+A review of PR #158 for performance, with `main` (the storage pane, huge maps and the trace) already
+merged in. The sim side is cheap by construction and reading it confirmed it: the third lister is
+walked with the stored one in the haul scan and every question a contained thing adds is a
+dictionary probe or a walk of at most eight slots; the destination walk asks the units the same three
+questions in the same order the zone cells are asked; the snapshot's slot index is a scan of at most
+eight. Nothing there needed a measurement to dismiss.
+
+**The presentation side owed one and it is taken.** `30-shelves.md` §8b said the draw calls were
+unchanged by construction and the per-frame cost of the matrices was not measured. It is now:
+`FrameTimeTests.TheWarehouseCostsWhatItHolds` times the bare meadow, then 320 full stacks of wood on
+the floor, then the same stacks on forty shelves, in one run. The shelf path costs what the floor
+path costs (2.36 against 2.39 ms, inside the noise); the warehouse as a whole is 0.4 ms, all of it
+in the `Actors` section; and the instance count is identical shelved or loose, which is the
+"matrices, not submissions" argument with a number on it. The fixture raises finished shelves
+through `Construction.Raise` and moves the piles in through `StorageUnits.PutIn`, and forbids
+everything it puts down and everything already lying there, because the colony is ticking underneath
+and a Preferred store that accepts everything would otherwise fill itself with the starting kit
+while the frame was being timed.
+
+**One thing was wrong and it was the one thing reading found:** `ShelfShape.SlotCentre` declared
+its two slot tables as local arrays, so every stack on every shelf cost two heap allocations a frame
+— 640 a frame for the warehouse above, a gen-0 collection every few seconds, for two tables that
+never change. They are static fields now. Not visible in the mean frame time, which is exactly why
+allocation on a per-frame path is checked by reading rather than by timing: it shows as a hitch
+every few seconds, and a 180-frame mean is the instrument least able to see one.
+
+Tiers on the worktree with `main` in: fast 963 Sim + 650 Hud, Long 34, EditMode 2,421 / 2,397 / 0,
+PlayMode 98 / 93 / 0, both content gates current. The branch is ready for the owner's Play.
