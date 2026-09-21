@@ -336,7 +336,8 @@ categories and alphabetical order inside them, capitalised display labels, the t
 the **remembered mixture** (a mis-click must not destroy a hand-built selection), Allow all / Clear
 all with Clear dimming at nothing-accepted, the search that turns itself on above twenty flattened
 rows and marks matches **at their real offset**, the match count, the no-match copy, the footer, the
-warning band, and empty categories that keep a live box and grow no caret. Twenty-seven fast-tier
+warning band, and empty categories that keep a live box and grow no caret. (**The footer is
+modelled and drawn by nothing** — see §12f; the status line beside it already carries a count.) Twenty-seven fast-tier
 tests, which is where most of the brief's acceptance list can actually be checked. Plus
 `HudGlyphKind.TriState`, the one mark the set did not have.
 
@@ -529,3 +530,25 @@ second, and rebuilds only when a signature — the zone, its rung, its cell coun
 has actually moved. Not an unconditional refill: thirteen elements of garbage a frame for a panel
 that changes when a person presses something is the fault the Work tab was pooled to avoid. The
 synchronous refill stays, because on a paused board no tick is coming to catch it.
+
+### 12f. What is deliberately left standing, and why
+
+Three things a merge review will notice and should not "tidy".
+
+**`StorageSettingsModel.FooterText` is modelled, tested and drawn by nothing.** §9d said the footer
+was built; it never was. Drawing it is one line, and it is left undone rather than done quietly,
+because the status line on the same row already carries a count and a second one is a judgement
+about the pane rather than a gap in it. The property says so at its own declaration.
+
+**`StorageSettingsModel.PresetKeys` is drawn by nothing** since §12b took the chips away. It stays
+because the preset is real simulation state — a zone is *founded* at Everything, and
+`StorageSettings.AllowUnknown` is set from a preset, which is what decides what a commodity added
+after the save gets (§4a). `StorageSettingsModelTests` still asserts both keys resolve in the
+registry.
+
+**`ui.storage.preset.everything` and `.nothing` stay in `icon-keys.csv`, so the wiki still lists
+them.** They name a thing the simulation has and the interface no longer shows. Removing them
+would take `Registry.Label` away from the model, break the test above, and churn the hosted wiki
+snapshot for a name the game still uses internally — so the wiki goes on being the reference for
+the game's vocabulary rather than an inventory of strings currently on a screen. Worth revisiting
+when the Def set generates the registry (`CLAUDE.md`, the content wiki section).

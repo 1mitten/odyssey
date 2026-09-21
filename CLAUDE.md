@@ -373,14 +373,22 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **914 Sim + 625 Hud** (2026-09-21,
-  `claude/storage-pane` merged with main); Long tier **23**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **924 Sim + 625 Hud** (2026-09-21,
+  `claude/storage-pane` merged with main, after the refusal fix and the pane's first look);
+  Long tier **23**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
-  `claude/storage-pane` after merging main: EditMode **2,315 total, 2,295 passed, 0 failed**;
-  PlayMode **91 total, 86 passed, 0 failed**. The seventeen new EditMode ones are the storage
-  zone pane's model and the type scale's second heading role. The run before it, on PR #139
+  `claude/storage-pane`: EditMode **2,323 total, 2,305 passed, 0 failed**; PlayMode **92 total,
+  87 passed, 0 failed**. On the CI runner, which has no `Assets/Synty`, the same commit is
+  2,323 / 2,302 / 0 and 92 / 82 / 0 — a lower *passed* with `failed` still 0 is the art-dependent
+  tests ignoring themselves, and is correct. The eight new EditMode ones are the store's refusal
+  rule and two tests in `GrowingJobTests` that had never actually run; the one new PlayMode one is
+  `ZoneInspectTests.ClearingEveryCategoryDoesNotMoveTheRowsThatDidIt`, which is the only thing in
+  the project that checks a panel does not shift under the pointer. The run before it, on the same
+  branch before those: EditMode **2,315 total, 2,295 passed, 0 failed**; PlayMode **91 / 86 / 0**.
+  The seventeen EditMode ones added there are the storage zone pane's model and the type scale's
+  second heading role. The run before it, on PR #139
   merged with main after the experience bar's first look and the toast's amber level:
   EditMode **2,298 total, 2,278 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the first attempt and that was the
   machine, not the branch**: `Assets/Synty` had gone missing, so the two `PortraitLightingTests`,

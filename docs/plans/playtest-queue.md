@@ -14,12 +14,11 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, on the day it was written.** There are 29 open rows — 28 on the day
-this file was written, and the skills work added the twenty-ninth the day after, which is the rule
-being broken again by the very next session rather than an old number left uncorrected. That is the
-finding, not an oversight — the ceiling is where the list should be, not where it is, and the first
-sessions after this one take verdicts and fixes rather than features until it comes down. A rule
-that is quietly wrong on arrival is a rule the next session learns to ignore.
+**The rule is already breached, and the breach is widening.** There are **45 open rows** as of
+2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
+days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
+is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
+rule that is quietly wrong on arrival is a rule the next session learns to ignore.
 
 ## Open
 

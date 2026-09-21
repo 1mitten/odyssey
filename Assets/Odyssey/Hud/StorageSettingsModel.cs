@@ -46,6 +46,16 @@ namespace Odyssey.Hud
         /// chip row costs 26 px of a pane with a 640 ceiling to say a second time what two text
         /// buttons already say.</para>
         /// </summary>
+        /// <summary>
+        /// The two presets, by registry key.
+        ///
+        /// <para><b>Nothing draws these any more</b> (2026-09-21): they were chips on the pane
+        /// that did what Allow all and Clear all do, under a second set of words. They are kept
+        /// because the preset is real simulation state — a zone is <em>founded</em> at Everything,
+        /// and <c>StorageSettings.AllowUnknown</c> is set from a preset, which is what decides
+        /// what a commodity added after the save gets (§4a) — and because the registry names it.
+        /// <c>26-storage.md</c> §12b.</para>
+        /// </summary>
         public static readonly string[] PresetKeys =
         {
             "ui.storage.preset.everything",
@@ -499,7 +509,15 @@ namespace Odyssey.Hud
 
         public string NoMatchesHint => $"Clear the search to see all {TotalCount}.";
 
-        /// <summary>The footer past twenty rows.</summary>
+        /// <summary>
+        /// The footer past twenty rows — <b>modelled and tested, and drawn by nothing</b>.
+        ///
+        /// <para>Said to be built in <c>26-storage.md</c> §9d and never wired up; the status line
+        /// beside it carries a count of its own, so a second one is a decision rather than an
+        /// omission and it is left to the owner. Recorded here rather than deleted because the
+        /// number it answers — how much of the list this store takes — is the question the pane
+        /// exists for, and it is one line away whenever it is wanted.</para>
+        /// </summary>
         public string FooterText => $"{AcceptedCount} of {TotalCount} accepted";
 
         /// <summary>
