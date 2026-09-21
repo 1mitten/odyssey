@@ -1748,6 +1748,10 @@ run, which is the only way a frame number on this machine means anything:
 | Before | 45 | **12.53 ms** | 0.68–0.85 ms |
 | After | 3 | **1.73 ms** | 0.38–0.43 ms |
 
+**Measured again with both in** (PlayMode on the merged branch, 2026-09-21): one wall is *in the
+mirror one tick and 12.4 ms after the raise, drawn on the next frame, 3 chunks re-meshed*, and the
+twelve frames following it are flat at 0.33–0.43 ms. The spike is not smaller, it is gone.
+
 The fix is a version *per chunk* (`WorldRenderModel.ChunkVersion`), stamped by `RefreshDirty` on the
 chunks it actually copied, with `RefreshAll` and `Remesh` writing the new version into every entry so
 that "re-mesh everything" is still expressible. `Version` itself stays and still means "something

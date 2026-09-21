@@ -395,7 +395,13 @@ invisible where the game is played.
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
-  `claude/huge-map` **after merging main**: EditMode **2,366 total, 2,345 passed,
+  `claude/build-appearance-and-entombment` **after merging main**: EditMode **2,406 total,
+  2,385 passed, 0 failed**; PlayMode **98 total, 93 passed, 0 failed**. The new ones are
+  `EntombmentTests` in the fast tier and `BuildAppearanceTests` in PlayMode, whose logged line on
+  that run is the whole of the build-delay answer: *in the mirror on frame 33 (1 ticks, 12.4 ms),
+  drawn on frame 34, 3 chunks re-meshed*, with the twelve frames after the raise flat at 0.33–0.43
+  ms — with the meshing budget also in, the spike frame is gone rather than merely smaller. On the runs before it: `claude/huge-map` **after merging
+  main**: EditMode **2,366 total, 2,345 passed,
   0 failed**; PlayMode **97 total, 92 passed, 0 failed**. The new ones on this branch
   are `SurroundCostTests`, `MeshBudgetTests`, `FrameWindowTests`, `TraceWriterTests`, and in
   PlayMode `TheDecorationAgainstTheFrame`, `TheSurroundSectorSweep`,
