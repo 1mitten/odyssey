@@ -1317,8 +1317,12 @@ walls etc — sometimes a little glitch and it appears"*. `BuildAppearanceTests`
 measure it in a real player loop rather than reason about the seam, and it found two things.
 
 **The publish seam is innocent.** A wall raised in a live session is in the render mirror on the
-**next frame** and drawn on the one after: `mirror=0, remesh=1`. The tick, the dirty chunk marks,
-the snapshot contributor and the mesher together cost one frame. Nothing there can account for
+**next tick's publish** — one tick, a few milliseconds — and drawn on the frame after that. The
+tick, the dirty chunk marks, the snapshot contributor and the mesher together cost one tick and one
+frame. **In ticks, not frames**, which cost a red run to learn: the mirror is written by a snapshot
+contributor, so a rig running frames faster than the fixed tick sees the wall arrive several frames
+later without anything being slower. The same commit read 0 frames alone and 13 frames in a full
+PlayMode run, with one tick of delay both times. Nothing there can account for
 seconds, and nothing there has been changed.
 
 **`WorldRenderModel.Version` was one number for the entire board.** Every `ChunkBatch` compared its

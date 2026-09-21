@@ -22,7 +22,8 @@ namespace Odyssey.Tests.PlayMode
     /// about before, so it is measured here instead.</para>
     ///
     /// <para><b>What the measurement found.</b> The seam is innocent — a raised wall is in the
-    /// render mirror on the very next frame and drawn on the one after — and the *whole board*
+    /// render mirror on the very next tick's publish and drawn on the frame after that — and the
+    /// *whole board*
     /// was being re-meshed because <c>WorldRenderModel.Version</c> was one number for every
     /// chunk. One wall on the meadow re-meshed all 45 drawn chunks and cost 12.53 ms in that
     /// frame against 0.7 ms either side of it. With per-chunk versions it is 3 chunks and
@@ -32,11 +33,11 @@ namespace Odyssey.Tests.PlayMode
     public class BuildAppearanceTests
     {
         /// <summary>
-        /// A raised building reaches the renderer immediately. The frame numbers are the point of
+        /// A raised building reaches the renderer immediately. The logged numbers are the point of
         /// the fixture; the assertions are the gate.
         /// </summary>
         [UnityTest]
-        public IEnumerator ARaisedWallIsDrawnWithinAFrameAndRemeshesOnlyItsOwnChunks()
+        public IEnumerator ARaisedWallIsDrawnOnTheNextPublishAndRemeshesOnlyItsOwnChunks()
         {
             GameObject root = RigWorld.Build(out OdysseyBootstrap boot, out SliceCameraRig rig);
             try
@@ -53,12 +54,15 @@ namespace Odyssey.Tests.PlayMode
                     Is.EqualTo(IntentRejection.None), "the fixture could order a wall");
 
                 int meshedBefore = boot.Renderer!.TotalChunksMeshed;
+                int tickAtRaise = boot.World!.CurrentTick;
+                float raisedAt = Time.realtimeSinceStartup;
                 colony.Construction.Raise(colony.Pawns, cell, (byte)QualityHandle.Normal);
                 Assert.That(colony.Grid.IsBlockedByEdifice(cell), Is.True,
                     "the fixture raised a wall; nothing below means anything otherwise");
 
                 var frames = new float[12];
-                int inMirror = -1, drawn = -1;
+                int inMirror = -1, drawn = -1, ticksWaited = -1;
+                float secondsWaited = -1f;
                 for (int frame = 0; frame < 60; frame++)
                 {
                     float t0 = Time.realtimeSinceStartup;
@@ -66,20 +70,34 @@ namespace Odyssey.Tests.PlayMode
                     if (frame < frames.Length) frames[frame] = (Time.realtimeSinceStartup - t0) * 1000f;
 
                     if (inMirror < 0 && boot.Model!.EdificeDef(cell) == CoreContent.EdificeWall)
+                    {
                         inMirror = frame;
+                        ticksWaited = boot.World!.CurrentTick - tickAtRaise;
+                        secondsWaited = Time.realtimeSinceStartup - raisedAt;
+                    }
                     if (drawn < 0 && boot.Renderer.TotalChunksMeshed > meshedBefore)
                         drawn = frame;
                 }
 
                 int chunksMeshed = boot.Renderer.TotalChunksMeshed - meshedBefore;
-                Debug.Log($"[build-appearance] in the mirror on frame {inMirror}, drawn on frame "
+                Debug.Log($"[build-appearance] in the mirror on frame {inMirror} "
+                          + $"({ticksWaited} ticks, {secondsWaited * 1000f:0.0} ms), drawn on frame "
                           + $"{drawn}, {chunksMeshed} chunks re-meshed; frame ms after the raise: "
                           + string.Join(", ", System.Array.ConvertAll(frames, f => f.ToString("0.00"))));
 
-                Assert.That(inMirror, Is.InRange(0, 2),
-                    "a raised wall reaches the render mirror within a frame or two of the tick "
-                    + "that raised it — if this fails, the publish seam is the delay");
-                Assert.That(drawn, Is.InRange(0, 3), "and the chunk holding it is re-meshed as promptly");
+                // **Ticks, not frames.** The mirror is written by a snapshot contributor, so it
+                // updates once a tick and not once a frame — and a rig with nothing to draw runs
+                // frames far faster than the fixed tick. Asserting frames measured the frame rate:
+                // this test failed at 13 frames in a full PlayMode run and passed at 0 alone, on
+                // the same commit and with the same one tick of delay both times.
+                Assert.That(ticksWaited, Is.InRange(0, 1),
+                    "a raised wall reaches the render mirror on the very next publish — if this "
+                    + "fails, the publish seam is the delay the owner sees");
+                Assert.That(secondsWaited, Is.LessThan(0.5f),
+                    "and it is there in well under a second of wall clock, which is the owner's "
+                    + "own unit: the report this fixture exists for was one to three seconds");
+                Assert.That(drawn - inMirror, Is.InRange(0, 2),
+                    "and the chunk holding it is re-meshed on the frame after it appears");
 
                 // The board is 120x120x16 and draws 45 chunks; one wall touches at most the 3x3x3
                 // neighbourhood MarkChunksAround dirties, which is three chunks of the drawn band.

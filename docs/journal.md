@@ -9221,12 +9221,19 @@ that was already done. `CanRaiseNow` exists so the hammer can be held *before* t
 
 **The delay.** My first instinct was to read the publish seam, and reading it said "next frame",
 which is exactly the sort of confident answer this project has been wrong about repeatedly. So I
-measured it in a real player loop instead — and the seam *is* next-frame: the wall is in the mirror
-on frame 0 and drawn on frame 1. The first two runs measured nothing at all, and both failures were
+measured it in a real player loop instead — and the seam *is* immediate: the wall is in the mirror
+on the next tick's publish and drawn on the frame after that. The first two runs measured nothing at
+all, and both failures were
 instructive. The first raised no wall because my own new guard refused it (a colonist was standing
 in the cell), which is the fixture reproducing the bug I had just fixed; the second told me so only
 because I had added `inGrid` to the log. **Assert the fixture did what it claims before believing
 anything downstream of it** — that is the third time that has cost a run here.
+
+And the assertion I wrote from those runs was wrong in a way only the full tier could show: I
+measured the wait in **frames**, it read 0 alone and 13 in a crowded PlayMode run, and the delay was
+one tick both times. The mirror is written by a snapshot contributor, so it moves once a tick; a rig
+with nothing to draw runs frames far faster than that. A measurement whose unit is the frame rate
+measures the frame rate.
 
 What the probe did find was something nobody was looking for. `WorldRenderModel.Version` is one
 number for the whole board, so a single wall invalidated all 45 drawn chunks and cost 12.53 ms in

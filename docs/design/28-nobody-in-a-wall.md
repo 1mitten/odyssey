@@ -137,8 +137,8 @@ appears when it's built"* — and the answer to it lives in `06-rendering-and-ca
 than here, because it is a rendering fault and not a construction one. Two things came out of
 measuring it (`BuildAppearanceTests`):
 
-- **The publish seam is innocent.** A raised wall is in the render mirror on the very next frame and
-  drawn on the one after. Whatever the seconds are, they are not the sim, the snapshot or the mesher.
+- **The publish seam is innocent.** A raised wall is in the render mirror on the very next tick's
+  publish and drawn on the frame after that. Whatever the seconds are, they are not the sim, the snapshot or the mesher.
 - **The whole board was being re-meshed on every edit**, because `WorldRenderModel.Version` was one
   number for all of it. One wall cost 12.53 ms in the frame after the raise against 0.7 ms either
   side; per-chunk versions make it 3 chunks and 1.73 ms. That is the *glitch* in the report, and it
