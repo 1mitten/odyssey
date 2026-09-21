@@ -78,7 +78,7 @@ the same trade `tools/icons/icons.py` makes when it vendors a PNG decoder rather
 **One record a line, always**, because a trace is routinely read while the game is still writing
 it. A half-written last line is the normal case; the reader counts it and carries on.
 
-### 4c. `Logs/perf/` in the editor, and why that differs from saves
+### 4c. `Logs/perf/` in the editor, `perf/` beside a development player
 
 `SaveFiles` writes to `Application.persistentDataPath` under a stated rule — "a playtest cannot
 leave save files in a working tree" — which is about the player's own data. A trace is the opposite
@@ -86,6 +86,11 @@ kind of thing: it exists to be read by whoever is working on the repository, min
 written, and a path under `AppData\LocalLow\…` is a path somebody has to be told. `Logs/` is
 gitignored and is already where every editor-side artefact goes (`one-day.txt`, `shot-*.png`,
 `hud-*.png`). A built player has no repository and falls back to the persistent data path.
+
+A **development player** writes beside its own executable — `Build/Win64/perf/` — for the same
+reason, added the moment the first one was built: that build exists to be compared against the
+editor, and `AppData\LocalLow\…` is a path somebody would have to be told. Only a shipped player,
+which does not trace at all, falls through to the persistent data path.
 
 Twenty traces are kept. A session is a few hundred kilobytes; the cap is about a readable folder,
 not disk.
@@ -182,6 +187,56 @@ a mean over 180 frames, the other a median of per-second medians, and they are n
 statistic — so what it catches is a tracer reading a different quantity, a different unit, or
 nothing at all. It is this sentence as a test: **a number the platform hands you is not a
 measurement until it has been seen beside a number taken independently.**
+
+## 7a. What it found in its first two sessions
+
+**Written the same day, because the point of the tool is what it settles and not what it is.**
+
+### The first session: the surround work held, and stutter is not the mean
+
+254 s at 3840 x 2160 on the Huge board. **p50 12.76 ms, p99 19.69** — a comfortable 78 fps — with
+**95 frames over 33 ms, 0.53 per cent**. The complaint was entirely in that half a per cent, which
+is precisely what a mean over 180 frames cannot see and what every number in §6c was until now.
+
+The captured spikes said something immediately: during a **172 ms** frame, `World` was 4–6 ms and
+`Surround` about 1, and the GPU peaked at 16 ms in the worst second. So the cost was **outside the
+draw block and off the GPU**.
+
+**One reading of it was wrong and is worth recording as such.** The raw spike times looked like a
+rising trend and were called one — a leak. Bucketed properly they are *bursty*, 12, 2, 3, 17, 9, 9,
+10, 1, 6 per thirty seconds, and p50 *improves* across the session from 14.82 to 11.87. There was no
+leak. A list of timestamps read by eye is not a trend, and the tool now prints the buckets.
+
+### The second session: both candidates eliminated
+
+The fields that would name it were added — collections by generation, the heap, ambient probe
+re-integrations, and whether the collector ran on a spiking frame — and 63 s of play settled both:
+
+- **Garbage collection: out.** One gen-0, one gen-1 and one gen-2 collection in the whole session,
+  and **zero of the eighteen spikes** had a collection on that frame.
+- **The ambient probe: out.** Twenty-three re-integrations, and the seconds carrying one are mostly
+  the seconds that did *not* spike.
+
+What is left is the finding. On a 165 ms frame the tick is **0.22 ms**, every tick phase is under a
+millisecond, the sections sum to about **7**, and the GPU peaked at **5.5**. Roughly **150 ms of
+every spike is accounted for by nothing this game measures at all.** And every spike lands between
+**159 and 174 ms** — that tight a cluster is the shape of a fixed blocking operation, not of a
+variable workload.
+
+So the reader gained an **unaccounted** line and an **elsewhere** column, computed rather than
+recorded: it is a subtraction of numbers already present, and a recorder that wrote it would be
+inventing a figure instead of reporting one, which is the rule this whole line of work keeps.
+
+### The player build, which is where the answer probably is
+
+A smoke run of the development player — 44 s, 14,480 frames, 120² at 2854 x 1440 — read **p50
+2.50 ms** with **4 frames over 33 ms, 0.03 per cent**, and its only large frames were the first two
+seconds of loading. **No 159–174 ms stalls at all.**
+
+That is suggestive and not conclusive: the board and the resolution both differ from the editor
+session, so it is not a controlled comparison. What makes it worth acting on is the *character* —
+the editor's stalls are regular and clustered at one value, and the player has nothing of that
+shape. The controlled run, same board and same settings in the player, is the open item.
 
 ## 8. What is deliberately not here
 
