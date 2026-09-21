@@ -2423,6 +2423,25 @@ there — so a smaller *passed* number is not a regression. And `TestResults/Pla
 `D:\actions-runner\_work\odyssey\odyssey` is overwritten by the next job, so copy it before
 diagnosing rather than after.
 
+## `BoardMemoryTests` is load-sensitive too, and a negative reading is the tell
+
+`BoardMemoryTests.EveryOfferedBoardSaysWhatItCostsToHold` joined the timing tests in this family on
+2026-09-21: it failed in an EditMode run taken beside the CI runner's PlayMode batch with
+
+```
+Expected: greater than 230400
+But was:  -11128832
+```
+
+**A world cannot cost minus eleven megabytes**, and the test's own message says what happened — the
+`before` reading carried garbage the double `Settle()` had not collected under contention, and the
+`after` reading did collect it. It passed in the two EditMode runs on the same commit either side
+of that one, and five times out of five in the fast tier alone.
+
+This one is **cheaper to settle than a timing test**, because the failure is not a number drifting
+over a threshold: it is a *sign*. A negative delta is never a regression, so it does not need a
+clean-HEAD control — re-run it alone and check whether the reading is positive. Only a positive
+delta under the floor is worth investigating.
 ## A timing test run beside another Unity batch run fails, and the baseline is the tell
 
 `HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on 2026-09-20 at
