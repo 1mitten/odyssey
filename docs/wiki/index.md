@@ -2,7 +2,7 @@
 
 Every named thing in the game, generated from the design data. **Do not edit these files by hand**: they are rebuilt by `tools/wiki/build_wiki.py` and your changes would be overwritten. Corrections go in the CSVs named at the bottom of each page.
 
-699 named entries, of which **429 have no icon art** in the owner's sheets.
+700 named entries, of which **430 have no icon art** in the owner's sheets.
 
 | Section | Entries | Without art |
 |---|---:|---:|

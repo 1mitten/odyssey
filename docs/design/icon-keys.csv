@@ -467,6 +467,7 @@ ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, 
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
+ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"
 ui.settings.detail,Detail,ui.settings,M3,"What the board is drawn with. None of it reaches the simulation"
 ui.settings.vsync,VSync,ui.settings,M3,"Match the screen's refresh rate. Stops tearing, and paces the frame"

@@ -82,6 +82,10 @@ namespace Odyssey.Presentation.Ui
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
                 RipenCrops));
+            _debugCheats.Add(DebugActionRow(DebugDirector.MarkTraceKey,
+                "Writes a marker into this session's performance trace, so the seconds around "
+                    + "this moment can be found afterwards - press it when something felt wrong",
+                MarkTrace));
             _debugPanel.Add(_debugCheats);
 
             // Filled when the panel opens, from the colony that is open: the content is the
@@ -96,6 +100,15 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>A toggle row: the pip idiom Settings already uses for the graphics options and
         /// used to use for this exact row, before it moved here.</summary>
+        /// <summary>
+        /// Mark this moment in the trace.
+        ///
+        /// <para>Nothing is said back here, and nothing needs to be: the developer overlay prints
+        /// the trace file and its marker count, so a mark that landed is visible and a mark that
+        /// had nowhere to land is visible too — the overlay says the trace is off.</para>
+        /// </summary>
+        void MarkTrace() => _boot?.MarkTrace("debug menu");
+
         VisualElement DebugToggleRow(string key, string tooltip, System.Action onClick)
         {
             var row = new VisualElement();

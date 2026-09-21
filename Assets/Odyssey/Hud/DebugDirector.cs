@@ -44,6 +44,19 @@ namespace Odyssey.Hud
         public const string RipenCropsKey = "ui.debug.ripen";
 
         /// <summary>
+        /// Write a marker into the performance trace.
+        ///
+        /// <para><b>Why this is a menu row and not a key of its own.</b> A marker wants to be
+        /// reachable while something is going wrong, which argues for a binding — but a
+        /// binding is a <c>HotkeyAction</c>, and those are player controls that appear in the
+        /// Keys tab and in the wiki. A developer's trace marker is not game content, and the
+        /// debug menu is exactly where developer tools live. The timing is forgiving enough
+        /// to afford it: the reader shows the seconds either side of a mark and leans the
+        /// window backwards, because nobody reaches anything mid-hitch anyway.</para>
+        /// </summary>
+        public const string MarkTraceKey = "ui.debug.marktrace";
+
+        /// <summary>
         /// Every key the panel puts on screen that is its own, so <c>RegistryTests</c> can hold
         /// the panel to the naming CSV the way it holds Settings. The event rows are named by
         /// <see cref="IncidentLabels"/>, which has its own test.
@@ -51,7 +64,7 @@ namespace Odyssey.Hud
         public static readonly string[] IconKeys =
         {
             PanelKey, CheatsKey, EventsKey, SpawnPawnKey, GiveWoodKey, GiveStoneKey, GiveFoodKey,
-            SkipDayKey, SkipMorningKey, RipenCropsKey,
+            SkipDayKey, SkipMorningKey, RipenCropsKey, MarkTraceKey,
         };
 
         public static string TabKey(DebugTab tab) => tab == DebugTab.Events ? EventsKey : CheatsKey;

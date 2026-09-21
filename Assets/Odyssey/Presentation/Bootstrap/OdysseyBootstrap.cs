@@ -333,6 +333,35 @@ namespace Odyssey.Presentation.Bootstrap
         }
         float _smoothedFrameMs;
         float _smoothedGpuMs;
+
+        Diagnostics.PerfTracer? _tracer;
+        double[] _traceSections = System.Array.Empty<double>();
+
+        /// <summary>
+        /// Whether a session writes a performance trace.
+        ///
+        /// <para><b>On in the editor and in development builds, off in a shipped one.</b> The
+        /// whole value of a trace is catching what does not reproduce, and a tracer that has to be
+        /// switched on before the interesting thing happens never is. It costs a dozen doubles a
+        /// frame and a kilobyte a second, and a released player has nobody to read it.</para>
+        /// </summary>
+        public static bool TraceEnabled { get; set; } = Application.isEditor || Debug.isDebugBuild;
+
+        /// <summary>The trace this session is writing, or null when it is not writing one.</summary>
+        public Diagnostics.PerfTracer? Trace => _tracer;
+
+        /// <summary>
+        /// <see cref="FrameSection"/> by name, minus <c>Count</c>, in enum order — the names a
+        /// trace's section columns carry.
+        /// </summary>
+        public static readonly string[] SectionNames = BuildSectionNames();
+
+        static string[] BuildSectionNames()
+        {
+            var names = new string[(int)FrameSection.Count];
+            for (int i = 0; i < names.Length; i++) names[i] = ((FrameSection)i).ToString();
+            return names;
+        }
         readonly UnityEngine.FrameTiming[] _frameTimings = new UnityEngine.FrameTiming[1];
         string _catalogueNote = string.Empty;
 
@@ -1288,6 +1317,128 @@ namespace Odyssey.Presentation.Bootstrap
             float frameMs = Time.unscaledDeltaTime * 1000f;
             _smoothedFrameMs = _smoothedFrameMs <= 0f ? frameMs : Mathf.Lerp(_smoothedFrameMs, frameMs, 0.05f);
             SampleFrameTimings();
+            SampleTrace(frameMs);
+        }
+
+        /// <summary>
+        /// Hand this frame to the trace, opening one if the session has not got one yet.
+        ///
+        /// <para>Opened here rather than at the end of <c>BuildSession</c> on purpose: by the time
+        /// a frame has run, the settings are seeded, the renderer exists and the board is meshed,
+        /// so the header describes the session the player is actually in rather than the one that
+        /// was requested. It costs one null check a frame for the life of the session.</para>
+        /// </summary>
+        void SampleTrace(float frameMs)
+        {
+            if (!TraceEnabled || _world == null) return;
+
+            if (_tracer == null)
+            {
+                _tracer = Diagnostics.PerfTracer.TryOpen(SectionNames, TraceEnvironment());
+                if (_tracer == null)
+                {
+                    // One failed attempt is enough. Retrying every frame would turn a full disk
+                    // into a stutter of its own, which is the diagnostic causing the fault.
+                    TraceEnabled = false;
+                    return;
+                }
+
+                _traceSections = new double[(int)FrameSection.Count];
+                // The tick's own phase split, which PhaseTrace has been able to produce since the
+                // tick benchmark was written and which nothing in the running game has ever read.
+                _world.PhaseSink = _tracer.PhaseSink;
+            }
+
+            System.ReadOnlySpan<double> split = FrameSectionMs;
+            for (int i = 0; i < _traceSections.Length && i < split.Length; i++)
+                _traceSections[i] = split[i];
+
+            var counters = new Odyssey.Hud.Diagnostics.FrameCounters(
+                tick: _world.CurrentTick,
+                speed: _world.GameSpeed,
+                drawCalls: _renderer?.DrawCalls ?? 0,
+                instances: _renderer?.InstancesDrawn ?? 0,
+                chunks: _renderer?.ChunksDrawn ?? 0,
+                cellPlates: _renderer?.CellPlatesDrawn ?? 0,
+                remeshed: _renderer?.ChunksMeshedThisFrame ?? 0,
+                materials: _renderer?.MaterialCount ?? 0,
+                surroundBatches: _renderer?.Skirt.BatchesDrawn ?? 0,
+                figures: _figures?.FigureCount ?? 0,
+                pawns: _colony?.Pawns.Pawns.Count ?? 0,
+                layer: cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer);
+
+            _tracer.Sample(Time.unscaledDeltaTime, frameMs, _smoothedGpuMs, _renderMs, _tickMs,
+                _traceSections, counters);
+        }
+
+        /// <summary>
+        /// Mark this moment in the trace. Returns the marker's number, or 0 if nothing is being
+        /// written.
+        /// </summary>
+        public int MarkTrace(string note) => _tracer?.Mark(note) ?? 0;
+
+        /// <summary>
+        /// What the trace's header says about this machine and this session.
+        ///
+        /// <para><b>This is the half that makes two traces comparable</b>, and the reader refuses
+        /// to diff two whose headers disagree on the things that would make a comparison a lie.
+        /// <c>docs/process.md</c>: "a number in a doc names its machine and its date; a timing
+        /// without either is a rumour."</para>
+        ///
+        /// <para>The graphics settings are walked through <c>SettingsDirector</c>'s own
+        /// <c>Order</c> and <c>LadderOrder</c> arrays rather than listed here, so a setting added
+        /// later appears in traces without anybody remembering to add it.</para>
+        /// </summary>
+        System.Collections.Generic.List<(string, string)> TraceEnvironment()
+        {
+            var pairs = new System.Collections.Generic.List<(string, string)>
+            {
+                ("started", System.DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)),
+                ("unity", Application.unityVersion),
+                ("platform", Application.platform.ToString()),
+                ("editor", Application.isEditor ? "yes" : "no"),
+                ("gpu", SystemInfo.graphicsDeviceName),
+                ("gpu_api", SystemInfo.graphicsDeviceType.ToString()),
+                ("cpu", SystemInfo.processorType),
+                ("cpu_threads", SystemInfo.processorCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("ram_mb", SystemInfo.systemMemorySize.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("screen", $"{Screen.width}x{Screen.height}"),
+                ("fullscreen", Screen.fullScreenMode.ToString()),
+                ("vsync", QualitySettings.vSyncCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("frame_cap", Application.targetFrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            };
+
+            if (_model != null)
+                pairs.Add(("board", $"{_model.Size.SizeX}x{_model.Size.SizeZ}x{_model.Size.SizeY}"));
+            pairs.Add(("map", mapType.ToString()));
+            pairs.Add(("barren", barrenMap ? "yes" : "no"));
+            pairs.Add(("seed", _world != null
+                ? _world.Seed.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : seed.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+            pairs.Add(("scatter", (_renderer?.ScatterDensity ?? grassScatter)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("surround", (_renderer?.Skirt.Enabled ?? terrainSkirt) ? "on" : "off"));
+            pairs.Add(("tree_sector", Rendering.TerrainSkirt.TreeSectorMetres
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("far_tree_sector", Rendering.TerrainSkirt.FarTreeSectorMetres
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("tree_variants", Rendering.TerrainSkirt.TreeVariantSlots
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("figure_cap", (_figures?.MaxFigures ?? 0)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+            Odyssey.Hud.SettingsDirector? settings = Directors?.Settings;
+            if (settings != null)
+            {
+                foreach (Odyssey.Hud.GraphicsOption option in Odyssey.Hud.SettingsDirector.All)
+                    pairs.Add(("gfx." + option, settings.IsOn(option) ? "on" : "off"));
+                foreach (Odyssey.Hud.GraphicsLadder ladder in Odyssey.Hud.SettingsDirector.AllLadders)
+                    pairs.Add(("gfx." + ladder, settings.Value(ladder)
+                        .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            }
+
+            return pairs;
         }
 
         /// <summary>
@@ -2418,7 +2569,11 @@ namespace Odyssey.Presentation.Bootstrap
                 // twice over — it hides both the headroom and the real cost.
                 $"gpu {Timing(_smoothedGpuMs)}   {Screen.width}x{Screen.height}" +
                 $"   vsync {(QualitySettings.vSyncCount > 0 ? $"on/{QualitySettings.vSyncCount}" : "off")}" +
-                $"   cap {(Application.targetFrameRate > 0 ? Application.targetFrameRate.ToString() : "none")}\n" +
+                $"   cap {(Application.targetFrameRate > 0 ? Application.targetFrameRate.ToString() : "none")}" +
+                // Where the trace is going and how much of it there is. Printed because "is it
+                // recording" is otherwise a question with no answer until the session is over,
+                // which is far too late to discover that it was not.
+                $"   trace {TraceNote()}\n" +
                 $"submit split: {SubmitSplit()}\n" +
                 $"sound played {_audio?.OneShotsPlayed ?? 0} culled {_audio?.DistanceCulled ?? 0}" +
                 $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +
@@ -2467,6 +2622,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// exact wrong conclusion to hand somebody hunting a fill-bound frame.</para>
         /// </summary>
         static string Timing(float ms) => ms > 0f ? $"{ms:0.00} ms" : "n/a";
+
+        /// <summary>The trace file and how many seconds are in it, or why there is not one.</summary>
+        string TraceNote()
+        {
+            if (_tracer == null) return TraceEnabled ? "opening" : "off";
+            if (!_tracer.Active) return "stopped: " + (_tracer.Fault ?? "unknown");
+            return System.IO.Path.GetFileName(_tracer.Path) + $" ({_tracer.Rows}s, {_tracer.Marks} marked)";
+        }
 
         readonly int[] _splitOrder = new int[(int)FrameSection.Count];
 
@@ -2835,6 +2998,11 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Dropped, not merely disposed. A disposed object still reachable from here would let
             // the next session read a torn-down library and fail somewhere far from the cause.
+            // Before the world goes, because the world holds the phase sink this owns.
+            if (_world != null) _world.PhaseSink = null;
+            _tracer?.Dispose();
+            _tracer = null;
+
             _audio = null;
             _daylight = null;
             _figures = null;

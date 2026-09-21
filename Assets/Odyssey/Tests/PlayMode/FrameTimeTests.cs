@@ -308,6 +308,116 @@ namespace Odyssey.Tests.PlayMode
             split.Length > (int)section ? split[(int)section] : 0d;
 
         /// <summary>
+        /// The performance trace agrees with the arm that timed the same frames.
+        ///
+        /// <para><b>This test exists because of what happened on 2026-09-21.</b> A
+        /// <c>CpuFrameMs</c> field was added to the developer overlay, looked entirely plausible in
+        /// a batch run at 640 x 480, and was wrong on screen in its first real session — 16.81 ms,
+        /// then 296.32, then 17,898.04 — with nothing in the project able to tell. The lesson
+        /// written down at the time was that <b>a number the platform hands you is not a
+        /// measurement until it has been seen beside a number taken independently</b>. This is that
+        /// sentence as a test: the trace and <see cref="TimeFrames"/> watch the same frames through
+        /// different clocks, and their answers have to meet.
+        /// </para>
+        ///
+        /// <para><b>The band is deliberately wide, and a narrow one would be wrong.</b> One figure
+        /// is a mean over 180 frames and the other a median of per-second medians; they are not the
+        /// same statistic and are not meant to be equal. What is being caught is a tracer reading a
+        /// different quantity, a different unit, or nothing at all — and a factor of two either way
+        /// catches every one of those while surviving a machine running three editors, which this
+        /// one does.</para>
+        ///
+        /// <para>It also proves the parts with no other proof: a file written where
+        /// <c>PerfTraceFiles</c> says, a header describing this session rather than a default, and
+        /// a marker that lands.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTraceAgreesWithTheArmThatTimedIt()
+        {
+            bool tracing = OdysseyBootstrap.TraceEnabled;
+            OdysseyBootstrap.TraceEnabled = true;
+
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+
+            float armMean = 0f;
+            string? path = null;
+            int rows = 0;
+            try
+            {
+                yield return TimeFrames("trace/agreement", boot, WarmupFrames, m => armMean = m);
+
+                Odyssey.Presentation.Diagnostics.PerfTracer? tracer = boot.Trace;
+                Assert.That(tracer, Is.Not.Null, "no trace was opened for a traced session");
+                Assert.That(tracer!.Active, Is.True, $"tracing stopped: {tracer.Fault}");
+                Assert.That(boot.MarkTrace("from the test"), Is.EqualTo(1), "the marker did not land");
+
+                path = tracer.Path;
+                rows = tracer.Rows;
+
+                // A row is written a second apart, so 180 frames must have produced some. A window
+                // that produced none would make every assertion below vacuously true.
+                Assert.That(rows, Is.GreaterThan(0),
+                    "180 frames went by and the trace wrote no row, so it is not sampling");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+                OdysseyBootstrap.TraceEnabled = tracing;
+            }
+
+            // After the teardown, so the file is closed and complete — which is also the only state
+            // the reader tool ever sees one in.
+            yield return null;
+
+            Assert.That(System.IO.File.Exists(path!), Is.True, $"no trace at {path}");
+            string[] lines = System.IO.File.ReadAllLines(path!);
+            Assert.That(lines.Length, Is.GreaterThan(1), "the trace has a header and nothing else");
+
+            Assert.That(lines[0], Does.Contain(@"""kind"":""header"""));
+            Assert.That(lines[0], Does.Contain(@"""board"":""120x120x16"""),
+                "the header does not describe the board this session actually built");
+            Assert.That(lines[0], Does.Contain($@"""screen"":""{Screen.width}x{Screen.height}"""),
+                "the header does not describe the resolution it was taken at");
+
+            var traced = new List<double>();
+            bool marked = false;
+            foreach (string line in lines)
+            {
+                if (line.Contains(@"""kind"":""marker""")) marked = true;
+                if (line.Contains(@"""kind"":""row""")) traced.Add(Field(line, "frame_p50"));
+            }
+
+            Assert.That(marked, Is.True, "the marker never reached the file");
+            Assert.That(traced.Count, Is.EqualTo(rows),
+                "the file and the tracer disagree about how many rows there are");
+
+            traced.Sort();
+            double tracedP50 = traced[traced.Count / 2];
+
+            Debug.Log($"[FrameTime] trace: {traced.Count} rows, trace p50 {tracedP50:0.00} ms " +
+                      $"against arm mean {armMean:0.00} ms, file {System.IO.Path.GetFileName(path)}");
+
+            Assert.That(tracedP50, Is.GreaterThan(0d), "the trace recorded a zero frame time");
+            Assert.That(tracedP50, Is.InRange(armMean * 0.5d, armMean * 2d),
+                $"the trace says {tracedP50:0.00} ms and the arm that watched the same frames says " +
+                $"{armMean:0.00} ms. They are different statistics and need not be equal, but a " +
+                "factor of two apart means one of them is not measuring a frame.");
+        }
+
+        /// <summary>Pull one number out of a JSONL record, without putting a JSON parser in a test.</summary>
+        static double Field(string line, string key)
+        {
+            int at = line.IndexOf("\"" + key + "\":", StringComparison.Ordinal);
+            if (at < 0) return 0d;
+            int from = at + key.Length + 3;
+            int to = from;
+            while (to < line.Length && (char.IsDigit(line[to]) || line[to] == '.' || line[to] == '-')) to++;
+            return double.Parse(line.Substring(from, to - from),
+                System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
         /// What the surround's sector size is worth, swept over one built world.
         ///
         /// <para><b>Why a sweep and not another judged number.</b> §6c chose 400 m by hand, found

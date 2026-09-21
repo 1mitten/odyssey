@@ -189,6 +189,7 @@ namespace Odyssey.Hud
             { "ui.debug.givefood", "Give food" },
             { "ui.debug.givestone", "Give stone" },
             { "ui.debug.givewood", "Give wood" },
+            { "ui.debug.marktrace", "Mark this moment" },
             { "ui.debug.panel", "Debug" },
             { "ui.debug.ripen", "Ripen crops" },
             { "ui.debug.skipday", "Skip one day" },

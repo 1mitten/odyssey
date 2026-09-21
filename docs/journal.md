@@ -9877,3 +9877,65 @@ The lesson is worth more than the figure was: **a number the platform hands you 
 measurement until it has been seen beside a number taken independently.** That one shipped on the
 strength of looking plausible in a batch run at 640 x 480 — inside the very document that says
 640 x 480 proves nothing.
+
+---
+
+## 2026-09-21 — the game records what it costs, so the next question does not need a batch run
+
+The owner, after three performance questions in one day had each cost a Unity batch run or a
+photograph: *"Is there any logging/monitoring or tooling we can implement now to understand
+everything, log the details so you can get your information quicker and easier?.. plan it out if
+need be"*. Interviewed first, as the working agreement says: all four goals wanted — turnaround,
+catching stutters, a regression record, and understanding the simulation — and **the loop only** in
+this pass, with summaries rather than a raw file to read.
+
+**The exploration found the most useful thing already written and unused.**
+`Assets/Odyssey/Sim/Diagnostics/PhaseTrace.cs` is a finished per-phase tick tracer — nearest-rank
+percentiles, `Clear()`, an `ITickPhaseSink` seam on `SimWorld`, UnityEngine-free — with **no
+consumer in the running game**, only `TickBenchmarkTests`. Attaching it gives the sim half of a
+trace for nothing and covers part of the fourth goal without any new machinery, and
+`TimingATickCannotChangeIt` already asserts that attaching it is harmless. Reusing it also settled
+the ranking rule by force: the new `FrameWindow` copies `PhaseTrace.Rank` exactly, so a p95 in a
+trace and a p95 in a tick benchmark cannot come to mean two different things.
+
+**What was built.** A row a second into `Logs/perf/` — frame p50/p95/p99/max, gpu, submit, tick,
+every `FrameSection`, every `TickSegment`, the counters — behind a header naming the machine, the
+screen, the board and every graphics setting, walked through `SettingsDirector.All` and
+`AllLadders` so a setting added later appears without anybody remembering. Any frame over 50 ms or
+three times the previous second's median is **captured whole with its own split**, rather than
+averaged into the second it interrupted, which is precisely what a mean does and precisely what
+this exists to stop. A *Mark this moment* row in the debug menu. And `tools/perf/trace.py`, stdlib
+only like every other tool here, with `summarise`, `compare` and `list`.
+
+**Three decisions worth the space.**
+
+*It measures nothing.* Every number it writes is already a public property. That is the safeguard
+rather than a limitation: a recorder that invented a figure could become the next `CpuFrameMs`,
+which is the field that shipped that morning and read 16.81, then 296.32, then 17,898.04.
+
+*`compare` refuses.* Two traces whose headers disagree about the GPU, the screen, vsync, the cap or
+the board are not compared without `--force`. `docs/process.md` says a timing without its machine is
+a rumour; this is that sentence executable, and it is aimed at the mistake §6c records costing an
+afternoon, when a canary drifted 2.01 → 4.01 ms on nothing but a sibling worktree. A move under one
+per cent gets no verdict either, for the same reason.
+
+*The marker is a menu row and not a key.* A binding is a `HotkeyAction`, and those are player
+controls that appear in the Keys tab and the wiki — a developer's trace marker is not game content.
+The reader makes the timing forgiving instead: it shows the seconds either side of a mark and leans
+the window **backwards**, two behind for every one ahead, because nobody reaches anything mid-hitch.
+
+**The test that matters is the one the day earned.**
+`FrameTimeTests.TheTraceAgreesWithTheArmThatTimedIt` runs the trace and `TimeFrames` over the same
+frames and requires their answers to meet within a factor of two. The band is wide on purpose —
+a mean over 180 frames and a median of per-second medians are not the same statistic — so what it
+catches is a tracer reading a different quantity, a different unit, or nothing. It is the morning's
+lesson as an assertion: *a number the platform hands you is not a measurement until it has been seen
+beside a number taken independently.* The fast tier's half is
+`TraceWriterTests.TheHeaderNamesEveryFieldARowCarries`, which fails the moment a field appears in a
+row without being declared.
+
+**One test was wrong before the code was.** The first draft of the percentile test used a sample
+list with a repeated value and asserted the median of the *distinct* values. The code was right and
+matched `PhaseTrace`; the test was rewritten with ten distinct samples and a note saying why,
+because a percentile convention quietly changed to match a mistaken test is exactly the kind of
+thing nothing else would catch.
