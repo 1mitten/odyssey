@@ -374,7 +374,6 @@
     justify-content: center;
     align-items: center;
     border-radius: 3px;
-    cursor: link;
 }
 
 .roster-pager__btn:hover {
@@ -484,7 +483,6 @@
     padding-left: 4px;
     padding-right: 2px;
     border-radius: 2px;
-    cursor: link;
 }
 
 .alert:hover {
@@ -506,7 +504,6 @@
 }
 
 .alert__target {
-    cursor: link;
 }
 
 .alert__prefix,
@@ -550,7 +547,6 @@
     padding-left: 4px;
     padding-right: 2px;
     border-radius: 2px;
-    cursor: link;
 }
 
 .toast:hover {
@@ -601,7 +597,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    cursor: link;
     border-radius: 2px;
 }
 
@@ -631,7 +626,6 @@
     padding-left: 4px;
     padding-right: 2px;
     border-radius: 2px;
-    cursor: link;
 }
 
 .bulletin:hover {
@@ -669,7 +663,6 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    cursor: link;
     border-radius: 2px;
 }
 
@@ -951,7 +944,6 @@
     border-radius: 4px;
     justify-content: center;
     align-items: center;
-    cursor: link;
 }
 .inspect__info:hover { border-color: #7fd0e0; }
 
@@ -1290,7 +1282,6 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.10);
     border-radius: 4px;
-    cursor: link;
 }
 
 .workkey__btn:hover {
@@ -1551,7 +1542,6 @@
 .bp__tile--off {
     background-color: rgba(255, 255, 255, 0.02);
     border-color: rgba(255, 255, 255, 0.07);
-    cursor: initial;
 }
 
 .bp__tile--off:hover {
@@ -2613,7 +2603,6 @@
     flex-grow: 1;
 }
 
-.inspect__row--pick { cursor: pointer; }
 
 .inspect__row--pick .inspect__rowbox {
     background-color: rgba(111, 211, 227, 0.14);
@@ -2760,7 +2749,6 @@
     margin-left: 6px;
     justify-content: center;
     align-items: center;
-    cursor: link;
 }
 
 .almanac-hdr__btn:hover {
@@ -2788,7 +2776,6 @@
     flex-direction: row;
     align-items: center;
     padding: 0 16px;
-    cursor: link;
 }
 
 .almanac-cat:hover {
@@ -2849,7 +2836,6 @@
     padding: 0 12px;
     border-bottom-width: 1px;
     border-bottom-color: rgba(255, 255, 255, 0.06);
-    cursor: link;
 }
 
 .almanac-idx-row:hover {
@@ -2964,7 +2950,6 @@
     background-color: rgba(127, 208, 224, 0.16);
     border-radius: 4px;
     margin-bottom: 8px;
-    cursor: link;
 }
 
 .almanac-action-btn:hover {
@@ -2976,14 +2961,12 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
-    cursor: link;
 }
 
 /* Picking is off in code as well; this says so in ink. */
 .almanac-pin-btn--off {
     border-color: rgba(255, 255, 255, 0.08);
     opacity: 0.38;
-    cursor: default;
 }
 
 .almanac-grid {
@@ -3121,7 +3104,6 @@
     background-color: rgba(255, 255, 255, 0.04);
     margin-right: 8px;
     margin-bottom: 8px;
-    cursor: link;
 }
 
 .almanac-rel-chip:hover {
