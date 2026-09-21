@@ -368,7 +368,10 @@ invisible where the game is played.
   Long tier **23**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
+  `claude/build-appearance-and-entombment`: EditMode **2,275 total, 2,255 passed, 0 failed**. The
+  run before it, on `claude/mark-pass-batching`, is below.
+- **Unity tier** (earlier), last run 2026-09-20 on
   `claude/mark-pass-batching` after merging main: EditMode **2,228 total, 2,210 passed,
   0 failed**; PlayMode **91 total, 86 passed, 0 failed**. The seven new EditMode ones are `CellPlateTests`,
   the guard that a marked board costs draws in colours rather than in cells; the two new PlayMode

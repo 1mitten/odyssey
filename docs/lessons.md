@@ -2390,3 +2390,39 @@ in full. **The real fix for this class is to assert the shape of a cost rather t
 the defect it guards made publishing scale with the area of the layer, so the same measurement on
 two board sizes differs by four with the bug and by nothing without it, and a ratio does not care
 how fast the machine is. Recorded in the test rather than done on a red `main`.
+
+## A dead process can hold the build backend, and the batch run waits for it for ever
+
+`scripts/unity.sh test editmode` wrote its log up to `Compiling Scripts` and then sat there. The last
+line was
+
+```
+bee_backend: error: More than one copy of bee_backend running in D:\code\odyssey-entomb -- PID 15200 waiting
+```
+
+and **PID 15200 did not exist** — it belonged to a batch run that had been killed earlier. The lock
+is not reclaimed when its owner dies, so Unity waited, wrote no `TestResults/EditMode.xml`, and gave
+every appearance of a slow compile. Ten minutes went into deciding whether it was slow or stuck.
+
+**The tell is the log not growing.** A compiling editor writes something every few seconds; a waiting
+one writes nothing at all after that line. Check the log's size twice a minute apart before assuming
+contention, and check the named PID actually exists:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "ProcessId=15200"
+```
+
+Nothing back means the lock is stale. Kill the waiting editor — check its command line names *your*
+project path first, because this machine runs several — and start the run again; a fresh run takes
+the lock cleanly. Do not delete anything under `Library/` to fix it.
+
+## A wait measured in frames is a measurement of the frame rate
+
+`BuildAppearanceTests` asked how long after a wall is built the renderer knows about it, and counted
+**frames**. It read 0 alone and 13 in a full PlayMode run on the same commit, and failed the tier on
+the second. Nothing was slower: the render mirror is written by a snapshot contributor, so it moves
+once a *tick*, and a rig with nothing to draw runs frames far faster than the fixed tick.
+
+**When something is published by the simulation, assert the tick.** Frames are a unit of how fast the
+machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
+both of those are worth logging. The frame count is a diagnostic, never a gate.
