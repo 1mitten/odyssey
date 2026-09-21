@@ -373,12 +373,15 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **914 Sim + 608 Hud** (2026-09-21,
-  PR #139 merged with a main carrying the almanac and storage zones); Long tier **23**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **914 Sim + 625 Hud** (2026-09-21,
+  `claude/storage-pane` merged with main); Long tier **23**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-20 on
-  PR #139 merged with main, after the experience bar's first look and the toast's amber level:
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
+  `claude/storage-pane` after merging main: EditMode **2,315 total, 2,295 passed, 0 failed**;
+  PlayMode **91 total, 86 passed, 0 failed**. The seventeen new EditMode ones are the storage
+  zone pane's model and the type scale's second heading role. The run before it, on PR #139
+  merged with main after the experience bar's first look and the toast's amber level:
   EditMode **2,298 total, 2,278 passed, 0 failed**; PlayMode **91 total, 86 passed, 0 failed**. **PlayMode read 81 on the first attempt and that was the
   machine, not the branch**: `Assets/Synty` had gone missing, so the two `PortraitLightingTests`,
   the two `AvatarSheetTests` and `FigureCapTests` each ignored itself and said so in its skip
