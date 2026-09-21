@@ -340,10 +340,10 @@ warning band, and empty categories that keep a live box and grow no caret. Twent
 tests, which is where most of the brief's acceptance list can actually be checked. Plus
 `HudGlyphKind.TriState`, the one mark the set did not have.
 
-**Not built, and next:** the pane itself — the 560 px frame, the title row, the tab strip with
-**Tile** second, the 320 px scrolling viewport with sticky headers, the search field, and the
-collapsed state. The rows currently draw in the popover, which is the thing the brief is replacing.
-With them: **zone selection** (`InspectSubject` gains a fifth value), the eight-hue rotation with no
+**Written before the pane was built, and left standing for two days after it was** — the frame,
+the title row, the tab strip with **Tile** second, the scrolling viewport, the search field and the
+collapsed state all landed in `e575ce32` and `079b1c05` on this same branch, and the popover they
+replaced is gone. What is still owed: **zone selection** (`InspectSubject` gains a fifth value), the eight-hue rotation with no
 two touching zones alike, the name plate, and the selection tint at 34% — none of which may cost a
 per-cell draw (§6, and the brief agrees).
 
@@ -353,15 +353,96 @@ an earlier zone is deleted. A typed name is the fix and it is the unit after the
 
 ## 10. What S1 does not do
 
-- **No panel yet.** The four intents exist, are applied while paused and are tested, and
-  `StorageSettingsModel` is the whole control — the rungs, the two presets, the six category rows,
-  one row per commodity, and what every press means — Unity-free and covered by the fast tier. What
-  is not built is the **popover in `HudShell`** that raises it from the inspect pane's storage row.
-  Until it lands, a painted zone accepts everything at Normal, which is what a new zone is anyway
-  (decision 22), and the pane says which rung it is on.
+- ~~**No panel yet.**~~ **Built** — the Storage tab of the inspect pane, on this branch
+  (`e575ce32`), and the popover it was going to be is gone. Struck through rather than deleted
+  because this list and §9d both said "not built" for two days after it was, which is the failure
+  mode `CLAUDE.md` warns about at the top of its status section.
 - **No containers.** `ColonyItem.ContainerId` exists and nothing writes it: it is in S1 so the item
   record's byte layout changes once rather than twice. Crates are S2.
-- **No category tree.** Four of the six categories have no commodity in them, so the rows are flat
-  (decisions 21 and 31). `CategoryRow.State` already carries the three-way answer, so the tree is a
-  layout change when it comes rather than a model change.
+- ~~**No category tree.**~~ **Built** — decision 35 overturned 21 and 31, and the six category
+  rows expand to their commodities. `CategoryRow.State` carried the three-way answer already, so it
+  was the layout change this bullet predicted.
 - **No "no storage" alert**, and no haul-urgently: S3.
+
+## 11. What a store does with what it refuses — 2026-09-21
+
+The filter was a rule about what could be carried **in** and said nothing at all about what was
+already lying there. The owner painted a store, set it to meals, and reported both halves of the
+consequence in one sentence: *"the colonists left the rocks already there and left the meals not
+hauled out in another place … I expect the colonists to ensure that all those tiles are occupied
+by meals or nothing, not leave rocks in there."*
+
+**They are one fault, not two.** A cell holding a rock has no space for a meal
+(`ColonyItems.CellHasSpace` requires the same def), so every cell the refused things squat in is a
+cell the store cannot use. Fill a small store with rocks it will not take and it accepts nothing
+ever again. Measured on the bare fixture before the fix: a two-cell meals-only store with a rock
+in each took **0 hauls in 10,000 ticks** and the meal on the grass never moved.
+
+### 11a. Why it survived a filter that already knew the answer
+
+`HaulWorkGiver.StoredPriority` has said since it was written that *"a thing lying in a pile whose
+filter no longer accepts it is not stored at all, only in the way"*, and it returns the implicit
+unstored rank for one. That was enough to let a refused thing move to a store that **would** have
+it, and not enough for anything else, because of where it was asked:
+
+| | |
+|---|---|
+| **The lister it was in** | `ColonyItems` buckets loose against stored by whether the cell is inside a zone — the question it can answer in one array read. A refused thing is bucketed *stored*. |
+| **The pass that walks that lister** | the re-stow, and `TryGiveJob` runs it only when the loose pass has found nothing, because *tidying is the lowest job there is*. A colony that is felling or mining always has something loose. |
+| **What happened when no store would take it** | `dest < 0`, `continue`. There was no third answer. |
+
+So the thing was scanned last, if at all, and when it was scanned the scan had nowhere to send it.
+
+### 11b. The fix, in two halves
+
+**A thing its own store refuses is scanned with the loose things.** Not re-bucketed — that was the
+other candidate and it is the worse one, because `ColonyItems`' buckets would come to depend on the
+filter table, so ticking one commodity would have to walk a zone's items and the save would have to
+agree about which lister each thing was in. Instead the first pass walks both listers and takes
+from the stored one only what is refused; the re-stow pass takes only what is accepted. One extra
+branch in a loop that was already there, and `Refused` is two array reads.
+
+**And when no store will have it, it is carried out to open ground** — the clause that already
+existed for a thing standing on tilled soil, now reached by both cases through one predicate,
+`HaulWorkGiver.InTheWay`. It goes to the nearest cell within `ClearanceRadius` (12, one constant
+for both cases now) that neither wants to be empty nor refuses it, and becomes an ordinary loose
+pile there: the stockpile's business again the moment one has room.
+
+### 11c. The second fault, which was the same fault from the other end
+
+`PawnContext.NotZoned` was the predicate that clearance searched through, and it knew only about
+**growing** zones — while both of its call sites said in their own comments that they wanted ground
+*"outside every zone"*. A rock lifted off a field could therefore be set down inside a meals-only
+stockpile, where nothing would ever pick it up again. One line of code, reachable without the
+player ever narrowing a filter.
+
+It is `PawnContext.OpenGroundFor(defIndex)` now, and it asks about the **thing** as well as the
+cell: a store that *accepts* the thing is not excluded, because that is a home rather than an
+obstruction — and the destination scan would have chosen it first anyway.
+`StockpileTests.OpenGroundIsNotAStoreThatRefusesTheThingButMayBeOneThatWantsIt` is the rule on its
+own; `GrowingJobTests.AFieldBlockerIsNotClearedIntoAStoreThatRefusesIt` is it end to end.
+
+### 11d. What is deliberately not done
+
+- **Open ground is the last answer, not the first.** A store that accepts the thing wins, and
+  `AThingAStoreRefusesGoesToAStoreThatWantsItRatherThanToTheGround` is the guard — a rock evicted
+  onto the grass beside a rock store is the obvious way to get this wrong.
+- **Nothing is re-checked on a filter edit.** The haul scan asks the filter afresh every think, so
+  narrowing a store is what sets its contents moving with no notification anywhere.
+  `NarrowingAStoresFilterIsWhatSetsItsContentsMoving` asserts exactly that, because a future
+  optimisation that caches the answer would break it silently.
+- **Where even twelve cells finds nowhere, the thing stays.** A board packed that solid is one
+  nothing in the game can produce, and the alternative is a hauler walking the map for a rock.
+- **The clearance fallback does not check reservations**, unlike `BestStorageCell`. Two haulers
+  evicting at once can pick the same cell; the loser fails its reservation and re-scans, and by
+  then the winner's load is down and the search moves on. Transient, not a livelock — but it is
+  why the unfixed predicate produced *no* clearance rather than a wrong one when the store cells
+  were all claimed by meal hauls, which is how the regression test was proved to bite.
+
+### 11e. No golden moved, and that is a gap rather than a reassurance
+
+The full fast tier (922 Sim, 625 Hud) and the Long tier (23) are green with no re-bake. That is
+correct — the behaviour changes only where a store is holding something it refuses, and **every
+zone in every golden is founded at *Everything***, so the state never arises. It also means the
+goldens do not cover this at all, and the six tests in `StockpileTests` under *what a store
+refuses* are the whole of the coverage.
