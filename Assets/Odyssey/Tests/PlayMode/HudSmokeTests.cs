@@ -332,6 +332,145 @@ namespace Odyssey.Tests.PlayMode
         /// and the cadence buckets after that are wall-clock, which in this harness advances
         /// by well under a millisecond a frame. Waiting on frames would not let a bucket fire.
         /// </summary>
+        /// <summary>
+        /// A store opens on its Storage tab, with one tab marked and its contents already listed.
+        ///
+        /// <para><b>Both halves were reported by the owner on 2026-09-21</b>, and both were the
+        /// same missing call: the colonist branch of the pane's builder ends with
+        /// <c>ShowActiveTab</c> and the store branch did not. Nothing else establishes which tab
+        /// is live, so a freshly built strip drew <em>both</em> underlines — they are created
+        /// visible — and the panes' display carried over from whatever the last subject left it
+        /// on. <i>"storage and tile are both underlined … it doesn't show what it is holding
+        /// until you click on storage."</i></para>
+        ///
+        /// <para><b>The re-selection is the test, not the first selection.</b> On a virgin pane
+        /// every element is new and defaults happen to read correctly; the fault only appears on
+        /// a structure rebuild, which is what selecting something else and coming back does. A
+        /// test that clicked one shelf once would have passed against the broken code.</para>
+        ///
+        /// <para>Display flags rather than pixels, which is the gap this fills: the fast tier has
+        /// no visual tree and the rest of the Unity tier asserts no appearance, so "the panel is
+        /// built but invisible" was a state nothing in the project could see.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AStoreOpensOnItsStorageTabShowingWhatItHolds()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot);
+            try
+            {
+                yield return WarmUp();
+
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                Assert.That(colony.Pawns.StorageUnits, Is.Not.Null, "the session has no built stores");
+
+                if (!TryRaiseStockedShelf(colony, out int shelfCell))
+                    Assert.Ignore("no cell near the start would take a shelf");
+
+                colony.World.Tick();
+                yield return null;
+
+                var doc = root.GetComponentInChildren<UIDocument>();
+                Assert.That(doc, Is.Not.Null);
+                CellRef at = colony.Grid.Size.FromIndex(shelfCell);
+
+                // First selection, then away, then back: the rebuild is what broke.
+                yield return SelectCell(boot, at);
+                AssertStorePaneReads(doc!, "on first selection");
+
+                yield return SelectCell(boot, new CellRef(at.X, at.Z + 2, at.Y));
+                yield return SelectCell(boot, at);
+                AssertStorePaneReads(doc!, "after selecting away and coming back");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>Select a cell the way a click does, and let the pane answer.</summary>
+        static IEnumerator SelectCell(OdysseyBootstrap boot, CellRef cell)
+        {
+            boot.Directors!.Selection.Pick(cell, default, boot.World!.Views.Current);
+            for (int i = 0; i < 3; i++) yield return null;
+        }
+
+        /// <summary>One tab marked, and the Holding list filled — the two things reported.</summary>
+        static void AssertStorePaneReads(UIDocument doc, string when)
+        {
+            var underlines = doc.rootVisualElement
+                .Query<VisualElement>(name: HudShell.StoreTabUnderlineName).ToList();
+            Assert.That(underlines, Has.Count.EqualTo(2), $"the store's two tabs, {when}");
+
+            int marked = 0;
+            for (int i = 0; i < underlines.Count; i++)
+                if (underlines[i].resolvedStyle.display == DisplayStyle.Flex) marked++;
+            Assert.That(marked, Is.EqualTo(1),
+                $"exactly one tab is underlined, {when} — both were, before ShowActiveTab was called on build");
+
+            VisualElement? holding = doc.rootVisualElement
+                .Q<VisualElement>(name: HudShell.StoreHoldingName);
+            Assert.That(holding, Is.Not.Null, $"the Holding group exists, {when}");
+            Assert.That(holding!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                $"and is shown over a built store, {when}");
+
+            var rows = doc.rootVisualElement
+                .Query<VisualElement>(name: HudShell.StoreHoldingRowName).ToList();
+            int shown = 0;
+            for (int i = 0; i < rows.Count; i++)
+                if (rows[i].resolvedStyle.display == DisplayStyle.Flex
+                    && rows[i].childCount > 0 && rows[i][0] is Label name
+                    && !string.IsNullOrEmpty(name.text)) shown++;
+
+            Assert.That(shown, Is.GreaterThan(0),
+                $"the shelf says what it is holding without being asked twice, {when} — " +
+                "the pooled rows belonged to the tree the rebuild threw away");
+        }
+
+        /// <summary>Raise a wooden shelf on the nearest cell that allows one and put wood on it.</summary>
+        static bool TryRaiseStockedShelf(Odyssey.Sim.Pawns.ColonyWorld colony, out int cell)
+        {
+            cell = -1;
+            CellRef start = colony.Start;
+            GridSize size = colony.Grid.Size;
+
+            for (int radius = 1; radius < 12 && cell < 0; radius++)
+            for (int dz = -radius; dz <= radius && cell < 0; dz++)
+            for (int dx = -radius; dx <= radius && cell < 0; dx++)
+            {
+                if (System.Math.Abs(dx) != radius && System.Math.Abs(dz) != radius) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+
+                int index = size.Index(x, z, start.Y);
+                if (!colony.Construction.Allows(index, BuildingHandle.Shelf)) continue;
+                if (colony.Construction.Place(size.FromIndex(index), BuildingHandle.Shelf, StuffHandle.Wood)
+                    != IntentRejection.None) continue;
+
+                colony.Construction.Raise(colony.Pawns, index);
+                cell = index;
+            }
+
+            if (cell < 0) return false;
+            colony.RebuildDerived();
+
+            Odyssey.Sim.Storage.StorageUnit? unit = colony.Pawns.StorageUnits!.AtCell(cell);
+            if (unit == null) return false;
+
+            // Two bays, so the list has something to say and the count is not one by accident.
+            int wood = Odyssey.Sim.Pawns.ItemIndex.Wood;
+            int full = colony.Pawns.Content.Items[wood].stackLimit;
+            for (int i = 0; i < 2; i++)
+            {
+                ThingId id = colony.Pawns.Items.Spawn(wood, cell, full);
+                Odyssey.Sim.Pawns.ColonyItem? item = colony.Pawns.Items.Get(id);
+                if (item == null) return false;
+                colony.Pawns.StorageUnits!.PutIn(unit, item);
+            }
+
+            return true;
+        }
+
         static IEnumerator WarmUp()
         {
             yield return new WaitForSecondsRealtime(0.3f);

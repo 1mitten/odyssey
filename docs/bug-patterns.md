@@ -352,6 +352,41 @@ two days.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-21 — Both tabs underlined, and the contents invisible until you clicked (P1)
+
+Owner, on the store pane: *"storage and tile are both underlined when you enter the shelve menu.
+It should be just stored and also when you do see menu — it doesn't show what it is holding until
+you click on storage when it should show that soon as you click on the shelve."*
+
+**Two reports, one missing line.** The inspect pane rebuilds its tree when the subject changes, and
+the colonist branch of that builder ends with `ShowActiveTab()`. The store branch never called it.
+Nothing else establishes which tab is live, so:
+
+- the underlines are created **visible** and both stayed lit until a tab was clicked;
+- `_storagePane` and `_cellRowsGrid` kept the display the *previous* subject had left them on, so a
+  store selected after one whose Tile tab you had been reading came up with its Storage tab blank.
+
+**A second fault of the same shape sat underneath it.** The Holding list pools its rows in
+`_storeHoldingRows`, and that list was not cleared on rebuild — unlike `_tabChips` and
+`_storageTabUnderlines` two lines away, which are. So after a rebuild the pool held orphans from the
+discarded tree: the fill loop wrote text into elements with no parent while the list on screen
+stayed empty, and the signature check then decided the rows were already right.
+
+**The general shape: state that must be re-established when structure is rebuilt.** Anything a
+builder creates in a default state — a display flag, a selected index, a pooled list of children —
+is *not* carried by the model, so a rebuild resets some of it and leaks the rest. The question to
+ask of any `Build*` method: *what did the last tree know that this one does not?* Every pooled list
+beside a rebuilt element is a candidate, and the tell is a control that works until you look at
+something else and come back.
+
+**What now stops it:** `HudSmokeTests.AStoreOpensOnItsStorageTabShowingWhatItHolds`, which selects a
+stocked shelf, selects away, and selects it **again** — the first selection passes against the
+broken code, because on a virgin pane the defaults happen to read correctly, so only the
+re-selection is a real test. It asserts *display flags*, which is the gap: the fast tier has no
+visual tree and the rest of the Unity tier asserts no appearance, so "built but invisible" was a
+state nothing in the project could see. Three elements gained names (`HudShell.StoreTabUnderlineName`
+and its two neighbours) so a test can find them without the shell opening up its fields.
+
 ### 2026-09-21 — Every screenshot tool has been photographing an empty sky (P3-adjacent)
 
 Writing `ShelfCheck` to look at the new rack produced four pictures of blue sky with the goods

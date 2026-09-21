@@ -735,6 +735,7 @@ namespace Odyssey.Presentation.Ui
                     // A 3 px rule under the live tab, not a filled pill: the pane is dark and a
                     // pill reads as a button that has been pressed rather than as a place you are.
                     var underline = new VisualElement();
+                    underline.name = StoreTabUnderlineName;
                     underline.style.height = 3;
                     underline.style.backgroundColor = HudTokens.Convert(HudTheme.Accent);
                     column.Add(underline);
@@ -752,6 +753,15 @@ namespace Odyssey.Presentation.Ui
 
                 _inspectBody.Add(strip);
                 BuildStoragePane();
+
+                // **The store's branch owed this and did not pay it**, while the colonist's
+                // branch a few lines up has always called it. Nothing else establishes which tab
+                // is live, so a freshly built strip drew *both* underlines — they are created
+                // visible — and the pane's own display carried over from whatever the last
+                // subject had left it on: select a store, look at its Tile tab, select another,
+                // and the Storage tab came up blank until a tab was clicked. Reported by the
+                // owner on 2026-09-21, as two separate faults that were one missing call.
+                ShowActiveTab();
             }
 
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
@@ -1007,6 +1017,18 @@ namespace Odyssey.Presentation.Ui
         readonly List<VisualElement> _storageTabUnderlines = new List<VisualElement>();
         VisualElement? _storagePane;
 
+        /// <summary>
+        /// Element names the store pane's own tests find it by.
+        ///
+        /// <para>Named rather than reached through the shell's fields, because the alternative is
+        /// making a dozen private elements internal for one test. These three are the ones whose
+        /// <em>visibility</em> is the assertion — which is a thing neither tier could see before
+        /// and which the owner has now had to report twice.</para>
+        /// </summary>
+        public const string StoreTabUnderlineName = "store-tab-underline";
+        public const string StoreHoldingName = "store-holding";
+        public const string StoreHoldingRowName = "store-holding-row";
+
         /// <summary>The Holding group: its header summary, its rows, and the pool they come from.</summary>
         VisualElement? _storeHoldingGroup;
         VisualElement? _storeHoldingList;
@@ -1093,6 +1115,7 @@ namespace Odyssey.Presentation.Ui
             // store is most often asking. It leads the tab because the filter below it answers
             // "what will it take", which is set once, while this changes all day.
             _storeHoldingGroup = new VisualElement();
+            _storeHoldingGroup.name = StoreHoldingName;
             _storeHoldingGroup.style.flexDirection = FlexDirection.Column;
 
             VisualElement holdingHeader = StorageHeaderRow();
@@ -1112,6 +1135,15 @@ namespace Odyssey.Presentation.Ui
 
             _storeHoldingGroup.Add(StorageDivider(0.14f));
             _storagePane.Add(_storeHoldingGroup);
+
+            // **The pool belongs to the tree that has just been thrown away.** Every element
+            // above is new, so the rows remembered from the last build are orphans with no parent
+            // — and the fill loop below would dutifully write text into them while the list on
+            // screen stayed empty. The signature goes with them, or the first sync decides the
+            // rows are already right and returns without adding any. This is the same fault as
+            // the tab underlines above, which is why both lists near them are cleared on build.
+            _storeHoldingRows.Clear();
+            _storeHoldingFilledFor = int.MinValue;
 
             // ---- priority: the section label, and the rung it is on, on one line
             VisualElement priorityHeader = StorageHeaderRow();
@@ -1332,6 +1364,7 @@ namespace Odyssey.Presentation.Ui
             while (_storeHoldingRows.Count < wanted)
             {
                 var row = new VisualElement();
+                row.name = StoreHoldingRowName;
                 row.style.flexDirection = FlexDirection.Row;
                 row.style.alignItems = Align.Center;
                 row.style.paddingTop = 2;
