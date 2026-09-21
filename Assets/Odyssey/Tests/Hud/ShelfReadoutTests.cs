@@ -76,6 +76,7 @@ namespace Odyssey.Tests.Hud
                 Size.Index(At), TerrainHandle.Grass, (byte)EdificeHandle.Shelf, StuffHandle.None, 0,
                 1000, 0,
                 storageZone: -1, storagePriority: priority,
+                storageCells: 1, storageOrdinal: 4,
                 storeKind: CellDetail.StoreShelf, storedStacks: stacks, storeSlots: slots,
                 storedDef: def, storedUnits: units);
 
@@ -91,16 +92,39 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void AShelfOffersTheSameStorageRowAZoneDoes()
+        public void AShelfIsAStoreThePaneIsAbout()
         {
-            // The whole of "reuse the controls": the pane's storage row is what raises the
-            // priority-and-filter panel, and it is gated on there being a store here rather than on
-            // there being a *zone* here.
+            // The whole of "reuse the controls". A click inside a painted store leads with the
+            // store and puts the tile on a second tab; a shelf is a store the player built rather
+            // than painted, and a pane that led with the tile for one and the store for the other
+            // would be the same report arriving a second time.
             InspectModel model = Showing(Shelf(1, 8, (byte)ItemHandle.Wood, 400, StorageRung.Preferred));
 
-            Assert.That(model.StoreUnderPane, Is.True, "the row is armed");
-            Assert.That(RowValue(model, "storage"), Does.Contain("…"),
-                "and it says it can be pressed");
+            Assert.That(model.IsStore, Is.True);
+            Assert.That(model.Title, Is.EqualTo(Registry.Label(PaletteTools.Shelf) + " 4"),
+                "named as a shelf, and numbered in the one series stockpiles are numbered in");
+            Assert.That(model.Subtitle, Is.EqualTo("1 of 8 stacks"),
+                "its extent is how full it is — '1 tile' says nothing about a thing that is always one tile");
+            Assert.That(model.Tabs, Has.Count.EqualTo(2));
+            Assert.That(model.Tabs[0].Name, Is.EqualTo(Registry.Label(InspectModel.TabStorage)));
+            Assert.That(RowValue(model, "storage"),
+                Is.EqualTo(Registry.Label(StorageSettingsModel.PriorityKeys[StorageRung.Preferred])),
+                "the rung is a fact; the settings are the tab");
+        }
+
+        [Test]
+        public void AStockpileIsStillNamedAStockpile()
+        {
+            // The guard against the obvious way to break the line above: naming every store after
+            // whichever kind was added last.
+            var zone = new CellDetail(
+                Size.Index(At), TerrainHandle.Grass, EdificeHandle.None, StuffHandle.None, 0, 1000, 0,
+                storageZone: 0, storagePriority: StorageRung.Normal,
+                storageCells: 9, storageOrdinal: 2, storeKind: CellDetail.StoreZone);
+
+            InspectModel model = Showing(zone);
+            Assert.That(model.Title, Is.EqualTo(Registry.Label(PaletteTools.Stockpile) + " 2"));
+            Assert.That(model.Subtitle, Is.EqualTo("9 tiles"));
         }
 
         [Test]

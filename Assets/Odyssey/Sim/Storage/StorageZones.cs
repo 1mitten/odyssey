@@ -125,6 +125,55 @@ namespace Odyssey.Sim.Storage
         public IReadOnlyList<int> CellsOf(int slot) => _zones.CellsOf(slot);
 
         /// <summary>
+        /// This store's place among the colony's, from 1 — what an unnamed zone is called.
+        ///
+        /// <para>Counted in <b>cell order</b>: how many stores begin at a lower cell than this one.
+        /// A slot index would have been free and is the wrong answer — slots move when a zone
+        /// dissolves, so a store would be renamed by the deletion of an unrelated one across the
+        /// map. Cell order moves only when a store that begins earlier goes, which is at least a
+        /// change the player made near the one they are looking at.</para>
+        ///
+        /// <para>Derived rather than stored, so it is the same on both sides of a save with nothing
+        /// written down. A typed name is what finally stops it drifting.</para>
+        /// </summary>
+        public int OrdinalOf(int slot)
+        {
+            if ((uint)slot >= (uint)_zones.Count) return 0;
+
+            IReadOnlyList<int> mine = _zones.CellsOf(slot);
+            return OrdinalOfCell(mine.Count > 0 ? mine[0] : int.MaxValue);
+        }
+
+        /// <summary>
+        /// What a store beginning at this cell is called: one more than the number of stores that
+        /// begin lower.
+        ///
+        /// <para><b>Both kinds are counted, and that is the whole reason this is separate from
+        /// <see cref="OrdinalOf"/>.</b> A shelf is a store, so it takes its place in the same
+        /// series — "Store 3" has to name exactly one thing, and counting zones and shelves apart
+        /// would give the player two of them.</para>
+        /// </summary>
+        public int OrdinalOfCell(int firstCell)
+        {
+            int ordinal = 1;
+
+            for (int other = 0; other < _zones.Count; other++)
+            {
+                IReadOnlyList<int> cells = _zones.CellsOf(other);
+                if (cells.Count > 0 && cells[0] < firstCell) ordinal++;
+            }
+
+            if (Units != null)
+                for (int u = 0; u < Units.Units.Count; u++)
+                {
+                    StorageUnit unit = Units.Units[u];
+                    if (!unit.Removed && Units.CellOf(unit) < firstCell) ordinal++;
+                }
+
+            return ordinal;
+        }
+
+        /// <summary>
         /// Does this cell accept this def? Answered here rather than by reaching for the settings,
         /// because "there is no zone here" and "the zone here refuses it" are the same answer to
         /// the caller and two different lookups.

@@ -128,6 +128,8 @@ namespace Odyssey.Sim.World
             // is a store that the tool would refuse, or the other way round.
             int storageZone = -1;
             byte storagePriority = 0;
+            int storageCells = 0;
+            int storageOrdinal = 0;
             byte storeKind = CellDetail.StoreNone;
             byte storedStacks = 0, storeSlots = 0, storedDef = 255;
             int storedUnits = 0;
@@ -139,6 +141,8 @@ namespace Odyssey.Sim.World
                 {
                     storageZone = slot;
                     storagePriority = (byte)_storage.SettingsOf(slot).Priority;
+                    storageCells = _storage.CellsOf(slot).Count;
+                    storageOrdinal = _storage.OrdinalOf(slot);
                     storeKind = CellDetail.StoreZone;
                 }
             }
@@ -153,6 +157,11 @@ namespace Odyssey.Sim.World
                 storagePriority = (byte)_units!.PriorityOf(unit);
                 storeSlots = (byte)unit.Slots;
                 storedStacks = (byte)_units.StacksIn(unit);
+
+                // One cell, and a place in the same numbered series the zones use: "Store 3" has to
+                // name exactly one store whether it was painted or raised.
+                storageCells = 1;
+                storageOrdinal = _storage?.OrdinalOfCell(_units.CellOf(unit)) ?? 0;
 
                 // One commodity, or none. A shelf holding several kinds says only how full it is,
                 // because a pane row that listed them would be the storage panel said twice.
@@ -174,7 +183,7 @@ namespace Odyssey.Sim.World
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
-                storageZone, storagePriority,
+                storageZone, storagePriority, storageCells, storageOrdinal,
                 storeKind, storedStacks, storeSlots, storedDef, storedUnits));
         }
     }

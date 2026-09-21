@@ -800,6 +800,19 @@ namespace Odyssey.Sim.Pawns
         /// not the radius.
         /// </summary>
         const int ClearanceBias = 50;
+
+        /// <summary>
+        /// How far the search for somewhere to set an unwanted load down may reach: twelve cells,
+        /// which is what it takes to get out of the middle of a field - or of a warehouse - that
+        /// a player would actually paint. A three-cell ring found only dirt inside a field six
+        /// tiles across, and that measurement is what set it. Where even twelve finds nothing the
+        /// thing stays where it is: a board packed that solid is one nothing in the game can
+        /// produce, and the alternative is a hauler walking the map for a rock.
+        ///
+        /// <para>One constant for both clearance cases, because the moment they disagree one of
+        /// them is the wrong answer to the same question.</para>
+        /// </summary>
+        const int ClearanceRadius = 12;
         /// <summary>
         /// A hauler with its arms full is not a colonist: the mode is fixed for the whole job,
         /// and the scan tests reachability in the <em>same</em> mode the job will walk in. A scan
@@ -808,35 +821,69 @@ namespace Odyssey.Sim.Pawns
         const TraverseMode Mode = TraverseMode.Hauler;
 
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job) =>
-            TryHaul(pawn, ctx, job, ctx.Items.LooseItems, restow: false) ||
-            TryHaul(pawn, ctx, job, ctx.Items.StoredItems, restow: true) ||
-            // Contained last, for the reason stored is second: taking a thing back out of a store
-            // is a lower job than tidying the floor. It is what lets a shelf be re-stowed *out of*
-            // — into a better store, or on to the ground when the shelf is coming apart — and the
-            // whole of "a shelf being emptied gives up its contents" falls out of it, because
-            // CurrentPriority ranks an emptying shelf's contents below every real store.
-            TryHaul(pawn, ctx, job, ctx.Items.ContainedItems, restow: true);
+            TryHaul(pawn, ctx, job, restow: false) ||
+            TryHaul(pawn, ctx, job, restow: true);
 
-        static bool TryHaul(Pawn pawn, PawnContext ctx, Job job, IReadOnlyList<int> lister, bool restow)
+        /// <summary>
+        /// One pass of the scan. The <em>first</em> walks the loose things and the things a store
+        /// refuses; the second walks the things a store is content to hold, which is the tidying.
+        ///
+        /// <para><b>The two listers are walked as one because a refused thing belongs in neither
+        /// on its own.</b> <see cref="ColonyItems"/> buckets by whether a cell is inside a zone,
+        /// which is the question it can answer cheaply, so a thing whose store refuses it is
+        /// bucketed stored - while by <see cref="StoredPriority"/>'s own words it "is not stored
+        /// at all, only in the way". Leaving it in the tidying pass is what left a rock sitting
+        /// in a meals-only stockpile for ever (owner, 2026-09-21), because that pass runs only
+        /// when nothing loose is waiting, and a busy colony always has something loose.
+        /// Re-bucketing on every filter edit was the other answer and is the worse one: it would
+        /// make <c>ColonyItems</c>' buckets depend on the filter table, so ticking one commodity
+        /// would have to walk a zone's items and a save would have to agree about which lister
+        /// each thing was in.</para>
+        /// </summary>
+        static bool TryHaul(Pawn pawn, PawnContext ctx, Job job, bool restow)
         {
             var items = ctx.Items.Items;
+            IReadOnlyList<int> loose = ctx.Items.LooseItems;
+            IReadOnlyList<int> stored = ctx.Items.StoredItems;
+
+            // The third lister: things inside a built store. They are walked with the stored ones
+            // and split by the same question, because a shelf that refuses a thing and a stockpile
+            // cell that refuses it are the same sentence — and a store being *emptied* refuses
+            // everything in it, which is how "a shelf ordered taken apart gives up its contents"
+            // falls out of a rule that was already here rather than out of a pass of its own.
+            IReadOnlyList<int> contained = ctx.Items.ContainedItems;
+
+            int held = stored.Count + contained.Count;
+            int count = restow ? held : loose.Count + held;
 
             int bestItem = -1;
             int bestDest = -1;
             int bestFrom = -1;
             int bestDistance = int.MaxValue;
 
-            for (int i = 0; i < lister.Count; i++)
+            for (int i = 0; i < count; i++)
             {
-                var item = items[lister[i]];
+                int inHeld = restow ? i : i - loose.Count;
+                bool isStored = inHeld >= 0;
+                int index = !isStored ? loose[i]
+                    : inHeld < stored.Count ? stored[inHeld]
+                    : contained[inHeld - stored.Count];
+
+                var item = items[index];
                 if (item.Despawned || item.Forbidden) continue;
 
                 // Where it is, which is now three questions and not two. A thing in a pair of
-                // hands answers -1 and is skipped exactly as before; a thing in a store answers
-                // the store's cell, which is where a colonist walks to reach it.
+                // hands answers -1 and is skipped exactly as `Cell < 0` used to skip it; a thing
+                // in a store answers the store's cell, which is where a colonist walks to reach
+                // it.
                 int at = ctx.WhereIs(item);
                 if (at < 0) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;
+
+                // Which pass this stored thing belongs to. A loose thing is never refused -
+                // there is no filter over bare ground - so the question is asked only of the
+                // stored lister.
+                if (isStored && Refused(ctx, item) == restow) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
@@ -859,40 +906,38 @@ namespace Odyssey.Sim.Pawns
                     slot = StorageSlot.None;
                 int dest = slot.Stand;
 
-                // A thing on tilled soil that no stockpile will take still has to come off the
-                // dirt - the sowing of its cell is waiting on it, and a full store is not a
-                // reason for a field to stand idle (owner, 2026-09-20: "the colonists didn't
-                // remove the stone from the dirt tile and didn't bother sowing and nothing
-                // happened"). It goes to the nearest free cell outside every zone, and becomes
-                // an ordinary pile there: the stockpile's business again once it has room.
-                if (dest < 0 && !restow && ctx.Growing != null &&
-                    ctx.Growing.ZonePlantAt(at) >= 0)
-                    dest = ctx.Items.NearestCellWithSpace(
-                        ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: 12,
-                        accept: ctx.NotZoned);
-
-                // **A store being emptied gives its contents up to the floor when no other store
-                // will take them**, and without this the order deadlocks: the contents rank below
-                // every real store, so they want to leave, but with nowhere better to go the scan
-                // finds no destination and they stay — while the deconstruct gate refuses to take
-                // the store apart until they have gone. Nothing moves and nothing says why.
+                // A thing that is in the way and that no store will take still has to come off
+                // the cell it is spoiling. Three cases, one rule:
                 //
-                // Hauled out rather than spilled, deliberately. The same load ends up on the same
-                // sort of cell either way, but a colonist carries it, which is the difference
-                // between a colony emptying a shelf and a shelf emptying itself.
-                if (dest < 0 && item.ContainerId != 0 && ctx.StorageUnits != null)
-                {
-                    Storage.StorageUnit? from = ctx.StorageUnits.ByContainerId(item.ContainerId);
-                    if (from != null && ctx.StorageUnits.IsEmptying(from))
-                        dest = ctx.Items.NearestCellWithSpace(
-                            ctx.Cells, at, item.DefIndex, item.Stack,
-                            maxRadius: Storage.StorageUnits.SpillRadius);
-                }
-
+                //   - on tilled soil, where the sowing of the cell is waiting on it and a full
+                //     store is not a reason for a field to stand idle (owner, 2026-09-20: "the
+                //     colonists didn't remove the stone from the dirt tile and didn't bother
+                //     sowing and nothing happened");
+                //   - inside a store that refuses it, where it is holding a cell the player set
+                //     aside for something else and no amount of waiting will make the store want
+                //     it (owner, 2026-09-21: "I expect the colonists to ensure that all those
+                //     tiles are occupied by meals or nothing, not leave rocks in there");
+                //   - inside a store that is being taken apart, which refuses everything for the
+                //     same reason: waiting will not help, because the store is going.
+                //
+                // **The third case is what stops an ordered shelf deadlocking.** Its contents rank
+                // below every real store so they want to leave, but with nowhere better to go the
+                // scan finds no destination and they stay — while the deconstruct gate refuses to
+                // remove the shelf until they have gone. Nothing moves and nothing says why.
+                //
+                // It goes to the nearest cell that neither wants to be empty nor refuses it, and
+                // becomes an ordinary pile there: a stockpile's business again the moment one
+                // has room for it. Hauled out rather than spilled, deliberately — the load ends on
+                // the same sort of cell either way, but a colonist carries it, which is the
+                // difference between a colony emptying a shelf and a shelf emptying itself.
+                if (dest < 0 && !restow && InTheWay(ctx, item))
+                    dest = ctx.Items.NearestCellWithSpace(
+                        ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: ClearanceRadius,
+                        accept: ctx.OpenGroundFor(item.DefIndex));
                 if (dest < 0) continue;
 
                 bestDistance = distance;
-                bestItem = lister[i];
+                bestItem = index;
                 bestDest = dest;
                 bestFrom = at;
             }
@@ -912,10 +957,58 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// The priority a stored thing already enjoys, which a re-stow has to beat. A thing lying
-        /// in a pile whose filter no longer accepts it is not stored at all, only in the way,
-        /// and any pile that does accept it is better: the implicit "unstored" priority below
-        /// every real one that a-14 §1 infers.
+        /// Is this thing lying in a store whose filter refuses it? Such a thing is not stored at
+        /// all, only in the way: it is scanned in the first pass beside the loose things, and it
+        /// is carried out to open ground when no store will have it.
+        ///
+        /// <para>A cell in no zone answers false, which is why the loose lister never has to be
+        /// asked.</para>
+        /// </summary>
+        static bool Refused(PawnContext ctx, ColonyItem item)
+        {
+            // A built store, which is also the only case that can answer "yes" about a thing with
+            // no cell at all. **A store being taken apart refuses everything in it**, which is not
+            // a special case bolted on: it is the same sentence as a filter refusing a thing —
+            // this store will not have it and waiting will not change that — and putting it here
+            // rather than in a pass of its own is what gives an emptying shelf the urgent pass and
+            // the clearance fallback for free.
+            if (item.ContainerId != 0)
+            {
+                Storage.StorageUnits? units = ctx.StorageUnits;
+                Storage.StorageUnit? holding = units?.ByContainerId(item.ContainerId);
+                if (holding == null) return false;
+
+                return units!.IsEmptying(holding) || !units.Accepts(holding, item.DefIndex);
+            }
+
+            var zones = ctx.Storage;
+            return zones != null
+                && zones.IsStorage(item.Cell)
+                && !zones.Accepts(item.Cell, item.DefIndex);
+        }
+
+        /// <summary>
+        /// Is this thing spoiling the cell it lies in - standing on soil somebody wants to sow,
+        /// or squatting in a store that will not have it? The question the clearance fallback
+        /// asks, and the one place the two cases are named together.
+        /// </summary>
+        static bool InTheWay(PawnContext ctx, ColonyItem item) =>
+            // The soil question is asked only of a thing actually lying on some: a contained thing
+            // has no cell, and the shelf's own cell is not what is being sown.
+            (item.Cell >= 0 && ctx.Growing != null && ctx.Growing.ZonePlantAt(item.Cell) >= 0)
+            || Refused(ctx, item);
+
+        /// <summary>
+        /// The priority a stored thing already enjoys, which a re-stow has to beat: the implicit
+        /// "unstored" rank below every real one that a-14 §1 infers, for anything no store is
+        /// holding.
+        ///
+        /// <para>Only ever asked of a thing its own store accepts, because <see cref="Refused"/>
+        /// takes the others out of the re-stow pass one loop above. The filter test is kept all
+        /// the same, so that the function is a true answer to its own question rather than one
+        /// that depends on its caller: it is a single lookup, and a re-stow that compared against
+        /// a priority a refused thing does not actually have would shuttle it between piles for
+        /// ever.</para>
         /// </summary>
         static int CurrentPriority(PawnContext ctx, ColonyItem item)
         {

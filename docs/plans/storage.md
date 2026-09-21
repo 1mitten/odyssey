@@ -811,7 +811,7 @@ disagrees.
 | 31 | **Decision 21 confirmed: the tri-state tree is deferred out of S1.** `ItemDef.category` and the six registry rows still land in S1. |
 | 32 | **Spoilage is its own unit, its own interview, after S2.** Not a rider on a storage branch. |
 
-**S2 is built, 2026-09-21** — `claude/storage-shelves`, `docs/design/28-shelves.md`. The container is
+**S2 is built, 2026-09-21** — `claude/storage-shelves`, `docs/design/30-shelves.md`. The container is
 a **Shelf** rather than a Crate, because `ui.arch.tool.shelf` already existed in the registry, in the
 icon map, as a glyph and as a dim chip in the palette's Furniture row; decisions 37–47 are the third
 interview round and are recorded in the design doc rather than here. Everything §7 predicted held

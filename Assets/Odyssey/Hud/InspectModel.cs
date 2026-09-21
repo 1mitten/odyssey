@@ -59,8 +59,23 @@ namespace Odyssey.Hud
         /// <summary>0 none, 1 minor, 2 major.</summary>
         public int Passion;
 
-        /// <summary>Experience in thousandths of a point, for a progress bar when one is wanted.</summary>
+        /// <summary>Experience in thousandths of a point. The absolute total, which nothing draws
+        /// today: the bar is drawn from <see cref="Progress"/>, because the ladder that turns one
+        /// into the other is simulation content.</summary>
         public int Experience;
+
+        /// <summary>
+        /// How far this skill stands towards its next level, per mille — the bar (SK2).
+        ///
+        /// <para><b>Derived by the simulation, not here.</b> The denominator is
+        /// <c>SkillDef.experienceToAdvance</c>, tuning content that a mod is meant to be able to
+        /// override; a copy of it in this assembly would be a second source of truth for it. So
+        /// this arrives already divided, the way <see cref="Level"/> does.</para>
+        ///
+        /// <para>Full at the top level, where there is no next one to be part of the way
+        /// towards.</para>
+        /// </summary>
+        public int Progress;
 
         public string Reason;
         public string Note;
@@ -274,7 +289,7 @@ namespace Odyssey.Hud
             Tabs.Clear();
             Commands.Clear();
             _bedUnderPane = false;
-            _storeUnderPane = false;
+            IsStore = false;
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -512,30 +527,77 @@ namespace Odyssey.Hud
 
             Subtitle = "cell";
 
+            // **A click inside a store is about the store.** The pane titles the zone, says how big
+            // it is, and offers the tile's own facts on a second tab — which is the whole of the
+            // owner's report that a stockpile "reads as though it belongs to a single tile"
+            // (design brief, 2026-09-21; docs/design/26-storage.md §9).
+            //
+            // The subject stays `Cell`, deliberately: everything below still describes the tile, a
+            // zone has no identity a selection could hold on to across an edit, and the pick
+            // resolver goes on answering in cells. What changes is what the pane leads with.
+            // **Either kind of store**, since 2026-09-21: a shelf is a store the player built
+            // rather than painted, and a pane that led with the tile for one and with the store for
+            // the other would be the same report arriving a second time. The ordinal is one series
+            // across both, so "Shelf 3" and "Stockpile 3" can never be the same store.
+            IsStore = detail.StoreKind != CellDetail.StoreNone;
+            if (IsStore)
+            {
+                bool built = detail.StoreKind == CellDetail.StoreShelf;
+                StoreCells = detail.StorageCells;
+
+                string storeKey = built ? PaletteTools.Shelf : PaletteTools.Stockpile;
+                Title = $"{Registry.Label(storeKey)} {detail.StorageOrdinal}";
+                CellIconKey = storeKey;
+
+                // A zone's extent is its tiles; a shelf's is how full it is, because "1 tile" says
+                // nothing at all about a thing that is always one tile.
+                Subtitle = built
+                    ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks"
+                    : StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
+                // Named from the registry, not written here. "Tile" is already the name of a floor
+                // covering in `ui.arch.tool.tile`, so a literal would have been a second copy of a
+                // name the wiki owns — which `RegistryTests` said, and the answer to that test is
+                // never to reword.
+                Tabs.Add(new InspectTab { Name = Registry.Label(TabStorage), Enabled = true, Reason = string.Empty });
+                Tabs.Add(new InspectTab { Name = Registry.Label(TabTile), Enabled = true, Reason = string.Empty });
+                if (ActiveTab < 0 || ActiveTab >= Tabs.Count) ActiveTab = 0;
+            }
+
             string edifice = EdificeLabels.Title(detail.Edifice);
             string terrain = TerrainLabels.Label(detail.Terrain);
+
+            // What the tile itself is called. Computed either way, because the Tile tab says it
+            // even when the store's name is what the header carries.
+            string tileTitle;
+            string tileIcon;
             if (edifice.Length > 0)
             {
-                Title = edifice;
-                CellIconKey = EdificeLabels.IconKey(detail.Edifice);
+                tileTitle = edifice;
+                tileIcon = EdificeLabels.IconKey(detail.Edifice);
             }
             else if (detail.FloorStuff != StuffHandle.None)
             {
                 string stuff = BuildLabels.Stuff(detail.FloorStuff);
-                Title = stuff.Length == 0
+                tileTitle = stuff.Length == 0
                     ? "Built floor"
                     : char.ToUpperInvariant(stuff[0]) + stuff.Substring(1) + " floor";
-                CellIconKey = BuildLabels.StuffKey(detail.FloorStuff);
+                tileIcon = BuildLabels.StuffKey(detail.FloorStuff);
             }
             else if (terrain.Length > 0)
             {
-                Title = terrain;
-                CellIconKey = TerrainLabels.IconKey(detail.Terrain);
+                tileTitle = terrain;
+                tileIcon = TerrainLabels.IconKey(detail.Terrain);
             }
             else
             {
-                Title = "Ground";
-                CellIconKey = "ui.overlay.zones";
+                tileTitle = "Ground";
+                tileIcon = "ui.overlay.zones";
+            }
+
+            if (!IsStore)
+            {
+                Title = tileTitle;
+                CellIconKey = tileIcon;
             }
 
             SetCellRows(snapshot, detail);
@@ -571,7 +633,7 @@ namespace Odyssey.Hud
         int _cellRowsStoragePriority;
 
         static int StoragePriorityOf(CellDetail detail) =>
-            detail.StorageZone >= 0 ? detail.StoragePriority + 1 : 0;
+            detail.StoreKind != CellDetail.StoreNone ? detail.StoragePriority + 1 : 0;
 
         int _cellRowsZonePlant;
         int _cellRowsZoneYield;
@@ -589,14 +651,27 @@ namespace Odyssey.Hud
         bool _bedUnderPane;
 
         /// <summary>
-        /// Whether the tile under the pane is inside a storage zone, so its storage row can be
-        /// pressed — the pane's second interactive fact, and the way a player says what a store
-        /// takes. Cleared and set on the same cadence as <see cref="BedUnderPane"/>, so a stale
-        /// true cannot outlive the zone it described.
+        /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
+        /// title is the zone's, the subtitle is its extent, and there are two tabs with Storage
+        /// first and the tile's own facts second.
         /// </summary>
-        public bool StoreUnderPane => _storeUnderPane;
+        public bool IsStore { get; private set; }
 
-        bool _storeUnderPane;
+        /// <summary>
+        /// How many cells the store covers — the extent the pane's title line carries.
+        ///
+        /// <para>The only one of these the pane turned out to need. <c>StorePriority</c> and
+        /// <c>StoreTileTitle</c> were written beside it for a header chip and a Tile-tab title
+        /// that were never built, and were set on every refresh and read by nothing until they
+        /// were taken out on 2026-09-21. A property whose doc comment describes a feature that
+        /// does not exist is the most expensive kind of dead code: it reads as a contract.</para>
+        /// </summary>
+        public int StoreCells { get; private set; }
+
+        /// <summary>The two tabs a store's pane carries, by registry key. The shell compares against these rather than against words.</summary>
+        public const string TabStorage = "ui.tab.storage";
+
+        public const string TabTile = "ui.tab.tile";
 
         /// <summary>
         /// The cell the pane is describing, for whoever must name it back to the world — the
@@ -642,7 +717,7 @@ namespace Odyssey.Hud
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
-            _storeUnderPane = detail.StoreKind != CellDetail.StoreNone;
+
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -732,11 +807,11 @@ namespace Odyssey.Hud
             // follows it, because a zone has no name until storage groups arrive (S2) and "how
             // big" is the only other thing that tells two of them apart.
             if (detail.StoreKind != CellDetail.StoreNone)
-                // "…" for the same reason the bed's owner row carries "Assign…": a row that can be
-                // pressed has to say it is one. That row looked exactly like the facts above and
-                // below it for two days and the owner could not find the feature at all.
+                // A fact, not a control: the settings are a tab of their own since 2026-09-21, so
+                // this row says which rung the store is on and nothing opens from it. Two ways in
+                // to one panel is the one a player finds by accident.
                 Row(n++, "storage",
-                    Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]) + " …");
+                    Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]));
 
             // What a built store is actually holding, which a painted one has no equivalent of:
             // its cells are the board and what is on them is read off the board.
@@ -849,6 +924,7 @@ namespace Odyssey.Hud
                     row.Level = 0;
                     row.Passion = 0;
                     row.Experience = 0;
+                    row.Progress = 0;
                 }
                 Skills[i] = row;
             }
@@ -873,6 +949,7 @@ namespace Odyssey.Hud
                     if (aspect.Key == entry.Level) row.Level = aspect.Value;
                     else if (aspect.Key == entry.Passion) row.Passion = aspect.Value;
                     else if (aspect.Key == entry.Experience) row.Experience = aspect.Value;
+                    else if (aspect.Key == entry.Progress) row.Progress = aspect.Value;
                     else continue;
                     Skills[r] = row;
                 }

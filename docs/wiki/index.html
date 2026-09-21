@@ -151,8 +151,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#work">Work and skills<b>42</b></a></li>
 <li><a href="#colonists">Colonists<b>36</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>39</b></a></li>
-<li><a href="#world">World and interface<b>92</b></a></li>
+<li><a href="#events">Events<b>40</b></a></li>
+<li><a href="#world">World and interface<b>94</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>698</b><i>named entries</i></div>
+<div class="stat"><b>704</b><i>named entries</i></div>
 <div class="stat"><b>270</b><i>with icon art</i></div>
-<div class="stat m"><b>428</b><i>no art yet</i></div>
+<div class="stat m"><b>434</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2142,8 +2142,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">39 entries</em></h2>
-<p class="blurb">Alerts are conditions that persist until fixed. Bulletins are things that happened. Both carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
+<h2>Events <em class="count">40 entries</em></h2>
+<p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -2386,10 +2386,20 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">M2</div>
 </div>
 </div>
+<h3 class="nsh">Toasts</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.toast.skillup" data-hay="{name} has reached {skill} {level} ui.toast.skillup a colonist's skill has gone up a level " data-gap="1">
+<div class="nm">{name} has reached {skill} {level}<span class="k">ui.toast.skillup</span></div>
+<div class="dsc">A colonist's skill has gone up a level</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M2</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">92 entries</em></h2>
+<h2>World and interface <em class="count">94 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2751,6 +2761,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Save, load, settings, quit<span class="need">Needs drawing: a settings or menu mark</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.tab.storage" data-hay="storage ui.tab.storage what a store takes, and how much it matters an open crate seen from above" data-gap="1">
+<div class="nm">Storage<span class="k">ui.tab.storage</span></div>
+<div class="dsc">What a store takes, and how much it matters<span class="need">Needs drawing: an open crate seen from above</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.tab.tile" data-hay="tile ui.tab.tile the ground itself, under whatever is standing on it a single square of ground, in plan" data-gap="1">
+<div class="nm">Tile<span class="k">ui.tab.tile</span></div>
+<div class="dsc">The ground itself, under whatever is standing on it<span class="need">Needs drawing: a single square of ground, in plan</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
 </div>
 </div>
 <h3 class="nsh">Game speed</h3>
@@ -3159,7 +3181,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 698, "gaps": 428};</script>
+<script>window.WIKI={"total": 704, "gaps": 434};</script>
 <script>
 (function(){
   var D = window.WIKI;

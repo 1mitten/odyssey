@@ -1,8 +1,8 @@
 # Events
 
-Alerts are conditions that persist until fixed. Bulletins are things that happened. Both carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
+Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
 
-39 entries, 15 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+40 entries, 16 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -52,6 +52,12 @@ Alerts are conditions that persist until fixed. Bulletins are things that happen
 | **Crash** | `ui.bulletin.crash` | Something has come down nearby <br>**Needs:** a crashed ship or drop pod | no art | M2 |
 | **Supply drop** | `ui.bulletin.supplydrop` | Something has fallen from the sky. Fetch it before the weather does <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
 | **Birth** | `ui.bulletin.birth` | A tame animal has given birth <br>**Needs:** a newborn animal | no art | M2 |
+
+## Toasts
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **{name} has reached {skill} {level}** | `ui.toast.skillup` | A colonist's skill has gone up a level | no art | M2 |
 
 ---
 

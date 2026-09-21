@@ -307,6 +307,7 @@ ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
 ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
+ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
 ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
 ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us
@@ -467,6 +468,8 @@ ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, 
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
+ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
+ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
 ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"
 ui.settings.detail,Detail,ui.settings,M3,"What the board is drawn with. None of it reaches the simulation"
 ui.settings.vsync,VSync,ui.settings,M3,"Match the screen's refresh rate. Stops tearing, and paces the frame"
@@ -504,6 +507,7 @@ ui.newgame.size,Board size,ui.newgame,MS,"How much ground the colony has to grow
 ui.newgame.size.small,Small,ui.newgame,MS,"80 x 80. Close quarters"
 ui.newgame.size.standard,Standard,ui.newgame,MS,"120 x 120. The board every measurement was taken on"
 ui.newgame.size.large,Large,ui.newgame,MS,"180 x 180, and deeper. Room to spread out"
+ui.newgame.size.huge,Huge,ui.newgame,MS,"240 x 240. Twice the ground of the standard board"
 ui.newgame.title,New game,ui.newgame,MS,"The board and the people, before anything is built"
 ui.newgame.skills,Skills,ui.newgame,MS,"What this candidate can already do, and what they care about"
 ui.newgame.traits,Traits,ui.newgame,MS,"What this candidate is like. Empty until traits exist"
@@ -697,3 +701,5 @@ ui.res.category.materials,Materials,ui.res.category,M3,"What things are made of,
 ui.res.category.books,Books,ui.res.category,M3,Research obtained elsewhere rather than worked out here
 ui.res.category.items,Items,ui.res.category,M3,"Made things that are carried, worn or used"
 ui.res.category.weapons,Weapons,ui.res.category,M3,What a colonist fights with
+ui.tab.storage,Storage,ui.tab,M3,"What a store takes, and how much it matters"
+ui.tab.tile,Tile,ui.tab,M3,"The ground itself, under whatever is standing on it"

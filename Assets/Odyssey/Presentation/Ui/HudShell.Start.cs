@@ -318,7 +318,7 @@ namespace Odyssey.Presentation.Ui
             reroll.AddToClassList("setup__inline");
             board.Add(reroll);
 
-            // One control that cycles rather than three rows: there are three sizes and a player
+            // One control that cycles rather than a row each: there are few sizes and a player
             // picking one is cycling, not navigating.
             var size = new VisualElement();
             size.AddToClassList("setup__size");
@@ -798,6 +798,12 @@ namespace Odyssey.Presentation.Ui
             bool playing = live != null;
             _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
             _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
+
+            // The toast stack belongs to a colony and goes away with it (SK4). Not for the rows —
+            // those expire on their own — but for the levels the watch is holding: nothing steps
+            // it while there is no world, so without this the next colony's PawnId 1 is measured
+            // against the last one's and announces a level she arrived with.
+            _toasts.Clear();
 
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {

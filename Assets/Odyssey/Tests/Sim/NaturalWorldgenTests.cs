@@ -684,6 +684,56 @@ namespace Odyssey.Tests.Sim
             Assert.That(median, Is.LessThan(2_000), $"M1 generation budget: {WorldgenTests.Listed(times)}");
         }
 
+        /// <summary>
+        /// Every board the menu offers generates, on five seeds each, and says what it made.
+        ///
+        /// <para><b>This is the first thing that can veto a bigger board, and it is seed-shaped.</b>
+        /// Several generator knobs are per-map absolutes while the feature densities beside them
+        /// are per-area: <c>minReachablePercent</c> and <c>maxForcedFords</c> are whole-map
+        /// numbers, <c>pondsPer10000Columns</c> is not. So Huge draws roughly four times the
+        /// ponds against the same three-ford budget, and <c>EnsureReachable</c> throws
+        /// "The water shapes have severed the map" when the water wins. Seed 1 proves nothing
+        /// about that; five seeds per board is the cheapest thing that does, and it costs about a
+        /// second in the fast tier.</para>
+        ///
+        /// <para>It prints rather than budgets. The one assertion is that every pass ran and the
+        /// board is not empty of the things a colony needs — a generator that quietly produced a
+        /// featureless plain would otherwise report beautiful timings.</para>
+        /// </summary>
+        [Test]
+        public void EveryOfferedBoardGenerates(
+            [ValueSource(nameof(OfferedBoards))] GridSize size)
+        {
+            var times = new List<long>();
+            NaturalMapResult? last = null;
+
+            for (uint seed = 1; seed <= 5; seed++)
+            {
+                var grid = new CellGrid(size);
+                var watch = Stopwatch.StartNew();
+                last = NaturalMapGenerator.Generate(grid, seed, NaturalMapGenDef.For(size));
+                watch.Stop();
+                times.Add(watch.ElapsedMilliseconds);
+
+                Assert.That(last.Report.PassesRun, Is.EqualTo(NaturalMapGenerator.PassCount),
+                    $"seed {seed} on {size} stopped early");
+                Assert.That(last.Report.Trees, Is.GreaterThan(0), $"seed {seed} on {size} is bare");
+            }
+
+            TestContext.WriteLine(
+                $"[Board] {size}: {size.CellCount:N0} cells, generation median " +
+                $"{WorldgenTests.Median(times)} ms of {WorldgenTests.Listed(times)} — {last!.Report}");
+        }
+
+        /// <summary>The boards <c>MapSizes</c> offers, mirrored in <see cref="BoardSizes"/>.</summary>
+        static IEnumerable<GridSize> OfferedBoards()
+        {
+            yield return BoardSizes.Small;
+            yield return BoardSizes.Standard;
+            yield return BoardSizes.Large;
+            yield return BoardSizes.Huge;
+        }
+
         // ---------------------------------------------------------------- helpers
 
         static NaturalMapResult GenerateWith(uint seed, Action<NaturalMapGenDef> tune)

@@ -837,13 +837,31 @@ namespace Odyssey.Sim.Contracts
         /// <summary>The store's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StoreKind"/> is 0.</summary>
         public readonly byte StoragePriority;
 
+        /// <summary>How many cells the store covers — the extent the pane's title line carries.</summary>
+        public readonly int StorageCells;
+
+        /// <summary>
+        /// The store's place among the colony's stores, from 1 — what an unnamed zone is called.
+        ///
+        /// <para>Counted in <b>cell order</b>: how many stores begin at a lower cell than this one.
+        /// Deterministic, the same on both sides of a save, and nothing is written down for it. The
+        /// price is that deleting an earlier store renumbers the later ones, which a typed name
+        /// will fix; until then the number the pane says and the number the board says are the same
+        /// number, which is the property that matters.</para>
+        /// </summary>
+        public readonly int StorageOrdinal;
+
         /// <summary>
         /// What kind of store covers this cell: 0 none, 1 a painted zone, 2 a built one.
         ///
         /// <para><b>A byte rather than "a capacity of nought means a zone".</b> The pane says
-        /// different words for the two — a zone is so many tiles, a shelf is so many stacks of so
-        /// many — and deriving the kind from a magic zero is how a shelf with nothing in it comes
-        /// to read as a stockpile.</para>
+        /// different words for the two — a zone is so many tiles, a shelf so many of its stacks in
+        /// use — and deriving the kind from a magic zero is how a shelf with nothing in it comes to
+        /// read as a stockpile.</para>
+        ///
+        /// <para><see cref="StorageCells"/> and <see cref="StorageOrdinal"/> are answered for both
+        /// kinds: a shelf is one cell and takes its place in the same cell-ordered count, so
+        /// "Store 3" means the third store on the board whether it was painted or raised.</para>
         /// </summary>
         public readonly byte StoreKind;
 
@@ -870,11 +888,14 @@ namespace Odyssey.Sim.Contracts
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
             bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
+            int storageCells = 0, int storageOrdinal = 0,
             byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
             byte storedDef = 255, int storedUnits = 0)
         {
             StorageZone = storageZone;
             StoragePriority = storagePriority;
+            StorageCells = storageCells;
+            StorageOrdinal = storageOrdinal;
             StoreKind = storeKind;
             StoredStacks = storedStacks;
             StoreSlots = storeSlots;
