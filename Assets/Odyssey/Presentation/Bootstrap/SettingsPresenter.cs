@@ -105,6 +105,16 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The leave prompt is modal and has no text field to own the key, so it is answered
+            // here, above everything else Escape could mean. Escape over a modal means the modal
+            // (`17-start-flow.md` §13), and cancelling is its safe answer: a key press must never
+            // be the thing that throws a colony away.
+            if (_shell != null && _shell.LeavePromptOpen)
+            {
+                if (keys.escapeKey.wasPressedThisFrame) _shell.CancelLeavePrompt();
+                return;
+            }
+
             // A text field has the keyboard, so Escape belongs to it: it backs out of the name
             // being typed, not out of whatever is open behind the prompt. The field registers for
             // the key itself (HudShell.TakesTheKeyboard), which is why this is a return rather
@@ -121,7 +131,10 @@ namespace Odyssey.Presentation.Bootstrap
                         _shell != null && _shell.BuildPaletteOpen,
                         _shell != null && _shell.MenuOpen,
                         _bootstrap?.Directors?.Work.Open == true,
-                        _bootstrap?.Directors?.Almanac.Open == true))
+                        _bootstrap?.Directors?.Almanac.Open == true,
+                        // Null while a colony is running: the main screen and the game are the two
+                        // halves of a session's life and only one of them is ever up.
+                        _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
@@ -151,8 +164,16 @@ namespace Odyssey.Presentation.Bootstrap
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);
                     break;
+                case EscapeAction.MenuBack:
+                    // The main screen's Load and New game screens. Until this rung existed Escape
+                    // fell past them to OpenPanel and laid the settings window over the load list
+                    // (owner, 2026-09-21).
+                    _shell?.Menu.Back();
+                    break;
                 case EscapeAction.OpenPanel:
                     _director.SetOpen(true);
+                    break;
+                case EscapeAction.Nothing:
                     break;
             }
         }
@@ -434,8 +455,21 @@ namespace Odyssey.Presentation.Bootstrap
         /// is a no-op, and a settings row that did nothing when clicked would be a row that
         /// taught the player not to trust it.
         /// </summary>
+        /// <summary>
+        /// The exit row was confirmed. Leaving the application is this component's job and always
+        /// has been — except while a colony is running.
+        ///
+        /// <para><b>Then the shell asks first</b> (owner, 2026-09-21: *"when you quit the game (to
+        /// main menu or to desktop) it should confirm to save before you exit"*). The shell raises
+        /// <c>LeavePrompt</c> off the same row through <c>RowRequested</c>, and quitting here as
+        /// well would close the game out from under the question. It is a stand-aside rather than
+        /// a rewiring because the main screen's exit row still comes through here, and that one
+        /// has no colony to offer to save.</para>
+        /// </summary>
         void Quit()
         {
+            if (_bootstrap != null && _bootstrap.HasSession) return;
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #endif

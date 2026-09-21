@@ -131,6 +131,64 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Rows[^1].Id, Is.EqualTo(entries.Length - BulletinModel.MaxRows + 1));
         }
 
+        /// <summary>
+        /// The autosave's line: something the game did, on the panel for things that happened.
+        /// </summary>
+        [Test]
+        public void ANoticeSitsOnThePanelWithoutBeingAnEvent()
+        {
+            var model = new BulletinModel();
+            model.Refresh(Frame((1, 100)));
+
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 2");
+
+            Assert.That(model.Rows[0].Id, Is.EqualTo(BulletinModel.NoticeId));
+            Assert.That(BulletinModel.IsNotice(model.Rows[0]), Is.True);
+            Assert.That(model.Rows[0].Id, Is.LessThan(0),
+                "negative, so it can never collide with a ledger id");
+            Assert.That(model.Arrived, Is.Zero, "the game saving itself does not chime");
+        }
+
+        [Test]
+        public void ThereIsOnlyEverOneNotice()
+        {
+            // Six rows is the whole panel, and a week of autosaves would otherwise crowd out every
+            // event. What a player wants from it has one current value, not a history.
+            var model = new BulletinModel();
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 2");
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 3");
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 4");
+
+            Assert.That(model.Rows.Count, Is.EqualTo(1));
+            Assert.That(model.Rows[0].Stamp, Is.EqualTo("Day 4"));
+        }
+
+        [Test]
+        public void ANoticeDismissedComesBackWhenTheNextOneIsWritten()
+        {
+            // Dismissing is "I have read this", not "never tell me again": the id is fixed, so
+            // without this the first dismissal would silence the autosave for the session.
+            var model = new BulletinModel();
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 2");
+            model.Dismiss(BulletinModel.NoticeId);
+            Assert.That(model.Rows, Is.Empty);
+
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 3");
+            Assert.That(model.Rows.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ANoticeDoesNotStopTheLedgerBeingRead()
+        {
+            var model = new BulletinModel();
+            model.Refresh(Frame((1, 100)));
+            model.PostNotice("ui.session.autosave", "Autosaved", "Day 2");
+            model.Refresh(Frame((1, 100), (2, 200)));
+
+            Assert.That(model.Arrived, Is.EqualTo(1), "the real event still arrives and still chimes");
+            Assert.That(model.Rows.Count, Is.EqualTo(3));
+        }
+
         [Test]
         public void VersionMovesOnlyWhenTheRowsDo()
         {

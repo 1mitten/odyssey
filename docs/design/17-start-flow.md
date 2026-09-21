@@ -645,3 +645,132 @@ page did nothing to the bed under it. The store is now written whether or not a 
 - **Whether four seconds of hand-over reads as seamless**, or whether the gap between the menu bed
   going and the outdoor bed's first birds is a hole. The two overlap by design; only an ear can say
   whether the overlap is enough.
+
+## 13. Escape on the main screen (2026-09-21)
+
+Owner: *"On the main menu when I go to load game or character screen and push escape — it doesn't
+close down menus and it gets confused."*
+
+**The cause.** `SettingsDirector.Escape` is the single owner of that key (`09-ui-and-input.md` §6)
+and its ladder knew five things, all of them in-game: the tool in the hand, the Build palette, the
+Work tab, the Almanac, the Menu popover. The main screen's own screens — `MenuScreen.Load` and
+`MenuScreen.NewGame` — were in none of the rungs, so the key fell through to the last one,
+`OpenPanel`, and opened the **in-game settings window on top of the load list**. Two screens at
+once is exactly the stack §4 was written to avoid, and the way out of it is not obvious, which is
+the "gets confused".
+
+**The rule.** The ladder takes the main screen's state as a nullable `MenuScreen` — null means a
+colony is running, which is every caller that existed before — and gains two rungs at the bottom:
+
+| Main screen shows | Escape |
+|---|---|
+| Load, or New game | `MenuBack`: back one level to the root column |
+| Root | `Nothing` |
+
+**`Nothing` is a rung rather than a fall-through.** The root column is the one place in the game
+with nothing behind it; opening the settings panel over it would be wrong because Options is
+already a row on that column, and closing it is not possible. A rung that says so is readable
+without tracing the order.
+
+**Both new rungs sit below `ClosePanel`, and that is deliberate.** On the main screen the settings
+panel stands *in* the menu's place (`MenuScreen.Settings`, §4), so closing the panel is what leaves
+that screen — `MenuDirector.SettingsClosed` brings the menu back by itself. A `MenuBack` above the
+panel would unwind the navigation out from under a panel still on the screen.
+
+Nothing else moved: `MenuDirector.Back` already existed and is what the Back row on both screens
+has always called. The key now reaches it.
+
+## 14. Leaving, and the autosave (2026-09-21)
+
+Owner, in one message with §13: *"when you quit the game (to main menu or to desktop). It should
+confirm to save before you exit to be sure. Also a suggestion of a autosave would be good — whatever
+you recommend — and have it on by default saving to the same game."*
+
+Two features, one fear: losing a colony you did not mean to lose. The confirmation catches the
+deliberate exit, the autosave catches everything else — a crash, a power cut, an afternoon in which
+you never thought to press Save.
+
+### 14a. The leave prompt
+
+**What it replaces.** Quit to main menu and Quit both armed on the first press and acted on the
+second (§3). That asks *are you sure* and nothing else, and a second press on a red row cannot
+offer to save. So the two rows now raise `LeavePrompt`, a modal with three answers:
+
+| Answer | What it does |
+|---|---|
+| **Save and leave** | writes the colony over its own save, then goes |
+| **Leave without saving** | goes now |
+| **Cancel** | stays, and is what Escape means |
+
+**The arming went with it** (`SessionCommands`, the in-game Quit rows are now `AsksTwice: false`).
+A row that arms in front of a prompt asks twice before asking properly. Load in game still arms,
+because it throws the colony away on a press and raises no prompt. **The main screen's Quit row
+still arms too**, and that is not an inconsistency: with no colony there is nothing to offer to
+save, so there is no prompt to raise in its place.
+
+**A colony that has never been saved is named rather than refused.** "Save and leave" on a nameless
+colony takes the name `SuggestedSaveName` would have offered and binds to it — the same rule the
+first autosave keeps (§14b) — rather than opening the naming prompt over the answer to this one.
+The note under the title says which file it is about to write, because the button is a promise
+about a file.
+
+**Escape cancels it, and is read above everything else Escape could mean.** The prompt is modal and
+has no text field to own the key, so `SettingsPresenter` answers it before the ladder. Cancelling is
+its safe answer: a key press must never be the thing that throws a colony away.
+
+**`SettingsPresenter.Quit` stands aside while a session is running.** The exit row raises
+`ExitRequested` (which quits) *and* `RowRequested` (which the shell turns into the prompt); without
+the stand-aside the game would close out from under the question. It is a stand-aside rather than a
+rewiring because the main screen's exit row still comes through that path.
+
+### 14b. The autosave
+
+**Every game day, over the colony's own file, on by default** — the owner's four choices, taken as
+recommended.
+
+| Question | Answer | Why |
+|---|---|---|
+| How often | a **game day** | five real minutes means something different at ×1 and ×3; a day is the same amount of *colony* at any speed, it is on the clock the player is already reading, and while the game is paused it never comes round — which is right, because nothing changed |
+| Where | **the same file**, keeping one previous generation | a folder that fills up with dated files is what the save binding was invented to stop (§3); but an autosave taken thirty seconds after a disaster would be the only copy there is, and one cut off halfway would be the only copy *and* unreadable. One previous generation costs one file per colony and answers both |
+| A colony never saved | **named automatically, and said so** | a brand-new colony is the one a crash hurts most. The first autosave takes the name the prompt would have offered, binds to it, and puts the name on the Events panel |
+| The setting | **Settings → Gameplay**, one ladder | Off · Every day · Every 2 days · Every 3 days. Off is a rung rather than a separate toggle, so the two questions — whether, and how often — are one control that cannot answer them inconsistently |
+
+**What it counts is the day, not the crossing.** A frame at ×3 retires several ticks, so a rule
+watching for "the tick where the day changed" would miss the day a batch stepped over midnight. The
+day is read and compared; a missed boundary is still a boundary. `AutosaveClock` holds that
+arithmetic and nothing else, in the assembly the fast tier compiles.
+
+**The day a colony arrives on counts as already saved.** Loading a save and leaving it alone must
+not write straight back over the file it came out of — the colony has not moved, and the write would
+spend the one previous copy for nothing. A clock that appears to go backwards (an older save opened
+into a running session) does not save either.
+
+**The previous copy is an ordinary save file and the load screen lists it.** A backup nobody can see
+is a backup nobody can use. It is `ashford-previous.odyssey` beside `ashford.odyssey`, the naming
+rule is `SaveCatalogue.PreviousFileName`, and it is idempotent so nothing can build
+`ashford-previous-previous`. It is **copied** before the write rather than moved: if the write fails
+the colony's own file is still there, and the worst case is two files holding the same thing.
+
+**The notice is one line on the Events panel, and there is only ever one of it.** The owner chose a
+line over a toast and over silence, and the reason is what it answers — *is my file current* — which
+a row that has already faded cannot. But the panel keeps six rows, so a week of play would hold six
+autosaves and no events. A notice therefore replaces the previous notice rather than stacking, it
+carries a negative id so it can never collide with a ledger id, and it does not chime: the game
+saving itself on schedule is not news that wants the room's attention. Clicking it does nothing,
+because nothing happened anywhere on the board.
+
+**Nothing here touches the simulation.** The autosave is a frame-time decision in the composition
+root, reading `SimWorld.CurrentTick` and writing a file; no tick, no intent, no hash, and the
+Events row is presentation-side in a model the ledger otherwise fills.
+
+### 14c. What is deliberately not in this
+
+- **No dirty flag.** The quit prompt always asks. Tracking "has anything happened since the last
+  save" is a second source of truth about the colony, and with the autosave on the quiet case is
+  rare enough not to be worth one.
+- **No autosave on quit.** The prompt offers it, which is the same thing under the player's hand.
+- **No rotation beyond one.** Three generations is the next rung if one proves too few, and the
+  naming rule is the only thing that would change.
+- **The autosave does not pause the game.** The write is synchronous and lands inside one frame,
+  which is a hitch at large colony sizes and is not yet measured. It is the first thing to look at
+  if a daily stutter is reported.

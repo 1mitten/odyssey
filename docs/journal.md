@@ -10152,3 +10152,196 @@ Five EditMode guards (`MeshBudgetTests`), of which the load-bearing one is
 frame whose meshing cost is proportional to how much went stale. One of its drafts failed honestly
 first — a 48-cell board is 2 x 2 chunks against `CellGrid.ChunkSize` of 25, and four chunks cannot
 tell a budget of four from no budget at all.
+
+## 2026-09-21 — session lifecycle: Escape on the main screen, the leave prompt, the autosave
+
+Three things the owner asked for in two messages, all of them about the moments either side of
+playing: pausing and coming back, backing out of a menu, and putting a colony down.
+
+**Escape on the main screen had no rung at all.** `SettingsDirector.Escape` is the single owner of
+that key and its ladder knew five in-game things — tool, palette, Work tab, Almanac, Menu popover —
+and nothing about the start screen's own Load and New game screens. So the key fell past all five to
+the last rung, `OpenPanel`, and opened the *in-game settings window on top of the load list*. That
+is the "gets confused": two screens at once, and no obvious way out of the pair. The fix is two
+rungs below `ClosePanel`, taking the main screen's state as a nullable `MenuScreen` (null means a
+colony is running, which is every caller that existed before). Below `ClosePanel` rather than above
+it, because on the main screen the settings panel stands *in* the menu's place — closing the panel
+is what leaves that screen, and a `MenuBack` above it would unwind the navigation out from under a
+panel still on screen. `Nothing` is a rung rather than a fall-through: the root column is the one
+place in the game with nothing behind it, and a named answer beats reading the order to predict one.
+
+**The pause resumed at the literal 1.** Space is a toggle — asking to pause an already-paused world
+means start again — and the answer to *start again at what* was hard-coded. A player at ×3 who
+paused to give an order, which is the reason the paused world drains orders at all, was dropped back
+to normal on every unpause. `Odyssey.Hud.SpeedControl` owns the rule and the memory now: a request
+for a speed is granted and remembered, a pause remembers the speed it stopped, and the toggle
+returns it. The memory is never zero, or the toggle would resume into a pause and the clock would
+look stuck. The one path that bypasses the toggle is deliberate — restoring a saved view writes the
+speed straight to the intent queue so a colony saved paused comes back paused — and it calls
+`Remember` instead, or a colony saved at ×3 would lose it on its first unpause. In `Odyssey.Hud`
+rather than the composition root because it is a rule and that assembly is what the fast tier
+compiles. (Its own branch and PR, `claude/resume-speed`.)
+
+**Leaving now asks a question with three answers rather than arming a row.** The arm-twice rows
+asked *are you sure* and could not offer the thing the owner actually wanted — a save on the way
+out. `LeavePrompt` is that question, and the arming went with it: a row that arms in front of a
+prompt asks twice before asking properly. The in-game Quit rows are `AsksTwice: false` now and Load
+is the last row that still arms. The main screen's Quit still arms, which is not an inconsistency —
+with no colony there is nothing to offer to save and no prompt to raise in its place.
+
+`SettingsPresenter.Quit` had to **stand aside** while a session is running: the exit row raises
+`ExitRequested` (which quits) *and* `RowRequested` (which the shell turns into the prompt), so
+without it the game would close out from under its own question. A stand-aside rather than a
+rewiring, because the main screen's exit row still comes through that path and has nothing to ask.
+
+**The autosave is a day, not a minute.** Five real minutes means something different at ×1 and at
+×3; a day is the same amount of *colony* at any speed, it is on the clock the player is already
+reading, and it never comes round while paused — which is right, because nothing changed. What it
+counts is the **day, not the crossing**: a frame at ×3 retires several ticks, so a rule watching for
+"the tick where the day changed" would miss the day a batch stepped over midnight.
+
+It writes **over the colony's own file**, which is the binding rule from U38, and keeps one previous
+generation beside it — because an autosave taken thirty seconds after a disaster would otherwise be
+the only copy there is, and one cut off halfway would be the only copy *and* unreadable. The
+previous copy is an ordinary save file the load screen lists: a backup nobody can see is a backup
+nobody can use. It is **copied** before the write rather than moved, so a failed write leaves the
+colony's own file intact and the worst case is two files holding the same thing.
+
+**Two decisions inside it that could have gone the other way.** A colony that has never been saved
+is **named automatically** on its first autosave rather than skipped — a brand-new colony is exactly
+the one a crash hurts most — and the name goes on the Events panel, because a file written under a
+name nobody was told is a file nobody will find. And the notice **replaces the previous notice**
+rather than stacking: the panel keeps six rows, and a week of play would otherwise hold six
+autosaves and no events, so the feature would crowd out the thing it lives on. It does not chime;
+the game saving itself on schedule is not news that wants the room's attention.
+
+**No dirty flag, deliberately.** The quit prompt always asks. "Has anything happened since the last
+save" is a second source of truth about the colony, and with the autosave on the quiet case is rare
+enough not to be worth one.
+
+**What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
+large colony that is a hitch every game morning, and it is the first thing to look at if a daily
+stutter is ever reported.
+## 2026-09-21 — Two reports: sealed in a wall, and a building that takes a second to appear
+
+The owner asked to be interviewed before either was fixed, which was the right instinct for the
+first and the wrong shape for the second: the wall question was a design choice and the delay
+question was a measurement nobody had taken.
+
+**The wall.** The interview asked who gets stuck, and whether they get out. *"Stuck forever — never
+gets out"*, which is what the code says too: once a cell is blocking, a path can neither start in it
+nor end in it, so a colonist inside a wall has no move available that would free them, for ever. I
+offered four rules and the owner took the belt-and-braces one, and it turned out to be three
+genuinely different jobs rather than one with redundancy. The detour stops passers-by walking into
+the cell a wall is about to fill. The guard decides what to do about whoever is there anyway — and
+the two cases are not the same case: somebody *walking through* will be gone in a second, so the
+raise waits; somebody *standing* will still be there in an hour, so they are moved. And the sweep is
+the only part that can help a save that already has somebody entombed in it, which is every save the
+owner has.
+
+The detail worth keeping is where the wait is asked. Refusing inside `Raise` is correct and it is
+not sufficient: the driver had already rolled for success by then, so a wall that politely waited a
+second for a passer-by would have paid for the courtesy by re-rolling, and sometimes botching, work
+that was already done. `CanRaiseNow` exists so the hammer can be held *before* the roll.
+
+**The delay.** My first instinct was to read the publish seam, and reading it said "next frame",
+which is exactly the sort of confident answer this project has been wrong about repeatedly. So I
+measured it in a real player loop instead — and the seam *is* immediate: the wall is in the mirror
+on the next tick's publish and drawn on the frame after that. The first two runs measured nothing at
+all, and both failures were
+instructive. The first raised no wall because my own new guard refused it (a colonist was standing
+in the cell), which is the fixture reproducing the bug I had just fixed; the second told me so only
+because I had added `inGrid` to the log. **Assert the fixture did what it claims before believing
+anything downstream of it** — that is the third time that has cost a run here.
+
+And the assertion I wrote from those runs was wrong in a way only the full tier could show: I
+measured the wait in **frames**, it read 0 alone and 13 in a crowded PlayMode run, and the delay was
+one tick both times. The mirror is written by a snapshot contributor, so it moves once a tick; a rig
+with nothing to draw runs frames far faster than that. A measurement whose unit is the frame rate
+measures the frame rate.
+
+What the probe did find was something nobody was looking for. `WorldRenderModel.Version` is one
+number for the whole board, so a single wall invalidated all 45 drawn chunks and cost 12.53 ms in
+the frame after the raise, against 0.7 ms either side. Per-chunk versions: 3 chunks, 1.73 ms. That
+is the "little glitch" in the report, and it is now P14 in the bug patterns — a cache keyed on "has
+anything changed" rebuilds everything whenever anything changes, and it is invisible to both review
+and the frame budget, because the picture is always right and the cost never lands in the steady
+state a benchmark measures.
+
+It also quietly moved a rule from decorative to load-bearing. A global stamp forgives a system that
+dirties too few chunks; a per-chunk stamp does not. The marks are all correct today — construction
+and mining both dirty the 3×3×3 neighbourhood, and the single-cell marks are all things drawn inside
+their own cell — but that is now a thing to check when adding a world edit, and it is written down
+in §6c.8 rather than left to be rediscovered from a stale tile.
+
+**And main had been at the same wound from the other side.** While this was being written,
+`claude/huge-map` landed a *meshing budget* — at most eleven chunks re-meshed a frame (§6c.6–6c.7),
+found with the new perf trace on a played session. The two are complements rather than duplicates
+and the merge kept both: the budget caps what may be re-meshed in one frame, the per-chunk version
+caps what is invalidated at all. With the budget alone a single wall still dirties 45 chunks and
+spends four frames of stale geometry catching up; with both, it dirties three and they are re-meshed
+inside one frame. My pattern renumbered to **P15** because P14 had been taken in the meantime, and
+the design doc to **30** because 28 and 29 had been.
+
+**The seconds are still unexplained**, and I would rather say so than offer a plausible story. The
+leading candidate is outside the game: the editor compiles shader variants asynchronously, a wall is
+the first thing of its material a meadow ever draws, and the signature of that — nothing, then a
+flicker, then the object — matches the report closely. A batch run cannot reproduce it, because
+`ShaderUtil.allowAsyncCompilation` is false in batch mode and the probe duly recorded zero frames of
+compiling. It needs one toggle flipped in a real editor session, which is a question for the owner
+and not a fix I can measure my way to from here.
+## 2026-09-21 — A proper cursor, and the frame in which a click is resolved
+
+Owner: *"The cursor doesn't seem super accurate but I noticed this issue and we should use a proper
+cursor — Runtime cursors other than the default cursor need to be defined using a texture."* Two
+faults in one sentence, unrelated to each other, and the second one is the interesting half.
+
+**The warning was eighteen inert declarations.** `Hud.uss` carried fifteen `cursor: link`, one
+`cursor: pointer`, one `cursor: default` and one `cursor: initial`. Keyword cursors are Editor-only
+in UI Toolkit; in the runtime panel the game actually has, they set nothing and log once per
+repaint. Every one had been written believing it changed the pointer, and the game has run the bare
+OS arrow since the HUD was written — nothing in the project had ever called `Cursor.SetCursor`.
+Deleted rather than converted to eighteen `url(...)` forms, for the reason `OrderColours` exists
+(eighteen selectors naming a cursor is eighteen owners) and for the reason written in Hud.uss
+itself at the bed-owner row: **hover is not an affordance**, so a per-widget pointer swap is the
+weakest signal available even in the world where it worked.
+
+**The accuracy half was arithmetic, and it was in `SliceCameraRig.Update`.** The order was
+`ReadKeyboard` → `ReadMouse` → `TakeJumpRequest` → `ApplyTransform` → `DrawSelection`, and every
+pointer ray in the game was cast inside `ReadMouse`. `CellAt` goes through `Camera.ScreenPointToRay`,
+which reads the camera's *current* transform — which at that point in the frame is still the one
+written at the end of the previous frame, while the world is then drawn from the new one. **Every
+hover, drag, box and click was resolved against a camera one frame behind the picture.** Exact
+while the camera is still, which is how it survived; a constant one-frame lag the whole time it
+moves, which is half a metre at a 30 m/s pan and more with shift held. Panning while placing is the
+commonest thing a player does with a tool in hand.
+
+The fix is ordering and the ordering is the invariant. `ReadMouse` now *latches* what the frame
+decided — a verb and two screen points, with no cell anywhere in the enum, because a cell is the
+one thing that cannot be worked out yet — and `ResolvePointer` runs after `ApplyTransform` and
+turns the points into cells. Every branch is the one `ReadMouse` took inline, unchanged.
+**Applying the transform above `ReadMouse` was the smaller diff and was rejected**: the wheel and
+the orbit write their targets inside `ReadMouse`, so the camera would answer the player's zoom a
+frame late instead — a different misalignment, not one fewer.
+
+**Three of the four tests read files rather than run code**, and that is the honest shape of it
+rather than a shortcut. A stylesheet asking a runtime panel for the impossible is a log line, and
+log lines are invisible in every gate this project has. The frame ordering cannot be tested at all:
+the PlayMode harness still cannot deliver a synthetic mouse, so nothing here can move a pointer and
+look at where the highlight landed. What can be defended is the invariant, so the invariant is what
+is asserted — including `OnlyTheResolvePassTurnsAScreenPointIntoACell`, because the ordering is
+worth nothing if a second `CellAt` reappears further up.
+
+**The art is baked in code at 32 x 32 and both numbers are load-bearing.** Above 32 px Windows
+cannot carry the cursor and Unity composites a software one, which lags the pointer and freezes
+with the frame — answering an accuracy complaint by making it worse, invisibly, on a machine other
+than the one that reported it. Baking also makes the tool crosshair a function of
+`OrderColours.Hue`, so the pointer is the fifth surface an armed order appears on and the only one
+that would otherwise have guessed at its own colour; a new tool inherits a cursor with no art work.
+And it avoids carving an exception into ADR 0007's absolute rule about interface art, which is how
+that rule would die.
+
+**What is deliberately not fixed** is recorded in `docs/design/28-pointer-cursor.md` section 5:
+`SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
+tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
+both at once would leave the playtest unable to say which one it had judged.
