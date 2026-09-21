@@ -270,7 +270,12 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Bed = 12;
 
-        public const int Count = 13;
+        /// <summary>The campfire, the second id the interface names that no generator stamps:
+        /// 13, after the bed, and like it the reason <c>CoreContent.EdificeCampfire</c> spells
+        /// the literal beside the ones it must not collide with (design 28 §7).</summary>
+        public const int Campfire = 13;
+
+        public const int Count = 14;
     }
 
     /// <summary>
@@ -317,7 +322,11 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Bed = 5;
         public const int Door = 6;
-        public const int Count = 7;
+
+        /// <summary>The first heat source (design 28 §7): one cell, blocking, and the one
+        /// building whose <c>heatPerPass</c> is not zero. Appended, as every handle is.</summary>
+        public const int Campfire = 7;
+        public const int Count = 8;
     }
 
     /// <summary>

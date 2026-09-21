@@ -30,17 +30,19 @@ namespace Odyssey.Sim.World
         readonly Growing.GrowingZones? _zones;
         readonly EnclosureGrid? _enclosure;
         readonly Storage.StorageZones? _storage;
+        readonly Temperature.TemperatureSystem? _temperature;
         readonly int[] _costByClass = new int[256];
 
         public CellDetailContributor(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices,
             Growing.GrowingZones? zones = null, EnclosureGrid? enclosure = null,
-            Storage.StorageZones? storage = null)
+            Storage.StorageZones? storage = null, Temperature.TemperatureSystem? temperature = null)
         {
             _grid = grid;
             _edifices = edifices;
             _zones = zones;
             _enclosure = enclosure;
             _storage = storage;
+            _temperature = temperature;
             NaturalContent.ApplyCostClasses(_costByClass);
         }
 
@@ -131,10 +133,17 @@ namespace Odyssey.Sim.World
             }
 
             bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
+
+            // The tile's own answer to "how warm is it here": its room's air where it is in a
+            // room, the outdoor curve where it is not. Read from the thermal system — the same
+            // one source the needs system and the growth pass ask — so the pane cannot disagree
+            // with the simulation about what a colonist is standing in.
+            int ambientTempC = _temperature?.CellTemp(cell, world.CurrentTick) ?? 0;
+
             writer.AddCellDetail(new CellDetail(
                 cell, (byte)terrain, edifice, floorStuff, _grid.Support[cell], cost, workToClear,
                 quality, owner, zonePlant, cropGrowth, zoneYield, isIndoors,
-                storageZone, storagePriority));
+                storageZone, storagePriority, ambientTempC));
         }
     }
 }

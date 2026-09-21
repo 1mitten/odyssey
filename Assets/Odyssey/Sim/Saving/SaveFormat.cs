@@ -224,8 +224,8 @@ namespace Odyssey.Sim.Saving
         /// rebuild the one it was written on, and the state hash could not notice because the
         /// cells are overwritten by the load.</para>
         ///
-        /// <para>2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony
-        /// name and day — after the world scalars it always carried.</para>
+        /// <para>2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario,
+        /// colony name and day — after the world scalars it always carried.</para>
         ///
         /// <para><b>Every version from 1 to 6 still loads</b>, and this sentence has said "1 to
         /// 5" through two bumps because it names the numbers rather than the current one. Each
@@ -253,8 +253,15 @@ namespace Odyssey.Sim.Saving
         /// schedule reached <c>main</c> first and took that number. The version is a save contract
         /// and two branches cannot both have it; the later branch is the one that moves, which is
         /// the same rule <c>BuildingHandle.Bed</c> records for handle order.</para>
+        ///
+        /// <para>9 (design 28, temperature): the pawn record grew <c>TemperatureSeverity</c>,
+        /// appended after <c>StarvationSeverity</c> behind a version guard. The room temperatures
+        /// themselves are a new keyed section (<c>odyssey.temperature</c>) and needed no number,
+        /// for the same reason storage's two did not; the pawn record's layout is what forced the
+        /// bump, exactly as it did at 6. A file at 8 ends where the new field begins, and a
+        /// colonist from one had never been cold by a definition that did not exist.</para>
         /// </remarks>
-        public const int CurrentFormatVersion = 8;
+        public const int CurrentFormatVersion = 9;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)

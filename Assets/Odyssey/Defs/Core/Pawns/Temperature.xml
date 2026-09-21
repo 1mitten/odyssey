@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  How temperature feels and what it does (design 28 §8). CENTI-DEGREES and per-mille, like the
+  rest of the thermal model.
+
+  Four bands each side of comfort, because a colonist who is a little cold and one who is
+  freezing differ in kind:
+
+    comfortable  16–26 °C    nothing happens at all
+    mild         10–16 / 26–32   mood −10, sleep ×0.90
+    bad          −3–10 / 32–35   mood −50, sleep ×0.75
+    extreme      below −3 / above 35   mood −120, sleep ×0.55, and severity builds
+
+  The edges are set by the climate the meadow ships: Wash nights bottom at 10 °C and so land
+  in the mild band — spring is benign, shelter wanted but not yet needed — while Hollow's
+  nights cross the floor and Candle's are deep in the extreme band, where severity builds.
+  Severity (hypothermia below −3 °C, heatstroke above 35 °C) mirrors starvation exactly: it
+  builds by distance beyond the bound — 3 per interval per degree, so Candle's nights are a
+  full bar in about four hours and a cold snap's worse — recovers by 5 anywhere inside the
+  bounds, and steps condition down in the same thirds starvation does. Real lethality arrives
+  with the health milestone; today it slows a colonist to the same floor. Work runs at full
+  speed from 8 °C: a cold morning slows nobody, a freezing one slows everyone.
+-->
+<Defs>
+
+  <TemperatureDef>
+    <defName>Temperature_Colonist</defName>
+    <label>colonist</label>
+    <comfortMinC>1600</comfortMinC>
+    <comfortMaxC>2600</comfortMaxC>
+    <mildBandC>600</mildBandC>
+    <coldFloorC>-300</coldFloorC>
+    <hotCeilingC>3500</hotCeilingC>
+    <moodMildOffset>-10</moodMildOffset>
+    <moodBadOffset>-50</moodBadOffset>
+    <moodExtremeOffset>-120</moodExtremeOffset>
+    <sleepMildPerMille>900</sleepMildPerMille>
+    <sleepBadPerMille>750</sleepBadPerMille>
+    <sleepExtremePerMille>550</sleepExtremePerMille>
+    <workMinC>800</workMinC>
+    <workMaxC>3500</workMaxC>
+    <workOutsidePerMille>700</workOutsidePerMille>
+    <hypothermiaC>-300</hypothermiaC>
+    <heatstrokeC>3500</heatstrokeC>
+    <severitySlopePerMille>300</severitySlopePerMille>
+    <severityRecoveryPerInterval>5</severityRecoveryPerInterval>
+    <bodyHeatPerPass>15</bodyHeatPerPass>
+    <bodyHeatGateC>4000</bodyHeatGateC>
+  </TemperatureDef>
+
+</Defs>

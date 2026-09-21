@@ -206,6 +206,34 @@
   </BuildingDef>
 
   <!--
+    THE FIRST HEAT SOURCE (design 28 §7). edifice 13 is CoreContent.EdificeCampfire.
+
+    heatPerPass 1200 is in centi-degree-cells: in deepest Rime it holds a 6×6 room at roughly
+    +38 °C over the outdoors - comfortable - and in Wash the same fire in the same room runs
+    toward 49 °C, which is the lesson "don't burn fires in summer" arriving for free. A
+    temperature cap on a source is a recorded hook, not v1.
+
+    blocking true: nobody stands in a fire. needsClearCell true like the bed's - a stack of
+    meals on a campfire is a worse version of the stack through the mattress.
+
+    costCount 3 and workToBuild 60: kindling and a ring of stones, the cheapest thing in the
+    table beside the deck plate. It burns steadily in v1; fuel is a recorded hook, and the
+    campfire sound is already in the library waiting for the day something plays it.
+  -->
+  <BuildingDef>
+    <defName>Building_Campfire</defName>
+    <label>campfire</label>
+    <edifice>13</edifice>
+    <blocking>true</blocking>
+    <needsClearCell>true</needsClearCell>
+    <heatPerPass>1200</heatPerPass>
+    <costCount>3</costCount>
+    <workToBuild>60</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.campfire</iconKey>
+  </BuildingDef>
+
+  <!--
     The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
     with: nothing produces them, no colonist can carry one, and offering them would be offering an
     order that can never be filled. They keep their indices, because every stamped wall in the city
@@ -225,6 +253,7 @@
     <label>concrete</label>
     <stuff>1</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>1100</thermalConductancePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -232,6 +261,7 @@
     <label>steel</label>
     <stuff>2</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>1400</thermalConductancePerMille>
   </StuffDef>
 
   <StuffDef>
@@ -239,6 +269,7 @@
     <label>composite</label>
     <stuff>3</stuff>
     <item>-1</item>
+    <thermalConductancePerMille>800</thermalConductancePerMille>
   </StuffDef>
 
   <!--
@@ -256,6 +287,7 @@
     <workOffsetTicks>0</workOffsetTicks>
     <hitPointsFactorPerMille>1000</hitPointsFactorPerMille>
     <iconKey>ui.res.wood</iconKey>
+    <thermalConductancePerMille>600</thermalConductancePerMille>
   </StuffDef>
 
   <!--
@@ -281,6 +313,7 @@
     <workOffsetTicks>15</workOffsetTicks>
     <hitPointsFactorPerMille>1500</hitPointsFactorPerMille>
     <iconKey>ui.res.stone</iconKey>
+    <thermalConductancePerMille>1000</thermalConductancePerMille>
   </StuffDef>
 
 </Defs>

@@ -85,7 +85,14 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Rode a floor down when it collapsed (U29).</summary>
         public const int Fell = 3;
-        public const int Count = 4;
+
+        /// <summary>Woke from a night outside the temperature bands, cold side (design 28 §8).
+        /// Appended, as every thought is — an index rides every saved memory.</summary>
+        public const int SleptCold = 4;
+
+        /// <summary>The same, hot side.</summary>
+        public const int SleptHot = 5;
+        public const int Count = 6;
     }
 
     /// <summary>
@@ -578,10 +585,129 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
-    /// The numbers that belong to the pawn simulation as a whole rather than to any one need,
-    /// job or item. They were fields on <see cref="PawnContent"/>, which meant they were the one
-    /// part of the tuning that content could not reach.
+    /// How temperature feels and what it does to a colonist: the comfort band, the mood and
+    /// sleep bands around it, the work band, and the severity that builds past the safe bounds
+    /// (design 28 §8). Authored in <c>Defs/Core/Pawns/Temperature.xml</c>; every temperature is
+    /// centi-degrees and every factor is per-mille, like the rest of the model.
+    ///
+    /// <para><b>Bands, not curves.</b> Four of them each side of comfort — comfortable, mild,
+    /// bad, extreme — because a colonist who is a little cold and one who is freezing differ in
+    /// kind, and a smooth slope would hide the moment the player is deciding against. The band
+    /// edges are fields so a mod can widen comfort without rewriting the offsets.</para>
     /// </summary>
+    public class TemperatureDef : Def
+    {
+        /// <summary>The comfort band. Inside it, temperature does nothing at all.</summary>
+        public int comfortMinC = 1_600;
+        public int comfortMaxC = 2_600;
+
+        /// <summary>Width of the mild band beyond comfort: cool below, warm above.</summary>
+        public int mildBandC = 600;
+
+        /// <summary>The cold floor and the hot ceiling: past these the extreme band begins, and
+        /// past these severity builds.</summary>
+        public int coldFloorC = -300;
+        public int hotCeilingC = 3_500;
+
+        /// <summary>Situational mood offset in the mild band (cool or warm).</summary>
+        public int moodMildOffset = -10;
+
+        /// <summary>In the bad band (cold or hot).</summary>
+        public int moodBadOffset = -50;
+
+        /// <summary>In the extreme band (freezing or sweltering).</summary>
+        public int moodExtremeOffset = -120;
+
+        /// <summary>Rest effectiveness in each band, per-mille of the bed's own answer.</summary>
+        public int sleepMildPerMille = 900;
+        public int sleepBadPerMille = 750;
+        public int sleepExtremePerMille = 550;
+
+        /// <summary>The work band: outside it, work rate is scaled.</summary>
+        public int workMinC = 800;
+        public int workMaxC = 3_500;
+        public int workOutsidePerMille = 700;
+
+        /// <summary>Severity begins below this (hypothermia) and above <see cref="hotCeilingC"/>
+        /// (heatstroke) — which are the same edges as the mood bands' extremes, so what feels
+        /// worst is what first hurts.</summary>
+        public int hypothermiaC = -300;
+        public int heatstrokeC = 3_500;
+
+        /// <summary>
+        /// Severity per needs interval, per centi-degree of distance beyond the safe bound:
+        /// distance × this / 1000. 300 makes −15 °C build about 4 a interval — a full bar in
+        /// fifteen game-hours of Rime night — and a cold snap's −40 °C fill it in five, which is
+        /// the "lethal hypothermia within 4 hours" the almanac already promises.
+        /// </summary>
+        public int severitySlopePerMille = 300;
+
+        /// <summary>Severity drained per interval inside the safe bounds. One arrest, not a
+        /// cure: a frozen colonist warms through over a day, not a step.</summary>
+        public int severityRecoveryPerInterval = 5;
+
+        /// <summary>Body heat, in centi-degree-cells per pawn per thermal pass.</summary>
+        public int bodyHeatPerPass = 15;
+
+        /// <summary>No body heat at or above this — the crowded-room brake.</summary>
+        public int bodyHeatGateC = 4_000;
+
+        /// <summary>Which of the four bands a temperature falls in: 0 comfortable, 1 mild,
+        /// 2 bad, 3 extreme.</summary>
+        public int BandOf(int tempC)
+        {
+            if (tempC < coldFloorC || tempC > hotCeilingC) return 3;
+            if (tempC < comfortMinC - mildBandC || tempC > comfortMaxC + mildBandC) return 2;
+            if (tempC < comfortMinC || tempC > comfortMaxC) return 1;
+            return 0;
+        }
+
+        /// <summary>The situational mood offset at a temperature — recomputed, never stored, the
+        /// same answer the need bands give.</summary>
+        public int MoodOffset(int tempC)
+        {
+            switch (BandOf(tempC))
+            {
+                case 1: return moodMildOffset;
+                case 2: return moodBadOffset;
+                case 3: return moodExtremeOffset;
+                default: return 0;
+            }
+        }
+
+        /// <summary>Rest effectiveness at a temperature, per-mille of the bed's own answer.</summary>
+        public int SleepPerMille(int tempC)
+        {
+            switch (BandOf(tempC))
+            {
+                case 1: return sleepMildPerMille;
+                case 2: return sleepBadPerMille;
+                case 3: return sleepExtremePerMille;
+                default: return 1_000;
+            }
+        }
+
+        /// <summary>Work rate at a temperature, per-mille — the reference's own ×0.70 outside
+        /// its comfortable working band, carried as content rather than code.</summary>
+        public int WorkPerMille(int tempC) =>
+            tempC >= workMinC && tempC <= workMaxC ? 1_000 : workOutsidePerMille;
+
+        /// <summary>
+        /// Severity change this needs interval, signed: negative is hypothermia, positive
+        /// heatstroke, zero inside the safe bounds (recovery is the caller's, by the symmetric
+        /// drain, exactly as starvation recovers).
+        /// </summary>
+        public int SeverityDelta(int tempC)
+        {
+            if (tempC < hypothermiaC) return -((hypothermiaC - tempC) * severitySlopePerMille / 1_000);
+            if (tempC > heatstrokeC) return (tempC - heatstrokeC) * severitySlopePerMille / 1_000;
+            return 0;
+        }
+    }
+
+    /// <summary>The numbers that belong to the pawn simulation as a whole rather than to any one need,
+    /// job or item. They were fields on <see cref="PawnContent"/>, which meant they were the one
+    /// part of the tuning that content could not reach.</summary>
     public class PawnTuningDef : Def
     {
         public int needsIntervalTicks = 150;
@@ -628,6 +754,7 @@ namespace Odyssey.Sim.Pawns
         public MentalBreakDef Break = new MentalBreakDef();
         public MovementDef Movement = new MovementDef();
         public PawnKindDef Kind = new PawnKindDef();
+        public TemperatureDef Temperature = new TemperatureDef();
 
         /// <summary>The needs interval, in ticks. 150 is the cadence a-01-pawns.md measured.</summary>
         public int NeedsIntervalTicks = 150;
@@ -734,6 +861,7 @@ namespace Odyssey.Sim.Pawns
                 .Register<MentalBreakDef>()
                 .Register<MovementDef>()
                 .Register<PawnKindDef>()
+                .Register<TemperatureDef>()
                 .Register<PawnTuningDef>();
 
         /// <summary>
@@ -757,7 +885,9 @@ namespace Odyssey.Sim.Pawns
 
             content.Needs = ByName<NeedDef>(defs, "Need_Food", "Need_Rest", "Need_Joy");
             content.Thoughts = ByName<ThoughtDef>(defs,
-                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell");
+                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell",
+                // Appended, never inserted: a thought index rides every saved memory.
+                "Thought_SleptCold", "Thought_SleptHot");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
@@ -781,6 +911,7 @@ namespace Odyssey.Sim.Pawns
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
             content.Movement = One<MovementDef>(defs, "Movement_Colonist");
             content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
+            content.Temperature = One<TemperatureDef>(defs, "Temperature_Colonist");
 
             var tuning = One<PawnTuningDef>(defs, "Tuning_Pawns");
             content.NeedsIntervalTicks = tuning.needsIntervalTicks;

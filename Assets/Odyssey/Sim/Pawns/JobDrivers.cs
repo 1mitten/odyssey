@@ -208,6 +208,18 @@ namespace Odyssey.Sim.Pawns
             if (Pawn.Needs[NeedIndex.Rest] < ctx.Content.Kind.wakeThreshold) return JobStatus.Ongoing;
 
             if (Job.TargetCell < 0) Pawn.AddMemory(ThoughtIndex.SleptOnGround, ctx.CurrentTick);
+
+            // A night outside the temperature bands is remembered on waking (design 28 §8) —
+            // the memory half, beside the mechanical half that ran all night as the sleep
+            // factor. Read from where the sleep ended, which is where it happened.
+            if (ctx.Temperature != null)
+            {
+                int temp = ctx.Temperature.CellTemp(Pawn.Cell, ctx.CurrentTick);
+                if (ctx.Content.Temperature.BandOf(temp) >= 2)
+                    Pawn.AddMemory(temp < ctx.Content.Temperature.comfortMinC
+                        ? ThoughtIndex.SleptCold
+                        : ThoughtIndex.SleptHot, ctx.CurrentTick);
+            }
             return JobStatus.Succeeded;
         }
 

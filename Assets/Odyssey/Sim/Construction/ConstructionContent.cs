@@ -114,6 +114,14 @@ namespace Odyssey.Sim.Construction
         /// <summary>Construction level a colonist needs before it may take the job. 0 for a wall.</summary>
         public int minSkill;
 
+        /// <summary>
+        /// Heat the finished thing pushes into its room each thermal pass, in centi-degree-cells
+        /// (design 28 §7): energy, not temperature, so the same campfire is an oven in a broom
+        /// cupboard and a warm corner in a hall. Zero for everything that is not a heat source,
+        /// which is everything until the campfire.
+        /// </summary>
+        public int heatPerPass;
+
         /// <summary>The registry key the interface names it by. Never a label, never a filename.</summary>
         public string iconKey = "";
     }
@@ -173,6 +181,19 @@ namespace Odyssey.Sim.Construction
         /// invented ahead of it.</para>
         /// </summary>
         public int hitPointsFactorPerMille = 1000;
+
+        /// <summary>
+        /// The material's effect on how much heat crosses a wall made of it, in thousandths of
+        /// the standard material's conductance (design 28 §6).
+        ///
+        /// <para><b>The one place building material changes the weather indoors.</b> The
+        /// reference's walls are all equally warm — a log cabin and a granite bunker hold heat
+        /// identically — and our stuff table already exists to make material a decision, so it
+        /// is a decision: wood insulates best of the buildables, stone is the standard the
+        /// numbers are quoted against, and the city's concrete and steel bleed heat, which is
+        /// the ruined city's problem and one day a salvage line's opportunity.</para>
+        /// </summary>
+        public int thermalConductancePerMille = 1_000;
 
         /// <summary>The registry key the interface names it by.</summary>
         public string iconKey = "";
@@ -331,7 +352,7 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed", "Building_Door",
+            "Building_Bed", "Building_Door", "Building_Campfire",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -436,6 +457,20 @@ namespace Odyssey.Sim.Construction
                     blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
                     iconKey = "ui.arch.tool.door",
                 },
+
+                // The first heat source (design 28 §7). Edifice 13, the next free id after the
+                // bed's. Blocking — nobody stands in a fire — and wanting a clear cell like the
+                // bed does, for the same reason with worse graphics. heatPerPass 1200 holds a
+                // 6×6 room comfortably above deepest Rime and overshoots in Wash, which is the
+                // brazier-in-a-broom-cupboard lesson arriving for free. 3 stuff and 60 ticks:
+                // kindling and a ring of stones. Fuel is a recorded hook — v1 burns steadily.
+                new BuildingDef
+                {
+                    defName = "Building_Campfire", label = "campfire", edifice = CoreContent.EdificeCampfire,
+                    blocking = true, needsClearCell = true, heatPerPass = 1_200,
+                    costCount = 3, workToBuild = 60, minSkill = 0,
+                    iconKey = "ui.arch.tool.campfire",
+                },
             };
         }
 
@@ -444,9 +479,9 @@ namespace Odyssey.Sim.Construction
             return new[]
             {
                 new StuffDef { defName = "Stuff_None", label = "nothing", stuff = CoreContent.StuffNone },
-                new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete },
-                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel },
-                new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite },
+                new StuffDef { defName = "Stuff_Concrete", label = "concrete", stuff = CoreContent.StuffConcrete, thermalConductancePerMille = 1100 },
+                new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel, thermalConductancePerMille = 1400 },
+                new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite, thermalConductancePerMille = 800 },
 
                 // Wood carries no offset: nailing and lashing a plank into place has no separate
                 // fitting step for the factor to leave out, so the whole of wood's cost is the
@@ -456,6 +491,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Stuff_Wood", label = "wood", stuff = NaturalContent.StuffWood,
                     item = ItemHandle.Wood, workFactorPerMille = 1000, workOffsetTicks = 0,
                     hitPointsFactorPerMille = 1000, iconKey = "ui.res.wood",
+                    thermalConductancePerMille = 600,
                 },
 
                 // 1.7x the work and 1.5x the hit points: the reference's own relation between a
@@ -475,6 +511,7 @@ namespace Odyssey.Sim.Construction
                     defName = "Stuff_Stone", label = "stone", stuff = NaturalContent.StuffStone,
                     item = ItemHandle.Stone, workFactorPerMille = 1700, workOffsetTicks = 15,
                     hitPointsFactorPerMille = 1500, iconKey = "ui.res.stone",
+                    thermalConductancePerMille = 1000,
                 },
             };
         }

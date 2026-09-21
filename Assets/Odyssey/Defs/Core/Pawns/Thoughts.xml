@@ -42,4 +42,25 @@
     <stackLimit>2</stackLimit>
   </ThoughtDef>
 
+  <!--
+    Design 28 §8. Waking from a night outside the temperature bands - remembered, not
+    situational, because it is about the night that happened rather than the morning it left
+    behind. The situational side of being cold is a banded mood offset on the needs interval and
+    never a stored thought at all.
+
+    Milder than a night on the ground (it stacks with it, and SleptOnGround's -40 is the worse
+    half of sleeping rough), longer lived because a bad night's ache outlasts the morning.
+  -->
+  <ThoughtDef>
+    <defName>Thought_SleptCold</defName>
+    <moodOffset>-30</moodOffset>
+    <durationTicks>20000</durationTicks>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_SleptHot</defName>
+    <moodOffset>-30</moodOffset>
+    <durationTicks>20000</durationTicks>
+  </ThoughtDef>
+
 </Defs>
