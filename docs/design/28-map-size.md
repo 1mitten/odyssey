@@ -52,17 +52,52 @@ laptop and there is not one in the building.
 
 ### Simulation
 
+**Re-taken 2026-09-21 on the map the game builds** — see §2a; the first set was taken on the
+unmodified default def.
+
 | Board | Live regions | Links | Generation, median of 5 seeds | Rebuild per mined cell | World memory | Save |
 |---|---|---|---|---|---|---|
-| Standard | 2,110 | 1,477 | 23 ms | **0.298 ms** | 15.5 MiB (70.4 B/cell) | 143 KB |
-| Large | 7,360 | 3,511 | 69 ms | **0.587 ms** | 51.1 MiB (68.9 B/cell) | 359 KB |
-| **Huge** | **8,406** | **6,180** | **90 ms** | **0.883 ms** | **61.3 MiB (69.8 B/cell)** | **581 KB** |
-| Scale target | 24,141 | 6,772 | 189 ms | **1.047 ms** | 161.8 MiB (67.9 B/cell) | — |
+| Standard | 2,110 | 1,477 | 24 ms | **0.278 ms** | 15.9 MiB (72.5 B/cell) | 137 KB |
+| Large | 7,360 | 3,511 | 77 ms | **0.613 ms** | 52.2 MiB (70.3 B/cell) | 356 KB |
+| **Huge** | **8,406** | **6,180** | **104 ms** | **0.865 ms** | **63.2 MiB (71.9 B/cell)** | **559 KB** |
+| Scale target | 24,141 | 6,772 | 235 ms | 1.472 ms † | 164.8 MiB (69.1 B/cell) | — |
+
+† The scale target's edit tick read 1.047 ms on the first pass and 1.472 on this one with an
+**identical** region and link count, so the move is this machine rather than the map. It is the
+reason every figure here is a ratio first and an absolute second.
 
 Arms: `NaturalWorldgenTests.EveryOfferedBoardGenerates`,
 `NavGraphStatisticsTests.EveryOfferedBoard` (which carries `TimePerEdit`), `BoardMemoryTests`,
 `GridSaveTests.EveryOfferedBoardRoundTripsAndFitsTheBudget`. All print; only the pre-existing
-budgets assert.
+budgets assert. All four build through `PlayedMap`, which calls `ColonyWorld.DefFor` — **the game's
+own chooser, not a copy of it** (§2a).
+
+### 2a. The first set of these numbers was taken on the wrong map
+
+**Found from an owner's play log, not from a test**, which is the part worth remembering. Their
+session on 120 × 120 × 16 reported `patches 0, trees 1598`; the arms were reporting `patches 2210,
+trees 1222` for the same board.
+
+The cause was two owners for one choice. The played scene sets `barrenMap: 1, woodedMap: 1`, so
+`ColonyWorld.Build` applied `MakeWooded()` on top of the default def — while every arm reached for
+`MapGenerator.DefaultDef` / `NaturalMapGenDef.For` and got the def **without** it.
+`BoardMemoryTests` was further out still: `ColonyWorld.Build`'s `wooded` parameter defaults to
+`false`, which is `MakeBarren()`, a board with no trees and no water at all.
+
+**The fix was to remove the second owner**, not to copy the first: `ColonyWorld.DefFor` is now the
+one place that decision is made, `Build` calls it, and `PlayedMap` calls it. `PlayedMapTests` holds
+it to an observable property of `MakeWooded` — trees present, patches zero — rather than to itself,
+with a negative control that fails if the helper ever becomes a synonym for the plain default.
+
+**What it moved, and it is less than feared.** Live regions and links are **identical on every
+board**, so the region counts, the edit tick and therefore the whole ceiling argument in §6 are
+unaffected — trees and surface patches do not change how the region graph carves a block. What moved
+is generation time (a wooded board carries more trees to place), the feature counts in §4, memory by
+about 2 B/cell, and save size by a few per cent.
+
+**What it cost was confidence, not conclusions**, and the general form is `docs/bug-patterns.md`
+P14 — which was written one commit before this was found, in this same branch, and not applied to
+the arms it was written about.
 
 **A tick at rest is 0.065 ms on Standard and 0.068 ms on Large — the board does not appear in it at
 all.** Everything that matters is in the edit column.
@@ -181,12 +216,15 @@ fits. Save chunking absorbs it: 400 chunk records against Standard's 100.
 ## 4. What the generator does *not* scale with the board
 
 Feature densities are per 10,000 columns, so a bigger board gets proportionally more of them
-automatically — Huge draws 5,264 trees, 403 ore deposits and 17 caverns against Standard's 1,222,
-100 and 4. **Three things are per-map absolutes and therefore get relatively scarcer as the board
+automatically — Huge draws 6,248 trees, 403 ore deposits and 17 caverns against Standard's 1,413,
+100 and 4. (A wooded board carries no bare patches at all: `MakeWooded` zeroes
+`barePatchThreshold`.) **Three things are per-map absolutes and therefore get relatively scarcer as the board
 grows:**
 
-- `streamCount = 2` and `riverFords = 2`. Measured: Standard puts down 4 water bodies on 300 m, Huge
-  5 on 600 m. A Huge board is drier per acre, and whether that reads as dry is an owner call.
+- `streamCount = 2` and `riverFords = 2`. Measured across the four boards: **2, 4, 7 and 5** water
+  shapes for Small, Standard, Large and Huge. Huge has **fewer** than Large despite covering nearly
+  twice the ground, so a Huge board is markedly drier per acre, and whether that reads as dry is an
+  owner call.
 - `maxForcedFords = 3` and `minReachablePercent = 80` are whole-map numbers while ponds are
   per-area, so Huge draws roughly four times the ponds against the same three-ford budget. This is
   the combination that can make `EnsureReachable` throw *"The water shapes have severed the map"*.
