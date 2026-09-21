@@ -362,7 +362,7 @@ namespace Odyssey.Tests.Hud
             string[] built =
             {
                 PaletteTools.Wall, PaletteTools.Slab, PaletteTools.Paving, PaletteTools.Ladder,
-                PaletteTools.Bed, PaletteTools.Door,
+                PaletteTools.Bed, PaletteTools.Door, PaletteTools.Shelf,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

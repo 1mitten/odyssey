@@ -21,11 +21,12 @@ namespace Odyssey.Hud
     /// </summary>
     public static class BuildLabels
     {
-        /// <summary>Parallel to <see cref="BuildingHandle"/>: None, Wall, Floor, DeckPlate, Ladder, Bed, Door.</summary>
+        /// <summary>Parallel to <see cref="BuildingHandle"/>: None, Wall, Floor, DeckPlate, Ladder, Bed, Door, Shelf.</summary>
         public static readonly string[] BuildingKeys =
         {
             "", "ui.arch.tool.wall", "ui.arch.tool.roof", "ui.arch.tool.deckplate",
             "ui.arch.tool.ladder", "ui.arch.tool.bed", "ui.arch.tool.door",
+            "ui.arch.tool.shelf",
         };
 
         /// <summary>

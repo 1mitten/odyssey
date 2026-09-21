@@ -106,6 +106,15 @@ namespace Odyssey.Hud
         public const string Door = "ui.arch.tool.door";
 
         public const string Bed = "ui.arch.tool.bed";
+
+        /// <summary>
+        /// A built store: one cell holding eight stacks, against a stockpile's one stack a cell.
+        /// The key predates the tool — it has been in the Furniture category as a dim chip since
+        /// the palette was written — so arriving is a matter of going live, not of naming
+        /// anything (docs/design/26-storage.md).
+        /// </summary>
+        public const string Shelf = "ui.arch.tool.shelf";
+
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -157,7 +166,7 @@ namespace Odyssey.Hud
         {
             ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
+            ("ui.arch.category.furniture", new[] { Bed, Shelf, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
@@ -296,6 +305,15 @@ namespace Odyssey.Hud
             new PaletteTool(Bed,
                 d => d.ArmBuild(BuildingHandle.Bed),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Bed,
+                wantsMaterial: true),
+
+            // The shelf, which has sat in the Furniture category as a dim chip since the palette
+            // was written. It is the first buildable *store*: the stockpile chip paints one and
+            // this one raises one, and the settings a player reaches from either are the same
+            // control over the same record (docs/design/26-storage.md).
+            new PaletteTool(Shelf,
+                d => d.ArmBuild(BuildingHandle.Shelf),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Shelf,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

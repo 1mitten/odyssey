@@ -206,6 +206,27 @@
   </BuildingDef>
 
   <!--
+    THE SHELF. edifice 13 is CoreContent.EdificeShelf — 10 and 11 are the trees, 12 is the bed.
+    blocking false: a shelf is walked past, not around. A blocking one would be a wall a player
+    built by accident, and every placement would be a NavGraph rebuild.
+    needsClearCell true: the cell stops taking loose stacks the moment the shelf is raised, so
+    what is at a shelf's cell is in the shelf.
+    Cost and work are the bed's; a shelf is joinery of the same order.
+  -->
+  <BuildingDef>
+    <defName>Building_Shelf</defName>
+    <label>shelf</label>
+    <edifice>13</edifice>
+    <blocking>false</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <costCount>5</costCount>
+    <workToBuild>180</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.shelf</iconKey>
+  </BuildingDef>
+
+  <!--
     The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
     with: nothing produces them, no colonist can carry one, and offering them would be offering an
     order that can never be filled. They keep their indices, because every stamped wall in the city
