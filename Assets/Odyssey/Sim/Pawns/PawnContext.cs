@@ -132,6 +132,24 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Storage.StorageUnits? StorageUnits { get; set; }
 
+        /// <summary>
+        /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
+        /// holding it, or -1 while it is in a pair of hands.
+        ///
+        /// <para><b>One owner, because five scans want it.</b> Every one of them used to write
+        /// <c>item.Cell</c> and mean "where is it", and that was true while a thing was either on
+        /// the floor or carried. With a third home the expression is wrong in a way that reads as
+        /// right — a contained thing answers -1, so a distance to it is garbage and a reachability
+        /// test against it is nonsense — and five copies of a wrong expression is five places to
+        /// fix it.</para>
+        /// </summary>
+        public int WhereIs(ColonyItem item)
+        {
+            if (item.Cell >= 0) return item.Cell;
+            if (item.ContainerId == 0) return -1;
+            return StorageUnits?.CellOfContainer(item.ContainerId) ?? -1;
+        }
+
 
         /// <summary>
         /// "This cell is in no growing zone" as a delegate that already exists.

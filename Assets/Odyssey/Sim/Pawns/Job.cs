@@ -389,6 +389,32 @@ namespace Odyssey.Sim.Pawns
         /// an unreachable target produces the most expensive possible search, and here it costs
         /// two array reads instead.
         /// </summary>
+        /// <summary>
+        /// Is this thing still where the job expects it — on that cell, or in the store standing in
+        /// it?
+        ///
+        /// <para>The guard every carrying driver opens with, and it used to be
+        /// <c>item.Cell != Job.TargetCell</c>. That was "the thing moved or vanished" while a thing
+        /// was on the floor or in a pair of hands; with a third home it is also false for a thing
+        /// sitting perfectly still on the shelf the colonist is walking towards.</para>
+        /// </summary>
+        protected static bool StillAt(PawnContext ctx, ColonyItem item, int cell)
+        {
+            if (item.Cell == cell) return true;
+            return item.ContainerId != 0 && ctx.StorageUnits?.CellOfContainer(item.ContainerId) == cell;
+        }
+
+        /// <summary>
+        /// Set a carried thing into a store. <see cref="PutDown"/>'s twin, and the same gesture:
+        /// the stoop on to the floor and the reach into a shelf are one motion, so they report one
+        /// thing and a watcher cannot tell which happened from the animation alone.
+        /// </summary>
+        protected void PutInto(PawnContext ctx, ColonyItem item, int containerId)
+        {
+            ctx.Items.PutIn(item, containerId);
+            Pawn.BeginGesture(PawnGesture.Stow);
+        }
+
         protected JobStatus GotoCell(PawnContext ctx, int dest)
         {
             if (dest < 0) return JobStatus.Failed;

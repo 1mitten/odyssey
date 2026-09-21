@@ -16,20 +16,45 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class HaulJobDriver : JobDriver
     {
+        /// <summary>
+        /// The destination store, or null when the load is going on to the ground. Resolved from
+        /// the destination <em>cell</em>, because that is all the job record carries and a cell
+        /// holds at most one edifice.
+        /// </summary>
+        Storage.StorageUnit? Destination(PawnContext ctx) => ctx.StorageUnits?.AtCell(Job.DestCell);
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
             var item = ctx.Items.Get(Job.TargetItem);
-            if (item == null || item.Cell < 0) return false;
-            if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return false;
+            // Somewhere real: on the floor, or in a store. A thing already in a pair of hands is
+            // not something to be sent for.
+            if (item == null || ctx.WhereIs(item) < 0) return false;
+
+            // **Every question first, then every claim.** All or nothing before the toils run
+            // (design 05 §2), and the reason this order matters rather than merely reading better:
+            // a check that fails after a claim has been taken walks out holding it.
+            Storage.StorageUnit? into = Destination(ctx);
+            if (into != null)
+            {
+                if (!ctx.StorageUnits!.HasSpaceFor(into, item.DefIndex, item.Stack)) return false;
+            }
+            else if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return false;
 
             long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
-            long cellKey = ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
+            // The destination is claimed as whichever kind of thing it is. **Only the
+            // destination** — a store being taken *out of* is deliberately left unclaimed, because
+            // the item claim already stops two haulers lifting the same stack, and a claim on the
+            // source would stop a second colonist putting something *into* a shelf while this one
+            // empties it.
+            long destKey = into != null
+                ? ReservationManager.Key(ReservationTargetKind.Container, into.Edifice)
+                : ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
 
             if (!ctx.Reservations.Reserve(Pawn.Id, itemKey)) return false;
             Pawn.HeldReservations.Add(itemKey);
 
-            if (!ctx.Reservations.Reserve(Pawn.Id, cellKey)) return false;
-            Pawn.HeldReservations.Add(cellKey);
+            if (!ctx.Reservations.Reserve(Pawn.Id, destKey)) return false;
+            Pawn.HeldReservations.Add(destKey);
             return true;
         }
 
@@ -42,7 +67,7 @@ namespace Odyssey.Sim.Pawns
             {
                 case 0:
                 {
-                    if (item.Cell != Job.TargetCell) return JobStatus.Failed;
+                    if (!StillAt(ctx, item, Job.TargetCell)) return JobStatus.Failed;
                     JobStatus walk = GotoCell(ctx, Job.TargetCell);
                     if (walk == JobStatus.Succeeded) NextToil();
                     return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
@@ -51,7 +76,8 @@ namespace Odyssey.Sim.Pawns
                 case 1:
                     // Taken up rather than merely moved, and it takes time: LiftToil is the stoop,
                     // the grasp and the rise, so every job which ever lifts anything gets all three
-                    // without being asked.
+                    // without being asked. Reaching into a shelf is the same motion and the same
+                    // duration as stooping to the floor, deliberately.
                     return LiftToil(ctx, item);
 
                 case 2:
@@ -68,12 +94,26 @@ namespace Odyssey.Sim.Pawns
                 default:
                 {
                     // Checked again on arrival: something may have been dropped or eaten here
-                    // meanwhile, and the cell claim guards against haulers, not against eaters.
-                    if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return JobStatus.Failed;
-                    // The same motion the other way up, and only on a haul that *arrived*: see
-                    // PutDown, and see Cleanup below for the failure path that deliberately says
-                    // nothing.
-                    PutDown(ctx, item, Job.DestCell);
+                    // meanwhile, and the destination claim guards against haulers, not against
+                    // eaters — which is as true of a shelf somebody has just taken the last meal
+                    // out of as it is of a cell.
+                    Storage.StorageUnit? into = Destination(ctx);
+                    if (into != null)
+                    {
+                        if (!ctx.StorageUnits!.HasSpaceFor(into, item.DefIndex, item.Stack))
+                            return JobStatus.Failed;
+                        PutInto(ctx, item, Storage.StorageUnits.ContainerIdOf(into.Edifice));
+                    }
+                    else
+                    {
+                        if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack))
+                            return JobStatus.Failed;
+                        // The same motion the other way up, and only on a haul that *arrived*: see
+                        // PutDown, and see Cleanup below for the failure path that deliberately
+                        // says nothing.
+                        PutDown(ctx, item, Job.DestCell);
+                    }
+
                     Job.CarriedItem = -1;
                     return JobStatus.Succeeded;
                 }
