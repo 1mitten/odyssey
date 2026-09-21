@@ -1392,7 +1392,11 @@ namespace Odyssey.Presentation.Ui
             icon.style.marginLeft = 10;
             element.Add(icon);
 
-            Label text = HudText.Make(row.Label, HudTextRole.Body);
+            // A category is a heading over the commodities it opens onto, so it is set in the
+            // heading role: a step above the rows beneath it, tracked, and upper-cased by
+            // HudText.Set rather than by a ToUpper here — the case belongs to the role, or the
+            // next heading somewhere else is capitalised by hand and the two drift apart.
+            Label text = HudText.Make(row.Label, HudTextRole.ListHeading);
             text.style.marginLeft = 10;
             text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue);
             element.Add(text);
