@@ -1048,11 +1048,16 @@ namespace Odyssey.Presentation.Bootstrap
         void OnGameSpeedRequested(int speed)
         {
             if (_world == null) return;
-            // Space toggles: asking for pause while already paused means "start again".
-            int next = speed == 0 && _world.GameSpeed == 0 ? 1 : speed;
+            // Space toggles: asking for pause while already paused means "start again" — at the
+            // speed the player was last running at, not at normal. SpeedControl owns that rule
+            // and the memory behind it.
+            int next = _speed.Resolve(speed, _world.GameSpeed);
             _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, next));
             _speedChangePending = true;
         }
+
+        /// <summary>What an unpause comes back to. See <see cref="Odyssey.Hud.SpeedControl"/>.</summary>
+        readonly Odyssey.Hud.SpeedControl _speed = new();
 
         bool _speedChangePending;
 
@@ -3011,7 +3016,13 @@ namespace Odyssey.Presentation.Bootstrap
                 var hud = GetComponent<Ui.HudShell>();
                 _view.Apply(cameraRig, Directors,
                     setGameSpeed: speed =>
-                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed)),
+                    {
+                        // Straight to the intent, bypassing the toggle, so a colony saved paused
+                        // comes back paused — but the memory still hears about it, or the first
+                        // unpause of a colony saved at triple speed would drop it to normal.
+                        _speed.Remember(speed);
+                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed));
+                    },
                     hud: hud);
             }
 
