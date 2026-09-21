@@ -198,6 +198,7 @@ this file.
 |---|---|
 | The frame budget, draw calls, what a submission costs | `docs/design/06-rendering-and-camera.md` §6c, §6c.1 |
 | Stairs, the one-cell flight, who owns a connector | `docs/design/28-stairs.md` (**§10 first**) |
+| How a figure is drawn climbing a stair | `docs/design/28-stairs.md` §11 — and read §11c before quantising anything to the treads |
 | Roofs, roofing a room, the support pillar, what the slice drops | `docs/design/27-roofs.md` |
 | Grass tufts, the surround, what the decoration costs, the GPU readout | `docs/design/06-rendering-and-camera.md` §6c.3 |
 | Tree sectors, how many kinds of tree the surround draws, the batch census | `docs/design/06-rendering-and-camera.md` §6c.4 |
@@ -402,6 +403,11 @@ invisible where the game is played.
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-21 on
+  PR #143, **after the one-cell stair and its climb** (2026-09-21): EditMode **2,407 total,
+  2,386 passed, 0 failed**; PlayMode **97 total, 92 passed, 0 failed**. The eleven newest are
+  `StairWalkTests`, which pin the drawn climb against the art's own measured surface and refuse the
+  per-tread quantisation the terrace already rejected.
+  The run before it, on the same
   PR #143 (RF1 + U44) **after merging main**: EditMode **2,396 total, 2,375 passed, 0 failed**,
   13 skipped and 8 inconclusive — the same twenty-one non-passing as the run before it, so the
   thirty added are all passing; PlayMode **97 total, 92 passed, 0 failed**, matching `main`

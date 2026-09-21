@@ -503,6 +503,110 @@ the same skirt, not a measurement. `Odyssey.EditorTools.StairCheck` is the tool,
 applies — a probe gets one `camera.Render()`, so an empty first picture is the meshing budget and
 not the camera.
 
+## 11. Climbing it — 2026-09-21, the same evening
+
+**The owner played the one-cell stair and it worked.** *"the stairs seemed to work - didn't test the
+ladders. But the animation for going upstairs is terrible it needs to ground 2 flights of stairs and
+make sure the feet get onto each step and surface as it climbs."*
+
+### 11a. Why there was no animation at all
+
+The stair's connector joins a cell to **the cell directly above it** — the ladder's shape, §10b's
+whole saving. So the step a pawn takes is `(0, +3, 0)` and every rule in `PawnPose.Of` treats it as
+a ladder without anyone having decided that:
+
+| the rule | what it does with a vertical step | the consequence |
+|---|---|---|
+| `heading = (travel.x, 0, travel.z)` | zero length, which means "keep facing wherever you were" | the figure never turns to the flight |
+| `StepPace.Of` | `half <= 1e-4`, so it keeps the raw clock | no pacing, correctly, for a ladder |
+| the position | a straight lerp between two cell centres | **straight up the middle of the staircase** |
+
+So the colonist rose vertically through the art with **no forward motion**, which also means the gait
+blend — driven by `PawnFigureDirector.ObserveSpeed`, which differences position frame to frame — had
+nothing to observe and left her in an idle pose. Feet still, body sliding up through the treads.
+"Terrible" is fair.
+
+### 11b. The path is measured, because the last guess was wrong the day before
+
+`SM_Bld_Base_Stairs_02` is a **switchback** — that is how a whole layer fits a 2.5 m run — and
+nothing in the code knew its shape. `StairCheck` gained a surface pass: it bins the module's
+**placed** vertices over the cell footprint and prints the top surface as a grid. What came back:
+
+- a flight along the **south** half of the cell, climbing toward **−X**, from the floor to 1.50 m;
+- a **landing** at the −X end, the strip from x = −1.25 to about x = −0.35, at exactly half a layer;
+- a second flight along the **north** half, climbing back toward **+X**, from 1.50 m to 3.00 m;
+- sixteen risers of 0.1875 m, eight to a flight.
+
+`StairWalk.Path` is the walking line read off that grid. **Measured rather than eyeballed on
+purpose**: §10b's `yaw` was copied from the half-flight on family resemblance and drew the whole
+staircase descending into the ground, which is the same mistake one level up.
+
+**Both ends of the path are cell centres.** The foot of the flight is over at +X and would be the
+tidier place to start, but the step before finishes at `FloorCentre(stairCell)` and the step after
+begins at `FloorCentre(cell above)` — a path that began at the flight would tear at both joins,
+which is a fault `PawnPose` already carries three comments about.
+
+### 11c. Smooth, not strided — and the obvious fix is the rejected one
+
+The literal reading of *"the feet get onto each step"* is to quantise the height to the sixteen
+treads. **Do not.** `HopArc`'s own summary records that rhythm being built for the terrace climb and
+then taken out again at the owner's request:
+
+> *"keep it simple … a consistently slow speed from top to bottom and motions exactly just above the
+> terrace surface, as it jolts and jitters the colonists at certain points; smoother is preferred and
+> predictable"* — which took away what had replaced the parabola: strides, a hold-and-push rhythm
+> that was four deliberate jolts a climb.
+
+A 0.1875 m riser snapped per tread is **seven times** the 25 mm an honest frame of walking moves,
+sixteen times a flight. So the walking line is the **nosing** — the ramp through the step edges,
+which is the surface a stair actually presents to a foot. The feet are on the treads and nothing
+jolts. `StairWalkTests.AClimbNeverJoltsTheFigure` is what keeps the quantised version out, and it
+says so in its own failure message.
+
+Time is spread over the path the way `StepPace` spreads a terrace's, and for the same reason: the
+landing is flat and the flights climb, so an equal share of the clock per segment would cross the
+landing at a crawl and take the flights at a run. Each segment is weighted by its ground length plus
+`HopArc.ClimbWeight` metres for every metre of rise.
+
+### 11d. What was photographed, and how
+
+`StairFigureCheck` is `ClimbCheck`'s sibling: `scripts/unity.sh shot
+Odyssey.EditorTools.StairFigureCheck.Run`. **It does not fabricate a `PawnView`**, which
+`ClimbCheck` has to because a ladder climb cannot be arranged on demand. A stair climb can: the board
+gets a stair, a wall beside it with a deck on top as the landing, wood on the ground and a floor
+ordered on the storey above — and the colonist has to climb to build it. The harness ticks until a
+pawn is *on* the stair and shoots at a spread of progress values.
+
+Measured on a real climb, **260 ticks spent on the stair**:
+
+| t | height above the cell floor | facing |
+|---|---|---|
+| 0.00 | 0.00 m | — |
+| 0.15 | 0.28 m | −90° (up the lower flight, toward −X) |
+| 0.30 | 0.89 m | −90° |
+| 0.45 | **1.50 m** | −30° (turning onto the landing) |
+| 0.55 | 1.51 m | +90° (**turned**, facing the upper flight) |
+| 0.70 | 2.13 m | +90° |
+| 0.85 | 2.75 m | +90° |
+
+The pictures show what the numbers cannot: boots on the treads on the lower flight, a figure standing
+square on the landing at the foot of the upper one, and a foot planted on a step near the top.
+
+**And it re-proves §10a incidentally** — the colonist only gets up there by having material delivered
+over the stair, so a run that produces pictures at all is a run in which delivery crossed a storey.
+
+### 11e. What this does not do
+
+**There is no foot IK**, and the gait is a blend rather than a stepping cycle keyed to the treads. A
+boot can fall between two nosings mid-stride. That is the same bargain every other walked surface in
+the game makes — the bank, the flat ground, the terrace — and closing it is a rig feature rather than
+a line here. `StairFigureCheck`'s own summary says so, so the next report about a foot is read
+against the right thing.
+
+**Worldgen's stamped two-cell stairwells are not touched.** `StairWalk.Crosses` asks for
+`EdificeStairFull` specifically: their halves lie side by side rather than stacked, so this path
+would be nonsense on one, and a colonist on a stamped stairwell is drawn exactly as it was.
+
 ## 9. Open
 
 - ~~**`EmitStair` infers facing by scanning for its partner**~~ — **closed 2026-09-21, §10b.** A

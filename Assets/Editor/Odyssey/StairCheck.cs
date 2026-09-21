@@ -182,6 +182,62 @@ namespace Odyssey.EditorTools
                     break;
                 }
 
+                // **The walked surface, binned over the cell's own footprint.** A switchback is
+                // not a ramp and cannot be drawn as one: a figure climbing it has to follow the
+                // lower flight, turn on the landing and climb the upper one, with its feet on the
+                // treads. That path has to come from the art, so this prints the art's top
+                // surface as a grid and StairTread is authored against the numbers
+                // (docs/design/28-stairs.md 11).
+                {
+                    var placed = library[model.EdificeModule(head)];
+                    const int bins = 20;
+                    var top = new float[bins, bins];
+                    for (int a = 0; a < bins; a++)
+                    for (int b = 0; b < bins; b++)
+                        top[a, b] = float.NegativeInfinity;
+
+                    foreach (ModulePart part in placed.Parts)
+                    {
+                        if (part.Mesh == null) continue;
+                        foreach (Vector3 v in part.Mesh.vertices)
+                        {
+                            Vector3 q = part.Local.MultiplyPoint3x4(v);
+                            int ix = Mathf.Clamp(
+                                Mathf.FloorToInt((q.x + CellMetrics.HalfXZ) / CellMetrics.SizeXZ * bins), 0, bins - 1);
+                            int iz = Mathf.Clamp(
+                                Mathf.FloorToInt((q.z + CellMetrics.HalfXZ) / CellMetrics.SizeXZ * bins), 0, bins - 1);
+                            if (q.y > top[ix, iz]) top[ix, iz] = q.y;
+                        }
+                    }
+
+                    var grid = new StringBuilder();
+                    grid.AppendLine("[Stair] the walked surface, metres above the cell floor.");
+                    grid.AppendLine("  rows are +Z (north, the climb) DOWN the page; columns are +X to the right.");
+                    for (int iz = bins - 1; iz >= 0; iz--)
+                    {
+                        grid.Append($"  z{iz,2} ");
+                        for (int ix = 0; ix < bins; ix++)
+                            grid.Append(float.IsNegativeInfinity(top[ix, iz]) ? "  .  " : $"{top[ix, iz],5:0.0}");
+                        grid.AppendLine();
+                    }
+
+                    // The centre line of the climb: the highest surface in each +Z band, which is
+                    // what a figure walking up the middle of the flight would tread on.
+                    grid.AppendLine("  centre line (max over x, per z band):");
+                    for (int iz = 0; iz < bins; iz++)
+                    {
+                        float best = float.NegativeInfinity;
+                        int at = -1;
+                        for (int ix = 0; ix < bins; ix++)
+                            if (top[ix, iz] > best) { best = top[ix, iz]; at = ix; }
+                        float zMid = (iz + 0.5f) / bins * CellMetrics.SizeXZ - CellMetrics.HalfXZ;
+                        float xMid = (at + 0.5f) / bins * CellMetrics.SizeXZ - CellMetrics.HalfXZ;
+                        grid.AppendLine($"    z={zMid,6:0.00}  highest x={xMid,6:0.00}  y={best,6:0.00}");
+                    }
+
+                    Debug.Log(grid.ToString());
+                }
+
                 Debug.Log(report.ToString());
 
                 lightingRoot = new GameObject("StairRoot");
