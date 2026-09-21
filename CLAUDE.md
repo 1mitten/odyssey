@@ -414,8 +414,13 @@ invisible where the game is played.
   tests, ~20 s). **The default fast tier excludes it**, so three green tiers can sit on top of a
   Long tier nobody ran — which is how PR #145 merged clean and turned `main` red on a wall-clock
   gate. `docs/lessons.md`.
-- **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
-  `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
+- **Content gates — there are three, and the third is the one that gets forgotten:**
+  `python3 tools/wiki/build_wiki.py --check`, `python3 tools/wiki/emit_labels.py --check`
+  and `python3 tools/icons/icons.py validate` (plus its 30 unittest tests,
+  `python3 -m unittest discover -s tools/icons -t tools/icons`). All three must pass
+  before a content commit. The icon gate turned CI red on 2026-09-21 over a hand-written
+  row in `icon-map.csv`: a key with no sheet behind it is `key,-,,,"description",-,gap`,
+  not a row of empty fields.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
   tick**. Both traps are in `docs/lessons.md` and both have cost a Unity run.
 
