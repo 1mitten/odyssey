@@ -236,19 +236,21 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void AStackThatWillNotFitTheResidentIsRefusedRatherThanSplit()
+        public void AFullStackTakesASecondSlotRatherThanOverflowingTheFirst()
         {
+            // **A slot is a stack, not a commodity.** Eight slots of wood is 600 wood, which is the
+            // whole reason a shelf is worth building rather than painting eight tiles of floor.
+            // Merging into "the" stack of a def and refusing a second would cap a shelf at one
+            // stack per kind — 75 wood — and quietly turn a warehouse unit into a spice rack.
             var colony = Colony.Build();
             int limit = colony.Ctx.Content.Items[Wood].stackLimit;
             Stow(colony, Wood, limit, Shelf, colony.Cell(3, 3, 0));
 
-            ColonyItems items = colony.Ctx.Items;
-            ThingId id = items.Spawn(Wood, colony.Cell(4, 3, 0), 1);
-            ColonyItem more = items.Get(id)!;
-            items.PickUp(more, Hauler);
+            ColonyItem second = Stow(colony, Wood, limit, Shelf, colony.Cell(4, 3, 0));
 
-            Assert.That(() => items.PutIn(more, Shelf), Throws.InvalidOperationException,
-                "a caller that has not asked whether it fits has a bug");
+            Assert.That(colony.Ctx.Items.StacksIn(Shelf), Is.EqualTo(2), "two stacks of one kind");
+            Assert.That(second.Stack, Is.EqualTo(limit), "and the second is whole, not split");
+            AssertEveryThingIsInExactlyOnePlace(colony);
         }
 
         // ---------------------------------------------------------------- the save

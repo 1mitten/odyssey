@@ -162,7 +162,13 @@ namespace Odyssey.Sim.Pawns
         public int StacksIn(int containerId) =>
             _inContainer.TryGetValue(containerId, out var slots) ? slots.Count : 0;
 
-        /// <summary>The stack of this def already in this container, or null.</summary>
+        /// <summary>
+        /// A stack of this def in this container, or null. The first, where there are several.
+        ///
+        /// <para>For reading — what a pane says a shelf holds. Putting something <em>in</em> asks
+        /// <see cref="StackWithRoomIn"/> instead, because the first stack of a def is not
+        /// necessarily one with room in it.</para>
+        /// </summary>
         public ColonyItem? ResidentIn(int containerId, int defIndex)
         {
             if (!_inContainer.TryGetValue(containerId, out var slots)) return null;
@@ -175,6 +181,26 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// A stack of this def in this container with room for the whole load, or null.
+        ///
+        /// <para><b>A container holds several stacks of one kind, and that is the point of it.</b>
+        /// A slot is a stack, not a commodity: eight slots of wood is 600 wood, which is what makes
+        /// a shelf worth building rather than painting eight tiles. Merging into "the" stack of a
+        /// def and refusing a second would cap a shelf at one stack per kind — 75 wood — and quietly
+        /// turn a warehouse unit into a spice rack.</para>
+        /// </summary>
+        public ColonyItem? StackWithRoomIn(int containerId, int defIndex, int count)
+        {
+            if (!_inContainer.TryGetValue(containerId, out var slots)) return null;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                ColonyItem held = _items[slots[i]];
+                if (Fits(held, defIndex, count)) return held;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Would this load merge into a stack the container already holds? The per-def half of
         /// "has it room"; how many slots the container has is the container's own half, and
         /// <c>StorageUnits.HasSpaceFor</c> is where the two meet.
@@ -182,11 +208,8 @@ namespace Odyssey.Sim.Pawns
         /// <para>Whole load or nothing, the same rule <see cref="CellHasSpace(int, int, int)"/>
         /// keeps one level up: a shelf never splits a load across two slots.</para>
         /// </summary>
-        public bool ContainerStackHasRoom(int containerId, int defIndex, int count)
-        {
-            ColonyItem? resident = ResidentIn(containerId, defIndex);
-            return resident != null && Fits(resident, defIndex, count);
-        }
+        public bool ContainerStackHasRoom(int containerId, int defIndex, int count) =>
+            StackWithRoomIn(containerId, defIndex, count) != null;
 
         /// <summary>
         /// Which cells are storage, or null where the colony has no zones at all. Set by the
@@ -319,13 +342,9 @@ namespace Odyssey.Sim.Pawns
             if (containerId == 0)
                 throw new System.InvalidOperationException("a container id of 0 is 'no container'");
 
-            ColonyItem? resident = ResidentIn(containerId, item.DefIndex);
+            ColonyItem? resident = StackWithRoomIn(containerId, item.DefIndex, item.Stack);
             if (resident != null)
             {
-                if (!Fits(resident, item.DefIndex, item.Stack))
-                    throw new System.InvalidOperationException(
-                        $"container {containerId} holds {resident.Stack} of def {resident.DefIndex} " +
-                        $"and cannot take {item.Stack} more");
                 resident.Stack += item.Stack;
                 item.Stack = 0;
                 Despawn(item);

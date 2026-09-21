@@ -130,6 +130,44 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void EightStacksOfOneCommodityFillAShelf()
+        {
+            // **The headline number, and it was wrong for a day.** "Eight stacks, 600 wood" is the
+            // decision; merging into *the* stack of a def and refusing a second capped a shelf at
+            // one stack per kind — 75 wood, one tile's worth — which would have made a shelf
+            // useless for the thing a player most wants to put on one.
+            ColonyWorld colony = Fresh();
+            int cell = OpenCell(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+            StorageUnit unit = RaiseShelf(colony, cell);
+            StorageUnits units = colony.Pawns.StorageUnits!;
+
+            int limit = colony.Pawns.Content.Items[Wood].stackLimit;
+            for (int i = 0; i < unit.Slots; i++)
+            {
+                Assert.That(units.HasSpaceFor(unit, Wood, limit), Is.True, $"slot {i} is free");
+                Stow(colony, unit, Wood, limit, FreeGround(colony, i));
+            }
+
+            Assert.That(units.StacksIn(unit), Is.EqualTo(8));
+            Assert.That(WoodIn(colony, unit), Is.EqualTo(8 * limit), "600 wood on one shelf");
+            Assert.That(units.HasSpaceFor(unit, Wood, 1), Is.False, "and the ninth is refused");
+            Assert.That(units.HasSpaceFor(unit, Meal, 1), Is.False, "as is anything else");
+        }
+
+        static int WoodIn(ColonyWorld colony, StorageUnit unit)
+        {
+            int total = 0;
+            var holds = colony.Pawns.Items.ContentsOf(StorageUnits.ContainerIdOf(unit.Edifice));
+            for (int i = 0; i < holds.Count; i++)
+            {
+                ColonyItem held = colony.Pawns.Items.Items[holds[i]];
+                if (held.DefIndex == Wood) total += held.Stack;
+            }
+            return total;
+        }
+
+        [Test]
         public void AFullSlotSetRefusesADefItDoesNotAlreadyHold()
         {
             ColonyWorld colony = Fresh();
@@ -287,6 +325,38 @@ namespace Odyssey.Tests.Sim
             Assert.That(details.Length, Is.EqualTo(1));
             Assert.That(details[0].StoreKind, Is.EqualTo(CellDetail.StoreShelf),
                 "the ground under a shelf answers for the shelf, as it does for a painted zone");
+        }
+
+        [Test]
+        public void AShelfOfOneCommodityNamesItHoweverManyStacksItIs()
+        {
+            // The commonest thing a player builds a shelf for is a pile of one thing, and that is
+            // eight stacks rather than one — so "is there exactly one item in here" would have left
+            // the ordinary case reading as a bare number.
+            ColonyWorld colony = Fresh();
+            int cell = OpenCell(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+            StorageUnit unit = RaiseShelf(colony, cell);
+
+            int limit = colony.Pawns.Content.Items[Wood].stackLimit;
+            Stow(colony, unit, Wood, limit, FreeGround(colony, 0));
+            Stow(colony, unit, Wood, limit, FreeGround(colony, 1));
+
+            CellDetail detail = Ask(colony, Size.FromIndex(cell));
+            Assert.That(detail.StoredDef, Is.EqualTo((byte)Wood), "two stacks, still one kind");
+            Assert.That(detail.StoredUnits, Is.EqualTo(2 * limit));
+            Assert.That(detail.StoredStacks, Is.EqualTo(2));
+
+            Stow(colony, unit, Meal, 2, FreeGround(colony, 2));
+            detail = Ask(colony, Size.FromIndex(cell));
+            Assert.That(detail.StoredDef, Is.EqualTo(255), "a second kind and it says only how full it is");
+        }
+
+        static CellDetail Ask(ColonyWorld colony, CellRef cell)
+        {
+            colony.World.Intents.Submit(new Intent(IntentKind.QueryCell, cell));
+            colony.World.Tick();
+            return colony.World.Views.Current.CellDetails[0];
         }
 
         // ---------------------------------------------------------------- coming apart

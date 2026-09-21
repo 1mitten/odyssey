@@ -1021,11 +1021,8 @@ namespace Odyssey.Presentation.Rendering
                     int shelfIndex = _model.Size.Index(cell);
                     Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y,
                         _model.EdificeFacing(shelfIndex));
-                    // Placed by what it is, not by what order it arrived in: wood sits in the same
-                    // place on every shelf in the colony, and taking a stack out never moves the
-                    // ones left behind.
                     Vector3 stand = ShelfShape.SlotCentre(shelf, _model.EdificeFacing(shelfIndex),
-                        ShelfShape.SlotFor(def));
+                        things[i].Slot);
 
                     // **A thing just set on a shelf is still leaving the hands that held it**, the
                     // same rule the floor path keeps one paragraph down and for the same reason:

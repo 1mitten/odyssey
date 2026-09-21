@@ -465,10 +465,25 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int Container;
 
+        /// <summary>
+        /// Which of the store's slots this thing sits on, so the drawn goods have somewhere to
+        /// stand. Meaningless where <see cref="Container"/> is 0.
+        ///
+        /// <para><b>Published rather than derived from the def, and that is the second answer to
+        /// this question.</b> The first was the def itself, which is stable and needs no field —
+        /// and is wrong the moment a store holds two stacks of one kind, which is the ordinary case
+        /// for anything bulky: eight stacks of wood would all draw in the same place.</para>
+        ///
+        /// <para>It is the thing's place in its store's ordered contents, so a store <b>re-packs</b>
+        /// when something leaves it and the goods behind shift along. That is a real motion on
+        /// screen and the honest price of never overlapping two heaps.</para>
+        /// </summary>
+        public readonly byte Slot;
+
         public bool Contained => Container != 0;
 
         public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
-            int container = 0)
+            int container = 0, byte slot = 0)
         {
             Id = id;
             Cell = cell;
@@ -476,6 +491,7 @@ namespace Odyssey.Sim.Contracts
             StuffIndex = stuffIndex;
             Stack = stack;
             Container = container;
+            Slot = slot;
         }
     }
 

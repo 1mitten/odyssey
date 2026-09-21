@@ -161,9 +161,10 @@ namespace Odyssey.Sim.Storage
             int container = ContainerIdOf(unit.Edifice);
             if (_items.ContainerStackHasRoom(container, defIndex, count)) return true;
 
-            // A fresh slot, and the load must fit in one of them.
-            return _items.ResidentIn(container, defIndex) == null
-                && _items.StacksIn(container) < unit.Slots
+            // Or a fresh slot, and the load must fit in one of them. **A slot is a stack and not a
+            // commodity**: a shelf takes eight stacks of wood as readily as eight different things,
+            // which is what makes it worth building rather than painting eight tiles of floor.
+            return _items.StacksIn(container) < unit.Slots
                 && count <= _items.Content.Items[defIndex].stackLimit;
         }
 

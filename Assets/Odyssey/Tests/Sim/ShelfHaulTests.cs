@@ -89,6 +89,21 @@ namespace Odyssey.Tests.Sim
             return -1;
         }
 
+        /// <summary>
+        /// Take the scenario's own starting kit out of play.
+        ///
+        /// <para>A Bare colony arrives with meals and salvage scattered about, and a shelf takes
+        /// eight <b>stacks</b> — so left alone the colony fills it with its own belongings and the
+        /// one stack a test put down finds no room. Forbidding is the game's own way of saying
+        /// "not this", and it keeps the colony's totals honest where despawning would not.</para>
+        /// </summary>
+        static void ForbidWhatIsAlreadyLying(ColonyWorld colony)
+        {
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned && items[i].Cell >= 0) items[i].Forbidden = true;
+        }
+
         static void Run(ColonyWorld colony, int ticks)
         {
             for (int i = 0; i < ticks; i++) colony.World.Tick();
@@ -107,6 +122,7 @@ namespace Odyssey.Tests.Sim
 
             int ground = FreeGround(colony, 0);
             Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+            ForbidWhatIsAlreadyLying(colony);
             colony.Pawns.Items.Spawn(Wood, ground, 20);
 
             Run(colony, 4_000);
@@ -139,6 +155,7 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(IntentRejection.None));
             Assume.That(colony.Pawns.Storage!.PriorityAt(nearZone), Is.EqualTo(StoragePriority.Normal));
 
+            ForbidWhatIsAlreadyLying(colony);
             colony.Pawns.Items.Spawn(Wood, ground, 20);
             Run(colony, 4_000);
 
@@ -240,6 +257,55 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.StorageUnits!.StacksIn(unit), Is.EqualTo(1),
                 "a full shelf takes nothing else");
             Assert.That(items.CellHasSpace(shelf), Is.False, "and nothing lands on the floor under it");
+        }
+
+        [Test]
+        public void HaulingIntoAShelfLeavesNoClaimBehind()
+        {
+            // **A leaked container claim blocks a shelf for ever**, silently: the destination scan
+            // skips a store it cannot reserve, so the shelf simply stops being offered and the
+            // colony looks like it has stopped caring about it. The reservation kind is new, and a
+            // new kind is exactly where a release path gets forgotten — this is the assertion
+            // ReservationManager's own doc says to make after thousands of ticks rather than ten.
+            ColonyWorld colony = Fresh();
+            int shelf = OpenCell(colony);
+            Assume.That(shelf, Is.GreaterThanOrEqualTo(0));
+            StorageUnit unit = RaiseShelf(colony, shelf);
+
+            ForbidWhatIsAlreadyLying(colony);
+            colony.Pawns.Items.Spawn(Wood, FreeGround(colony, 0), 20);
+            Run(colony, 4_000);
+
+            Assume.That(colony.Pawns.Items.ResidentIn(StorageUnits.ContainerIdOf(unit.Edifice), Wood),
+                Is.Not.Null, "something was actually hauled, or this asserts nothing");
+
+            Assert.That(colony.Pawns.Reservations.ActiveClaims, Is.Zero,
+                "every claim the haul took is given back");
+        }
+
+        [Test]
+        public void OnlyOneHaulerClaimsAShelfAtATime()
+        {
+            // Eight slots and one claim bit, which is the conservative reading and a decision
+            // rather than an oversight: two haulers both aiming at the last free slot is the race
+            // a destination claim exists to stop. Pinned, so that widening it later is a change
+            // somebody makes on purpose after measuring a shelf to be a bottleneck.
+            ColonyWorld colony = Fresh();
+            int shelf = OpenCell(colony);
+            Assume.That(shelf, Is.GreaterThanOrEqualTo(0));
+            StorageUnit unit = RaiseShelf(colony, shelf);
+
+            long key = ReservationManager.Key(ReservationTargetKind.Container, unit.Edifice);
+            var first = new PawnId(1);
+            var second = new PawnId(2);
+
+            Assert.That(colony.Pawns.Reservations.Reserve(first, key), Is.True);
+            Assert.That(colony.Pawns.Reservations.CanReserve(second, key), Is.False,
+                "a second hauler is turned away while the first holds it");
+
+            colony.Pawns.Reservations.Release(first, key);
+            Assert.That(colony.Pawns.Reservations.CanReserve(second, key), Is.True,
+                "and let in once it is given back");
         }
 
         [Test]

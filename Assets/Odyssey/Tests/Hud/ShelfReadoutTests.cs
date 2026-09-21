@@ -136,6 +136,10 @@ namespace Odyssey.Tests.Hud
             Assert.That(RowValue(Showing(Shelf(1, 8, (byte)ItemHandle.Wood, 400, StorageRung.Normal)), "holding"),
                 Is.EqualTo("Wood × 400 — 1 of 8 stacks"));
 
+            Assert.That(RowValue(Showing(Shelf(8, 8, (byte)ItemHandle.Wood, 600, StorageRung.Normal)), "holding"),
+                Is.EqualTo("Wood × 600 — 8 of 8 stacks"),
+                "eight stacks of one kind is the ordinary case, and it is named");
+
             Assert.That(RowValue(Showing(Shelf(3, 8, 255, 46, StorageRung.Normal)), "holding"),
                 Is.EqualTo("46 — 3 of 8 stacks"), "several kinds say only how much and how full");
 

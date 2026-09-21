@@ -121,22 +121,6 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// Which slot a commodity stands in — the same one on every shelf, for ever.
-        ///
-        /// <para>Derived from the def rather than published, because the simulation has no opinion
-        /// about where on a shelf a thing sits and a number taken from the store's ordered contents
-        /// would not be stable: eat one stack out and everything after it shifts down a slot, so
-        /// the goods left behind hop.</para>
-        ///
-        /// <para>Two commodities share a slot once the game has more of them than a shelf has
-        /// slots, and then their heaps overlap. That is a placeholder's problem and a visible one,
-        /// which is the right kind: the day it happens is the day a shelf's geometry stops being
-        /// three boxes.</para>
-        /// </summary>
-        public static int SlotFor(int defIndex) =>
-            defIndex < 0 ? 0 : defIndex % Slots;
-
-        /// <summary>
         /// Where one slot's goods stand, in world space and already draped.
         ///
         /// <para>Four across the deck by two deep, which is the eight the def declares. The point

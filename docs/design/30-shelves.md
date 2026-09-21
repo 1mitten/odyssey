@@ -22,6 +22,21 @@ live. No wiki content moved except one new alert key.
 
 **A shelf holds an inventory; it never puts a second stack in a cell.**
 
+### 2a. A slot is a stack, not a kind
+
+Eight slots of wood is **600 wood**, and that is the whole reason a shelf is worth building rather
+than painting eight tiles of floor.
+
+**It was written the other way for a day and the review caught it.** `PutIn` merged into *the* stack
+of a def and `HasSpaceFor` refused a second, which capped a shelf at one stack per commodity — 75
+wood, one tile's worth — and quietly turned a warehouse unit into a spice rack. Every number in the
+decision, the handover and this document said 600; the code said 75; and nothing failed, because
+every test put one stack of each kind in. `EightStacksOfOneCommodityFillAShelf` is the assertion
+that was missing, and `StackWithRoomIn` is the fix: a load merges into a stack of its def **with
+room**, and takes a fresh slot when there is none.
+
+The knock-on is §8b: with several stacks of one kind, a commodity can no longer address a slot.
+
 The ground stays strictly one stack per cell, and that is not a convenience — six write paths throw
 on a second stack (felling, mining, the deconstruct refund, falling, the construction refund and the
 debug grant), each with its own tests. A contained thing is `Cell = -1, CarriedBy = 0,
@@ -166,13 +181,14 @@ it does not stand in the middle of its cell.
 `ItemHeap`'s own ramp and its own spiral, on the deck instead of the floor, with the spread tightened
 to a slot's width (the recipe's spreads are sized for a 2.5 m cell and a slot is a fifth of that).
 
-**Which slot a commodity stands on is presentation's own answer**, from the def: wood sits in the
-same place on every shelf in the colony, for ever. It was published as a field for a day and taken
-out — a number from the store's ordered contents is not stable, because eating one stack out shifts
-every later one down and the goods left behind visibly hop. The simulation has no opinion about
-where on a shelf a jar sits, so it does not carry one. Two commodities share a slot once the game
-has more of them than a shelf has slots, and their heaps overlap; that is a placeholder's problem
-and a visible one, which is the right kind.
+**Which slot a stack stands on is published**, as its place in the store's ordered contents — so a
+store **re-packs** when something leaves it and the goods behind shift along. That is real motion on
+screen and the honest price of never overlapping two heaps.
+
+*Deriving it from the def was tried and is wrong*, and the reason is §2a: a store holds several
+stacks of one kind, which is the ordinary case for anything bulky, so eight stacks of wood would all
+have drawn in the same place. The contents index is the only number available here that never
+collides.
 
 `RenderThings` already groups by def and submits one instanced call per kind, so a shelf's contents
 land in a bucket that was going to be submitted anyway: **forty shelves add matrices, not

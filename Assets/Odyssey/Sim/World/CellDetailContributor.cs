@@ -169,20 +169,25 @@ namespace Odyssey.Sim.World
                 storageCells = 1;
                 storageOrdinal = _storage?.OrdinalOfCell(_units.CellOf(unit)) ?? 0;
 
-                // One commodity, or none. A shelf holding several kinds says only how full it is,
-                // because a pane row that listed them would be the storage panel said twice.
+                // **One kind, however many stacks of it.** A shelf holding several kinds says only
+                // how full it is, because a pane row that listed them would be the storage panel
+                // said twice — but a shelf of nothing but wood is the commonest thing a player
+                // builds one for, and it is eight stacks rather than one, so asking "is there
+                // exactly one item in here" would have left the ordinary case unnamed.
                 System.Collections.Generic.IReadOnlyList<int> holds =
                     _items!.ContentsOf(Storage.StorageUnits.ContainerIdOf(unit.Edifice));
-                if (holds.Count == 1)
+
+                int onlyDef = -1;
+                for (int h = 0; h < holds.Count; h++)
                 {
-                    Pawns.ColonyItem only = _items.Items[holds[0]];
-                    storedDef = (byte)only.DefIndex;
-                    storedUnits = only.Stack;
+                    Pawns.ColonyItem held = _items.Items[holds[h]];
+                    storedUnits += held.Stack;
+
+                    if (h == 0) onlyDef = held.DefIndex;
+                    else if (onlyDef != held.DefIndex) onlyDef = -1;
                 }
-                else
-                {
-                    for (int h = 0; h < holds.Count; h++) storedUnits += _items.Items[holds[h]].Stack;
-                }
+
+                if (onlyDef >= 0) storedDef = (byte)onlyDef;
             }
 
             bool isIndoors = _enclosure?.IsIndoors(cell) ?? false;
