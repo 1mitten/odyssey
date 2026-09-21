@@ -9939,3 +9939,41 @@ list with a repeated value and asserted the median of the *distinct* values. The
 matched `PhaseTrace`; the test was rewritten with ten distinct samples and a note saying why,
 because a percentile convention quietly changed to match a mistaken test is exactly the kind of
 thing nothing else would catch.
+
+---
+
+## 2026-09-21 — the stutter, found: chunk meshing has no per-frame budget
+
+The owner had reported hitches all day. `ChunkRenderer.BatchFor` meshes every stale chunk the draw
+loop touches, in the frame it touches it, with no budget and no deferral. A camera sweep into unseen
+map brings hundreds due at once; a graphics toggle calls `Model.Remesh()` and brings all eight
+hundred of a Huge board.
+
+**The evidence is a clean separation.** Eighty-seven seconds of traced player: fifty-six seconds
+with no meshing produced **zero** stalls over 100 ms, and every stall in the session fell in one of
+the eleven seconds where meshing ran, at a rate that tracks the meshing rate. The frame-level
+confirmation is one record — a **180 ms frame that meshed 900 chunks** — and `submit_max` reached
+200 ms, the draw block wearing it.
+
+**It took four wrong answers, and that is the part worth keeping.** Editor-only, then the collector,
+then shader compilation, then the tick. Each survived longer than it deserved because the trace was
+reporting *summaries of events*: `remeshed` was last-seen and read 0 through a second that meshed
+eight hundred; the tick had a median and no maximum; the phases had a mean and a p95 and no maximum.
+Every one of those zeroes and plausible medians was quoted as evidence of absence, against the
+correct hypothesis, more than once. `docs/bug-patterns.md` P14 holds the pattern and the rule: **a
+counter of events is summed, a counter of state is last-seen, and anything timed carries a maximum
+as well as a middle.**
+
+The two eliminations that survive and should not be re-litigated: **not the simulation** (`tick_max`
+4.90 ms and worst phase 3.58 ms across the session, against frames of 180-439; and 3x speed with the
+camera still produced no stalls at all), and **not the collector** (zero of the captured stalls
+collected on their own frame, across three sessions, one of which had 21 collections in a second
+whose worst frame was 19 ms).
+
+One methodological note against myself. The captured spike records all showed `remesh=0` on their
+own frame, and I said so — but `MaxSpikesPerRow` caps capture at four a second and those seconds had
+thirty-eight. **A capped sample is not a sample**, and the unbiased `submit_max` said the opposite.
+The 900-chunk frame arrived later and settled it.
+
+The fix is a per-frame meshing budget, nearest first, and it is not built: it is a renderer change
+with a visible trade and wants its own unit.

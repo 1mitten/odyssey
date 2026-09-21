@@ -1538,6 +1538,68 @@ hands over is not a measurement until it has been seen beside a number taken ind
 one shipped on the strength of looking plausible in a batch run at 640 × 480, in the very document
 that warns that 640 × 480 proves nothing.
 
+### 6c.6 The stutter, found: chunk meshing has no per-frame budget
+
+**2026-09-21, from a traced player session on the Huge board at 3840 x 2160.** The owner had been
+reporting hitches all day. They are **`ChunkRenderer.BatchFor` meshing every stale chunk it meets,
+in one frame, however many that is.**
+
+```csharp
+if (batch.Version != _model.Version)
+{
+    _mesher.Mesh(batch, chunkIndex);      // no budget, no deferral, no limit
+    ChunksMeshedThisFrame++;
+}
+```
+
+### The measurement
+
+Eighty-seven seconds of play, per-second rows, stalls counted as frames over 100 ms:
+
+| chunks meshed in the second | seconds | stalls | stalls a second |
+|---|---|---|---|
+| **0** | 56 | **0** | 0.00 |
+| 150+ | 11 | 36 | 3.3 |
+| 1,725 | 1 | 22 | — |
+| 2,507 | 1 | 38 | — |
+
+**Fifty-six seconds with no meshing produced no stall at all.** Every stall in the session fell in a
+second where meshing ran, and the rate tracks the meshing rate. The frame-level confirmation is a
+single record: **a 180 ms frame that meshed 900 chunks**.
+
+`submit_max` reached **200 ms** — the draw block itself, which is where meshing happens.
+
+### Why it took four wrong answers to get here
+
+Recorded because the route matters more than the destination. The stalls were blamed on the editor,
+then the collector, then shader compilation, then the tick, and each survived longer than it should
+because **the trace was reporting summaries of events** (`docs/bug-patterns.md` P14): `remeshed` was
+last-seen so it read 0 through a second that meshed 800; the tick had a median and no maximum; the
+phases had a mean and a p95 and no maximum. Each fix to the instrument moved the answer.
+
+Two eliminations that now stand on good evidence, and are worth keeping:
+
+- **Not the simulation.** `tick_max` 4.90 ms and the worst tick phase 3.58 ms across the whole
+  session, against frames of 180–439 ms. Game speed alone provokes nothing: a stretch at 3x with the
+  camera still produced **zero** stalls.
+- **Not the collector.** Zero of the captured stalls had a collection on their frame, in three
+  separate sessions, including one where 21 collections a second coincided with a worst frame of
+  19 ms.
+
+### What to do about it
+
+**A per-frame meshing budget**: mesh at most N chunks — or M milliseconds — a frame, nearest to the
+camera first, and let the rest arrive over the following frames. A chunk one frame late while
+panning is invisible; a 200 ms stall is not.
+
+It is the project's own standing rule being broken: *presentation per-frame work scales with what is
+visible*, and this scales with **what became stale**, which a camera sweep or any `Model.Remesh()`
+makes unbounded. A full re-mesh — which every non-ladder graphics toggle triggers — dirties all 800
+chunks of a Huge board at once.
+
+**Not built.** It is a renderer change with a visible trade (briefly unmeshed chunks while panning)
+and wants its own unit, its own design note and the owner's eye.
+
 ### Still outstanding
 
 **Nothing in this section is measured at the resolution the game will be played at.** See below.
