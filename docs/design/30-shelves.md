@@ -212,6 +212,14 @@ things are drawn (0.016 to 0.387 ms). The instance count is the same shelved as 
 three and a half a stack, because wood's recipe never reaches `ItemHeap.Most`. The three extra draw
 calls are the shelf bodies themselves, three body buckets in the chunk they stand in.
 
+**It only runs where the packs are, and it says so rather than failing.** Without `Assets/Synty`
+every stack takes `ChunkRenderer`'s stand-in marker path, which costs a draw call and no instance,
+and the contained branch this measures is never reached — so the control *each stack is at least one
+instance* was measuring a warehouse that had not been drawn, and turned the self-hosted runner red
+at 34,827 against 35,027. The case now asks `ChunkRenderer.ItemArtResolved`, the item-side pair of
+`PawnFigureDirector.Enabled` and `PortraitStudio.Available`, and ignores itself where the answer is
+no. `docs/bug-patterns.md`, 2026-09-21.
+
 The review that took the measurement also found the one allocation on the path: `SlotCentre` built
 its two slot tables as locals, which was two heap allocations per stack per frame — 640 a frame for
 this warehouse — for tables that never change. They are static now. Still unmeasured: a warehouse at

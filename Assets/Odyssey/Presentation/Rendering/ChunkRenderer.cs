@@ -1329,6 +1329,25 @@ namespace Odyssey.Presentation.Rendering
         ResolvedModule? ItemModule(int defIndex) =>
             defIndex >= 0 && defIndex < _itemModules.Length ? _model.Library[_itemModules[defIndex]] : null;
 
+        /// <summary>
+        /// Whether this kind of item resolved to real art, or draws as the stand-in marker.
+        ///
+        /// <para><b>Whether the art resolved, not whether there is a catalogue.</b> The catalogue
+        /// is committed and its prefab references point into the gitignored <c>Assets/Synty</c>,
+        /// so on the self-hosted runner it loads perfectly with every reference null — and every
+        /// item then takes the marker path above, which costs a draw call and <i>no instance</i>.
+        /// A measurement that counts instances measures nothing there and has to say so rather
+        /// than fail. This is the item-side pair of <c>PawnFigureDirector.Enabled</c> and
+        /// <c>PortraitStudio.Available</c>; see <c>CLAUDE.md</c>, "the runner has no
+        /// Assets/Synty".</para>
+        /// </summary>
+        public bool ItemArtResolved(int defIndex)
+        {
+            EnsureItemModules();
+            ResolvedModule? module = ItemModule(defIndex);
+            return module != null && !module.IsEmpty && module.UsesArt;
+        }
+
         void AppendItem(int def, in Matrix4x4 placement)
         {
             Matrix4x4[] into = _itemPlacements[def];

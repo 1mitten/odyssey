@@ -352,6 +352,37 @@ two days.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-21 — The warehouse measurement failed on the one machine that draws no warehouse (P13)
+
+CI's Unity tier went red on `FrameTimeTests.TheWarehouseCostsWhatItHolds` — the measurement
+`30-shelves.md` §8b owed, written the same day: 34,827 instances against the 35,027 its own control
+demanded. The test passes on this machine. It has never passed on the runner and never could.
+
+**Nothing about shelves was wrong.** `ChunkRenderer.RenderThings` asks `module.UsesArt` before it
+looks at anything else, and draws the deliberately ugly stand-in cube when the answer is no —
+through `DrawMarker`, which increments `DrawCalls` and *not* `InstancesDrawn`, because a marker is
+not an instanced submission and counting it as one would put a fiction in the frame budget. The
+runner has no `Assets/Synty`, so all three hundred and twenty stacks took that path, the contained
+branch the test exists to measure was never reached, and the control — *each stack is at least one
+instance* — was measuring a warehouse that was not drawn. With the packs present the same run reads
+43,935 → 45,015 → 45,015 instances and 1,128 draw calls either way, which is the number that was
+wanted.
+
+**The general shape: a measurement whose subject is absent is not a failure, and must say which it
+is.** This is P13 seen from the test side — the asset cannot draw the thing the code asked for, and
+the fallback is silent — with the twist that here the silence is *correct behaviour* and only the
+assertion is wrong. Two other tests already knew: `FigureCapTests` asks `PawnFigureDirector.Enabled`
+and `PortraitLightingTests` asks `PortraitStudio.Available`, both with a comment saying why the
+catalogue is the wrong question. Items had no such question to ask, so the new test could not have
+asked it.
+
+**What now stops it:** `ChunkRenderer.ItemArtResolved(defIndex)` — the item-side pair of those two,
+returning the identical predicate the marker branch tests rather than a restatement of it — and the
+warehouse case ignores itself on the machines where wood resolves to no art. **Ask it of any new
+measurement in the Unity tier**: *would this number be the same on a machine with no packs, and if
+not, does the test know?* The fast tier cannot see the question at all, and a green local run is
+exactly what makes it invisible.
+
 ### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)
 
 Owner, on the storage pane's first look: *"when I clicked off all the categories a message appeared

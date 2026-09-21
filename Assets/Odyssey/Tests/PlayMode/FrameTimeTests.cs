@@ -157,6 +157,18 @@ namespace Odyssey.Tests.PlayMode
                 var colony = boot.Colony!;
                 Assert.That(colony.Pawns.StorageUnits, Is.Not.Null, "the session has no built stores");
 
+                // **Whether the art resolved, not whether there is a catalogue** — CLAUDE.md, and
+                // the reason FigureCapTests asks PawnFigureDirector.Enabled. Without Assets/Synty
+                // every stack takes ChunkRenderer's stand-in marker path, which costs a draw call
+                // and no instance, and the whole contained branch of RenderThings is never
+                // reached. There is nothing to measure there, and the instance control at the foot
+                // of this test would fail for the one reason that is not a regression — which is
+                // what turned the runner red on 2026-09-21 at 34,827 instances against 35,027.
+                if (!boot.Renderer!.ItemArtResolved(Odyssey.Sim.Pawns.ItemIndex.Wood))
+                    Assert.Ignore("wood resolved to no art (no Assets/Synty), so every stack " +
+                                  "draws as the stand-in marker and the shelf draw path is " +
+                                  "never reached");
+
                 ForbidWhatIsLying(colony);
 
                 float bare = 0f;
