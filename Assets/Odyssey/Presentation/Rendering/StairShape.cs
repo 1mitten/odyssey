@@ -32,6 +32,23 @@ namespace Odyssey.Presentation.Rendering
         public const float Rise = CellMetrics.SizeY * 0.5f;
 
         /// <summary>
+        /// How far the colony's own flight climbs: a <b>whole</b> layer, in its own cell
+        /// (2026-09-21).
+        ///
+        /// <para><b>Also the art's own geometry, not a choice.</b> <c>SM_Bld_Base_Stairs_02</c>
+        /// rises precisely 3.00 m over the same 2.5 m run — measured in
+        /// <c>docs/research/e-01-module-mapping.md</c>, which listed it as a "steep full-layer
+        /// stair in one cell (optional variant)" beside the half-flight it recommended. The owner
+        /// asked for the variant after playing the recommendation
+        /// (<c>docs/design/28-stairs.md</c> §10).</para>
+        ///
+        /// <para>So <b>flush</b> is arithmetic rather than a tolerance: the top of the flight and
+        /// the floor of the cell above are the same plane, and the picker's top plane
+        /// (<see cref="TopOfRun"/>) is that plane too.</para>
+        /// </summary>
+        public const float FullRise = CellMetrics.SizeY;
+
+        /// <summary>
         /// The top of the flight within this cell, measured from the cell's own floor — or 0 for
         /// anything that is not a stair, so a caller may ask it of any cell.
         ///
@@ -43,7 +60,8 @@ namespace Odyssey.Presentation.Rendering
         /// kind of geometry in the picker.</para>
         /// </summary>
         public static float TopOfRun(ushort edifice) =>
-            edifice == CoreContent.EdificeStairLower ? Rise
+            edifice == CoreContent.EdificeStairFull ? FullRise
+            : edifice == CoreContent.EdificeStairLower ? Rise
             : edifice == CoreContent.EdificeStairUpper ? Rise * 2f
             : 0f;
 

@@ -19,9 +19,14 @@ namespace Odyssey.Hud
         /// <summary>
         /// Cells the thing occupies, in a line along its facing. Parallel to
         /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed, door,
-        /// pillar, stair. A stair is two cells on one layer, like the bed (U44).
+        /// pillar, stair.
+        ///
+        /// <para><b>The bed is the only two-cell thing again.</b> The stair was 2 for one day
+        /// (U44) and is 1 since 2026-09-21, when it became a single cell climbing a whole layer.
+        /// <c>BuildShapesAgreeWithTheDefs</c> walks this against <c>BuildingDef.footprint</c>, so
+        /// this row cannot drift from the content on its own.</para>
         /// </summary>
-        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2, 1, 1, 2 };
+        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2, 1, 1, 1 };
 
         /// <summary>
         /// Whether the ghost may be turned with the rotate key before placing. Parallel to

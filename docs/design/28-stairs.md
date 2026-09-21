@@ -1,7 +1,13 @@
 # Stairs — U44, the way up that carries something
 
-**Status:** design settled by owner interview 2026-09-20; implementation on
-`claude/adoring-ptolemy-baq5te`. The last M3 unit before the ten-day run.
+**Status:** design settled by owner interview 2026-09-20; **re-cut to one cell 2026-09-21 after the
+second play (§10)**; implementation on `claude/adoring-ptolemy-baq5te`. The last M3 unit before the
+ten-day run.
+
+**Read §10 first.** Everything above it describes the stair as **two cells**, which it was for one
+day. A colony-built stair is one cell climbing a whole layer; worldgen's stamped stairwells are
+still the two-cell Lower + Upper pair the rest of this document describes, and they are now
+deliberately a different thing.
 **Read first:** `21-ladders-and-climbing.md` (U43, which this copies almost line for line — the
 idempotent refresh, the shaft rule, the arrival rule, and the hauler exclusion that is the argument
 for this unit), `20-beds.md` §4 (the two-cell site, which is the shape a stair's footprint takes),
@@ -335,17 +341,179 @@ came in with `main` and a probe gets one `camera.Render()`. `PrimeAll` in the re
 and the empty-first-picture-full-last-picture progression is the tell rather than the camera.
 `docs/lessons.md`. **Both pictures are now right**: one continuous flight, from the profile and from
 the play camera's 48°.
+## 10. One cell, and the delivery rule reversed — 2026-09-21
+
+**The second play, and it found three things at once.** The owner built a stair, photographed it,
+and wrote: *"there are multiple problems with the stairs — Tried to build it as in the picture - the
+colonists gave up - so it doesn't even build. It should be able to go up a flight in one square for
+ease - but it's not - it's not flush with the floor above either - this needs to change. I couldn't
+rotate the stairs with R either."*
+
+Three complaints, **two** causes, and the first one is not the stair's fault at all.
+
+### 10a. "The colonists gave up" — measured, and it was §7
+
+**The screenshot was not the evidence; the save was.** `ffdsf.odyssey`, written in the same minute
+as the picture, read headless with `tools/dotnet/Odyssey.SaveProbe`. The stair site is at
+132,129 L12, **3 of 6 wood delivered, zero work**, and it sits in a walled room — a closed box of
+twenty-three walls, x130–136 by z126–131, with **no door in any of them**. The door the owner built
+is at 129,129, one cell *outside* the west wall, standing free in the open. The only way in or out
+is a ladder at 134,129.
+
+Flood-filling the region the site is in, in each mode:
+
+| | walkable cells reachable from the site | by layer |
+|---|---|---|
+| `TraverseMode.Colonist` | **81** | L12 = 20, L13 = 61 |
+| `TraverseMode.Hauler` | **20** | L12 = 20 |
+
+**Neither pocket contains a single stack of wood.** All fourteen on the board answer
+`hauler=False colonist=False` to that site. So the colony was not failing to build a stair; it was
+sealed in a room with one, and nothing in the game said so.
+
+But the numbers say the rest of it too. §7 moved `DeliverWorkGiver` to `TraverseMode.Hauler`, and a
+hauler cannot use a ladder — so the whole 61-cell upper platform fell out of reach of construction
+delivery the moment that line changed. §7 stated the consequence plainly and called it the point:
+*"a ladder-only upper storey stops being buildable, which is the whole point."*
+
+**It is a bootstrap deadlock, and that is what §7 did not see.** The stair meant to replace the
+ladder is itself a building order. It needs material delivered to the storey that, by the new rule,
+nothing may deliver to. A player who has climbed a ladder and wants a floor has no move at all.
+
+**Owner, asked directly:** *"Ladders are fine as they are - we should be able to be build a storey
+as long as there is room above - this would make it much easier to stack ladders/platforms."*
+
+So **§7 is reversed**: `DeliverWorkGiver` is `TraverseMode.Colonist` again, and `HaulWorkGiver`
+keeps the ladder exclusion for stockpile hauling, where it means what it was written to mean — a
+bulky load being tidied away is not worth a one-handed climb, while the five planks that make the
+floor you are standing on are.
+
+**And the test that was missing is written.** §3 said it in general —
+*a test that asserts a rule is not a test that asserts the rule is reached* — and then §7 was
+allowed to stand on `AHaulerCannotClimbALadder...`, which proves the *mode* is excluded and says
+nothing about which jobs use it. `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished`
+asserts the outcome instead: a wall ordered on a ladder-only storey is fed and finished.
+
+**It took two attempts to make it discriminate, and the first attempt is the lesson.** It ordered a
+*deck plate* up there and passed in both modes, because `BuildJob.StandToBuild` falls back to the
+cell **below** a slab and then to the cells beside that one — so "a colonist floors over its own
+head" stays possible, and a slab on an upper storey is reachable from the ground. A **wall** is only
+ever built from beside it, on its own storey. Flipped back to `Hauler`, the test now fails with
+*"no wood ever reached a site one ladder up"*; that control was measured, not assumed.
+
+### 10b. One cell, and the art was in the research all along
+
+The owner's second complaint is a design change, and the thing that makes it cheap was recorded in
+Phase 3 and passed over. `docs/research/e-01-module-mapping.md`, in the same table that recommended
+the half-flight this unit was built on:
+
+| Prefab | Size | Note |
+|---|---|---|
+| `SM_Bld_Base_Stairs_01` | 2.50 × 1.83 × 2.50 (rise 1.50) | half-flight; two per layer climb |
+| **`SM_Bld_Base_Stairs_02`** | **2.50 × 3.33 × 2.50 (rise 3.00)** | **steep full-layer stair in one cell (optional variant)** |
+
+One cell, exactly 3.00 m, flush with the floor above. No Blender, no scaling hack, same family, same
+2.5 m run, same 0.33 m skirt below y=0 — and therefore the same `yaw = 180` correction §8b had to
+write for its sibling.
+
+**A colony-built stair is one cell and worldgen's stamped stairwells are untouched** (owner:
+*"forget stamped city. Colony built becomes one."*). They are a different thing now and stay one:
+the city templates depend on the Lower + Upper pair, `ShellTemplate` treats an unpaired stair as a
+content error, and converting them would re-bake the city goldens for nothing anybody asked for.
+
+So `CoreContent.EdificeStairFull` = 13, appended after the bed, and `Building_Stair` points at it
+with `footprint` 1 and no `secondEdifice`. **A separate value is what keeps the change small**, and
+the list is worth having in one place because each line is work that did *not* have to be done:
+
+| | two cells (U44) | one cell |
+|---|---|---|
+| `EdificeFootprint.Cells` | 2, via `secondEdifice` | 1, with no special case |
+| `Place` / `Raise` / `Demolish` second-cell paths | five guarded blocks | all fall out on `SecondCell == -1` |
+| shaft rule | both cells above must be open | one cell above |
+| connector | `TwoCellConnectorTouching`, a derived far half, an `IsOurs` guard | `OneCellConnectorAt` — the ladder's own shape |
+| facing | inferred by scanning for the partner | **read from the record** |
+
+That last row closes §9's first open item for free. A one-cell flight has no partner to scan for, so
+it *must* read the stored facing — which `20-beds.md` §93 says a built thing was always supposed to
+do. `WorldRenderModel.EdificeFacing` is the accessor and `ChunkMesher.EmitFullStair` is the reader.
+
+**`ModuleShape.StairFull` is a shape of its own and not `StairFlight` at a different scale.** The
+fallback box is the reason shapes exist: a clone without the packs draws a stand-in from
+`GetFallbackBox`, and a half-flight's box is 1.5 m tall. Sharing the shape would have drawn every
+colony stair at half its height on exactly the machines that cannot look — the runner, and CI.
+
+**The costs did not move.** 6 wood and 150 ticks, the same as the two-cell version: a stair still
+costs a stair. The building table's fingerprint moved for the footprint, the edifice and the dropped
+`secondEdifice`, and `ConstructionContentDefTests` says which.
+
+### 10c. "I couldn't rotate the stairs with R" — one bug, and it explains "not flush" too
+
+**These were the same fault, and the rotation plumbing was innocent.** `BuildShapes.Rotates[8]` is
+`true`, `DesignateDirector.RotatableArmed` returns true, `Rotate()` runs and raises
+`FacingChanged`, and `ConstructionGrid.Place` stores the facing. Every one of those was correct.
+
+`OdysseyBootstrap.DrawThingGhost` has explicit branches for the bed, the door and the ladder, and
+the stair fell through to the plain `else`:
+
+```csharp
+placed = GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y));
+```
+
+**No rotation, one module, drawn flat on the cell floor.** So R changed the facing the order would be
+placed at and *nothing whatsoever moved on screen* — and because the flight was never built (10a),
+the blueprint was the only stair the owner ever saw. "It is not flush with the floor above" is a
+description of that ghost: the lower half-flight alone, unturned, starting at floor level and
+reaching nowhere. The built geometry was right the whole time.
+
+The branch now draws the ghost the way `EmitFullStair` draws the built thing — draped, from the cell
+floor, yawed by the facing — which is `19-build-cursor.md` §6's rule: a cursor that promises a
+different thing from the one that will stand there is worse than no cursor.
+
+### 10d. And one hazard the change created, caught at the signature
+
+A ladder and the new stair are **both** one-cell ways up, so both are looked up through
+`NavGraph.OneCellConnectorAt` — which had no notion of kind, having been written when the ladder was
+the only one-cell connector in the game. Every structure edit runs `RefreshLaddersAround`, a
+seven-cell fan-out; on a stair's cell it would have found the stair's portal, asked `IsLadder`, been
+told no, and **removed it**. A way up that vanishes because somebody built a wall next door —
+`docs/bug-patterns.md` P1, one rule with two owners.
+
+The method takes a `ConnectorKind` now and cannot hand a caller somebody else's.
+`AnEditBesideAStairLeavesItsPortalStanding` asserts the half a signature cannot: that the fan-out
+really does reach a stair's cell, so the guard is a fix rather than a plausible precaution. Dropping
+the filter turns the ladder tests red.
+
+### 10e. What the fixture change exposed
+
+`StairTests.AStoreyWithNothingLeadingToIt` put the stair's far half between the near half and the
+wall, so the landing was two cells from the cell a colonist started in. With a one-cell stair that
+geometry is wrong, and **four tests went quietly green rather than red** — their controls are
+`Assume`, and a failed `Assume` is reported by NUnit as *skipped*. §5 recorded that trap on this
+unit's first day and the file still had the shape that suffers from it.
+
+Every control in the rewritten file is an `Assert`, and the placement tests gained the control they
+never had: `AStairIsRefusedUnderASlab` now measures that the cell takes a stair perfectly well
+*before* the slab goes over it, so it cannot pass on a board that refuses everything.
+
+### 10f. Still not looked at
+
+**No stair has been photographed since the change.** `SM_Bld_Base_Stairs_02` is assumed to share its
+sibling's local −Z ascent and therefore its `yaw = 180`; that is inference from the same family and
+the same skirt, not a measurement. `Odyssey.EditorTools.StairCheck` is the tool, and §8c's warning
+applies — a probe gets one `camera.Render()`, so an empty first picture is the meshing budget and
+not the camera.
+
 ## 9. Open
 
-- **`EmitStair` infers facing by scanning for its partner**, which `20-beds.md` §93 says a built
-  thing must never do — *"the stairs infer only because worldgen had nowhere to put an answer, and
-  placing is exactly where the answer is known."* It is unambiguous while the two halves differ and
-  ambiguous for two stairwells side by side. `WorldRenderModel.LadderFacing` is the precedent for a
-  stored-facing branch. **Recorded, not fixed here.**
+- ~~**`EmitStair` infers facing by scanning for its partner**~~ — **closed 2026-09-21, §10b.** A
+  one-cell stair has no partner to scan for, so `EmitFullStair` reads the stored facing through
+  `WorldRenderModel.EdificeFacing`. It still applies to worldgen's stamped Lower + Upper pairs,
+  which still infer, and which still cannot tell two stairwells side by side apart.
 - **One stairwell per storey** is worldgen's recorded limitation (`SurfacePasses.cs:275-277`). A
   player building two stairs on one storey must get two connectors, not one four-celled thing — the
-  ladder's "two ladders are two connectors" rule, applied. A built stair registers its own two-cell
-  connector, so this holds; nothing tests two built stairs on one storey yet.
+  ladder's "two ladders are two connectors" rule, applied. Since §10b each built stair is its own
+  one-cell connector keyed on its own cell, so this is now true by construction rather than by
+  argument; nothing tests two built stairs on one storey yet.
 - **The generator's stairs are left entirely alone** (`RefreshStair`'s first line), because a
   stamped stair has no facing to derive its partner from. The consequence is that a colonist
   **cannot deconstruct a stamped stairwell and have the connector go with it** — Reclaim is the

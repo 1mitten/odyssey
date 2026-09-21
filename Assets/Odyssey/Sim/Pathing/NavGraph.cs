@@ -1135,8 +1135,19 @@ namespace Odyssey.Sim.Pathing
         ///
         /// <para>Scoped to the block's own connector list rather than scanning them all, so the cost
         /// is the handful that could possibly be here (U43).</para>
+        ///
+        /// <para><b><paramref name="kind"/> is required, and it is required because leaving it out
+        /// was a silent bug waiting on the next one-cell way up.</b> The ladder was the only one
+        /// for as long as this method had no kind, so "the one-cell connector here" and "the
+        /// ladder's connector here" were the same sentence. The one-cell stair (2026-09-21) made
+        /// them two: <c>RefreshLadder</c> fans out over seven cells after any structure change, and
+        /// on a stair's cell it would have found the stair's portal, asked <c>IsLadder</c>, been
+        /// told no, and <b>removed it</b> — a way up that vanishes depending on what somebody built
+        /// next door. One rule with two owners, <c>docs/bug-patterns.md</c> P1, caught at the
+        /// signature instead. Each caller now says which kind it is asking about and can only ever
+        /// be handed its own.</para>
         /// </summary>
-        public int OneCellConnectorAt(int lowerCell)
+        public int OneCellConnectorAt(int lowerCell, ConnectorKind kind)
         {
             if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
             if (!_connectorsByBlock.TryGetValue(BlockIndexOfCell(lowerCell), out List<int>? ids)) return -1;
@@ -1144,7 +1155,7 @@ namespace Odyssey.Sim.Pathing
             for (int i = 0; i < ids.Count; i++)
             {
                 Connector? con = GetConnector(ids[i]);
-                if (con == null) continue;
+                if (con == null || con.Kind != kind) continue;
                 if (con.LowerCells.Length == 1 && con.LowerCells[0] == lowerCell) return con.Id;
             }
 

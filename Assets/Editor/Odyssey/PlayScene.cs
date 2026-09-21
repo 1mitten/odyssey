@@ -1237,6 +1237,29 @@ namespace Odyssey.EditorTools
                     centreXZ = true, baseAtY = false, yaw = 180f,
                 });
 
+            // **The colony's own stair: one cell, one whole layer** (2026-09-21).
+            // SM_Bld_Base_Stairs_02 is 2.50 x 3.33 x 2.50 with a rise of exactly 3.00 and the same
+            // 0.33 m skirt below y=0 its half-flight sibling has. It is a SWITCHBACK - two short
+            // flights and a mid-landing - which is how a whole layer fits a 2.5 m run.
+            //
+            // **yaw 90, and the number is measured rather than inherited.** The first cut copied
+            // the sibling's 180 on family resemblance and drew the flight DESCENDING into the
+            // ground. Stairs_01 ascends toward its local -Z; this one ascends toward its local -X,
+            // a quarter turn away, and 90 is what brings that to the +Z a facing of 0 means.
+            // StairCheck reports the ascent off the prefab's own vertices and prints the yaw it
+            // implies, so the next piece of stair art is measured in one run instead of guessed
+            // (docs/design/28-stairs.md 10f).
+            //
+            // docs/research/e-01-module-mapping.md listed it as a "steep full-layer stair in one
+            // cell (optional variant)" in the table that recommended the half-flight, and nothing
+            // took it until the owner played two cells and asked for one square.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.StairFull, shape = ModuleShape.StairFull,
+                prefabName = "SM_Bld_Base_Stairs_02",
+                centreXZ = true, baseAtY = false, yaw = 90f,
+            });
+
             // Exactly one layer tall, pushed back against the wall it is fixed to.
             foreach (string id in new[] { ModuleIds.Ladder, "odyssey.module.ladder.fixed" })
                 rows.Add(new ModuleEntry

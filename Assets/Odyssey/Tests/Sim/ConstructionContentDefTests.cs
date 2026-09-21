@@ -66,17 +66,25 @@ namespace Odyssey.Tests.Sim
         // grounded the slab over it for as long as the solver has run and there was simply nothing
         // that could build one.
         //
-        // U44 appended Building_Stair at handle 8 - two adjacent cells on ONE layer, rotatable,
-        // blocking false, 6 stuff and 150 ticks, and the first and only buildable to finish as TWO
-        // edifice values (`secondEdifice`): EdificeStairLower at the head and EdificeStairUpper at
-        // the far cell, which is exactly what worldgen has always stamped. The new field is on
-        // every row, so the whole table's fingerprint moves and not only the stair's.
+        // U44 appended Building_Stair at handle 8 - rotatable, blocking false, 6 stuff and 150
+        // ticks. It landed as TWO adjacent cells on one layer finishing as two edifice values
+        // (`secondEdifice`: EdificeStairLower at the head, EdificeStairUpper at the far cell,
+        // which is what worldgen stamps). The new field went on every row, so the whole table's
+        // fingerprint moved and not only the stair's.
         //
         // Seven and eight, not six and seven: the door reached main first and took 6, so this
         // branch moved down by one when it merged. Handle order is the save contract and positions
         // are append-only; it is safe only because no save with a pillar or a stair in it has ever
         // left this branch.
-        const ulong BuildingFingerprint = 2044564326777250333UL;
+        //
+        // **2026-09-21: the stair became ONE cell and the fingerprint moved again.** The owner
+        // played the two-cell flight and asked for one square, flush with the floor above; the
+        // pack's SM_Bld_Base_Stairs_02 rises a full 3.00 m in one cell and had been listed as an
+        // optional variant in the research all along. So on the stair's row: `footprint` 2 -> 1,
+        // `secondEdifice` EdificeStairUpper -> 0, and `edifice` EdificeStairLower -> the new
+        // EdificeStairFull (13). Nothing else in the table moved, and the costs did not: a stair
+        // still costs 6 wood and 150 ticks. docs/design/28-stairs.md 10.
+        const ulong BuildingFingerprint = 4885284094868351627UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

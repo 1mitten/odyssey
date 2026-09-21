@@ -270,7 +270,14 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Bed = 12;
 
-        public const int Count = 13;
+        /// <summary>
+        /// The colony-built stair: one cell, one full layer (2026-09-21). Worldgen's stamped
+        /// stairwells keep <see cref="StairLower"/> and <see cref="StairUpper"/> and are a
+        /// different thing; see <c>CoreContent.EdificeStairFull</c> for why they are not unified.
+        /// </summary>
+        public const int StairFull = 13;
+
+        public const int Count = 14;
     }
 
     /// <summary>
@@ -336,18 +343,20 @@ namespace Odyssey.Sim.Contracts
         public const int Pillar = 7;
 
         /// <summary>
-        /// A stair: two adjacent cells on one layer, rising 1.5 m each, joining the layer above
-        /// (U44, docs/design/28-stairs.md).
+        /// A stair: <b>one</b> cell, climbing one full layer to the floor above
+        /// (docs/design/28-stairs.md §10).
         ///
-        /// <para><b>Two cells on ONE layer, which is the thing to get right.</b> The halves are
-        /// side by side and the upper one is <em>drawn</em> 1.5 m up inside its own cell; the
-        /// connector's upper end is those same two cells one layer higher, derived. So the
-        /// footprint is the bed's shape and not a vertical one.</para>
+        /// <para><b>It was two cells for one day.</b> U44 built it as the bed's footprint — two
+        /// adjacent cells on one layer rising 1.5 m each — because the half-flight was the art the
+        /// Phase 3 research recommended. The owner played it and asked for one square
+        /// (2026-09-21): <i>"It should be able to go up a flight in one square for ease ... it's
+        /// not flush with the floor above either."</i> The pack has a full-layer flight,
+        /// <c>SM_Bld_Base_Stairs_02</c>, listed as an optional variant in the same research table
+        /// and never taken.</para>
         ///
-        /// <para>Unlike every other buildable this one finishes as <b>two</b> edifice values —
-        /// <c>EdificeStairLower</c> at the head and <c>EdificeStairUpper</c> at the second cell,
-        /// which is exactly what worldgen stamps, so a stair a colonist built and a stair the
-        /// generator stamped are the same thing to the mesher, the labels and the graph.</para>
+        /// <para>So one cell, one record, one edifice value — <c>CoreContent.EdificeStairFull</c>.
+        /// Worldgen's stamped two-cell stairwells are untouched and stay a different thing; the
+        /// handle keeps its number because handle order is the save contract.</para>
         /// </summary>
         public const int Stair = 8;
 

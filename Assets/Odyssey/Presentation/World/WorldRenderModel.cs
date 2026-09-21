@@ -148,6 +148,9 @@ namespace Odyssey.Presentation.World
         readonly int _wallCoreModule;
         readonly int _waterFallModule;
         readonly int _bedModule;
+
+        /// <summary>The colony's one-cell, one-layer stair (2026-09-21). See <see cref="StairShape"/>.</summary>
+        readonly int _stairFullModule;
         readonly int _bedPillowModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library, PlantDef[]? plants = null)
@@ -198,6 +201,12 @@ namespace Odyssey.Presentation.World
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
             _wallCoreModule = library.Resolve(ModuleIds.WallCore, ModuleShape.SolidBlock);
             _waterFallModule = library.Resolve(ModuleIds.WaterFall, ModuleShape.WaterFall);
+
+            // The colony's own stair: one id, resolved once, not a per-template slot like
+            // ModuleGroup.Stair. A stamped stairwell belongs to the shell it was stamped into and
+            // varies with it; a stair a colonist built is the same flight of wood or stone wherever
+            // it stands, which is the bed's argument for being a fixed module id too.
+            _stairFullModule = library.Resolve(ModuleIds.StairFull, ModuleShape.StairFull);
 
             // The bed's placeholder: a plain block module, because the honest stand-in for absent
             // art is a box the tint colours, not a borrowed tree or wall wearing a bed's name.
@@ -763,6 +772,21 @@ namespace Odyssey.Presentation.World
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
         public byte BedFacing(int index) => _edificeFacing[index];
 
+        /// <summary>
+        /// The facing stored on the edifice in this cell, 0–3.
+        ///
+        /// <para><b>For the colony's one-cell stair, and it is why that stair is one cell's worth
+        /// of progress rather than none.</b> <c>ChunkMesher.EmitStair</c> works out which way a
+        /// two-cell stair climbs by <em>scanning for its partner</em>, which
+        /// <c>docs/design/20-beds.md</c> §93 says a built thing must never do — <i>"the stairs
+        /// infer only because worldgen had nowhere to put an answer, and placing is exactly where
+        /// the answer is known"</i> — and which is ambiguous the moment two stairwells stand side
+        /// by side. A one-cell flight has no partner to scan for, so it must read what the player
+        /// chose, and <c>28-stairs.md</c> §9's first open item closes with it.</para>
+        /// </summary>
+        public int EdificeFacing(int index) =>
+            (uint)index < (uint)_edificeFacing.Length ? _edificeFacing[index] & 3 : 0;
+
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
 
@@ -897,6 +921,13 @@ namespace Odyssey.Presentation.World
             // The bed first, before the natural range: its id sits above the trees' but it is not
             // one of theirs, and the natural table below would index past itself for it.
             if (def == CoreContent.EdificeBed) return _bedModule;
+            // **And the colony's stair, for exactly the bed's reason and caught exactly the way
+            // this comment warns.** Its id is 13, `FirstEdifice` is 10 and `EdificeCount` is 12, so
+            // the range test below claims it, finds it past the end of the tree table and returns
+            // 0 — no module, nothing drawn, no error. The first picture of the one-cell stair was a
+            // field of grass with no stair in it (2026-09-21), and the `case` for it further down
+            // this switch was never reached. Anything numbered above the trees belongs up here.
+            if (def == CoreContent.EdificeStairFull) return _stairFullModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

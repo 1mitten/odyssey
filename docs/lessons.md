@@ -2610,3 +2610,44 @@ probe is one board's meshing in total.
 Assets/Editor/` — and every one of them is exposed. Only `StairCheck` is fixed, because it is the
 one that needed its own evidence; **check the picture before trusting any of the other twenty**, and
 prime the probe you are using rather than the whole set.
+
+
+## Rebuilding the module catalogue throws away the character swatches (2026-09-21)
+
+`PlayScene.RebuildCatalogue` writes `ModuleCatalogue.asset` **from its own rows**, and the colonist
+appearance data on those rows is not one of them: it is put there afterwards by a second pass,
+`CharacterSwatches.Classify`, which reads each body's meshes and records the atlas rectangles to
+recolour. So a plain rebuild is **destructive** — one line added to the generator, and the commit
+also deletes 2,164 lines of appearance data for all 61 colonists and every one of them draws
+untinted.
+
+Nothing says so at the call site and the rebuild reports success: *"catalogue rebuilt … 127/144 rows
+have art."* It was caught only because the Unity tier runs
+`AppearanceCatalogueTests.EveryBodyHasSomethingToRecolourAndMostAreFullyClassified`, which came back
+**"some body has nothing to recolour: Expected 61, But was 0"** — a test about colonists failing on a
+commit about stairs.
+
+**So the sequence is two commands, always:**
+
+```
+scripts/unity.sh shot Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh shot Odyssey.EditorTools.CharacterSwatches.Classify
+```
+
+**And check the diff before believing it.** Adding one module row should be `+N insertions, 0
+deletions`. Any deletion at all means the second pass has not run, whatever the log said.
+
+## `unity.sh exec` passes `-nographics`, so nothing it runs can draw (2026-09-21)
+
+A probe run through `exec` writes its report perfectly and its pictures come out blank — identical
+file sizes, a flat fill, not even the camera's clear colour. `shot` is the same batch run **without**
+`-nographics`, and the script's own comment says it is "the one family of commands that needs a real
+graphics device". It takes an optional method, so anything that makes an image goes through it:
+
+```
+scripts/unity.sh shot Odyssey.EditorTools.StairCheck.Run
+```
+
+The tell is that the *log* is complete and correct while the images are uniform. That is not the
+meshing-budget symptom (`docs/design/28-stairs.md` §8c), where the first picture is empty and the
+last is full — this one is every picture blank, and it means no device.

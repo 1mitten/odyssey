@@ -412,6 +412,81 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// <b>And the storey a ladder reaches can still be built on</b> (owner, 2026-09-21:
+        /// <i>"Ladders are fine as they are - we should be able to be build a storey as long as
+        /// there is room above - this would make it much easier to stack ladders/platforms."</i>).
+        ///
+        /// <para><b>This is the test whose absence let a false claim stand in four documents and
+        /// then let the opposite one break a playtest.</b> The test above proves a hauler is
+        /// excluded from a ladder; it says nothing about which jobs use that mode, and
+        /// <c>28-stairs.md</c> §3 records the general form: <i>a test that asserts a rule is not a
+        /// test that asserts the rule is reached.</i> U44 then set
+        /// <c>DeliverWorkGiver</c> to <c>Hauler</c> on the strength of the first sentence and made
+        /// a ladder-only storey unbuildable — which is a bootstrap deadlock, because the stair
+        /// meant to replace the ladder is itself a building order needing material delivered up
+        /// there. Measured on the owner's save: the construction pocket around their stair order
+        /// held 81 walkable cells for a colonist and 20 for a hauler.</para>
+        ///
+        /// <para>So the rule is stated from the end that matters — <b>a wall ordered on the landing
+        /// actually gets built</b> — rather than by reading a mode constant back. A test on
+        /// <c>DeliverWorkGiver.Mode</c> would pass on the broken version too.</para>
+        /// </summary>
+        [Test]
+        public void ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished()
+        {
+            ColonyWorld colony = Board();
+            AShaftWithALandingBesideIt(colony, out int ground, out _, out int landing);
+            RaiseNow(colony, ground, BuildingHandle.Ladder);
+            colony.World.Tick();
+
+            // **A wall on an upper deck, and it has to be a wall.** A slab can be built from
+            // underneath — StandToBuild falls back to the cell below a slab and then to the cells
+            // beside that one, so "a colonist floors over its own head" stays possible — which
+            // means a deck plate up here is reachable from the ground and measures nothing at all.
+            // The first version of this test ordered one and passed in both modes. A wall is only
+            // ever built from beside it, on its own storey.
+            RaiseNow(colony, landing + 1, BuildingHandle.Floor);
+            colony.World.Tick();
+
+            int site = landing + 1;
+            Assert.That(colony.Construction.Allows(site, BuildingHandle.Wall), Is.True,
+                "the fixture has to offer a cell up there that only an upper-storey stance reaches");
+
+            // Asked of the LANDING and not of the site: the site is where the wall goes, and the
+            // only cell a builder can stand in to raise it is the landing beside it.
+            Pawn pawn = TheColonist(colony);
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.False,
+                "the control: a hauler cannot get up there, so the storey is ladder-only");
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Colonist), Is.True,
+                "...and a colonist can, which is the whole difference this test turns on");
+
+            // Wood on the ground below, where felling would have left it.
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, ground, ItemIndex.Wood, 20, JobDriver.DropSearchRadius);
+            Assert.That(pile, Is.GreaterThanOrEqualTo(0));
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 20);
+            Assert.That(colony.Pawns.Reachable(pawn, pile, TraverseMode.Hauler), Is.True,
+                "and the wood starts somewhere a hauler could reach, so the only thing in the way "
+                + "of delivering it is the climb");
+
+            Assert.That(
+                colony.Construction.Place(Size.FromIndex(site), BuildingHandle.Wall, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.None));
+
+            bool fed = false;
+            for (int tick = 0; tick < 40_000 && colony.Grid.Edifice[site] < 0; tick++)
+            {
+                colony.World.Tick();
+                if (colony.Construction.IsFrame(site)) fed = true;
+            }
+
+            Assert.That(fed, Is.True,
+                "no wood ever reached a site one ladder up, so nothing can be built above ground");
+            Assert.That(colony.Grid.Edifice[site], Is.GreaterThanOrEqualTo(0),
+                "the wall on the ladder-only storey was never finished");
+        }
+
+        /// <summary>
         /// <b>A ladder survives a save.</b> Its connector does not go in the file — it is derived,
         /// like structural support and the region graph — so this is the test that the deriving
         /// actually happens. Without it a loaded colony keeps its ladders and loses every way up,

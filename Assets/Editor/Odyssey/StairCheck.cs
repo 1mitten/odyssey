@@ -71,8 +71,14 @@ namespace Odyssey.EditorTools
 
                 CellRef start = colony.Start;
                 int head = size.Index(start.X, start.Z, start.Y);
-                const int facing = 1;              // +X, so the far half is the next cell along X
-                int second = head + 1;
+                // **Facing 0, +Z — north, and the facing a player gets before they press R.** One
+                // cell since 2026-09-21, so this is the direction the flight CLIMBS rather than the
+                // direction a far half lay in, and the profile shots below look along +Z for it.
+                // The cell the flight climbs toward is left empty on purpose: it is what the
+                // pictures are checked against — a flight that spills into it is a flight drawn at
+                // the wrong scale, and one that leans into it is one yawed wrong.
+                const int facing = 0;
+                int beyond = head + size.SizeX;
 
                 IntentRejection order = colony.Construction.Place(
                     size.FromIndex(head), BuildingHandle.Stair, StuffHandle.Wood, facing);
@@ -94,17 +100,23 @@ namespace Odyssey.EditorTools
                 var report = new StringBuilder();
                 report.AppendLine("[Stair] one order, raised, and what came of it:");
                 report.AppendLine($"  order          {order}");
-                report.AppendLine($"  lower half     {size.FromIndex(head)} def={model.EdificeDef(head)} "
+                report.AppendLine($"  the stair      {size.FromIndex(head)} def={model.EdificeDef(head)} "
+                                  + $"facing={model.EdificeFacing(head)} "
                                   + $"stand={model.StandHeight(head):0.000} m mark={model.MarkHeight(head):0.000} m");
-                report.AppendLine($"  upper half     {size.FromIndex(second)} def={model.EdificeDef(second)} "
-                                  + $"stand={model.StandHeight(second):0.000} m mark={model.MarkHeight(second):0.000} m");
-                report.AppendLine($"  expected defs  lower={CoreContent.EdificeStairLower} "
-                                  + $"upper={CoreContent.EdificeStairUpper}");
-                report.AppendLine($"  StairShape     rise={StairShape.Rise:0.000} m per cell, "
+                report.AppendLine($"  the cell along {size.FromIndex(beyond)} def={model.EdificeDef(beyond)} "
+                                  + "(0 = empty, which is the point: one cell)");
+                report.AppendLine($"  expected def   {CoreContent.EdificeStairFull} "
+                                  + $"(worldgen's halves are still {CoreContent.EdificeStairLower} "
+                                  + $"and {CoreContent.EdificeStairUpper})");
+                report.AppendLine($"  StairShape     full={StairShape.FullRise:0.000} m in one cell, "
+                                  + $"half-flight={StairShape.Rise:0.000} m, "
                                   + $"layer={CellMetrics.SizeY:0.000} m, cell={CellMetrics.SizeXZ:0.000} m");
+                report.AppendLine("  FLUSH means StandHeight == layer exactly, and the picture has to "
+                                  + "agree with the number: a mesh yawed the wrong way reports the "
+                                  + "same height and descends.");
 
                 // The art's own geometry, measured rather than taken from the research note.
-                foreach (ModuleEntry row in catalogue.FindFamily(ModuleIds.Stair))
+                foreach (ModuleEntry row in catalogue.FindFamily(ModuleIds.StairFull))
                 {
                     if (row.prefab == null) continue;
                     var probe = UnityEngine.Object.Instantiate(row.prefab);
@@ -123,6 +135,48 @@ namespace Odyssey.EditorTools
                             ? $"  {row.prefabName,-28} size={bounds.size.x:0.00} x {bounds.size.y:0.00} "
                               + $"x {bounds.size.z:0.00}  y in [{bounds.min.y:0.00}, {bounds.max.y:0.00}]"
                             : $"  {row.prefabName,-28} no mesh to measure");
+
+                        // **Which way the art climbs, measured off its own vertices.** §8b fixed
+                        // SM_Bld_Base_Stairs_01 with `yaw = 180` because it ascends toward its local
+                        // -Z; the one-cell stair inherited that number by family resemblance and was
+                        // drawn DESCENDING into the ground (2026-09-21). A number copied from a
+                        // sibling is an inference, and this is the measurement that replaces it.
+                        //
+                        // Mean vertex height in the low half of each axis against the high half. The
+                        // axis with the larger split is the run; its sign says which end is the top,
+                        // and the yaw that makes the flight climb toward world +Z follows from it.
+                        if (any)
+                        {
+                            float lowX = 0f, highX = 0f, lowZ = 0f, highZ = 0f;
+                            int nLowX = 0, nHighX = 0, nLowZ = 0, nHighZ = 0;
+                            foreach (MeshFilter filter in probe.GetComponentsInChildren<MeshFilter>(true))
+                            {
+                                if (filter.sharedMesh == null) continue;
+                                foreach (Vector3 v in filter.sharedMesh.vertices)
+                                {
+                                    Vector3 local = filter.transform.localPosition + v;
+                                    if (local.x < bounds.center.x) { lowX += local.y; nLowX++; }
+                                    else { highX += local.y; nHighX++; }
+                                    if (local.z < bounds.center.z) { lowZ += local.y; nLowZ++; }
+                                    else { highZ += local.y; nHighZ++; }
+                                }
+                            }
+
+                            float dx = (nHighX > 0 ? highX / nHighX : 0f) - (nLowX > 0 ? lowX / nLowX : 0f);
+                            float dz = (nHighZ > 0 ? highZ / nHighZ : 0f) - (nLowZ > 0 ? lowZ / nLowZ : 0f);
+                            string run = Mathf.Abs(dx) >= Mathf.Abs(dz) ? "X" : "Z";
+                            float along = Mathf.Abs(dx) >= Mathf.Abs(dz) ? dx : dz;
+
+                            report.AppendLine(
+                                $"  climb          runs along local {run}, toward "
+                                + $"{(along > 0f ? "+" : "-")}{run} "
+                                + $"(mean height rises {Mathf.Abs(along):0.000} m across it; "
+                                + $"dx={dx:0.000} dz={dz:0.000})");
+                            report.AppendLine(
+                                "  yaw wanted     " + (run == "Z"
+                                    ? (along > 0f ? "0 (already climbs toward +Z)" : "180")
+                                    : (along > 0f ? "270 (climbs toward +X)" : "90")));
+                        }
                     }
                     finally { UnityEngine.Object.DestroyImmediate(probe); }
                     break;
@@ -167,9 +221,11 @@ namespace Odyssey.EditorTools
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
 
-                // The seam between the two cells, at the height the flight passes through it.
+                // **The middle of the climb, not a seam** — there are no two pieces to meet any
+                // more. Half a layer up in the stair's own cell, so the frame holds the whole
+                // flight and the empty cell along +X that it must not spill into.
                 Vector3 seam = CellMetrics.FloorCentre(start.X, start.Z, start.Y)
-                               + new Vector3(CellMetrics.HalfXZ, StairShape.Rise, 0f);
+                               + new Vector3(0f, StairShape.FullRise * 0.5f, 0f);
 
                 PlayScene.Shoot(camera, seam, 48f, 45f, 12f, "Logs/stair-play.png");
 

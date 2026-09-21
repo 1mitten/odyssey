@@ -358,6 +358,33 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeBed = 12;
 
         /// <summary>
+        /// <b>A colony-built stair: one cell, one full layer, flush with the floor above.</b>
+        ///
+        /// <para>13, appended after the bed, and deliberately <em>not</em>
+        /// <see cref="EdificeStairLower"/>. Worldgen stamps its stairwells as a Lower + Upper pair
+        /// climbing 1.5 m each across two cells and every city template depends on that shape, so
+        /// the pair stays exactly as it is; this is the thing a colonist builds, and it is a
+        /// different thing (owner, 2026-09-21: <i>"forget stamped city. Colony built becomes
+        /// one."</i>).</para>
+        ///
+        /// <para><b>The art already existed and had been passed over.</b>
+        /// <c>docs/research/e-01-module-mapping.md</c> lists <c>SM_Bld_Base_Stairs_02</c> —
+        /// 2.50 x 3.33 x 2.50, rise <b>3.00</b> — as a "steep full-layer stair in one cell
+        /// (optional variant)" in the same table that recommended the half-flight. Taking it costs
+        /// no new geometry and no scaling hack.</para>
+        ///
+        /// <para><b>A separate value is what keeps this small.</b> One cell means
+        /// <c>EdificeFootprint.Cells</c> answers 1 with no special case, every second-cell path in
+        /// <c>Place</c>, <c>Raise</c> and <c>Demolish</c> falls out on <c>SecondCell == -1</c>, the
+        /// shaft rule asks about one cell above instead of two, and the connector is
+        /// <c>NavGraph.OneCellConnectorAt</c>'s — the ladder's own shape. It also closes
+        /// <c>28-stairs.md</c> §9's first open item for free: a one-cell stair has no partner to
+        /// scan for, so the mesher must read the <b>stored</b> facing, which is what a built thing
+        /// was always supposed to do.</para>
+        /// </summary>
+        public const ushort EdificeStairFull = 13;
+
+        /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
         /// in code and the XML mirrored it, which meant every terrain was written twice.

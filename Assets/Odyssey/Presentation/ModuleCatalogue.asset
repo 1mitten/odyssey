@@ -553,6 +553,36 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.stair.full
+    shape: 14
+    prefab: {fileID: 4932502671990187051, guid: 04f02b7219a7b474198e81b0e197dca9, type: 3}
+    prefabName: SM_Bld_Base_Stairs_02
+    centreXZ: 1
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 90
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.ladder
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}

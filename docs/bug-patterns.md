@@ -1901,3 +1901,55 @@ the same origin and the toast draws over the panel.
 - **The check:** `HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and
   the reason, and two cases in `Cases()` put all three panels in one column at all three
   resolutions. Both confirmed to fail on the pre-fix arithmetic before the fix went in.
+
+
+## A rule whose stated consequence is a deadlock (2026-09-21)
+
+**P14.** U44 moved construction delivery from `TraverseMode.Colonist` to `Hauler`, reasoning that
+carrying a plank is carrying something and a hauler is barred from a ladder. The design document
+stated the consequence in as many words and called it the point: *"a ladder-only upper storey stops
+being buildable, which is the whole point."* One playtest later the owner could not build anything
+above ground, and the thing meant to rescue them — a stair — was itself a building order needing
+material delivered to the storey nothing could deliver to.
+
+- **The pattern:** a restriction whose replacement is *gated behind the restriction*. The review
+  question that catches it is not "is the rule right" — it was defensible — but **"what is the first
+  move a player makes under the new rule, and can they make it?"** Here the answer was: none.
+- **Why nothing failed.** Every test in the file asserted the *rule* (`a hauler cannot climb a
+  ladder`) and none asserted the *outcome* (`a wall ordered up a ladder gets built`). The design had
+  written that distinction down a fortnight earlier — *a test that asserts a rule is not a test that
+  asserts the rule is reached* — and then leaned on the rule test anyway.
+- **How it was found:** not from the screenshot. `tools/dotnet/Odyssey.SaveProbe` on the owner's own
+  save, flood-filling the region the stalled site was in, once per mode: **81 walkable cells for a
+  colonist, 20 for a hauler, and no wood in either**. Two numbers ended an argument that reading the
+  code could not.
+- **Where to look for the next one:** any change that narrows a `TraverseMode`, a permission or a
+  reachability test, where the compensating feature is something the player has to *build*.
+- **The check:** `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished`, and it took two
+  attempts to make it discriminate. The first ordered a **deck plate** on the upper storey and
+  passed in both modes, because `BuildJob.StandToBuild` falls back to the cell *below* a slab — so a
+  slab up there is reachable from the ground and the test measured nothing. A **wall** is only ever
+  built from beside it, on its own storey. Confirmed red against the pre-fix mode before the fix
+  went back in.
+
+## A ghost that is the only evidence, and it was never rotated (2026-09-21)
+
+**P15.** The owner reported two faults in one breath: a stair *"not flush with the floor above"* and
+*"I couldn't rotate the stairs with R"*. Both were one branch. `DrawThingGhost` had cases for the
+bed, the door and the ladder; a stair fell through to the plain `else`, which draws one module flat
+on the cell floor with **no rotation at all**. R changed the stored facing correctly and nothing
+moved on screen.
+
+- **The pattern:** a dispatch written as `if (thing A) … else if (thing B) … else <the simple case>`,
+  where the simple case is silently wrong rather than absent. A missing branch that *throws* is
+  found in a minute; a missing branch that falls into a plausible default is found by a playtest.
+- **The multiplier:** the blueprint was the *only* stair that had ever been drawn, because the
+  flight itself never got built (P14). **When a thing cannot be finished, its ghost becomes the
+  whole of the player's evidence** — so a cosmetic fault in the cursor is reported as a fault in the
+  geometry, and two bugs arrive looking like three.
+- **Where to look for the next one:** grep for the `else` at the end of any per-thing dispatch and
+  ask what the newest member of the family does there. `DrawThingGhost`, `EdificeModule`,
+  `ChunkMesher.Emit*` and `StandHeight` are four of the same shape, keyed on the same value.
+- **The check:** the ghost is drawn by the same arithmetic as the built thing —
+  `GroundRelief.Drape(FloorCentre) * Rotate(Yaw[facing])` in both — which is
+  `19-build-cursor.md` §6's rule rather than a new one.

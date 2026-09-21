@@ -629,6 +629,9 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeStairUpper:
                     EmitStair(batch, module, tint, def, x, z, y);
                     return;
+                case CoreContent.EdificeStairFull:
+                    EmitFullStair(batch, module, tint, index, x, z, y);
+                    return;
                 case CoreContent.EdificeLadder:
                     EmitLadder(batch, module, tint, index, x, z, y);
                     return;
@@ -757,6 +760,31 @@ namespace Odyssey.Presentation.Rendering
 
             AddBody(batch, module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[climb], 0f)));
+        }
+
+        /// <summary>
+        /// The colony's own stair: one cell, one whole layer, drawn from the cell floor and
+        /// climbing the way the <b>player turned it</b> (2026-09-21).
+        ///
+        /// <para><b>The facing is read, not inferred, and that is the point of it.</b>
+        /// <see cref="EmitStair"/> above scans for its partner because a stamped stairwell has no
+        /// facing to read; <c>docs/design/20-beds.md</c> §93 calls that out as the thing a built
+        /// thing must never do, and it is ambiguous the moment two stairwells stand side by side.
+        /// A one-cell flight has no partner at all, so the question does not arise — it asks the
+        /// record what the player chose. <c>28-stairs.md</c> §9's first open item closes here.</para>
+        ///
+        /// <para>Draped like everything fixed to the grid, and drawn from the cell's own floor with
+        /// no lift: the whole rise is inside this cell, so the top of the flight <em>is</em> the
+        /// floor above. <see cref="StairShape.FullRise"/> is the same number the picker is offered
+        /// through <c>WorldRenderModel.StandHeight</c>, which is why that class exists.</para>
+        /// </summary>
+        void EmitFullStair(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
+        {
+            int climb = _model.EdificeFacing(index);
+
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[climb], 0f)));
         }
 

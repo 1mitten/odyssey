@@ -492,27 +492,29 @@ namespace Odyssey.Sim.Construction
                     iconKey = "ui.arch.tool.pillar",
                 },
 
-                // The way up that carries something (U44, docs/design/28-stairs.md). Two adjacent
-                // cells on ONE layer - the upper half is drawn 1.5 m up inside its own cell, and
-                // the connector's upper end is those two cells one layer higher, derived. So the
-                // footprint is the bed's shape, not a vertical one.
+                // The way up that carries something (docs/design/28-stairs.md). ONE cell, climbing
+                // a full 3.0 m layer to the floor above - owner, 2026-09-21, after playing the
+                // two-cell version: "It should be able to go up a flight in one square for ease -
+                // but it's not - it's not flush with the floor above either."
                 //
-                // Two edifice values, which no other buildable has: worldgen has always stamped a
-                // stair as Lower + Upper, and matching that means the mesher's partner scan,
-                // EdificeLabels and the render mirror all keep working untouched, and a built stair
-                // is indistinguishable from a stamped one.
+                // One edifice value of its own, EdificeStairFull, and NOT worldgen's Lower/Upper
+                // pair. The pair stays exactly as it is for the stamped city; this is the thing a
+                // colonist builds and it is a different thing. What that buys: footprint 1, so
+                // every second-cell path in Place, Raise and Demolish falls out on SecondCell ==
+                // -1; a shaft rule about one cell above instead of two; and the ladder's own
+                // one-cell connector.
                 //
                 // blocking false for the ladder's reason exactly: a stair you cannot enter is a
-                // decoration. 6 and 150 against a wall's 5 and 135 and a ladder's 4 and 90 - two
-                // cells of carpentry, and the thing a colony saves up for rather than knocks
-                // together. Neither number derives from anything and nothing derives from them;
-                // they are the owner's to tune.
+                // decoration. 6 and 150 against a wall's 5 and 135 and a ladder's 4 and 90 - a
+                // flight of carpentry, and the thing a colony saves up for rather than knocks
+                // together. The numbers are unchanged from the two-cell version deliberately: a
+                // stair still costs a stair, and neither number derives from anything nor has
+                // anything derive from it. They are the owner's to tune.
                 new BuildingDef
                 {
                     defName = "Building_Stair", label = "stair",
-                    edifice = CoreContent.EdificeStairLower,
-                    secondEdifice = CoreContent.EdificeStairUpper,
-                    footprint = 2, rotates = true, blocking = false,
+                    edifice = CoreContent.EdificeStairFull,
+                    rotates = true, blocking = false,
                     costCount = 6, workToBuild = 150, minSkill = 0,
                     iconKey = "ui.arch.tool.stair",
                 },

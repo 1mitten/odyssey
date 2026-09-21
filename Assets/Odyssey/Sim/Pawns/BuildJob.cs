@@ -29,24 +29,36 @@ namespace Odyssey.Sim.Pawns
         public override int IntraPriority => 0;
 
         /// <summary>
-        /// <b>Carrying a plank is carrying something</b> (U44, docs/design/28-stairs.md §3).
+        /// <b>Building material goes wherever a colonist goes, ladders included</b> (owner,
+        /// 2026-09-21: <i>"Ladders are fine as they are - we should be able to be build a storey
+        /// as long as there is room above - this would make it much easier to stack
+        /// ladders/platforms."</i>).
         ///
-        /// <para>This was <see cref="TraverseMode.Colonist"/> by omission until stairs landed, and
-        /// the omission was invisible because nothing tested it: <c>job.Mode = Hauler</c> was
-        /// assigned in exactly one place in the simulation, <c>HaulWorkGiver</c>, so the ladder's
-        /// exclusion covered stockpile hauling and not construction delivery. Four documents said
-        /// a ladder meant nothing could be built on an upper storey; a colonist could carry a plank
-        /// up one and build with it.</para>
+        /// <para><b>U44 set this to <see cref="TraverseMode.Hauler"/> and it was reversed after one
+        /// playtest.</b> The reasoning was that carrying a plank is carrying something, so a
+        /// hauler's ladder exclusion should cover construction delivery too — and the consequence,
+        /// stated plainly in the design at the time, was that a ladder-only upper storey stops
+        /// being buildable. That consequence is a <b>bootstrap deadlock</b>: the stair meant to
+        /// replace the ladder is itself a building order, so it needs material delivered to a
+        /// storey that, by the new rule, nothing may deliver to. A player who has climbed up a
+        /// ladder and wants a floor has no move at all.</para>
         ///
-        /// <para>It changes <b>with</b> stairs and not before, on the owner's instruction: the day
-        /// delivery stops going up a ladder is the day it starts going up a stair, so nothing a
-        /// player could do yesterday is taken away today.</para>
+        /// <para>Measured on the owner's own save (<c>ffdsf.odyssey</c>, day 2): the construction
+        /// pocket around their stair order held <b>81 walkable cells in Colonist mode and 20 in
+        /// Hauler mode</b> — the whole upper platform fell out of reach of delivery the moment the
+        /// mode changed, and the stair sat at 3 of 6 wood for the rest of the day.</para>
         ///
-        /// <para>The mode is fixed for the whole job and the scan tests reachability in the same
-        /// mode the job will walk in — <c>HaulWorkGiver</c>'s rule, and for its reason: a scan that
-        /// tested a laxer mode would hand out jobs that fail on their first step.</para>
+        /// <para>So delivery is a colonist's errand again, and <c>HaulWorkGiver</c> keeps the
+        /// ladder exclusion for stockpile hauling, where it means what it was written to mean: a
+        /// bulky load being tidied away is not worth a one-handed climb, while the five planks
+        /// that make the floor you are standing on are.</para>
+        ///
+        /// <para>The mode is still fixed for the whole job and the scan still tests reachability in
+        /// the same mode the job will walk in — <c>HaulWorkGiver</c>'s rule, and for its reason: a
+        /// scan that tested a laxer mode would hand out jobs that fail on their first step. Only
+        /// the mode chosen has changed.</para>
         /// </summary>
-        const TraverseMode Mode = TraverseMode.Hauler;
+        const TraverseMode Mode = TraverseMode.Colonist;
 
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
         {

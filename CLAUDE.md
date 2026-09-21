@@ -181,7 +181,7 @@ tier can see that** — P10 again. |
 | **FI** falling items | **Merged 2026-09-20 (PR #138)** — `docs/design/26-falling-items.md`. Items and deconstruction refunds resting on destroyed floors or cleared cells drop onto the first solid floor below (or despawn if over void). Visual downward fall with gravitational acceleration ($t \propto \sqrt{h}$) and `SoundIds.CarryDrop` on landing. Fast tier (759 Sim, 449 Hud), EditMode (1902 passed, 0 failed), PlayMode (77 passed, 0 failed). |
 | **GS** graphics settings | **Built 2026-09-20, not yet run in Unity.** The Graphics tab gained a **Display** group beside the older toggles: VSync, frame cap, render scale, anti-aliasing, shadow distance, display mode and resolution. Numbers rather than yes/no, so `GraphicsLadder` is one owner for the snap-write-raise rule instead of seven copies, and the HUD's three duplicate ladder builders collapsed into `BuildLadderRow`. The three URP levers write through a **runtime copy** of the pipeline asset, the `PanelSettings` trick from `HudShell.EnsurePanelCopy`, or pressing a settings row would dirty the committed `PC_RPAsset.asset`. Nothing polls per frame. `docs/design/27-graphics-settings.md`. |
 | **RF** roofs | **`RF1` in review — PR #143**, branch `claude/adoring-ptolemy-baq5te` — `docs/design/27-roofs.md`. Mostly a finding: **a roof has been a slab since U29** and three things that sounded like work were already built, `CellGrid.IsRoofed` included (written, never called). What was missing was roofing as a *gesture*. Pointing at an upper storey's floor now orders the roof above it instead of being refused in silence; a roof two or more layers above the slice is never drawn, so a tall building cannot hide its own ground floor, while the storey directly overhead is untouched; and the **support pillar** is buildable — measured, a 10 × 10 hall takes nine holes in its roof and one pillar closes all nine. The solver needed **no change at all**: `IsGrounded` already grounds a slab on any edifice below. `RF2` is the pitched cap (art exists, cell-sized, 3.25 m in a 3.00 m layer so decoration only; a cap makes the roof non-walkable — decided, not built). Enclosure stays M4. |
-| **ST** stairs | **`U44` in review — PR #143**, branch `claude/adoring-ptolemy-baq5te` — `docs/design/28-stairs.md`, and the last M3 unit. Mostly a finding again: the connector kind, its `AllMask`, both edifice values, worldgen's stamping and the drawing were all built; what was missing was a `BuildingDef`, a two-cell placement rule and a connector refresh. A stair is **two adjacent cells on one layer**, finishing as two edifice values from one site — the shape worldgen stamps, so nothing downstream changed. **Delivery became a hauling job in the same commit** (see the gap below). Two corrections the code made to the design: a stair needs both upper cells *open* but only one *arriving*, and the generator's own stairwells are not the colony's to manage — managing them tore them out on every edit, which the Long tier caught and the fast tier did not. |
+| **ST** stairs | **`U44` in review — PR #143**, branch `claude/adoring-ptolemy-baq5te` — `docs/design/28-stairs.md`, and the last M3 unit. **Re-cut to one cell on 2026-09-21 after the second play** (§10 of that document), which is the part to read: everything above §10 describes a two-cell stair and it was two cells for one day. A colony-built stair is now **one cell climbing a whole 3.0 m layer, flush with the floor above** (`CoreContent.EdificeStairFull`, `SM_Bld_Base_Stairs_02` — art the Phase 3 research listed as an "optional variant" and nobody took). **Worldgen's stamped stairwells keep the two-cell Lower + Upper pair and are deliberately a different thing** (owner: *"forget stamped city"*). One cell is smaller everywhere: `EdificeFootprint` answers 1 with no special case, every second-cell path falls out on `SecondCell == -1`, the shaft rule asks about one cell instead of two, the connector is the ladder's own `OneCellConnectorAt`, and the facing is **read from the record** rather than inferred by scanning for a partner — which closes §9's first open item. **`DeliverWorkGiver` is back to `TraverseMode.Colonist`** (see the gap below). |
 | **MZ** map size | **Built and measured 2026-09-21, PR #156.** A fourth board, **Huge 240 x 240 x 16** (921,600 cells), beside Small, Standard and Large; Standard stays the default and stays the baseline every number on record was taken on. The size picker already existed, so the content change is three lines and a CSV row; everything else is measurement. Measured on all four boards in one run each (`docs/design/28-map-size.md` §2): Huge is **0.883 ms per edited cell** against Standard's 0.298 and the scale target's 1.047, **69.8 bytes a cell** (61.3 MiB, ~78 with the render mirror), **90 ms** to generate and **581 KB** to save. **The audit's 0.449 / 1.150 ms are corroborated.** Two findings fell out. **`TickBenchmarkTests` does not build the game's world** — its room lattice carries 19,606 regions at 120 x 120 x 16 against a generated map's 2,110, so its new edit arm reports an order of magnitude more than the same edit costs in the game; it now prints its own region count and names the arm to quote instead. And **"four times Standard" is the wrong multiplier for anything but cells**: Huge is 1.04x Large's render chunks, because a chunk is 25 x 25 within one layer. **And the frame says something the tick does not: Huge is over budget.** 7.82 ms against the 5 ms budget (Standard 3.18, Large 6.09) at 640 x 480 on a 5070 Ti, and **it is all one term** — `FrameSection.World` is 2.146 -> 5.950 ms while every other section is flat to two decimal places. 5,392 draw calls against Standard's 1,475. `ChunkRenderer.Render` still has **no frustum or distance test**, so all 443 drawn chunks are submitted wherever the camera points on a 600 m board seen through a 160 m camera — **culling is now HT8's only remaining decision and it has a number behind it.** `FrameSection.Doors` read 0.000 on every board, which is a **gap, not a result**: the arm designates and then settles, so `DoorDirector`'s 922k-cell rescan never fires. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
@@ -197,7 +197,7 @@ this file.
 | If you are touching | Read |
 |---|---|
 | The frame budget, draw calls, what a submission costs | `docs/design/06-rendering-and-camera.md` §6c, §6c.1 |
-| Stairs, the two-cell placement rule, who owns a connector | `docs/design/28-stairs.md` |
+| Stairs, the one-cell flight, who owns a connector | `docs/design/28-stairs.md` (**§10 first**) |
 | Roofs, roofing a room, the support pillar, what the slice drops | `docs/design/27-roofs.md` |
 | Grass tufts, the surround, what the decoration costs, the GPU readout | `docs/design/06-rendering-and-camera.md` §6c.3 |
 | Tree sectors, how many kinds of tree the surround draws, the batch census | `docs/design/06-rendering-and-camera.md` §6c.4 |
@@ -388,8 +388,12 @@ invisible where the game is played.
 
 - **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **954 Sim + 642 Hud**
   (2026-09-21, PR #143 — RF1 and U44 — merged with a main carrying the perf trace, the meshing
-  budget and the Huge board; 928 before, and the twenty-five are `RoofsTests`, `StairTests` and
-  the two the stair's first play added, and the guard on `Demolish` the second review found);
+  budget and the Huge board; 928 before. The additions are `RoofsTests`, `StairTests`, the two the
+  stair's first play added, the guard on `Demolish` the second review found, and — from the stair's
+  **second** play — `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished` and
+  `StairTests.AnEditBesideAStairLeavesItsPortalStanding`, both of which were confirmed red against
+  the code they guard before the fix went in. `StairTests` lost two tests in the same pass, because
+  a one-cell stair has no far half to take apart by);
   Long tier **34**, up from 23 because the per-board
   measurement arms all carry `Category("Long")`.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
@@ -566,11 +570,18 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
   update type `Editor`, so `wasPressedThisFrame` never fires); `FloorToolClickTests` and
   `InputHarnessTests` carry ignored tests. Un-ignore them together the day the harness can. This is
   why this line of work has had three silent failures.
-- ~~A hauler cannot climb a ladder, so material cannot be carried up~~ — **closed by `U44`,
-  2026-09-20, and it was never quite true.** A hauler still cannot climb a ladder, but *delivery of
-  building material* never asked for the hauling mode, so a plank went up one regardless: the
-  conclusion four documents drew from it was false. Delivery is a hauling job now and a stair is
-  buildable, so the sentence and its consequence are both true and both answered.
+- ~~A hauler cannot climb a ladder, so material cannot be carried up~~ — **not a gap, and the fix
+  for it was itself reverted on 2026-09-21.** A hauler still cannot climb a ladder, but *delivery of
+  building material* never asked for the hauling mode, so a plank always went up one: the conclusion
+  four documents drew was false. `U44` then made delivery a hauling job to make the sentence true,
+  and **that broke the game** — a ladder-only storey became unbuildable, which is a deadlock,
+  because the stair meant to replace the ladder is itself a building order needing material up
+  there. Measured on the owner's save: 81 walkable cells reachable from their stalled site for a
+  colonist, 20 for a hauler, no wood in either. Owner, 2026-09-21: *"Ladders are fine as they are -
+  we should be able to be build a storey as long as there is room above."* So delivery is a
+  colonist's errand again, `HaulWorkGiver` keeps the exclusion for stockpile hauling, and
+  `LadderTests.ABuildingOrderOnALadderOnlyStoreyIsFedAndFinished` is the outcome test whose absence
+  let the change through. `docs/design/28-stairs.md` §10a, `docs/bug-patterns.md` P14.
 - **A stamped stairwell cannot be deconstructed with its connector.** `RefreshStair` deliberately
   leaves the generator's stairs alone — a stamped one carries no facing to derive its partner from —
   so taking one apart would leave its portal behind. Reclaim is the line that answers it.

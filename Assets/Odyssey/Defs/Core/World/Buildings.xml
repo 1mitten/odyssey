@@ -237,33 +237,40 @@
   </BuildingDef>
 
   <!--
-    U44. The way up that carries something. A ladder excludes a hauler by its connector's own mode
-    mask; a stair carries AllMask, so material reaches an upper storey and a second storey becomes
-    somewhere a colony can actually build. docs/design/28-stairs.md.
+    THE WAY UP THAT CARRIES SOMETHING (docs/design/28-stairs.md). A hauler is barred from a ladder,
+    so a stair carries the AllMask and material reaches an upper storey by it.
 
-    TWO CELLS ON ONE LAYER, which is the thing to get right: the halves are side by side, and the
-    upper one is DRAWN 1.5 m up inside its own cell. The connector's upper end is those same two
-    cells one layer higher, derived - so this is the bed's footprint and not a vertical one.
+    ONE CELL, climbing a full 3.0 m layer, flush with the floor above. It was two cells for exactly
+    one day: U44 built it as the bed's footprint - two adjacent halves rising 1.5 m each - because
+    SM_Bld_Base_Stairs_01 is a half-flight and that is what the Phase 3 research recommended. The
+    owner played it (2026-09-21): "It should be able to go up a flight in one square for ease - but
+    it's not - it's not flush with the floor above either - this needs to change."
 
-    edifice 5 and secondEdifice 6 are EdificeStairLower and EdificeStairUpper. Two values is unique
-    to the stair, and it is not an inconsistency: worldgen has stamped a stair as Lower + Upper
-    since the first template, so matching it means the mesher's partner scan, EdificeLabels and the
-    render mirror all keep working untouched and a built stair is indistinguishable from a stamped
-    one. A stair takes no quality and nobody owns one, so the only thing its two records must ever
-    agree about is existing and being torn out together.
+    docs/research/e-01-module-mapping.md had the answer in the same table it made the original
+    recommendation in: SM_Bld_Base_Stairs_02, 2.50 x 3.33 x 2.50, rise 3.00, listed as a "steep
+    full-layer stair in one cell (optional variant)". No new geometry, no scaling hack.
+
+    edifice 13 is CoreContent.EdificeStairFull, a value of its own. Worldgen's stamped stairwells
+    keep Lower + Upper (5 and 6) and are deliberately NOT unified with this - the city templates
+    depend on the pair, and a separate value means EdificeFootprint answers 1 here with no special
+    case, every second-cell path falls out on SecondCell == -1, the shaft rule asks about one cell
+    above instead of two, and the connector is the ladder's own one-cell shape.
+
+    rotates true: which way the flight climbs is the player's to choose, and unlike the two-cell
+    version there is no partner to infer it from - so the stored facing is read, which is what a
+    built thing was always supposed to do (28-stairs.md 9).
 
     blocking false for the ladder's reason exactly: a stair you cannot enter is a decoration.
 
-    costCount 6 and workToBuild 150 against a wall's 5 and 135 and a ladder's 4 and 90 - two cells
-    of carpentry, and the thing a colony saves up for rather than knocks together. Neither number
-    derives from anything and nothing derives from them; they are the owner's to tune.
+    costCount 6 and workToBuild 150 against a wall's 5 and 135 and a ladder's 4 and 90 - a flight of
+    carpentry, and the thing a colony saves up for rather than knocks together. Unchanged from the
+    two-cell version deliberately: a stair still costs a stair. Neither number derives from anything
+    and nothing derives from them; they are the owner's to tune.
   -->
   <BuildingDef>
     <defName>Building_Stair</defName>
     <label>stair</label>
-    <edifice>5</edifice>
-    <secondEdifice>6</secondEdifice>
-    <footprint>2</footprint>
+    <edifice>13</edifice>
     <rotates>true</rotates>
     <blocking>false</blocking>
     <costCount>6</costCount>

@@ -66,28 +66,33 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// A storey to climb to, and the two cells a stair will stand in.
+        /// A storey to climb to, and the one cell a stair will stand in.
         ///
-        /// <para>The shape is the ladder's with one more cell: a wall with a slab on top of it as
-        /// the landing, and the stair's two cells in the column beside it, nothing above them. The
-        /// stair's halves are <b>side by side on one layer</b> — the upper one is drawn 1.5 m up
-        /// inside its own cell — so this is a footprint like the bed's, not a vertical one.</para>
+        /// <para><b>Exactly the ladder's shape, and since 2026-09-21 that is literal.</b> A wall
+        /// one cell along, a slab on top of it as the landing, and the way up in the column beside
+        /// it with nothing over it. The stair climbs the whole layer inside <paramref name="cell"/>
+        /// and steps off sideways on to the landing — which is what a ladder does, and is why the
+        /// two can share a fixture at last.</para>
+        ///
+        /// <para>The two-cell version of this had the stair's far half between the near half and
+        /// the wall, so the landing was two cells from the cell a colonist started in. Several of
+        /// the assertions below were written against that geometry and would now hold vacuously;
+        /// they are stated against <paramref name="cell"/> alone.</para>
         /// </summary>
         static void AStoreyWithNothingLeadingToIt(
-            ColonyWorld colony, out int head, out int second, out int landing)
+            ColonyWorld colony, out int cell, out int beside, out int landing)
         {
-            head = GroundNear(colony, 3);
-            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            cell = GroundNear(colony, 3);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
 
-            // Facing 1 is +X, so the far half is the next cell along X.
-            second = head + 1;
-            int wall = head + 2;
+            // Facing 1 is +X. The stair climbs in its own cell and arrives beside this wall's top.
+            beside = cell + 1;
 
-            Assume.That(colony.Construction.Allows(wall, BuildingHandle.Wall), Is.True);
-            RaiseNow(colony, wall, BuildingHandle.Wall);
+            Assume.That(colony.Construction.Allows(beside, BuildingHandle.Wall), Is.True);
+            RaiseNow(colony, beside, BuildingHandle.Wall);
             colony.World.Tick();
 
-            landing = Above(wall);
+            landing = Above(beside);
             RaiseNow(colony, landing, BuildingHandle.Floor);
             colony.World.Tick();
         }
@@ -102,10 +107,12 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AStairCarriesAHaulerWhereALadderCannot()
         {
-            // The ladder goes in the stair's FAR cell, not its near one: a landing has to be
-            // orthogonally beside the top of the shaft, and only the far half is beside the wall.
+            // The ladder goes in the same cell the stair will: a landing has to be orthogonally
+            // beside the top of the shaft, and that is now true of the one cell either of them
+            // stands in. (The two-cell stair needed its FAR half here, which is the sentence this
+            // comment used to carry.)
             ColonyWorld ladderBoard = Board();
-            AStoreyWithNothingLeadingToIt(ladderBoard, out _, out int lShaft, out int lLanding);
+            AStoreyWithNothingLeadingToIt(ladderBoard, out int lShaft, out _, out int lLanding);
             RaiseNow(ladderBoard, lShaft, BuildingHandle.Ladder);
             ladderBoard.World.Tick();
 
@@ -119,7 +126,10 @@ namespace Odyssey.Tests.Sim
             AStoreyWithNothingLeadingToIt(colony, out int head, out _, out int landing);
             Pawn pawn = TheColonist(colony);
 
-            Assume.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Colonist), Is.False,
+            // Assert, not Assume. A failed Assume is reported by NUnit as SKIPPED, so a control
+            // that stops holding takes the whole test green with it — which is exactly what the
+            // two-cell fixture did to four tests in this file the day the footprint changed.
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Colonist), Is.False,
                 "the control: nothing reaches the storey before the stair goes in");
 
             RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
@@ -151,51 +161,75 @@ namespace Odyssey.Tests.Sim
                 Assert.That(colony.Pawns.Reachable(pawn, landing, mode), Is.True, $"{mode} may climb a stair");
         }
 
-        // ---- two cells, two records -------------------------------------------------------------
+        // ---- one cell, one record ---------------------------------------------------------------
 
         /// <summary>
-        /// A stair finishes as <b>two</b> edifice values, which is unique to it and is exactly what
-        /// worldgen stamps — so the mesher's partner scan, the labels and the render mirror all keep
-        /// working untouched (28-stairs.md §4).
+        /// <b>A colony-built stair is one record in one cell, climbing a whole layer</b>
+        /// (2026-09-21, <c>28-stairs.md</c> §10). The owner's words: <i>"It should be able to go up
+        /// a flight in one square for ease."</i>
+        ///
+        /// <para>The neighbour is asserted empty in the same breath, because "one cell" is a claim
+        /// about what is <em>not</em> there and a test that only looked at the head would have
+        /// passed just as happily on the two-cell version.</para>
+        ///
+        /// <para>And the def is checked by name: it is <see cref="CoreContent.EdificeStairFull"/>
+        /// and deliberately not worldgen's <c>EdificeStairLower</c>, which the stamped city still
+        /// uses and which still means a half-flight rising 1.5 m.</para>
         /// </summary>
         [Test]
-        public void AStairIsALowerHalfAndAnUpperHalfInTwoCells()
+        public void AStairIsOneRecordInOneCell()
         {
             ColonyWorld colony = Board();
-            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out _);
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out _);
             RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
             colony.World.Tick();
 
-            Assert.That(colony.Grid.Edifice[head], Is.GreaterThanOrEqualTo(0));
-            Assert.That(colony.Grid.Edifice[second], Is.GreaterThanOrEqualTo(0));
-            Assert.That(colony.Grid.Edifice[second], Is.Not.EqualTo(colony.Grid.Edifice[head]),
-                "two records, not one pointed at twice — a bed's shape would draw both halves alike");
+            int handle = colony.Grid.Edifice[head];
+            Assert.That(handle, Is.GreaterThanOrEqualTo(0), "the stair is not standing in its cell");
+            Assert.That(colony.Construction.Edifices.Records[handle].Def,
+                Is.EqualTo(CoreContent.EdificeStairFull),
+                "a built stair is the one-cell full flight, not one of worldgen's halves");
+
+            // Every neighbour on the layer, so the claim does not depend on guessing which way a
+            // vanished far half would have fallen.
+            CellRef at = Size.FromIndex(head);
+            for (int f = 0; f < 4; f++)
+            {
+                int x = at.X + (f == 1 ? 1 : f == 3 ? -1 : 0);
+                int z = at.Z + (f == 0 ? 1 : f == 2 ? -1 : 0);
+                if (!Size.Contains(x, z, at.Y)) continue;
+                int neighbour = Size.Index(x, z, at.Y);
+                if (neighbour == head) continue;
+
+                Assert.That(colony.Grid.Edifice[neighbour], Is.Not.EqualTo(handle),
+                    $"the stair claimed the cell at facing {f}; it occupies one cell and no more");
+            }
         }
 
         /// <summary>
-        /// Taken apart by naming <b>either</b> half, and neither half is left behind. The far half
-        /// stores the opposite facing precisely so this is symmetric; a record left standing would
-        /// hand back a connector for a stair that is not there on the next load.
+        /// Taken apart by naming its cell, and the portal goes with it. A record left standing
+        /// would hand back a connector for a stair that is not there on the next load.
         /// </summary>
         [Test]
-        public void EitherHalfTakesTheWholeStairApart([Values(true, false)] bool byTheFarHalf)
+        public void DemolishingAStairTakesItsPortalWithIt()
         {
             ColonyWorld colony = Board();
-            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out int landing);
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out int landing);
             RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
             colony.World.Tick();
 
             Pawn pawn = TheColonist(colony);
-            Assume.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.True);
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.True,
+                "the control: the stair opened the storey to a hauler in the first place");
 
-            Assert.That(colony.Construction.Demolish(colony.Pawns, byTheFarHalf ? second : head, out _),
-                Is.True);
+            Assert.That(colony.Construction.Demolish(colony.Pawns, head, out _), Is.True);
             colony.World.Tick();
 
-            Assert.That(colony.Grid.Edifice[head], Is.LessThan(0), "the near half is gone");
-            Assert.That(colony.Grid.Edifice[second], Is.LessThan(0), "and so is the far one");
-            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.False,
+            Assert.That(colony.Grid.Edifice[head], Is.LessThan(0), "the stair is gone");
+            Assert.That(colony.Pawns.Nav.OneCellConnectorAt(head, ConnectorKind.Stair), Is.LessThan(0),
                 "the portal must not outlive the stair");
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.False,
+                "and a hauler must not still be able to get up there");
         }
 
         /// <summary>
@@ -260,22 +294,23 @@ namespace Odyssey.Tests.Sim
         /// be filled and is handed out for ever, which is exactly what an unreachable crop cost
         /// PR #119 — 159 failed jobs in 2,000 ticks.</para>
         ///
-        /// <para>Marked by each half in turn, because the far half is a record of its own and the
-        /// two are not symmetric in the code even though they are to the player.</para>
+        /// <para><b>One cell since 2026-09-21</b>, so the "by either half" parameter this test used
+        /// to carry is gone with the far half itself. What is left is still worth asserting, and is
+        /// the part that was never about the footprint: the mark has to be seen, walked to,
+        /// finished, and cleared.</para>
         /// </summary>
         [Test]
-        public void AMarkedStairIsPulledDownWholeByAColonist([Values(true, false)] bool byTheFarHalf)
+        public void AMarkedStairIsPulledDownByAColonist()
         {
             ColonyWorld colony = Board();
-            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out int landing);
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out int landing);
             RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
             colony.World.Tick();
 
-            int marked = byTheFarHalf ? second : head;
-            Assume.That(colony.Designations.CanDeconstruct(marked), Is.True,
-                "the half that was clicked has to be something the deconstruct tool will take");
+            Assert.That(colony.Designations.CanDeconstruct(head), Is.True,
+                "the cell that was clicked has to be something the deconstruct tool will take");
             Assert.That(
-                colony.Designations.Designate(Size.FromIndex(marked), DesignationKind.Deconstruct),
+                colony.Designations.Designate(Size.FromIndex(head), DesignationKind.Deconstruct),
                 Is.EqualTo(IntentRejection.None), "the order was refused");
 
             for (int tick = 0; tick < 20_000 && colony.Grid.Edifice[head] >= 0; tick++)
@@ -284,13 +319,9 @@ namespace Odyssey.Tests.Sim
             // Assert rather than Assume, for the reason DeconstructTests records against its own
             // stone wall: a precondition that fails is reported as green.
             Assert.That(colony.Grid.Edifice[head], Is.LessThan(0), "nobody pulled the stair down");
-            Assert.That(colony.Grid.Edifice[second], Is.LessThan(0),
-                "half a stair was left standing, which is a portal whose far end is a hole");
 
             Assert.That(colony.Designations.At(head), Is.EqualTo(DesignationKind.None),
                 "a mark outlived the thing it was on");
-            Assert.That(colony.Designations.At(second), Is.EqualTo(DesignationKind.None),
-                "the mark on the other half outlived the stair");
 
             // **The portal, and not reachability.** The obvious assertion — that the landing is
             // no longer reachable — is the wrong one for this fixture and passes or fails for the
@@ -298,30 +329,83 @@ namespace Odyssey.Tests.Sim
             // it with a one-block hop whether or not a stair was ever there. Measured, 2026-09-21:
             // the connector is correctly gone and the landing is still reachable. The claim worth
             // making is that the stair took its portal with it.
-            Assert.That(colony.Pawns.Nav.TwoCellConnectorTouching(head), Is.LessThan(0),
-                "the stair is gone and its portal is still registered at the near half");
-            Assert.That(colony.Pawns.Nav.TwoCellConnectorTouching(second), Is.LessThan(0),
-                "...and at the far half");
+            Assert.That(colony.Pawns.Nav.OneCellConnectorAt(head, ConnectorKind.Stair), Is.LessThan(0),
+                "the stair is gone and its portal is still registered in its cell");
+        }
+
+        /// <summary>
+        /// <b>A ladder's refresh must not carry off a stair's portal.</b>
+        ///
+        /// <para>Both are one-cell ways up now, so both are looked up through
+        /// <c>NavGraph.OneCellConnectorAt</c> — and that method had no notion of <i>kind</i>, having
+        /// been written when the ladder was the only one-cell connector there was. Every structure
+        /// edit runs <c>RefreshLaddersAround</c>, a seven-cell fan-out; on a stair's cell it would
+        /// have found the stair's portal, asked <c>IsLadder</c>, been told no, and removed it. A way
+        /// up that disappears because somebody built a wall next door — <c>docs/bug-patterns.md</c>
+        /// P1, one rule with two owners.</para>
+        ///
+        /// <para>Caught at the signature rather than here: <c>OneCellConnectorAt</c> takes a
+        /// <see cref="ConnectorKind"/> and cannot hand a caller somebody else's. This test is what
+        /// says the fan-out really does reach a stair's cell, which is the half a signature cannot
+        /// assert — without it the guard is a plausible precaution rather than a fix.</para>
+        /// </summary>
+        [Test]
+        public void AnEditBesideAStairLeavesItsPortalStanding()
+        {
+            ColonyWorld colony = Board();
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out int landing);
+            RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
+            colony.World.Tick();
+
+            Pawn pawn = TheColonist(colony);
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.True,
+                "the control: the stair opened the storey before anything was built beside it");
+
+            // A wall on the far side of the stair, so the ladder fan-out is put over the stair's
+            // own cell. Any structure edit would do; this is the nearest one.
+            int behind = head - 1;
+            Assert.That(colony.Construction.Allows(behind, BuildingHandle.Wall), Is.True);
+            RaiseNow(colony, behind, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            Assert.That(colony.Pawns.Nav.OneCellConnectorAt(head, ConnectorKind.Stair),
+                Is.GreaterThanOrEqualTo(0),
+                "a wall next door took the stair's portal out with it");
+            Assert.That(colony.Pawns.Reachable(pawn, landing, TraverseMode.Hauler), Is.True,
+                "and the storey stopped being reachable because of it");
         }
 
         // ---- where one may be ordered -----------------------------------------------------------
 
-        /// <summary>Both halves need something to stand on; half a stair over air is refused.</summary>
+        /// <summary>
+        /// A stair needs something to stand on; a flight hanging in air is refused.
+        ///
+        /// <para>Measured against a control in the same test, because "refused" is the answer this
+        /// board gives to a great many orders and a test that only saw the refusal would pass
+        /// without the footing rule existing at all: the cell one layer up over a <em>wall</em> is
+        /// accepted and the cell one layer up over <em>nothing</em> is not, and the only difference
+        /// between them is the footing.</para>
+        /// </summary>
         [Test]
-        public void AStairNeedsAFootingUnderBothOfItsCells()
+        public void AStairNeedsAFootingUnderIt()
         {
             ColonyWorld colony = Board();
-            int head = GroundNear(colony, 3);
-            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            int onTheGround = GroundNear(colony, 3);
+            Assert.That(onTheGround, Is.GreaterThanOrEqualTo(0));
 
-            // One layer up, where only the near cell has anything under it.
-            int up = Above(head);
-            RaiseNow(colony, head, BuildingHandle.Wall);
+            // A wall to stand the control on, and its neighbour left as open air.
+            RaiseNow(colony, onTheGround, BuildingHandle.Wall);
             colony.World.Tick();
 
-            Assert.That(colony.Construction.Place(Size.FromIndex(up), BuildingHandle.Stair, StuffHandle.Wood, 1),
+            Assert.That(
+                colony.Construction.Allows(Above(onTheGround), BuildingHandle.Stair), Is.True,
+                "the control: a stair may start from the top of a wall, which has a footing");
+
+            int overAir = Above(onTheGround) + 1;
+            Assert.That(
+                colony.Construction.Place(Size.FromIndex(overAir), BuildingHandle.Stair, StuffHandle.Wood, 1),
                 Is.Not.EqualTo(IntentRejection.None),
-                "the far half would be standing on air");
+                "a stair with nothing under it would be a connector hanging in air");
         }
 
         /// <summary>
@@ -332,14 +416,17 @@ namespace Odyssey.Tests.Sim
         public void AStairIsRefusedUnderASlab()
         {
             ColonyWorld colony = Board();
-            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out _);
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out _);
 
-            RaiseNow(colony, Above(second), BuildingHandle.Floor);
+            Assert.That(colony.Construction.Allows(head, BuildingHandle.Stair), Is.True,
+                "the control: that cell takes a stair perfectly well while its shaft is open");
+
+            RaiseNow(colony, Above(head), BuildingHandle.Floor);
             colony.World.Tick();
 
             Assert.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Stair, StuffHandle.Wood, 1),
                 Is.Not.EqualTo(IntentRejection.None),
-                "the far half's own shaft is capped, and the far half is asked too");
+                "the shaft is capped, so the flight would climb into the underside of a deck");
         }
 
         /// <summary>
@@ -350,17 +437,19 @@ namespace Odyssey.Tests.Sim
         public void ASlabIsRefusedDirectlyOverAStair()
         {
             ColonyWorld colony = Board();
-            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out _);
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out _);
 
-            Assume.That(colony.Construction.Allows(Above(second), BuildingHandle.Floor), Is.True,
+            Assert.That(colony.Construction.Allows(Above(head), BuildingHandle.Floor), Is.True,
                 "the control: that slab is legal while no stair is under it");
 
             RaiseNow(colony, head, BuildingHandle.Stair, facing: 1);
             colony.World.Tick();
 
-            Assert.That(colony.Construction.Allows(Above(head), BuildingHandle.Floor), Is.False);
-            Assert.That(colony.Construction.Allows(Above(second), BuildingHandle.Floor), Is.False,
-                "over either half, because either one is the stair");
+            Assert.That(colony.Construction.Allows(Above(head), BuildingHandle.Floor), Is.False,
+                "a slab capping the flight is the same fault ordered the other way round");
+            Assert.That(colony.Construction.Allows(Above(Above(head)), BuildingHandle.Floor), Is.False,
+                "and a slab over the ARRIVAL cell roofs the way up just as finally - the two-cell "
+                + "reach in ShaftRulePermits is about the arrival, not about a far half");
         }
 
         /// <summary>
@@ -372,22 +461,24 @@ namespace Odyssey.Tests.Sim
         public void TwoOrdersCannotCombineIntoAStairUnderAFloor([Values(true, false)] bool stairFirst)
         {
             ColonyWorld colony = Board();
-            AStoreyWithNothingLeadingToIt(colony, out int head, out int second, out _);
+            AStoreyWithNothingLeadingToIt(colony, out int head, out _, out _);
 
             CellRef stair = Size.FromIndex(head);
-            CellRef floor = Size.FromIndex(Above(second));
+            CellRef floor = Size.FromIndex(Above(head));
 
+            // Assert on the FIRST order as well as the second: whichever goes down first has to be
+            // accepted, or the test proves only that this board refuses everything.
             if (stairFirst)
             {
-                Assume.That(colony.Construction.Place(stair, BuildingHandle.Stair, StuffHandle.Wood, 1),
-                    Is.EqualTo(IntentRejection.None));
+                Assert.That(colony.Construction.Place(stair, BuildingHandle.Stair, StuffHandle.Wood, 1),
+                    Is.EqualTo(IntentRejection.None), "the stair order was refused on its own");
                 Assert.That(colony.Construction.Place(floor, BuildingHandle.Floor, StuffHandle.Wood),
                     Is.Not.EqualTo(IntentRejection.None));
             }
             else
             {
-                Assume.That(colony.Construction.Place(floor, BuildingHandle.Floor, StuffHandle.Wood),
-                    Is.EqualTo(IntentRejection.None));
+                Assert.That(colony.Construction.Place(floor, BuildingHandle.Floor, StuffHandle.Wood),
+                    Is.EqualTo(IntentRejection.None), "the floor order was refused on its own");
                 Assert.That(colony.Construction.Place(stair, BuildingHandle.Stair, StuffHandle.Wood, 1),
                     Is.Not.EqualTo(IntentRejection.None));
             }

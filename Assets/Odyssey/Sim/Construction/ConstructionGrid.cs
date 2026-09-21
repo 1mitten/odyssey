@@ -1190,6 +1190,14 @@ namespace Odyssey.Sim.Construction
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return;
 
+            // **The colony's own stair is one cell, and its connector is the ladder's shape.**
+            // Kept as its own method rather than a branch inside the two-cell arithmetic below,
+            // because the two have nothing in common but the word: this one has no far half to
+            // derive, no facing to trust, and one cell above to ask about. Called unconditionally
+            // so that the *removal* case works — a demolished stair leaves a cell that answers
+            // IsFullStair false, and the whole job of this method is to notice that.
+            RefreshFullStair(ctx, cell);
+
             // **Worldgen's stairwells are not ours to manage, and this line is why the M2 demo
             // failed before it existed.** A stamped stair carries no facing — the generator had
             // nowhere to put one and the mesher infers it by scanning for the partner — so
@@ -1250,6 +1258,43 @@ namespace Odyssey.Sim.Construction
                 Pathing.ConnectorKind.Stair,
                 new[] { head, second },
                 new[] { head + stride, second + stride });
+        }
+
+        /// <summary>
+        /// The connector of the colony's own one-cell stair at this cell, re-derived.
+        ///
+        /// <para><b>Deliberately <see cref="RefreshLadder"/>'s shape, line for line</b>, because a
+        /// one-cell way up is a one-cell way up: work out what is <em>wanted</em>, compare it
+        /// against what the graph holds, add or remove. Idempotent in both directions, so every
+        /// place either end can change may call it without anyone tracking which change it was.</para>
+        ///
+        /// <para><b>Where it differs from the ladder is the top.</b> A ladder asks
+        /// <c>LadderArrivesAt</c>; a stair asks <see cref="StairArrivesAt"/>, which is the same
+        /// question with <see cref="StairTopIsOpen"/> folded into it — a stair's flight is drawn
+        /// climbing <em>into</em> the cell above, so a slab or a blocking edifice there is a
+        /// colonist walking into the ceiling. That is <c>ConnectorRegistrar</c>'s rule about
+        /// worldgen's stairwells said of one cell instead of two.</para>
+        ///
+        /// <para><b>No <c>IsOurs</c> guard, unlike the two-cell path.</b> That guard exists because
+        /// a <i>stamped</i> stair carries no facing and deriving its far half picks the wrong cell;
+        /// nothing the generator stamps is ever <see cref="CoreContent.EdificeStairFull"/>, so
+        /// there is nothing here to protect from the derivation — and there is no derivation.</para>
+        /// </summary>
+        void RefreshFullStair(PawnContext ctx, int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return;
+
+            int above = cell + _grid.Size.LayerStride;
+            bool wanted = IsFullStair(cell)
+                && above < _grid.Size.CellCount
+                && StandsOnAFooting(cell)
+                && StairArrivesAt(above);
+
+            int existing = ctx.Nav.OneCellConnectorAt(cell, ConnectorKind.Stair);
+            if (wanted == (existing >= 0)) return;
+
+            if (wanted) ctx.Nav.AddConnector(ConnectorKind.Stair, new[] { cell }, new[] { above });
+            else ctx.Nav.RemoveConnector(existing);
         }
 
         /// <summary>
@@ -1321,7 +1366,8 @@ namespace Odyssey.Sim.Construction
             {
                 PlacedEdifice placed = _edifices[i];
                 if (placed.Removed || !placed.Built) continue;
-                if (placed.Def != CoreContent.EdificeStairLower) continue;
+                if (placed.Def != CoreContent.EdificeStairLower
+                    && placed.Def != CoreContent.EdificeStairFull) continue;
                 RefreshStair(ctx, placed.CellIndex);
             }
         }
@@ -1336,7 +1382,7 @@ namespace Odyssey.Sim.Construction
                 wanted = above < _grid.Size.CellCount
                     && StandsOnAFooting(cell) && LadderArrivesAt(above);
 
-            int existing = ctx.Nav.OneCellConnectorAt(cell);
+            int existing = ctx.Nav.OneCellConnectorAt(cell, ConnectorKind.Ladder);
             if (wanted == (existing >= 0)) return;
 
             if (wanted) ctx.Nav.AddConnector(ConnectorKind.Ladder, new[] { cell }, new[] { above });
@@ -1445,7 +1491,15 @@ namespace Odyssey.Sim.Construction
             return !placed.Removed && placed.Built;
         }
 
-        /// <summary>Either half of a built stair standing in this cell.</summary>
+        /// <summary>
+        /// A stair standing in this cell, of either shape: the colony's own one-cell flight, or
+        /// either half of one of worldgen's two-cell stairwells.
+        ///
+        /// <para>Both, because every caller of this asks a question about <i>the way up</i> and not
+        /// about who put it there — the shaft rule, the footing rule and the connector refresh all
+        /// mean the same thing whichever kind is standing. Where the two kinds must be told apart,
+        /// the caller names the def itself; see <see cref="IsFullStair"/>.</para>
+        /// </summary>
         bool IsStair(int cell)
         {
             if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
@@ -1453,8 +1507,19 @@ namespace Odyssey.Sim.Construction
             if (handle < 0 || handle >= _edifices.Count) return false;
             PlacedEdifice placed = _edifices[handle];
             return !placed.Removed
-                && (placed.Def == CoreContent.EdificeStairLower
+                && (placed.Def == CoreContent.EdificeStairFull
+                    || placed.Def == CoreContent.EdificeStairLower
                     || placed.Def == CoreContent.EdificeStairUpper);
+        }
+
+        /// <summary>The colony's own one-cell, one-layer stair standing in this cell.</summary>
+        bool IsFullStair(int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count) return false;
+            PlacedEdifice placed = _edifices[handle];
+            return !placed.Removed && placed.Def == CoreContent.EdificeStairFull;
         }
 
         /// <summary>Is a ladder standing in this cell, whoever put it there?</summary>
