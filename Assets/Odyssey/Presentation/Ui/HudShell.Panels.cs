@@ -1110,6 +1110,27 @@ namespace Odyssey.Presentation.Ui
             RefreshToasts();
         }
 
+        /// <summary>
+        /// The game wrote the colony by itself: one line on the Events panel saying so, and which
+        /// file it went to (2026-09-21).
+        ///
+        /// <para><b>A line rather than a toast or a silence</b> (owner's call). What a player wants
+        /// from it is the answer to *is my file current* when they are about to quit, and a row
+        /// that has already faded cannot answer it. It replaces the previous autosave line rather
+        /// than stacking — <see cref="BulletinModel.PostNotice"/> says why — and it does not chime.
+        /// </para>
+        /// </summary>
+        void OnAutosaved(string saveName)
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+
+            _bulletins.PostNotice(AutosaveClock.NoticeKey,
+                Registry.Label(AutosaveClock.NoticeKey),
+                saveName + " · " + BulletinModel.Stamp(world.CurrentTick));
+            RefreshBulletins();
+        }
+
         void RefreshBulletins()
         {
             var world = _boot!.World;
@@ -1202,6 +1223,9 @@ namespace Odyssey.Presentation.Ui
             {
                 if (evt.button != 0) return;
                 if (_directors == null || _boot?.World == null) return;
+                // A notice is something the game did, not something the colony did, so there is
+                // nowhere on the board to take the camera.
+                if (view.Id < 0) return;
                 _directors.Camera.JumpTo(
                     new CellRef(view.TargetCell.X, view.TargetCell.Z, _directors.Slice.ActiveLayer));
             });
