@@ -121,7 +121,10 @@ namespace Odyssey.Presentation.Bootstrap
                         _shell != null && _shell.BuildPaletteOpen,
                         _shell != null && _shell.MenuOpen,
                         _bootstrap?.Directors?.Work.Open == true,
-                        _bootstrap?.Directors?.Almanac.Open == true))
+                        _bootstrap?.Directors?.Almanac.Open == true,
+                        // Null while a colony is running: the main screen and the game are the two
+                        // halves of a session's life and only one of them is ever up.
+                        _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
@@ -151,8 +154,16 @@ namespace Odyssey.Presentation.Bootstrap
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);
                     break;
+                case EscapeAction.MenuBack:
+                    // The main screen's Load and New game screens. Until this rung existed Escape
+                    // fell past them to OpenPanel and laid the settings window over the load list
+                    // (owner, 2026-09-21).
+                    _shell?.Menu.Back();
+                    break;
                 case EscapeAction.OpenPanel:
                     _director.SetOpen(true);
+                    break;
+                case EscapeAction.Nothing:
                     break;
             }
         }

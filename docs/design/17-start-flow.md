@@ -645,3 +645,37 @@ page did nothing to the bed under it. The store is now written whether or not a 
 - **Whether four seconds of hand-over reads as seamless**, or whether the gap between the menu bed
   going and the outdoor bed's first birds is a hole. The two overlap by design; only an ear can say
   whether the overlap is enough.
+
+## 13. Escape on the main screen (2026-09-21)
+
+Owner: *"On the main menu when I go to load game or character screen and push escape — it doesn't
+close down menus and it gets confused."*
+
+**The cause.** `SettingsDirector.Escape` is the single owner of that key (`09-ui-and-input.md` §6)
+and its ladder knew five things, all of them in-game: the tool in the hand, the Build palette, the
+Work tab, the Almanac, the Menu popover. The main screen's own screens — `MenuScreen.Load` and
+`MenuScreen.NewGame` — were in none of the rungs, so the key fell through to the last one,
+`OpenPanel`, and opened the **in-game settings window on top of the load list**. Two screens at
+once is exactly the stack §4 was written to avoid, and the way out of it is not obvious, which is
+the "gets confused".
+
+**The rule.** The ladder takes the main screen's state as a nullable `MenuScreen` — null means a
+colony is running, which is every caller that existed before — and gains two rungs at the bottom:
+
+| Main screen shows | Escape |
+|---|---|
+| Load, or New game | `MenuBack`: back one level to the root column |
+| Root | `Nothing` |
+
+**`Nothing` is a rung rather than a fall-through.** The root column is the one place in the game
+with nothing behind it; opening the settings panel over it would be wrong because Options is
+already a row on that column, and closing it is not possible. A rung that says so is readable
+without tracing the order.
+
+**Both new rungs sit below `ClosePanel`, and that is deliberate.** On the main screen the settings
+panel stands *in* the menu's place (`MenuScreen.Settings`, §4), so closing the panel is what leaves
+that screen — `MenuDirector.SettingsClosed` brings the menu back by itself. A `MenuBack` above the
+panel would unwind the navigation out from under a panel still on the screen.
+
+Nothing else moved: `MenuDirector.Back` already existed and is what the Back row on both screens
+has always called. The key now reaches it.

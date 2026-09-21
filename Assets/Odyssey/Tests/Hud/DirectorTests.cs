@@ -787,6 +787,55 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// Escape on the main screen backs out one level, and does nothing at its root.
+        ///
+        /// Owner, 2026-09-21: *"On the main menu when I go to load game or character screen and
+        /// push escape — it doesn't close down menus and it gets confused."* The start screen's
+        /// screens had no rung at all, so the key fell through to <c>OpenPanel</c> and laid the
+        /// in-game settings window over the load list.
+        /// </summary>
+        [Test]
+        public void EscapeBacksOutOfTheMainScreenAndDoesNothingAtItsRoot()
+        {
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Load),
+                Is.EqualTo(EscapeAction.MenuBack));
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.NewGame),
+                Is.EqualTo(EscapeAction.MenuBack),
+                "the character screen is the other half of the report");
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Root),
+                Is.EqualTo(EscapeAction.Nothing),
+                "the one screen with nothing behind it — and Options is a row on it already");
+        }
+
+        [Test]
+        public void TheSettingsPanelUnwindsBeforeTheScreenItStandsIn()
+        {
+            // On the main screen the panel takes the menu's place rather than sitting over it, so
+            // closing the panel is what leaves that screen and the menu follows on its own. A rung
+            // above the panel would move the navigation out from under a panel still on screen.
+            var settings = new SettingsDirector();
+            settings.SetOpen(true);
+
+            Assert.That(settings.Escape(false, false, false, false, false, MenuScreen.Settings),
+                Is.EqualTo(EscapeAction.ClosePanel));
+        }
+
+        [Test]
+        public void InGameEscapeIsUnchangedByTheMainScreenRung()
+        {
+            // Null start screen is "a colony is running", which is every existing caller.
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(false, false, false, false, false, startScreen: null),
+                Is.EqualTo(EscapeAction.OpenPanel));
+            Assert.That(settings.Escape(false, false, false, false, false),
+                Is.EqualTo(EscapeAction.OpenPanel), "the five-argument overload means the same");
+        }
+
+        /// <summary>
         /// Every option starts as <see cref="SettingsDirector.DefaultOn"/> says, and the panel
         /// knows which ones cost a remesh to change.
         ///
