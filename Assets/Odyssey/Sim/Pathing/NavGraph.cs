@@ -711,7 +711,12 @@ namespace Odyssey.Sim.Pathing
             _pairScratch[key] = id;
         }
 
-        int StepCost(int targetCell, bool diagonal = false)
+        /// <summary>
+        /// What the region graph charges for stepping into a cell. Public so that a test can hold
+        /// it against <see cref="NavGrid.EnterCost"/>, which is what the mover charges for the
+        /// same step: the two are mirrors and a disagreement between them fails silently.
+        /// </summary>
+        public int StepCost(int targetCell, bool diagonal = false)
         {
             NavFlags f = Grid.Flags[targetCell];
             int baseCost = diagonal ? MoveCost.Diagonal : MoveCost.Orthogonal;
@@ -729,6 +734,16 @@ namespace Odyssey.Sim.Pathing
                 int hazard = MoveCost.HazardPenalty;
                 if (diagonal) hazard = (hazard * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
                 cost += hazard;
+            }
+            // The mirror of NavGrid.EnterCost's own site clause. The two must agree or the
+            // abstract search prices a route the mover then walks at a different cost, which is
+            // the failure HopPriceHasOneOwnerTests exists to catch for the hop;
+            // SiteDetourHasOneOwnerTests does the same for this.
+            if ((f & NavFlags.BuildSite) != 0)
+            {
+                int site = MoveCost.SiteDetour;
+                if (diagonal) site = (site * MoveCost.Diagonal + 50) / MoveCost.Orthogonal;
+                cost += site;
             }
             return cost;
         }
@@ -1175,6 +1190,24 @@ namespace Odyssey.Sim.Pathing
             if (isAlreadyOpen == open) return;
             if (open) Grid.Flags[cell] |= NavFlags.DoorOpen;
             else Grid.Flags[cell] &= ~NavFlags.DoorOpen;
+            MarkDirty(cell);
+        }
+
+        /// <summary>
+        /// Mark, or unmark, a cell as holding a building that is ordered and not yet standing.
+        ///
+        /// <para>Registration rather than derivation, exactly as <see cref="SetDoor"/> is: the
+        /// nav grid is built from the <c>CellGrid</c> and a site lives in the construction grid,
+        /// which the nav layer does not know about and should not learn. The flag is sticky, so
+        /// a rebuild of the cell's other flags preserves it, and
+        /// <c>ConstructionGrid</c> is the only caller.</para>
+        /// </summary>
+        public void SetBuildSite(int cell, bool site)
+        {
+            bool already = (Grid.Flags[cell] & NavFlags.BuildSite) != 0;
+            if (already == site) return;
+            if (site) Grid.Flags[cell] |= NavFlags.BuildSite;
+            else Grid.Flags[cell] &= ~NavFlags.BuildSite;
             MarkDirty(cell);
         }
 
