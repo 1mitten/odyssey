@@ -22,6 +22,69 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
 
 ## Open
 
+- **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
+  (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
+  batch count, and the count was sixteen tree kinds multiplying every spatial cell — so it now
+  draws **eight**, which took it from 1.08 ms to 0.58 with all 3,907 trees still standing and the
+  meadow frame from 2.71 to 2.14. **A slot is a colour palette over one of two silhouettes**, not a
+  kind of tree, so halving them ought to be invisible: look along the rim and at the hills behind
+  it, from the play camera and from a low orbit. **A wrong answer looks like a stripe** — the same
+  colour of tree recurring at a regular spacing along a ridge, which is the failure this number has.
+  If it reads clean, **×4 is measured at 0.371 ms** and is the next rung; if it stripes, 12 is
+  untested and sits between.
+- **Is vsync on, and what is the frame with it off?** (`claude/huge-map`,
+  `docs/design/06-rendering-and-camera.md` §6c.5.) **Answered half of the old "which side of the
+  bus" row and raised this one.** Your three 4K shots read frame 16.79 / 15.66 / ~17.5 ms at
+  60 / 64 / 57 fps with gpu 8.4 and submit 5.5 inside them — 8.4 + 5.5 is not 16.79, so those
+  frames are waiting on something. The overlay now prints `vsync` and `cap` beside the GPU
+  figure. **Turn vsync off in Settings → Graphics and read the frame again**: that is the first
+  number in this project that would be a real headroom figure. A wrong answer looks like quoting
+  fps with vsync on — it hides the spare capacity and the true cost at the same time.
+- **Do the tufts cost pixels?** (Same section.) At 640 x 480 they were 7 per cent of a CPU frame
+  and dismissed; at 4K the **GPU is the largest single item at ~8.5 ms**, and tufts are
+  alpha-tested foliage covering the ground — pixels, not calls. With vsync off, toggle
+  **Grass tufts** in Settings → Graphics and read `gpu`. A wrong answer looks like reading
+  `frame` instead of `gpu`, which vsync or a cap will flatten.
+- **Are the tufts and the surround worth what they cost?** (Same branch and section.) Settings →
+  Graphics already carries both switches. Turn the **surround** off on the meadow and look at the
+  horizon: 45 per cent of the frame is a large sum for scenery, and the question is whether the
+  board reads as a board or as a diorama floating in fog without it. Then the **tufts**, which cost
+  a seventh of that. A wrong answer looks like both being turned off and left off — that would mean
+  the levers are settings rather than the decoration being worth keeping, and the ranked options in
+  §6c.3 should be spent making the expensive one cheaper instead.
+
+- **Is a Huge board more room, or more walking?** (`claude/huge-map`, `docs/design/28-map-size.md`.)
+  New Game → the **Size** control now cycles a fourth board, **Huge, 240 × 240 × 16** — twice
+  Standard's ground at Standard's depth. Standard is still the default, so nothing changes unless
+  you pick it. The simulation is measured and comfortable (0.883 ms per edited cell against
+  Standard's 0.298, 69.8 bytes a cell, 90 ms to generate); **what no test can answer is whether the
+  board is worth crossing.** Five things to look at, in the order they will hit:
+
+  1. **Zoom out as far as it goes.** `maxDistance` is 160 m and the board is 600 m across, so you
+     will see about an eighth of it. This is *already* true at Standard — "see the whole map" has
+     never actually worked — but Huge is where it stops being ignorable. A wrong answer looks like:
+     you cannot tell where your colony is relative to anything, in which case zoom wants to scale
+     with the board and that is its own unit.
+  2. **Pan corner to corner without the fast modifier.** 23 seconds at `panSpeed = 26`. A wrong
+     answer looks like: you reach for the fast key every time, so the base speed is wrong for this
+     board and not just slow.
+  3. **Play twenty minutes.** A wrong answer looks like: colonists spend the session in transit and
+     the extra ground is a tax rather than a choice — in which case Large (180 × 180 × 24, which
+     ships and which nobody has ever played either) may be the size that was actually wanted.
+  4. **Look for water.** `streamCount` is a per-map absolute, so Huge gets 5 water bodies on 600 m
+     where Standard gets 4 on 300 m. A wrong answer looks like: the board reads as arid, or you walk
+     a long way to find a pond.
+  5. **Walk the wilderness for a minute.** Every noise period is in cells, not fractions of the
+     board, so Huge is *more map at the same grain* rather than the same map enlarged. A wrong
+     answer looks like: the same copse and the same hillside keep recurring, which means the
+     periods want to scale.
+
+  **Not a playtest item, and please do not treat it as one:** whether the frame holds. That is
+  measured — Huge is **7.82 ms against a 5 ms budget** at 640 x 480 on a 5070 Ti, against Standard's
+  3.18 and Large's 6.09, and all of the difference is `FrameSection.World`. **Frustum culling in
+  `ChunkRenderer.Render` is the named fix and it is HT8's last open decision.** So if Huge feels
+  heavy, that is expected and already has a work item; what is wanted from the keyboard is whether
+  the board is worth crossing, not whether it is fast.
 - **Does the storage pane sit still now?** (`claude/storage-pane`,
   `docs/design/26-storage.md` §12.) Untick every category and the warning appears under the list
   rather than in it, and the list gives up 92 px to make room, so nothing above it moves. **Is

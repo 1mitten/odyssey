@@ -9325,6 +9325,8 @@ built, and that the collector does not run at all while the panel sits open.
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
 
+---
+
 ## 2026-09-21 — The toast's level goes amber, and why it is a split and not a tag
 
 The owner, after the bar: *"make a small change to the notification to make the value of level (IE
@@ -9668,3 +9670,485 @@ is inconclusive**, which it was eighteen times (the `[Explicit]` benchmarks, the
 probes and the four `GrowingJobTests` the fast tier also skips). `unity.sh` reads `failed=` out of
 the results XML and exited 0; a log line saying "Exiting with code 2 (Failed)" beside `failed="0"`
 is not a failure.
+
+---
+
+## 2026-09-21 — a bigger board, and the number that turned out to be measuring the wrong world
+
+The owner asked for a map twice the size in every direction, for an honest answer about how big we
+could realistically go, and to be interviewed first. The interview settled four things: **twice the
+ground, not the depth** (240 × 240 × 16); a **fourth size** rather than a new default; **measure
+first and change behaviour second**; and the ceiling to be answered against the **2022 laptop** the
+docs still name as the target.
+
+**The first thing grounding found was that the feature already existed.** A board-size picker has
+been on the setup page since 2026-09-17 — Small, Standard, Large — so "a bigger map" is a fourth
+entry in a three-element array. `MapSizes.Default` is an index and Huge goes after Large, so nothing
+shifts; the index is not persisted anywhere (not `PlayerPrefs`, not `ViewStateSection`, not
+`SaveRecipe` — a save carries `SaveHeader.Size`), so a fourth entry cannot invalidate a save.
+`MenuDirectorTests` already iterates `MapSizes.All`, so the cycle, the clamp and the label came for
+free. The content change is three lines and a CSV row.
+
+**The second thing it found is worth more: Large already ships and nothing has ever run it.**
+180 × 180 × 24 is 777,600 cells against Huge's 921,600 — 84% — and 1,536 render chunks against
+1,600, which is 96%. So "four times Standard" is true of cells and of almost nothing that costs,
+because a chunk is 25 × 25 *within one layer* and Large carries eight more layers. The multiplier
+somebody will quote at a frame number is wrong before the frame is measured. Every arm written this
+session runs Large too, for that reason.
+
+### The measurement that mattered, and the one that was lying
+
+The plan was to take the edit tick — the audit's one finding that scales with the board rather than
+with what is happening on it — at each board size. `TickBenchmarkTests` was the obvious place: it
+already runs fifty pawns at the scale target and reports per-phase timing. It also, as the audit had
+noted, **never edits the world**, which is the one state in which `NavGraph.Rebuild` returns on its
+first line. So it got `MineOneCell` and a busy arm.
+
+The first numbers were alarming: 5.23 ms per tick on Standard, 17.78 on Huge, 40.4 at the scale
+target, against the audit's 0.414 and 1.187. Twelve to thirty-four times worse, on a machine several
+times faster than the audit's container. Either the audit was wrong or the new arm was.
+
+**Neither. The benchmark does not build the game's world.** `BuildColony` lays an 11 × 11 room
+lattice with 8% rubble scattered through it, which fragments every block: **19,606 regions at
+120 × 120 × 16 against a generated map's 2,110**, and 207,293 at the scale target against 24,141.
+The rebuild's cost tracks the region count almost exactly — the isolated diagnostic confirmed it,
+19,606 regions → 6.0 ms and 207,293 → 40.1 ms — so the arm was reporting roughly an order of
+magnitude more than the same edit costs in the game, and reporting it under a label that read like
+the game.
+
+That is the failure this project keeps meeting in different clothes: **a measurement that is correct
+about the thing it measures and wrong about the thing it is named after.** The fix is not to delete
+the arm — a heavily built colony tends towards exactly that lattice, so it is a fair floor to hold —
+but to make it say its own region count in its report line and to name, in its summary, which arm to
+quote instead.
+
+The figure a board size is actually bought with went where the real boards already are:
+`NavGraphStatisticsTests`, which generates each map and walks its graph, gained `TimePerEdit`. On a
+board the generator made:
+
+| Board | Regions | Links | Rebuild per mined cell |
+|---|---|---|---|
+| Standard 120 × 120 × 16 | 2,110 | 1,477 | 0.298 ms |
+| Large 180 × 180 × 24 | 7,360 | 3,511 | 0.587 ms |
+| Huge 240 × 240 × 16 | 8,406 | 6,180 | 0.883 ms |
+| Scale target 250 × 250 × 40 | 24,141 | 6,772 | 1.047 ms |
+
+**The audit is corroborated** — it read 0.449 and 1.150 on a 4-core Xeon; this reads 0.298 and 1.047
+on a faster machine, same shape. Huge costs 2.96× Standard's edit tick, which at speed 3 is about
+2.6 ms of a 16.6 ms frame against 0.9 ms today. Real, and nowhere near fatal.
+
+One prediction worth recording because it held: before measuring, live regions were estimated at
+~8,500 for Huge from the live-block count. Measured 8,406. The model — regions track live 10 × 10 × 1
+blocks, not cells — is sound enough to price a board that has not been built.
+
+### What else the numbers said
+
+**Memory is 69.8 bytes a cell** and flat across every board, so Huge is 61.3 MiB simulation-side and
+about 78 MiB with the presentation mirror. The estimate going in was 67 B/cell. `CellGrid`'s
+docstring claiming "22 MB at 2.5M cells" is stale by 1.7× and has been for a while — its six arrays
+are fifteen bytes wide.
+
+**Generation is 90 ms** median over five seeds, and **nothing throws**. That mattered more than it
+sounds: `minReachablePercent` and `maxForcedFords` are per-map absolutes while `pondsPer10000Columns`
+is per-area, so Huge draws roughly four times the ponds against the same three-ford budget, and
+`EnsureReachable` can throw *"The water shapes have severed the map"*. Twenty boards, four sizes by
+five seeds, and it did not — but that arm is now the cheapest thing that can veto a board size, and
+it runs first for exactly that reason.
+
+The same per-map/per-area split shows up where the generator is not broken but is arguably wrong:
+`streamCount = 2`, so Standard puts four water bodies on 300 m and Huge puts five on 600 m. A Huge
+board is drier per acre. And every noise period is in **cells** — `surfacePeriod = 34`,
+`treeClumpPeriod = 11` — so a bigger board is *more map at the same grain* rather than the same map
+enlarged. Both are owner calls, both are in the playtest table, neither was changed.
+
+### The frame half is owed, and saying so is the point
+
+A Unity editor was open on this machine from 00:39 onwards. `CLAUDE.md` is explicit that a frame
+number taken beside a sibling Unity is worthless — the city canary drifted 2.01 to 4.01 ms on
+nothing else — and the rule about not killing a process that might be somebody's editor is there
+because it has been wrong before. So `TheBoardSizeAgainstTheFrame` is written and compiled and
+unrun.
+
+It is written as **one test and not three arms**, which is the whole design of it: all three boards
+timed seconds apart inside one run, so the answer is a ratio that survives a noisy machine even
+though the absolutes will not. And it **holds the colony fixed**, because the largest open cost in
+the frame is not board-shaped at all — `PawnPose.Of`'s crowd scan is 13.3 ms of a 22.5 ms frame at
+384 colonists, larger than every board-scaled term put together, and an arm that varied both would
+read one as the other.
+
+The prior is stated in the design doc before the measurement, deliberately: `FrameSection.World` is
+flat at 1.9–2.5 ms across a 48-fold colony at Standard, so Huge is 4× a ~2 ms term and not 4× a 5 ms
+frame. That is a much less alarming starting position than the audit implied, and it is worth
+writing down *first* so the result reads as confirmation or surprise rather than as whatever it
+happens to be.
+
+### A number that was retired on the way past
+
+The plan going in priced the standing-order marks at ~4.6 us a submission, making a 300-cell drag
+~1.4 ms and the first thing to fix. That was **wrong by about forty times**, and the branch that
+fixed it had already merged: a mark plate's submission costs about 0.1 us, the whole pass is 0.40 ms
+at 901 orders, and the 4.6 us constant is what a *loaded* submission costs. The consequence is that
+**frustum culling is now the only behaviour change HT8's numbers decide.** A plan is allowed to
+carry a wrong number; it is not allowed to carry it into a design document.
+
+### So how big, honestly
+
+Three things set the ceiling and only the first is about cells: the four global navigation passes
+(HT1 removes the board from the term entirely), per-frame work that scales with the board rather
+than the view (five rows, all fixable to scale with what is visible, none fixed), and the colony
+rather than the board — which is already the binding term at Standard.
+
+With HT1 and view-scaled rendering, the 250 × 250 × 40 design target is reachable and the board
+stops being the limiting number; memory puts a hard stop near 400 × 400 × 40 on an 8 GB laptop.
+Without either, 240 × 240 × 16 is comfortable, which is what the measurements say.
+
+Depth is the axis to be careful of, and the reason is ours rather than inherent: the region graph
+allocates a region for solid rock too, because rooms and atmosphere want a substrate. Only 6.8% of
+the wilderness's regions are walkable, so skipping all-impassable blocks would cut the count roughly
+tenfold — at the cost of M4's substrate. A design decision, not an optimisation.
+
+The outside reading converged from four directions on the same sentence, and it is the one to keep:
+**what makes a large colony map expensive is connected, reachable, searchable area — not cells, not
+bytes, not triangles.** RimWorld bounds a region to its 12 × 12 square so one edit costs one flood;
+Dwarf Fortress tells you to *seal* cavern levels rather than delete them; HPA\* recomputes one
+cluster; voxel storage pays off because most of the world is uniform and can be skipped. We already
+have the hard half of the first — `NavGraph.BlockSize = 10` is exactly that bound. What we lack is
+the incremental relink, which is HT1, which is already written down and waiting.
+
+### The frame half, run after all — and a prior of mine that was wrong
+
+The editor that made the frame measurement untrustworthy turned out to be on another project, and
+the run went ahead once EditMode was clear. The arm is built to survive a noisy machine anyway —
+three boards timed seconds apart inside one run — and every timing test in the same PlayMode run
+passed, which is the tell that contention was not gross.
+
+| Board | Frame | `World` | Draw calls | Chunks drawn | Surround batches |
+|---|---|---|---|---|---|
+| Standard 120 × 120 × 16 | 3.18 ms | 2.146 | 1,475 | 104 | 266 |
+| Large 180 × 180 × 24 | 6.09 ms | 4.513 | 3,205 | 250 | 430 |
+| Huge 240 × 240 × 16 | **7.82 ms** | 5.950 | 5,392 | 443 | 464 |
+
+**Huge is over the 5 ms budget**, at 640 × 480 on a 5070 Ti, before the target laptop is considered
+at all. So the answer splits: comfortable in the tick, over budget in the frame. Large is over too,
+at 6.09 — and Large has shipped for days.
+
+**And the cost is one term.** `FrameSection.World` goes 2.146 → 5.950 while `Figures`, `Overlays`,
+`Mirror`, `Sight`, `Audio` and `Actors` are flat to two decimal places across all three boards. That
+is the cleanest signal this renderer has produced: the board shows up in draw submission and
+nowhere else.
+
+**I had stated the opposite prior, in writing, before measuring — and keeping the correction is the
+point of having stated it.** The mark-pass work found `World` flat at 1.9–2.5 ms across a *48-fold
+colony*, and I reasoned from that to "Huge is 4× a ~2 ms term, not 4× a 5 ms frame". `World` is flat
+in the colony and is not flat in the board. It should have been obvious: a term that does not move
+with what is *happening* is exactly the term that moves with *how much there is*. Writing the
+prediction down first is what turned that into a correction instead of a silently revised memory.
+
+**The decision HT8 existed to make is now made.** `ChunkRenderer.Render` has no frustum or distance
+test, so all 443 of Huge's drawn chunks are submitted wherever the camera points — and on a 600 m
+board seen through a 160 m camera most of them are off-screen. Culling goes ahead, with a number
+behind it rather than a suspicion.
+
+**One thing the arm did not measure, and says so.** `FrameSection.Doors` read 0.000 on every board.
+`DoorDirector.EnsureDoorList` only rescans when `WorldRenderModel.Version` moves, and this arm
+designates and then lets the world settle, so the 922k-cell scan never fired. The hazard is
+unmeasured, not absent, and measuring it wants an arm that keeps editing while it times — the same
+shape as `MineOneCell`. Recorded rather than quietly left as a zero, because a zero in a table is
+indistinguishable from a cost that is genuinely nil.
+
+---
+
+## 2026-09-21 — the decoration, measured: the surround was 45 per cent of the frame and nothing could say so
+
+The owner, from a Play session rather than a test: *"it seems that grass tufts and surrounding land
+have some impact of the FPS — is there anything we can explore investigate to improve or handle
+performance, any pre warming of shaders, caching or something that would help."*
+
+**The first answer was that the project could not tell them, and that is the finding behind the
+finding.** The surround is submitted from inside `ChunkRenderer.Render` — deliberately, so it
+reaches the GPU before the board and the depth buffer can reject it — and it was therefore charged
+to `FrameSection.World` along with the chunk buckets from the day the sections were written. So the
+one pass §6c had spent a day cutting from 3.65 ms to about 2.2 was the one pass no instrument could
+name afterwards. The tufts had never had a number at all: they are meshed into the chunks, so they
+are invisible inside the board's own figure by construction.
+
+**Four instruments, and they are the real deliverable.** `FrameSection.Surround`, split out and
+charged by a stopwatch inside the renderer; `GpuFrameMs` and `CpuFrameMs` off `FrameTimingManager`,
+with `enableFrameTimingStats` turned on in the player settings to feed them; two lines on the
+developer overlay — `cpu … gpu … <resolution>` and the whole submit split, largest first; and
+`FrameTimeTests.TheDecorationAgainstTheFrame`, which times one built world four ways.
+
+**One world, four readings, because this machine cannot be trusted across runs.** The played
+meadow, 640 × 480: as shipped **2.71 ms**, tufts off **2.52**, surround off **1.48**, neither
+**1.29**. So the surround is **1.23 ms — 45 per cent of the frame** — and the tufts are **0.18, or
+7**. Together they are more than half of it. The owner named the two together and one of them is
+nearly seven times the other.
+
+Three corroborations fell out of the same run without being asked for. The surround is a **flat
+tax**: 1.14–1.24 ms at every colony size from 8 pawns to 384, while `Figures` goes 0.09 → 8.65 and
+`Actors` 0.02 → 15.41 — it is the largest single item in the draw block on the standard board until
+about thirty colonists. It **barely grows with the board** — 1.07, 1.78, 2.05 ms on standard, large
+and huge, against `World` going 0.92 → 2.17 → 4.08 — because it scales with the ring and not with
+the area. And the **city pays 0.058 ms**, since the ruined city grows no wood outside it, which
+confirms directly what §6c had only established by subtraction: the surround's cost is its trees.
+
+**What was deliberately not concluded.** Every figure is a stopwatch around CPU submission at
+640 × 480, and both suspects are alpha-tested foliage covering the horizon — the exact geometry §6c
+predicted would be free at 307k pixels and dominant at 1080p. The ranking may invert at play
+resolution: batch overhead hardly moves with pixels and fill moves with their square. So the tuft's
+7 per cent is a statement about submission and might be wrong by an order of magnitude about what
+the owner is watching. That is what the GPU readout is for, and the next step is one Play session
+at the owner's own resolution rather than another test on this one.
+
+**Two things in the question were answered rather than built.** *Pre-warming shaders* fixes hitches,
+not frame rate — a variant costs one stalled frame the first time it is drawn and nothing
+afterwards, so it cannot be what a steady readout shows; worth doing for the stutter on its own
+terms, and this project has been bitten three times by the neighbouring problem of variants being
+*stripped*, but it is not on the path to this report. *Caching* is already done: the surround is
+built once and submitted unchanged, the tufts are baked into chunk meshes and re-meshed only on a
+dirty chunk, and there is no per-frame rebuild in either pass to remove. What is left is the
+submission itself and the pixels it costs.
+
+`docs/design/06-rendering-and-camera.md` §6c.3 holds the table, the ranked options and the rule for
+reading the new overlay lines. Nothing is built past the instruments; the phase gate holds.
+
+---
+
+## 2026-09-21 — the surround halved, and a constant that had been guarding the wrong factor
+
+The owner, after the measurement: *"Ok what can we do about the surround and focus on this"*.
+
+**The instrument came before the fix, and it is what made the fix findable.** A census of the
+skirt's three batch lists on the played meadow: ground 24 batches for 12,832 instances, tufts 12 for
+1,191 — both fine — and **trees 230 batches for 3,907 instances, mean 17 a call, 192 of the 230
+holding fewer than thirty-two**. The wood was 230 of the 266 batches and it was submitting them
+nearly empty.
+
+**And the key those 230 came out of was 115 sectors × 4 mutes × 1 part × 2 tints × 16 themes.**
+§6c had cut this pass once, 80 m sectors to 400, 760 batches to 266, and then recorded that the
+ladder saturated and that the remaining floor was "the variants, themes, mute steps and parts,
+which no sector size can merge". The first half was right. The second named the right factor for
+the wrong reason and was never measured: four mute steps, two tints and one part are not splitting
+anything. `SectorOf` **folds the variant into the sector number**, so those 115 sectors are spatial
+cells times tree kinds, and a sixteen-kind wood cannot fall below sixteen batches a spatial cell
+however coarse the cells are. That is the whole explanation of the saturation, and it had sat there
+for a day disguised as a floor.
+
+**Then a sweep rather than another judged constant.** The two sector sizes and the near variant
+count were `const` and a const cannot be swept, which is exactly how the 400 came to be chosen once
+and believed. They are settable statics now, written by nothing but the sweep, which restores them
+in a `finally`. One built world, rebuilt only in the skirt, six readings in one run — surround
+section in ms: 400/800 ×16 **1.080** at 266 batches; 800/1600 ×16 **0.952** at 230; 1600/3200 ×16
+**0.935** at 230; 800/1600 ×8 **0.576** at 151; ×6 **0.483** at 129; ×4 **0.371** at 104. **Space is
+the cheap half and one step spends all of it** — 1600 m and a single 100 km sector measure the same
+as 800 — and the kinds go on paying the whole way down. Cost tracked batches throughout, 4.06 µs a
+batch at 266 and 3.81 at 104, the 4.6 µs constant behaving as §6c says a *loaded* submission does.
+
+**Shipped: 800 m near, 1600 far, eight kinds.** The surround is 1.08 → **0.58 ms** on the meadow and
+the whole frame 2.71 → **2.14**, with every one of the 3,907 trees still standing. It is now **flat
+at about 0.6 ms on every board** where it used to grow with the ring: Large 1.78 → 0.60, Huge
+2.05 → 0.63, and Huge's whole frame 8.07 → 6.09, which matters because §28 measured Huge as over
+budget.
+
+**Four was measured, is cheaper again, and was not taken.** A slot is a (module, theme) pair sampled
+from the board's own wood by frequency, and the census says the meadow's surround uses **2 tints and
+16 themes** — so sixteen slots were buying sixteen colour palettes over two silhouettes, not sixteen
+kinds of tree. Halving the palettes ought to be invisible; quartering them might not be, and that is
+an eye on the horizon rather than another reading. So 8 ships and 4 waits for a verdict.
+
+**The guard is on the factor, not the number.**
+`SurroundCostTests.HalvingTheVariantsHalvesTheWoodsBatchesAndNotTheWood` builds one board twice
+differing in the slot count alone and fails if the wood changes or the batches do not. Its first
+draft asserted something else — that a thicker wood rides in the batches already open — and it
+failed honestly: a denser board pushes the surround further out and opens real new spatial cells,
+so batches grew faster than instances and the premise was wrong. Worth recording, because the
+failing version looked like the more general guard and was simply untrue of this geometry.
+
+**And the caveat is undiminished.** All of it is CPU submission at 640 × 480. Halving a batch count
+halves per-call overhead and does nothing at all for fill, so if the owner's report turns out to be
+GPU-bound at play resolution this has moved a number they were not watching. It was still worth
+doing unconditionally — half a millisecond off every board for nobody's trade — but the Play session
+with the GPU readout is still what decides everything after it.
+
+---
+
+## 2026-09-21 — 4K on the owner's machine: the surround is six per cent, the GPU is the frame, and my CPU readout was wrong
+
+Three screenshots, a real Play session, **3840 x 2160** — twenty-seven times the pixels every number
+in §6c was taken at, and the first reading this project has at a resolution anybody plays at.
+
+**The surround work paid and is done.** It reads **0.91–0.98 ms of a 16 ms frame, about six per
+cent**, where before §6c.4 it was forty-five per cent of a 2.7 ms frame. It does not scale with
+resolution, which is the shape it should have: per-call overhead, the same calls whatever the pixels.
+
+**The GPU is now the largest single item — about 8.5 ms against 5.5 of CPU submission.** §6c
+predicted exactly this and could not test it, and the prediction was right. So the tuft question
+§6c.3 could not answer is still open and is now the one worth asking, because tufts are pixels
+rather than calls. And on the CPU side what is left is **`World`: 4.1–4.7 ms of the 5.1–5.7 ms
+submit**, four to five times the surround, over 3,747 draw calls and 413 chunks. The next unit on
+this side of the bus is the chunk buckets, and `claude/frustum-culling` is already sitting there
+measured.
+
+**8.40 + 5.55 does not make 16.79, and that gap is the finding underneath the finding.** 60, 64 and
+57 fps across three shots is a frame paced by a display, not by work. So the fps number in those
+shots is not evidence of headroom in either direction — it hides both the spare capacity and the
+real cost. The overlay prints `vsync` and the frame `cap` beside the GPU figure now, because a
+reading taken without them is not comparable with anything.
+
+**And `CpuFrameMs`, which I added that morning, was wrong on screen in its first real session.**
+16.81 ms beside a 16.79 ms frame in the first shot — right — then 296.32, then 17,898.04, climbing
+over about twenty-five seconds, so a stream of bad samples and not one spike decaying out of an
+average. Deleted rather than repaired, because nothing is lost by deleting it: `frame` and `submit`
+are our own stopwatches, they agree with each other, and between them they say everything a CPU
+figure would have. `GpuFrameMs` stays — it is the one number nothing else here can get, it read
+8.40, 8.15 and 9.12 across the three shots, and it is guarded against implausible samples now.
+
+The lesson is worth more than the figure was: **a number the platform hands you is not a
+measurement until it has been seen beside a number taken independently.** That one shipped on the
+strength of looking plausible in a batch run at 640 x 480 — inside the very document that says
+640 x 480 proves nothing.
+
+---
+
+## 2026-09-21 — the game records what it costs, so the next question does not need a batch run
+
+The owner, after three performance questions in one day had each cost a Unity batch run or a
+photograph: *"Is there any logging/monitoring or tooling we can implement now to understand
+everything, log the details so you can get your information quicker and easier?.. plan it out if
+need be"*. Interviewed first, as the working agreement says: all four goals wanted — turnaround,
+catching stutters, a regression record, and understanding the simulation — and **the loop only** in
+this pass, with summaries rather than a raw file to read.
+
+**The exploration found the most useful thing already written and unused.**
+`Assets/Odyssey/Sim/Diagnostics/PhaseTrace.cs` is a finished per-phase tick tracer — nearest-rank
+percentiles, `Clear()`, an `ITickPhaseSink` seam on `SimWorld`, UnityEngine-free — with **no
+consumer in the running game**, only `TickBenchmarkTests`. Attaching it gives the sim half of a
+trace for nothing and covers part of the fourth goal without any new machinery, and
+`TimingATickCannotChangeIt` already asserts that attaching it is harmless. Reusing it also settled
+the ranking rule by force: the new `FrameWindow` copies `PhaseTrace.Rank` exactly, so a p95 in a
+trace and a p95 in a tick benchmark cannot come to mean two different things.
+
+**What was built.** A row a second into `Logs/perf/` — frame p50/p95/p99/max, gpu, submit, tick,
+every `FrameSection`, every `TickSegment`, the counters — behind a header naming the machine, the
+screen, the board and every graphics setting, walked through `SettingsDirector.All` and
+`AllLadders` so a setting added later appears without anybody remembering. Any frame over 50 ms or
+three times the previous second's median is **captured whole with its own split**, rather than
+averaged into the second it interrupted, which is precisely what a mean does and precisely what
+this exists to stop. A *Mark this moment* row in the debug menu. And `tools/perf/trace.py`, stdlib
+only like every other tool here, with `summarise`, `compare` and `list`.
+
+**Three decisions worth the space.**
+
+*It measures nothing.* Every number it writes is already a public property. That is the safeguard
+rather than a limitation: a recorder that invented a figure could become the next `CpuFrameMs`,
+which is the field that shipped that morning and read 16.81, then 296.32, then 17,898.04.
+
+*`compare` refuses.* Two traces whose headers disagree about the GPU, the screen, vsync, the cap or
+the board are not compared without `--force`. `docs/process.md` says a timing without its machine is
+a rumour; this is that sentence executable, and it is aimed at the mistake §6c records costing an
+afternoon, when a canary drifted 2.01 → 4.01 ms on nothing but a sibling worktree. A move under one
+per cent gets no verdict either, for the same reason.
+
+*The marker is a menu row and not a key.* A binding is a `HotkeyAction`, and those are player
+controls that appear in the Keys tab and the wiki — a developer's trace marker is not game content.
+The reader makes the timing forgiving instead: it shows the seconds either side of a mark and leans
+the window **backwards**, two behind for every one ahead, because nobody reaches anything mid-hitch.
+
+**The test that matters is the one the day earned.**
+`FrameTimeTests.TheTraceAgreesWithTheArmThatTimedIt` runs the trace and `TimeFrames` over the same
+frames and requires their answers to meet within a factor of two. The band is wide on purpose —
+a mean over 180 frames and a median of per-second medians are not the same statistic — so what it
+catches is a tracer reading a different quantity, a different unit, or nothing. It is the morning's
+lesson as an assertion: *a number the platform hands you is not a measurement until it has been seen
+beside a number taken independently.* The fast tier's half is
+`TraceWriterTests.TheHeaderNamesEveryFieldARowCarries`, which fails the moment a field appears in a
+row without being declared.
+
+**One test was wrong before the code was.** The first draft of the percentile test used a sample
+list with a repeated value and asserted the median of the *distinct* values. The code was right and
+matched `PhaseTrace`; the test was rewritten with ten distinct samples and a note saying why,
+because a percentile convention quietly changed to match a mistaken test is exactly the kind of
+thing nothing else would catch.
+
+---
+
+## 2026-09-21 — the stutter, found: chunk meshing has no per-frame budget
+
+The owner had reported hitches all day. `ChunkRenderer.BatchFor` meshes every stale chunk the draw
+loop touches, in the frame it touches it, with no budget and no deferral. A camera sweep into unseen
+map brings hundreds due at once; a graphics toggle calls `Model.Remesh()` and brings all eight
+hundred of a Huge board.
+
+**The evidence is a clean separation.** Eighty-seven seconds of traced player: fifty-six seconds
+with no meshing produced **zero** stalls over 100 ms, and every stall in the session fell in one of
+the eleven seconds where meshing ran, at a rate that tracks the meshing rate. The frame-level
+confirmation is one record — a **180 ms frame that meshed 900 chunks** — and `submit_max` reached
+200 ms, the draw block wearing it.
+
+**It took four wrong answers, and that is the part worth keeping.** Editor-only, then the collector,
+then shader compilation, then the tick. Each survived longer than it deserved because the trace was
+reporting *summaries of events*: `remeshed` was last-seen and read 0 through a second that meshed
+eight hundred; the tick had a median and no maximum; the phases had a mean and a p95 and no maximum.
+Every one of those zeroes and plausible medians was quoted as evidence of absence, against the
+correct hypothesis, more than once. `docs/bug-patterns.md` P14 holds the pattern and the rule: **a
+counter of events is summed, a counter of state is last-seen, and anything timed carries a maximum
+as well as a middle.**
+
+The two eliminations that survive and should not be re-litigated: **not the simulation** (`tick_max`
+4.90 ms and worst phase 3.58 ms across the session, against frames of 180-439; and 3x speed with the
+camera still produced no stalls at all), and **not the collector** (zero of the captured stalls
+collected on their own frame, across three sessions, one of which had 21 collections in a second
+whose worst frame was 19 ms).
+
+One methodological note against myself. The captured spike records all showed `remesh=0` on their
+own frame, and I said so — but `MaxSpikesPerRow` caps capture at four a second and those seconds had
+thirty-eight. **A capped sample is not a sample**, and the unbiased `submit_max` said the opposite.
+The 900-chunk frame arrived later and settled it.
+
+The fix is a per-frame meshing budget, nearest first, and it is not built: it is a renderer change
+with a visible trade and wants its own unit.
+
+---
+
+## 2026-09-21 — the meshing budget: 156 ms to 9, and the stall moves into the loading screen
+
+The owner: *"fold it in and and plan out the performance improvements now and combine into PR ...
+and then execute."* So §6c.6's finding became §6c.7's rule and then the code, in that order.
+
+**The rule is one sentence: a frame meshes at most eleven chunks, and a chunk that misses the budget
+draws what it already has and is retried next frame.** The number is the fault's own arithmetic —
+the player session measured 900 chunks at about 165 ms, so 0.18 ms a chunk, and roughly 2 ms of a
+5 ms frame is eleven.
+
+**The retry needed no queue, and that is the part worth keeping.** A deferred chunk still has
+`batch.Version != _model.Version`, so the next frame's walk finds it again. The staleness *is* the
+queue. A second list of owed chunks would have been a copy of state the batch already holds, and
+the sort of thing that goes out of step with the thing it mirrors.
+
+**One exception, and it is a decision rather than an oversight.** On a new game every chunk is
+never-meshed, so a budgeted first frame would draw almost nothing and the board would arrive in
+instalments over several hundred frames while the player watched it build itself. `PrimeAll` meshes
+the lot unbudgeted and `BuildSession` calls it once — putting the stall inside the loading screen,
+where §6c.6 had already measured 14.7 seconds of worldgen stall sitting. **Keep the freeze where
+the player is already waiting.**
+
+**Measured with a control in one run**, which is the only way a number off this machine means
+anything: the same Huge board re-meshed twice, budget off then on —
+
+    unbudgeted  156.1 ms  (900 chunks)
+    budgeted      8.8 ms  (11 chunks, cap 11; 889 deferred)
+
+It reproduces the exact signature the live session caught, 900 chunks at about 160 ms, which is the
+best evidence that the arm measures the fault and not a proxy for it. No absolute threshold is
+asserted; the assertion is the difference.
+
+**What it does not fix, stated so nobody looks for it later.** The 439 ms frame at session start is
+worldgen and `PrimeAll` deliberately keeps it there. And this spreads the cost of meshing without
+making a chunk cheaper — if 0.18 ms a chunk ever becomes the complaint, that is a mesher change and
+a different unit.
+
+Five EditMode guards (`MeshBudgetTests`), of which the load-bearing one is
+`AWholeBoardRemeshIsSpreadOverFramesInsteadOfLandingInOne`: it guards the *shape* of the fault, a
+frame whose meshing cost is proportional to how much went stale. One of its drafts failed honestly
+first — a 48-cell board is 2 x 2 chunks against `CellGrid.ChunkSize` of 25, and four chunks cannot
+tell a budget of four from no budget at all.

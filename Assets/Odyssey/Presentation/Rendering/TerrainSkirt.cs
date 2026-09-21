@@ -37,50 +37,74 @@ namespace Odyssey.Presentation.Rendering
         public const int MaxInstancesPerCall = ChunkRenderer.MaxInstancesPerCall;
 
         /// <summary>
-        /// How wide a tree sector is - the spatial half of a batch key, and so the knob that
-        /// decides how many instanced calls the near wood costs.
+        /// How wide a tree sector is — the spatial half of a batch key, and so one of the two
+        /// knobs that decide how many instanced calls the near wood costs.
         ///
-        /// <para><b>400 m since 2026-09-20, up from 80, and it is worth two milliseconds.</b>
-        /// The surround was 3.65 ms of a 5 ms frame on the played meadow and the trees were all
-        /// of it - its ground and its tufts are free to within noise. The instinct is that 4,169
-        /// trees are too many trees, and the measurement says otherwise: dropping the 2,577 hill
-        /// trees changed nothing at all (5.37 ms against 5.04), while the cost tracked the BATCH
-        /// count almost exactly - 760 batches 3.5 ms, 438 batches 2.1 ms, about 4.6 us a batch.
-        /// It is per-call overhead, not trees and not fill; at 640x480 there are not enough
-        /// pixels on the board for fill to cost this.</para>
+        /// <para><b>800 m since 2026-09-21; 400 m from 2026-09-20; 80 m before that.</b> The
+        /// original finding stands and is worth restating, because it is the reason this is a
+        /// batch-count problem at all: the surround was 3.65 ms of a 5 ms frame on the played
+        /// meadow and the trees were all of it — its ground and its tufts are free to within
+        /// noise. The instinct is that four thousand trees are too many trees, and the measurement
+        /// says otherwise. Dropping the 2,577 hill trees changed nothing at all (5.37 ms against
+        /// 5.04), while the cost tracked the <b>batch</b> count almost exactly — 760 batches
+        /// 3.5 ms, 438 batches 2.1 ms, about 4.6 us a batch. It is per-call overhead, not trees
+        /// and not fill; at 640 x 480 there are not enough pixels on the board for fill to cost
+        /// this.</para>
         ///
-        /// <para>So the wood is kept and the calls are cut. At 80 m the board's ring fell into
-        /// hundreds of sectors holding a handful of trees each; at 400 m the same trees ride in
-        /// 266 batches instead of 760, and the meadow went 5.04 -> 2.52 ms with the wood
-        /// unchanged. Past 400 it saturates - 2,000 m measured 204 batches and 2.22 ms, the
-        /// floor being the variants, themes, mute steps and parts, which no sector size can
-        /// merge.</para>
+        /// <para><b>Where 400 came from, and why it was not the floor.</b> At 80 m the ring fell
+        /// into hundreds of sectors holding a handful of trees each; 400 m rode the same trees in
+        /// 266 batches instead of 760 and took the meadow 5.04 → 2.52 ms. That pass then recorded
+        /// that the ladder "saturates" past 400 m and that the remaining floor was "the variants,
+        /// themes, mute steps and parts, which no sector size can merge". **The first half was
+        /// right and the second was not measured.** The census of 2026-09-21 found the wood at
+        /// <b>230 batches over 115 sectors, mean 17 trees a call, 192 of the 230 holding fewer
+        /// than 32</b> — and only 4 mute steps, 2 tints and 1 part in the whole key. The space
+        /// was still doing the splitting, and one more step of it was free.</para>
+        ///
+        /// <para><b>The sweep, one built world, one run</b>
+        /// (<c>FrameTimeTests.TheSurroundSectorSweep</c>), surround section in milliseconds:
+        /// 400/800 m <b>1.160</b> at 266 batches, 800/1600 <b>1.003</b> at 230, 1600/3200
+        /// <b>1.002</b> at 230, and a single 100 km sector also 230. So 800 m takes the last of
+        /// what space is worth and everything past it is nothing. <b>The rest of the saving is in
+        /// <see cref="TreeVariantSlots"/></b>, because <c>SectorOf</c> folds the variant into the
+        /// sector number and a sixteen-kind wood therefore cannot fall below sixteen batches a
+        /// spatial cell however coarse the cells are.</para>
         ///
         /// <para><b>The trade, stated.</b> A coarser sector is a looser <c>worldBounds</c>, so
         /// less of the wood frustum-culls and more of it is submitted every frame. That is the
-        /// right way round here and was measured to be: the draw the culling saves is cheaper
-        /// than the per-batch cost of being able to save it. If a weaker machine ever reverses
-        /// that, this is the one number to turn, and
-        /// <see cref="NearWoodDensityPercent"/> is the other.</para>
+        /// right way round here and was measured to be, twice: the draw the culling saves is
+        /// cheaper than the per-batch cost of being able to save it. If a weaker machine ever
+        /// reverses that, this is one number to turn and <see cref="NearWoodDensityPercent"/> is
+        /// another.</para>
+        ///
+        /// <para><b>Settable since 2026-09-21, and a <c>const</c> until then.</b> A const cannot
+        /// be swept, so the number was chosen once by hand and then believed for a day longer than
+        /// it deserved. Nothing but the sweep writes it; it restores the default in a
+        /// <c>finally</c>, because it is process-wide and a leak would read as a performance
+        /// change rather than as a test fault.</para>
         /// </summary>
-        public const float TreeSectorMetres = 400f;
+        public static float TreeSectorMetres { get; set; } = DefaultTreeSectorMetres;
+
+        /// <summary>What the game ships with.</summary>
+        public const float DefaultTreeSectorMetres = 800f;
 
         /// <summary>
-        /// How wide a sector of the far wood is.
+        /// How wide a sector of the far wood is. Twice the near one, and swept with it.
         ///
-        /// <para>Ten times the near one, and the number was measured rather than chosen. A batch
-        /// key is (sector, variant, part), and the far band covers some four million square
-        /// metres: at 400 m sectors with the full sixteen tree kinds the meadow drew <b>1,154
-        /// surround batches</b>, against 72 before the hill wood existed. That is a great many
-        /// draw calls for decoration nobody inspects. Widening the sector and capping the kinds
-        /// below attacks both factors of the same product.</para>
-        ///
-        /// <para>Coarse sectors cull worse: a sector this wide is nearly always partly on screen,
-        /// so its instances are submitted whether or not they can be seen. That is the right trade
+        /// <para>The far band covers some four million square metres, and before any of this work
+        /// it drew <b>1,154 surround batches</b> against 72 before the hill wood existed. Coarse
+        /// sectors cull worse — a sector this wide is nearly always partly on screen, so its
+        /// instances are submitted whether or not they can be seen — and that is the right trade
         /// out here and the wrong one at the rim. There are only a few thousand far trees in all,
         /// so submitting them costs less than the draw calls that culling them finely would.</para>
+        ///
+        /// <para>1600 m since 2026-09-21, with the near sector. Nothing further was on offer: the
+        /// 1600/3200 rung measured identically to 800/1600, to three decimal places.</para>
         /// </summary>
-        public const float FarTreeSectorMetres = 800f;
+        public static float FarTreeSectorMetres { get; set; } = DefaultFarTreeSectorMetres;
+
+        /// <summary>What the game ships with.</summary>
+        public const float DefaultFarTreeSectorMetres = 1600f;
 
         /// <summary>
         /// How many kinds of tree the far wood picks between.
@@ -92,8 +116,33 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int FarTreeVariants = 4;
 
-        /// <summary>How many kinds of tree the surround picks between, sampled by frequency.</summary>
-        public const int TreeVariantSlots = 16;
+        /// <summary>
+        /// How many kinds of tree the near wood picks between, sampled by frequency off the board.
+        ///
+        /// <para><b>Eight since 2026-09-21, down from sixteen, and it is the single largest saving
+        /// available in this class.</b> The variant is folded into the sector number by
+        /// <c>SectorOf</c>, so it multiplies the batch count whatever the sector size — which is
+        /// exactly why the sector ladder saturated. Swept on one built world in one run, surround
+        /// section in milliseconds at 800/1600 m sectors: <b>×16 = 1.003</b> at 230 batches,
+        /// <b>×8 = 0.619</b> at 151, <b>×6 = 0.515</b> at 129, <b>×4 = 0.392</b> at 104. Against
+        /// the shipped 400 m ×16 at 1.160 ms and 266 batches, the pair of changes is
+        /// <b>1.160 → 0.619 ms, a 47 per cent cut, with the same 3,907 trees standing.</b></para>
+        ///
+        /// <para><b>What a slot actually is, which decides how far this can go.</b> A slot is a
+        /// (module, theme) pair sampled from the board's own wood by frequency. On the played
+        /// meadow the census finds <b>2 tints and 16 themes</b> — so sixteen slots were buying
+        /// sixteen colour palettes over two silhouettes, not sixteen kinds of tree. Halving them
+        /// halves the palettes and touches the silhouettes not at all, which is why 8 is the
+        /// recommendation and not 4: 4 is available, measured and cheaper again, and it is a look
+        /// decision that wants an eye on the horizon rather than another reading.</para>
+        ///
+        /// <para>Settable for the sweep, like the two sector sizes, and written by nothing
+        /// else.</para>
+        /// </summary>
+        public static int TreeVariantSlots { get; set; } = DefaultTreeVariantSlots;
+
+        /// <summary>What the game ships with.</summary>
+        public const int DefaultTreeVariantSlots = 8;
 
         sealed class Batch
         {
@@ -107,6 +156,11 @@ namespace Odyssey.Presentation.Rendering
 
             /// <summary>The four tree colours, when this batch is a tree. Null for everything else.</summary>
             public MaterialPropertyBlock? Props;
+
+            // The key this batch was opened under, kept only so the census can say which field of
+            // it is doing the splitting. Four ints against a Matrix4x4 array; it costs nothing and
+            // it is the difference between knowing which knob to turn and guessing.
+            public int Sector, MuteStep, Part, TintCode, Theme;
 
             public void Add(in Matrix4x4 matrix)
             {
@@ -216,6 +270,111 @@ namespace Odyssey.Presentation.Rendering
         public int DrawCalls { get; private set; }
         public int InstancesDrawn { get; private set; }
         public int BatchesDrawn { get; private set; }
+
+        // ---- the batch census, for deciding what to do about the surround's cost ----
+
+        /// <summary>Which of the three lists a census is being taken of.</summary>
+        public enum SkirtPart { Ground, Trees, Tufts }
+
+        /// <summary>A batch holding fewer than this is not paying for the call it costs.</summary>
+        public const int ThinBatch = 32;
+
+        /// <summary>
+        /// What one of the three lists is made of: how many batches, how many instances ride in
+        /// them, how many of those batches are thin, and how big the largest is.
+        ///
+        /// <para><b>Why the distribution and not just the count.</b> §6c established that this
+        /// pass costs its <em>batch</em> count and not its tree count, and cut the count once by
+        /// coarsening the spatial half of the batch key. What it could not say is whether the
+        /// remaining batches are full or nearly empty, and those want opposite fixes: a list of
+        /// full batches is paying for content and can only be made cheaper by having less of it,
+        /// while a list of thin ones is paying for a key that splits too finely and can be made
+        /// cheaper for nothing. One number cannot tell the two apart.</para>
+        /// </summary>
+        public readonly struct Census
+        {
+            public Census(int batches, int instances, int thin, int largest)
+            {
+                Batches = batches;
+                Instances = instances;
+                Thin = thin;
+                Largest = largest;
+            }
+
+            public readonly int Batches;
+            public readonly int Instances;
+
+            /// <summary>Batches holding fewer than <see cref="ThinBatch"/> instances.</summary>
+            public readonly int Thin;
+
+            public readonly int Largest;
+
+            /// <summary>Mean instances a batch, or 0 where there are none.</summary>
+            public float Mean => Batches > 0 ? (float)Instances / Batches : 0f;
+
+            public override string ToString() =>
+                $"{Batches} batches, {Instances} instances, mean {Mean:0.0}, " +
+                $"{Thin} thin (<{ThinBatch}), largest {Largest}";
+        }
+
+        /// <summary>Take the census of one of the three lists. Needs <see cref="Build"/> first.</summary>
+        public Census CensusOf(SkirtPart part)
+        {
+            List<Batch> batches = part switch
+            {
+                SkirtPart.Ground => _ground,
+                SkirtPart.Trees => _trees,
+                _ => _tufts,
+            };
+
+            int instances = 0, thin = 0, largest = 0;
+            for (int i = 0; i < batches.Count; i++)
+            {
+                int count = batches[i].Count;
+                instances += count;
+                if (count < ThinBatch) thin++;
+                if (count > largest) largest = count;
+            }
+            return new Census(batches.Count, instances, thin, largest);
+        }
+
+        /// <summary>
+        /// How many distinct values of each key field one of the lists uses, as
+        /// <c>sectors x mutes x parts x tints x themes</c>.
+        ///
+        /// <para>The batch count is the size of the product of these, restricted to the
+        /// combinations that actually occur. So this is the line that says which factor to attack:
+        /// a field with one value is not costing anything, and a field with sixteen is costing
+        /// sixteenfold whatever sits beside it.</para>
+        /// </summary>
+        public string KeySpreadOf(SkirtPart part)
+        {
+            List<Batch> batches = part switch
+            {
+                SkirtPart.Ground => _ground,
+                SkirtPart.Trees => _trees,
+                _ => _tufts,
+            };
+
+            var sectors = new HashSet<int>();
+            var mutes = new HashSet<int>();
+            var parts = new HashSet<int>();
+            var tints = new HashSet<int>();
+            var themes = new HashSet<int>();
+            for (int i = 0; i < batches.Count; i++)
+            {
+                sectors.Add(batches[i].Sector);
+                mutes.Add(batches[i].MuteStep);
+                parts.Add(batches[i].Part);
+                tints.Add(batches[i].TintCode);
+                themes.Add(batches[i].Theme);
+            }
+
+            return $"{sectors.Count} sectors x {mutes.Count} mutes x {parts.Count} parts x " +
+                   $"{tints.Count} tints x {themes.Count} themes " +
+                   $"= {sectors.Count * mutes.Count * parts.Count * tints.Count * themes.Count} " +
+                   $"possible, {batches.Count} used";
+        }
 
         /// <summary>
         /// Measure the board and lay the surround out. Idempotent; call it again after a rebuild
@@ -664,6 +823,11 @@ namespace Odyssey.Presentation.Rendering
                 if (!_index.TryGetValue(key, out Batch? batch))
                 {
                     batch = NewBatch(parts[p], tintCode, muteStep, castsShadow, foliage, bounds, theme);
+                    batch.Sector = sector;
+                    batch.MuteStep = muteStep;
+                    batch.Part = p;
+                    batch.TintCode = tintCode;
+                    batch.Theme = theme;
                     _index.Add(key, batch);
                     into.Add(batch);
                 }
