@@ -329,6 +329,12 @@ deliberately: the claim is that `Demolish` is safe on its own terms. Same argume
 index on the stair fan-out that this branch's first review found, and the same shape as
 `docs/bug-patterns.md` P1 — one rule with two owners, where the second owner was three files away.
 
+**And the probe was photographing eleven chunks.** Re-shot after the merge, `stair-play.png` showed
+a meadow and no stair, while `stair-side.png` from the same run was perfect — `MeshBudgetPerFrame`
+came in with `main` and a probe gets one `camera.Render()`. `PrimeAll` in the render hook fixes it,
+and the empty-first-picture-full-last-picture progression is the tell rather than the camera.
+`docs/lessons.md`. **Both pictures are now right**: one continuous flight, from the profile and from
+the play camera's 48°.
 ## 9. Open
 
 - **`EmitStair` infers facing by scanning for its partner**, which `20-beds.md` §93 says a built

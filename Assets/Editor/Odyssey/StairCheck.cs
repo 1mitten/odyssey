@@ -149,6 +149,20 @@ namespace Odyssey.EditorTools
                 {
                     if (rendering != camera) return;
                     renderer.ViewerPosition = rendering.transform.position;
+
+                    // **A probe gets one frame, and a frame meshes eleven chunks.**
+                    // MeshBudgetPerFrame landed on main on 2026-09-21 and it is right for the
+                    // game: a deferred chunk keeps its old geometry and comes back next frame.
+                    // A photograph has no next frame. PlayScene.Shoot calls camera.Render()
+                    // exactly once, so without this the first shot drew eleven chunks of board
+                    // and no stair at all, and each later shot in the same run drew eleven more
+                    // — which reads as a framing mistake rather than as a stale mesh, and is why
+                    // it is written down rather than merely fixed (docs/lessons.md).
+                    //
+                    // PrimeAll is the one unbudgeted walk and is idempotent: a chunk that is not
+                    // stale costs nothing, so paying it every frame of a four-shot probe is one
+                    // board's meshing in total.
+                    renderer.PrimeAll(activeLayer, slice);
                     renderer.Render(activeLayer, slice);
                 };
                 RenderPipelineManager.beginCameraRendering += hook;

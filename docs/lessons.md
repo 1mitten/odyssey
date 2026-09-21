@@ -2562,3 +2562,32 @@ git worktree remove D:\code\<worktree>
 ```
 
 `rmdir` on a junction removes the link. A recursive delete follows it.
+
+## A screenshot probe gets one frame, and a frame meshes eleven chunks
+
+`ChunkRenderer.MeshBudgetPerFrame` landed on `main` on 2026-09-21 and is right for the game: a
+frame meshes eleven stale chunks, a deferred chunk keeps its old geometry, and the staleness is the
+queue, so the board catches up over the next few frames. **A photograph has no next frame.**
+`PlayScene.Shoot` calls `camera.Render()` exactly once.
+
+So on 2026-09-21 `StairCheck` photographed a stair and there was no stair in it — eleven chunks of
+meadow and a dark wedge where the rest of the board had not been meshed yet. The side elevation,
+taken later in the same run, was perfect, because by then three more shots had meshed thirty-three
+more chunks. **That progression is the tell**: an empty first picture and a full last one from one
+probe is a budget, not a camera. It reads as a framing mistake, which is the expensive way to spend
+an hour on it.
+
+The fix is one line in the probe's render hook, before `Render`:
+
+```csharp
+renderer.PrimeAll(activeLayer, slice);   // the one unbudgeted walk, and idempotent
+```
+
+`PrimeAll` is what `OdysseyBootstrap.BuildSession` already calls so a new world arrives whole inside
+the loading screen; a chunk that is not stale costs nothing, so paying it every frame of a four-shot
+probe is one board's meshing in total.
+
+**Twenty-one editor probes construct a `ChunkRenderer` directly** — `grep -rl "new ChunkRenderer("
+Assets/Editor/` — and every one of them is exposed. Only `StairCheck` is fixed, because it is the
+one that needed its own evidence; **check the picture before trusting any of the other twenty**, and
+prime the probe you are using rather than the whole set.
