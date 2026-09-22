@@ -65,6 +65,12 @@ namespace Odyssey.Presentation.Ui
             _debugCheats.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
                 "Adds a colonist near the camera, with no scenario and no starting kit",
                 SpawnPawn));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SpawnHogKey,
+                "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
+                () => SpawnPawn(PawnKindIndex.MiddenHog)));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SpawnRatKey,
+                "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
+                () => SpawnPawn(PawnKindIndex.DuctRat)));
             _debugCheats.Add(DebugActionRow(DebugDirector.GiveWoodKey, "Adds 50 wood near the camera",
                 () => GiveResource(ItemIndex.Wood)));
             _debugCheats.Add(DebugActionRow(DebugDirector.GiveStoneKey, "Adds 50 stone near the camera",
@@ -229,11 +235,15 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
-        void SpawnPawn()
+        /// <summary>
+        /// A pawn of a kind near the camera (design 29 §7). The colonist is kind 0, which is what
+        /// the row that predates animals still sends.
+        /// </summary>
+        void SpawnPawn(int kind = PawnKindIndex.Colonist)
         {
             var world = _boot!.World;
             if (world == null || _directors == null) return;
-            world.Intents.Submit(new Intent(IntentKind.SpawnPawn, DebugAnchorCell(world)));
+            world.Intents.Submit(new Intent(IntentKind.SpawnPawn, DebugAnchorCell(world), kind));
         }
 
         /// <summary>Fire one incident regardless of its gates (design 23 §3). Lands on the next tick.</summary>

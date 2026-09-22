@@ -128,6 +128,9 @@ namespace Odyssey.Hud
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
+                // The roster is the colony's people (design 29 §2): an animal has no card, no
+                // name and no slot to be dragged into, so it never enters the order at all.
+                if (pawns[i].Kind != 0) continue;
                 PawnId id = pawns[i].Id;
                 if (!_customOrder.Contains(id))
                     _customOrder.Add(id);

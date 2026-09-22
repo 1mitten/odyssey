@@ -175,10 +175,13 @@ namespace Odyssey.Presentation.Ui
 
             // The avatar follows the answer rather than the click: a tile whose face is mined
             // through, or a pile that changes hands, swaps its icon without a rebuild.
-            bool colonist = _inspect.Subject == InspectSubject.Colonist;
+            // An animal is a pawn with no face (design 29 §8): the badge slot shows its species
+            // key and the portrait slot stays out, as for anything that is not a person.
+            bool colonist = _inspect.Subject == InspectSubject.Colonist && !_inspect.IsAnimal;
             string avatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
                 : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
-                : "ui.pawn.colonist";
+                : _inspect.IsAnimal ? _inspect.KindIconKey
+                : PawnKindLabels.Colonist;
             if (avatarKey != _inspectAvatarKey)
             {
                 _inspectAvatarKey = avatarKey;
@@ -204,7 +207,7 @@ namespace Odyssey.Presentation.Ui
             // rarely and the job hardly at all.
             int layer = _inspect.Layer;
             int selected = _directors != null ? _directors.Selection.Pawns.Count : 0;
-            string band = _inspect.Subject == InspectSubject.Colonist
+            string band = _inspect.Subject == InspectSubject.Colonist && !_inspect.IsAnimal
                 ? MoodBands.Band(_inspect.Mood)
                 : string.Empty;
 
@@ -230,7 +233,7 @@ namespace Odyssey.Presentation.Ui
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
                 SyncCellRows();
 
-            if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned) return;
+            if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned || _inspect.IsAnimal) return;
 
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
@@ -500,6 +503,9 @@ namespace Odyssey.Presentation.Ui
             {
                 case InspectSubject.Colonist:
                     {
+                        // An animal has an activity and no mood (design 29 §8).
+                        if (_inspect.IsAnimal) return _inspect.Job;
+
                         // A multi-selection shows the primary colonist in full, with the size of
                         // the set said out loud: "3 selected" is the whole of what a pane can add
                         // to several brackets until commands arrive (A10).
