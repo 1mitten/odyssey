@@ -214,7 +214,8 @@ namespace Odyssey.Tests.Hud
             Assert.That(roster.Cards.Count, Is.EqualTo(2));
             Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(1)));
             Assert.That(roster.Cards[1].Id, Is.EqualTo(new PawnId(3)));
-            Assert.That(roster.CustomOrder, Does.Not.Contain(new PawnId(2)), "and it holds no slot to be dragged into");
+            Assert.That(new List<PawnId>(roster.CustomOrder), Has.No.Member(new PawnId(2)),
+                "and it holds no slot to be dragged into");
         }
 
         [Test]

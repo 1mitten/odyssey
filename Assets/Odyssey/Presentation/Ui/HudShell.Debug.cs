@@ -64,7 +64,7 @@ namespace Odyssey.Presentation.Ui
             _debugCheats.Add(_debugDeveloperRow);
             _debugCheats.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
                 "Adds a colonist near the camera, with no scenario and no starting kit",
-                SpawnPawn));
+                () => SpawnPawn()));
             _debugCheats.Add(DebugActionRow(DebugDirector.SpawnHogKey,
                 "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
                 () => SpawnPawn(PawnKindIndex.MiddenHog)));

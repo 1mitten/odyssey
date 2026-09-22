@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
+  (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
+  *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five
+  things to judge, none a test can answer: whether a **life-size** hog (1.2 m) beside a 2.49 m
+  colonist reads as a pig or as a piglet, and whether the rat is visible at all at play height;
+  whether the hog's **computed walk** reads as walking beside the rat's authored one — a wrong
+  answer is legs that paddle, slide or bend the wrong way; whether the **flat two-colour** models
+  read as the same game as the Synty colonists; whether a hog at the foot of a ladder **turns
+  away** rather than standing at it, and a rat goes up; and whether the wander reads as an animal
+  living rather than pacing a corner or standing for minutes. Click one: the pane should say
+  *Midden hog · Wandering* or *Resting*, with no face, needs or tabs; the roster should not gain
+  a card. Both scales are one number each in `AnimalImport.Scales`.
+
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
   across a route colonists are using and let them finish while people are crossing. Three things

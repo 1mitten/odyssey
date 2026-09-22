@@ -32,6 +32,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -62,6 +63,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -92,6 +94,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -122,6 +125,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -152,6 +156,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -182,6 +187,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -212,6 +218,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -242,6 +249,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -272,6 +280,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -302,6 +311,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -332,6 +342,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -362,6 +373,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -392,6 +404,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -422,6 +435,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -452,6 +466,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -482,6 +497,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -512,6 +528,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -542,6 +559,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -572,6 +590,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -602,6 +621,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -632,6 +652,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -662,6 +683,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -692,6 +714,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -722,6 +745,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -752,6 +776,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -782,6 +807,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -812,6 +838,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -842,6 +869,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -872,6 +900,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -902,6 +931,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -932,6 +962,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -962,6 +993,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -992,6 +1024,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1022,6 +1055,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1052,6 +1086,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1082,6 +1117,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1112,6 +1148,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1142,6 +1179,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1172,6 +1210,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1202,6 +1241,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1232,6 +1272,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1262,6 +1303,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1292,6 +1334,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1322,6 +1365,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1352,6 +1396,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1382,6 +1427,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1412,6 +1458,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1442,6 +1489,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1472,6 +1520,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1502,6 +1551,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1532,6 +1582,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1562,6 +1613,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1592,6 +1644,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1622,6 +1675,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1652,6 +1706,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1682,6 +1737,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1712,6 +1768,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1742,6 +1799,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1772,6 +1830,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1802,6 +1861,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1832,6 +1892,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1862,6 +1923,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1892,6 +1954,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1922,6 +1985,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1952,6 +2016,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -1982,6 +2047,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2012,6 +2078,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2042,6 +2109,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2072,6 +2140,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2102,6 +2171,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2132,6 +2202,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2162,6 +2233,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2192,6 +2264,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2222,6 +2295,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2252,6 +2326,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -2294,6 +2369,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2361,6 +2437,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2428,6 +2505,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2495,6 +2573,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2562,6 +2641,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2629,6 +2709,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2696,6 +2777,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2763,6 +2845,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2830,6 +2913,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2897,6 +2981,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2964,6 +3049,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3031,6 +3117,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3098,6 +3185,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3165,6 +3253,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3232,6 +3321,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3299,6 +3389,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3366,6 +3457,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3433,6 +3525,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin: []
       hair:
@@ -3490,6 +3583,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin: []
       hair:
@@ -3552,6 +3646,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -3604,6 +3699,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3671,6 +3767,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin: []
       hair:
@@ -3733,6 +3830,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3800,6 +3898,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3872,6 +3971,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3939,6 +4039,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin: []
       hair:
@@ -3996,6 +4097,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4063,6 +4165,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4130,6 +4233,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4197,6 +4301,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4264,6 +4369,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin: []
       hair:
@@ -4321,6 +4427,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4388,6 +4495,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4455,6 +4563,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4522,6 +4631,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4589,6 +4699,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4661,6 +4772,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4733,6 +4845,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4800,6 +4913,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4872,6 +4986,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4944,6 +5059,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5016,6 +5132,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5083,6 +5200,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5150,6 +5268,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5217,6 +5336,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5289,6 +5409,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5356,6 +5477,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5428,6 +5550,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5500,6 +5623,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5572,6 +5696,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5639,6 +5764,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5706,6 +5832,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5773,6 +5900,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5845,6 +5973,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5917,6 +6046,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5984,6 +6114,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6056,6 +6187,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6123,6 +6255,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6195,6 +6328,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6267,6 +6401,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6339,6 +6474,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    strideMetres: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6380,6 +6516,84 @@ MonoBehaviour:
       cloth2Verts: 256
       totalVerts: 4139
       quality: 1
+  - moduleId: odyssey.module.pawn.animal.hog
+    shape: 4
+    prefab: {fileID: 919132149155446097, guid: 4a05467d051682c4788592b32f244768, type: 3}
+    prefabName: Pig
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: -8945691123924629249, guid: 4a05467d051682c4788592b32f244768, type: 3}
+    poseClipName: Armature|Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Armature|Idle
+      clip: {fileID: -8945691123924629249, guid: 4a05467d051682c4788592b32f244768, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    strideMetres: 1
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.rat
+    shape: 4
+    prefab: {fileID: 919132149155446097, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+    prefabName: Rat
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7628754178218877552, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+    poseClipName: RatArmature|Rat_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: RatArmature|Rat_Idle
+      clip: {fileID: 7628754178218877552, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: RatArmature|Rat_Walk
+      clip: {fileID: 7369953533816513705, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.9
+    - clipName: RatArmature|Rat_Run
+      clip: {fileID: -5573254151428076804, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 2.2
+    strideMetres: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
@@ -6399,6 +6613,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -6429,6 +6644,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -6459,6 +6675,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -6489,6 +6706,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -6519,6 +6737,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -6549,6 +6768,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []
@@ -6579,6 +6799,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    strideMetres: 0
     appearance:
       skin: []
       hair: []

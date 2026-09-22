@@ -24,31 +24,8 @@ namespace Odyssey.EditorTools
     {
         const string Folder = "Assets/Art/Custom/Animals";
 
-        /// <summary>
-        /// The import scale each model gets, measured on 2026-09-22 from the bone positions the
-        /// first run printed: the pig imported 11.39 m nose to tail and 5.76 m tall, the rat 7.07 m
-        /// with its tail and about 2.7 m in the body. A pig is about 1.2 m long and a rat's body
-        /// about 0.25 m, so these bring each to life size. Applied to the importer, which is the
-        /// one place a model's size should be decided (the catalogue then reads a true mesh).
-        /// </summary>
-        static readonly (string file, float scale)[] ImportScale =
-        {
-            ("Pig.fbx", 0.105f),
-            ("Rat.fbx", 0.09f),
-        };
-
-        static void ApplyImportScale()
-        {
-            foreach (var (file, scale) in ImportScale)
-            {
-                string path = Folder + "/" + file;
-                if (AssetImporter.GetAtPath(path) is not ModelImporter importer) continue;
-                if (Mathf.Approximately(importer.globalScale, scale) && importer.animationType == ModelImporterAnimationType.Generic) continue;
-                importer.globalScale = scale;
-                importer.animationType = ModelImporterAnimationType.Generic;
-                importer.SaveAndReimport();
-            }
-        }
+        /// <summary>The import settings live in <see cref="AnimalImport"/>; the probe applies them first.</summary>
+        static void ApplyImportScale() => AnimalImport.Apply();
 
         public static void Run()
         {
@@ -102,6 +79,36 @@ namespace Odyssey.EditorTools
                     inst.transform.position = at;
                     column++;
                 }
+                // The hog mid-stride, twice, so the computed walk's leg signs are judged from a
+                // picture (design 29; c-procedural-quadruped-gait.md): at phase 0.15 the left
+                // fore leg is near the top of its swing with the knee flexed, and at 0.65 the
+                // right fore is. A leg that bends the wrong way reads at once here and never in
+                // a number.
+                var hogModel = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/Pig.fbx");
+                foreach (float phase in new[] { 0.15f, 0.65f })
+                {
+                    if (hogModel == null) break;
+                    var at = new Vector3(column * 2.5f, 0f, 0f);
+                    var tile = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    Object.DestroyImmediate(tile.GetComponent<Collider>());
+                    tile.transform.SetParent(root.transform, false);
+                    tile.transform.position = at + Vector3.down * 1.5f;
+                    tile.transform.localScale = new Vector3(2.45f, 3f, 2.45f);
+                    if (grass != null) tile.GetComponent<MeshRenderer>().sharedMaterial = grass;
+                    var walker = (GameObject)PrefabUtility.InstantiatePrefab(hogModel, root.transform);
+                    walker.transform.position = at;
+                    walker.name = $"Hog at phase {phase}";
+                    var gait = Odyssey.Presentation.World.QuadrupedGait.Bind(walker.transform, 1f);
+                    if (gait != null)
+                    {
+                        gait.Advance(1f, 1f);      // a whole stride at full weight: phase back to 0
+                        gait.Advance(1f, phase);   // then to the phase asked for
+                        gait.Apply(walker.transform.right, walker.transform.up);
+                        Debug.Log($"[AnimalProbe] hog gait phase {gait.Phase:F2} weight {gait.Weight:F2}");
+                    }
+                    column++;
+                }
+
                 // A 1 m cube on its own cell as the ruler.
                 var ruler = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 Object.DestroyImmediate(ruler.GetComponent<Collider>());
@@ -110,6 +117,15 @@ namespace Odyssey.EditorTools
                 var centre = new Vector3(column * 2.5f * 0.5f, 0f, 0f);
                 PlayScene.ShootAt(centre, (column + 1) * 2.5f * 1.2f, "Logs/animal-sheet.png");
                 Debug.Log("[AnimalProbe] wrote Logs/animal-sheet.png");
+
+                // And the mid-stride hog alone, close enough to see which way a knee bends. The
+                // sheet above is the scale question; this is the gait question, and the two are
+                // judged at different distances.
+                if (column >= 4)
+                {
+                    PlayScene.ShootAt(new Vector3(2 * 2.5f, 0.3f, 0f), 1.6f, "Logs/animal-gait.png");
+                    Debug.Log("[AnimalProbe] wrote Logs/animal-gait.png");
+                }
             }
             catch (System.Exception e)
             {

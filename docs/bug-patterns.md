@@ -410,6 +410,31 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-22 — The baked mesh said eleven centimetres; the bones said eleven metres (P11)
+
+Not a report: a measurement taken before anything was built, which is the point of recording it.
+The two animal models (`Assets/Art/Custom/Animals`) are a Blender "units scale" export — 1 cm file
+units with a ×100 on the mesh node and, on the rat, a ×39.55 on the armature. A first probe
+measured them with `SkinnedMeshRenderer.BakeMesh(useScale: true)` and reported a pig **0.114 m**
+long and a rat 0.071 m: in range, plausible for a "small placeholder", and wrong by a factor of
+a hundred. The bind pose folds the node scale into the skinning, so the baked vertices came out in
+the mesh's own space and the renderer's ×100 was never applied. The bone world positions — head
+at 3.07 m, front foot to back foot 5 m apart — said 11.39 m, and a photograph on a 2.5 m cell
+agreed: the pig covered the whole cell and hid the rat behind it.
+
+**P11's third face: the measurement was of a real thing, correctly computed, in the wrong frame.**
+The tell was the same as ever — a number nothing could argue with — and the cure was the same as
+`MeasureSole`'s: prefer what the player would see. Here that meant two readings that must agree
+(bones and bake) and a picture as the tie-break.
+
+**What now stops it:** `AnimalImport.Scales` carries the measured ×0.105 and ×0.09 with the two
+readings in its comment; `AnimalProbe.Shoot` photographs both animals on a cell beside a 1 m cube,
+and `AnimalFigureTests.TheAnimalRowsResolveFromTheProjectsOwnArt` pins that the rows resolve.
+The rule for the next model: **measure a rig from its bones or its picture, never from a bake
+alone**, and if two readings of the same length disagree by more than a few per cent, the
+smaller one is in the wrong frame.
+
+
 ### 2026-09-21 — Both tabs underlined, and the contents invisible until you clicked (P1)
 
 Owner, on the store pane: *"storage and tile are both underlined when you enter the shelve menu.

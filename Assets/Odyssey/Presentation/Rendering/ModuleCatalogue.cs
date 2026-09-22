@@ -255,6 +255,14 @@ namespace Odyssey.Presentation.Rendering
         public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
 
         /// <summary>
+        /// The stride of a <b>computed</b> quadruped gait, in metres as authored (design 29,
+        /// <c>QuadrupedGait</c>). Zero, the default, means the row's clips are its whole
+        /// locomotion. Set on the hog, which has no walk clip; the rat walks on its own clips.
+        /// </summary>
+        [Tooltip("Stride of a computed four-legged walk, metres as authored. 0 = the clips are the locomotion.")]
+        public float strideMetres;
+
+        /// <summary>
         /// Which parts of this body's atlas are its skin, its hair and its clothes, so a colonist
         /// can be recoloured. Empty on everything that is not a colonist.
         /// </summary>
@@ -525,6 +533,20 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The id of one colonist variant. Variant 0 keeps the unsuffixed id.</summary>
         public static string Colonist(int variant) =>
             variant <= 0 ? ColonistBase : ColonistBase + "." + variant.ToString();
+
+        /// <summary>
+        /// The animals (design 29 §1), one row per <b>kind</b> of pawn that is not a person. The
+        /// name table is parallel to the simulation's <c>PawnKindIndex</c> — 0 is the colonist and
+        /// has no row here — exactly as the interface's <c>PawnKindLabels</c> is, so the three
+        /// tables can be checked against each other and none has to see the others' assembly.
+        /// </summary>
+        public const string AnimalBase = Prefix + "pawn.animal";
+
+        public static readonly string[] AnimalNames = { string.Empty, "hog", "rat" };
+
+        /// <summary>The row for a kind, or empty for the colonist and for a kind past the table.</summary>
+        public static string Animal(int kind) =>
+            kind > 0 && kind < AnimalNames.Length ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
 
         // Loose items lying in a cell: a crate of rations to be eaten, a heap of scrap to be
         // hauled. These are drawn by the actor pass for the same reason the colonist is — they

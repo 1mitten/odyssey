@@ -109,13 +109,49 @@ The rat is new: **duct rat**, `creature.vermin`, proposed in the same register (
 `ui.pawn.rat` in `icon-keys.csv`, which is what `Registry.Label` reads; the proper-noun row
 is the lore entry and says the same words.
 
+## 8a. The figure
+
+An animal is drawn through the colonists' figure director, not a director of its own. The
+catalogue gains one row per kind under `ModuleIds.Animal(kind)` — `pawn.animal.hog`,
+`pawn.animal.rat` — written by the same builder as the colonist rows and resolved from
+`Assets/Art/Custom` rather than from the packs, so **these rows resolve on the runner**, which no
+colonist row does; `AnimalFigureTests` is the first figure test CI can build. The director keeps
+a second look table indexed by kind; a look index at or past the colonist table names an animal,
+so the pool, the create, the repaint and the blend all key on one integer.
+
+**The rat walks on its clips**: Idle, Walk and Run in the same mixer a colonist has, with the
+walk and run speeds *declared* (0.9 and 2.2 m/s) because neither file carries a root-motion twin
+to measure them from. **The hog walks on a computed gait**, `QuadrupedGait`: the row declares a
+stride (1 m) and its locomotion is the idle alone; the gait binds the four legs by the rig's bone
+names at build, advances its phase once a frame from the figure's measured speed, and lays
+forward-kinematic sines over the idle in the pose pass — lateral sequence, hip ±25°, knee 35°
+peaking mid-swing, a 2 cm bob — exactly where `WorkSwing` lays an axe stroke. A rig without the
+four legs gets no gait and walks on its idle, as a colonist without bound arms swings no axe.
+
+**A Generic rig gets everything a Humanoid one gets except the poses that need named human
+bones**: no work stance, gesture, climb, carry, footing or gaze. It is measured in its own height
+window (a rat is a quarter of a metre and the colonist window would call that a failed bake) and
+does not move the contact sheets' maxima. No swatches: an animal is drawn in its own paint.
+
+**Two deliberate gaps.** An animal past the figure cap is **not drawn at all** — the instanced
+baked pass deals every pawn a colonist's face, and a hog wearing one would be worse than no hog
+— so a baked animal pose is a later unit. And animals are **outside the crowd sidestep** on both
+sides (P11 in `bug-patterns.md`'s frame-cost sense, the plan's decision 7).
+
 ## 9. Measurements
 
-- **Import scale** (`e-08`): the bones said 11.39 m and 7.07 m; the baked mesh said a
-  hundredth of that and was wrong; ×0.105 and ×0.09 stand them life-size on a 2.5 m cell.
-- **Goldens**: re-baked once for the kind in the hash. *(Filled in when measured.)*
+- **Import scale** (`e-08`, and the register entry of 2026-09-22 in `bug-patterns.md`): the bones
+  said 11.39 m and 7.07 m; the baked mesh said a hundredth of that and was wrong; ×0.105 and
+  ×0.09 stand them life-size on a 2.5 m cell (`docs/reference/screenshots/2026-09-22-animal-sheet.png`).
+- **Goldens**: all six re-baked once for the kind in the hash. `GoldenColonyProbe` run on
+  `main` and on the branch, same file, **diffs clean in every number** on all three boards.
 - **Fingerprint**: moved for `SpeciesDef` and `PawnKindDef.species`; taken from a freshly
   loaded pack.
+- **The ten-day gate**: twenty animals on the played board for ten days on three seeds, every
+  one standing somewhere it can stand at the end and having done nothing but walk and rest
+  (`AnimalTests.TwentyAnimalsSurviveTenDays`, Long tier, 77 s for the whole tier).
+- **A day of one hog**: between twenty and six hundred job starts, bounded by the rest bounds
+  (`ARestingAnimalCostsNoPathRequest`).
 
 ## 10. What not to undo by tidying
 

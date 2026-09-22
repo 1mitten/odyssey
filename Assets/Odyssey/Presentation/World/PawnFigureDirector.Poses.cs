@@ -255,6 +255,15 @@ namespace Odyssey.Presentation.World
                 Figure figure = _figures[i];
                 if (figure.Pawn < 0) continue;
 
+                // An animal with a computed walk lays it over its idle here and does nothing
+                // else in this pass: it has no arms to swing, no gestures, and does not sleep,
+                // swim or climb yet (design 29). Idempotent for the reason the work pose is.
+                if (figure.Gait != null)
+                {
+                    figure.Gait.Apply(figure.Transform.right, figure.Transform.up);
+                    continue;
+                }
+
                 // A colonist cannot be swinging a pick and climbing at the same time, and the two
                 // poses write the same bones, so the climb is applied here rather than in a pass
                 // of its own — one place where an additive pose is laid over the clip, in one

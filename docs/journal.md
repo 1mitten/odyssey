@@ -10489,3 +10489,51 @@ draw, click, from the debug menu only; rats climb anything and pigs never take a
 health model is the unit after. `docs/plans/animals.md` holds the five units and the decisions
 the design doc must record. Save format: temperature is at 9 in review, so animals rebase after
 it and take 10.
+
+## 2026-09-22 — Animals built: a pawn with a kind, and the hog that walks on arithmetic
+
+The plan was approved in the morning and the MVP — spawn, wander, draw, click — was built in the
+day. What follows is what was decided on the way and why, in the order it happened.
+
+**The save did not need a format bump, and the plan said it would.** `PawnSeedSection` already
+answers the question: a section keyed by pawn id is skippable in both directions, a file without
+one reads every pawn as the colonist it was, and nothing about the pawn record's layout changes.
+`PawnKindSection` is that pattern again, and it also removes the collision the plan warned about
+with the temperature branch's format 9. The kind *is* hashed, so all six goldens moved; the golden
+colony probe run on `main` and on the branch diffs clean in every number, which is the measured
+form of "the hash sees one more zero per colonist".
+
+**Three things were already there**, and the design leaned on all of them: `TraverseMode.Animal`
+(no ladders, no doors) has been in the nav graph since the pathfinding lane with a mask on every
+link; the mental break's `WanderTarget` and `WanderJobDriver` are the animal's whole locomotion;
+and `PawnKindDef` existed, carrying the colonist's needs tuning. The animal mind is one think
+node — a leg or a rest, off its own random stream — and every system about being a person asks
+`IsPerson` once at the top of its loop. Fifteen fast-tier tests, and a twenty-animal ten-day run
+on three seeds in the Long tier, went green first time.
+
+**The interface kept its one rule.** The roster leaves animals out by the view's new `Kind`
+field; the pane says species, activity and where, with no face, needs, tabs or commands; and the
+species names went through the registry (`ui.pawn.hog`, `ui.pawn.rat`) beside the proper noun
+the CSV already held for the hog. The rat is the **duct rat**, proposed in the register of the
+midden hog and the girder cat, for the owner to correct in the CSV.
+
+**The figure was the day's real work, and the baked mesh lied first.** A probe measuring the two
+models with `BakeMesh` reported an eleven-centimetre pig; the bones said eleven metres and a
+photograph on a 2.5 m cell agreed with the bones (`bug-patterns.md`, 2026-09-22). With the
+import scale set from the bones the two animals stand life-size — and life-size beside a 2.49 m
+colonist is the first playtest question. The director gained a second look table indexed by
+kind, so an animal is a figure through the same pool, create and blend as a colonist; the rat
+walks on its own clips with declared speeds; the hog, which has no walk clip, walks on
+`QuadrupedGait` — sines on hip and knee laid over its idle in the pose pass, exactly where
+`WorkSwing` lays an axe stroke, advanced once a frame from the figure's measured speed so the
+feet cannot slide whatever the speed. One index into the colonist table survived the change and
+threw out of range on the first animal figure; the test that found it is the one that keeps it.
+
+**Two gaps are recorded rather than hidden**: an animal past the figure cap is not drawn (the
+baked pass deals every pawn a colonist's face), and animals are outside the crowd sidestep on
+both sides, because the sidestep's per-pawn scan is P11 and open.
+
+**The animal rows are the first figures CI can build.** Every colonist test ignores itself on
+the runner, which has no Synty folder; the animals are committed CC0 art, so
+`AnimalFigureTests` runs there. That was not the reason to commit them, but it is a reason to
+be glad they were.

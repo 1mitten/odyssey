@@ -57,6 +57,13 @@ namespace Odyssey.Presentation.World
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
 
+            /// <summary>
+            /// The computed walk, for an animal whose row declares a stride and whose rig has the
+            /// four legs (design 29). Null on every colonist and on an animal that walks on its
+            /// own clips.
+            /// </summary>
+            public QuadrupedGait? Gait;
+
             /// <summary>Which face this figure was built from. Fixed for its life; the rig is bound.</summary>
             public int Look;
 

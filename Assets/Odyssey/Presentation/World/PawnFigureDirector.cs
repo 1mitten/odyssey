@@ -529,11 +529,56 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Gait speeds as drawn, i.e. after Scale. See <see cref="GroundSpeeds"/>.</summary>
             public float[] Speeds = Array.Empty<float>();
+
+            /// <summary>An animal's row rather than a colonist's (design 29): no swatches, no work bones, its own height window.</summary>
+            public bool Animal;
+
+            /// <summary>Stride of a computed walk, as drawn, or 0 for a rig that walks on its clips.</summary>
+            public float Stride;
         }
 
         readonly Look?[] _looks;
         readonly int _usableLooks;
         readonly ModuleCatalogue? _catalogue;
+
+        /// <summary>
+        /// One slot per animal <b>kind</b>, indexed as <c>ModuleIds.Animal</c> is — 0 is the
+        /// colonist and is always null here. A look index at or past <see cref="_looks"/>' length
+        /// names one of these (<see cref="AnimalLookIndex"/>), so the pool, the create and the
+        /// repaint all key on one integer whatever the figure is.
+        /// </summary>
+        readonly Look?[] _animalLooks;
+        readonly int _usableAnimalLooks;
+
+        int AnimalLookIndex(int kind) => _looks.Length + kind;
+
+        Look? LookAt(int look) =>
+            look < _looks.Length ? _looks[look]
+            : look - _looks.Length < _animalLooks.Length ? _animalLooks[look - _looks.Length]
+            : null;
+
+        static Look?[] AnimalLooksFrom(ModuleCatalogue? catalogue)
+        {
+            var looks = new Look?[ModuleIds.AnimalNames.Length];
+            if (catalogue == null) return looks;
+            for (int kind = 1; kind < looks.Length; kind++)
+            {
+                ModuleEntry? row = catalogue.Find(ModuleIds.Animal(kind));
+                if (row == null || row.prefab == null) continue;
+                LocomotionEntry[] gaits = Gaits(row);
+                if (gaits.Length == 0) continue;
+                looks[kind] = new Look
+                {
+                    Prefab = row.prefab,
+                    Scale = row.scale,
+                    Gaits = gaits,
+                    Speeds = GroundSpeeds(gaits, row.scale),
+                    Animal = true,
+                    Stride = row.strideMetres * Mathf.Max(0.01f, (Mathf.Abs(row.scale.x) + Mathf.Abs(row.scale.z)) * 0.5f),
+                };
+            }
+            return looks;
+        }
 
         /// <summary>
         /// Where a colonist's colours come from. Null draws every figure in the pack's own paint,
@@ -605,7 +650,7 @@ namespace Odyssey.Presentation.World
         readonly List<int> _retired = new List<int>();
 
         /// <summary>True when there is at least one usable face, so figures can be made at all.</summary>
-        public bool Enabled => _usableLooks > 0;
+        public bool Enabled => _usableLooks > 0 || _usableAnimalLooks > 0;
 
         /// <summary>
         /// The size of the face lottery: every colonist row the catalogue has, holes included.
@@ -803,6 +848,8 @@ namespace Odyssey.Presentation.World
             _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
             for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
+            _animalLooks = AnimalLooksFrom(catalogue);
+            for (int i = 0; i < _animalLooks.Length; i++) if (_animalLooks[i] != null) _usableAnimalLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
                 _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
             Chips = new ChipDirector(parent, layer);
@@ -887,6 +934,10 @@ namespace Odyssey.Presentation.World
 
         int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value, RollSeedOf(pawn));
 
+        /// <summary>An animal's look is its kind's row; a person's is the face the book dealt.</summary>
+        int LookFor(in PawnView pawn) =>
+            pawn.Kind != 0 ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
+
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
         ///
@@ -914,6 +965,12 @@ namespace Odyssey.Presentation.World
             int look = LookFor(pawn);
             return (uint)look < (uint)_looks.Length && _looks[look] != null;
         }
+
+        /// <summary>The same question of a view, which is the only thing that knows a pawn's kind.</summary>
+        bool CanDraw(in PawnView pawn) =>
+            pawn.Kind != 0
+                ? (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null
+                : CanDraw(pawn.Id);
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
@@ -1013,7 +1070,7 @@ namespace Odyssey.Presentation.World
                 // A face that did not resolve is not drawn here at all: the pawn falls through to
                 // the baked path, which will draw whatever that row does resolve to (a marker, if
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
-                if (!CanDraw(pawns[i].Id)) continue;
+                if (!CanDraw(in pawns[i])) continue;
 
                 _eligible.Add(i);
             }
@@ -1025,7 +1082,7 @@ namespace Odyssey.Presentation.World
                 int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
                     World, pawns, out Vector3 steer);
-                Figure figure = Lease(pawns[i].Id, position);
+                Figure figure = Lease(in pawns[i], position);
                 Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
@@ -1371,6 +1428,10 @@ namespace Odyssey.Presentation.World
             // as long as the pose is worth anything. See WorkEaseSeconds.
             float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : running ? 1f : 0f;
             figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
+
+            // The computed walk's cycle steps on here, once a frame, from the speed this figure
+            // was measured at last frame; the pose pass only applies it (design 29).
+            figure.Gait?.Advance(figure.Speed, deltaTime);
 
             // The swing's own clock, which runs only while there is work. Freezing it between
             // jobs rather than letting it free-run means a colonist's first blow at a new tree
@@ -1843,7 +1904,7 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Blend(Figure figure, float speed, bool running)
         {
-            Look look = _looks[figure.Look]!;
+            Look look = LookAt(figure.Look)!;
 
             // **A swimmer has ground speed and must not walk on it.** The gait reads speed from
             // how far the figure moved this frame, which is the right rule everywhere else and
@@ -2092,20 +2153,23 @@ namespace Odyssey.Presentation.World
         AppearanceCells? CellsFor(int look)
         {
             if (_catalogue == null) return null;
+            // An animal has no swatches: it is drawn in its own paint (design 29).
+            if (look >= _looks.Length) return null;
             List<ModuleEntry> rows = _catalogue.FindFamily(ModuleIds.ColonistBase);
             if ((uint)look >= (uint)rows.Count) return null;
             AppearanceCells cells = rows[look].appearance;
             return cells.Any ? cells : null;
         }
 
-        Figure Lease(PawnId pawn, Vector3 at)
+        Figure Lease(in PawnView view, Vector3 at)
         {
+            PawnId pawn = view.Id;
             if (_byPawn.TryGetValue(pawn.Value, out Figure? existing)) return existing;
 
             // The pool is keyed by face as well as by being free: a figure is a *built* prefab
             // with a graph bound to its own rig, so handing a parked one to a pawn wearing a
             // different face would put the wrong person on screen rather than save any work.
-            int look = LookFor(pawn);
+            int look = LookFor(in view);
             Figure figure = Free(look) ?? Create(look);
             Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
@@ -2187,9 +2251,11 @@ namespace Odyssey.Presentation.World
 
         Figure Create(int look)
         {
-            Look face = _looks[look]!;
+            Look face = LookAt(look)!;
             GameObject instance = UnityEngine.Object.Instantiate(face.Prefab, _parent);
-            instance.name = $"Colonist figure {_figures.Count} ({face.Prefab.name})";
+            instance.name = face.Animal
+                ? $"Animal figure {_figures.Count} ({face.Prefab.name})"
+                : $"Colonist figure {_figures.Count} ({face.Prefab.name})";
             instance.transform.localScale = face.Scale;
             SetLayer(instance.transform, _layer);
 
@@ -2250,11 +2316,22 @@ namespace Odyssey.Presentation.World
             figure.SoleOffset = MeasureSole(figure);
             // And how long a body there is to lay down. Measured here, beside the sole, because
             // both are one bake of the posed mesh and both are properties of the rig rather than
-            // of the colonist wearing it.
-            figure.StandingHeight = MeasureBody(figure);
-            if (figure.StandingHeight > MeasuredStandingHeight)
-                MeasuredStandingHeight = figure.StandingHeight;
-            if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
+            // of the colonist wearing it. An animal is measured in its own window — a rat is a
+            // quarter of a metre and the colonist window would call that a failed bake — and
+            // does not move the colonists' maxima, which the contact sheets print.
+            if (face.Animal)
+            {
+                figure.StandingHeight = FigureBuild.Height(figure.Skins, figure.Transform.position.y,
+                    FigureBuild.FallbackHeight, minimum: 0.05f);
+                figure.Gait = QuadrupedGait.Bind(instance.transform, face.Stride);
+            }
+            else
+            {
+                figure.StandingHeight = MeasureBody(figure);
+                if (figure.StandingHeight > MeasuredStandingHeight)
+                    MeasuredStandingHeight = figure.StandingHeight;
+                if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
+            }
             _figures.Add(figure);
             return figure;
         }

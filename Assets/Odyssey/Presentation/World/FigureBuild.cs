@@ -96,15 +96,19 @@ namespace Odyssey.Presentation.World
         /// wide — a metre to five — because it is there to catch a measurement that has collapsed
         /// or run away, not to second-guess a pack whose people are unusually tall.</para>
         /// </summary>
-        public static float Height(SkinnedMeshRenderer?[]? skins, float rootY, float fallback)
+        public static float Height(SkinnedMeshRenderer?[]? skins, float rootY, float fallback,
+            float minimum = 1f)
         {
             DrawnExtent(skins, out float lowest, out float highest);
             if (lowest >= float.MaxValue || highest <= float.MinValue) return fallback;
 
             // From the sole rather than from the root: the root sits where a boot would be, and a
             // barefoot character's heel is higher — the same difference MeasureSole exists for.
+            // The floor of the window is the caller's: a metre for a person, and a few
+            // centimetres for an animal (design 29), which is a quarter of a metre and not a
+            // failed bake.
             float height = highest - Mathf.Min(lowest, rootY);
-            return height >= 1f && height <= 5f ? height : fallback;
+            return height >= minimum && height <= 5f ? height : fallback;
         }
 
         /// <summary>

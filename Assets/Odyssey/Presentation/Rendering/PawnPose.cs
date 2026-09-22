@@ -184,10 +184,15 @@ namespace Odyssey.Presentation.Rendering
 
                 // 1. Passing traffic and standing colonists.
                 float crowd = 0f;
-                for (int i = 0; i < otherPawns.Length; i++)
+                // Animals are outside the sidestep on both sides (design 29 §7 of the plan): a
+                // hog does not dodge a colonist and a colonist does not dodge a hog. Recorded
+                // against P11, whose per-pawn scan this is; the day that is fixed, this is a
+                // one-line inclusion.
+                int scanned = pawn.Kind != 0 ? 0 : otherPawns.Length;
+                for (int i = 0; i < scanned; i++)
                 {
                     ref readonly var other = ref otherPawns[i];
-                    if (other.Id == pawn.Id) continue;
+                    if (other.Id == pawn.Id || other.Kind != 0) continue;
 
                     float near = SteeringCurve.Proximity(
                         Vector3.Distance(hereNow, SteeringCurve.WhereItIsNow(in other)));
