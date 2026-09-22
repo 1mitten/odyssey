@@ -21,18 +21,20 @@ namespace Odyssey.Presentation.Ui
     /// is open, because a debug menu that froze the game to use it would defeat most of what it is
     /// for.</para>
     ///
-    /// <para><b>Two tabs</b> (owner, 2026-09-20). <b>Cheats</b>: the developer-overlay toggle,
+    /// <para><b>Three tabs</b> (owner, 2026-09-20 and 2026-09-22). <b>Cheats</b>: the developer-overlay toggle,
     /// moved here wholesale from Settings' Interface tab rather than duplicated
     /// (<c>EveryLiveToolIsDrawnSomewhere</c>), and the grants that wrap sim APIs that already exist.
     /// <b>Events</b>: one row per incident the content declares, each fired through the same door
     /// a storyteller will use (design 23 §3), built from the open colony's content when the panel
-    /// opens so a second Def appears by existing.</para>
+    /// opens so a second Def appears by existing. <b>Spawn</b>: one row per kind of pawn —
+    /// the colonist and the animals — placed near the camera.</para>
     /// </summary>
     public sealed partial class HudShell
     {
         VisualElement _debugDeveloperRow = null!;
         VisualElement _debugCheats = null!;
         VisualElement _debugEvents = null!;
+        VisualElement _debugSpawn = null!;
         readonly Dictionary<DebugTab, Label> _debugTabs = new();
 
         /// <summary>The content the event rows were last built from, so a new colony rebuilds them and a reopen does not.</summary>
@@ -46,7 +48,7 @@ namespace Odyssey.Presentation.Ui
             // The tab strip, in Settings' idiom: nothing new is invented for a third use of it.
             var tabs = new VisualElement();
             tabs.AddToClassList("settings__tabs");
-            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Events })
+            foreach (DebugTab tab in new[] { DebugTab.Cheats, DebugTab.Spawn, DebugTab.Events })
             {
                 Label chip = HudText.Make(Registry.Label(DebugDirector.TabKey(tab)), HudTextRole.Body, ussClass: "tab");
                 DebugTab captured = tab;
@@ -62,15 +64,6 @@ namespace Odyssey.Presentation.Ui
                 "The frame-time readout. Also the ` key, and kept between sessions",
                 () => _directors?.Settings.SetDeveloperOverlay(!_directors.Settings.DeveloperOverlay));
             _debugCheats.Add(_debugDeveloperRow);
-            _debugCheats.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
-                "Adds a colonist near the camera, with no scenario and no starting kit",
-                () => SpawnPawn()));
-            _debugCheats.Add(DebugActionRow(DebugDirector.SpawnHogKey,
-                "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
-                () => SpawnPawn(PawnKindIndex.MiddenHog)));
-            _debugCheats.Add(DebugActionRow(DebugDirector.SpawnRatKey,
-                "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
-                () => SpawnPawn(PawnKindIndex.DuctRat)));
             _debugCheats.Add(DebugActionRow(DebugDirector.GiveWoodKey, "Adds 50 wood near the camera",
                 () => GiveResource(ItemIndex.Wood)));
             _debugCheats.Add(DebugActionRow(DebugDirector.GiveStoneKey, "Adds 50 stone near the camera",
@@ -99,6 +92,21 @@ namespace Odyssey.Presentation.Ui
                     + "this moment can be found afterwards - press it when something felt wrong",
                 MarkTrace));
             _debugPanel.Add(_debugCheats);
+
+            // Who can be put on the board (owner, 2026-09-22: a tab of its own rather than three
+            // rows among the grants). One row per kind of pawn, the colonist first.
+            _debugSpawn = new VisualElement();
+            _debugSpawn.AddToClassList("settings__body");
+            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnPawnKey,
+                "Adds a colonist near the camera, with no scenario and no starting kit",
+                () => SpawnPawn()));
+            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnHogKey,
+                "Adds a wild midden hog near the camera. It wanders and rests, and never takes a ladder",
+                () => SpawnPawn(PawnKindIndex.MiddenHog)));
+            _debugSpawn.Add(DebugActionRow(DebugDirector.SpawnRatKey,
+                "Adds a duct rat near the camera. It wanders and rests, and climbs anything",
+                () => SpawnPawn(PawnKindIndex.DuctRat)));
+            _debugPanel.Add(_debugSpawn);
 
             // Filled when the panel opens, from the colony that is open: the content is the
             // colony's, and there is no colony when the shell is built.
@@ -211,6 +219,7 @@ namespace Odyssey.Presentation.Ui
             }
             _debugCheats.style.display = tab == DebugTab.Cheats ? DisplayStyle.Flex : DisplayStyle.None;
             _debugEvents.style.display = tab == DebugTab.Events ? DisplayStyle.Flex : DisplayStyle.None;
+            _debugSpawn.style.display = tab == DebugTab.Spawn ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         void OnDeveloperOverlayChanged()

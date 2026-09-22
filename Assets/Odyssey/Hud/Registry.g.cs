@@ -200,6 +200,7 @@ namespace Odyssey.Hud
             { "ui.debug.spawnrat", "Spawn duct rat" },
             { "ui.debug.tab.cheats", "Cheats" },
             { "ui.debug.tab.events", "Events" },
+            { "ui.debug.tab.spawn", "Spawn" },
             { "ui.debug.trace", "Performance trace" },
             { "ui.health.anaesthetic", "Anaesthetic" },
             { "ui.health.arm", "Arm" },

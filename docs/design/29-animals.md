@@ -98,8 +98,10 @@ moved by the hash seeing one more zero; the re-bake was measured to be that and 
 The debug menu only (owner). `IntentKind.SpawnPawn` gains a meaning for `A`: the kind. Zero
 is the colonist it always was, so nothing that sends the intent today changed; an unknown
 kind is `NotPermitted`. The column rule is unchanged — the animal lands on the walkable cell
-nearest the camera's column. Two rows, *Spawn midden hog* and *Spawn duct rat*, through the
-registry. Worldgen scatter and an arrival incident are the recorded follow-ups.
+nearest the camera's column. The debug menu gained a **Spawn** tab (owner, 2026-09-22) holding
+*Spawn colonist*, *Spawn midden hog* and *Spawn duct rat*, through the registry.
+`AnimalSpawnTests` (PlayMode) proves the whole path under the real bootstrap with the
+catalogue attached: the intent, the tick, two pawns of the right kinds, and a figure for each. Worldgen scatter and an arrival incident are the recorded follow-ups.
 
 ## 8. Names
 
