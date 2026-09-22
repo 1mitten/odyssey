@@ -766,7 +766,7 @@ namespace Odyssey.Sim.Pawns
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.AnimalMind ^ (uint)pawn.Id.Value);
 
             if (rng.NextInt(100) < LegPerCent &&
-                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, species.traverseMode))
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, species.traverseMode, avoidSlopes: true))
                 return true;
 
             int span = species.restTicksMax > species.restTicksMin
@@ -783,7 +783,7 @@ namespace Odyssey.Sim.Pawns
     static class WanderTarget
     {
         public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>
-            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, TraverseMode.Colonist);
+            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, TraverseMode.Colonist, avoidSlopes: false);
 
         /// <summary>
         /// The same pick under a given radius and traverse mode (design 29 §3, §4). The mode goes
@@ -791,7 +791,12 @@ namespace Odyssey.Sim.Pawns
         /// species' own rules — a hog at the foot of a ladder is refused the link by the mask the
         /// graph already carries.
         /// </summary>
-        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode)
+        /// <para><paramref name="avoidSlopes"/> refuses the foot cell of a terrace step as a
+        /// destination (owner, 2026-09-22: an animal must not rest on one — it is drawn as a ramp,
+        /// and a body resting in it is drawn on the ramp and then snaps to the floor when it sets
+        /// off). Walking <i>through</i> one is unchanged. Animals only, for now: a colonist's
+        /// wander is the mental break's, and moving it would move every golden.</para>
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes)
         {
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Wander ^ (uint)pawn.Id.Value);
@@ -807,6 +812,7 @@ namespace Odyssey.Sim.Pawns
 
                 int cell = size.Index(x, z, from.Y);
                 if (cell == pawn.Cell) continue;
+                if (avoidSlopes && ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
                 if (!ctx.Reachable(pawn, cell, mode)) continue;
 
                 job.Reset(JobIndex.Wander);

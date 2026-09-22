@@ -10579,3 +10579,19 @@ reach it; the leg lengths hold to the millimetre and the photograph is a pig mid
 slide factor from 2 to 2.5, about 1.7 cycles a second. The model itself has never been the
 problem, and the honest answer to "is there another file" is yes: a walk or trot clip for this
 pig, if the pack has one, replaces the computed gait with one flag.
+
+## 2026-09-22 — No animal swims, and none rests on a step
+
+Two rules from the owner's third look, both simulation-side. **Water:** a fifth traverse mode,
+`Climber` — as a colonist but no water — for the rat, and `Animal` now refuses water too, with
+`TraverseModes.Swims` the one place that says who may wade. The refusal is at `CanEnter`, and so
+that the district knows it rather than a failed search finding it, shallow water became a region
+kind of its own; the links into a water region are masked by the same `CanEnter`, so a hog on
+one bank is told the other is out of its world. No golden moved. **Slopes:** the animal mind
+refuses the foot cell of a terrace step as a destination, so no leg ends there and no rest
+begins there; walking through is untouched. The colonists' wander was left alone on purpose, as
+it is the mental break's and moving it moves every golden.
+
+One thing about the harness: painting terrain behind the graph's back leaves its per-cell cost
+class stale, and the first version of the water test read a stream as clear ground. The graph
+refreshes what it is told has changed — `MarkDirty` — and the test helper now tells it.

@@ -29,8 +29,9 @@
     The midden hog: pig-descended, thrives on refuse heaps, the reliable meat animal
     (docs/design/proper-nouns.csv, creature.scavenger). Wild first; livestock is a later unit.
 
-    An ambler: 600 per mille of the colonist's walk (was 700; owner, 2026-09-22: the trot read as "way too fast"). A hog never takes a ladder and cannot open a
-    door, which is what TraverseMode.Animal already meant before any animal existed. Rests are
+    An ambler: 600 per mille of the colonist's walk (was 700; owner, 2026-09-22: the trot read
+    as "way too fast"). A hog never takes a ladder, cannot open a door and does not swim, which
+    is TraverseMode.Animal. Rests are
     INVENTED: five to fifteen seconds between legs at sixty ticks a second, a radius of eight
     cells so a hog drifts rather than paces. All three are playtest numbers.
   -->
@@ -51,8 +52,9 @@
     The duct rat (proper-nouns.csv, creature.vermin — proposed). Vermin, small game, the walking
     proof of the figure path, and a threat once there is a health model to bite.
 
-    Lively: 900 per mille. Climbs anything, so it traverses as a colonist does. Short rests and a
-    short radius: a rat darts and stops. INVENTED, playtest numbers.
+    Lively: 900 per mille. Climbs anything a colonist can, but does not swim (owner, 2026-09-22:
+    no animal does by default), which is TraverseMode.Climber. Short rests and a short radius: a
+    rat darts and stops. INVENTED, playtest numbers.
   -->
   <SpeciesDef>
     <defName>Species_DuctRat</defName>
@@ -60,7 +62,7 @@
     <person>false</person>
     <bodyLengthMm>250</bodyLengthMm>
     <movePerMille>900</movePerMille>
-    <traverseMode>Colonist</traverseMode>
+    <traverseMode>Climber</traverseMode>
     <wanderRadius>5</wanderRadius>
     <restTicksMin>120</restTicksMin>
     <restTicksMax>480</restTicksMax>

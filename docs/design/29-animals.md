@@ -64,13 +64,33 @@ falls into the stand-down, which is a rest by another name.
 
 ## 4. The third dimension
 
-**Rats climb anything; hogs never take a ladder.** The species' `traverseMode` goes on the
-job the animal is walking, exactly where the hauler's `Hauler` mode goes today, and
+**Rats climb anything; hogs never take a ladder; neither swims.** The species' `traverseMode`
+goes on the job the animal is walking, exactly where the hauler's `Hauler` mode goes today, and
 `Pawn.Mode` answers the species' mode when there is no job. The pathfinder already carries a
 mode mask on every link and every portal edge, so a hog at the foot of a ladder is refused
-the link by the mask that was there before this unit. The hog's mode is the pre-existing
-`TraverseMode.Animal` (no ladders, no manipulable doors); the rat's is `Colonist`. Stairs
-(`U44`) are not built; the day they are, `Animal` allows them and nothing here changes.
+the link by the mask that was there before this unit. The hog's mode is `TraverseMode.Animal`
+(no ladders, no manipulable doors, and now no water); the rat's is the new `Climber` — as
+`Colonist`, but no water. Stairs (`U44`) are not built; the day they are, both modes allow them
+and nothing here changes.
+
+**No animal swims** (owner, 2026-09-22: *"animals can't swim by default, especially rats and
+pigs"*). `TraverseModes.Swims` says which modes may enter shallow water — people wade (design
+20), the two animal modes do not — and `NavGrid.CanEnter` refuses the cell. So that the refusal
+is known to the district rather than found by a failed search, shallow water is a **region kind
+of its own** (`RegionKind.Water`): the links into it are masked by the same `CanEnter`, so a
+non-swimmer is told the far bank of a stream is unreachable and never sets off for it.
+`NeitherAnimalWadesAndAColonistDoes` paints a stream across the board and asserts all three:
+the person may wade it, neither animal may enter it, and over six thousand ticks neither ever
+stands in it. Deep water was already impassable to everyone.
+
+**An animal never ends a leg on the foot of a terrace step** (owner, 2026-09-22: they rested on
+one, drawn on the ramp, and snapped to the lower floor when they set off). `WanderTarget.Fill`
+refuses a cell whose cost class is the slope's as a *destination* when asked to
+(`avoidSlopes`), which the animal mind always does; walking through one is unchanged. A rest is
+taken where the last leg ended, so it cannot begin on one either — `AnAnimalNeverEndsALegOrRests
+OnATerraceFoot` raises a step and watches twelve thousand ticks. Colonists' wander is left as it
+was: it is the mental break's, and moving it moves every golden; the standing figure on a foot
+cell is already a recorded gap for them.
 
 ## 5. Pace
 

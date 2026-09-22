@@ -80,21 +80,35 @@ namespace Odyssey.Sim.Pathing
         /// <summary>As Colonist, but a bulky load forbids ladders.</summary>
         Hauler = 1,
 
-        /// <summary>No ladders and no manipulable doors.</summary>
+        /// <summary>No ladders, no manipulable doors, and no water: a hog.</summary>
         Animal = 2,
 
         /// <summary>Raiders and bashers: a closed door is a cost, not an obstacle.</summary>
         IgnoreDoors = 3,
+
+        /// <summary>
+        /// As Colonist — ladders, stairs, the hop — but no water: a rat (design 29 §4). The two
+        /// animal modes differ only in the ladder, and neither swims, because no animal does by
+        /// default (owner, 2026-09-22).
+        /// </summary>
+        Climber = 4,
     }
 
     public static class TraverseModes
     {
-        public const int Count = 4;
-        public const byte AllMask = 0x0F;
+        public const int Count = 5;
+        public const byte AllMask = 0x1F;
 
         public static byte Mask(TraverseMode mode) => (byte)(1 << (int)mode);
 
         public static bool Allows(byte mask, TraverseMode mode) => (mask & (1 << (int)mode)) != 0;
+
+        /// <summary>
+        /// May this mode enter shallow water? People wade (design 20); the animal modes do not.
+        /// Deep water is impassable to everyone and is not a question of mode.
+        /// </summary>
+        public static bool Swims(TraverseMode mode) =>
+            mode != TraverseMode.Animal && mode != TraverseMode.Climber;
     }
 
     /// <summary>
@@ -113,6 +127,14 @@ namespace Odyssey.Sim.Pathing
         /// <summary>Kept so rooms and atmosphere have a substrate. Never carries a link.</summary>
         Impassable = 4,
         Hazard = 5,
+
+        /// <summary>
+        /// Shallow water: walkable, and a region of its own so that a mode which does not swim
+        /// (<see cref="TraverseModes.Swims"/>) is told a far bank is unreachable by the district
+        /// rather than finding out by a failed search. The links into it carry no such mode,
+        /// because <see cref="NavGrid.CanEnter"/> refuses the cells.
+        /// </summary>
+        Water = 6,
     }
 
     /// <summary>
@@ -425,6 +447,7 @@ namespace Odyssey.Sim.Pathing
                 if ((f & NavFlags.Door) != 0) return RegionKind.Door;
                 if ((f & NavFlags.Connector) != 0) return RegionKind.Connector;
                 if ((f & NavFlags.Hazard) != 0) return RegionKind.Hazard;
+                if (CostClass[index] == Worldgen.Natural.NaturalContent.CostClassShallowWater) return RegionKind.Water;
                 return RegionKind.Walkable;
             }
 
@@ -442,6 +465,9 @@ namespace Odyssey.Sim.Pathing
         {
             NavFlags f = Flags[index];
             if ((f & NavFlags.Walkable) == 0) return false;
+            // Shallow water is a wade for a person and a wall for an animal (design 29 §4).
+            if (CostClass[index] == Worldgen.Natural.NaturalContent.CostClassShallowWater
+                && !TraverseModes.Swims(mode)) return false;
             if ((f & NavFlags.Door) == 0 || (f & NavFlags.DoorOpen) != 0) return true;
             return mode != TraverseMode.Animal;
         }

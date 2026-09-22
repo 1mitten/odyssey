@@ -155,7 +155,11 @@ namespace Odyssey.Tests.Sim
         // Moved a thirteenth time, 2026-09-22, the same day: the midden hog's movePerMille went
         // 700 to 600 after the owner's first look at the trot ("way too fast"). No golden moved:
         // no golden world has an animal in it.
-        const ulong ContentFingerprint = 5760087318366849525UL;
+        //
+        // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
+        // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
+        // can't swim by default"). No golden moved.
+        const ulong ContentFingerprint = 10013780930231455378UL;
 
 
         [Test]

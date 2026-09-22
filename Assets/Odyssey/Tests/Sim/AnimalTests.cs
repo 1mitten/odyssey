@@ -6,6 +6,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.World;
 
 namespace Odyssey.Tests.Sim
 {
@@ -62,9 +63,12 @@ namespace Odyssey.Tests.Sim
             Assert.That(content.SpeciesOf(PawnKindIndex.MiddenHog).person, Is.False);
             Assert.That(content.SpeciesOf(PawnKindIndex.DuctRat).person, Is.False);
 
-            // Design 29 §4: rats climb anything, hogs never take a ladder.
+            // Design 29 §4: rats climb anything, hogs never take a ladder, and neither swims.
             Assert.That(content.SpeciesOf(PawnKindIndex.MiddenHog).traverseMode, Is.EqualTo(TraverseMode.Animal));
-            Assert.That(content.SpeciesOf(PawnKindIndex.DuctRat).traverseMode, Is.EqualTo(TraverseMode.Colonist));
+            Assert.That(content.SpeciesOf(PawnKindIndex.DuctRat).traverseMode, Is.EqualTo(TraverseMode.Climber));
+            Assert.That(TraverseModes.Swims(TraverseMode.Animal), Is.False);
+            Assert.That(TraverseModes.Swims(TraverseMode.Climber), Is.False);
+            Assert.That(TraverseModes.Swims(TraverseMode.Colonist), Is.True, "the control: a person wades");
 
             // And the colonist's own kind is still reachable by the name every needs rule uses.
             Assert.That(content.Kind, Is.SameAs(content.Kinds[0]));
@@ -267,6 +271,117 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.Reachable(hog, landing, TraverseMode.Colonist), Is.True,
                 "and it is the mode that refuses it, not the board");
             _ = shaft;
+        }
+
+        // ---- water and slopes ---------------------------------------------------------------
+
+        /// <summary>Paint a cell's terrain the way CellDetailTests does, and rebuild what reads it.</summary>
+        static void Paint(ColonyWorld colony, int index, ushort terrain)
+        {
+            var grid = colony.Grid;
+            grid.Terrain[index] = terrain;
+            // The graph refreshes what it is told has changed; a cell painted behind its back
+            // stays as it was, and so do its neighbours' slope classes, which read across it.
+            colony.Pawns.Nav.MarkDirty(index);
+            CellRef at = grid.FromIndex(index);
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (grid.Size.Contains(at.X + dx, at.Z + dz, at.Y))
+                    colony.Pawns.Nav.MarkDirty(grid.Size.Index(at.X + dx, at.Z + dz, at.Y));
+            if (Odyssey.Sim.Worldgen.Natural.NaturalContent.IsSolid(terrain)) grid.Flags[index] |= CellFlags.SolidTerrain;
+            else grid.Flags[index] &= ~CellFlags.SolidTerrain;
+            if (Odyssey.Sim.Worldgen.Natural.NaturalContent.IsImpassable(terrain)) grid.Flags[index] |= CellFlags.ImpassableTerrain;
+            else grid.Flags[index] &= ~CellFlags.ImpassableTerrain;
+        }
+
+        /// <summary>
+        /// <b>No animal swims</b> (owner, 2026-09-22). A stream painted across the board between
+        /// an animal and a cell beyond it: a colonist wades it, a hog and a rat are told the far
+        /// bank is unreachable — by the district, not by a failed search — and neither will so
+        /// much as enter the water.
+        /// </summary>
+        [Test]
+        public void NeitherAnimalWadesAndAColonistDoes()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = Size.FromIndex(TheColonist(colony).Cell);
+            int streamZ = start.Z + 4;
+            Assume.That(streamZ + 3 < Size.SizeZ);
+            for (int x = 0; x < Size.SizeX; x++)
+                Paint(colony, Size.Index(x, streamZ, start.Y), Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainShallowWater);
+            colony.Pawns.Nav.Rebuild();
+
+            Pawn hog = colony.Pawns.Pawns.Spawn(GroundNear(colony, 2, 0), PawnKindIndex.MiddenHog);
+            Pawn rat = colony.Pawns.Pawns.Spawn(GroundNear(colony, -2, 0), PawnKindIndex.DuctRat);
+            Pawn person = TheColonist(colony);
+            int water = Size.Index(start.X, streamZ, start.Y);
+            int farBank = Size.Index(start.X, streamZ + 2, start.Y);
+            Assume.That(colony.Grid.IsWalkable(farBank), Is.True);
+
+            Assert.That(colony.Pawns.Reachable(person, water, person.Mode), Is.True, "the control: a person may wade");
+            Assert.That(colony.Pawns.Reachable(person, farBank, person.Mode), Is.True, "and reach the far bank");
+            Assert.That(colony.Pawns.Reachable(hog, water, hog.Mode), Is.False, "a hog does not enter water");
+            Assert.That(colony.Pawns.Reachable(rat, water, rat.Mode), Is.False, "nor does a rat");
+            Assert.That(colony.Pawns.Reachable(hog, farBank, hog.Mode), Is.False, "so the far bank is out of a hog's world");
+            Assert.That(colony.Pawns.Reachable(rat, farBank, rat.Mode), Is.False, "and a rat's");
+
+            // And over a long wander neither ever stands in it.
+            for (int tick = 0; tick < 6_000; tick++)
+            {
+                colony.World.Tick();
+                Assert.That(Size.FromIndex(hog.Cell).Z, Is.Not.EqualTo(streamZ), $"the hog stood in the stream on tick {tick}");
+                Assert.That(Size.FromIndex(rat.Cell).Z, Is.Not.EqualTo(streamZ), $"the rat stood in the stream on tick {tick}");
+            }
+        }
+
+        /// <summary>
+        /// <b>An animal never ends a leg on the foot of a terrace step</b> (owner, 2026-09-22: they
+        /// rested on one and snapped to the lower floor when they set off). A step is raised beside
+        /// the start so its foot cells are real ones; over a long wander every leg's target and
+        /// every rest is somewhere else. Walking through a foot cell is allowed and not asserted.
+        /// </summary>
+        [Test]
+        public void AnAnimalNeverEndsALegOrRestsOnATerraceFoot()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = Size.FromIndex(TheColonist(colony).Cell);
+            // A 3 x 3 block of ground one layer up, three cells from the start.
+            for (int dz = 3; dz <= 5; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                Paint(colony, Size.Index(start.X + dx, start.Z + dz, start.Y), Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass);
+            colony.Pawns.Nav.Rebuild();
+
+            int foot = Size.Index(start.X, start.Z + 2, start.Y);
+            Assume.That(Odyssey.Sim.Worldgen.TerraceFoot.IsFoot(colony.Grid, foot), Is.True, "the fixture raised no step");
+            Assume.That(colony.Pawns.Nav.Grid.CostClass[foot],
+                Is.EqualTo(Odyssey.Sim.Worldgen.Natural.NaturalContent.CostClassSlope), "and the graph prices it as a slope");
+
+            Pawn hog = colony.Pawns.Pawns.Spawn(GroundNear(colony, 1, 0), PawnKindIndex.MiddenHog);
+            Pawn rat = colony.Pawns.Pawns.Spawn(GroundNear(colony, -1, 0), PawnKindIndex.DuctRat);
+            int legs = 0;
+            int lastHog = -1, lastRat = -1;
+            for (int tick = 0; tick < 12_000; tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn animal in new[] { hog, rat })
+                {
+                    Job? job = animal.CurrentJob;
+                    if (job == null) continue;
+                    bool fresh = animal == hog ? animal.JobStartTick != lastHog : animal.JobStartTick != lastRat;
+                    if (animal == hog) lastHog = animal.JobStartTick; else lastRat = animal.JobStartTick;
+                    if (!fresh) continue;
+                    if (job.DefIndex == JobIndex.Wander)
+                    {
+                        legs++;
+                        Assert.That(Odyssey.Sim.Worldgen.TerraceFoot.IsFoot(colony.Grid, job.TargetCell), Is.False,
+                            $"a leg was aimed at a terrace foot on tick {tick}");
+                    }
+                    else if (job.DefIndex == JobIndex.Wait)
+                        Assert.That(Odyssey.Sim.Worldgen.TerraceFoot.IsFoot(colony.Grid, animal.Cell), Is.False,
+                            $"a rest began on a terrace foot on tick {tick}");
+                }
+            }
+            Assert.That(legs, Is.GreaterThan(10), "the animals walked enough for the rule to have been tested");
         }
 
         // ---- pace -------------------------------------------------------------------------
