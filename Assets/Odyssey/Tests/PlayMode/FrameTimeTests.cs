@@ -129,6 +129,95 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// <b>What the grass costs, measured against the same board without it.</b>
+        ///
+        /// <para>The meadow's clumps became the renderer's own geometry on 2026-09-22
+        /// (<c>docs/design/29-illustrated-look.md</c> §2) — blades instead of alpha-clipped
+        /// cards, bent in the vertex shader, and drawn through the same buckets as before.
+        /// Two claims need numbers rather than argument. That a thicker meadow adds instances
+        /// and not draws is asserted in the fast-compiling tier by
+        /// <c>GrassTests.AThickerMeadowAddsInstancesRatherThanDraws</c>; what that tier cannot
+        /// see is the <em>frame</em>, because fill is not counted anywhere and grass at a
+        /// camera looking down a field is an overdraw problem before it is anything else.</para>
+        ///
+        /// <para><b>Paired, in one world, seconds apart</b>, for the reason
+        /// <see cref="TheMarkPassCostsWhatItSubmits"/> gives at length: a frame number on this
+        /// machine is only comparable with one taken beside it. The lever is
+        /// <c>ScatterDensity</c> and a re-mesh, which is the same lever the settings panel
+        /// pulls, so the control is the shipping code path and not a second one written for
+        /// the test.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeadowCostsWhatItGrows()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+
+                int shipped = boot.Renderer!.ScatterDensity;
+
+                float grassy = 0f;
+                yield return TimeFrames("grass/shipped", boot, WarmupFrames, x => grassy = x);
+                int grassyCalls = boot.Renderer!.DrawCalls;
+                int grassyInstances = boot.Renderer!.InstancesDrawn;
+
+                Remesh(boot, 0);
+                float bare = 0f;
+                yield return TimeFrames("grass/none", boot, WarmupFrames, x => bare = x);
+                int bareCalls = boot.Renderer!.DrawCalls;
+                int bareInstances = boot.Renderer!.InstancesDrawn;
+
+                Remesh(boot, shipped * 2);
+                float thick = 0f;
+                yield return TimeFrames("grass/double", boot, WarmupFrames, x => thick = x);
+                int thickCalls = boot.Renderer!.DrawCalls;
+                int thickInstances = boot.Renderer!.InstancesDrawn;
+
+                Debug.Log($"[FrameTime] grass at density {shipped}: " +
+                          $"bare {bare:0.00} ms / {bareCalls} calls / {bareInstances} instances, " +
+                          $"shipped {grassy:0.00} ms (+{grassy - bare:0.00}) / {grassyCalls} calls " +
+                          $"(+{grassyCalls - bareCalls}) / {grassyInstances} instances " +
+                          $"(+{grassyInstances - bareInstances}), " +
+                          $"double {thick:0.00} ms (+{thick - bare:0.00}) / {thickCalls} calls " +
+                          $"(+{thickCalls - bareCalls}) / {thickInstances} instances " +
+                          $"(+{thickInstances - bareInstances})");
+
+                Assert.That(grassyInstances, Is.GreaterThan(bareInstances),
+                    "no grass was drawn, so this measured nothing");
+
+                // The invariant, at the scale the fast tier cannot reach: doubling the meadow
+                // must cost matrices, not submissions. A handful of extra calls is the chunks
+                // that had no clump at all before; a number anywhere near the instance count
+                // is the per-cell draw pass coming back (docs/bug-patterns.md P10).
+                Assert.That(thickCalls - grassyCalls,
+                    Is.LessThan((thickInstances - grassyInstances) / 20),
+                    $"doubling the meadow added {thickCalls - grassyCalls} draw calls for " +
+                    $"{thickInstances - grassyInstances} instances; grass must cost instances");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Set the scatter density and rebuild what draws it — the board's chunks and the first
+        /// ring of the surround, which is strewn at the same density.
+        ///
+        /// The same two calls <c>SettingsPresenter.Redraw</c> makes, because a control that
+        /// rebuilt the world differently from the settings panel would be measuring a path
+        /// nobody takes.
+        /// </summary>
+        static void Remesh(OdysseyBootstrap boot, int density)
+        {
+            boot.Renderer!.ScatterDensity = density;
+            boot.Model?.Remesh();
+            if (boot.Renderer!.Skirt.Enabled) boot.Renderer!.Skirt.Build();
+        }
+
+        /// <summary>
         /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
         /// same three hundred and twenty stacks lying on the floor, in one world.
         ///

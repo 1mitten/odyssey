@@ -159,17 +159,35 @@ namespace Odyssey.Tests.Presentation
             }
         }
 
+        /// <summary>
+        /// <b>A clone without the packs gets grass now, and this test used to assert the
+        /// opposite.</b>
+        ///
+        /// <para>It was <c>ACloneWithoutThePacksGetsNoStrewnGreyCubes</c> and it was right at
+        /// the time: the surround resolved Synty tuft prefabs, dropped any that fell back to a
+        /// primitive, and a box where a tuft of grass should be is four thousand grey cubes on
+        /// a meadow. The cure was bare ground on every machine without <c>Assets/Synty</c> —
+        /// which is every clone, and the build runner.</para>
+        ///
+        /// <para>The clump is the renderer's own mesh and shader now
+        /// (<c>docs/design/29-illustrated-look.md</c> §2), so it always resolves and there is
+        /// nothing to drop. <see cref="RenderTestWorld"/> still builds its library with no
+        /// catalogue at all — exactly that machine — and the surround is strewn.</para>
+        ///
+        /// <para>The first assertion is now the one that would catch the fault worth catching:
+        /// the surround and the board must be strewn with the <em>same</em> clumps, resolved
+        /// through the same call. They used to be two separate loops that could disagree about
+        /// how many there were, and the rim of the map is a line you can see.</para>
+        /// </summary>
         [Test]
-        public void ACloneWithoutThePacksGetsNoStrewnGreyCubes()
+        public void ACloneWithoutThePacksStillGetsGrass()
         {
-            // RenderTestWorld resolves every module to a tinted primitive, which is the path a
-            // clone without the licensed art takes. A box where a wall should be is still a wall;
-            // a box where a tuft of grass should be is four thousand grey cubes on a meadow.
             var world = Meadow(trees: 20);
             TerrainSkirt skirt = SkirtFor(world, out MaterialCache materials);
             try
             {
-                Assert.That(skirt.TuftInstances, Is.Zero);
+                Assert.That(skirt.TuftInstances, Is.GreaterThan(0),
+                    "the surround is bare on a machine that can draw grass perfectly well");
                 Assert.That(skirt.GroundInstances, Is.GreaterThan(0),
                     "the ground itself still draws, as it does inside the board");
             }
