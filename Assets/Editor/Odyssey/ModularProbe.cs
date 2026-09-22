@@ -87,6 +87,19 @@ namespace Odyssey.EditorTools
 
                 Write("pool-bodies.png", poolShots, report);
 
+                // ---- 1b. the colony as it actually deals itself: the uniform, and identity
+                //      carried entirely by face, hair and beard.
+                ColonistAppearanceBook book = AppearanceBooks.For(20260922u, catalogue);
+                var colony = new List<(string, Texture2D?)>();
+                for (int pawn = 1; pawn <= 24; pawn++)
+                {
+                    uint roll = (uint)(pawn * 2654435761u % 900000 + 1000);
+                    ColonistAppearance a = book.For(pawn, roll);
+                    colony.Add(($"pawn {pawn} look {a.Look} hair {a.HairPiece} beard {a.BeardPiece}",
+                        studio.For(a)));
+                }
+                Write("colony.png", colony, report);
+
                 // ---- 2 and 3. one body, every piece.
                 int model = ModelBody(bodies);
                 report.AppendLine($"model body for the piece sheets: {bodies[model].prefabName} (look {model})");

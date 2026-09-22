@@ -210,6 +210,16 @@ namespace Odyssey.Presentation.Rendering
         public bool recolours = true;
 
         /// <summary>
+        /// Is this body the colony's issued uniform?
+        ///
+        /// <para>Exactly one row per sex carries it. Until clothing is a thing a colonist can be
+        /// given (<c>docs/design/29-modular-colonists.md</c> §9), every colonist wears the uniform
+        /// and the rest of the pool is what the clothing system will draw from — so the pool is
+        /// kept and flagged rather than emptied.</para>
+        /// </summary>
+        public bool uniform;
+
+        /// <summary>
         /// Take only the *material* from the prefab and keep the primitive box for the mesh.
         ///
         /// Solid ground needs this. A terrain cell is meshed as a body filling the cell, so

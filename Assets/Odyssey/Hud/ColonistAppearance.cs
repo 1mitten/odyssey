@@ -202,10 +202,23 @@ namespace Odyssey.Hud
 
             int[] shades = ColonistPalette.SecondShades;
             int shade = shades[(int)(Mix(seed, pawnId, ShadeStream) % (uint)shades.Length)];
+            Rgb24 cloth2 = cloth.Scaled(shade);
+
+            // The colony issues a uniform, so the body lottery and the colour roll do not run.
+            // Everything above still does: the rolls stay in the same order and keep consuming
+            // their own streams, so switching the uniform off gives back exactly the cast that
+            // would have been dealt without it rather than a re-shuffled one.
+            if (pools.HasUniform)
+            {
+                int issued = pools.UniformFor(gender);
+                if (issued != ColonistCastPools.NoUniform) look = issued;
+                cloth = UniformCloth;
+                cloth2 = UniformTrim;
+            }
 
             hair = hair.MixedWith(Grey, GreyingAt(age));
 
-            return new ColonistAppearance(look, skin, hair, cloth, cloth.Scaled(shade),
+            return new ColonistAppearance(look, skin, hair, cloth, cloth2,
                 HairPieceFor(seed, pawnId, pools, gender, age),
                 BeardPieceFor(seed, pawnId, pools, gender));
         }
@@ -271,6 +284,25 @@ namespace Odyssey.Hud
 
         /// <summary>What hair greys towards. Not white: a value grey that still takes light.</summary>
         static readonly Rgb24 Grey = Rgb24.FromHex(0xBFBCB6);
+
+        /// <summary>
+        /// The issued uniform: white with a slight blue tint (owner, 2026-09-22).
+        ///
+        /// <para><b>Not pure white</b>, which has nowhere to go under the golden-hour grading and
+        /// reads as a hole in the frame rather than as cloth. This keeps a couple of per cent of
+        /// blue in it, so it takes the warm light at dusk and the cold light at dawn and stays
+        /// legibly a garment in both.</para>
+        /// </summary>
+        public static readonly Rgb24 UniformCloth = Rgb24.FromHex(0xE8EDF6);
+
+        /// <summary>
+        /// The uniform's second garment — collar, cuffs and boots.
+        ///
+        /// <para>Fixed rather than rolled, because a uniform whose trim varied per colonist is not
+        /// a uniform. It is the same hue carried down to a blue-grey, so the two read as one
+        /// garment rather than as two.</para>
+        /// </summary>
+        public static readonly Rgb24 UniformTrim = Rgb24.FromHex(0xA8B2C2);
 
         static Rgb24 Pick(Rgb24[] table, uint seed, int pawnId, uint stream) =>
             table[(int)(Mix(seed, pawnId, stream) % (uint)table.Length)];

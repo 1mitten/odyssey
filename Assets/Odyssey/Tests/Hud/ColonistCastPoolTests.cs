@@ -191,6 +191,94 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        // ------------------------------------------------------------------ the uniform
+
+        static ColonistCastPools Issued() => new ColonistCastPools(
+            maleBodies: new[] { 3, 7, 11, 19 },
+            femaleBodies: new[] { 4, 8, 12 },
+            maleHair: new[] { 2, 5, 9, 14, 21 },
+            femaleHair: new[] { 1, 6 },
+            beards: new[] { 30, 31, 32 },
+            uniformMale: 40, uniformFemale: 41);
+
+        [Test]
+        public void AColonyWithAUniformPutsEverybodyInIt()
+        {
+            ColonistCastPools pools = Issued();
+            for (int i = 1; i <= 200; i++)
+            {
+                Assert.That(ColonistAppearance.Of(5u, i, pools, 'm', 30).Look, Is.EqualTo(40));
+                Assert.That(ColonistAppearance.Of(5u, i, pools, 'f', 30).Look, Is.EqualTo(41));
+            }
+        }
+
+        [Test]
+        public void TheUniformIsTheSameColourOnEverybody()
+        {
+            // A uniform whose colour varied per colonist is not a uniform. Both garments, because
+            // the trim is rolled separately from the main cloth and would drift on its own.
+            ColonistCastPools pools = Issued();
+            for (int i = 1; i <= 200; i++)
+            {
+                ColonistAppearance a = ColonistAppearance.Of(9u, i, pools, 'n', 40);
+                Assert.That(a.Cloth, Is.EqualTo(ColonistAppearance.UniformCloth));
+                Assert.That(a.Cloth2, Is.EqualTo(ColonistAppearance.UniformTrim));
+            }
+        }
+
+        [Test]
+        public void TheUniformIsNotPureWhiteButIsCloseToIt()
+        {
+            // Pure white has nowhere to go under the grading and reads as a hole in the frame.
+            Rgb24 c = ColonistAppearance.UniformCloth;
+            Assert.That(c.R, Is.GreaterThan(0xD0), "it should still read as white");
+            Assert.That(c.B, Is.GreaterThan(c.R), "and carry a slight blue tint");
+            Assert.That(c.Packed, Is.Not.EqualTo(0xFFFFFFu));
+        }
+
+        [Test]
+        public void ColonistsInAUniformStillTellThemselvesApart()
+        {
+            // The whole argument for a uniform: identity moves onto the face. If skin and hair
+            // stopped varying too, a colony would be a row of clones.
+            ColonistCastPools pools = Issued();
+            var skins = new HashSet<uint>();
+            var hairs = new HashSet<uint>();
+            var pieces = new HashSet<int>();
+            for (int i = 1; i <= 400; i++)
+            {
+                ColonistAppearance a = ColonistAppearance.Of(11u, i, pools, 'm', 30);
+                skins.Add(a.Skin.Packed);
+                hairs.Add(a.Hair.Packed);
+                pieces.Add(a.HairPiece);
+            }
+
+            Assert.That(skins.Count, Is.GreaterThan(1));
+            Assert.That(hairs.Count, Is.GreaterThan(1));
+            Assert.That(pieces.Count, Is.GreaterThan(1));
+        }
+
+        [Test]
+        public void TakingTheUniformOffGivesBackTheCastThatWouldHaveBeenDealt()
+        {
+            // The uniform is applied after the rolls, not instead of them, so every stream is
+            // consumed in the same order either way. That is what lets clothing-as-equipment take
+            // it off later without re-shuffling the whole colony (docs/design/29 section 9).
+            ColonistCastPools issued = Issued();
+            ColonistCastPools bare = Pools();
+
+            for (int i = 1; i <= 100; i++)
+            {
+                ColonistAppearance withUniform = ColonistAppearance.Of(21u, i, issued, 'm', 30);
+                ColonistAppearance without = ColonistAppearance.Of(21u, i, bare, 'm', 30);
+
+                Assert.That(withUniform.Skin, Is.EqualTo(without.Skin));
+                Assert.That(withUniform.Hair, Is.EqualTo(without.Hair));
+                Assert.That(withUniform.HairPiece, Is.EqualTo(without.HairPiece));
+                Assert.That(withUniform.BeardPiece, Is.EqualTo(without.BeardPiece));
+            }
+        }
+
         // ------------------------------------------------------------------ equality
 
         [Test]

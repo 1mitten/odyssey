@@ -26,6 +26,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -59,6 +60,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -92,6 +94,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -125,6 +128,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -158,6 +162,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -191,6 +196,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -224,6 +230,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -257,6 +264,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -290,6 +298,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -323,6 +332,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -356,6 +366,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -389,6 +400,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -422,6 +434,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -455,6 +468,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -488,6 +502,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -521,6 +536,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -554,6 +570,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -587,6 +604,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -620,6 +638,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -653,6 +672,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -686,6 +706,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -719,6 +740,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -752,6 +774,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -785,6 +808,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -818,6 +842,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -851,6 +876,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -884,6 +910,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -917,6 +944,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -950,6 +978,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -983,6 +1012,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1016,6 +1046,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1049,6 +1080,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1082,6 +1114,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1115,6 +1148,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1148,6 +1182,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 622765764f944614ebdf232c6d33f022, type: 2}
     materialName: Mat_Grass_Textures_01
@@ -1181,6 +1216,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 277550534fdc44c4ca35aff476d9aee3, type: 2}
     materialName: Mat_Dirt_01
@@ -1214,6 +1250,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: ae0d5b704718f9047878075d3fd13c0e, type: 2}
     materialName: Mat_Gravel_01
@@ -1247,6 +1284,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 85a97bd83bea37340836687cf20aa474, type: 2}
     materialName: Mat_Mud_01
@@ -1280,6 +1318,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 277550534fdc44c4ca35aff476d9aee3, type: 2}
     materialName: Mat_Dirt_01
@@ -1313,6 +1352,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1346,6 +1386,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1379,6 +1420,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1412,6 +1454,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1445,6 +1488,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1478,6 +1522,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1511,6 +1556,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1544,6 +1590,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1577,6 +1624,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1610,6 +1658,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1643,6 +1692,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1676,6 +1726,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1709,6 +1760,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1742,6 +1794,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1775,6 +1828,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1808,6 +1862,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1841,6 +1896,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1874,6 +1930,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1907,6 +1964,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1940,6 +1998,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1973,6 +2032,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2006,6 +2066,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2039,6 +2100,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2072,6 +2134,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2105,6 +2168,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2138,6 +2202,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2171,6 +2236,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2204,6 +2270,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2237,6 +2304,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2270,6 +2338,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2303,6 +2372,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2336,6 +2406,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2369,6 +2440,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2402,6 +2474,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2435,6 +2508,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2468,6 +2542,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2501,6 +2576,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2571,6 +2647,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2641,6 +2718,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 1
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2711,6 +2789,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 1
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2781,6 +2860,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2851,6 +2931,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2921,6 +3002,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2991,6 +3073,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3061,6 +3144,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3131,6 +3215,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3201,6 +3286,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3271,6 +3357,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3341,6 +3428,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3411,6 +3499,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3481,6 +3570,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3551,6 +3641,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3621,6 +3712,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3691,6 +3783,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3751,6 +3844,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3816,6 +3910,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3871,6 +3966,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3941,6 +4037,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4006,6 +4103,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4076,6 +4174,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4151,6 +4250,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4221,6 +4321,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4281,6 +4382,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4351,6 +4453,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4421,6 +4524,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4491,6 +4595,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4561,6 +4666,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4621,6 +4727,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4691,6 +4798,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4761,6 +4869,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4831,6 +4940,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4901,6 +5011,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4976,6 +5087,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5051,6 +5163,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5121,6 +5234,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5196,6 +5310,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5271,6 +5386,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5346,6 +5462,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5416,6 +5533,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5486,6 +5604,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5556,6 +5675,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5631,6 +5751,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5701,6 +5822,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5776,6 +5898,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5851,6 +5974,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5926,6 +6050,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5996,6 +6121,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6066,6 +6192,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6136,6 +6263,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6211,6 +6339,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6286,6 +6415,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6356,6 +6486,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6431,6 +6562,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6501,6 +6633,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6576,6 +6709,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6651,6 +6785,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6726,6 +6861,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6801,6 +6937,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6866,6 +7003,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6941,6 +7079,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7011,6 +7150,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7086,6 +7226,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7156,6 +7297,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7226,6 +7368,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7301,6 +7444,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7371,6 +7515,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7446,6 +7591,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7516,6 +7662,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7591,6 +7738,7 @@ MonoBehaviour:
     colonistPool: 1
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7661,6 +7809,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7699,6 +7848,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7737,6 +7887,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7775,6 +7926,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7813,6 +7965,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7851,6 +8004,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7889,6 +8043,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 2
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7927,6 +8082,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -7965,6 +8121,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8003,6 +8160,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8041,6 +8199,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8079,6 +8238,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8117,6 +8277,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8155,6 +8316,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8193,6 +8355,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8231,6 +8394,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8269,6 +8433,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8307,6 +8472,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8345,6 +8511,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8383,6 +8550,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8421,6 +8589,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8459,6 +8628,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8497,6 +8667,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8535,6 +8706,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 1
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8573,6 +8745,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8606,6 +8779,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8639,6 +8813,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8672,6 +8847,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8705,6 +8881,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8738,6 +8915,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -8771,6 +8949,7 @@ MonoBehaviour:
     colonistPool: 0
     sex: 0
     recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 

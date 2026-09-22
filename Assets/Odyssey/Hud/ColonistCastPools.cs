@@ -56,14 +56,50 @@ namespace Odyssey.Hud
 
         public ColonistCastPools(
             int[] maleBodies, int[] femaleBodies,
-            int[] maleHair, int[] femaleHair, int[] beards)
+            int[] maleHair, int[] femaleHair, int[] beards,
+            int uniformMale = NoUniform, int uniformFemale = NoUniform)
         {
             MaleBodies = maleBodies;
             FemaleBodies = femaleBodies;
             MaleHair = maleHair;
             FemaleHair = femaleHair;
             Beards = beards;
+            UniformMale = uniformMale;
+            UniformFemale = uniformFemale;
         }
+
+        /// <summary>No uniform in this catalogue, so every colonist is dealt from the pool.</summary>
+        public const int NoUniform = -1;
+
+        /// <summary>The issued uniform's male body, as a catalogue family index.</summary>
+        public int UniformMale { get; }
+
+        /// <summary>The issued uniform's female body.</summary>
+        public int UniformFemale { get; }
+
+        /// <summary>
+        /// Whether this colony issues a uniform at all.
+        ///
+        /// <para><b>While it does, the body lottery does not run</b> — every colonist wears the
+        /// uniform and tells themselves apart by face, hair and beard, which is what the identity
+        /// work is for (owner, 2026-09-22). The full pool is still here and still correct; it is
+        /// what clothing-as-equipment will draw from (<c>docs/design/29-modular-colonists.md</c>
+        /// §9), which is why it is kept rather than emptied.</para>
+        /// </summary>
+        public bool HasUniform => UniformMale != NoUniform || UniformFemale != NoUniform;
+
+        /// <summary>
+        /// The uniform body for a gender, or <see cref="NoUniform"/> where there is none.
+        ///
+        /// <para>A neutral name takes the male cut, and that is a placeholder rather than a
+        /// judgement: the jumpsuit is one garment with two cuts and there is no third. When
+        /// clothing becomes an item the garment will carry both and the cut will follow the body,
+        /// not the name.</para>
+        /// </summary>
+        public int UniformFor(char gender) =>
+            gender == 'f'
+                ? (UniformFemale != NoUniform ? UniformFemale : UniformMale)
+                : (UniformMale != NoUniform ? UniformMale : UniformFemale);
 
         /// <summary>Catalogue family indices of the male-shaped bodies a colonist may wear.</summary>
         public int[] MaleBodies { get; }

@@ -320,3 +320,88 @@ row count deals bodies the colony would never give you.
 *a type grew a field and a second construction site was not told*. `AppearanceBooks.For` existed
 precisely to be the one owner and a `??=` quietly forked it. Any `??=` that constructs a
 configured object is a second owner waiting to drift — `docs/bug-patterns.md`.
+
+
+---
+
+## 9. The uniform, and clothing as equipment
+
+**Owner, 2026-09-22:** *"could we make the colonists' clothes the same at the beginning but use the
+assets as items for clothing — start with a basic clean space uniform"*, and *"stick with a white
+uniform with a slight blue tint, go with the jumpsuit"*.
+
+### 9a. Why this is not a garment system, and what it is instead
+
+**Clothing is not separable from the body in any Synty pack.** A body is one skinned mesh: the person
+and their outfit together, with no seam between them. That was `e-05`'s conclusion and Battle Royale
+confirmed it — fifteen complete outfits on one rig with exactly one enabled
+(`e-06-modular-colonists.md` §1).
+
+So a clothing *item* cannot be a garment layered onto a colonist. It has to be **a swap of which body
+mesh is active** — which is what the `Look` index already does. The machinery is built. What changes
+is who decides it: today a lottery, tomorrow an inventory.
+
+That reframing is the whole design. It also means the work splits cleanly in two, and the halves have
+very different costs.
+
+### 9b. What was built now: the issued uniform
+
+Every colonist wears **PolygonGeneric's jumpsuit** — `SM_Gen_Chr_Jumpsuit_Male_01` and
+`_Female_01`, the one matched male/female pair in either pack that reads as issued kit rather than as
+somebody's own clothes. It is flagged in the catalogue (`ModuleEntry.uniform`), read into
+`ColonistCastPools`, and applied in `ColonistAppearance.Of`.
+
+**Colour: `#E8EDF6` cloth, `#A8B2C2` trim.** White with a slight blue tint, not pure white — pure
+white has nowhere to go under the golden-hour grading and reads as a hole in the frame rather than as
+cloth. The trim is fixed rather than rolled, because a uniform whose collar varied per colonist is
+not a uniform.
+
+**While a uniform is issued, the body lottery does not run.** Every colonist is the same two bodies
+and tells themselves apart by face, hair and beard — which is exactly what MC1–MC5 built, and is the
+argument for doing this at all. The twenty-nine-body pool is *kept and still correct*; it is what the
+clothing system will draw from, which is why it is flagged rather than emptied.
+
+**The uniform is applied after the rolls, never instead of them.** Every stream is consumed in the
+same order either way, so taking the uniform off later gives back exactly the cast that would have
+been dealt rather than a re-shuffled one.
+`TakingTheUniformOffGivesBackTheCastThatWouldHaveBeenDealt` is the assertion, and it is what makes
+9c safe to build on top.
+
+### 9c. What is planned: clothing as equipment
+
+**The cost that matters is not the meshes — it is that the outfit stops being drawing.**
+
+Today a colonist's appearance is a pure function of their roll seed: never saved, never hashed,
+outside the simulation entirely. That is load-bearing, and it is why none of MC1–MC5 moved a golden.
+**The moment clothing is a thing a colonist wears, what they are wearing is simulation state** —
+saved, hashed, and part of the tick. A save-format bump and a golden re-bake, not a drawing change.
+
+What the packs actually offer, counted:
+
+| Kind | What exists |
+|---|---|
+| **Both-sex garments** | **Twelve matched pairs** — jumpsuit, business, peasant, prisoner, four street variants, mercenary, military, and two sporty |
+| **Single-sex garments** | Five — the space suit, redneck and Battle Royale's business male; the 70s and goth women |
+| **Layered armour** | Six overlays, three per sex — the only genuinely *additive* clothing in either pack, worn over a body rather than replacing it |
+| **Headgear** | ~35 hats, three helmets, masks, glasses — already excluded from the lottery and waiting on this seam (§3 decision 4) |
+
+The units, in the order they should run:
+
+| Unit | What it does |
+|---|---|
+| **CL1** | An `ApparelDef`: a garment's key, its male and female body rows, and what it is worth. The twelve pairs and the five single-sex ones become content, not code. |
+| **CL2** | A worn slot on the pawn, in the save and in the state hash. This is the golden re-bake, and it should land on its own so the re-bake is *measured* to be the hash seeing more rather than the colony doing anything different. |
+| **CL3** | The drawers read the worn garment instead of the uniform. `ColonistAppearance` gains an override the same way `ColonistAppearanceBook.Override` was left for the appearance panel — the seam is already there. |
+| **CL4** | Armour as a second, layered slot, using Battle Royale's six overlays. Additive, so it does not fight CL3. |
+| **CL5** | Headgear, on the head socket `ColonistAttachments` already builds and leaves empty. Content, not surgery — which was the whole point of building the socket in MC5. |
+| **CL6** | Where clothing comes from: the starting kit, a trader, a crafting bill. Out of scope until CL1–CL3 exist. |
+
+**Two things to decide before CL1 is written**, neither of which is mine to guess:
+
+- **Does a garment have a quality and a condition?** Beds already have quality tiers
+  (`20-beds.md`), so the vocabulary exists. A worn-out jumpsuit is a mood thought and a reason to
+  make a new one; it is also a whole durability system nobody has asked for.
+- **Is the uniform an item, or the absence of one?** Cheapest is the absence: a colonist wearing
+  nothing draws the uniform, which is what today's code already does and costs no content. The
+  alternative — the uniform as a real garment the colony starts with a stack of — is more honest and
+  more work.

@@ -1086,6 +1086,16 @@ namespace Odyssey.EditorTools
             prefab.StartsWith("SM_Gen_Chr_", StringComparison.Ordinal);
 
         /// <summary>
+        /// The colony's issued uniform: one body per sex, and the only thing a colonist wears
+        /// until clothing is an item (owner, 2026-09-22 — <i>"a basic clean space uniform"</i>).
+        ///
+        /// <para>PolygonGeneric's jumpsuit pair, because it is the one matched male/female garment
+        /// in either pack that reads as issued kit rather than as somebody's own clothes.</para>
+        /// </summary>
+        static bool IsUniform(string prefab) =>
+            prefab == "SM_Gen_Chr_Jumpsuit_Male_01" || prefab == "SM_Gen_Chr_Jumpsuit_Female_01";
+
+        /// <summary>
         /// The Battle Royale bodies a colonist may be dealt: six male-shaped and six
         /// female-shaped.
         ///
@@ -1659,6 +1669,7 @@ namespace Odyssey.EditorTools
                     moduleId = ModuleIds.Colonist(variant), shape = ModuleShape.Pillar,
                     prefabName = prefab,
                     colonistPool = Cast[variant].Pool,
+                    uniform = IsUniform(prefab),
                     sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
                     centreXZ = true, baseAtY = true,

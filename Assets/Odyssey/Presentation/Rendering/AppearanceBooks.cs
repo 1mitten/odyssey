@@ -51,10 +51,23 @@ namespace Odyssey.Presentation.Rendering
 
             var maleBodies = new List<int>();
             var femaleBodies = new List<int>();
+            int uniformMale = ColonistCastPools.NoUniform;
+            int uniformFemale = ColonistCastPools.NoUniform;
             List<ModuleEntry> bodies = catalogue.FindFamily(ModuleIds.ColonistBase);
             for (int i = 0; i < bodies.Count; i++)
             {
                 ModuleEntry row = bodies[i];
+
+                // The uniform is read whether or not its row is in the lottery: it is what a
+                // colonist wears, not one of the things they might be dealt.
+                if (row.uniform)
+                {
+                    if (row.sex != BodySex.Female && uniformMale == ColonistCastPools.NoUniform)
+                        uniformMale = i;
+                    if (row.sex != BodySex.Male && uniformFemale == ColonistCastPools.NoUniform)
+                        uniformFemale = i;
+                }
+
                 if (!row.colonistPool) continue;
                 if (row.sex != BodySex.Female) maleBodies.Add(i);
                 if (row.sex != BodySex.Male) femaleBodies.Add(i);
@@ -84,7 +97,8 @@ namespace Odyssey.Presentation.Rendering
 
             return new ColonistCastPools(
                 maleBodies.ToArray(), femaleBodies.ToArray(),
-                maleHair.ToArray(), femaleHair.ToArray(), beards.ToArray());
+                maleHair.ToArray(), femaleHair.ToArray(), beards.ToArray(),
+                uniformMale, uniformFemale);
         }
     }
 }
