@@ -32,7 +32,9 @@ namespace Odyssey.Tests.Hud
         public void EveryGenderIsOneOfTheThreeTheCsvAllows()
         {
             foreach (char g in ColonistNamePool.Genders)
-                Assert.That(g, Is.AnyOf('m', 'f', 'n'));
+                // Not Is.AnyOf: the two tiers do not run the same NUnit and Unity's is older
+                // (docs/lessons.md). This spelling compiles in both.
+                Assert.That(g, Is.EqualTo('m').Or.EqualTo('f').Or.EqualTo('n'));
         }
 
         [Test]

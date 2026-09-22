@@ -111,7 +111,6 @@ namespace Odyssey.Presentation.Rendering
     /// <see cref="prefabName"/> records what the reference was, so the editor tool can rebuild it
     /// once the packs are imported and so a missing row can name itself in the log.
     /// </summary>
-    [Serializable]
     /// <summary>
     /// Which gendered pool a body or a hair piece belongs to
     /// (<c>docs/design/29-modular-colonists.md</c> §6).
@@ -126,6 +125,7 @@ namespace Odyssey.Presentation.Rendering
         Female = 2,
     }
 
+    [Serializable]
     public sealed class ModuleEntry
     {
         [Tooltip("The module id the simulation emits, e.g. odyssey.module.wall.panel.")]

@@ -381,7 +381,13 @@ namespace Odyssey.EditorTools
                          .Where(p =>
                          {
                              string n = Path.GetFileNameWithoutExtension(p);
-                             return n.Contains("Hair") || n.Contains("Beard");
+                             // Bun, Ponytail, Chops and Moustache contain neither word, and the
+                             // first pass silently left all four unmeasured. Named here rather
+                             // than widened to every attachment, so the list stays the list of
+                             // things that can be dealt as hair.
+                             return n.Contains("Hair") || n.Contains("Beard") ||
+                                    n.Contains("Bun") || n.Contains("Ponytail") ||
+                                    n.Contains("Chops") || n.Contains("Moustache");
                          })
                          .OrderBy(p => p, StringComparer.Ordinal))
             {
