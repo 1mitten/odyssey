@@ -309,15 +309,16 @@ namespace Odyssey.Sim.Pawns
             if (pawn.CurrentJob != null)
             {
                 var def = _ctx.Content.Jobs[pawn.CurrentJob.DefIndex];
-                // An animal's job expires at the next cell boundary, never mid-step (design 29
-                // §3a; owner, 2026-09-22: a hog "went past the tree, then suddenly appeared before
-                // it again"). Ending a job drops the step in progress, so the pawn is put back on
-                // the cell it was leaving while its figure was already drawn most of the way into
-                // the next — a snap of up to a cell. Waiting for progress to reach nought costs
-                // at most one step and is the whole of the fix. Colonists keep the old rule for
-                // now: changing it moves every golden, and their wander is the mental break's.
+                // A job expires at the next cell boundary, never mid-step (design 29 §3a; owner,
+                // 2026-09-22: a hog "went past the tree, then suddenly appeared before it again").
+                // Ending a job drops the step in progress, so the pawn is put back on the cell it
+                // was leaving while its figure was already drawn most of the way into the next —
+                // a snap of up to a cell. Waiting for progress to reach nought costs at most one
+                // step and is the whole of the fix. It was animals only for an afternoon, with
+                // the colonists' snap at the end of a mental-break wander recorded as a gap; the
+                // owner asked for the gap closed the same day, and every golden re-baked for it.
                 bool expired = def.expiryTicks > 0 && tick - pawn.JobStartTick >= def.expiryTicks;
-                if (expired && (pawn.IsPerson || pawn.MoveProgress == 0))
+                if (expired && pawn.MoveProgress == 0)
                 {
                     EndJob(pawn, JobStatus.Succeeded);
                 }

@@ -424,9 +424,9 @@ its pace can be longer, so the expiry landed mid-step, reliably, at ticks 1,200 
 **The shape: a discrete state dropped under a continuous drawing.** Anything that resets a
 pawn's step — a job ending, a path cleared, a reservation lost — resets the figure by a cell.
 The fix for an animal is to end the job on a cell rather than between two: the expiry waits for
-progress to reach nought, at most one step late. **Colonists have the same snap** at the end of a
-mental-break wander and keep it for now, because their rule moves every golden; it is a known
-gap in `CLAUDE.md`.
+progress to reach nought, at most one step late — for every pawn, since the same afternoon: the
+colonists' copy of the snap, at the end of a mental-break wander, was a recorded gap for a few
+hours until the owner asked for it closed on the PR, and two goldens re-baked for it.
 
 **What now stops it:** `AnAnimalsJobNeverEndsMidStep` — every job an animal starts begins with
 its move progress at nought, over twenty thousand ticks — and `AnimalProbe.Snaps`, which is the

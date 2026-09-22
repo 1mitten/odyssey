@@ -420,6 +420,32 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// The same rule for a person, now: a colonist in a mental break wanders on the same job
+        /// with the same expiry, and had the same snap. She is put into a long break and watched;
+        /// every job she starts begins on a cell.
+        /// </summary>
+        [Test]
+        public void AColonistsBreakWanderNeverEndsMidStepEither()
+        {
+            ColonyWorld colony = Board();
+            Pawn person = TheColonist(colony);
+            person.BreakTicksLeft = 30_000;
+            int starts = 0;
+            int last = -1;
+            for (int tick = 0; tick < 30_000; tick++)
+            {
+                colony.World.Tick();
+                if (person.CurrentJob != null && person.JobStartTick != last)
+                {
+                    last = person.JobStartTick;
+                    starts++;
+                    Assert.That(person.MoveProgress, Is.Zero, $"the colonist began a job between two cells on tick {tick}");
+                }
+            }
+            Assert.That(starts, Is.GreaterThan(10), "enough break legs began for the rule to have been tested");
+        }
+
+        /// <summary>
         /// <b>An animal hops only where a ramp is drawn</b> (owner, 2026-09-22: "saw a pig climb a
         /// stone/mine"). A block one layer up is raised beside the start; its natural foot cells
         /// are terrace steps, drawn as ramps, and a hog may go up. Then every foot cell's floor is

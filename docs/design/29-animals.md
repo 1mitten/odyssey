@@ -76,9 +76,14 @@ at the tick a wander expired. `TickPawn` now lets an animal's expired job run on
 cell — at most one step late — and the detector finds none. `AnAnimalsJobNeverEndsMidStep`
 holds the invariant: every job an animal starts begins with its move progress at nought.
 
-Colonists keep the old rule for now, deliberately: their wander is the mental break's, and the
-change would move every golden. **They have the same snap**, at the end of a break, and it is
-recorded as a known gap.
+**And every colonist's, since the same afternoon.** The rule was animals-only for a few hours
+with the colonists' own snap — at the end of a mental-break wander, the same job and the same
+expiry — recorded as a gap, because closing it moves goldens. The owner asked for it closed on
+the PR. `TickPawn` now holds every pawn's expiry to a cell boundary;
+`AColonistsBreakWanderNeverEndsMidStepEither` puts a colonist into a long break and watches.
+Two goldens moved and the bare meadow did not: on the played board and the city a break wander
+now ends a step later than it did, which is a change the colony *does* make and not one the
+hash merely sees — the colony probe on `main` and here differs by exactly that (§9).
 
 ## 4. The third dimension
 

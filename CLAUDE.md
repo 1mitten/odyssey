@@ -547,11 +547,6 @@ is the project's real constraint, and the audit says why (`docs/audit/2026-09-19
 - **No health model**, so fall damage is designed with a number and nothing to apply it to, a
   colonist rides a collapsing floor down unharmed, and the debug menu has no kill or heal.
 - **No fog of war**, so a sealed cavern is visible if the player scrolls the layer down.
-- **A colonist snaps back a cell when a mental-break wander expires mid-step** (2026-09-22,
-  `docs/design/29-animals.md` §3a): ending a job drops the step in progress and the figure was
-  drawn most of the way into the next cell. Animals end their jobs on a cell boundary now;
-  colonists keep the old rule because changing it moves every golden. The fix is one condition
-  in `JobSystem.TickPawn` and a re-bake.
 - **An animal past the figure cap is not drawn at all** (2026-09-22, `docs/design/29-animals.md`
   §8a): the instanced baked pass deals every pawn a colonist's face, so animals are figures only.
   Under the 64-figure ceiling that is every animal on screen; a baked animal pose is the unit that

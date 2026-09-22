@@ -10619,3 +10619,9 @@ the same rebuild, which is what the test does with a colonist as the control.
 lowered to keep the cadence, so the legs travel far enough to be seen from the play camera.
 The turn on the spot before each leg is the wander picking a new heading, and a walk clip
 would still be the better answer to all of it.
+
+**Later the same day, the gap closed.** The owner asked for the colonists' copy of the snap fixed
+on the PR, so the boundary rule is everyone's now. Two goldens moved and the meadow did not, and
+the probe says why in one number per board: the sum of the pawns' cells, with food, rest, items
+and orders identical. A break wander ends a step later. That is the first re-bake in this unit
+where the colony itself changed rather than the hash seeing more, and it is written down as such.

@@ -249,6 +249,13 @@ namespace Odyssey.Tests.Sim
         /// assumed: <see cref="GoldenColonyProbe"/> run on <c>main</c> and on the branch, same
         /// file, diffs clean in every number on all three boards. No golden world has an animal
         /// in it (the debug menu is the only spawner), so nothing here walks differently.
+        /// <para><b>Two Simulated numbers re-baked again the same day, and this time the colony
+        /// did change.</b> A job's expiry waits for the next cell boundary for every pawn now
+        /// (design 29 section 3a), so a mental-break wander ends one step later than it did. The
+        /// played board and the city moved; the bare meadow, where nobody breaks in the window,
+        /// did not. The probe on <c>main</c> and here differs in one number on each of the two
+        /// boards - the sum of the pawns' cells - and in nothing else: food, rest, items and
+        /// orders identical. That is a step taken, not a hash seeing more.</para>
         /// </remarks>
         ///
         /// <remarks>
@@ -367,7 +374,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 16544611470612847695UL,
-            Simulated = 12822355184187399901UL,
+            Simulated = 15965256675088450335UL,
         };
 
         /// <summary>
@@ -404,7 +411,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 5027966950043598296UL,
-            Simulated = 2948596161527354308UL,
+            Simulated = 3947823172848803435UL,
         };
     }
 }
