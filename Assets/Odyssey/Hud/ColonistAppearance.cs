@@ -41,6 +41,24 @@ namespace Odyssey.Hud
             return (byte)(v < 0 ? 0 : v > 255 ? 255 : v);
         }
 
+        /// <summary>
+        /// This colour moved <paramref name="percent"/> of the way towards another.
+        ///
+        /// Integer arithmetic on purpose (see the type's remarks); used to grey a colonist's hair
+        /// with age, which is the one thing about an appearance that is a function of something
+        /// other than the seed.
+        /// </summary>
+        public Rgb24 MixedWith(Rgb24 other, int percent)
+        {
+            if (percent <= 0) return this;
+            if (percent >= 100) return other;
+            return new Rgb24(Blend(R, other.R, percent), Blend(G, other.G, percent),
+                Blend(B, other.B, percent));
+        }
+
+        static byte Blend(byte a, byte b, int percent) =>
+            (byte)((a * (100 - percent) + b * percent + 50) / 100);
+
         public bool Equals(Rgb24 other) => R == other.R && G == other.G && B == other.B;
         public override bool Equals(object? obj) => obj is Rgb24 other && Equals(other);
         public override int GetHashCode() => (int)Packed;
@@ -83,13 +101,44 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly Rgb24 Cloth2;
 
+        /// <summary>
+        /// Which hair piece this colonist wears, as an index into the attachment family, or
+        /// <see cref="NoPiece"/> for none.
+        ///
+        /// <para><b>None is bald, and it is a real outcome rather than a missing value.</b> It is
+        /// also what every colonist gets on a machine with no licensed packs, which is why the
+        /// drawers must treat it as ordinary.</para>
+        /// </summary>
+        public readonly int HairPiece;
+
+        /// <summary>
+        /// Which beard, or <see cref="NoPiece"/> for clean-shaven.
+        ///
+        /// <para><b>The beard is painted from the hair's own atlas cell</b>, so it is the hair
+        /// colour exactly and there is no separate beard colour to carry. That is not a decision
+        /// this code makes -- it is what the art does, measured
+        /// (<c>docs/research/e-06-modular-colonists.md</c> section 6).</para>
+        /// </summary>
+        public readonly int BeardPiece;
+
+        /// <summary>No piece in this slot: bald, or clean-shaven.</summary>
+        public const int NoPiece = -1;
+
         public ColonistAppearance(int look, Rgb24 skin, Rgb24 hair, Rgb24 cloth, Rgb24 cloth2)
+            : this(look, skin, hair, cloth, cloth2, NoPiece, NoPiece)
+        {
+        }
+
+        public ColonistAppearance(int look, Rgb24 skin, Rgb24 hair, Rgb24 cloth, Rgb24 cloth2,
+            int hairPiece, int beardPiece)
         {
             Look = look;
             Skin = skin;
             Hair = hair;
             Cloth = cloth;
             Cloth2 = cloth2;
+            HairPiece = hairPiece;
+            BeardPiece = beardPiece;
         }
 
         /// <summary>
@@ -118,6 +167,105 @@ namespace Odyssey.Hud
             return new ColonistAppearance(look, skin, hair, cloth, cloth.Scaled(shade));
         }
 
+        /// <summary>
+        /// The appearance of one pawn, dealt from gendered pools and wearing hair and a beard
+        /// (<c>docs/design/29-modular-colonists.md</c> section 6, MC3).
+        ///
+        /// <para><b>The body is a catalogue family index, not a position in the pool.</b> The
+        /// lottery picks one of the legal indices and returns it unchanged, so a gendered pool
+        /// never re-indexes the look space. See <see cref="ColonistCastPools"/>.</para>
+        ///
+        /// <para><b><paramref name="age"/> is the only input that is not the seed</b>, and it
+        /// greys the hair. Nothing ages in this game yet -- <c>ColonistIdentity.Age</c> is itself
+        /// a function of the roll seed -- so an appearance is still a pure function of
+        /// (seed, pawn) and <see cref="ColonistAppearanceBook"/>'s cache needs nothing.
+        /// <b>The day ageing lands, that cache must gain the age</b> or a colonist keeps the hair
+        /// they were born with for ever.</para>
+        /// </summary>
+        public static ColonistAppearance Of(
+            uint seed, int pawnId, ColonistCastPools pools, char gender, int age)
+        {
+            int[] bodies = pools.BodiesFor(gender);
+            int look = bodies.Length == 0
+                ? 0
+                : bodies[(int)(Mix(seed, pawnId, BodyStream) % (uint)bodies.Length)];
+
+            Rgb24 skin = Pick(ColonistPalette.Skin, seed, pawnId, SkinStream);
+            Rgb24 hair = Pick(ColonistPalette.Hair, seed, pawnId, HairStream);
+            Rgb24 cloth = Pick(ColonistPalette.Cloth, seed, pawnId, ClothStream);
+
+            int[] shades = ColonistPalette.SecondShades;
+            int shade = shades[(int)(Mix(seed, pawnId, ShadeStream) % (uint)shades.Length)];
+
+            hair = hair.MixedWith(Grey, GreyingAt(age));
+
+            return new ColonistAppearance(look, skin, hair, cloth, cloth.Scaled(shade),
+                HairPieceFor(seed, pawnId, pools, gender, age),
+                BeardPieceFor(seed, pawnId, pools, gender));
+        }
+
+        /// <summary>
+        /// What hair this colonist has, or <see cref="NoPiece"/> when they are bald.
+        ///
+        /// <para><b>Baldness is men only and rises with age.</b> A flat rate reads as a quirk;
+        /// rising with age reads as a colony of people who have been alive for different lengths
+        /// of time, which is the same argument greying makes. Women are never dealt none, because
+        /// the female hair pool is thin enough already
+        /// (<c>docs/research/e-06-modular-colonists.md</c> section 7) and losing one more option
+        /// to baldness would show.</para>
+        /// </summary>
+        static int HairPieceFor(uint seed, int pawnId, ColonistCastPools pools, char gender, int age)
+        {
+            int[] hair = pools.HairFor(gender);
+            if (hair.Length == 0) return NoPiece;
+
+            if (gender != 'f')
+            {
+                // Per mille, like every other rate in this project, so the arithmetic stays
+                // integer: 50 at eighteen, rising by 8 a year past forty, capped at 300.
+                int chance = 50 + 8 * (age > 40 ? age - 40 : 0);
+                if (chance > 300) chance = 300;
+                if (Mix(seed, pawnId, BaldStream) % 1000u < (uint)chance) return NoPiece;
+            }
+
+            return hair[(int)(Mix(seed, pawnId, HairPieceStream) % (uint)hair.Length)];
+        }
+
+        /// <summary>
+        /// What beard, or <see cref="NoPiece"/> for clean-shaven.
+        ///
+        /// <para>Clean-shaven is the commoner outcome at 55%, so a beard reads as a choice that
+        /// person made rather than as the house style.</para>
+        /// </summary>
+        static int BeardPieceFor(uint seed, int pawnId, ColonistCastPools pools, char gender)
+        {
+            if (!pools.CanGrowABeard(gender)) return NoPiece;
+            if (Mix(seed, pawnId, ShavenStream) % 1000u < 550u) return NoPiece;
+
+            return pools.Beards[(int)(Mix(seed, pawnId, BeardStream) % (uint)pools.Beards.Length)];
+        }
+
+        /// <summary>
+        /// How grey this colonist's hair is, as a percentage.
+        ///
+        /// <para>Nothing until forty-five, then linear. The endpoint is deliberately past the
+        /// oldest a colonist can be: the pool tops out at sixty-five
+        /// (<c>ColonistIdentity.MaximumAge</c>) and a colony whose eldest are snow-white reads as
+        /// a retirement home rather than as people who have been working outdoors.</para>
+        /// </summary>
+        public static int GreyingAt(int age)
+        {
+            const int Starts = 45;
+            const int FullyGreyAt = 80;
+            if (age <= Starts) return 0;
+
+            int percent = (age - Starts) * 100 / (FullyGreyAt - Starts);
+            return percent > 100 ? 100 : percent;
+        }
+
+        /// <summary>What hair greys towards. Not white: a value grey that still takes light.</summary>
+        static readonly Rgb24 Grey = Rgb24.FromHex(0xBFBCB6);
+
         static Rgb24 Pick(Rgb24[] table, uint seed, int pawnId, uint stream) =>
             table[(int)(Mix(seed, pawnId, stream) % (uint)table.Length)];
 
@@ -125,6 +273,15 @@ namespace Odyssey.Hud
         const uint HairStream = 0x85EBCA6Bu;
         const uint ClothStream = 0xC2B2AE35u;
         const uint ShadeStream = 0x27D4EB2Fu;
+
+        // Five more streams, each with its own constant for the reason the first four have theirs:
+        // a shortcut that takes one hash modulo several lengths correlates the slots, and the
+        // correlation is invisible until somebody looks at fifty colonists at once.
+        const uint BodyStream = 0x165667B1u;
+        const uint HairPieceStream = 0xD3A2646Cu;
+        const uint BeardStream = 0xFD7046C5u;
+        const uint BaldStream = 0xB55A4F09u;
+        const uint ShavenStream = 0x5BD1E995u;
 
         /// <summary>One avalanche over (seed, pawn, stream). Integers only, unchecked, no float.</summary>
         static uint Mix(uint seed, int pawnId, uint stream)
