@@ -32,13 +32,18 @@ namespace Odyssey.Presentation.Rendering
         static readonly int WavelengthId = Shader.PropertyToID("_OdysseyWindWavelength");
 
         /// <summary>
-        /// How far the tip of a blade is pushed, as a fraction of its own length.
+        /// How far the wind bows a blade at its tip, <b>in radians</b>.
         ///
-        /// A third is a breeze. Past about a half the blades lie down and the clump reads as
-        /// combed hair, and past <c>GrassMesh.MaxSway</c> the shader clamps it anyway and the
-        /// tall blades stop moving before the short ones do, which looks like a bug.
+        /// <para>It used to be a fraction of the blade's length, because the shader dragged the
+        /// tip sideways. The shader rotates the blade about its root now, so the honest unit is
+        /// an angle: 0.45 is about 26 degrees at full gust, and the gust and swell terms spend
+        /// most of their time well below it.</para>
+        ///
+        /// <para>Past about 0.6 the shader's own cap takes over, at which point the tall blades
+        /// stop moving before the short ones do — which does not read as a clamp, it reads as
+        /// the grass being broken.</para>
         /// </summary>
-        public float Strength { get; set; } = 0.30f;
+        public float Strength { get; set; } = 0.45f;
 
         /// <summary>
         /// How many ticks one gust takes to pass. 180 is three seconds at speed 1.

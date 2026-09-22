@@ -21,12 +21,19 @@ namespace Odyssey.Presentation.Rendering
     /// matrix the mesher builds — position, yaw, a uniform 0.7 to 1.2 — lands the clump where it
     /// stands with no constant to look up.</para>
     ///
+    /// <para><b>Blades are curved, not straight</b> (owner, 2026-09-22, asking for something more
+    /// like Breath of the Wild's). A straight tapered triangle reads as a spike however it is
+    /// coloured; an arc that rises and bows over is the whole silhouette difference, and it is the
+    /// change most likely to survive our camera, because what survives at two pixels wide is the
+    /// *outline* of a clump and not anything inside it. The arc is a quadratic Bézier from root to
+    /// tip, sampled at <see cref="Rows"/> stations, with the control point directly above the root
+    /// so the blade leaves the ground vertical and does its bending late — a control point out at
+    /// the side gives a hoop, which is the usual way this goes wrong.</para>
+    ///
     /// <para><b>Vertex colour red is the height along the blade</b>, black at the root and full at
-    /// the tip. One channel drives three things in the shader — the wind bend, the root-to-tip
-    /// colour ramp and the lean towards the camera — and it is the convention the commercial
-    /// stylised-grass shaders use, so a blade authored here would drop into one of those
-    /// unchanged. Our meshes carry positions, normals and UV0 and nothing else, so the channel
-    /// was free.</para>
+    /// the tip; green is a per-blade constant the shader uses to offset its wind phase. That one
+    /// channel drives the colour ramp, the bend, the lean towards the camera and the base
+    /// shading. Our meshes carry positions, normals and UV0 and nothing else, so it was free.</para>
     ///
     /// <para><b>The normals lean towards up, and that is deliberate.</b> Everywhere else in this
     /// renderer normals are hard and per-face, because the flat-lit low-poly look depends on it.
@@ -48,35 +55,51 @@ namespace Odyssey.Presentation.Rendering
         static readonly int[] BladesPerVariant = { 5, 4, 6 };
 
         /// <summary>
+        /// Stations along a blade, the tip excluded: the arc is sampled at this many pairs of
+        /// vertices and closed with a single point.
+        ///
+        /// <para>The cost is linear in it — a blade is <c>Rows * 2 + 1</c> vertices and
+        /// <c>(Rows - 1) * 2 + 1</c> triangles, so three rows is seven and five against the five
+        /// and three a straight blade needed.</para>
+        ///
+        /// <para><b>Three rather than the four this started at, because the research says the
+        /// curve is nearly wasted here</b> (<c>b-botw-grass.md</c>). Breath of the Wild's own
+        /// blade is a single triangle; the curved Bézier blade everybody associates with it is
+        /// tutorial invention for a ground-level camera, and at one or two pixels a blade none of
+        /// it survives. What does survive is the outline of a *clump*, which is ten or twenty
+        /// pixels across and is visibly different bowed from spiky — so the bow is kept, at the
+        /// least geometry that still reads as one. <b>Spend vertices on more blades, not better
+        /// blades</b> is the rule; raising this is spending them the wrong way.</para>
+        /// </summary>
+        const int Rows = 3;
+
+        const int VerticesPerBlade = Rows * 2 + 1;
+        const int TrianglesPerBlade = (Rows - 1) * 2 + 1;
+
+        /// <summary>
         /// How far the tip of a blade leans out from its root, as a fraction of its length.
         ///
         /// A clump of parallel uprights reads as a brush. The splay is what makes it read as
         /// something growing, and it is also what gives the clump a silhouette wider than one
         /// blade at the board distance, where a single blade is a pixel.
         /// </summary>
-        const float Splay = 0.42f;
-
-        /// <summary>The widest a clump reaches from its own centre, in metres, before scaling.</summary>
-        public const float Reach = 0.62f;
-
-        // A blade is five vertices and three triangles: a quad from the root to the shoulder and
-        // a triangle from the shoulder to the point. Three would be a spike and seven buys
-        // nothing at a camera that never sees a single blade fill more than a few pixels.
-        const int VerticesPerBlade = 5;
-        const int TrianglesPerBlade = 3;
-
-        /// <summary>Where the blade narrows, as a fraction of its length.</summary>
-        const float ShoulderT = 0.55f;
+        const float Splay = 0.46f;
 
         /// <summary>
-        /// How wide the blade is at the shoulder, against its width at the root.
-        ///
-        /// <para>Raised from 0.55 with the width in <see cref="Build"/> (owner, 2026-09-22:
-        /// thicker). A blade that narrows fast is a spike at any distance the eye can resolve it,
-        /// so thickening the root without thickening the shoulder only makes the spike start
-        /// wider.</para>
+        /// How high the tip stands against the blade's own length, the rest having gone into the
+        /// arc. A blade that arced to horizontal would be lying down; most of the length upright
+        /// and the last of it leaning is a blade that has grown and then bowed.
         /// </summary>
-        const float ShoulderWidth = 0.62f;
+        const float TipRise = 0.82f;
+
+        /// <summary>Where the Bézier control point sits up the blade, directly over the root.</summary>
+        const float ControlRise = 0.72f;
+
+        /// <summary>The widest a clump reaches from its own centre, in metres, before scaling.</summary>
+        public const float Reach = 0.72f;
+
+        /// <summary>How fast the blade narrows. Below one it keeps its width and tapers late.</summary>
+        const float TaperPower = 0.65f;
 
         /// <summary>How far the shading normal is pulled from the blade's own face towards up.</summary>
         const float NormalLift = 0.7f;
@@ -129,6 +152,13 @@ namespace Odyssey.Presentation.Rendering
             var normals = new Vector3[blades * VerticesPerBlade];
             var uvs = new Vector2[blades * VerticesPerBlade];
             var colours = new Color[blades * VerticesPerBlade];
+
+            // UV2 carries the vector from the blade's spine out to this vertex, in object
+            // space and in metres. The shader adds a multiple of it to widen blades with
+            // distance, which is the cheapest defence there is against a field of one-pixel
+            // triangles shimmering — and it has to be authored here because the shader cannot
+            // recover which way is across a blade from the vertex alone.
+            var spread = new Vector2[blades * VerticesPerBlade];
             var triangles = new int[blades * TrianglesPerBlade * 3];
 
             for (int b = 0; b < blades; b++)
@@ -141,71 +171,88 @@ namespace Odyssey.Presentation.Rendering
                 float bearing = even + (Unit(variant, b, 11u) - 0.5f) * (Mathf.PI * 2f / blades) * 0.8f;
 
                 float root = Mathf.Lerp(0.02f, 0.16f, Unit(variant, b, 23u));
-                float length = Mathf.Lerp(0.34f, 0.72f, Unit(variant, b, 37u));
-                // 45-75 mm until the owner saw it (2026-09-22: thicker). A blade at 2.5 m a
-                // cell and a camera tens of metres up is a pixel or two wide, so the honest
-                // width is whatever reads rather than whatever a real blade measures.
+
+                // Taller, since the owner asked for grass more like Breath of the Wild's
+                // (2026-09-22). The arc means the *tip height* is about TipRise of this, so a
+                // 0.95 m blade stands about 0.78 m — still below a colonist's knee, which is the
+                // limit worth keeping while items, orders and zones are all read off the ground.
+                float length = Mathf.Lerp(0.45f, 0.95f, Unit(variant, b, 37u));
+
                 float width = Mathf.Lerp(0.075f, 0.115f, Unit(variant, b, 53u));
                 float splay = Splay * Mathf.Lerp(0.6f, 1.25f, Unit(variant, b, 71u));
 
                 var outward = new Vector3(Mathf.Cos(bearing), 0f, Mathf.Sin(bearing));
                 Vector3 across = Vector3.Cross(Vector3.up, outward);
 
-                Vector3 basePoint = outward * root;
-                Vector3 tip = basePoint + Vector3.up * length + outward * (length * splay);
-
-                // The blade's own face normal: perpendicular to the blade and to its width. Taken
-                // before the lift so the lift has something honest to lean away from.
-                Vector3 along = (tip - basePoint).normalized;
-                Vector3 face = Vector3.Cross(along, across).normalized;
-                if (Vector3.Dot(face, outward) < 0f) face = -face;
-                Vector3 normal = Vector3.Slerp(face, Vector3.up, NormalLift).normalized;
+                Vector3 a = outward * root;
+                Vector3 c = a + Vector3.up * (length * TipRise) + outward * (length * splay);
+                Vector3 control = a + Vector3.up * (length * ControlRise);
 
                 int v = b * VerticesPerBlade;
-
-                Vector3 shoulder = Vector3.Lerp(basePoint, tip, ShoulderT);
-                float shoulderHalf = width * 0.5f * ShoulderWidth;
-                float rootHalf = width * 0.5f;
-
-                vertices[v + 0] = basePoint - across * rootHalf;
-                vertices[v + 1] = basePoint + across * rootHalf;
-                vertices[v + 2] = shoulder - across * shoulderHalf;
-                vertices[v + 3] = shoulder + across * shoulderHalf;
-                vertices[v + 4] = tip;
-
-                uvs[v + 0] = new Vector2(0f, 0f);
-                uvs[v + 1] = new Vector2(1f, 0f);
-                uvs[v + 2] = new Vector2(0f, ShoulderT);
-                uvs[v + 3] = new Vector2(1f, ShoulderT);
-                uvs[v + 4] = new Vector2(0.5f, 1f);
-
-                // Red is the height along the blade. Green carries a per-blade constant so the
-                // shader can give neighbouring blades different wind phases without needing a
-                // second channel or a per-instance array — a clump that sways as one rigid object
-                // is the thing that makes cheap grass look cheap.
                 float phase = Unit(variant, b, 97u);
-                colours[v + 0] = new Color(0f, phase, 0f, 1f);
-                colours[v + 1] = new Color(0f, phase, 0f, 1f);
-                colours[v + 2] = new Color(ShoulderT, phase, 0f, 1f);
-                colours[v + 3] = new Color(ShoulderT, phase, 0f, 1f);
-                colours[v + 4] = new Color(1f, phase, 0f, 1f);
 
-                for (int i = 0; i < VerticesPerBlade; i++) normals[v + i] = normal;
+                for (int row = 0; row < Rows; row++)
+                {
+                    float t = row / (float)Rows;
+                    Vector3 point = Bezier(a, control, c, t);
+                    Vector3 tangent = BezierTangent(a, control, c, t).normalized;
 
-                // Wound so the face side is the front. The shader draws both sides — a blade seen
-                // from behind is half the meadow at any given moment — but the winding still has
-                // to be consistent or the front face is the far one and the depth passes, which
-                // do cull, keep the wrong surface.
-                int t = b * TrianglesPerBlade * 3;
-                triangles[t + 0] = v + 0; triangles[t + 1] = v + 2; triangles[t + 2] = v + 1;
-                triangles[t + 3] = v + 1; triangles[t + 4] = v + 2; triangles[t + 5] = v + 3;
-                triangles[t + 6] = v + 2; triangles[t + 7] = v + 4; triangles[t + 8] = v + 3;
+                    // Taken per row rather than per blade, so a curved blade is not lit as a flat
+                    // one: the face turns over as the blade bows, and that turn is most of what
+                    // separates a clump from a green star at this distance.
+                    Vector3 face = Vector3.Cross(tangent, across).normalized;
+                    if (Vector3.Dot(face, outward) < 0f) face = -face;
+                    Vector3 normal = Vector3.Slerp(face, Vector3.up, NormalLift).normalized;
+
+                    float half = width * 0.5f * Mathf.Pow(1f - t, TaperPower);
+
+                    vertices[v + row * 2 + 0] = point - across * half;
+                    vertices[v + row * 2 + 1] = point + across * half;
+                    spread[v + row * 2 + 0] = new Vector2(-across.x * half, -across.z * half);
+                    spread[v + row * 2 + 1] = new Vector2(across.x * half, across.z * half);
+                    normals[v + row * 2 + 0] = normal;
+                    normals[v + row * 2 + 1] = normal;
+                    uvs[v + row * 2 + 0] = new Vector2(0f, t);
+                    uvs[v + row * 2 + 1] = new Vector2(1f, t);
+                    colours[v + row * 2 + 0] = new Color(t, phase, 0f, 1f);
+                    colours[v + row * 2 + 1] = new Color(t, phase, 0f, 1f);
+                }
+
+                int tip = v + Rows * 2;
+                vertices[tip] = c;
+                normals[tip] = normals[v + (Rows - 1) * 2];
+                uvs[tip] = new Vector2(0.5f, 1f);
+                spread[tip] = Vector2.zero;
+                colours[tip] = new Color(1f, phase, 0f, 1f);
+
+                // Wound so the face side is the front. The shader draws both sides — half the
+                // meadow faces away at any moment — but the winding still has to be consistent or
+                // the front face is the far one and the depth passes, which do cull, keep the
+                // wrong surface.
+                int t0 = b * TrianglesPerBlade * 3;
+                for (int row = 0; row < Rows - 1; row++)
+                {
+                    int lo = v + row * 2;
+                    int hi = lo + 2;
+                    triangles[t0 + row * 6 + 0] = lo;
+                    triangles[t0 + row * 6 + 1] = hi;
+                    triangles[t0 + row * 6 + 2] = lo + 1;
+                    triangles[t0 + row * 6 + 3] = lo + 1;
+                    triangles[t0 + row * 6 + 4] = hi;
+                    triangles[t0 + row * 6 + 5] = hi + 1;
+                }
+
+                int last = v + (Rows - 1) * 2;
+                triangles[t0 + (Rows - 1) * 6 + 0] = last;
+                triangles[t0 + (Rows - 1) * 6 + 1] = tip;
+                triangles[t0 + (Rows - 1) * 6 + 2] = last + 1;
             }
 
             var mesh = new Mesh { name = "Odyssey/GrassClump" + variant };
             mesh.vertices = vertices;
             mesh.normals = normals;
             mesh.uv = uvs;
+            mesh.SetUVs(2, spread);
             mesh.colors = colours;
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
@@ -222,13 +269,35 @@ namespace Odyssey.Presentation.Rendering
             return mesh;
         }
 
+        static Vector3 Bezier(Vector3 a, Vector3 b, Vector3 c, float t)
+        {
+            float u = 1f - t;
+            return u * u * a + 2f * u * t * b + t * t * c;
+        }
+
+        static Vector3 BezierTangent(Vector3 a, Vector3 b, Vector3 c, float t) =>
+            2f * (1f - t) * (b - a) + 2f * t * (c - b);
+
         /// <summary>
         /// The furthest a vertex can be moved by wind and camera lean together, in metres.
         ///
-        /// Matched by hand to the shader's own clamps rather than derived from them, because the
-        /// two live in different languages; <c>GrassMeshTests</c> is what stops them drifting.
+        /// <para>Matched by hand to the shader's own clamp rather than derived from it, because
+        /// the two live in different languages; <c>GrassTests</c> is what stops them drifting.
+        /// The arithmetic is the chord of the arc: a vertex an arm's length from the root,
+        /// rotated by the cap, moves <c>2 * arm * sin(cap / 2)</c>. The shader caps the bow at
+        /// <c>ODYSSEY_GRASS_MAX_BOW</c> = 0.60 rad, and the longest blade's tip is about 1.05 m
+        /// from its root — 0.71 m out and 0.78 m up — so it travels at most about 0.62 m.
+        /// <c>GrassTests.TheBoundsCoverTheBowTheShaderCanApply</c> does that sum against the
+        /// built mesh and the shader source rather than trusting this paragraph, which is just
+        /// as well: the first figure written here was 0.90 m and 0.53 m, taken from the blade's
+        /// height alone with its reach forgotten.</para>
+        ///
+        /// <para><b>Raised from 0.35 when the bow replaced the old tip drag</b>, which moved
+        /// vertices far less because it was a translation the shader clamped directly. Leaving
+        /// it at 0.35 would not have looked like a bounds bug; it would have looked like clumps
+        /// at the edge of the view blinking out when the wind got up.</para>
         /// </summary>
-        public const float MaxSway = 0.35f;
+        public const float MaxSway = 0.70f;
 
         /// <summary>A stable value in [0, 1) for a variant, a blade and a salt.</summary>
         static float Unit(int variant, int blade, uint salt) =>

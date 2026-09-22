@@ -53,6 +53,47 @@ namespace Odyssey.Presentation.Rendering
         public static float BandHeight { get; set; } = 0.45f;
 
         /// <summary>
+        /// How dark the foot of a blade goes, and how far up that darkening reaches.
+        ///
+        /// <para>Contact shading, and at a camera looking down from tens of metres it does
+        /// more for the read than anything happening at the tip: it is what makes a clump
+        /// sit <em>in</em> the ground instead of on it. Distinct from the root colour, which
+        /// is a hue — this is a value, and a clump wants both.</para>
+        /// </summary>
+        public static float BaseShade { get; set; } = 0.66f;
+
+        /// <inheritdoc cref="BaseShade"/>
+        public static float BaseShadeHeight { get; set; } = 0.40f;
+
+        /// <summary>
+        /// How far the colour drifts between one patch of meadow and the next.
+        ///
+        /// <para>A field of one green reads as a painted surface however good the blades
+        /// are, and <c>b-painted-look-games.md</c> ranked low-frequency colour variation as
+        /// the single highest-value change available to this renderer — a year ago, and it
+        /// had never been built. It rides the grass shader because that is where it costs
+        /// nothing: two sines of the clump's own world position, no texture fetch.</para>
+        /// </summary>
+        public static float PatchVariation { get; set; } = 0.14f;
+
+        /// <summary>
+        /// How brightly a blade lights up with the sun behind it, how tight that response
+        /// is, and what colour comes through.
+        ///
+        /// <para>Fake translucency, and the cheapest thing in the feature that reads as
+        /// <em>alive</em>: real grass is thin enough to pass light, and looking across a
+        /// field into a low sun is when it stops being green and starts being lit. It is
+        /// emission rather than a light term, so it costs a dot product and a power.</para>
+        /// </summary>
+        public static float Sheen { get; set; } = 0.9f;
+
+        /// <inheritdoc cref="Sheen"/>
+        public static float SheenSharpness { get; set; } = 7f;
+
+        /// <inheritdoc cref="Sheen"/>
+        public static Color SheenColour { get; set; } = new Color(0.72f, 0.84f, 0.38f);
+
+        /// <summary>
         /// How far the tip leans towards the camera, as a fraction of the blade's length.
         ///
         /// <b>The setting the whole feature turns on at this camera.</b> A blade is a thin upright
@@ -68,6 +109,12 @@ namespace Odyssey.Presentation.Rendering
         static readonly int BandingId = Shader.PropertyToID("_Banding");
         static readonly int BandHeightId = Shader.PropertyToID("_BandHeight");
         static readonly int FaceCameraId = Shader.PropertyToID("_FaceCamera");
+        static readonly int BaseShadeId = Shader.PropertyToID("_BaseShade");
+        static readonly int BaseShadeHeightId = Shader.PropertyToID("_BaseShadeHeight");
+        static readonly int PatchVariationId = Shader.PropertyToID("_PatchVariation");
+        static readonly int SheenId = Shader.PropertyToID("_Sheen");
+        static readonly int SheenSharpnessId = Shader.PropertyToID("_SheenSharpness");
+        static readonly int SheenColourId = Shader.PropertyToID("_SheenColour");
 
         /// <summary>Write the table onto a freshly built grass material.</summary>
         public static void Apply(Material material)
@@ -79,6 +126,12 @@ namespace Odyssey.Presentation.Rendering
             material.SetFloat(BandingId, Banding);
             material.SetFloat(BandHeightId, BandHeight);
             material.SetFloat(FaceCameraId, FaceCamera);
+            material.SetFloat(BaseShadeId, BaseShade);
+            material.SetFloat(BaseShadeHeightId, BaseShadeHeight);
+            material.SetFloat(PatchVariationId, PatchVariation);
+            material.SetFloat(SheenId, Sheen);
+            material.SetFloat(SheenSharpnessId, SheenSharpness);
+            material.SetColor(SheenColourId, SheenColour);
         }
 
         /// <summary>Back to what the game ships with. For a check harness that changed them.</summary>
@@ -90,6 +143,12 @@ namespace Odyssey.Presentation.Rendering
             Banding = 0f;
             BandHeight = 0.45f;
             FaceCamera = 0.3f;
+            BaseShade = 0.66f;
+            BaseShadeHeight = 0.40f;
+            PatchVariation = 0.14f;
+            Sheen = 0.9f;
+            SheenSharpness = 7f;
+            SheenColour = new Color(0.72f, 0.84f, 0.38f);
         }
     }
 }

@@ -1,5 +1,8 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Worldgen.Natural;
@@ -56,8 +59,13 @@ namespace Odyssey.Tests.Presentation
 
                 Assert.That(lowest, Is.EqualTo(0f).Within(1e-4f),
                     $"variant {variant} does not stand on its own roots");
-                Assert.That(highest, Is.InRange(0.3f, 0.8f),
-                    $"variant {variant} is {highest:0.00} m tall; grass is ankle high");
+                // Taller since the owner asked for grass more like Breath of the Wild's, and
+                // the ceiling is a real limit rather than a round number: items, orders and
+                // zones are all read off the ground, so grass that reached a colonist's waist
+                // would be hiding the game. The arc keeps the tip well under the blade's own
+                // length, so the longest blade stands about 0.78 m.
+                Assert.That(highest, Is.InRange(0.3f, 1.0f),
+                    $"variant {variant} is {highest:0.00} m tall; grass is knee high at most");
                 Assert.That(widest, Is.LessThanOrEqualTo(GrassMesh.Reach + 1e-3f),
                     $"variant {variant} reaches {widest:0.00} m, past its declared {GrassMesh.Reach} m — "
                         + "GroundScatter.ClumpReach is what keeps clumps off a tilled tile, and it "
@@ -133,6 +141,54 @@ namespace Odyssey.Tests.Presentation
                 Assert.That(raw.min.z - mesh.bounds.min.z, Is.GreaterThanOrEqualTo(GrassMesh.MaxSway - 1e-3f),
                     "the bounds do not allow for the wind the shader applies");
             }
+        }
+
+        /// <summary>
+        /// <b>The bounds cover the bow the shader can actually apply</b>, which is a number that
+        /// lives in HLSL and a number that lives in C#, and nothing but this connects them.
+        ///
+        /// <para><see cref="TheBoundsCoverTheSway"/> above checks the mesh against
+        /// <c>GrassMesh.MaxSway</c>; this checks <c>MaxSway</c> against the shader. Both halves are
+        /// needed, because the failure is not a crash or a wrong pixel: it is clumps at the edge
+        /// of the view blinking out when the wind gets up, which reads as a culling bug and sends
+        /// the next person to the wrong file.</para>
+        ///
+        /// <para>The arithmetic is the chord of the arc: a vertex an arm's length from the root,
+        /// rotated by the cap, moves <c>2 * arm * sin(cap / 2)</c>. The arm is measured off the
+        /// built mesh rather than assumed, so making blades longer fails this too — which is the
+        /// half somebody would otherwise miss, since lengthening a blade does not look like it has
+        /// anything to do with a shader constant.</para>
+        ///
+        /// <para>Reading the shader source is the same move <c>HudFontTests</c> makes when it
+        /// parses the shipped fonts: the fast tier has no HLSL compiler and the Unity tier asserts
+        /// no pixels, so a disagreement between the two languages is otherwise silent.</para>
+        /// </summary>
+        [Test]
+        public void TheBoundsCoverTheBowTheShaderCanApply()
+        {
+            string source = Path.Combine(
+                Application.dataPath, "Odyssey/Presentation/Shaders/OdysseyGrass.shader");
+            Assume.That(File.Exists(source), Is.True, $"no grass shader at {source}");
+
+            Match match = Regex.Match(
+                File.ReadAllText(source),
+                @"#define\s+ODYSSEY_GRASS_MAX_BOW\s+([0-9.]+)");
+            Assert.That(match.Success, Is.True,
+                "the shader no longer declares ODYSSEY_GRASS_MAX_BOW; if the cap moved or was "
+                    + "renamed, this test and GrassMesh.MaxSway both need to hear about it");
+
+            float cap = float.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+
+            float arm = 0f;
+            for (int variant = 0; variant < GrassMesh.Variants; variant++)
+                foreach (Vector3 v in Vertices(variant))
+                    arm = Mathf.Max(arm, v.magnitude);
+
+            float travel = 2f * arm * Mathf.Sin(cap * 0.5f);
+            Assert.That(GrassMesh.MaxSway, Is.GreaterThanOrEqualTo(travel - 1e-3f),
+                $"the shader can bow a vertex {arm:0.00} m from its root by {cap:0.00} rad, which "
+                    + $"moves it {travel:0.00} m, but the mesh bounds only allow for "
+                    + $"{GrassMesh.MaxSway:0.00} m");
         }
 
         /// <summary>

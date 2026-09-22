@@ -253,6 +253,54 @@ number quietly about the wrong world. They all read `ChunkMesher.DefaultScatterD
 `GrassTests.TheMeadowAndTheSurroundAgreeOnHowThickTheGrassIs` guards the pair inside this assembly,
 because a density difference at the board rim is a straight line across the view.
 
+### 2.8 "More like Breath of the Wild", and the research that cut half of it back
+
+The owner's second look, 2026-09-22: *"can it be more like the grass you see in Zelda breath of the
+wild, tears of the kingdom — it looks fine though but nothing special"*, with an offer of a shader
+pack and a link to a Unity URP tutorial of that name, and then: *"maybe make a short version of
+it?"*
+
+**The short version is the right instinct and the research says why.** `b-botw-grass.md` was
+commissioned before anything was built on it, and it moved the plan more than any research note in
+this project has. Three things:
+
+1. **Nintendo has published nothing about the grass**, and most of what is labelled "BotW grass
+   shader" — including the tutorial family the owner's link belongs to — is tuned by eye against
+   screenshots. Two of its most-copied features are not in the game.
+2. **The BotW blade is one straight triangle** with the wind applied by dragging the tip. The
+   curved Bézier blade everybody associates with the look is tutorial invention for a ground-level
+   camera.
+3. **The colour is a painted 64×64 patch map** per terrain area — height and RGB — so hue *and*
+   value vary at patch scale rather than per blade. That is the mechanism, and it is the one whose
+   wavelength is measured in metres.
+
+And the governing fact for us, which decides everything: **at one or two pixels a blade we are not
+drawing blades, we are drawing a statistical field.** Anything whose signal lives inside one blade
+is gone at this camera.
+
+**What was built on that, and what was cut.** Half of this section is a record of work reversed
+within the hour, which is the honest shape of it:
+
+| | Verdict | Why |
+|---|---|---|
+| Patch-scale colour, hue **and** value, from the clump's world position | **kept and extended** | Ranked first for our camera, and `b-painted-look-games.md` ranked the same idea first a year ago and it was never built |
+| Per-blade wind phase | **cut from a full turn to 0.9 rad** | A full turn decorrelates every blade in a clump. Close up that is detail; at two pixels it is noise crawling over the field. The signal that reads is the world-space term |
+| Gust swell from a second slow wave | **kept** | Coherent gust fronts are the one blade-shader motion that survives tens of metres |
+| Distance widening of blades | **added** | Not decoration: a one-pixel triangle wastes four to eight times over on 2×2 quad shading. The research calls this where a frame budget is won or lost |
+| Curved blades | **kept, but at three rows not four** | Sub-pixel per blade and not what BotW does — but a *clump* is ten or twenty pixels and is visibly different bowed from spiky. Kept at the least geometry that still reads |
+| Backlight sheen | **halved to 0.45** | At 48° looking down we are almost never viewing blades against the sun, and a moving highlight on a one-pixel triangle is an aliasing generator. It earns its place only at dawn and dusk with the rig pitched down |
+| Shading at the base | **softened, 0.66 → 0.80** | From above you see tips and the ground between blades, hardly any base. The occlusion that would read belongs on the **ground**, which is a different material and a later unit |
+| Length-preserving root rotation | **kept, against the advice** | The research says the stretch of tip-dragging is a sub-pixel error and rotation only pays when blades are tens of pixels tall. Our rig zooms to **10 m**, where they are — so this is a deliberate disagreement with a good argument, and the cheap way back is one function |
+
+**Two things the research asks for that are not built**, recorded so they are not rediscovered: a
+real painted colour-and-height map instead of the two sines standing in for it, and a ground
+texture beyond the geometry ring matched to the field's average colour so the transition needs no
+fade. Both are upgrades to what is here rather than rewrites of it.
+
+**No shader pack was needed or bought.** Everything above is the blade mesh and a vertex shader we
+own outright; §2.5 has the licensing and architecture reasons a pack is the wrong purchase for this
+renderer, and none of them changed.
+
 ---
 
 ## 3. The sky and clouds (designed, not built)
