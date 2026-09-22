@@ -1691,6 +1691,13 @@ window.ICON_MAP = {
   "r": null,
   "s": "06"
  },
+ "ui.tab.almanac": {
+  "c": null,
+  "d": "notebook",
+  "q": "high",
+  "r": null,
+  "s": "08"
+ },
  "ui.tab.animals": {
   "c": null,
   "d": "paw print tile",
@@ -2078,6 +2085,8 @@ window.ICON_GAPS = [
  "ui.storage.priority.preferred",
  "ui.storage.priority.urgent",
  "ui.tab.menu",
+ "ui.tab.storage",
+ "ui.tab.tile",
  "ui.terrain.bareearth",
  "ui.terrain.bedrock",
  "ui.terrain.grass",

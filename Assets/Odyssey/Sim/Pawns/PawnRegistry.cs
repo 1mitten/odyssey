@@ -262,9 +262,14 @@ namespace Odyssey.Sim.Pawns
                 // simulation content and is not published.
                 for (int s = 0; s < SkillIndex.Count; s++)
                 {
-                    writer.AddPawnAspect(pawn.Id, SkillAspects.Level[s], pawn.SkillLevel(s));
+                    // The level and the progress come out of one walk of the ladder (SK2). Asking
+                    // SkillLevel for one and ProgressPerMille for the other would scan the same
+                    // twenty entries twice, every tick, for every skill of every colonist.
+                    int progress = _ctx.Content.Skills[s].ProgressPerMille(pawn.Skills[s], out int level);
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Level[s], level);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Passion[s], pawn.Passions[s]);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Experience[s], pawn.Skills[s]);
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Progress[s], progress);
                 }
 
                 // The work priorities, on the same terms and through the same channel (design 27).
@@ -336,8 +341,40 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                if (item.Despawned || item.Cell < 0) continue;
-                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                if (item.Despawned) continue;
+
+                if (item.Cell >= 0)
+                {
+                    writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
+                    continue;
+                }
+
+                // In a store: published at the store's cell, carrying the store's id. A thing in a
+                // pair of hands is still skipped — it is drawn by the carrier, through the carry
+                // aspects above.
+                if (item.ContainerId == 0) continue;
+
+                int where = _ctx.WhereIs(item);
+                if (where < 0) continue;
+
+                // The thing's place in its store's ordered contents. A drawing position and
+                // nothing else — nothing in the simulation reads it back, and a store re-packs when
+                // something leaves it.
+                //
+                // **The def cannot stand in for it**, which was tried: a store holds several stacks
+                // of one kind, so eight stacks of wood would all draw in the same place. The
+                // contents index is the only number here that never collides.
+                IReadOnlyList<int> holds = _ctx.Items.ContentsOf(item.ContainerId);
+                int slot = 0;
+                for (int h = 0; h < holds.Count; h++)
+                {
+                    if (holds[h] != i) continue;
+                    slot = h;
+                    break;
+                }
+
+                writer.AddThing(new ThingView(item.Id, size.FromIndex(where), item.DefIndex, 0,
+                    item.Stack, item.ContainerId, (byte)slot));
             }
         }
 

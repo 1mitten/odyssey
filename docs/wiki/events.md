@@ -1,8 +1,8 @@
 # Events
 
-Alerts are conditions that persist until fixed. Bulletins are things that happened. Both carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
+Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
 
-38 entries, 14 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+40 entries, 16 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -30,6 +30,7 @@ Alerts are conditions that persist until fixed. Bulletins are things that happen
 | **Spoiling** | `ui.alert.spoilage` | Food is going off | sheet 02 (food), low | M2 |
 | **No light** | `ui.alert.darkness` | Work is slowed for want of a lamp | sheet 06 (action tiles), low | M2 |
 | **Trapped** | `ui.alert.trapped` | Someone cannot reach the colony <br>**Needs:** a colonist cut off from the colony | no art | M2 |
+| **Store cannot be emptied** | `ui.alert.storagestuck` | A shelf is marked for removal and there is nowhere to put what is in it | no art | M3 |
 
 ## Bulletins
 
@@ -51,6 +52,12 @@ Alerts are conditions that persist until fixed. Bulletins are things that happen
 | **Crash** | `ui.bulletin.crash` | Something has come down nearby <br>**Needs:** a crashed ship or drop pod | no art | M2 |
 | **Supply drop** | `ui.bulletin.supplydrop` | Something has fallen from the sky. Fetch it before the weather does <br>**Needs:** a stack falling from the sky. Our own concept | no art | M3 |
 | **Birth** | `ui.bulletin.birth` | A tame animal has given birth <br>**Needs:** a newborn animal | no art | M2 |
+
+## Toasts
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **{name} has reached {skill} {level}** | `ui.toast.skillup` | A colonist's skill has gone up a level | no art | M2 |
 
 ---
 

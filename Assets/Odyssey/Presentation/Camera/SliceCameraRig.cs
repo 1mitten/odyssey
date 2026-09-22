@@ -302,7 +302,23 @@ namespace Odyssey.Presentation.CameraRig
             ReadKeyboard(dt);
             ReadMouse(dt);
             TakeJumpRequest();
+
+            // **The camera moves before the pointer is asked what it is pointing at, and that
+            // order is the whole of the fix for "the cursor doesn't seem super accurate"** (owner,
+            // 2026-09-21). `CellAt` casts a ray through this camera's *current* transform; until
+            // 2026-09-21 every hover, drag, box and click was resolved up in `ReadMouse`, which
+            // runs before this line - so the ray went through the transform written at the end of
+            // the *previous* frame while the world was drawn from the new one. Exact while the
+            // camera is still, and a constant one-frame lag the entire time it moves: half a metre
+            // at a 30 m/s pan, a fifth of a cell, and more with shift held. Panning while placing
+            // is the commonest thing a player does with a tool in hand.
+            //
+            // Applying the transform *above* `ReadMouse` would have been the smaller diff and is
+            // wrong: the wheel and the orbit write their targets inside `ReadMouse`, so the camera
+            // would answer the player's zoom a frame late instead.
+            // `docs/design/28-pointer-cursor.md` section 4.
             ApplyTransform(instant: false);
+            ResolvePointer();
             DrawSelection();
         }
 
@@ -399,6 +415,8 @@ namespace Odyssey.Presentation.CameraRig
 
         void ReadMouse(float dt)
         {
+            _pending = PointerOutcome.Idle;
+
             Mouse? mouse = Mouse.current;
             if (mouse == null) return;
 
@@ -472,12 +490,9 @@ namespace Odyssey.Presentation.CameraRig
                 // the press, so arming a tool part way through a drag lights the preview up
                 // immediately — which is the same question the release below asks, and it must be
                 // asked the same way or the preview and the order disagree.
-                if (WorldToolArmed != null && WorldToolArmed()
-                    && CellAt(_dragStart.Value, out CellRef dragAnchor)
-                    && CellAt(_draggedTo, out CellRef dragHead))
-                    ToolDragging?.Invoke(dragAnchor, dragHead);
-                else
-                    ToolDragCancelled?.Invoke();
+                Latch(WorldToolArmed != null && WorldToolArmed()
+                        ? PointerOutcome.Dragging : PointerOutcome.Cancel,
+                    _dragStart.Value, _draggedTo);
             }
             else if (_dragStart.HasValue)
             {
@@ -489,36 +504,133 @@ namespace Odyssey.Presentation.CameraRig
                 // Who owns this press. Asked once, on release, so arming a tool mid-drag cannot
                 // turn a half-drawn selection box into an order.
                 if (WorldToolArmed != null && WorldToolArmed())
-                {
                     // **A press that travelled is a drag; one that did not is a click.** They are
                     // two different gestures and the owner asked for both (2026-09-17): hold and
                     // drag finishes on release, and a plain click anchors a run that the next
                     // click finishes. The rig cannot tell them apart any later than this, because
                     // `_boxActive` is the only record that the pointer ever moved.
-                    if (!CellAt(start, out CellRef anchor) || !CellAt(_draggedTo, out CellRef head))
-                        ToolDragCancelled?.Invoke();
-                    else if (wasBox) ToolDrag?.Invoke(anchor, head);
-                    else ToolClick?.Invoke(head);
-                }
-                else if (wasBox)
-                {
-                    ToolDragCancelled?.Invoke();
-                    BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
-                }
+                    Latch(wasBox ? PointerOutcome.Drag : PointerOutcome.Click, start, _draggedTo);
                 else
-                {
-                    ToolDragCancelled?.Invoke();
-                    PickAt(_draggedTo);
-                }
+                    Latch(wasBox ? PointerOutcome.Box : PointerOutcome.Pick, start, _draggedTo, shift);
             }
-            else if (WorldToolArmed != null && WorldToolArmed() && !_orbiting && !overInterface
-                     && CellAt(pointer, out CellRef hovered))
+            else if (WorldToolArmed != null && WorldToolArmed() && !_orbiting && !overInterface)
             {
-                ToolHover?.Invoke(hovered);
+                Latch(PointerOutcome.Hover, pointer, pointer);
             }
             else
             {
-                ToolHoverLost?.Invoke();
+                Latch(PointerOutcome.HoverLost, pointer, pointer);
+            }
+        }
+
+        /// <summary>
+        /// What the pointer did this frame, decided in <see cref="ReadMouse"/> and acted on in
+        /// <see cref="ResolvePointer"/> once the camera has moved.
+        ///
+        /// <para>It is screen points and a verb, deliberately: no cell appears anywhere in this
+        /// enum, because a cell is the one thing that cannot be worked out yet.</para>
+        /// </summary>
+        enum PointerOutcome
+        {
+            /// <summary>Nothing happened and nothing is dispatched - there is no mouse.</summary>
+            Idle,
+
+            /// <summary>Nothing is under the pointer, or nothing should be.</summary>
+            HoverLost,
+
+            /// <summary>A tool is armed and the button is up.</summary>
+            Hover,
+
+            /// <summary>A run is being drawn with the button held.</summary>
+            Dragging,
+
+            /// <summary>A held run was let go.</summary>
+            Drag,
+
+            /// <summary>A press that never travelled, with a tool armed.</summary>
+            Click,
+
+            /// <summary>A selection box was let go, with no tool armed.</summary>
+            Box,
+
+            /// <summary>A press that never travelled, with no tool armed.</summary>
+            Pick,
+
+            /// <summary>Whatever was being drawn is off.</summary>
+            Cancel,
+        }
+
+        PointerOutcome _pending;
+        Vector2 _pendingFrom;
+        Vector2 _pendingTo;
+        bool _pendingShift;
+
+        void Latch(PointerOutcome outcome, Vector2 from, Vector2 to, bool shift = false)
+        {
+            _pending = outcome;
+            _pendingFrom = from;
+            _pendingTo = to;
+            _pendingShift = shift;
+        }
+
+        /// <summary>
+        /// Turn this frame's latched gesture into cells and fire it.
+        ///
+        /// <para><b>Called after <see cref="ApplyTransform"/>, and that is the point of it</b> -
+        /// see the comment in <see cref="Update"/>. Every <see cref="CellAt"/> the rig performs
+        /// lives here now, so there is one answer to "which camera was this pick resolved
+        /// against" rather than one per call site.</para>
+        ///
+        /// <para>The branches are the ones <c>ReadMouse</c> used to take inline, unchanged: a
+        /// resolution that fails cancels rather than guessing, and a release resolves both ends
+        /// because a run needs both.</para>
+        /// </summary>
+        void ResolvePointer()
+        {
+            switch (_pending)
+            {
+                case PointerOutcome.Idle:
+                    return;
+
+                case PointerOutcome.HoverLost:
+                    ToolHoverLost?.Invoke();
+                    return;
+
+                case PointerOutcome.Cancel:
+                    ToolDragCancelled?.Invoke();
+                    return;
+
+                case PointerOutcome.Hover:
+                    if (CellAt(_pendingTo, out CellRef hovered)) ToolHover?.Invoke(hovered);
+                    else ToolHoverLost?.Invoke();
+                    return;
+
+                case PointerOutcome.Dragging:
+                    if (CellAt(_pendingFrom, out CellRef dragAnchor)
+                        && CellAt(_pendingTo, out CellRef dragHead))
+                        ToolDragging?.Invoke(dragAnchor, dragHead);
+                    else
+                        ToolDragCancelled?.Invoke();
+                    return;
+
+                case PointerOutcome.Drag:
+                case PointerOutcome.Click:
+                    if (!CellAt(_pendingFrom, out CellRef anchor)
+                        || !CellAt(_pendingTo, out CellRef head))
+                        ToolDragCancelled?.Invoke();
+                    else if (_pending == PointerOutcome.Drag) ToolDrag?.Invoke(anchor, head);
+                    else ToolClick?.Invoke(head);
+                    return;
+
+                case PointerOutcome.Box:
+                    ToolDragCancelled?.Invoke();
+                    BoxSelected?.Invoke(RectFromTo(_pendingFrom, _pendingTo), _pendingShift);
+                    return;
+
+                case PointerOutcome.Pick:
+                    ToolDragCancelled?.Invoke();
+                    PickAt(_pendingTo);
+                    return;
             }
         }
 

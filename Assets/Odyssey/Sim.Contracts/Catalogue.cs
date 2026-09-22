@@ -270,7 +270,13 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Bed = 12;
 
-        public const int Count = 13;
+        /// <summary>
+        /// The shelf: the second edifice the interface names that no generator stamps, and the
+        /// colony's first buildable store. See <c>CoreContent.EdificeShelf</c>.
+        /// </summary>
+        public const int Shelf = 13;
+
+        public const int Count = 14;
     }
 
     /// <summary>
@@ -317,7 +323,23 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Bed = 5;
         public const int Door = 6;
-        public const int Count = 7;
+
+        /// <summary>
+        /// A shelf: one cell of furniture that holds an inventory rather than standing in the way
+        /// of one (docs/design/26-storage.md, the S2 branch of the storage line).
+        ///
+        /// <para><b>The colony's first buildable store.</b> A stockpile is painted and a shelf is
+        /// raised, and the difference underneath is where the things go: a zone leaves them on the
+        /// floor one stack to a cell, while a shelf holds eight stacks in an inventory of its own.
+        /// The ground's one-stack-per-cell rule is therefore never touched — six write paths throw
+        /// on a second stack and all six are left alone.</para>
+        ///
+        /// <para>Seven because the door reached main first and took six. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Shelf = 7;
+
+        public const int Count = 8;
     }
 
     /// <summary>

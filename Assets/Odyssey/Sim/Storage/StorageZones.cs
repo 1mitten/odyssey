@@ -89,10 +89,33 @@ namespace Odyssey.Sim.Storage
         public bool IsStorage(int cell) => _zones.SlotAt(cell) >= 0;
 
         /// <summary>The settings of the zone covering this cell, or null where there is none.</summary>
+        /// <summary>
+        /// The colony's built stores, or null where it has none.
+        ///
+        /// <para>Held here so that <see cref="SettingsAt"/> can answer for a shelf as well as for a
+        /// zone — which is the whole of what makes the priority and filter intents drive a shelf
+        /// without a second intent pair or a second control. The pane must not be able to say a
+        /// cell is a store that the tool would refuse, and one resolver is how that stays true.</para>
+        /// </summary>
+        public StorageUnits? Units { get; set; }
+
+        /// <summary>
+        /// What the store covering this cell accepts, or null where nothing does.
+        ///
+        /// <para><b>The one resolver, and it answers for both kinds of store.</b> A painted zone
+        /// first, then a shelf standing in the cell — the two can never both be true, because a
+        /// shelf takes its cell out of any zone when it is raised and
+        /// <see cref="SiteAllows"/> refuses to paint a zone over an edifice. Both storage intents
+        /// come through here, which is what lets the priority ladder and the filter the player
+        /// already knows drive a shelf with no second control anywhere.</para>
+        /// </summary>
         public StorageSettings? SettingsAt(int cell)
         {
             int slot = _zones.SlotAt(cell);
-            return slot >= 0 ? _settings[_zones.TagOf(slot)] : null;
+            if (slot >= 0) return _settings[_zones.TagOf(slot)];
+
+            StorageUnit? unit = Units?.AtCell(cell);
+            return unit == null ? null : Units!.SettingsOf(unit);
         }
 
         /// <summary>The settings of one zone by slot.</summary>
@@ -100,6 +123,55 @@ namespace Odyssey.Sim.Storage
 
         /// <summary>The cells one zone owns, ascending.</summary>
         public IReadOnlyList<int> CellsOf(int slot) => _zones.CellsOf(slot);
+
+        /// <summary>
+        /// This store's place among the colony's, from 1 — what an unnamed zone is called.
+        ///
+        /// <para>Counted in <b>cell order</b>: how many stores begin at a lower cell than this one.
+        /// A slot index would have been free and is the wrong answer — slots move when a zone
+        /// dissolves, so a store would be renamed by the deletion of an unrelated one across the
+        /// map. Cell order moves only when a store that begins earlier goes, which is at least a
+        /// change the player made near the one they are looking at.</para>
+        ///
+        /// <para>Derived rather than stored, so it is the same on both sides of a save with nothing
+        /// written down. A typed name is what finally stops it drifting.</para>
+        /// </summary>
+        public int OrdinalOf(int slot)
+        {
+            if ((uint)slot >= (uint)_zones.Count) return 0;
+
+            IReadOnlyList<int> mine = _zones.CellsOf(slot);
+            return OrdinalOfCell(mine.Count > 0 ? mine[0] : int.MaxValue);
+        }
+
+        /// <summary>
+        /// What a store beginning at this cell is called: one more than the number of stores that
+        /// begin lower.
+        ///
+        /// <para><b>Both kinds are counted, and that is the whole reason this is separate from
+        /// <see cref="OrdinalOf"/>.</b> A shelf is a store, so it takes its place in the same
+        /// series — "Store 3" has to name exactly one thing, and counting zones and shelves apart
+        /// would give the player two of them.</para>
+        /// </summary>
+        public int OrdinalOfCell(int firstCell)
+        {
+            int ordinal = 1;
+
+            for (int other = 0; other < _zones.Count; other++)
+            {
+                IReadOnlyList<int> cells = _zones.CellsOf(other);
+                if (cells.Count > 0 && cells[0] < firstCell) ordinal++;
+            }
+
+            if (Units != null)
+                for (int u = 0; u < Units.Units.Count; u++)
+                {
+                    StorageUnit unit = Units.Units[u];
+                    if (!unit.Removed && Units.CellOf(unit) < firstCell) ordinal++;
+                }
+
+            return ordinal;
+        }
 
         /// <summary>
         /// Does this cell accept this def? Answered here rather than by reaching for the settings,
@@ -223,20 +295,33 @@ namespace Odyssey.Sim.Storage
             return IntentRejection.None;
         }
 
-        /// <summary>Take a cell back out of its storage zone. Anything lying in it becomes loose again.</summary>
-        public IntentRejection Cancel(CellRef cell)
+        /// <summary>
+        /// Take one cell out of whatever zone holds it, by index. False when it was in none.
+        ///
+        /// <para><see cref="Cancel"/> is the player's door to this and calls it after
+        /// <see cref="StoreCellOf"/>; the world's door is a shelf being raised, which takes its own
+        /// cell out of any zone so that no cell is ever in two stores. One owner, because the
+        /// re-bucket and the re-mesh are easy for a second caller to forget.</para>
+        /// </summary>
+        public bool LeaveCell(int index)
         {
-            if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
-
-            int index = StoreCellOf(_grid.Index(cell));
-            if (!_zones.Leave(index)) return IntentRejection.AlreadyInThatState;
+            if (!_zones.Leave(index)) return false;
 
             // A dissolve can have moved the slot the run was pointing at, and a subtract and an add
             // are never the same gesture, so the memo is dropped rather than chased.
             _run = (-1, -1);
             _items.Rebucket(index);
             Mark(index);
-            return IntentRejection.None;
+            return true;
+        }
+
+        /// <summary>Take a cell back out of its storage zone. Anything lying in it becomes loose again.</summary>
+        public IntentRejection Cancel(CellRef cell)
+        {
+            if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
+
+            int index = StoreCellOf(_grid.Index(cell));
+            return LeaveCell(index) ? IntentRejection.None : IntentRejection.AlreadyInThatState;
         }
 
         /// <summary>

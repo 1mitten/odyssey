@@ -329,7 +329,8 @@ namespace Odyssey.Presentation.Ui
             var tabs = new VisualElement();
             tabs.AddToClassList("settings__tabs");
             foreach (SettingsTab tab in new[]
-                     { SettingsTab.Interface, SettingsTab.Graphics, SettingsTab.Audio, SettingsTab.Keys })
+                     { SettingsTab.Interface, SettingsTab.Graphics, SettingsTab.Audio, SettingsTab.Keys,
+                       SettingsTab.Gameplay })
             {
                 Label chip = HudText.Make(Registry.Label(SettingsDirector.TabKey(tab)),
                     HudTextRole.Body, ussClass: "tab");
@@ -348,6 +349,7 @@ namespace Odyssey.Presentation.Ui
             BuildGraphicsSection(scroll);
             BuildAudioSection(scroll);
             BuildKeysSection(scroll);
+            BuildGameplaySection(scroll);
             _settingsPanel.Add(scroll);
 
             // The session rows across a 2-column grid at the bottom, so they take half the vertical
@@ -1005,7 +1007,49 @@ namespace Odyssey.Presentation.Ui
                 tab == SettingsTab.Audio ? DisplayStyle.Flex : DisplayStyle.None;
             _keysSection.style.display =
                 tab == SettingsTab.Keys ? DisplayStyle.Flex : DisplayStyle.None;
+            _gameplaySection.style.display =
+                tab == SettingsTab.Gameplay ? DisplayStyle.Flex : DisplayStyle.None;
         }
+
+        /// <summary>
+        /// The Gameplay section: at present the autosave and nothing else (2026-09-21).
+        ///
+        /// <para><b>One ladder rather than a switch and an interval.</b> Off is a rung, so the two
+        /// questions — whether, and how often — are one control that cannot answer them
+        /// inconsistently. <c>AutosaveClock</c> owns the rungs and their words; this only draws
+        /// them.</para>
+        ///
+        /// <para>The rungs are words rather than figures, so they are set in the reading face like
+        /// the Build-palette layout's and unlike the percentages.</para>
+        /// </summary>
+        void BuildGameplaySection(VisualElement parent)
+        {
+            _gameplaySection = new VisualElement();
+            _gameplaySection.AddToClassList("settings__body");
+
+            var columns = new VisualElement();
+            columns.AddToClassList("settings__columns");
+            var leftCol = new VisualElement();
+            leftCol.AddToClassList("settings__column");
+            var rightCol = new VisualElement();
+            rightCol.AddToClassList("settings__column");
+            columns.Add(leftCol);
+            columns.Add(rightCol);
+
+            BuildLadderRow(leftCol, SettingsDirector.AutosaveKey,
+                AutosaveClock.DayRungs,
+                AutosaveClock.RungLabel,
+                AutosaveClock.RungTooltip,
+                days => _directors?.Settings.SetAutosaveDays(days),
+                _autosaveRungs,
+                numeric: false,
+                rowTooltip: "Written over this colony's own save, keeping one previous copy beside it");
+
+            _gameplaySection.Add(columns);
+            parent.Add(_gameplaySection);
+        }
+
+        void OnAutosaveDaysChanged(int days) => LightRung(_autosaveRungs, days);
 
         void OnUiScaleChanged(int percent)
         {

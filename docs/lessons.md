@@ -29,6 +29,14 @@ Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" |
 
 A row that is `-batchmode` **and** on your own worktree is an orphan and is safe to stop. A row without `-batchmode`, or on any other path, is somebody's open editor — leave it, per the standing rule. There were two on the machine that day and only one was ours.
 
+**And one way an orphan is made: Unity deadlocks on a stale `bee_backend` lock and never exits** (2026-09-21, twenty-five minutes). A run of `unity.sh test editmode` sat at 0 bytes of test output with its `Unity.exe` alive and idle. The wrapper's log was not empty — it ended on the line that says exactly what happened:
+
+```
+bee_backend: error: More than one copy of bee_backend running in <project> -- PID 8644 waiting
+```
+
+PID 8644 was already gone. Unity waited on a process that had died, wrote nothing more, and held `Temp/UnityLockfile` until it was killed; the next `unity.sh` refused with the lock message and so looked like the editor being open. **Read the tail of the run's own log before deciding a silent batch run is merely slow** — a genuine reimport keeps writing, and a deadlock says so in one line. The cure is to stop the orphan, delete `Temp/UnityLockfile` and run it again; the second run took about four minutes with the import already done.
+
 **Editing any `.cs` while a batch run is in flight makes its result meaningless, and the run still
 says "passed"** (2026-09-20, two wasted runs). Unity refreshes the asset database once at startup
 and compiles from what it found; a file saved after that point is simply not in the run. The exit
@@ -67,6 +75,19 @@ worth changing.
 **The tests are not the slow part.** The suite executes in about 40 ms. A Unity EditMode cycle takes minutes, and essentially all of it is Unity booting, refreshing the asset database (~7 s) and reloading the script domain (~3 s compile). **Filtering which tests run therefore saves nothing.** The only thing that helps is not starting Unity.
 
 **Two tiers.** `scripts/test-fast.sh` runs the same Sim test sources through mirror projects in `tools/dotnet/` with no editor, in about 1.7 seconds warm. `scripts/unity.sh test editmode` takes about 37 seconds with the watchdog and is the authority, because only Unity proves the assembly-definition boundaries hold and only Unity can run editor or PlayMode tests. Work in the fast tier, gate on the slow one. See `docs/setup/local-dev.md` §10.
+
+**An inconclusive test is printed as "Skipped" and counted as nothing.** `Assume.That` answers a
+failed precondition with NUnit's *Inconclusive*, which is the point of it — but `dotnet test`
+prints that as `Skipped <TestName>` and puts it in neither column of the summary, so a run can say
+`Skipped: 0` and list fifteen skipped tests in the same output. Filter down to one of them and the
+summary reads `Failed: 0, Passed: 0, Total: 0`: a green run in which nothing happened. On
+2026-09-21 fifteen Sim tests were in that state, three of them written for specific owner reports
+about the rule that session was fixing; all three failed the same `Assume`, and the oldest threw on
+its first assertion the moment it was allowed to run. **`Assume` is for a precondition that is
+genuinely allowed to be absent** — a board that might have no water, an optional pack. A fixture
+the test builds for itself is not that: if it cannot be built, `Assert` and fail loudly. And
+**grep `^  Skipped` after a full run** and check the list against what is deliberately `[Explicit]`
+or `[Ignore]`; there is no count to watch, so the list is the only signal.
 
 **Unity ships a .NET *runtime*, not an SDK.** `dotnet --list-sdks` against a runtime-only install prints an error to stdout and still exits 0, so the exit code cannot be trusted; check for an actual version line. Install a real SDK without admin rights with the official script, which lands in `%USERPROFILE%\.dotnet`.
 
@@ -2390,3 +2411,116 @@ in full. **The real fix for this class is to assert the shape of a cost rather t
 the defect it guards made publishing scale with the area of the layer, so the same measurement on
 two board sizes differs by four with the bug and by nothing without it, and a ratio does not care
 how fast the machine is. Recorded in the test rather than done on a red `main`.
+
+## Re-check the base branch before claiming a finding, not only before starting
+
+A session on 2026-09-20 read `main` and its own base branch once, at the start, then worked for
+several hours. It was wrong three times for that one reason:
+
+- It reported a stale `CLAUDE.md` known gap as its own finding. The baseline audit had caught it the
+  previous day and already struck it through on `main` — where the line is deliberately **kept**
+  struck through as the worked example of that exact failure.
+- It wrote a whole unit that already existed. A parallel agent added the identical growing rate
+  curve on the branch this one was based on — same def values, same re-baked content fingerprint,
+  because it was byte-for-byte the same change. A test on that branch even said *"another agent is
+  addressing skills"*. Neither session looked at the other's head again after starting.
+- It worked around a bug that was already fixed, running the wiki gate under `python3.13` because
+  `build_wiki.py` had a 3.12-only f-string. `main` had repaired that line the day before.
+
+**The cost is not the wasted work, it is the false record.** Two design documents and a journal
+entry claimed credit for somebody else's change and had to be corrected, and a commit message
+asserted three goldens had moved when none had.
+
+**The checks, and they are seconds each:**
+
+- `git fetch origin main <your-base>` and re-read the diff **before writing a finding down**, not
+  just before starting. A claim that something is stale, missing or broken is a claim about a branch
+  at a moment, and both move.
+- Before adding a Def value or a table row, grep the base branch for it. An identical change on
+  another branch is far likelier than it sounds when several agents run at once.
+- Before working around tooling that fails, check whether the base fixed it. A workaround that
+  outlives its bug is a second mechanism nobody knows to delete.
+
+**And the reverse holds when several agents run in parallel**, which this project does: assume
+somebody else may be in the same file, and prefer a unit that is defensibly yours — a bug nothing
+else is looking at — over one any concurrent session would reach for from the same stale note.
+
+## The licensed packs must not live inside a worktree
+
+**2026-09-20: they did, and the machine lost them.**
+
+`Assets/Synty` is gitignored, so every checkout needs its own copy or its own link. The arrangement
+that had grown up on the Windows machine was a chain: one worktree, `D:\code\odyssey-audio`, held
+the real folder, `D:\code\odyssey\Assets\Synty` was a junction to it, and the other fifteen
+checkouts were junctions to one or the other. Sixteen checkouts, one copy, no duplication — which is
+why it looked like the right answer.
+
+It has one property that is not obvious until it bites: **the real packs are inside something whose
+whole purpose is to be disposable.** A worktree is removed when its branch is done. `git worktree
+remove` and a recursive delete both take the directory, and the directory is where the packs were.
+That worktree was removed while a session was running — the session read the packs at the start and
+found the directory gone later — and every junction on the machine went dangling at once, including
+the one in the main checkout. Nothing is in the recycle bin: neither `rm -rf` nor `git worktree
+remove` puts anything there.
+
+**The symptom does not look like a missing folder.** The build is green, both test tiers pass, and
+`failed` is 0 in both. What changes is the *skipped* count: five PlayMode tests ignore themselves
+with reasons like *"the colonist rows resolved to no art"*, and the game draws untextured primitives
+in the editor. A lower `passed` number with `failed=0` is the tell — **read the skip reasons before
+reading it as a regression**, and read it as a question about the machine rather than the branch.
+
+**The rule:** the real packs live somewhere no git command will ever remove — a plain directory
+outside every checkout, such as `D:\assets\Synty` — and *every* checkout including the main one is a
+junction into it. Then a worktree removal can only ever take a link.
+
+**Recovery, when it has already happened.** A deleted worktree lands in `D:\$RECYCLE.BIN` under a
+`$R…` directory, and **the COM recycle-bin listing does not show these** — enumerate the `$R*`
+directories on disk instead. Most of the copies found that way are themselves junctions and restore
+nothing; the one that is a *real* directory is the one that matters, and on this project it has
+**18 entries, 15,868 files and 1.54 GB**. `robocopy <src> <dst> /E /COPY:DAT /DCOPY:DAT` it to the
+canonical path, copy `Assets\Synty.meta` beside it, then sweep `D:\code` for junctions whose target
+no longer resolves and repoint them. Copy rather than move, so the bin copy survives as a fallback.
+
+**And before removing a worktree, unlink first:**
+
+```
+cmd /c rmdir "D:\code\<worktree>\Assets\Synty"     # removes the junction, not its target
+git worktree remove D:\code\<worktree>
+```
+
+`rmdir` on a junction removes the link. A recursive delete follows it.
+## A dead process can hold the build backend, and the batch run waits for it for ever
+
+`scripts/unity.sh test editmode` wrote its log up to `Compiling Scripts` and then sat there. The last
+line was
+
+```
+bee_backend: error: More than one copy of bee_backend running in D:\code\odyssey-entomb -- PID 15200 waiting
+```
+
+and **PID 15200 did not exist** — it belonged to a batch run that had been killed earlier. The lock
+is not reclaimed when its owner dies, so Unity waited, wrote no `TestResults/EditMode.xml`, and gave
+every appearance of a slow compile. Ten minutes went into deciding whether it was slow or stuck.
+
+**The tell is the log not growing.** A compiling editor writes something every few seconds; a waiting
+one writes nothing at all after that line. Check the log's size twice a minute apart before assuming
+contention, and check the named PID actually exists:
+
+```powershell
+Get-CimInstance Win32_Process -Filter "ProcessId=15200"
+```
+
+Nothing back means the lock is stale. Kill the waiting editor — check its command line names *your*
+project path first, because this machine runs several — and start the run again; a fresh run takes
+the lock cleanly. Do not delete anything under `Library/` to fix it.
+
+## A wait measured in frames is a measurement of the frame rate
+
+`BuildAppearanceTests` asked how long after a wall is built the renderer knows about it, and counted
+**frames**. It read 0 alone and 13 in a full PlayMode run on the same commit, and failed the tier on
+the second. Nothing was slower: the render mirror is written by a snapshot contributor, so it moves
+once a *tick*, and a rig with nothing to draw runs frames far faster than the fixed tick.
+
+**When something is published by the simulation, assert the tick.** Frames are a unit of how fast the
+machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
+both of those are worth logging. The frame count is a diagnostic, never a gate.

@@ -49,6 +49,10 @@ namespace Odyssey.Hud
 
         /// <summary>The Events panel (A6): incidents that happened, under the alerts in the same column.</summary>
         Bulletins,
+
+        /// <summary>The transient toast stack, at the foot of that same column (SK4).</summary>
+        Toasts,
+
         DepthRail,
         OrdersStrip,
         Inspect,
@@ -107,8 +111,15 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly int Bulletins;
 
+        /// <summary>
+        /// Toasts on screen right now (SK4). Zero hides the stack outright, which is its resting
+        /// state: a toast lasts six seconds and nothing raises one most of the time, so this is
+        /// zero whenever the coverage criterion is measured.
+        /// </summary>
+        public readonly int Toasts;
+
         public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
-                          int skillRows = 0, int cellRows = 0, int bulletins = 0)
+                          int skillRows = 0, int cellRows = 0, int bulletins = 0, int toasts = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
@@ -118,6 +129,7 @@ namespace Odyssey.Hud
             SkillRows = Math.Max(0, skillRows);
             CellRows = Math.Max(0, cellRows);
             Bulletins = Math.Max(0, bulletins);
+            Toasts = Math.Max(0, toasts);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -816,6 +828,70 @@ namespace Odyssey.Hud
         /// page's own grid can be derived from it rather than from a second literal.</summary>
         public const int SkillRowWidth = 256;
 
+        // ---------------------------------- the skill row's width budget (owner, 2026-09-21)
+        //
+        // The experience bar moved out of the row's bottom edge and INTO the row, between the name
+        // and the level, on the owner's first look at it: *"the experience bar needs to sit between
+        // the skill label and the skill value"*. That turns a decoration drawn over the row into a
+        // fifth column of it, so the row now has a width budget and these are it. `Hud.uss` is
+        // written from these numbers and `HudLayoutTests.TheSkillRowsPartsFitTheRow` is what stops
+        // the two drifting.
+        //
+        // <b>The bar is a fixed width and the NAME is what flexes</b>, which is the decision worth
+        // keeping. Everything to the bar's right is a fixed width, so a fixed bar sits at a fixed
+        // offset from the row's right edge and every bar in the grid lines up on both edges without
+        // anything measuring text. Flex the bar instead and its left edge tracks the name beside
+        // it, so "Construction" and "Mining" would start their bars in different places and the
+        // column would read as ragged.
+
+        /// <summary>The icon badge at the head of a skill row (<c>IconBadge.RowSize</c>).</summary>
+        public const int SkillIconWidth = 17;
+
+        /// <summary>Between the icon and the name.</summary>
+        public const int SkillIconGap = 9;
+
+        /// <summary>
+        /// The experience bar's track (SK3). Fixed, so every bar in the grid aligns — see the note
+        /// above.
+        /// </summary>
+        public const int SkillBarWidth = 72;
+
+        /// <summary>The air either side of the bar, so it is not crowded by the name or the
+        /// number (owner, 2026-09-21: <i>"with good spacing"</i>).</summary>
+        public const int SkillBarGap = 8;
+
+        /// <summary>
+        /// How thick the bar is drawn. Six rather than the three it shipped at, on the owner's
+        /// first look: <i>"can we make the bars slightly thicker if space allows"</i>.
+        ///
+        /// <para><b>The row does not grow for it and must not.</b> <see cref="SkillRow"/> is 19 and
+        /// the colonist pane is one fixed height across every tab on purpose, so the bar is only
+        /// ever allowed the height it can take inside a row that is already that tall. Six leaves
+        /// six and a half either side of it, centred. This is the same constraint the absolutely
+        /// positioned version was protecting, met by staying short rather than by leaving the
+        /// flow.</para>
+        /// </summary>
+        public const int SkillBarHeight = 6;
+
+        /// <summary>The level number's column.</summary>
+        public const int SkillLevelWidth = 22;
+
+        /// <summary>The passion pips, and the air before them.</summary>
+        public const int SkillPassionWidth = 18;
+
+        public const int SkillPassionGap = 7;
+
+        /// <summary>
+        /// What is left for the name once every fixed part of the row has taken its width. The
+        /// name is the only thing that flexes, so this is the number that shrinks when somebody
+        /// widens anything else — which is why it is derived here and asserted rather than written
+        /// into the stylesheet as a literal nobody would recompute.
+        /// </summary>
+        public const int SkillNameWidth =
+            SkillRowWidth - SkillIconWidth - SkillIconGap
+            - SkillBarGap - SkillBarWidth - SkillBarGap
+            - SkillLevelWidth - SkillPassionGap - SkillPassionWidth;
+
         /// <summary>Between two columns of skills.</summary>
         public const int SkillColumnGap = 18;
 
@@ -1264,17 +1340,35 @@ namespace Odyssey.Hud
             boxes[HudRegion.Clock] = new HudRect(clockX, Edge, ClockWidth, ClockHeight);
 
             // ---- alerts, under the clock in the same column, hidden when there are none
+            float alertsTop = Edge + ClockHeight + Gap;
+            float alertsHeight = AlertsHeight(content.Alerts);
             boxes[HudRegion.Alerts] = content.Alerts <= 0
                 ? default
-                : new HudRect(clockX, Edge + ClockHeight + Gap, ClockWidth, AlertsHeight(content.Alerts));
+                : new HudRect(clockX, alertsTop, ClockWidth, alertsHeight);
 
             // ---- events, under the alerts in the same column, or under the clock when there are
             // none, because the column is a flex column and a hidden panel takes no room in it.
-            float bulletinsTop = Edge + ClockHeight + Gap
-                                 + (content.Alerts > 0 ? AlertsHeight(content.Alerts) + Gap : 0f);
+            float bulletinsTop = alertsTop + (content.Alerts > 0 ? alertsHeight + Gap : 0f);
+            float bulletinsHeight = BulletinsHeight(content.Bulletins);
             boxes[HudRegion.Bulletins] = content.Bulletins <= 0
                 ? default
-                : new HudRect(clockX, bulletinsTop, ClockWidth, BulletinsHeight(content.Bulletins));
+                : new HudRect(clockX, bulletinsTop, ClockWidth, bulletinsHeight);
+
+            // ---- toasts, at the foot of that same column (SK4). Panel A6 puts the bulletin
+            // stack "right edge, below the alerts" and a toast is the passing member of that
+            // family, so it takes the same column and the same width. It is hidden when there are
+            // none, which is most of the time — so the coverage criterion, which is stated with
+            // nothing selected and no alerts, never sees it.
+            //
+            // <b>It is last in the column, under the Events panel, and that is the whole reason
+            // the order is this way round.</b> A toast arrives every couple of minutes and leaves
+            // six seconds later; anything below it in a stacked column would step down and back
+            // up each time. Nothing is below it, so nothing moves.
+            boxes[HudRegion.Toasts] = content.Toasts <= 0
+                ? default
+                : new HudRect(clockX,
+                    bulletinsTop + (content.Bulletins <= 0 ? 0f : bulletinsHeight + Gap),
+                    ClockWidth, ToastsHeight(content.Toasts));
 
             // ---- colonist strip, centred in what is left between the two top corners
             int cards = VisibleCards(width, height, content.Colonists);
@@ -1344,6 +1438,15 @@ namespace Odyssey.Hud
         public static float BulletinsHeight(int bulletins) =>
             bulletins <= 0 ? 0f : Frame + Pad + AlertHeaderBlock + bulletins * BulletinHeight +
                                   (bulletins - 1) * BulletinGap + Pad;
+
+        /// <summary>
+        /// The toast stack's height (SK4). One row per toast at the alerts' own row height, and
+        /// <b>no header block</b>: an alerts panel earns a heading because it is a standing list a
+        /// player returns to, and a toast is a line that is already leaving. A heading over it
+        /// would also be the tallest thing in the stack for most of its life.
+        /// </summary>
+        public static float ToastsHeight(int toasts) =>
+            toasts <= 0 ? 0f : Frame + Pad + toasts * AlertHeight + (toasts - 1) * AlertGap + Pad;
 
         /// <summary>
         /// The rail's chrome: everything that is not a cell.

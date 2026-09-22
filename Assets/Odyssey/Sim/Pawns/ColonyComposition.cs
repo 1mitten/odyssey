@@ -73,6 +73,10 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, edificeSave, pawns.Items, pawns.Pawns, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // So a site can carry its detour in the navigation flags, and so raising a building
+            // can ask who is standing in it. Set here because this is the one place that holds
+            // both the graph and the grid.
+            construction.Nav = nav;
             // Built here rather than passed in, for the same argument the construction grid's
             // `out` was: an optional growing-zone parameter is how a caller forgets one, and a
             // forgetful build is a paint tool that silently does nothing. Reached through
@@ -88,6 +92,20 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, new Storage.StorageSettingsTable(pawns.Content), pawns.Items, pawns.Chunks);
             pawns.Storage = storage;
             pawns.Items.Membership = storage;
+            // And the built stores, sharing the zones' own settings table rather than keeping a
+            // second one: "what the colony accepts where" stays one table, one save section and
+            // one walk of the hash, whether the store in question was painted or raised. It takes
+            // the designations because a shelf being emptied is derived from the deconstruct order
+            // standing on it, rather than from a flag that could disagree with the order.
+            var units = new Storage.StorageUnits(
+                pawns.Cells, edifices, storage.Settings, pawns.Items, designations);
+            pawns.StorageUnits = units;
+            // And back the other way, which is what makes SettingsAt one resolver rather than two:
+            // the priority and filter intents name a cell, and that cell may be a painted zone's or
+            // a raised shelf's. Without this the whole storage control silently does nothing over a
+            // shelf — the panel opens and closes again, which is the shape of fault design 20 §8
+            // records as "Assign did nothing, three times".
+            storage.Units = units;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -111,6 +129,9 @@ namespace Odyssey.Sim.Pawns
                 .AddHashable(edificeSave)
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
+                // After navigation, so it reads the flags this tick's edits produced: nobody is
+                // left standing inside solid world, whatever put the world there.
+                .AddSystem(_ => new TrappedPawnSystem(pawns))
                 .AddSystem(_ => enclosure)
                 // Starting skills (U37), before Needs and the job pipeline for the same reason
                 // they run: a colonist should not be scanned for work on the first tick it is
@@ -138,7 +159,8 @@ namespace Odyssey.Sim.Pawns
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
-                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure, storage))
+                .AddSnapshotContributor(new CellDetailContributor(
+                    pawns.Cells, edifices, growing, enclosure, storage, units, pawns.Items))
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
@@ -168,6 +190,7 @@ namespace Odyssey.Sim.Pawns
             incidents.Attach(builder);
             growing.Attach(builder);
             storage.Attach(builder);
+            units.Attach(builder);
             return builder;
         }
     }

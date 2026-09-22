@@ -48,6 +48,22 @@ namespace Odyssey.Sim.Pawns
                 if (designations.At(cell) != DesignationKind.Deconstruct) continue;
                 if (!designations.CanDeconstruct(cell)) continue;
 
+                // **A store with anything in it is not offered to a deconstructor at all.** The
+                // order still stands, and haulers can see it: an ordered store ranks its contents
+                // below every real store, so the colony empties it first and a deconstructor
+                // arrives to a store that is already empty.
+                //
+                // Without this gate the refusal below is a loop rather than a rule. The work is
+                // banked on the cell, so a colonist would walk over, swing until the work was
+                // done, be refused, and be handed the same site again on the next think — for
+                // ever, until the think-tree's own circuit breaker parked her. The fault would
+                // then read as idleness, which is a long way from "that shelf cannot be emptied".
+                if (ctx.StorageUnits != null)
+                {
+                    Storage.StorageUnit? store = ctx.StorageUnits.AtCell(cell);
+                    if (store != null && !ctx.StorageUnits.IsEmpty(store)) continue;
+                }
+
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
 
@@ -125,6 +141,21 @@ namespace Odyssey.Sim.Pawns
             ToilProgress += rate;
             if (designations.AddWork(cell, rate) < ConstructionContent.WorkToDeconstruct(building, stuff) * Rates.Scale)
                 return JobStatus.Ongoing;
+
+            // The last word before the thing comes down: a store whose contents have nowhere to go
+            // is **not** taken apart. A player's order that cannot be carried out is refused, not
+            // approximated — losing things to a building collapsing is a consequence, losing them
+            // to your own tidying is a bug.
+            //
+            // Reached only when something was put into the store during the final swing, because
+            // the giver above will not offer a store that is not already empty. It is the guard
+            // rather than the rule, and it is here because "the gate held" is not something to
+            // assume about a colony with several colonists in it.
+            if (ctx.StorageUnits != null)
+            {
+                Storage.StorageUnit? store = ctx.StorageUnits.AtCell(cell);
+                if (store != null && !ctx.StorageUnits.CanSpillAll(ctx, store)) return JobStatus.Failed;
+            }
 
             designations.Clear(cell);
             int tick = ctx.CurrentTick;

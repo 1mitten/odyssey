@@ -17,7 +17,10 @@ namespace Odyssey.Sim.Pawns
     {
         public PawnContext(CellGrid cells, NavGraph nav, PathService paths, PawnContent content)
         {
-            NotZoned = cell => Growing == null || Growing.ZonePlantAt(cell) < 0;
+            _openGround = cell =>
+                (Growing == null || Growing.ZonePlantAt(cell) < 0)
+                && (Storage == null || !Storage.IsStorage(cell)
+                    || Storage.Accepts(cell, _openGroundDef));
             Cells = cells;
             Nav = nav;
             Paths = paths;
@@ -125,18 +128,63 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public Storage.StorageZones? Storage { get; set; }
 
+        /// <summary>
+        /// The colony's built stores — shelves — or null where it has none and in a bare fixture.
+        /// Null-guarded at every read, exactly as <see cref="Storage"/> is, so a colony that was
+        /// never given one simply has no containers rather than throwing.
+        /// </summary>
+        public Storage.StorageUnits? StorageUnits { get; set; }
 
         /// <summary>
-        /// "This cell is in no growing zone" as a delegate that already exists.
+        /// Where a thing is, as a cell a colonist can walk to: its own cell, the cell of the store
+        /// holding it, or -1 while it is in a pair of hands.
         ///
-        /// <para>Both callers used to write the lambda inline, and a lambda that captures
+        /// <para><b>One owner, because five scans want it.</b> Every one of them used to write
+        /// <c>item.Cell</c> and mean "where is it", and that was true while a thing was either on
+        /// the floor or carried. With a third home the expression is wrong in a way that reads as
+        /// right — a contained thing answers -1, so a distance to it is garbage and a reachability
+        /// test against it is nonsense — and five copies of a wrong expression is five places to
+        /// fix it.</para>
+        /// </summary>
+        public int WhereIs(ColonyItem item)
+        {
+            if (item.Cell >= 0) return item.Cell;
+            if (item.ContainerId == 0) return -1;
+            return StorageUnits?.CellOfContainer(item.ContainerId) ?? -1;
+        }
+
+
+        /// <summary>The def <see cref="OpenGroundFor"/> was last asked about.</summary>
+        int _openGroundDef;
+
+        /// <summary>The one instance of the predicate <see cref="OpenGroundFor"/> hands out.</summary>
+        readonly System.Func<int, bool> _openGround;
+
+        /// <summary>
+        /// "A thing of this kind may be set down here and will not be in anybody's way": the cell
+        /// is in no growing zone, and no store here refuses it.
+        ///
+        /// <para><b>It asks about both kinds of zone, and the def, because the callers always
+        /// meant it to.</b> Until 2026-09-21 this was <c>NotZoned</c>, which knew only about
+        /// growing zones while both of its call sites said in their comments that they were
+        /// looking for ground "outside every zone" — so a rock lifted off a field could be set
+        /// down inside a meals-only stockpile, which is the very state the haul scan now exists
+        /// to undo. A store that <em>accepts</em> the thing is not excluded: that is a home, not
+        /// an obstruction, and the destination scan would have chosen it first anyway.</para>
+        ///
+        /// <para><b>One delegate, allocated once in the constructor.</b> A lambda that captures
         /// anything is an allocation every time the line is reached — in a work-giver scan, that
         /// is per candidate per think. Measured on a 45 x 45 field: 199 bytes a tick with six
-        /// colonists against 4 with none, all of it pawn-scaled. Held here rather than on either
-        /// giver because both want the same question and the context is what both already
-        /// have.</para>
+        /// colonists against 4 with none, all of it pawn-scaled. The def travels in a field
+        /// rather than in a capture for that reason, which is safe because the simulation is
+        /// single-threaded and the predicate is read inside the one call it is handed to — never
+        /// stored, never deferred.</para>
         /// </summary>
-        public System.Func<int, bool> NotZoned { get; }
+        public System.Func<int, bool> OpenGroundFor(int defIndex)
+        {
+            _openGroundDef = defIndex;
+            return _openGround;
+        }
 
         /// <summary>The world being ticked, valid inside a pawn system's tick.</summary>
         public SimWorld? World { get; private set; }

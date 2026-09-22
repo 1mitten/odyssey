@@ -681,13 +681,14 @@ namespace Odyssey.Hud
                     new[] { (AlmanacKeys.Mining, "governing skill"), ("Rock", "target terrain medium"), ("Iron Ore", "valuable resource vein") }
                 ),
                 new AlmanacEntry(
-                    "Haul", "Work types", "Transporting loose items to designated stockpile zones", "Work Type", "Logistics", false, "#7fd0e0",
+                    "Haul", "Work types", "Moving loose items into stores, and unwanted ones back out", "Work Type", "Logistics", false, "#7fd0e0",
                     new AlmanacIcon("work_haul", "#7fd0e0", "M5 8h14M5 8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"),
                     "Ensures crops are hauled indoors before rain rots them, and keeps building sites supplied with materials.",
                     "Active work type · All colonists assigned", "Manage priorities",
                     new[] {
                         ("Governing skill", "None (All pawns capable)"), ("Carry capacity", "75 units standard"), ("Fatigue rate", "Moderate to high"),
                         ("Distance scaling", "Speed determines efficiency"), ("Perishable bias", "Prioritizes food over metal scrap"),
+                        ("Store clearing", "Anything a store refuses is carried back out"),
                         ("Priority rank", "Rank 4 baseline or Rank 1 during harvest"), ("Secondary tasks", "Clear corpse debris")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
@@ -695,7 +696,11 @@ namespace Odyssey.Hud
                         effects: new[] {
                             ("Larder restocking", "Carries carrots and ration packs from fields into freezing rooms."),
                             ("Blueprint supply", "Pre-loads wood and stone to planned wall segments."),
-                            ("Corridor clearing", "Removes scrap metal cluttering indoor hallway thoroughfares.")
+                            ("Corridor clearing", "Removes scrap metal cluttering indoor hallway thoroughfares."),
+                            // Added 2026-09-21 with the behaviour itself: a store's filter governs
+                            // what is already in it as well as what arrives, so the entry that
+                            // describes hauling has to say who empties one.
+                            ("Store clearing", "Carries out whatever a store has been told not to accept, to a store that wants it or to open ground.")
                         }),
                     new[] { ("Ration Pack", "critical freight commodity"), (AlmanacKeys.Salvage, "cleared debris"), ("Construct", "recipient of hauled construction materials") }
                 )

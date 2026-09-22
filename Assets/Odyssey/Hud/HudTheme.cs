@@ -123,7 +123,7 @@ namespace Odyssey.Hud
 
         /// <summary>Panel fill. Translucent over the world and blurred behind, so a panel reads as
         /// glass laid on the board rather than as a hole cut in it.</summary>
-        public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 0.86f);
+        public static readonly HudColour PanelFill = new HudColour(12, 16, 20, 1f);
 
         /// <summary>The command bar's fill: the same colour, a little more opaque, because the
         /// bar is always on screen and always carries text.</summary>
@@ -375,6 +375,78 @@ namespace Odyssey.Hud
         // Earthy brown since 2026-09-18 (owner: the green was hard to see on the surface) —
         // worked soil, matching the tint the drawn field wears. Was olive 0xa8c06a.
         public static readonly HudColour ZonesHue = new HudColour(0xc3, 0x98, 0x5c);
+
+        /// <summary>
+        /// The five storage rungs, low to high — <b>cool to warm as urgency rises</b>, so the
+        /// ladder reads without reading the words (design brief, 2026-09-21).
+        ///
+        /// <para>This is the second place in the HUD allowed a hue per row, and it earns it on the
+        /// same terms <see cref="BuildCategoryTiers"/> does: a closed set, always drawn together,
+        /// always in the same order, where the colour separates adjacent things rather than asking
+        /// to be recognised out of context. The acceptance criterion is the same one — each is
+        /// distinct with the labels masked.</para>
+        ///
+        /// <para><b>Normal is the accent cyan on purpose.</b> It is the rung a zone is founded at
+        /// and the one most zones stay on, so the commonest state wears the colour the interface
+        /// already means "ordinary, current" by.</para>
+        /// </summary>
+        public static readonly HudColour[] StoragePriorityHues =
+        {
+            // **The cool end of the brief's ladder did not survive its own acceptance criteria**,
+            // and the two faults pull in opposite directions, which is why both numbers moved.
+            //
+            // Grey #6b737a measured 2.71:1 against the panel where the floor is 4.5, and slate
+            // #7f9ab0 measured 4.45 — near enough to pass by eye and not near enough to pass. The
+            // hue is a *label* colour when a rung is selected, so both had to come up. But
+            // lightening grey towards slate then put the two within 41 channel-points of each
+            // other, under the 60 the order hues are held to, and they are adjacent rows.
+            //
+            // So grey goes the other way: a pale neutral, far from slate, and reading as inactive
+            // — which is what the bottom rung means. It is the only rung with no colour in it at
+            // all, so it is told apart by that as much as by its value.
+            new HudColour(0xc6, 0xc9, 0xcb), // Last — pale neutral
+            new HudColour(0x8c, 0xa6, 0xbb), // Low — slate
+            new HudColour(0x7f, 0xd0, 0xe0), // Normal — cyan
+            new HudColour(0x7f, 0xc0, 0x7a), // Preferred — green
+            new HudColour(0xe0, 0xa4, 0x5c), // Urgent — amber
+        };
+
+        /// <summary>
+        /// The six item categories, in registry order.
+        ///
+        /// <para>The category row is tinted with its hue at a tenth and its label set in the hue,
+        /// so the six blocks stay findable while a player scrolls sixty rows. <b>Commodity rows
+        /// stay untinted</b>: the colour marks the group, not every line, which is the difference
+        /// between a coded list and a striped one.</para>
+        ///
+        /// <para>Materials' tan and Urgent's amber are the two the brief singles out for contrast,
+        /// and <c>StorageThemeTests</c> holds every one of the eleven to
+        /// <see cref="HudContrast.BodyMinimum"/> over the panel rather than taking the brief's word
+        /// for it.</para>
+        /// </summary>
+        public static readonly HudColour[] ItemCategoryHues =
+        {
+            new HudColour(0x7f, 0xb8, 0x5a), // Food
+            // The reds came up too: #d95a6a measured 3.50 and #c85a3f was heading the same way.
+            // Dark saturated reds are the hardest thing to read as a label on a dark panel, and
+            // these are labels. Lightened until both clear the floor and stay clear of each other.
+            new HudColour(0xf0, 0x86, 0xa8), // Medicine
+            // The brief's tan was #b0793f, 55 channel-points from Weapons' #c85a3f — under the 60
+            // the order hues are already held to, and the two sit three rows apart in a list the
+            // colour exists to make scannable. Pushed yellower; every other pair is well clear.
+            new HudColour(0xc4, 0xa0, 0x5a), // Materials
+            new HudColour(0xbb, 0x94, 0xdd), // Books
+            new HudColour(0x8f, 0xb3, 0xd9), // Items
+            new HudColour(0xe8, 0x8d, 0x66), // Weapons
+        };
+
+        /// <summary>The rung's hue, or <see cref="TextDim"/> for a rung that does not exist.</summary>
+        public static HudColour StoragePriorityHue(int rung) =>
+            (uint)rung < (uint)StoragePriorityHues.Length ? StoragePriorityHues[rung] : TextDim;
+
+        /// <summary>The category's hue, or <see cref="TextDim"/> for a category that does not exist.</summary>
+        public static HudColour ItemCategoryHue(int category) =>
+            (uint)category < (uint)ItemCategoryHues.Length ? ItemCategoryHues[category] : TextDim;
 
         /// <summary>
         /// The Build categories' hues, in palette order.

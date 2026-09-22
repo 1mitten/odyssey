@@ -6,6 +6,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.Ui;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Construction;
@@ -303,8 +304,18 @@ namespace Odyssey.Presentation.Bootstrap
             Mirror = 0,
             /// <summary>The eye-to-colonist lines that ghost whatever stands on them.</summary>
             Sight,
-            /// <summary>The chunk buckets, the surround and the falling items.</summary>
+            /// <summary>The chunk buckets and the falling items. The surround is <b>not</b> here.</summary>
             World,
+            /// <summary>
+            /// The land beyond the board: its ground, its tufts and its wood.
+            ///
+            /// <para>Split out of <see cref="World"/> on 2026-09-21. It is submitted from inside
+            /// <c>ChunkRenderer.Render</c> and had been charged to the board ever since, which
+            /// made the one pass §6c spent a day cutting from 3.65 ms to 2.2 invisible on the
+            /// overlay and in <c>FrameTimeTests</c>. The two scale with different things and want
+            /// separate numbers.</para>
+            /// </summary>
+            Surround,
             /// <summary>The live Synty figures, capped at <c>PawnFigureDirector.FigureCeiling</c>.</summary>
             Figures,
             /// <summary>Sound: what played, what was culled, the ambience.</summary>
@@ -331,7 +342,117 @@ namespace Odyssey.Presentation.Bootstrap
             _sectionTimer.Restart();
         }
         float _smoothedFrameMs;
+        float _smoothedGpuMs;
+
+        Diagnostics.PerfTracer? _tracer;
+        double[] _traceSections = System.Array.Empty<double>();
+
+        /// <summary>
+        /// Whether a session writes a performance trace.
+        ///
+        /// <para><b>On in the editor and in development builds, off in a shipped one.</b> The
+        /// whole value of a trace is catching what does not reproduce, and a tracer that has to be
+        /// switched on before the interesting thing happens never is. It costs a dozen doubles a
+        /// frame and a kilobyte a second, and a released player has nobody to read it.</para>
+        ///
+        /// <para><b>And off in batch mode, which is not a detail.</b> A batch run is the test
+        /// tiers, and leaving it on there would do two bad things at once: every arm in
+        /// <c>FrameTimeTests</c> would silently start carrying the tracer's own cost in the numbers
+        /// this project quotes as budgets, and a PlayMode run would drop a dozen traces of its own
+        /// into the folder beside the ones somebody took by playing — where the newest file is no
+        /// longer theirs. The one arm that wants tracing sets this itself and puts it back in a
+        /// <c>finally</c>.</para>
+        /// </summary>
+        /// <para><b>Worked out on first use, not in a field initialiser, and that is not a
+        /// style choice.</b> A static field initialiser on a <see cref="MonoBehaviour"/> runs in
+        /// the serialisation context, where Unity forbids most of its own API — asking
+        /// <c>Application.isBatchMode</c> there throws <c>UnityException: get_isBatchMode is not
+        /// allowed to be called from a MonoBehaviour constructor (or instance field
+        /// initializer)</c>, and because it throws inside the static constructor the whole type
+        /// fails to initialise, so every later touch of it rethrows
+        /// <c>TypeInitializationException</c>. It shipped that way for one commit on 2026-09-21
+        /// and filled the console. Nothing reads this before the first frame, so a lazy default
+        /// costs nothing and cannot be asked at a moment Unity objects to.</para>
+        public static bool TraceEnabled
+        {
+            get => _traceEnabled ??= DefaultTracing();
+            set => _traceEnabled = value;
+        }
+
+        static bool? _traceEnabled;
+
+        static bool DefaultTracing() =>
+            !Application.isBatchMode && (Application.isEditor || Debug.isDebugBuild);
+
+        /// <summary>The trace this session is writing, or null when it is not writing one.</summary>
+        public Diagnostics.PerfTracer? Trace => _tracer;
+
+        /// <summary>
+        /// <see cref="FrameSection"/> by name, minus <c>Count</c>, in enum order — the names a
+        /// trace's section columns carry.
+        /// </summary>
+        public static readonly string[] SectionNames = BuildSectionNames();
+
+        static string[] BuildSectionNames()
+        {
+            var names = new string[(int)FrameSection.Count];
+            for (int i = 0; i < names.Length; i++) names[i] = ((FrameSection)i).ToString();
+            return names;
+        }
+        readonly UnityEngine.FrameTiming[] _frameTimings = new UnityEngine.FrameTiming[1];
         string _catalogueNote = string.Empty;
+
+        /// <summary>
+        /// Last frame's GPU time in milliseconds, smoothed, or <c>0</c> where the platform will
+        /// not say.
+        ///
+        /// <para><b>The one number nothing here could previously read, and the reason §6c's
+        /// findings stop where they do.</b> Every timing this class takes is a stopwatch around
+        /// CPU work, so a frame that is entirely GPU-bound — the case §6c predicts for
+        /// alpha-tested foliage at a real resolution, and cannot see at 640 x 480 — reads as a
+        /// cheap frame with a slow clock. Fill, overdraw and the shadow pass are invisible to
+        /// <see cref="SubmitMs"/> by construction.</para>
+        ///
+        /// <para>Needs <c>enableFrameTimingStats</c> in the player settings, which is on since
+        /// 2026-09-21, and a development build or the editor. Where it is unavailable it stays 0
+        /// and the overlay says so rather than printing a zero that looks like a measurement.</para>
+        /// </summary>
+        public float GpuFrameMs => _smoothedGpuMs;
+
+        // There was a CpuFrameMs here for one day, off FrameTiming.cpuFrameTime, and it was
+        // **wrong on screen in its first real session** (owner's 4K shots, 2026-09-21): it read
+        // 16.81 ms beside a 16.79 ms frame, which is right, then 296.32, then 17,898.04 over about
+        // twenty-five seconds — climbing, so not one poisoned sample decaying out of an average
+        // but a stream of bad ones. It is removed rather than repaired because **nothing was lost
+        // by removing it**: `frame` and `submit` are this class's own stopwatches, they agree with
+        // each other, and between them they say everything a CPU figure would have. The GPU time
+        // is kept because it is the one number nothing else here can get, and because the same
+        // shots show it steady and plausible — 8.40, 8.15, 9.12 ms at 3840 x 2160.
+        //
+        // The lesson, which is the general one: a figure the platform hands over is not a
+        // measurement until it has been seen beside a figure taken independently. This one was
+        // shipped on the strength of being plausible in a batch run at 640 x 480.
+
+        /// <summary>
+        /// Ask the platform what the last frame cost on each side of the bus.
+        ///
+        /// <para><c>CaptureFrameTimings</c> gathers what is ready, which lags the current frame by
+        /// a few; that is fine for a readout and useless for attributing a single frame, so the
+        /// numbers are smoothed exactly as the frame time is and read as a trend.</para>
+        /// </summary>
+        /// <summary>The largest a sample may be and still be a frame. Anything over is rejected.</summary>
+        const float PlausibleFrameMs = 500f;
+
+        void SampleFrameTimings()
+        {
+            FrameTimingManager.CaptureFrameTimings();
+            if (FrameTimingManager.GetLatestTimings(1, _frameTimings) == 0) return;
+
+            float gpu = (float)_frameTimings[0].gpuFrameTime;
+            if (gpu <= 0f || gpu > PlausibleFrameMs || float.IsNaN(gpu)) return;
+
+            _smoothedGpuMs = _smoothedGpuMs <= 0f ? gpu : Mathf.Lerp(_smoothedGpuMs, gpu, 0.05f);
+        }
 
         public SimWorld? World => _world;
 
@@ -894,6 +1015,18 @@ namespace Odyssey.Presentation.Bootstrap
                 : $"catalogue {moduleCatalogue.name}: {moduleCatalogue.ResolvedPrefabCount()}/" +
                   $"{moduleCatalogue.Entries.Count} rows have art";
 
+            // Mesh the whole board before the first drawn frame, ignoring the per-frame budget.
+            //
+            // **This is where the meshing stall is meant to be.** Every chunk of a new world is
+            // never-meshed, so a budgeted first frame would draw almost nothing and the board would
+            // arrive in instalments over several hundred frames while the player watched it build
+            // itself. The player is already waiting here — 6c.6 measured 14.7 seconds of worldgen
+            // in this very call on the Huge board — so one more pass costs them nothing they can
+            // tell apart from the wait they are already in, and it buys a first frame that is
+            // whole. Everything after this frame is budgeted (6c.7).
+            if (_renderer != null && cameraRig != null)
+                _renderer.PrimeAll(cameraRig.ActiveLayer, cameraRig.slice);
+
             SessionChanged?.Invoke();
 
             Debug.Log(
@@ -925,16 +1058,31 @@ namespace Odyssey.Presentation.Bootstrap
         void OnGameSpeedRequested(int speed)
         {
             if (_world == null) return;
-            // Space toggles: asking for pause while already paused means "start again".
-            int next = speed == 0 && _world.GameSpeed == 0 ? 1 : speed;
+            // Space toggles: asking for pause while already paused means "start again" — at the
+            // speed the player was last running at, not at normal. SpeedControl owns that rule
+            // and the memory behind it.
+            int next = _speed.Resolve(speed, _world.GameSpeed);
             _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, next));
             _speedChangePending = true;
         }
 
+        /// <summary>What an unpause comes back to. See <see cref="Odyssey.Hud.SpeedControl"/>.</summary>
+        readonly Odyssey.Hud.SpeedControl _speed = new();
+
         bool _speedChangePending;
+
+        /// <summary>
+        /// The pointer's one owner. Not part of a session: the menu has a cursor too, and a
+        /// teardown must not leave the player without one.
+        /// </summary>
+        readonly CursorDirector _cursor = new();
 
         void Update()
         {
+            // Before the session guard, deliberately. There is a pointer on the main screen and
+            // during a load, and both of them are this object's to set.
+            UpdatePointerCursor();
+
             if (_world == null) return;
 
             int speed = _world.GameSpeed;
@@ -986,6 +1134,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             ReportRejections();
+            ConsiderAutosave();
 
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
@@ -1180,6 +1329,17 @@ namespace Odyssey.Presentation.Bootstrap
             }
             MarkSection(FrameSection.World);
 
+            // And then take the surround back out of it. The skirt is submitted from inside
+            // ChunkRenderer.Render — deliberately, because it must go to the GPU before the board
+            // does (see the comment there) — so it cannot be bracketed by a MarkSection of its
+            // own. Charging it here keeps the two numbers separate without moving the submission.
+            if (_renderer != null)
+            {
+                double surroundMs = _renderer.SurroundMs;
+                _sectionMs[(int)FrameSection.Surround] += surroundMs;
+                _sectionMs[(int)FrameSection.World] -= surroundMs;
+            }
+
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
             _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
@@ -1221,6 +1381,147 @@ namespace Odyssey.Presentation.Bootstrap
 
             float frameMs = Time.unscaledDeltaTime * 1000f;
             _smoothedFrameMs = _smoothedFrameMs <= 0f ? frameMs : Mathf.Lerp(_smoothedFrameMs, frameMs, 0.05f);
+            SampleFrameTimings();
+            SampleTrace(frameMs);
+        }
+
+        /// <summary>
+        /// Hand this frame to the trace, opening one if the session has not got one yet.
+        ///
+        /// <para>Opened here rather than at the end of <c>BuildSession</c> on purpose: by the time
+        /// a frame has run, the settings are seeded, the renderer exists and the board is meshed,
+        /// so the header describes the session the player is actually in rather than the one that
+        /// was requested. It costs one null check a frame for the life of the session.</para>
+        /// </summary>
+        void SampleTrace(float frameMs)
+        {
+            if (!TraceEnabled || _world == null) return;
+
+            if (_tracer == null)
+            {
+                _tracer = Diagnostics.PerfTracer.TryOpen(SectionNames, TraceEnvironment());
+                if (_tracer == null)
+                {
+                    // One failed attempt is enough. Retrying every frame would turn a full disk
+                    // into a stutter of its own, which is the diagnostic causing the fault.
+                    TraceEnabled = false;
+                    return;
+                }
+
+                _traceSections = new double[(int)FrameSection.Count];
+                // The tick's own phase split, which PhaseTrace has been able to produce since the
+                // tick benchmark was written and which nothing in the running game has ever read.
+                _world.PhaseSink = _tracer.PhaseSink;
+            }
+
+            System.ReadOnlySpan<double> split = FrameSectionMs;
+            for (int i = 0; i < _traceSections.Length && i < split.Length; i++)
+                _traceSections[i] = split[i];
+
+            var counters = new Odyssey.Hud.Diagnostics.FrameCounters(
+                tick: _world.CurrentTick,
+                speed: _world.GameSpeed,
+                drawCalls: _renderer?.DrawCalls ?? 0,
+                instances: _renderer?.InstancesDrawn ?? 0,
+                chunks: _renderer?.ChunksDrawn ?? 0,
+                cellPlates: _renderer?.CellPlatesDrawn ?? 0,
+                remeshed: _renderer?.ChunksMeshedThisFrame ?? 0,
+                materials: _renderer?.MaterialCount ?? 0,
+                surroundBatches: _renderer?.Skirt.BatchesDrawn ?? 0,
+                figures: _figures?.FigureCount ?? 0,
+                pawns: _colony?.Pawns.Pawns.Count ?? 0,
+                layer: cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer,
+                // The daylight cycle's own comment nominates this as "the only real cost in the
+                // cycle", and it runs in Update, which no FrameSection covers.
+                probes: _daylight?.ProbeUpdates ?? 0);
+
+            _tracer.Sample(Time.unscaledDeltaTime, frameMs, _smoothedGpuMs, _renderMs, _tickMs,
+                _traceSections, counters);
+        }
+
+        /// <summary>
+        /// Mark this moment in the trace. Returns the marker's number, or 0 if nothing is being
+        /// written.
+        /// </summary>
+        public int MarkTrace(string note) => _tracer?.Mark(note) ?? 0;
+
+        /// <summary>
+        /// Close the trace this session is writing, leaving the session running.
+        ///
+        /// <para>The phase sink goes back to null first, because it belongs to the tracer and a
+        /// simulation holding a disposed one would be recording into nothing. Turning tracing on
+        /// again opens a new file rather than reopening this one — see the debug row.</para>
+        /// </summary>
+        public void StopTrace()
+        {
+            if (_tracer == null) return;
+            if (_world != null) _world.PhaseSink = null;
+            _tracer.Dispose();
+            _tracer = null;
+        }
+
+        /// <summary>
+        /// What the trace's header says about this machine and this session.
+        ///
+        /// <para><b>This is the half that makes two traces comparable</b>, and the reader refuses
+        /// to diff two whose headers disagree on the things that would make a comparison a lie.
+        /// <c>docs/process.md</c>: "a number in a doc names its machine and its date; a timing
+        /// without either is a rumour."</para>
+        ///
+        /// <para>The graphics settings are walked through <c>SettingsDirector</c>'s own
+        /// <c>Order</c> and <c>LadderOrder</c> arrays rather than listed here, so a setting added
+        /// later appears in traces without anybody remembering to add it.</para>
+        /// </summary>
+        System.Collections.Generic.List<(string, string)> TraceEnvironment()
+        {
+            var pairs = new System.Collections.Generic.List<(string, string)>
+            {
+                ("started", System.DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture)),
+                ("unity", Application.unityVersion),
+                ("platform", Application.platform.ToString()),
+                ("editor", Application.isEditor ? "yes" : "no"),
+                ("gpu", SystemInfo.graphicsDeviceName),
+                ("gpu_api", SystemInfo.graphicsDeviceType.ToString()),
+                ("cpu", SystemInfo.processorType),
+                ("cpu_threads", SystemInfo.processorCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("ram_mb", SystemInfo.systemMemorySize.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("screen", $"{Screen.width}x{Screen.height}"),
+                ("fullscreen", Screen.fullScreenMode.ToString()),
+                ("vsync", QualitySettings.vSyncCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("frame_cap", Application.targetFrameRate.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            };
+
+            if (_model != null)
+                pairs.Add(("board", $"{_model.Size.SizeX}x{_model.Size.SizeZ}x{_model.Size.SizeY}"));
+            pairs.Add(("map", mapType.ToString()));
+            pairs.Add(("barren", barrenMap ? "yes" : "no"));
+            pairs.Add(("seed", _world != null
+                ? _world.Seed.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : seed.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+            pairs.Add(("scatter", (_renderer?.ScatterDensity ?? grassScatter)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("surround", (_renderer?.Skirt.Enabled ?? terrainSkirt) ? "on" : "off"));
+            pairs.Add(("tree_sector", Rendering.TerrainSkirt.TreeSectorMetres
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("far_tree_sector", Rendering.TerrainSkirt.FarTreeSectorMetres
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("tree_variants", Rendering.TerrainSkirt.TreeVariantSlots
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            pairs.Add(("figure_cap", (_figures?.MaxFigures ?? 0)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+            Odyssey.Hud.SettingsDirector? settings = Directors?.Settings;
+            if (settings != null)
+            {
+                foreach (Odyssey.Hud.GraphicsOption option in Odyssey.Hud.SettingsDirector.All)
+                    pairs.Add(("gfx." + option, settings.IsOn(option) ? "on" : "off"));
+                foreach (Odyssey.Hud.GraphicsLadder ladder in Odyssey.Hud.SettingsDirector.AllLadders)
+                    pairs.Add(("gfx." + ladder, settings.Value(ladder)
+                        .ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            }
+
+            return pairs;
         }
 
         /// <summary>
@@ -1638,6 +1939,18 @@ namespace Odyssey.Presentation.Bootstrap
                         pillow && _model != null ? _model.BedPillowModule : module,
                         partTint, BedShape.Part(root, facing, part));
                 }
+                return;
+            }
+
+            // The shelf's ghost, from the shelf's own shape — the same three boxes the mesher
+            // draws, so the thing under the pointer and the thing on the board cannot disagree
+            // about where a shelf stands in its cell. It stands against the back of the cell, so
+            // that disagreement would be visible rather than subtle.
+            if (what.edifice == CoreContent.EdificeShelf)
+            {
+                Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y, facing);
+                for (int part = 0; part < ShelfShape.PartCount; part++)
+                    _renderer.DrawGhost(module, tint, ShelfShape.Part(shelf, facing, part));
                 return;
             }
 
@@ -2274,6 +2587,18 @@ namespace Odyssey.Presentation.Bootstrap
                 }
             }
 
+            // A shelf, for the bed's reason one cell along: it does not fill the cell it stands in,
+            // so a cell highlight is wrong about how big it is and which way it faces. Its box is
+            // off-centre in plan — the carcass is against the back — which is why the bracket asks
+            // ShelfShape rather than being built from the cell here.
+            if (_model.EdificeDef(index) == CoreContent.EdificeShelf)
+            {
+                ShelfShape.WorldBounds(cell.X, cell.Z, cell.Y, _model.EdificeFacing(index),
+                    out Vector3 shelfCentre, out Vector3 shelfSize);
+                _renderer.DrawSelectionBracket(shelfCentre, shelfSize + Vector3.one * ItemCursorMargin, colour);
+                return;
+            }
+
             if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
             {
                 _renderer.DrawCellHighlight(cell, colour);
@@ -2338,6 +2663,25 @@ namespace Odyssey.Presentation.Bootstrap
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
+                // The line that answers "is this the CPU or the GPU", which nothing on this
+                // overlay could say until 2026-09-21. Read `gpu` against `frame` and `submit`:
+                // where it is at or above the frame time the frame is fill-bound, no amount of
+                // batching will move it, and the render-scale rung is the lever; where it is well
+                // under, the cost is on this side of the bus and the split below says which pass.
+                //
+                // **VSync and the frame cap are printed beside them because without those two the
+                // frame time is not evidence of anything.** A frame pinned at 16.7 ms with 8.4 ms
+                // of GPU and 5.5 ms of submit in it is a frame spending three milliseconds waiting
+                // for a monitor, and reading that as "we are at budget" is the wrong conclusion
+                // twice over — it hides both the headroom and the real cost.
+                $"gpu {Timing(_smoothedGpuMs)}   {Screen.width}x{Screen.height}" +
+                $"   vsync {(QualitySettings.vSyncCount > 0 ? $"on/{QualitySettings.vSyncCount}" : "off")}" +
+                $"   cap {(Application.targetFrameRate > 0 ? Application.targetFrameRate.ToString() : "none")}" +
+                // Where the trace is going and how much of it there is. Printed because "is it
+                // recording" is otherwise a question with no answer until the session is over,
+                // which is far too late to discover that it was not.
+                $"   trace {TraceNote()}\n" +
+                $"submit split: {SubmitSplit()}\n" +
                 $"sound played {_audio?.OneShotsPlayed ?? 0} culled {_audio?.DistanceCulled ?? 0}" +
                 $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +
                 $" noclip {_audio?.ClipMissing ?? 0}" +
@@ -2376,6 +2720,50 @@ namespace Odyssey.Presentation.Bootstrap
             GUI.Label(rect, text, style);
         }
 
+        /// <summary>
+        /// A millisecond figure, or <c>n/a</c> where the platform declined to give one.
+        ///
+        /// <para>Printed rather than zeroed deliberately. A GPU time of 0.00 ms and a GPU time
+        /// that could not be read look identical, and the second is the likelier of the two on a
+        /// non-development build — a zero there would be read as "the GPU is free", which is the
+        /// exact wrong conclusion to hand somebody hunting a fill-bound frame.</para>
+        /// </summary>
+        static string Timing(float ms) => ms > 0f ? $"{ms:0.00} ms" : "n/a";
+
+        /// <summary>The trace file and how many seconds are in it, or why there is not one.</summary>
+        string TraceNote()
+        {
+            if (_tracer == null) return TraceEnabled ? "opening" : "off";
+            if (!_tracer.Active) return "stopped: " + (_tracer.Fault ?? "unknown");
+            return System.IO.Path.GetFileName(_tracer.Path) + $" ({_tracer.Rows}s, {_tracer.Marks} marked)";
+        }
+
+        readonly int[] _splitOrder = new int[(int)FrameSection.Count];
+
+        /// <summary>
+        /// Last frame's draw block, section by section, largest first, skipping what rounds to
+        /// nothing.
+        ///
+        /// <para>Largest first because the list is read while something is wrong, and in that
+        /// state the only question is which name is at the front. Enum order would put
+        /// <c>Mirror</c> there every time.</para>
+        /// </summary>
+        string SubmitSplit()
+        {
+            for (int i = 0; i < _splitOrder.Length; i++) _splitOrder[i] = i;
+            System.Array.Sort(_splitOrder, (a, b) => _sectionMs[b].CompareTo(_sectionMs[a]));
+
+            var parts = new System.Text.StringBuilder();
+            for (int i = 0; i < _splitOrder.Length; i++)
+            {
+                double ms = _sectionMs[_splitOrder[i]];
+                if (ms < 0.005d) continue;
+                if (parts.Length > 0) parts.Append("  ");
+                parts.Append((FrameSection)_splitOrder[i]).Append(' ').Append(ms.ToString("0.00"));
+            }
+            return parts.Length > 0 ? parts.ToString() : "nothing measurable";
+        }
+
         GUIStyle? _developerOverlayStyle;
 
         /// <summary>
@@ -2389,8 +2777,28 @@ namespace Odyssey.Presentation.Bootstrap
             return _developerOverlayStyle;
         }
 
+        /// <summary>
+        /// Hand the two facts that decide the pointer to <see cref="CursorDirector"/>: where it is,
+        /// and what is in hand. Both are already published for other reasons, which is why this is
+        /// three lines and not a subscription.
+        ///
+        /// <para>With no rig the pointer is treated as being over the interface — on the main
+        /// screen and between sessions the HUD <i>is</i> the whole screen, and the arrow is what
+        /// belongs there.</para>
+        ///
+        /// <para>See <c>docs/design/28-pointer-cursor.md</c>.</para>
+        /// </summary>
+        void UpdatePointerCursor() => _cursor.Update(
+            cameraRig == null || cameraRig.PointerWasOverInterface,
+            _designate != null ? _designate.Director.Tool : DesignateTool.None);
+
         void OnDestroy()
         {
+            // Give the pointer back before anything else goes. `Cursor.SetCursor` outlives play
+            // mode, so a session that exits holding a crosshair leaves the *editor* wearing one.
+            _cursor.Release();
+            CursorArt.Forget();
+
             TeardownSession();
 
             // And the two things teardown deliberately leaves standing, because neither is part
@@ -2514,6 +2922,61 @@ namespace Odyssey.Presentation.Bootstrap
             return path;
         }
 
+        // ==================================================================== the autosave
+
+        /// <summary>
+        /// When the colony next writes itself. The rule and the day bookkeeping are
+        /// <see cref="Odyssey.Hud.AutosaveClock"/>, in the assembly the fast tier compiles; this
+        /// field is only where the running one lives.
+        /// </summary>
+        readonly Odyssey.Hud.AutosaveClock _autosave = new();
+
+        /// <summary>
+        /// Raised after the game has written the colony by itself, with the save's own name. The
+        /// HUD puts a line on the Events panel from it; nothing else listens, and nothing in the
+        /// simulation hears about it at all.
+        /// </summary>
+        public event Action<string>? Autosaved;
+
+        /// <summary>
+        /// A day has turned. Write the colony over its own save, keeping one previous generation.
+        ///
+        /// <para><b>A colony that has never been named is named here rather than skipped.</b> The
+        /// owner's call (2026-09-21): a brand-new colony is exactly the one a crash hurts most, so
+        /// the first autosave takes the name <see cref="SuggestedSaveName"/> would have offered,
+        /// binds the session to it, and says so on the Events panel. From then on it is "the same
+        /// game" every following autosave overwrites.</para>
+        ///
+        /// <para>Returns the path written, or null when there was no session to write.</para>
+        /// </summary>
+        public string? Autosave()
+        {
+            if (_world == null || _colony == null) return null;
+
+            string path = BoundSavePath ?? SaveFiles.PathForName(SuggestedSaveName());
+            SaveFiles.KeepPrevious(path);
+            SaveSession(path);
+
+            Autosaved?.Invoke(System.IO.Path.GetFileNameWithoutExtension(path));
+            return path;
+        }
+
+        /// <summary>
+        /// Asked once a frame: has the clock come round? Arithmetic on every frame it has not,
+        /// and the disk is touched only on the one it has.
+        ///
+        /// <para>After the ticks rather than before them, so the day the save records is the day
+        /// the frame ended on — and never while paused, because a paused world's tick does not
+        /// move and the clock reads the tick.</para>
+        /// </summary>
+        void ConsiderAutosave()
+        {
+            if (_world == null || Directors == null) return;
+            if (!_autosave.Due(_world.CurrentTick, Directors.Settings.AutosaveDays)) return;
+
+            Autosave();
+        }
+
         /// <summary>The same, to a path of the caller's choosing. What a test uses.</summary>
         public void SaveSession(string path)
         {
@@ -2633,6 +3096,10 @@ namespace Odyssey.Presentation.Bootstrap
             // copy" for every session after the first.
             BoundSavePath = path;
 
+            // The day this colony arrives on counts as already saved: a save opened and left alone
+            // must not be written straight back over the file it came out of.
+            _autosave.Begin(_world!.CurrentTick);
+
             RefreshAfterLoad();
         }
 
@@ -2673,7 +3140,13 @@ namespace Odyssey.Presentation.Bootstrap
                 var hud = GetComponent<Ui.HudShell>();
                 _view.Apply(cameraRig, Directors,
                     setGameSpeed: speed =>
-                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed)),
+                    {
+                        // Straight to the intent, bypassing the toggle, so a colony saved paused
+                        // comes back paused — but the memory still hears about it, or the first
+                        // unpause of a colony saved at triple speed would drop it to normal.
+                        _speed.Remember(speed);
+                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed));
+                    },
                     hud: hud);
             }
 
@@ -2717,6 +3190,11 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Dropped, not merely disposed. A disposed object still reachable from here would let
             // the next session read a torn-down library and fail somewhere far from the cause.
+            // Before the world goes, because the world holds the phase sink this owns.
+            if (_world != null) _world.PhaseSink = null;
+            _tracer?.Dispose();
+            _tracer = null;
+
             _audio = null;
             _daylight = null;
             _figures = null;
@@ -2737,6 +3215,7 @@ namespace Odyssey.Presentation.Bootstrap
             // the last one's file would overwrite it on its first Save, which is the worst of both
             // behaviours: a lost save and no prompt.
             BoundSavePath = null;
+            _autosave.Forget();
 
             // Last, and after everything is null: whoever listens is about to ask whether a
             // session exists, and the answer has to already be no.

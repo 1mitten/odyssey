@@ -222,6 +222,67 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Total chunks meshed since start. A large number in steady state is a bug.</summary>
         public int TotalChunksMeshed { get; private set; }
 
+        /// <summary>
+        /// The most chunks one frame will mesh. Zero or less is no limit.
+        ///
+        /// <para><b>Eleven, and the number came from the fault it fixes.</b> Until 2026-09-21 this
+        /// did not exist: <see cref="BatchFor"/> meshed every stale chunk the draw walk touched, in
+        /// that frame, however many there were. A traced player session on the Huge board at 4K
+        /// measured what that costs — <b>fifty-six seconds and eight thousand frames with no
+        /// meshing produced not one frame over 33 ms, while all 192 slow frames fell in the
+        /// sixty-one seconds where meshing ran</b>. Sixty-one captured stalls meshed on their own
+        /// frame and every one of them meshed 900 chunks: a whole board, in a frame, about 165 ms.
+        /// §6c.6.</para>
+        ///
+        /// <para>165 ms for 900 chunks is about <b>0.18 ms a chunk</b>. Against a 5 ms frame, a
+        /// meshing frame should not spend more than about 2 ms of it here, which is eleven.</para>
+        ///
+        /// <para><b>It breaks nothing to miss the budget.</b> A deferred chunk keeps
+        /// <c>batch.Version != _model.Version</c>, so the next frame's walk finds it again — the
+        /// staleness *is* the queue, and a second list of owed chunks would be a copy of state the
+        /// batch already holds. What the player sees is a chunk one to three frames out of date, or
+        /// one that arrives a frame late if it had no geometry at all. At 150 fps neither is
+        /// visible, and the alternative is a sixth of a second of nothing.</para>
+        /// </summary>
+        public int MeshBudgetPerFrame { get; set; } = DefaultMeshBudgetPerFrame;
+
+        /// <summary>What the game ships with. See <see cref="MeshBudgetPerFrame"/> for the arithmetic.</summary>
+        public const int DefaultMeshBudgetPerFrame = 11;
+
+        /// <summary>
+        /// Chunks the last frame wanted to mesh and would not, because the budget was spent.
+        ///
+        /// <para>Its own counter because "the budget is working" and "the budget is starving the
+        /// board" look identical in <see cref="ChunksMeshedThisFrame"/> — both cap it at the
+        /// budget. A number that stays high for many seconds means the world is being dirtied
+        /// faster than eleven chunks a frame can absorb, which is a different problem from the one
+        /// this budget solves.</para>
+        /// </summary>
+        public int ChunksMeshDeferred { get; private set; }
+
+        /// <summary>Set for the length of <see cref="PrimeAll"/>, which is the one unbudgeted walk.</summary>
+        bool _priming;
+
+        int _meshedThisFrame;
+
+        /// <summary>
+        /// What submitting the surround cost last frame, in milliseconds.
+        ///
+        /// <para><b>Its own number because the surround is the one pass whose cost was measured
+        /// and then buried.</b> §6c found it was 3.65 ms of a 5 ms frame and cut it to about 2.2,
+        /// and from that day it was charged to <c>FrameSection.World</c> alongside the chunk
+        /// buckets — so nothing on the overlay or in <c>FrameTimeTests</c> could say which of the
+        /// two a number belonged to. The board and the land beyond it scale with completely
+        /// different things (chunks with the slice and the edits, the surround with the ring and
+        /// the tree sectors), so one figure covering both answers no question anybody asks.</para>
+        ///
+        /// <para>CPU submission only. It cannot see fill or the shadow pass, which is exactly the
+        /// axis §6c.3 says is unmeasured — read it beside the GPU frame time, never instead.</para>
+        /// </summary>
+        public double SurroundMs { get; private set; }
+
+        readonly System.Diagnostics.Stopwatch _surroundTimer = new System.Diagnostics.Stopwatch();
+
         public void Render(int activeLayer, SliceSettings slice)
         {
             DrawCalls = 0;
@@ -231,6 +292,8 @@ namespace Odyssey.Presentation.Rendering
             InstancesFaded = 0;
             ChunksSightTested = 0;
             CellPlatesDrawn = 0;
+            ChunksMeshDeferred = 0;
+            _meshedThisFrame = 0;
 
             // Before the board, not after it: the surround is the furthest thing in the scene, and
             // submitting it first lets the depth buffer reject it behind the board rather than
@@ -238,7 +301,10 @@ namespace Odyssey.Presentation.Rendering
             Skirt.GameObjectLayer = GameObjectLayer;
             Skirt.CastShadows = CastShadows;
             Skirt.SubmitToGpu = SubmitToGpu;
+            _surroundTimer.Restart();
             Skirt.Render(activeLayer);
+            _surroundTimer.Stop();
+            SurroundMs = _surroundTimer.Elapsed.TotalMilliseconds;
             DrawCalls += Skirt.DrawCalls;
             InstancesDrawn += Skirt.InstancesDrawn;
 
@@ -301,6 +367,37 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// Mesh everything the given view would draw, ignoring <see cref="MeshBudgetPerFrame"/>.
+        ///
+        /// <para><b>For the loading screen and nothing else.</b> On a new game every chunk is
+        /// never-meshed, so a budgeted first frame would draw almost nothing and the board would
+        /// arrive in instalments over several hundred frames while the player watched. The
+        /// composition root calls this once, before the first drawn frame, which puts the stall
+        /// where the player is already waiting — and where §6c.6 measured 14.7 seconds of worldgen
+        /// stall already sitting.</para>
+        ///
+        /// <para>It is a <see cref="Render"/> with the budget off rather than a second walk, so
+        /// there is no second copy of the rule about which chunks a view draws.</para>
+        /// </summary>
+        public void PrimeAll(int activeLayer, SliceSettings slice)
+        {
+            bool submitting = SubmitToGpu;
+            _priming = true;
+            try
+            {
+                // Nothing is shown from a priming pass: it exists to fill the batches, and
+                // submitting a frame the player never sees would be a frame's work for nothing.
+                SubmitToGpu = false;
+                Render(activeLayer, slice);
+            }
+            finally
+            {
+                _priming = false;
+                SubmitToGpu = submitting;
+            }
+        }
+
         ChunkBatch BatchFor(int chunkIndex)
         {
             ChunkBatch? batch = _batches[chunkIndex];
@@ -309,9 +406,21 @@ namespace Odyssey.Presentation.Rendering
                 batch = new ChunkBatch();
                 _batches[chunkIndex] = batch;
             }
-            if (batch.Version != _model.Version)
+            // Per chunk, not the whole board: see WorldRenderModel.ChunkVersion for the
+            // measurement that made this a per-chunk question.
+            if (batch.Version != _model.ChunkVersion(chunkIndex))
             {
+                // The whole of §6c.6's fix. Past the budget the chunk keeps the geometry it has
+                // and stays stale, so the next frame's walk picks it up; nothing is dropped and
+                // nothing is queued.
+                if (!_priming && MeshBudgetPerFrame > 0 && _meshedThisFrame >= MeshBudgetPerFrame)
+                {
+                    ChunksMeshDeferred++;
+                    return batch;
+                }
+
                 _mesher.Mesh(batch, chunkIndex);
+                _meshedThisFrame++;
                 ChunksMeshedThisFrame++;
                 TotalChunksMeshed++;
             }
@@ -900,6 +1009,80 @@ namespace Odyssey.Presentation.Rendering
 
                 Vector3 floor = CellMetrics.FloorCentre(cell);
 
+                // **On the shelf, not on the floor under it.** A contained thing is published at
+                // its store's cell so that every count of what the colony holds stays right; this
+                // is the one place that has to care which of the two it is looking at.
+                //
+                // It costs no extra draw calls, and that is the point rather than a hope: these
+                // instances land in the per-def bucket that was going to be submitted anyway, so a
+                // forty-shelf warehouse adds matrices and not submissions. The alternative — a pass
+                // of its own over the shelves — is `docs/bug-patterns.md` P10, which cost the
+                // growing zone 2,065 draw calls before it was deleted.
+                if (things[i].Contained)
+                {
+                    int shelfIndex = _model.Size.Index(cell);
+                    Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y,
+                        _model.EdificeFacing(shelfIndex));
+                    Vector3 stand = ShelfShape.SlotCentre(shelf, _model.EdificeFacing(shelfIndex),
+                        things[i].Slot);
+
+                    // **A thing just set on a shelf is still leaving the hands that held it**, the
+                    // same rule the floor path keeps one paragraph down and for the same reason:
+                    // the simulation moves a load in one instant, and an instant transfer drawn
+                    // literally is a teleport. The hands were a third of a metre in front of the
+                    // colonist; the deck is a metre up. Without this the load pops.
+                    Vector3 settling = Vector3.zero;
+                    if (carried != null
+                        && carried.TryGetSettling(things[i].Id.Value, out Vector3 fromHands, out float held))
+                        settling = Vector3.Lerp(fromHands - stand, Vector3.zero,
+                            CarryHandover.Fallen(held));
+
+                    stand += settling;
+
+                    if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe onShelf))
+                    {
+                        // The same ramp and the same spiral, tightened: ItemHeap's recipes are
+                        // sized for a 2.5 m cell floor and a slot is a fifth of that, so at the
+                        // recipe's own numbers neighbouring stacks interleave.
+                        //
+                        // **The count as well as the spread.** Tightening only the spread left
+                        // each heap with its cell-floor population, so eight full slots of wood
+                        // drew twenty-four bundles in one cell's footprint and the rack was
+                        // invisible under them. A bay holds one stack and reads as one or two
+                        // bundles; the fill tell on a shelf is how many bays are taken.
+                        var tight = new ItemHeap.Recipe(
+                            Mathf.Min(onShelf.Fewest, ShelfShape.SlotLumps),
+                            Mathf.Min(onShelf.Biggest, ShelfShape.SlotLumps),
+                            onShelf.Full,
+                            ShelfShape.SlotSpread, onShelf.SizeJitter, lyingDown: onShelf.LyingDown);
+
+                        int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                            stand, tight, _heapPlacements);
+
+                        for (int rock = 0; rock < rocks; rock++)
+                        {
+                            Matrix4x4 placement = _heapPlacements[rock];
+
+                            // **No GroundRelief.Lift here**, unlike the loose-pile path below.
+                            // ShelfShape.Root is already draped, so lifting again would float the
+                            // goods a few centimetres off their own deck on sloping ground — and
+                            // only on sloping ground, which is the kind of fault nobody
+                            // reproduces.
+                            Vector3 at = (Vector3)placement.GetColumn(3);
+                            placement = Matrix4x4.TRS(at, placement.rotation,
+                                placement.lossyScale * ShelfShape.GoodsScale);
+                            AppendItem(def, placement);
+                        }
+
+                        continue;
+                    }
+
+                    AppendItem(def, Matrix4x4.TRS(stand,
+                        Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
+                        Vector3.one * ShelfShape.GoodsScale));
+                    continue;
+                }
+
                 // **A thing just put down is still falling out of the hands that held it.** The
                 // simulation transfers it in one instant, because a thing is in a cell or in a
                 // pair of hands and there is nothing sensible between — but the hands were a
@@ -1156,6 +1339,25 @@ namespace Odyssey.Presentation.Rendering
 
         ResolvedModule? ItemModule(int defIndex) =>
             defIndex >= 0 && defIndex < _itemModules.Length ? _model.Library[_itemModules[defIndex]] : null;
+
+        /// <summary>
+        /// Whether this kind of item resolved to real art, or draws as the stand-in marker.
+        ///
+        /// <para><b>Whether the art resolved, not whether there is a catalogue.</b> The catalogue
+        /// is committed and its prefab references point into the gitignored <c>Assets/Synty</c>,
+        /// so on the self-hosted runner it loads perfectly with every reference null — and every
+        /// item then takes the marker path above, which costs a draw call and <i>no instance</i>.
+        /// A measurement that counts instances measures nothing there and has to say so rather
+        /// than fail. This is the item-side pair of <c>PawnFigureDirector.Enabled</c> and
+        /// <c>PortraitStudio.Available</c>; see <c>CLAUDE.md</c>, "the runner has no
+        /// Assets/Synty".</para>
+        /// </summary>
+        public bool ItemArtResolved(int defIndex)
+        {
+            EnsureItemModules();
+            ResolvedModule? module = ItemModule(defIndex);
+            return module != null && !module.IsEmpty && module.UsesArt;
+        }
 
         void AppendItem(int def, in Matrix4x4 placement)
         {

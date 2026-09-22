@@ -551,6 +551,15 @@ namespace Odyssey.Presentation.Rendering
         public const string BedPillow = Prefix + "bed.pillow";
 
         /// <summary>
+        /// The shelf. No catalogue row and none owed: the id resolves to the plain block
+        /// placeholder, tinted by the stuff it was built of, and drawn by the mesher as a carcass,
+        /// a deck and a back lip from scaled instances of it — the bed's idiom exactly, an honest
+        /// stand-in rather than borrowed art. One row on this id upgrades every shelf in the game
+        /// the day real art lands.
+        /// </summary>
+        public const string Shelf = Prefix + "shelf";
+
+        /// <summary>
         /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every
         /// tick and are drawn from the published snapshot, so these are resolved once and drawn by
         /// the actor pass rather than meshed into a chunk.

@@ -40,7 +40,10 @@ namespace Odyssey.Tests.Sim
     /// </summary>
     public class TickBenchmarkTests
     {
-        const int SizeX = 250, SizeZ = 250, SizeY = 40;
+        /// <summary>The scale target from ADR 0002, and the board the three original arms
+        /// measure. Every arm now takes its board, so a figure is only comparable with another
+        /// taken on the same one — which is why the edit arms print all three in one run.</summary>
+        static readonly GridSize Scale = GridSize.ScaleTarget;
         const int Portals = 200;
         const int Pawns = 50;
         const int Ticks = 1_500;
@@ -82,10 +85,64 @@ namespace Odyssey.Tests.Sim
         public void TheColonyAnsweringACellQuestion() =>
             Measure("colony answering a cell question", replanPressure: false, standingQuestion: true);
 
-        void Measure(string label, bool replanPressure, bool standingQuestion = false)
+        /// <summary>
+        /// The same fifty colonists, on each board the menu offers, with one cell mined every
+        /// tick. <b>This is the arm the board size is bought with.</b>
+        ///
+        /// <para>The three arms above hold the world still, and a still world is the one state in
+        /// which the navigation rebuild costs nothing (see <see cref="MineOneCell"/>). Under edits
+        /// it runs four passes over every region and link in the world for a change confined to
+        /// one 10 x 10 block, so <b>it is the only cost this project has measured that grows with
+        /// the board rather than with what is happening on it</b>. Making it local is HT1; this is
+        /// the number HT1 has to move, and the number that says what a bigger board costs today.
+        /// </para>
+        ///
+        /// <para><b>All three boards in one method on purpose.</b> This machine runs several
+        /// editors at once and a figure taken in one run is only comparable with another taken in
+        /// the same one — the city frame canary drifted 2.01 to 4.01 ms in an afternoon purely on
+        /// what a sibling worktree was doing. Three separate arms would let a noisy minute be read
+        /// as a board-size effect. Everything else about the workload is held identical, so the
+        /// only thing that varies between the three reports is the board.</para>
+        ///
+        /// <para><b>Read these against the played board, not as it.</b> <see cref="BuildColony"/>
+        /// lays an 11 x 11 room lattice with rubble scattered through it, which fragments every
+        /// block: 19,606 regions at 120 x 120 x 16 against a generated map's 2,110, and 207,293 at
+        /// the scale target against 24,141. The rebuild's cost tracks the region count almost
+        /// exactly, so this arm reports roughly an order of magnitude more than the same edit
+        /// costs in the game. That is the right stress world to hold a floor under — it is the
+        /// shape a heavily built colony tends towards — but the figure a board size is bought
+        /// with is <c>NavGraphStatisticsTests.EveryOfferedBoard</c>'s, taken on a board the
+        /// generator made.</para>
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void TheEditTickOnEveryOfferedBoard()
         {
+            Measure("edit tick, standard", replanPressure: false, board: BoardSizes.Standard, edits: true);
+            Measure("edit tick, large", replanPressure: false, board: BoardSizes.Large, edits: true);
+            Measure("edit tick, huge", replanPressure: false, board: BoardSizes.Huge, edits: true);
+            Measure("edit tick, scale target", replanPressure: false, board: Scale, edits: true);
+        }
+
+        /// <summary>
+        /// The same four boards with the world held still, so the edit arm above has a control on
+        /// each of them. Without this the difference between two boards and the difference between
+        /// resting and editing are the same number read twice.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void TheRestingTickOnEveryOfferedBoard()
+        {
+            Measure("rest, standard", replanPressure: false, board: BoardSizes.Standard);
+            Measure("rest, large", replanPressure: false, board: BoardSizes.Large);
+            Measure("rest, huge", replanPressure: false, board: BoardSizes.Huge);
+            Measure("rest, scale target", replanPressure: false, board: Scale);
+        }
+
+        void Measure(string label, bool replanPressure, bool standingQuestion = false,
+                     GridSize? board = null, bool edits = false)
+        {
+            GridSize size = board ?? Scale;
             var setup = Stopwatch.StartNew();
-            Colony colony = BuildColony(seed: 12345u, replanPressure);
+            Colony colony = BuildColony(seed: 12345u, replanPressure, size, edits);
             setup.Stop();
 
             // A question submitted before the warm-up drains on the warm-up's first tick and
@@ -133,7 +190,12 @@ namespace Odyssey.Tests.Sim
             colony.World.PhaseSink = null;
 
             var report = new StringBuilder();
-            report.AppendLine($"--- {label}: {SizeX} x {SizeZ} x {SizeY}, {colony.Spawned} pawns, {Ticks} ticks ---");
+            report.AppendLine($"--- {label}: {size.SizeX} x {size.SizeZ} x {size.SizeY} " +
+                              $"({size.CellCount:N0} cells), {colony.Spawned} pawns, {Ticks} ticks ---");
+            report.AppendLine($"lattice world: {colony.Nav.RegionCapacity:N0} regions — a generated " +
+                              "board of this size carries roughly a ninth of that, so an edit here " +
+                              "costs about an order of magnitude more than one in the game " +
+                              "(NavGraphStatisticsTests.EveryOfferedBoard has the played figure)");
             if (standingQuestion)
                 report.AppendLine("a cell question stood for every tick; the Snapshot line below is " +
                                   "the answered publish, and is also what one click's RepublishViews costs");
@@ -162,6 +224,9 @@ namespace Odyssey.Tests.Sim
                               $"gen2 {gc2After - gc2}" +
                               (gc0After == gc0 ? " — none, so the growth figure is the allocation figure"
                                                : " — a collection ran, so allocation exceeded the growth figure"));
+            if (colony.Miner != null)
+                report.AppendLine($"cells mined over the window {colony.Miner.Mined} " +
+                                  $"({(double)colony.Miner.Mined / (Ticks + WarmUp):F2} per tick)");
             if (colony.Pressure != null)
             {
                 int issued = colony.Pressure.Issued - issuedBefore;
@@ -183,6 +248,13 @@ namespace Odyssey.Tests.Sim
             foreach (TickSegment phase in Enum.GetValues(typeof(TickSegment)))
                 Assert.That(trace.Count(phase), Is.EqualTo(Ticks), $"{phase} was not timed on every tick");
             Assert.That(colony.Spawned, Is.EqualTo(Pawns), "the benchmark did not get the pawns it asked for");
+
+            // The negative control for the edit arms. A fixture that quietly stopped finding solid
+            // cells to clear would report a resting tick under an editing label, which is exactly
+            // the failure the arm exists to rule out.
+            if (edits)
+                Assert.That(colony.Miner!.Mined, Is.EqualTo(Ticks + WarmUp),
+                    "the edit arm did not edit on every tick, so it measured a world at rest");
         }
 
         /// <summary>
@@ -265,6 +337,63 @@ namespace Odyssey.Tests.Sim
                 "a world that was being timed ended up in a different state from one that was not");
         }
 
+        /// <summary>
+        /// Attribution for the edit arm: what one <c>NavGraph.Rebuild</c> costs on its own, with
+        /// nothing else in the tick, and how that moves as the board is dug.
+        ///
+        /// <para><b>Temporary diagnostic.</b> The edit arm reports its whole WorldSystems phase,
+        /// and four systems register there. This isolates the one that was expected to dominate,
+        /// so a number can be attributed rather than assumed.</para>
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void WhatOneRebuildCosts()
+        {
+            foreach (GridSize size in new[] { BoardSizes.Standard, BoardSizes.Large, BoardSizes.Huge, Scale })
+            {
+                Colony colony = BuildColony(seed: 12345u, replanPressure: false, size, edits: false);
+                NavGraph nav = colony.Nav;
+                uint s = 99u;
+
+                // A fresh board: mark one cell, rebuild, repeat. The dirty set is re-marked each
+                // time, so every call does the work rather than returning on the first line.
+                double first = TimeRebuilds(nav, colony, ref s, 200);
+                int regionsAfterFirst = nav.RegionCapacity;
+
+                // Then dig two thousand more and ask again, because the edit arm digs for 1,700
+                // ticks and the question is whether the cost is a constant or a drift.
+                double later = TimeRebuilds(nav, colony, ref s, 2_000);
+
+                TestContext.WriteLine(
+                    $"[Rebuild] {size}: {regionsAfterFirst} regions, one rebuild after one dirty cell " +
+                    $"= {first:F3} ms; after 2,000 more edits ({nav.RegionCapacity} regions) = {later:F3} ms");
+            }
+        }
+
+        static double TimeRebuilds(NavGraph nav, Colony colony, ref uint s, int count)
+        {
+            CellGrid cells = colony.Cells;
+            var watch = new Stopwatch();
+            int done = 0;
+            for (int i = 0; i < count; i++)
+            {
+                for (int attempt = 0; attempt < 64; attempt++)
+                {
+                    int idx = (int)(Next(ref s) % (uint)cells.Size.CellCount);
+                    if ((cells.Flags[idx] & CellFlags.SolidTerrain) == 0) continue;
+                    cells.Flags[idx] &= ~CellFlags.SolidTerrain;
+                    nav.MarkDirty(idx);
+                    break;
+                }
+
+                watch.Start();
+                nav.Rebuild();
+                watch.Stop();
+                done++;
+            }
+
+            return watch.Elapsed.TotalMilliseconds / done;
+        }
+
         // ---------------------------------------------------------------- the workload
 
         readonly struct Colony
@@ -274,27 +403,36 @@ namespace Odyssey.Tests.Sim
             public readonly ReplanPressure? Pressure;
             public readonly PathService Paths;
 
-            public Colony(SimWorld world, int spawned, ReplanPressure? pressure, PathService paths)
+            /// <summary>Null unless this arm edits the world; see <see cref="MineOneCell"/>.</summary>
+            public readonly MineOneCell? Miner;
+
+            public readonly CellGrid Cells;
+            public readonly NavGraph Nav;
+
+            public Colony(SimWorld world, int spawned, ReplanPressure? pressure, PathService paths,
+                          MineOneCell? miner, CellGrid cells, NavGraph nav)
             {
                 World = world;
                 Spawned = spawned;
                 Pressure = pressure;
                 Paths = paths;
+                Miner = miner;
+                Cells = cells;
+                Nav = nav;
             }
         }
 
-        static Colony BuildColony(uint seed, bool replanPressure)
+        static Colony BuildColony(uint seed, bool replanPressure, GridSize size, bool edits)
         {
             uint s = seed;
-            var size = new GridSize(SizeX, SizeZ, SizeY);
             var cells = new CellGrid(size);
             for (int i = 0; i < size.CellCount; i++) cells.Floor[i] = 1;
 
             // 11 x 11 rooms on a wall lattice, one doorway per wall segment placed by a hash of
             // the segment, and light rubble inside the rooms.
-            for (int y = 0; y < SizeY; y++)
-            for (int z = 0; z < SizeZ; z++)
-            for (int x = 0; x < SizeX; x++)
+            for (int y = 0; y < size.SizeY; y++)
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
             {
                 int idx = size.Index(x, z, y);
                 bool wall = x % 12 == 0 || z % 12 == 0;
@@ -319,9 +457,9 @@ namespace Odyssey.Tests.Sim
             int accepted = 0;
             while (accepted < Portals)
             {
-                int x = (int)(Next(ref s) % SizeX);
-                int z = (int)(Next(ref s) % SizeZ);
-                int y = (int)(Next(ref s) % (SizeY - 1));
+                int x = (int)(Next(ref s) % size.SizeX);
+                int z = (int)(Next(ref s) % size.SizeZ);
+                int y = (int)(Next(ref s) % (size.SizeY - 1));
                 int a = size.Index(x, z, y);
                 int b = a + size.LayerStride;
                 if ((cells.Flags[a] & CellFlags.SolidTerrain) != 0) continue;
@@ -351,6 +489,17 @@ namespace Odyssey.Tests.Sim
                 spawned++;
             }
 
+            MineOneCell? miner = null;
+            if (edits)
+            {
+                // Registered as a thing for the same reason ReplanPressure is: it runs in phase 3,
+                // so the dirty block is waiting when NavigationSystem rebuilds in phase 2 of the
+                // *next* tick. The cost therefore lands on WorldSystems, which is where a
+                // colonist's own mined cell would land it.
+                miner = new MineOneCell(cells, nav, s);
+                world.Register(miner);
+            }
+
             ReplanPressure? pressure = null;
             if (replanPressure)
             {
@@ -361,7 +510,64 @@ namespace Odyssey.Tests.Sim
                 world.Register(pressure);
             }
 
-            return new Colony(world, spawned, pressure, pawns.Paths);
+            return new Colony(world, spawned, pressure, pawns.Paths, miner, cells, nav);
+        }
+
+        /// <summary>
+        /// One cell mined per tick, somewhere new each time.
+        ///
+        /// <para><b>This is the workload every benchmark in this file was missing.</b> The three
+        /// original arms hold the world perfectly still, and a still world is the one state in
+        /// which <c>NavGraph.Rebuild</c> does nothing at all — it returns on the first line when
+        /// no block is dirty. A colony that is mining, felling and building edits the world on
+        /// most ticks, so the number those arms report is the cost of the one thing a colony
+        /// never does (<c>docs/audit/2026-09-19-baseline.md</c> section 1, which had to measure
+        /// this outside the repository for want of this class).</para>
+        ///
+        /// <para><b>It walks the board rather than working one corner.</b> If the mined cells
+        /// stayed inside one block, <c>CollectAffectedZones</c> would see the same zones every
+        /// tick and the flood would warm into nothing, leaving only the four global passes — which
+        /// would flatter the result in the wrong direction, by hiding the part that is already
+        /// local behind the part that is not.</para>
+        ///
+        /// <para>It edits the grid directly rather than going through a designation and a
+        /// colonist, because the question is what a <i>rebuild</i> costs, not what mining costs.
+        /// Nothing here is saved or hashed and the class lives in the test assembly.</para>
+        /// </summary>
+        public sealed class MineOneCell : ITickable
+        {
+            readonly CellGrid _cells;
+            readonly NavGraph _nav;
+            uint _s;
+
+            public MineOneCell(CellGrid cells, NavGraph nav, uint seed)
+            {
+                _cells = cells;
+                _nav = nav;
+                _s = seed == 0 ? 1u : seed;
+            }
+
+            /// <summary>Cells actually cleared. The arm asserts this, because a fixture that
+            /// stopped editing would report an idle tick as though it were a busy one.</summary>
+            public int Mined { get; private set; }
+
+            public TickGroup TickGroup => TickGroup.Normal;
+            public int TickPhaseOffset => 0;
+
+            public void Tick(SimWorld world)
+            {
+                GridSize size = _cells.Size;
+                for (int attempt = 0; attempt < 64; attempt++)
+                {
+                    int idx = (int)(Next(ref _s) % (uint)size.CellCount);
+                    if ((_cells.Flags[idx] & CellFlags.SolidTerrain) == 0) continue;
+
+                    _cells.Flags[idx] &= ~CellFlags.SolidTerrain;
+                    _nav.MarkDirty(idx);
+                    Mined++;
+                    return;
+                }
+            }
         }
 
         /// <summary>

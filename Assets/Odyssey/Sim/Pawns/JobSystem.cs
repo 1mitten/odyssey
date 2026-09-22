@@ -593,27 +593,37 @@ namespace Odyssey.Sim.Pawns
             int best = -1;
             int bestDistance = int.MaxValue;
 
+            int bestCell = -1;
+
             for (int i = 0; i < items.Count; i++)
             {
                 var item = items[i];
-                if (item.Despawned || item.Cell < 0 || item.Forbidden) continue;
+                if (item.Despawned || item.Forbidden) continue;
                 if (ctx.Content.Items[item.DefIndex].nutrition <= 0) continue;
+
+                // **A meal in a shelf is a meal.** This line read `item.Cell < 0` until shelves
+                // existed, and that was right while "no cell" meant "in somebody's hands". A
+                // colonist who cannot see into a store starves beside a full pantry, which is why
+                // this scan is not optional once a shelf accepts food.
+                int at = ctx.WhereIs(item);
+                if (at < 0) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-                if (!ctx.Reachable(pawn, item.Cell)) continue;
+                if (!ctx.Reachable(pawn, at)) continue;
 
-                int distance = ctx.Distance(pawn.Cell, item.Cell);
+                int distance = ctx.Distance(pawn.Cell, at);
                 if (distance >= bestDistance) continue;
                 bestDistance = distance;
                 best = i;
+                bestCell = at;
             }
 
             if (best < 0) return false;
 
             job.Reset(JobIndex.Eat);
             job.TargetItem = items[best].Id;
-            job.TargetCell = items[best].Cell;
+            job.TargetCell = bestCell;
             return true;
         }
 
@@ -790,6 +800,19 @@ namespace Odyssey.Sim.Pawns
         /// not the radius.
         /// </summary>
         const int ClearanceBias = 50;
+
+        /// <summary>
+        /// How far the search for somewhere to set an unwanted load down may reach: twelve cells,
+        /// which is what it takes to get out of the middle of a field - or of a warehouse - that
+        /// a player would actually paint. A three-cell ring found only dirt inside a field six
+        /// tiles across, and that measurement is what set it. Where even twelve finds nothing the
+        /// thing stays where it is: a board packed that solid is one nothing in the game can
+        /// produce, and the alternative is a hauler walking the map for a rock.
+        ///
+        /// <para>One constant for both clearance cases, because the moment they disagree one of
+        /// them is the wrong answer to the same question.</para>
+        /// </summary>
+        const int ClearanceRadius = 12;
         /// <summary>
         /// A hauler with its arms full is not a colonist: the mode is fixed for the whole job,
         /// and the scan tests reachability in the <em>same</em> mode the job will walk in. A scan
@@ -798,77 +821,223 @@ namespace Odyssey.Sim.Pawns
         const TraverseMode Mode = TraverseMode.Hauler;
 
         public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job) =>
-            TryHaul(pawn, ctx, job, ctx.Items.LooseItems, restow: false) ||
-            TryHaul(pawn, ctx, job, ctx.Items.StoredItems, restow: true);
+            TryHaul(pawn, ctx, job, restow: false) ||
+            TryHaul(pawn, ctx, job, restow: true);
 
-        static bool TryHaul(Pawn pawn, PawnContext ctx, Job job, IReadOnlyList<int> lister, bool restow)
+        /// <summary>
+        /// One pass of the scan. The <em>first</em> walks the loose things and the things a store
+        /// refuses; the second walks the things a store is content to hold, which is the tidying.
+        ///
+        /// <para><b>The two listers are walked as one because a refused thing belongs in neither
+        /// on its own.</b> <see cref="ColonyItems"/> buckets by whether a cell is inside a zone,
+        /// which is the question it can answer cheaply, so a thing whose store refuses it is
+        /// bucketed stored - while by <see cref="StoredPriority"/>'s own words it "is not stored
+        /// at all, only in the way". Leaving it in the tidying pass is what left a rock sitting
+        /// in a meals-only stockpile for ever (owner, 2026-09-21), because that pass runs only
+        /// when nothing loose is waiting, and a busy colony always has something loose.
+        /// Re-bucketing on every filter edit was the other answer and is the worse one: it would
+        /// make <c>ColonyItems</c>' buckets depend on the filter table, so ticking one commodity
+        /// would have to walk a zone's items and a save would have to agree about which lister
+        /// each thing was in.</para>
+        /// </summary>
+        static bool TryHaul(Pawn pawn, PawnContext ctx, Job job, bool restow)
         {
             var items = ctx.Items.Items;
+            IReadOnlyList<int> loose = ctx.Items.LooseItems;
+            IReadOnlyList<int> stored = ctx.Items.StoredItems;
+
+            // The third lister: things inside a built store. They are walked with the stored ones
+            // and split by the same question, because a shelf that refuses a thing and a stockpile
+            // cell that refuses it are the same sentence — and a store being *emptied* refuses
+            // everything in it, which is how "a shelf ordered taken apart gives up its contents"
+            // falls out of a rule that was already here rather than out of a pass of its own.
+            IReadOnlyList<int> contained = ctx.Items.ContainedItems;
+
+            int held = stored.Count + contained.Count;
+            int count = restow ? held : loose.Count + held;
 
             int bestItem = -1;
             int bestDest = -1;
+            int bestFrom = -1;
             int bestDistance = int.MaxValue;
 
-            for (int i = 0; i < lister.Count; i++)
+            for (int i = 0; i < count; i++)
             {
-                var item = items[lister[i]];
-                if (item.Despawned || item.Cell < 0 || item.Forbidden) continue;
+                int inHeld = restow ? i : i - loose.Count;
+                bool isStored = inHeld >= 0;
+                int index = !isStored ? loose[i]
+                    : inHeld < stored.Count ? stored[inHeld]
+                    : contained[inHeld - stored.Count];
+
+                var item = items[index];
+                if (item.Despawned || item.Forbidden) continue;
+
+                // Where it is, which is now three questions and not two. A thing in a pair of
+                // hands answers -1 and is skipped exactly as `Cell < 0` used to skip it; a thing
+                // in a store answers the store's cell, which is where a colonist walks to reach
+                // it.
+                int at = ctx.WhereIs(item);
+                if (at < 0) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;
+
+                // Which pass this stored thing belongs to. A loose thing is never refused -
+                // there is no filter over bare ground - so the question is asked only of the
+                // stored lister.
+                if (isStored && Refused(ctx, item) == restow) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Item, item.Id.Value);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
 
-                int distance = ctx.Distance(pawn.Cell, item.Cell);
+                int distance = ctx.Distance(pawn.Cell, at);
 
                 // A thing standing on tilled soil is in the way of the field (owner,
                 // 2026-09-19: "all items should be removed by colonists first from the dirt
                 // before sowing to an appropriate place"): the sowing scan will not touch its
                 // cell while it lies there, so it outranks every ordinary pile however near -
                 // the field cannot wait on a nearer rock.
-                if (ctx.Growing != null && ctx.Growing.ZonePlantAt(item.Cell) >= 0)
-                    distance -= ClearanceBias;
+                if (OnSoilSomebodyWantsToSow(ctx, item)) distance -= ClearanceBias;
 
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, item.Cell, Mode)) continue;
+                if (!ctx.Reachable(pawn, at, Mode)) continue;
 
-                int dest = BestStorageCell(pawn, ctx, item, restow ? StoredPriority(ctx, item) : int.MinValue);
+                if (!TryBestStorageSlot(pawn, ctx, item, at,
+                        restow ? CurrentPriority(ctx, item) : int.MinValue, out StorageSlot slot))
+                    slot = StorageSlot.None;
+                int dest = slot.Stand;
 
-                // A thing on tilled soil that no stockpile will take still has to come off the
-                // dirt - the sowing of its cell is waiting on it, and a full store is not a
-                // reason for a field to stand idle (owner, 2026-09-20: "the colonists didn't
-                // remove the stone from the dirt tile and didn't bother sowing and nothing
-                // happened"). It goes to the nearest free cell outside every zone, and becomes
-                // an ordinary pile there: the stockpile's business again once it has room.
-                if (dest < 0 && !restow && ctx.Growing != null &&
-                    ctx.Growing.ZonePlantAt(item.Cell) >= 0)
+                // A thing that is in the way and that no store will take still has to come off
+                // the cell it is spoiling. Three cases, one rule:
+                //
+                //   - on tilled soil, where the sowing of the cell is waiting on it and a full
+                //     store is not a reason for a field to stand idle (owner, 2026-09-20: "the
+                //     colonists didn't remove the stone from the dirt tile and didn't bother
+                //     sowing and nothing happened");
+                //   - inside a store that refuses it, where it is holding a cell the player set
+                //     aside for something else and no amount of waiting will make the store want
+                //     it (owner, 2026-09-21: "I expect the colonists to ensure that all those
+                //     tiles are occupied by meals or nothing, not leave rocks in there");
+                //   - inside a store that is being taken apart, which refuses everything for the
+                //     same reason: waiting will not help, because the store is going.
+                //
+                // **The third case is what stops an ordered shelf deadlocking.** Its contents rank
+                // below every real store so they want to leave, but with nowhere better to go the
+                // scan finds no destination and they stay — while the deconstruct gate refuses to
+                // remove the shelf until they have gone. Nothing moves and nothing says why.
+                //
+                // It goes to the nearest cell that neither wants to be empty nor refuses it, and
+                // becomes an ordinary pile there: a stockpile's business again the moment one
+                // has room for it. Hauled out rather than spilled, deliberately — the load ends on
+                // the same sort of cell either way, but a colonist carries it, which is the
+                // difference between a colony emptying a shelf and a shelf emptying itself.
+                if (dest < 0 && !restow && InTheWay(ctx, item))
                     dest = ctx.Items.NearestCellWithSpace(
-                        ctx.Cells, item.Cell, item.DefIndex, item.Stack, maxRadius: 12,
-                        accept: ctx.NotZoned);
+                        ctx.Cells, at, item.DefIndex, item.Stack, maxRadius: ClearanceRadius,
+                        accept: ctx.OpenGroundFor(item.DefIndex));
                 if (dest < 0) continue;
 
                 bestDistance = distance;
-                bestItem = lister[i];
+                bestItem = index;
                 bestDest = dest;
+                bestFrom = at;
             }
 
             if (bestItem < 0) return false;
 
             job.Reset(JobIndex.Haul);
             job.TargetItem = items[bestItem].Id;
-            job.TargetCell = items[bestItem].Cell;
+            // Both ends are named by a **cell**, and a store at either end is named by the cell it
+            // stands in. A cell holds at most one edifice, so that is unambiguous — and it costs no
+            // new field on the job record, which is written inside the pawns section and read
+            // sequentially, so two ints there would be a save-format bump for nothing.
+            job.TargetCell = bestFrom;
             job.DestCell = bestDest;
             job.Mode = Mode;
             return true;
         }
 
         /// <summary>
-        /// The priority a stored thing already enjoys, which a re-stow has to beat. A thing lying
-        /// in a pile whose filter no longer accepts it is not stored at all, only in the way,
-        /// and any pile that does accept it is better: the implicit "unstored" priority below
-        /// every real one that a-14 §1 infers.
+        /// Is this thing lying in a store whose filter refuses it? Such a thing is not stored at
+        /// all, only in the way: it is scanned in the first pass beside the loose things, and it
+        /// is carried out to open ground when no store will have it.
+        ///
+        /// <para>A cell in no zone answers false, which is why the loose lister never has to be
+        /// asked.</para>
         /// </summary>
-        static int StoredPriority(PawnContext ctx, ColonyItem item)
+        static bool Refused(PawnContext ctx, ColonyItem item)
         {
+            // A built store, which is also the only case that can answer "yes" about a thing with
+            // no cell at all. **A store being taken apart refuses everything in it**, which is not
+            // a special case bolted on: it is the same sentence as a filter refusing a thing —
+            // this store will not have it and waiting will not change that — and putting it here
+            // rather than in a pass of its own is what gives an emptying shelf the urgent pass and
+            // the clearance fallback for free.
+            if (item.ContainerId != 0)
+            {
+                Storage.StorageUnits? units = ctx.StorageUnits;
+                Storage.StorageUnit? holding = units?.ByContainerId(item.ContainerId);
+                if (holding == null) return false;
+
+                return units!.IsEmptying(holding) || !units.Accepts(holding, item.DefIndex);
+            }
+
+            var zones = ctx.Storage;
+            return zones != null
+                && zones.IsStorage(item.Cell)
+                && !zones.Accepts(item.Cell, item.DefIndex);
+        }
+
+        /// <summary>
+        /// Is this thing spoiling the cell it lies in - standing on soil somebody wants to sow,
+        /// or squatting in a store that will not have it? The question the clearance fallback
+        /// asks, and the one place the two cases are named together.
+        /// </summary>
+        static bool InTheWay(PawnContext ctx, ColonyItem item) =>
+            OnSoilSomebodyWantsToSow(ctx, item) || Refused(ctx, item);
+
+        /// <summary>
+        /// Is this thing lying on ground somebody wants to plant?
+        ///
+        /// <para><b>Its own method because two callers ask it</b> — the clearance bias and
+        /// <see cref="InTheWay"/> — and because it is exactly the question a third home makes easy
+        /// to get wrong. It asks <c>item.Cell</c> and not "where can a colonist reach it": a thing
+        /// on a shelf is not lying on anything, and a shelf built on a zone cell would otherwise
+        /// give everything standing on it the bias meant for a rock in the dirt.</para>
+        /// </summary>
+        static bool OnSoilSomebodyWantsToSow(PawnContext ctx, ColonyItem item) =>
+            item.Cell >= 0 && ctx.Growing != null && ctx.Growing.ZonePlantAt(item.Cell) >= 0;
+
+        /// <summary>
+        /// The priority a stored thing already enjoys, which a re-stow has to beat: the implicit
+        /// "unstored" rank below every real one that a-14 §1 infers, for anything no store is
+        /// holding.
+        ///
+        /// <para>Only ever asked of a thing its own store accepts, because <see cref="Refused"/>
+        /// takes the others out of the re-stow pass one loop above. The filter test is kept all
+        /// the same, so that the function is a true answer to its own question rather than one
+        /// that depends on its caller: it is a single lookup, and a re-stow that compared against
+        /// a priority a refused thing does not actually have would shuttle it between piles for
+        /// ever.</para>
+        /// </summary>
+        static int CurrentPriority(PawnContext ctx, ColonyItem item)
+        {
+            if (item.ContainerId != 0)
+            {
+                Storage.StorageUnit? unit = ctx.StorageUnits?.ByContainerId(item.ContainerId);
+                if (unit == null) return int.MinValue;
+
+                // An emptying store holds nothing at a rank worth keeping. **Not reached in
+                // practice** — `Refused` says the same thing one loop up and sends these to the
+                // first pass, where no priority is consulted — and kept for the reason this method's
+                // own doc gives: it is a true answer to its own question rather than one that
+                // depends on which caller asked. The day something re-stows out of an emptying
+                // store by another route, this is already right.
+                if (ctx.StorageUnits!.IsEmptying(unit)) return int.MinValue;
+
+                return ctx.StorageUnits!.Accepts(unit, item.DefIndex)
+                    ? ctx.StorageUnits!.PriorityOf(unit)
+                    : int.MinValue;
+            }
+
             var zones = ctx.Storage;
             if (zones == null) return int.MinValue;
             return zones.Accepts(item.Cell, item.DefIndex) ? zones.PriorityAt(item.Cell) : int.MinValue;
@@ -878,10 +1047,13 @@ namespace Odyssey.Sim.Pawns
         /// The cell the load should go to, or -1: filter, then space for the whole load, then
         /// the highest priority strictly above <paramref name="abovePriority"/>, then nearest.
         /// </summary>
-        static int BestStorageCell(Pawn pawn, PawnContext ctx, ColonyItem item, int abovePriority)
+        static bool TryBestStorageSlot(Pawn pawn, PawnContext ctx, ColonyItem item, int from,
+            int abovePriority, out StorageSlot slot)
         {
+            slot = StorageSlot.None;
             var zones = ctx.Storage;
-            if (zones == null) return -1;
+            Storage.StorageUnits? units = ctx.StorageUnits;
+            if (zones == null && units == null) return false;
 
             // **Bands, high to low, stopping at the first that yields.** Priority dominates
             // distance — nearest only breaks ties *inside* a band — so once a band has produced a
@@ -897,16 +1069,16 @@ namespace Odyssey.Sim.Pawns
             // that only tested the floor would count down two billion times before it stopped.
             for (int priority = StoragePriority.Count - 1; priority >= 0 && priority > abovePriority; priority--)
             {
-                int bestCell = -1;
+                StorageSlot best = StorageSlot.None;
                 int bestDistance = int.MaxValue;
 
-                for (int slot = 0; slot < zones.ZoneCount; slot++)
+                for (int zone = 0; zones != null && zone < zones.ZoneCount; zone++)
                 {
-                    StorageSettings settings = zones.SettingsOf(slot);
+                    StorageSettings settings = zones.SettingsOf(zone);
                     if (settings.Priority != priority) continue;
                     if (!settings.Accepts(item.DefIndex)) continue;
 
-                    IReadOnlyList<int> cells = zones.CellsOf(slot);
+                    IReadOnlyList<int> cells = zones.CellsOf(zone);
                     for (int c = 0; c < cells.Count; c++)
                     {
                         int cell = cells[c];
@@ -916,23 +1088,62 @@ namespace Odyssey.Sim.Pawns
                         // The distance first, because it is two array reads and it is what lets a
                         // cell that cannot win skip the reservation, the nav flag and the region
                         // lookup behind it.
-                        int distance = ctx.Distance(item.Cell, cell);
+                        int distance = ctx.Distance(from, cell);
                         if (distance >= bestDistance) continue;
 
                         long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                         if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
                         if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
-                        if (!ctx.Nav.Reachable(item.Cell, cell, Mode)) continue;
+                        if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
 
                         bestDistance = distance;
-                        bestCell = cell;
+                        best = new StorageSlot(cell, 0, cell);
                     }
                 }
 
-                if (bestCell >= 0) return bestCell;
+                // The built stores, in the same band, competing on the same distance and answering
+                // the same three questions in the same order. **Not a second walk and not a second
+                // rule** — the destination has one owner, which is the lesson HopPriceHasOneOwner
+                // records for the price of a hop.
+                for (int u = 0; units != null && u < units.Units.Count; u++)
+                {
+                    Storage.StorageUnit unit = units.Units[u];
+                    if (unit.Removed) continue;
+
+                    // A store being emptied is never a destination, or a shelf ordered taken apart
+                    // would re-stow into itself for ever.
+                    if (units.IsEmptying(unit)) continue;
+                    if (Storage.StorageUnits.ContainerIdOf(unit.Edifice) == item.ContainerId) continue;
+
+                    StorageSettings settings = units.SettingsOf(unit);
+                    if (settings.Priority != priority) continue;
+                    if (!settings.Accepts(item.DefIndex)) continue;
+                    if (!units.HasSpaceFor(unit, item.DefIndex, item.Stack)) continue;
+
+                    int cell = units.CellOf(unit);
+                    int distance = ctx.Distance(from, cell);
+                    if (distance >= bestDistance) continue;
+
+                    // Keyed on the edifice, not on the cell: a shelf is passable, so its cell is
+                    // one a colonist stands *in* rather than one a load is put down on, and a cell
+                    // claim there would stop a second colonist walking through the room.
+                    long key = ReservationManager.Key(ReservationTargetKind.Container, unit.Edifice);
+                    if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+                    if (!ctx.Nav.Grid.CanEnter(cell, Mode)) continue;
+                    if (!ctx.Nav.Reachable(from, cell, Mode)) continue;
+
+                    bestDistance = distance;
+                    best = new StorageSlot(-1, Storage.StorageUnits.ContainerIdOf(unit.Edifice), cell);
+                }
+
+                if (best.Stand >= 0)
+                {
+                    slot = best;
+                    return true;
+                }
             }
 
-            return -1;
+            return false;
         }
     }
 }

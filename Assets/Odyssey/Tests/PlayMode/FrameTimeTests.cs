@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
@@ -127,10 +128,193 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What a warehouse costs to draw: forty shelves holding eight stacks each, against the
+        /// same three hundred and twenty stacks lying on the floor, in one world.
+        ///
+        /// <para><b>The measurement <c>30-shelves.md</c> §8b owed.</b> A shelf's goods are drawn
+        /// by the loose-pile path — the same ramp, the same spiral, tightened to a slot — so by
+        /// construction they add matrices and not submissions. That is an argument, and this is
+        /// the number: the frame with the stacks on the floor, then the frame with the same
+        /// stacks on shelves, seconds apart in one session so that whatever the machine is doing
+        /// cancels out. The difference is what the shelf path itself costs over the floor path
+        /// it was copied from — the draped root, the turned slot and the second facing lookup,
+        /// paid once per stack rather than once per shelf.</para>
+        ///
+        /// <para>Every stack is forbidden and so is the starting kit, because the colony is
+        /// running underneath this and a Preferred store that accepts everything would otherwise
+        /// be filled with the colonists' own belongings while the frame was being timed.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWarehouseCostsWhatItHolds()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.Colony, Is.Not.Null, "the bootstrap never built a colony");
+                var colony = boot.Colony!;
+                Assert.That(colony.Pawns.StorageUnits, Is.Not.Null, "the session has no built stores");
+
+                // **Whether the art resolved, not whether there is a catalogue** — CLAUDE.md, and
+                // the reason FigureCapTests asks PawnFigureDirector.Enabled. Without Assets/Synty
+                // every stack takes ChunkRenderer's stand-in marker path, which costs a draw call
+                // and no instance, and the whole contained branch of RenderThings is never
+                // reached. There is nothing to measure there, and the instance control at the foot
+                // of this test would fail for the one reason that is not a regression — which is
+                // what turned the runner red on 2026-09-21 at 34,827 instances against 35,027.
+                if (!boot.Renderer!.ItemArtResolved(Odyssey.Sim.Pawns.ItemIndex.Wood))
+                    Assert.Ignore("wood resolved to no art (no Assets/Synty), so every stack " +
+                                  "draws as the stand-in marker and the shelf draw path is " +
+                                  "never reached");
+
+                ForbidWhatIsLying(colony);
+
+                float bare = 0f;
+                yield return TimeFrames("warehouse/none", boot, WarmupFrames, x => bare = x);
+                int bareInstances = boot.Renderer!.InstancesDrawn;
+
+                // The shelves first, empty, so the piles are put down on cells no shelf will want.
+                var shelves = new List<int>();
+                RaiseShelves(colony, WarehouseShelves, shelves);
+                Assert.That(shelves.Count, Is.EqualTo(WarehouseShelves),
+                    $"only {shelves.Count} shelves found room near the start");
+
+                var stacks = new List<ThingId>();
+                SpawnPiles(colony, WarehouseShelves * ShelfShape.Slots, shelves, stacks);
+                Assert.That(stacks.Count, Is.EqualTo(WarehouseShelves * ShelfShape.Slots),
+                    $"only {stacks.Count} piles found ground near the start");
+                colony.World.Tick();
+
+                float floor = 0f;
+                yield return TimeFrames("warehouse/floor", boot, WarmupFrames, x => floor = x);
+                int floorInstances = boot.Renderer!.InstancesDrawn;
+                int floorCalls = boot.Renderer!.DrawCalls;
+
+                int shelved = Shelve(colony, shelves, stacks);
+                Assert.That(shelved, Is.EqualTo(stacks.Count), "not every pile fitted on a shelf");
+                colony.World.Tick();
+
+                float onShelves = 0f;
+                yield return TimeFrames("warehouse/shelved", boot, WarmupFrames, x => onShelves = x);
+                int shelvedInstances = boot.Renderer!.InstancesDrawn;
+                int shelvedCalls = boot.Renderer!.DrawCalls;
+
+                Debug.Log($"[FrameTime] warehouse of {shelves.Count} shelves, {stacks.Count} stacks: " +
+                          $"bare {bare:0.00} ms, on the floor {floor:0.00} ms (+{floor - bare:0.00}), " +
+                          $"on shelves {onShelves:0.00} ms (+{onShelves - bare:0.00}); " +
+                          $"shelf path over floor path {onShelves - floor:0.00} ms; " +
+                          $"instances {bareInstances} -> {floorInstances} -> {shelvedInstances}, " +
+                          $"draw calls {floorCalls} -> {shelvedCalls}");
+
+                // The goods were drawn, or this measured an empty warehouse. Each stack is at
+                // least one instance whether it lies on the floor or stands on a deck.
+                Assert.That(shelvedInstances, Is.GreaterThanOrEqualTo(bareInstances + stacks.Count),
+                    "the shelved goods were not drawn, so the shelf path was not measured");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>A warehouse at the size the design document reasons about (§8b).</summary>
+        const int WarehouseShelves = 40;
+
+        /// <summary>The player's own veto, so the colony underneath leaves the fixture alone.</summary>
+        static void ForbidWhatIsLying(Odyssey.Sim.Pawns.ColonyWorld colony)
+        {
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned) items[i].Forbidden = true;
+        }
+
+        /// <summary>Cells on the start's layer, nearest first, in the order a spiral visits them.</summary>
+        static IEnumerable<int> AroundTheStart(Odyssey.Sim.Pawns.ColonyWorld colony, int maxRadius)
+        {
+            CellRef start = colony.Start;
+            GridSize size = colony.Grid.Size;
+            for (int radius = 1; radius < maxRadius; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (Math.Abs(dx) != radius && Math.Abs(dz) != radius) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+                yield return size.Index(x, z, start.Y);
+            }
+        }
+
+        /// <summary>Raise this many wooden shelves, finished, on the nearest cells that allow one.</summary>
+        static void RaiseShelves(Odyssey.Sim.Pawns.ColonyWorld colony, int wanted, List<int> shelves)
+        {
+            GridSize size = colony.Grid.Size;
+            foreach (int cell in AroundTheStart(colony, 30))
+            {
+                if (shelves.Count >= wanted) break;
+                if (!colony.Construction.Allows(cell, BuildingHandle.Shelf)) continue;
+                if (colony.Construction.Place(size.FromIndex(cell), BuildingHandle.Shelf, StuffHandle.Wood)
+                    != IntentRejection.None) continue;
+                colony.Construction.Raise(colony.Pawns, cell);
+                shelves.Add(cell);
+            }
+            colony.RebuildDerived();
+        }
+
+        /// <summary>Full stacks of wood on the nearest open ground that is not a shelf, forbidden.</summary>
+        static void SpawnPiles(Odyssey.Sim.Pawns.ColonyWorld colony, int wanted, List<int> shelves,
+            List<ThingId> stacks)
+        {
+            var items = colony.Pawns.Items;
+            int wood = Odyssey.Sim.Pawns.ItemIndex.Wood;
+            int full = colony.Pawns.Content.Items[wood].stackLimit;
+            foreach (int cell in AroundTheStart(colony, 40))
+            {
+                if (stacks.Count >= wanted) break;
+                if (shelves.Contains(cell)) continue;
+                if (colony.Grid.Edifice[cell] >= 0) continue;
+                if (!colony.Pawns.Cells.IsWalkable(cell)) continue;
+                if (!items.CellHasSpace(cell)) continue;
+
+                ThingId id = items.Spawn(wood, cell, full);
+                items.Get(id)!.Forbidden = true;
+                stacks.Add(id);
+            }
+        }
+
+        /// <summary>Move the piles on to the shelves, eight to a shelf. Returns how many went.</summary>
+        static int Shelve(Odyssey.Sim.Pawns.ColonyWorld colony, List<int> shelves, List<ThingId> stacks)
+        {
+            var units = colony.Pawns.StorageUnits!;
+            var items = colony.Pawns.Items;
+            int put = 0;
+            for (int i = 0; i < stacks.Count; i++)
+            {
+                Odyssey.Sim.Storage.StorageUnit? unit = units.AtCell(shelves[i / ShelfShape.Slots]);
+                Odyssey.Sim.Pawns.ColonyItem? item = items.Get(stacks[i]);
+                if (unit == null || item == null || item.Despawned) continue;
+                if (!units.HasSpaceFor(unit, item.DefIndex, item.Stack)) continue;
+                units.PutIn(unit, item);
+                put++;
+            }
+            return put;
+        }
+
         /// <summary>How many cells the order case marks. A wood is hundreds; this is the round
         /// number above it, and it is the same order of magnitude as the field's 2,000 so the two
         /// can be read against each other.</summary>
         const int OrderCells = 1_000;
+
+        /// <summary>
+        /// How long the trace arm will wait for its rows before giving up, in frames.
+        ///
+        /// <para>Generous: a row is a second of wall clock and the arm wants two, so on a machine
+        /// drawing this world at four hundred frames a second that is about eight hundred frames.
+        /// The cap exists so a tracer that has stopped fails the test in seconds rather than
+        /// hanging the tier.</para>
+        /// </summary>
+        const int MaxFramesWaitingForRows = 5_000;
 
         /// <summary>
         /// What a colony costs as it grows: the frame at eight colony sizes, in one world.
@@ -206,6 +390,481 @@ namespace Odyssey.Tests.PlayMode
             }
 
             yield return null;
+        }
+
+        /// <summary>
+        /// What a bigger board costs the frame: the three boards the menu offers, each carrying
+        /// the same standing orders, timed one after another inside one test.
+        ///
+        /// <para><b>One test rather than three arms, and that is the whole design of it.</b> This
+        /// machine runs several editors at once and a frame number is only comparable with one
+        /// taken in the same run — the city canary drifted from 2.01 ms to 4.01 in an afternoon
+        /// purely on what a sibling worktree was doing. Three separate arms would let a noisy
+        /// minute be read as a board-size effect, which is exactly the wrong conclusion to draw
+        /// from this measurement.</para>
+        ///
+        /// <para><b>The colony is held still on purpose.</b> The largest open cost in the frame is
+        /// not board-shaped: <c>PawnPose.Of</c> scans every other pawn for the crowd sidestep once
+        /// per posed pawn, which is 13.3 ms of a 22.5 ms frame at 384 colonists and 0.02 at 64. If
+        /// this arm varied the colony as well as the board, the board's signal would sit
+        /// underneath a pawn-count signal an order of magnitude larger. Same scenario, same seed,
+        /// same order count, one thing different.</para>
+        ///
+        /// <para><b>Read the split, not the total.</b> <c>FrameSection.World</c> is the chunk
+        /// buckets — the term that actually scales with the board — <c>FrameSection.Surround</c>
+        /// is the land beyond it, which scales with the ring rather than with the board, and
+        /// <c>FrameSection.Doors</c> is <c>DoorDirector</c>, which scans every cell in the world
+        /// for doors whenever anything has been edited. Those three are what a board size buys,
+        /// and the rest of the frame should be flat across all three boards.</para>
+        ///
+        /// <para>It asserts nothing about time. Every number here is 640 x 480 on a development
+        /// GPU and the target is a 2022 laptop, so a threshold would be a threshold on the wrong
+        /// machine; what it asserts is that each board really was built and really was designated,
+        /// because a world that failed to generate reports a beautifully fast frame.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBoardSizeAgainstTheFrame()
+        {
+            (string Label, int X, int Z, int Y)[] boards =
+            {
+                ("standard", 120, 120, 16),
+                ("large", 180, 180, 24),
+                ("huge", 240, 240, 16),
+            };
+
+            var means = new float[boards.Length];
+            var world = new double[boards.Length];
+            var surround = new double[boards.Length];
+            var doors = new double[boards.Length];
+            var chunks = new int[boards.Length];
+
+            for (int b = 0; b < boards.Length; b++)
+            {
+                (string label, int x, int z, int y) = boards[b];
+                GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                    out OdysseyBootstrap boot, x, z, y);
+                try
+                {
+                    yield return SeedOrders(boot);
+
+                    float mean = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"board/{label}", boot, WarmupFrames,
+                        m => mean = m, p => split = p);
+
+                    means[b] = mean;
+                    world[b] = Section(split, OdysseyBootstrap.FrameSection.World);
+                    surround[b] = Section(split, OdysseyBootstrap.FrameSection.Surround);
+                    doors[b] = Section(split, OdysseyBootstrap.FrameSection.Doors);
+                    chunks[b] = boot.Renderer?.ChunksDrawn ?? 0;
+
+                    Assert.That(boot.Colony, Is.Not.Null, $"{label} never built a colony");
+                    Assert.That(chunks[b], Is.GreaterThan(0),
+                        $"{label} drew no chunks, so this timed an empty frame rather than a board");
+                }
+                finally
+                {
+                    UnityEngine.Object.Destroy(root);
+                }
+
+                // Let the old world's arrays go before the next one is built, so a later board is
+                // not timed against a heap still holding an earlier one.
+                yield return null;
+                GC.Collect();
+                yield return null;
+            }
+
+            for (int b = 0; b < boards.Length; b++)
+                Debug.Log($"[FrameTime] board {boards[b].Label} " +
+                          $"{boards[b].X}x{boards[b].Z}x{boards[b].Y}: " +
+                          $"frame {means[b]:0.00} ms, World {world[b]:0.000} ms, " +
+                          $"Surround {surround[b]:0.000} ms, " +
+                          $"Doors {doors[b]:0.000} ms, {chunks[b]} chunks drawn " +
+                          $"(x{(means[0] > 0 ? means[b] / means[0] : 0):0.00} frame, " +
+                          $"x{(world[0] > 0 ? world[b] / world[0] : 0):0.00} World against standard)");
+
+            Assert.That(chunks[2], Is.GreaterThan(chunks[0]),
+                "the huge board drew no more chunks than the standard one, so the size seam did " +
+                "not take and all three readings are the same board");
+        }
+
+        static double Section(double[] split, OdysseyBootstrap.FrameSection section) =>
+            split.Length > (int)section ? split[(int)section] : 0d;
+
+        /// <summary>
+        /// What the meshing budget is worth, measured against itself on one board in one run.
+        ///
+        /// <para><b>This is the negative control for §6c.7.</b> The same world is made to re-mesh
+        /// twice — once with the budget off, once with it on — and the worst frame of each is
+        /// quoted. No absolute threshold, because this machine runs several editors at once and a
+        /// frame number is only comparable with one taken in the same run (§6c); what is asserted
+        /// is the difference, which is the thing the unit claims.</para>
+        ///
+        /// <para><c>Model.Remesh()</c> is exactly what a graphics toggle does, and §6c.6 caught it
+        /// happening sixty-one times in a two-minute player session, each one meshing 900 chunks in
+        /// a single frame for about 165 ms.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeshBudgetKeepsAWholeBoardRemeshOutOfOneFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot, 240, 240, 16);
+            try
+            {
+                for (int i = 0; i < WarmupFrames; i++) yield return null;
+
+                ChunkRenderer renderer = boot.Renderer!;
+                int budget = renderer.MeshBudgetPerFrame;
+                Assert.That(budget, Is.GreaterThan(0), "the shipped budget is off, so this proves nothing");
+
+                float unbudgeted = 0f, budgeted = 0f;
+                int unbudgetedChunks = 0, budgetedChunks = 0;
+
+                // The fault, reproduced: no budget, one Remesh, the whole board in one frame.
+                renderer.MeshBudgetPerFrame = 0;
+                boot.Model!.Remesh();
+                yield return null;
+                unbudgeted = Time.unscaledDeltaTime * 1000f;
+                unbudgetedChunks = renderer.ChunksMeshedThisFrame;
+
+                for (int i = 0; i < 30; i++) yield return null;
+
+                // And the fix, on the same board, the same Remesh, in the same run.
+                renderer.MeshBudgetPerFrame = budget;
+                boot.Model!.Remesh();
+                yield return null;
+                budgeted = Time.unscaledDeltaTime * 1000f;
+                budgetedChunks = renderer.ChunksMeshedThisFrame;
+
+                Debug.Log($"[FrameTime] mesh budget: unbudgeted {unbudgeted:0.0} ms " +
+                          $"({unbudgetedChunks} chunks), budgeted {budgeted:0.0} ms " +
+                          $"({budgetedChunks} chunks, cap {budget}); " +
+                          $"{renderer.ChunksMeshDeferred} deferred to later frames");
+
+                Assert.That(unbudgetedChunks, Is.GreaterThan(budget * 4),
+                    "the unbudgeted pass meshed too little to be the fault this guards against");
+                Assert.That(budgetedChunks, Is.LessThanOrEqualTo(budget),
+                    "the budget did not hold on a real board");
+                Assert.That(renderer.ChunksMeshDeferred, Is.GreaterThan(0),
+                    "nothing was deferred, so the budget never actually bit");
+
+                // The measurement the unit exists for. Half is a wide margin on purpose — the
+                // point is the class of change, not a tuned ratio.
+                Assert.That(budgeted, Is.LessThan(unbudgeted * 0.5d),
+                    $"the budgeted re-mesh cost {budgeted:0.0} ms against {unbudgeted:0.0} ms " +
+                    "unbudgeted, so spreading the work bought nothing measurable");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The performance trace agrees with the arm that timed the same frames.
+        ///
+        /// <para><b>This test exists because of what happened on 2026-09-21.</b> A
+        /// <c>CpuFrameMs</c> field was added to the developer overlay, looked entirely plausible in
+        /// a batch run at 640 x 480, and was wrong on screen in its first real session — 16.81 ms,
+        /// then 296.32, then 17,898.04 — with nothing in the project able to tell. The lesson
+        /// written down at the time was that <b>a number the platform hands you is not a
+        /// measurement until it has been seen beside a number taken independently</b>. This is that
+        /// sentence as a test: the trace and <see cref="TimeFrames"/> watch the same frames through
+        /// different clocks, and their answers have to meet.
+        /// </para>
+        ///
+        /// <para><b>The band is deliberately wide, and a narrow one would be wrong.</b> One figure
+        /// is a mean over 180 frames and the other a median of per-second medians; they are not the
+        /// same statistic and are not meant to be equal. What is being caught is a tracer reading a
+        /// different quantity, a different unit, or nothing at all — and a factor of two either way
+        /// catches every one of those while surviving a machine running three editors, which this
+        /// one does.</para>
+        ///
+        /// <para>It also proves the parts with no other proof: a file written where
+        /// <c>PerfTraceFiles</c> says, a header describing this session rather than a default, and
+        /// a marker that lands.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTraceAgreesWithTheArmThatTimedIt()
+        {
+            bool tracing = OdysseyBootstrap.TraceEnabled;
+            OdysseyBootstrap.TraceEnabled = true;
+
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+
+            float armMean = 0f;
+            string? path = null;
+            int rows = 0;
+            try
+            {
+                yield return TimeFrames("trace/agreement", boot, WarmupFrames, m => armMean = m);
+
+                Odyssey.Presentation.Diagnostics.PerfTracer? tracer = boot.Trace;
+                Assert.That(tracer, Is.Not.Null, "no trace was opened for a traced session");
+                Assert.That(tracer!.Active, Is.True, $"tracing stopped: {tracer.Fault}");
+                Assert.That(boot.MarkTrace("from the test"), Is.EqualTo(1), "the marker did not land");
+
+                // **Frames are not seconds, and the first draft of this test assumed they were.**
+                // A row covers one second of wall clock; 180 frames on this machine is 0.39 s, so
+                // the arm asserted on a trace that had correctly written nothing yet. Wait for real
+                // time instead, and for two rows rather than one — a single row could be produced
+                // by a tracer that emits on its first sample and never again.
+                float waited = 0f;
+                for (int frame = 0; frame < MaxFramesWaitingForRows && tracer.Rows < 2; frame++)
+                {
+                    yield return null;
+                    waited += Time.unscaledDeltaTime;
+                }
+
+                path = tracer.Path;
+                rows = tracer.Rows;
+
+                Assert.That(rows, Is.GreaterThanOrEqualTo(2),
+                    $"{waited:0.0}s of frames went by and the trace wrote {rows} row(s), so it is " +
+                    "not sampling on the clock it claims to");
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+                OdysseyBootstrap.TraceEnabled = tracing;
+            }
+
+            // After the teardown, so the file is closed and complete — which is also the only state
+            // the reader tool ever sees one in.
+            yield return null;
+
+            Assert.That(System.IO.File.Exists(path!), Is.True, $"no trace at {path}");
+            string[] lines = System.IO.File.ReadAllLines(path!);
+            Assert.That(lines.Length, Is.GreaterThan(1), "the trace has a header and nothing else");
+
+            Assert.That(lines[0], Does.Contain(@"""kind"":""header"""));
+            Assert.That(lines[0], Does.Contain(@"""board"":""120x120x16"""),
+                "the header does not describe the board this session actually built");
+            Assert.That(lines[0], Does.Contain($@"""screen"":""{Screen.width}x{Screen.height}"""),
+                "the header does not describe the resolution it was taken at");
+
+            var traced = new List<double>();
+            bool marked = false;
+            foreach (string line in lines)
+            {
+                if (line.Contains(@"""kind"":""marker""")) marked = true;
+                if (line.Contains(@"""kind"":""row""")) traced.Add(Field(line, "frame_p50"));
+            }
+
+            Assert.That(marked, Is.True, "the marker never reached the file");
+            Assert.That(traced.Count, Is.EqualTo(rows),
+                "the file and the tracer disagree about how many rows there are");
+
+            traced.Sort();
+            double tracedP50 = traced[traced.Count / 2];
+
+            Debug.Log($"[FrameTime] trace: {traced.Count} rows, trace p50 {tracedP50:0.00} ms " +
+                      $"against arm mean {armMean:0.00} ms, file {System.IO.Path.GetFileName(path!)}");
+
+            Assert.That(tracedP50, Is.GreaterThan(0d), "the trace recorded a zero frame time");
+            Assert.That(tracedP50, Is.InRange(armMean * 0.5d, armMean * 2d),
+                $"the trace says {tracedP50:0.00} ms and the arm that watched the same frames says " +
+                $"{armMean:0.00} ms. They are different statistics and need not be equal, but a " +
+                "factor of two apart means one of them is not measuring a frame.");
+        }
+
+        /// <summary>Pull one number out of a JSONL record, without putting a JSON parser in a test.</summary>
+        static double Field(string line, string key)
+        {
+            int at = line.IndexOf("\"" + key + "\":", StringComparison.Ordinal);
+            if (at < 0) return 0d;
+            int from = at + key.Length + 3;
+            int to = from;
+            while (to < line.Length && (char.IsDigit(line[to]) || line[to] == '.' || line[to] == '-')) to++;
+            return double.Parse(line.Substring(from, to - from),
+                System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// What the surround's sector size is worth, swept over one built world.
+        ///
+        /// <para><b>Why a sweep and not another judged number.</b> §6c chose 400 m by hand, found
+        /// the cost tracked the batch count rather than the tree count, and recorded that past
+        /// 400 m it "saturates … the floor being the variants, themes, mute steps and parts, which
+        /// no sector size can merge". The census taken on 2026-09-21 says that floor was not
+        /// reached: the wood was <b>230 batches over 115 sectors</b>, mean 17 trees a call, with
+        /// 192 of the 230 holding fewer than 32 — and only <b>4 mute steps, 2 tints and 1 part</b>
+        /// in the whole key. The space was still doing the splitting. A hand-picked constant could
+        /// not have shown that; a sweep with the batch count printed beside the frame does.</para>
+        ///
+        /// <para><b>And the sector ladder saturates almost at once</b>, which is why the variant
+        /// count is swept beside it: 400 → 800 m took the wood 230 → 194 batches and the surround
+        /// 1.08 → 0.92 ms, and 1600 m and a single 100 km sector both changed nothing further. The
+        /// reason is in <c>SectorOf</c>, which folds the variant into the sector number, so a
+        /// sixteen-kind wood cannot fall below sixteen batches per spatial cell however coarse the
+        /// cells are. Space was the cheap half and it is spent.</para>
+        ///
+        /// <para>Same built world throughout, rebuilt only in the skirt, in one run — the rule
+        /// every frame reading on this machine is subject to (§6c). Read the differences.</para>
+        ///
+        /// <para>It asserts no time, for the reason the rest of this file gives, and it restores
+        /// the shipped sizes in a <c>finally</c> because they are process-wide statics and a test
+        /// that leaked one would silently retune every arm that ran afterwards.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSurroundSectorSweep()
+        {
+            (string Label, float Near, float Far, int Variants)[] sizes =
+            {
+                ("400/800 x16 (shipped to 2026-09-21)", 400f, 800f, 16),
+                ("800/1600 x16", 800f, 1600f, 16),
+                ("1600/3200 x16", 1600f, 3200f, 16),
+                ("800/1600 x8 (shipped)", 800f, 1600f, 8),
+                ("800/1600 x6", 800f, 1600f, 6),
+                ("800/1600 x4", 800f, 1600f, 4),
+            };
+
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                float baseline = 0f;
+                yield return TimeFrames("sector/warm", boot, WarmupFrames, m => baseline = m);
+
+                ChunkRenderer renderer = boot.Renderer!;
+
+                for (int i = 0; i < sizes.Length; i++)
+                {
+                    (string label, float near, float far, int variants) = sizes[i];
+                    TerrainSkirt.TreeSectorMetres = near;
+                    TerrainSkirt.FarTreeSectorMetres = far;
+                    TerrainSkirt.TreeVariantSlots = variants;
+                    renderer.Skirt.Build();
+                    yield return null;
+
+                    float mean = 0f;
+                    double[] split = Array.Empty<double>();
+                    yield return TimeFrames($"sector/{label}", boot, WarmupFrames,
+                        m => mean = m, s => split = s);
+
+                    TerrainSkirt.Census trees = renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Trees);
+                    Debug.Log($"[FrameTime] sector {label}: frame {mean:0.00} ms, " +
+                              $"Surround {Section(split, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                              $"{renderer.Skirt.BatchesDrawn} batches drawn; trees {trees}; " +
+                              $"{renderer.Skirt.KeySpreadOf(TerrainSkirt.SkirtPart.Trees)}");
+
+                    Assert.That(trees.Instances, Is.GreaterThan(0),
+                        $"{label} built no wood, so this reading is of an empty surround");
+                }
+            }
+            finally
+            {
+                // Process-wide statics. A leaked value would retune every arm that runs after this
+                // one, and the leak would read as a performance change rather than as a test fault.
+                TerrainSkirt.TreeSectorMetres = TerrainSkirt.DefaultTreeSectorMetres;
+                TerrainSkirt.FarTreeSectorMetres = TerrainSkirt.DefaultFarTreeSectorMetres;
+                TerrainSkirt.TreeVariantSlots = TerrainSkirt.DefaultTreeVariantSlots;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// What the decoration costs: the grass tufts and the land beyond the board, measured
+        /// against each other and against a board with neither.
+        ///
+        /// <para><b>Why this arm exists.</b> The owner reported (2026-09-21) that the tufts and
+        /// the surround appeared to be costing frames, and the project had no way to answer
+        /// except by opinion: the tufts are baked into the chunk mesh so they hide inside
+        /// <c>FrameSection.World</c>, and until the same day the surround hid there too. Both are
+        /// already player-facing switches (<c>GraphicsOption.GrassTufts</c>,
+        /// <c>GraphicsOption.Surround</c>), so the question is not whether they can be turned off
+        /// but what turning them off is worth.</para>
+        ///
+        /// <para><b>One world, four readings, and that is the whole method.</b> This machine runs
+        /// several editors at once and a frame number taken in one run is not comparable with one
+        /// taken in another — the city canary drifted 2.01 to 4.01 ms in an afternoon on nothing
+        /// but a sibling worktree (§6c). So the same built world is timed with everything on,
+        /// with the tufts off, with the surround off and with both off, in that order and without
+        /// a rebuild between them. Only the differences are quoted.</para>
+        ///
+        /// <para><b>What it cannot see, and the reason it must be read beside a Play session.</b>
+        /// Every number here is a stopwatch around CPU submission at 640 x 480. Alpha-tested
+        /// foliage is exactly the geometry whose cost is nil at 307k pixels and dominant at
+        /// 1080p, so a tuft reading of "free" here is a statement about submission and not about
+        /// fill. <c>OdysseyBootstrap.GpuFrameMs</c> on the developer overlay is the other half.
+        /// </para>
+        ///
+        /// <para>It asserts no times, for the reason every arm in this file gives: the budget is
+        /// for a 2022 laptop and this is not one. What it asserts is that the world really had
+        /// tufts and a surround to take away, because a board that generated neither reports a
+        /// beautifully cheap frame and a difference of zero.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheDecorationAgainstTheFrame()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: false,
+                out OdysseyBootstrap boot);
+            try
+            {
+                float all = 0f, noTufts = 0f, noSurround = 0f, bare = 0f;
+                double[] allSplit = Array.Empty<double>(), bareSplit = Array.Empty<double>();
+
+                // The shipped case first, and the renderer read afterwards: the bootstrap builds
+                // it on its own first Update, so there is nothing to ask before a frame has run.
+                yield return TimeFrames("decoration/all", boot, WarmupFrames,
+                    m => all = m, p => allSplit = p);
+
+                ChunkRenderer renderer = boot.Renderer!;
+                int shippedDensity = renderer.ScatterDensity;
+                int surroundTrees = renderer.Skirt.TreeInstances + renderer.Skirt.FarTreeInstances;
+
+                Assert.That(shippedDensity, Is.GreaterThan(0),
+                    "this board strews no tufts, so there is nothing to take away");
+
+                // The tufts are meshed into the chunks, so taking them away is a re-mesh and not
+                // a flag read at submission — the same rule ScatterDensity's own comment states.
+                renderer.ScatterDensity = 0;
+                boot.Model!.Remesh();
+                yield return null;
+                yield return TimeFrames("decoration/no tufts", boot, WarmupFrames, m => noTufts = m);
+
+                renderer.ScatterDensity = shippedDensity;
+                boot.Model!.Remesh();
+                renderer.Skirt.Enabled = false;
+                yield return null;
+                yield return TimeFrames("decoration/no surround", boot, WarmupFrames, m => noSurround = m);
+
+                renderer.ScatterDensity = 0;
+                boot.Model!.Remesh();
+                yield return null;
+                yield return TimeFrames("decoration/bare", boot, WarmupFrames,
+                    m => bare = m, p => bareSplit = p);
+
+                Assert.That(surroundTrees, Is.GreaterThan(0),
+                    "no wood grew outside this board, so the surround reading is of empty ground");
+
+                Debug.Log($"[FrameTime] decoration on {Screen.width}x{Screen.height}: " +
+                          $"all {all:0.00} ms, no tufts {noTufts:0.00} ms " +
+                          $"(-{all - noTufts:0.00}), no surround {noSurround:0.00} ms " +
+                          $"(-{all - noSurround:0.00}), neither {bare:0.00} ms " +
+                          $"(-{all - bare:0.00}); " +
+                          $"Surround section {Section(allSplit, OdysseyBootstrap.FrameSection.Surround):0.000} " +
+                          $"-> {Section(bareSplit, OdysseyBootstrap.FrameSection.Surround):0.000} ms, " +
+                          $"World {Section(allSplit, OdysseyBootstrap.FrameSection.World):0.000} " +
+                          $"-> {Section(bareSplit, OdysseyBootstrap.FrameSection.World):0.000} ms, " +
+                          $"{surroundTrees} surround trees, tuft density {shippedDensity}");
+
+                // Where the surround's batches actually go. §6c cut the count by coarsening the
+                // spatial half of the key and said the floor was "the variants, themes, mute
+                // steps and parts"; this is the first reading that says whether those remaining
+                // batches are full or nearly empty, which is the whole of what to do next.
+                Debug.Log($"[FrameTime] surround census: " +
+                          $"ground {renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Ground)}; " +
+                          $"trees {renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Trees)}; " +
+                          $"tufts {renderer.Skirt.CensusOf(TerrainSkirt.SkirtPart.Tufts)}");
+                Debug.Log($"[FrameTime] surround tree key: " +
+                          renderer.Skirt.KeySpreadOf(TerrainSkirt.SkirtPart.Trees));
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
         }
 
         /// <summary>
@@ -345,13 +1004,14 @@ namespace Odyssey.Tests.PlayMode
         /// <para>Its own method so a test can time the same world twice and quote the
         /// difference, which is the only figure this machine can be trusted for.</para>
         /// </summary>
-        IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean)
+        IEnumerator TimeFrames(string label, OdysseyBootstrap boot, int warmup, Action<float> mean,
+                               Action<double[]>? sections = null)
         {
             for (int i = 0; i < warmup; i++) yield return null;
 
             float total = 0f, worst = 0f;
             double tick = 0d, submit = 0d;
-            var sections = new double[(int)OdysseyBootstrap.FrameSection.Count];
+            var sectionTotals = new double[(int)OdysseyBootstrap.FrameSection.Count];
             for (int i = 0; i < TimedFrames; i++)
             {
                 yield return null;
@@ -364,7 +1024,7 @@ namespace Odyssey.Tests.PlayMode
                 tick += boot.TickMs;
                 submit += boot.SubmitMs;
                 System.ReadOnlySpan<double> split = boot.FrameSectionMs;
-                for (int k = 0; k < sections.Length && k < split.Length; k++) sections[k] += split[k];
+                for (int k = 0; k < sectionTotals.Length && k < split.Length; k++) sectionTotals[k] += split[k];
             }
 
             float meanMs = total / TimedFrames;
@@ -394,17 +1054,26 @@ namespace Odyssey.Tests.PlayMode
             // Submit, split by what it was doing. A frame number that says "the renderer is
             // slow" without saying which part of it is slow only licences a guess.
             var parts = new System.Text.StringBuilder();
-            for (int k = 0; k < sections.Length; k++)
+            for (int k = 0; k < sectionTotals.Length; k++)
             {
                 if (k > 0) parts.Append(", ");
                 parts.Append((OdysseyBootstrap.FrameSection)k).Append(' ')
-                     .Append((sections[k] / TimedFrames).ToString("0.000"));
+                     .Append((sectionTotals[k] / TimedFrames).ToString("0.000"));
             }
             Debug.Log($"[FrameTime] {label} submit split: {parts}");
+
+            if (sections != null)
+            {
+                var perFrame = new double[sectionTotals.Length];
+                for (int k = 0; k < sectionTotals.Length; k++) perFrame[k] = sectionTotals[k] / TimedFrames;
+                sections(perFrame);
+            }
         }
 
         /// <summary>The play scene's objects, built by hand: a camera with the rig, a sun, the bootstrap.</summary>
-        static GameObject Build(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren, out OdysseyBootstrap boot)
+        static GameObject Build(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren,
+                                out OdysseyBootstrap boot,
+                                int sizeX = 120, int sizeZ = 120, int layers = 16)
         {
             var root = new GameObject("FrameTime");
 
@@ -446,9 +1115,9 @@ namespace Odyssey.Tests.PlayMode
             // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
             // what this rig is asserting is that a session exists.
             boot.buildOnPlay = true;
-            boot.sizeX = 120;
-            boot.sizeZ = 120;
-            boot.layers = 16;
+            boot.sizeX = sizeX;
+            boot.sizeZ = sizeZ;
+            boot.layers = layers;
             boot.seed = 1;
             boot.mapType = mapType;
             boot.barrenMap = barren;
