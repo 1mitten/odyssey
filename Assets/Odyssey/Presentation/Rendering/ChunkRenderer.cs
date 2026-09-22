@@ -283,8 +283,33 @@ namespace Odyssey.Presentation.Rendering
 
         readonly System.Diagnostics.Stopwatch _surroundTimer = new System.Diagnostics.Stopwatch();
 
+        /// <summary>
+        /// Where the grass is pushed back, so that nothing lying on the floor is hidden by it.
+        /// See <see cref="GrassClearance"/> for why it is a field rather than something the
+        /// mesher does.
+        /// </summary>
+        public GrassClearance Clearance { get; } = new GrassClearance();
+
+        /// <summary>How far an item pushes the grass back. The owner asked for tight —
+        /// clear of the thing and no more (<c>grass-interview.md</c>, answer 12).</summary>
+        public float ItemClearance { get; set; } = 0.55f;
+
+        /// <summary>The same for an order mark, which covers a whole cell face and so wants
+        /// a wider ring than a stack of logs does.</summary>
+        public float MarkClearance { get; set; } = 1.1f;
+
         public void Render(int activeLayer, SliceSettings slice)
         {
+            // **Published first, and it is last frame's field.** The grass is submitted
+            // below, and the items and marks that clear it are drawn *after* this call —
+            // so a field gathered and uploaded in the same frame would either be empty or
+            // depend on globals landing between a submission and its execution, which is
+            // an ordering nothing here guarantees. One frame of latency on where grass is
+            // flattened is sixteen milliseconds and invisible; the alternative is a race.
+            Clearance.Publish();
+            Clearance.Begin(ViewerPosition ?? CellMetrics.Centre(
+                _model.Size.SizeX / 2, _model.Size.SizeZ / 2, activeLayer));
+
             DrawCalls = 0;
             InstancesDrawn = 0;
             ChunksDrawn = 0;
@@ -998,6 +1023,12 @@ namespace Odyssey.Presentation.Rendering
             {
                 CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // A stack of logs is shorter than a blade of grass, so without this it is
+                // simply not there to be found. Stamped from the drawn set rather than from
+                // the whole snapshot, so an item three storeys down does not bald the
+                // meadow above it.
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), ItemClearance);
 
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
@@ -2222,6 +2253,12 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void GatherCellPlate(Color colour, in Matrix4x4 place)
         {
+            // Every mark on the floor comes through here — chop crosses, mine marks, build
+            // and deconstruct plates — which is the whole reason the plates were gathered
+            // into one place to begin with. A mark is painted flat on the ground and tall
+            // grass covers it completely.
+            Clearance.Stamp(place.GetColumn(3), MarkClearance);
+
             PlateBucket? bucket = null;
             for (int i = 0; i < _plateBucketCount; i++)
                 if (_plateBuckets[i]!.Colour == colour) { bucket = _plateBuckets[i]; break; }
@@ -2405,6 +2442,7 @@ namespace Odyssey.Presentation.Rendering
         {
             Skirt.Dispose();
             _materials.Dispose();
+            Clearance.Dispose();
         }
     }
 }

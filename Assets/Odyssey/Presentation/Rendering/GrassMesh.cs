@@ -52,7 +52,12 @@ namespace Odyssey.Presentation.Rendering
         public const int Variants = 3;
 
         /// <summary>Blades in each variant, in order. Different counts as well as different shapes.</summary>
-        static readonly int[] BladesPerVariant = { 5, 4, 6 };
+        // Roughly doubled on 2026-09-22 (owner: "much more dense and bushier … really
+        // thicken out"). One of the three levers the interview's answer 7 asked to move
+        // together; the other two are the blade width below and the scatter density in
+        // ChunkMesher. Blades per clump is the dearest of the three per unit of cover,
+        // because it multiplies geometry without multiplying anything that culls.
+        static readonly int[] BladesPerVariant = { 11, 9, 13 };
 
         /// <summary>
         /// Stations along a blade, the tip excluded: the arc is sampled at this many pairs of
@@ -96,7 +101,7 @@ namespace Odyssey.Presentation.Rendering
         const float ControlRise = 0.72f;
 
         /// <summary>The widest a clump reaches from its own centre, in metres, before scaling.</summary>
-        public const float Reach = 0.72f;
+        public const float Reach = 0.95f;
 
         /// <summary>How fast the blade narrows. Below one it keeps its width and tapers late.</summary>
         const float TaperPower = 0.65f;
@@ -172,13 +177,17 @@ namespace Odyssey.Presentation.Rendering
 
                 float root = Mathf.Lerp(0.02f, 0.16f, Unit(variant, b, 23u));
 
-                // Taller, since the owner asked for grass more like Breath of the Wild's
-                // (2026-09-22). The arc means the *tip height* is about TipRise of this, so a
-                // 0.95 m blade stands about 0.78 m — still below a colonist's knee, which is the
-                // limit worth keeping while items, orders and zones are all read off the ground.
-                float length = Mathf.Lerp(0.45f, 0.95f, Unit(variant, b, 37u));
+                // **Mid-thigh, by the owner's choice** (grass-interview.md, answer 9). The arc
+                // means the tip stands about TipRise of the blade's length, so a 1.32 m blade
+                // reaches about 1.08 m.
+                //
+                // This is the number that made the clearance field a prerequisite rather than a
+                // nicety: at this height a stack of logs is simply gone, and answer 2 was that
+                // grass must never hide anything. Raising it again without checking what still
+                // clears is how that promise gets quietly broken.
+                float length = Mathf.Lerp(0.62f, 1.32f, Unit(variant, b, 37u));
 
-                float width = Mathf.Lerp(0.075f, 0.115f, Unit(variant, b, 53u));
+                float width = Mathf.Lerp(0.105f, 0.165f, Unit(variant, b, 53u));
                 float splay = Splay * Mathf.Lerp(0.6f, 1.25f, Unit(variant, b, 71u));
 
                 var outward = new Vector3(Mathf.Cos(bearing), 0f, Mathf.Sin(bearing));
@@ -285,8 +294,8 @@ namespace Odyssey.Presentation.Rendering
         /// the two live in different languages; <c>GrassTests</c> is what stops them drifting.
         /// The arithmetic is the chord of the arc: a vertex an arm's length from the root,
         /// rotated by the cap, moves <c>2 * arm * sin(cap / 2)</c>. The shader caps the bow at
-        /// <c>ODYSSEY_GRASS_MAX_BOW</c> = 0.60 rad, and the longest blade's tip is about 1.05 m
-        /// from its root — 0.71 m out and 0.78 m up — so it travels at most about 0.62 m.
+        /// <c>ODYSSEY_GRASS_MAX_BOW</c> = 0.60 rad, and the longest blade's tip is about 1.42 m
+        /// from its root — 0.92 m out and 1.08 m up — so it travels at most about 0.84 m.
         /// <c>GrassTests.TheBoundsCoverTheBowTheShaderCanApply</c> does that sum against the
         /// built mesh and the shader source rather than trusting this paragraph, which is just
         /// as well: the first figure written here was 0.90 m and 0.53 m, taken from the blade's
@@ -297,7 +306,7 @@ namespace Odyssey.Presentation.Rendering
         /// it at 0.35 would not have looked like a bounds bug; it would have looked like clumps
         /// at the edge of the view blinking out when the wind got up.</para>
         /// </summary>
-        public const float MaxSway = 0.70f;
+        public const float MaxSway = 0.90f;
 
         /// <summary>A stable value in [0, 1) for a variant, a blade and a salt.</summary>
         static float Unit(int variant, int blade, uint salt) =>

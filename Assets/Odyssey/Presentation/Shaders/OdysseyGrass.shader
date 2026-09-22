@@ -141,6 +141,31 @@ Shader "Odyssey/Grass"
         // gust is.
         float _OdysseyWindWavelength;
 
+        // Where the grass is pushed back, written by GrassClearance: a top-down field over a
+        // window around the camera. xy is the world corner of the window, z is one over its
+        // width in metres, and w is whether there is a field at all — all-zero means nothing
+        // has set it and the grass stands up everywhere, which is what a contact sheet, a test
+        // harness and the first frame of a session all need.
+        TEXTURE2D(_OdysseyClearTex);
+        SAMPLER(sampler_OdysseyClearTex);
+        float4 _OdysseyClear;
+
+        // Sampled at the clump's root rather than per vertex, so a clump clears or stands as
+        // one thing. Half a blade flattened and half upright is not a partly-cleared clump, it
+        // is a broken one.
+        float GrassClearanceAt(float3 rootWS)
+        {
+            if (_OdysseyClear.w < 0.5) return 0;
+
+            float2 uv = (rootWS.xz - _OdysseyClear.xy) * _OdysseyClear.z;
+            // Outside the window is uncleared, not clamped: clamping would smear the edge
+            // texels of the field across the whole rest of the board, so one item near the rim
+            // would flatten a stripe of meadow to the horizon.
+            if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) return 0;
+
+            return SAMPLE_TEXTURE2D_LOD(_OdysseyClearTex, sampler_OdysseyClearTex, uv, 0).r;
+        }
+
         /// The furthest any vertex may be moved. GrassMesh.MaxSway grows the mesh bounds by the
         /// same figure and GrassTests is what stops the two drifting apart.
         #define ODYSSEY_GRASS_MAX_BOW 0.60
@@ -156,6 +181,17 @@ Shader "Odyssey/Grass"
             float span = distance(_WorldSpaceCameraPos.xyz, rootWS);
             float t = saturate((span - _WidenStart) / max(_WidenEnd - _WidenStart, 1e-3));
             return positionOS + float3(spread.x, 0, spread.y) * (t * _WidenAmount);
+        }
+
+        // Everything that decides where a vertex starts, before the wind touches it: the
+        // distance widening, then the clearance shrinking the whole clump towards its root.
+        //
+        // Shrinking rather than moving, because the owner asked for bare ground and not for
+        // grass leaning aside (grass-interview.md, answer 5) — a clump at zero scale is a
+        // degenerate triangle the rasteriser drops, which is cheaper than any branch here.
+        float3 GrassStand(float3 positionOS, float2 spread, float3 rootWS)
+        {
+            return GrassWiden(positionOS, spread, rootWS) * (1.0 - GrassClearanceAt(rootWS));
         }
 
         float3 RotateAbout(float3 v, float3 axis, float angle)
@@ -306,7 +342,7 @@ Shader "Odyssey/Grass"
 
                 float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
                 float3 positionWS = TransformObjectToWorld(
-                    GrassWiden(input.positionOS.xyz, input.spread, rootWS));
+                    GrassStand(input.positionOS.xyz, input.spread, rootWS));
                 positionWS = GrassBend(positionWS, rootWS, input.colour.r, input.colour.g, _FaceCamera);
 
                 output.positionWS = positionWS;
@@ -407,7 +443,7 @@ Shader "Odyssey/Grass"
 
                 float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
                 float3 positionWS = TransformObjectToWorld(
-                    GrassWiden(input.positionOS.xyz, input.spread, rootWS));
+                    GrassStand(input.positionOS.xyz, input.spread, rootWS));
 
                 // The wind, but not the camera lean: this pass runs from the light, where
                 // _WorldSpaceCameraPos is the light's own position and leaning towards it would
@@ -480,7 +516,7 @@ Shader "Odyssey/Grass"
 
                 float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
                 float3 positionWS = TransformObjectToWorld(
-                    GrassWiden(input.positionOS.xyz, input.spread, rootWS));
+                    GrassStand(input.positionOS.xyz, input.spread, rootWS));
                 positionWS = GrassBend(positionWS, rootWS, input.colour.r, input.colour.g, _FaceCamera);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 return output;
@@ -537,7 +573,7 @@ Shader "Odyssey/Grass"
 
                 float3 rootWS = TransformObjectToWorld(float3(0, 0, 0));
                 float3 positionWS = TransformObjectToWorld(
-                    GrassWiden(input.positionOS.xyz, input.spread, rootWS));
+                    GrassStand(input.positionOS.xyz, input.spread, rootWS));
                 positionWS = GrassBend(positionWS, rootWS, input.colour.r, input.colour.g, _FaceCamera);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);

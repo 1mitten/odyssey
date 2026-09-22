@@ -218,6 +218,52 @@ says which reading was disturbed. **A single paired measurement is not enough wh
 smaller than the spread** — the pairing cancels what the machine is doing between the two halves,
 not what it does during them.
 
+### 2.6a At a play resolution, and across the view — 2026-09-22
+
+The owner asked for the thickened grass to be checked across the view, which turned out to be two
+questions. Both were measured with a control in the same run.
+
+**Across the view**, at 640 x 480, camera at three distances on one board:
+
+| view | bare | with grass | grass adds | draw calls | instances |
+|---|---|---|---|---|---|
+| close, 14 m | 2.02 ms | 2.42 ms | **+0.40** | 1,131 (+217) | 60,059 (+25,319) |
+| play, 48 m | 2.09 ms | 2.29 ms | **+0.20** | 1,131 (+217) | 60,059 (+25,319) |
+| wide, 150 m | 2.04 ms | 2.26 ms | **+0.22** | 1,131 (+217) | 60,059 (+25,319) |
+
+**Draw calls and instances are identical at all three**, which is correct and worth stating:
+submission is view-independent by design and the GPU does the culling, so the P10 invariant holds
+across the view and not merely across the board. And the cost profile is **inverted from the
+intuition** — dearest close up, not zoomed out. That is the signature of a fill cost, and it means
+the levers are blade height and width rather than how many clumps there are, which is the opposite
+of what "make it denser" suggests you would have to undo.
+
+**At a play resolution**, which no measurement in this project had ever taken:
+
+| | 640 x 480 | 1920 x 1440 |
+|---|---|---|
+| bare | 1.98 ms | **6.52 ms** |
+| grass adds | +0.20 ms | **+0.85 ms** |
+
+Nine times the pixels costs 3.3x the frame, and grass costs **4.25x what the small target said**.
+So the small-target figures were flattering it, exactly as §6c warned they would be, and the honest
+cost of the thickened meadow is about **a sixth of the whole 5 ms budget**.
+
+**And the larger finding is not about grass at all: the bare frame is already 6.52 ms against a
+5 ms budget, on an RTX 5070 Ti, with no grass in it.** That is the largest open question in the
+renderer finally carrying a number, it is not this unit's to fix, and it means the density ladder
+queued with the Look switch is no longer a nicety for the laptop.
+
+Two caveats on the absolutes. Five Unity processes were live on the machine, which `lessons.md`
+records as worth 2 ms on a canary — the paired differences survive that and the absolutes do not.
+And the large size is reached with a camera target texture rather than a swapchain, which is a
+proxy for a real window rather than the same thing.
+
+**The instrument had to be rebuilt once and that is recorded in `lessons.md`**: the first version
+raised `renderScale` on a copy of the pipeline asset, which does not reach the renderer, and
+reported that grass costs the same at nine times the pixels. It is caught now by the test timing
+the bare frame at both sizes and failing unless the larger one costs more.
+
 **What this still does not measure.** Every number here is 640 x 480 on a very fast GPU. Grass at a
 camera looking down a field is an overdraw problem before it is anything else, overdraw scales with
 pixels, 1080p is nearly seven times as many, and the blades were made thicker on 2026-09-22, which

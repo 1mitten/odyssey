@@ -119,6 +119,32 @@ namespace Odyssey.Presentation.Rendering
             if (tilledZMinus) offsetZ = Mathf.Max(offsetZ, -limit);
         }
 
+        /// <summary>
+        /// How deep the grass grows here, from what the land around it is: 0 thin, 1 lush.
+        ///
+        /// <para><b>Following the land rather than noise was the owner's choice</b>
+        /// (<c>grass-interview.md</c>, answer 11), and it is the more interesting one: a meadow
+        /// that is deep by the water and thin against the rock tells you something true about
+        /// the map while you are looking at it, where noise only tells you the artist wanted
+        /// variety. It also makes the grass part of worldgen rather than a texture laid over
+        /// it.</para>
+        ///
+        /// <para>The recorded risk is that a rule keyed on terrain draws edges where the
+        /// terrain changes, so the field can read as a contour map. Noise on top was offered
+        /// and declined; if it reads badly, adding it here is one line.</para>
+        ///
+        /// <para>A pure function of two counts so a test can state the rule without building a
+        /// world: four wet neighbours is as lush as it gets, four stony ones as thin.</para>
+        /// </summary>
+        public static float Lushness(int wetNeighbours, int stonyNeighbours) =>
+            Mathf.Clamp01(0.5f + wetNeighbours * 0.22f - stonyNeighbours * 0.18f);
+
+        /// <summary>How the lushness scales the density, from thin ground to deep grass.</summary>
+        public static float DensityScale(float lushness) => Mathf.Lerp(0.45f, 1.25f, lushness);
+
+        /// <summary>And how it scales a clump itself, so deep grass is taller as well as thicker.</summary>
+        public static float ClumpScale(float lushness) => Mathf.Lerp(0.78f, 1.18f, lushness);
+
         /// <summary>Which of the available tuft meshes this one is.</summary>
         public static int VariantFor(int x, int z, int slot, int variants)
         {

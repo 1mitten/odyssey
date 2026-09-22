@@ -29,10 +29,18 @@ namespace Odyssey.Presentation.Rendering
         /// thing float. This is the shading the geometry cannot supply, since at board distance a
         /// blade is a pixel and there is no light left to model.
         /// </summary>
-        public static Color Root { get; set; } = new Color(0.290f, 0.416f, 0.212f);
+        public static Color Root { get; set; } = new Color(0.404f, 0.518f, 0.220f);
 
-        /// <summary>The colour at the tip. Lighter, warmer and more saturated than the root.</summary>
-        public static Color Tip { get; set; } = new Color(0.616f, 0.780f, 0.376f);
+        /// <summary>
+        /// The colour at the tip. Lighter, warmer and more saturated than the root.
+        ///
+        /// <para><b>Spring green, by the owner's choice</b> (grass-interview.md, answer 3),
+        /// asked for twice: the first pass only raised the value and that was not what was
+        /// wanted. Both ends are pushed towards yellow as well as lighter — red up, blue
+        /// down — which is the difference between brighter grass and *fresher* grass, and
+        /// which is also what the concept renders and the Hinterberg reference both do.</para>
+        /// </summary>
+        public static Color Tip { get; set; } = new Color(0.757f, 0.882f, 0.365f);
 
         /// <summary>
         /// How much of the blade the root colour keeps. Above one it hangs on and the clump reads
@@ -137,8 +145,8 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Back to what the game ships with. For a check harness that changed them.</summary>
         public static void Reset()
         {
-            Root = new Color(0.290f, 0.416f, 0.212f);
-            Tip = new Color(0.616f, 0.780f, 0.376f);
+            Root = new Color(0.404f, 0.518f, 0.220f);
+            Tip = new Color(0.757f, 0.882f, 0.365f);
             RampBias = 1.6f;
             Banding = 0f;
             BandHeight = 0.45f;

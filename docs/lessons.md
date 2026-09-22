@@ -2559,3 +2559,31 @@ test that measured a frame the player never gets: **an instrument that returns a
 to a question it did not ask.** The tell here was unmissable once looked at — a uniformly blank
 image — and nobody had looked, because the tool exits zero and writes the file.
 
+## Raising the resolution: two instruments, one of which lied
+
+**2026-09-22, measuring what grass costs at a play resolution — the figure this project has never
+had.** Batch mode fixes the screen at 640 x 480, so every frame number on record is 307,200 pixels,
+and `06-rendering-and-camera.md` §6c already warned that alpha-tested foliage is "exactly the kind
+of geometry whose cost is invisible at 640x480 and dominant at 1080p".
+
+**What does not work: `renderScale` on a copy of the pipeline asset.** Instantiate the URP asset,
+set `renderScale = 3`, assign `QualitySettings.renderPipeline`. It runs, it reports, and it changes
+nothing — `UniversalRenderPipeline.asset` is still the original. This is the same shape as the trap
+`DisplaySettingsApplier` documents about which of the two pipeline settings is read first, and it
+fails silently: the test produced a perfectly plausible number.
+
+**What works: give the camera a `targetTexture` of the size you want.** No global state, nothing to
+restore beyond the camera field, and it demonstrably takes.
+
+**The lesson is the guard, not the technique.** The first version reported *grass costs the same at
+nine times the pixels*, which would have been excellent news and was entirely false. The tell was in
+its own output: **the bare frame came out faster at the larger size** — 2.09 ms down to 1.89 — which
+nothing about grass can explain. The test now times the bare frame at both sizes and **fails unless
+nine times the pixels costs at least twenty per cent more**, because a run where it does not is a
+run that measured the small target twice.
+
+This is P11 again — a measurement that never measured anything, clamped into plausibility — and it
+is the third time in this project. The pattern worth copying is not "check your render scale"; it is
+**make the instrument assert the thing that proves it is switched on**, in the same test, before it
+is allowed to report.
+

@@ -5,6 +5,8 @@ using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
@@ -64,8 +66,9 @@ namespace Odyssey.Tests.Presentation
                 // zones are all read off the ground, so grass that reached a colonist's waist
                 // would be hiding the game. The arc keeps the tip well under the blade's own
                 // length, so the longest blade stands about 0.78 m.
-                Assert.That(highest, Is.InRange(0.3f, 1.0f),
-                    $"variant {variant} is {highest:0.00} m tall; grass is knee high at most");
+                Assert.That(highest, Is.InRange(0.3f, 1.25f),
+                    $"variant {variant} is {highest:0.00} m tall; mid-thigh is the ceiling the "
+                        + "owner chose and anything past it is hiding the board");
                 Assert.That(widest, Is.LessThanOrEqualTo(GrassMesh.Reach + 1e-3f),
                     $"variant {variant} reaches {widest:0.00} m, past its declared {GrassMesh.Reach} m — "
                         + "GroundScatter.ClumpReach is what keeps clumps off a tilled tile, and it "
@@ -329,8 +332,14 @@ namespace Odyssey.Tests.Presentation
             (int Buckets, int Instances) thin = Meadow(100);
             (int Buckets, int Instances) thick = Meadow(200);
 
-            Assert.That(thin.Instances, Is.EqualTo(64), "one clump a cell at a hundred per hundred");
-            Assert.That(thick.Instances, Is.EqualTo(128), "two clumps a cell at two hundred");
+            // No longer an exact count. How thick the grass is now depends on the land as well
+            // as on the setting (GroundScatter.Lushness), and on an all-grass board that lands
+            // at the middle of the range rather than at one — so the numbers to assert are the
+            // *relationship* and the draw count, which is what this test was ever about.
+            Assert.That(thin.Instances, Is.GreaterThan(0), "no grass at all at a hundred per hundred");
+            Assert.That(thick.Instances, Is.GreaterThan(thin.Instances * 17 / 10),
+                $"doubling the setting took the meadow {thin.Instances} -> {thick.Instances}, "
+                    + "which is not a doubling");
             Assert.That(thick.Buckets, Is.EqualTo(thin.Buckets),
                 $"the meadow doubled and the draws went {thin.Buckets} -> {thick.Buckets}; "
                     + "grass must cost instances, not draws");
@@ -369,6 +378,159 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void ZeroDensityIsBareGround() =>
             Assert.That(Meadow(0).Instances, Is.Zero);
+
+        // ------------------------------------------------------------- the land
+
+        /// <summary>
+        /// Lushness follows the land: deep by the water, thin against the rock.
+        ///
+        /// <para>The owner chose this over noise (<c>grass-interview.md</c>, answer 11) because it
+        /// says something true about the map. The rule is asserted here rather than being left to
+        /// the eye, because "the grass is a bit thin over there" is not a bug report anybody can
+        /// act on.</para>
+        /// </summary>
+        [Test]
+        public void GrassIsDeepByWaterAndThinByRock()
+        {
+            float dry = GroundScatter.Lushness(0, 0);
+            float wet = GroundScatter.Lushness(4, 0);
+            float stony = GroundScatter.Lushness(0, 4);
+
+            Assert.That(wet, Is.GreaterThan(dry), "water should not thin the grass beside it");
+            Assert.That(stony, Is.LessThan(dry), "rock should not fatten the grass beside it");
+            Assert.That(wet, Is.EqualTo(1f).Within(1e-3f), "four wet sides should be as lush as it goes");
+            Assert.That(stony, Is.EqualTo(0f).Within(1e-3f), "four stony sides should be as thin as it goes");
+
+            Assert.That(GroundScatter.Lushness(9, 0), Is.LessThanOrEqualTo(1f), "unclamped");
+            Assert.That(GroundScatter.Lushness(0, 9), Is.GreaterThanOrEqualTo(0f), "unclamped");
+
+            Assert.That(GroundScatter.DensityScale(1f), Is.GreaterThan(GroundScatter.DensityScale(0f)));
+            Assert.That(GroundScatter.ClumpScale(1f), Is.GreaterThan(GroundScatter.ClumpScale(0f)));
+        }
+
+        /// <summary>
+        /// <b>A wall clears the grass around it</b>, and the cell it clears is decided by the layer
+        /// the wall stands in rather than the one the grass grows on.
+        ///
+        /// <para>That distinction is the whole test. Grass is strewn on the top of a solid cell and
+        /// a wall stands in the open cell <em>above</em> it, so a margin rule that asked the grass's
+        /// own cell whether it was blocked would be asking whether the ground is ground — always
+        /// false, clearing nothing, and looking on screen exactly like a feature that was never
+        /// written. The first draft did that.</para>
+        /// </summary>
+        [Test]
+        public void AWallClearsTheGrassAroundIt()
+        {
+            int Clumps(bool withWall)
+            {
+                var world = new RenderTestWorld(8, 8, 3);
+                for (int z = 0; z < 8; z++)
+                for (int x = 0; x < 8; x++)
+                    world.Solid(x, z, 1, NaturalContent.TerrainGrass);
+
+                if (withWall) world.Edifice(4, 4, 2, CoreContent.EdificeWall);
+                world.Publish();
+
+                var clumps = new HashSet<int>(GrassMesh.Modules(world.Library));
+                var batch = new ChunkBatch();
+                var mesher = new ChunkMesher(world.Model) { ScatterDensity = 300 };
+                mesher.Mesh(batch, world.Chunks.ChunksX * world.Chunks.ChunksZ);
+
+                int instances = 0;
+                foreach (InstanceBucket bucket in batch.Body)
+                    if (clumps.Contains(bucket.Module))
+                        instances += bucket.Count;
+                return instances;
+            }
+
+            int bare = Clumps(withWall: false);
+            int walled = Clumps(withWall: true);
+
+            Assume.That(bare, Is.GreaterThan(0), "no grass to clear");
+            Assert.That(walled, Is.LessThan(bare),
+                "a wall cleared no grass at all, which is what asking the wrong layer looks like");
+        }
+
+        // ------------------------------------------------------------- the clearance field
+
+        /// <summary>
+        /// A dropped item pushes the grass back, and only where it is.
+        ///
+        /// <para>This is the mechanism the interview turned on (answer 13): items and order marks
+        /// are not in the render mirror the mesher reads, so the only way grass can get out of
+        /// their way is a field stamped per frame and read by the shader. Built on the CPU
+        /// precisely so that this test can exist.</para>
+        /// </summary>
+        [Test]
+        public void AnItemPushesTheGrassBackAndOnlyWhereItIs()
+        {
+            using var clearance = new GrassClearance();
+            var at = new Vector3(100f, 0f, 100f);
+
+            clearance.Begin(at);
+            clearance.Stamp(at, 0.55f);
+
+            Assert.That(clearance.At(at), Is.GreaterThan(0.9f), "the item's own ground is not cleared");
+            Assert.That(clearance.At(at + new Vector3(3f, 0f, 0f)), Is.Zero,
+                "three metres away is not near anything and must keep its grass");
+            Assert.That(clearance.Stamps, Is.EqualTo(1));
+        }
+
+        /// <summary>
+        /// Two items beside each other clear their own ground and do not gouge a deeper hole where
+        /// their rings overlap. The field keeps the strongest stamp rather than summing them.
+        /// </summary>
+        [Test]
+        public void OverlappingRingsDoNotCompound()
+        {
+            using var clearance = new GrassClearance();
+            var centre = new Vector3(100f, 0f, 100f);
+
+            clearance.Begin(centre);
+            clearance.Stamp(centre, 1.2f);
+            float alone = clearance.At(centre);
+
+            clearance.Stamp(centre + new Vector3(0.4f, 0f, 0f), 1.2f);
+            Assert.That(clearance.At(centre), Is.EqualTo(alone).Within(1e-3f));
+        }
+
+        /// <summary>
+        /// The window snaps to a whole texel as it follows the camera.
+        ///
+        /// <para>Without it the field slides continuously under the world, every clump's sample
+        /// point drifts across texel boundaries, and the grass at the edge of a ring flickers as
+        /// you pan — which reads as the grass being broken rather than as the window moving.</para>
+        /// </summary>
+        [Test]
+        public void TheWindowSnapsToATexelAsItFollowsTheCamera()
+        {
+            using var clearance = new GrassClearance();
+
+            clearance.Begin(new Vector3(100f, 0f, 100f));
+            Vector2 first = clearance.Origin;
+
+            clearance.Begin(new Vector3(100f + GrassClearance.MetresPerTexel * 0.25f, 0f, 100f));
+            Assert.That(clearance.Origin, Is.EqualTo(first), "the window crawled within one texel");
+
+            clearance.Begin(new Vector3(100f + GrassClearance.MetresPerTexel * 4f, 0f, 100f));
+            Assert.That(clearance.Origin, Is.Not.EqualTo(first), "the window did not follow the camera");
+        }
+
+        /// <summary>Anything outside the window keeps its grass, rather than being smeared by the
+        /// edge texels of a field that does not reach it.</summary>
+        [Test]
+        public void GroundOutsideTheWindowIsNeverCleared()
+        {
+            using var clearance = new GrassClearance();
+            clearance.Begin(new Vector3(100f, 0f, 100f));
+            clearance.Stamp(new Vector3(100f, 0f, 100f), 2f);
+
+            Assert.That(clearance.At(new Vector3(1000f, 0f, 1000f)), Is.Zero);
+            Assert.That(clearance.Stamps, Is.EqualTo(1));
+
+            clearance.Stamp(new Vector3(1000f, 0f, 1000f), 2f);
+            Assert.That(clearance.Stamps, Is.EqualTo(1), "a stamp outside the window was counted");
+        }
 
         // ------------------------------------------------------------- the wind
 

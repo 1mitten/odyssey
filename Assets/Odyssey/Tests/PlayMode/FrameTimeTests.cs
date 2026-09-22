@@ -203,6 +203,168 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// <b>What the grass costs from every distance the player can look from</b>, rather than
+        /// from the one place the harness happens to put the camera.
+        ///
+        /// <para><see cref="TheMeadowCostsWhatItGrows"/> times one framing, and for a per-cell
+        /// pass that is enough because its cost is the board's, not the view's. Grass is not like
+        /// that: it is geometry and fill, so what it costs depends entirely on how much of it is on
+        /// screen, and the camera zooms from 10 m to 160 m. A number taken at 48 m says nothing
+        /// about the frame when somebody pulls the camera back over a meadow — which is the frame
+        /// most likely to be the worst one, and the one no measurement here has ever taken.</para>
+        ///
+        /// <para>Paired at each distance, grass against no grass, for the reason
+        /// <see cref="TheMarkPassCostsWhatItSubmits"/> gives: a frame number is only comparable
+        /// with one measured beside it. Three pairs in one session, so the three differences are
+        /// comparable with each other as well.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeadowCostsWhatItGrowsAcrossTheView()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+
+                SliceCameraRig? rig = boot.cameraRig;
+                Assert.That(rig, Is.Not.Null, "no camera rig, so no view to measure across");
+
+                int shipped = boot.Renderer!.ScatterDensity;
+                var middle = new CellRef(
+                    boot.Model!.Size.SizeX / 2, boot.Model!.Size.SizeZ / 2, rig!.ActiveLayer);
+
+                foreach ((string label, float distance) in new[]
+                         {
+                             ("close", 14f), ("play", 48f), ("wide", 150f),
+                         })
+                {
+                    rig.FocusOn(middle, distance);
+                    yield return null;
+                    yield return null;
+
+                    Remesh(boot, shipped);
+                    float grassy = 0f;
+                    yield return TimeFrames($"view/{label}/grass", boot, WarmupFrames, x => grassy = x);
+                    int grassyCalls = boot.Renderer!.DrawCalls;
+                    int grassyInstances = boot.Renderer!.InstancesDrawn;
+
+                    Remesh(boot, 0);
+                    float bare = 0f;
+                    yield return TimeFrames($"view/{label}/bare", boot, WarmupFrames, x => bare = x);
+                    int bareCalls = boot.Renderer!.DrawCalls;
+                    int bareInstances = boot.Renderer!.InstancesDrawn;
+
+                    Debug.Log($"[FrameTime] grass across the view, {label} at {distance:0} m: " +
+                              $"bare {bare:0.00} ms / {bareCalls} calls / {bareInstances} instances, " +
+                              $"grass {grassy:0.00} ms (+{grassy - bare:0.00}) / {grassyCalls} calls " +
+                              $"(+{grassyCalls - bareCalls}) / {grassyInstances} instances " +
+                              $"(+{grassyInstances - bareInstances}); " +
+                              $"clearance stamps {boot.Renderer!.Clearance.Stamps}");
+                }
+
+                Remesh(boot, shipped);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// <b>What the grass costs at something like a play resolution</b>, which is the number
+        /// every other figure in this file is missing.
+        ///
+        /// <para>Batch mode fixes the screen at 640 x 480, so every frame number this project has
+        /// ever quoted is 307,200 pixels — and <c>06-rendering-and-camera.md</c> §6c says outright
+        /// that "the alpha-tested foliage that covers the horizon is exactly the kind of geometry
+        /// whose cost is invisible at 640x480 and dominant at 1080p". Grass is that geometry. The
+        /// across-the-view pairing showed it is dearest *close up*, which is the signature of a
+        /// fill cost, and fill is precisely what a small render target cannot show.</para>
+        ///
+        /// <para>The screen cannot be resized in batch mode, but the render target can: a render
+        /// scale of three takes 640 x 480 to 1920 x 1440, which is 2.76 million pixels against
+        /// 1080p's 2.07 million. So this is a little <em>harsher</em> than a play resolution, which
+        /// is the right way round for a figure meant to reassure.</para>
+        ///
+        /// <para><b>Through a copy of the pipeline asset, never the asset itself.</b> Writing
+        /// <c>renderScale</c> on the committed <c>PC_RPAsset.asset</c> would leave the whole
+        /// project rendering at three times scale after the test, as a stray diff somebody finds
+        /// days later — the exact trap <c>DisplaySettingsApplier</c> exists to avoid and which
+        /// <c>27-graphics-settings.md</c> records.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMeadowCostsWhatItGrowsAtPlayResolution()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            RenderTexture? large = null;
+            Camera? camera = boot.cameraRig != null ? boot.cameraRig.GetComponent<Camera>() : null;
+            try
+            {
+                yield return null;
+                Assume.That(camera, Is.Not.Null, "no camera, so no resolution to raise");
+
+                int shipped = boot.Renderer!.ScatterDensity;
+
+                // The control, at the resolution every other figure in this file was taken at.
+                Remesh(boot, 0);
+                float bareSmall = 0f;
+                yield return TimeFrames("resolution/bare@640", boot, WarmupFrames, x => bareSmall = x);
+
+                // 1920 x 1440 is 2.76 million pixels against 1080p's 2.07 million, so this is a
+                // little harsher than a play resolution — the right way round for a figure that is
+                // meant to reassure.
+                large = new RenderTexture(1920, 1440, 24, RenderTextureFormat.DefaultHDR)
+                {
+                    name = "Odyssey/PlayResolution",
+                    antiAliasing = 1,
+                };
+                camera!.targetTexture = large;
+
+                yield return null;
+                yield return null;
+
+                float bareLarge = 0f;
+                yield return TimeFrames("resolution/bare@1920", boot, WarmupFrames, x => bareLarge = x);
+
+                // **The instrument proves itself before it is allowed to report anything.**
+                //
+                // The first version of this test set renderScale on a copy of the pipeline asset,
+                // measured, and announced that grass costs the same at nine times the pixels. The
+                // tell that it had measured nothing was in its own numbers: the *bare* frame came
+                // out faster at the larger size, which no amount of grass tuning can explain.
+                // Assigning QualitySettings.renderPipeline is not the same as the renderer using
+                // it — the same trap DisplaySettingsApplier documents about which of the two
+                // pipeline settings is read first.
+                //
+                // Nine times the pixels must cost something on a frame that is part fill. A run
+                // where it does not is a run that measured the small target twice, and it should
+                // go red rather than reassure (docs/bug-patterns.md P11).
+                Assert.That(bareLarge, Is.GreaterThan(bareSmall * 1.2f),
+                    $"the bare frame cost {bareSmall:0.00} ms at 640x480 and {bareLarge:0.00} ms at "
+                        + "1920x1440, which is nine times the pixels for no cost — so the larger "
+                        + "target did not take and nothing below is measured at the resolution it "
+                        + "claims");
+
+                Remesh(boot, shipped);
+                float grassy = 0f;
+                yield return TimeFrames("resolution/grass@1920", boot, WarmupFrames, x => grassy = x);
+
+                Debug.Log("[FrameTime] grass at 1920 x 1440 against 640 x 480: " +
+                          $"bare {bareSmall:0.00} -> {bareLarge:0.00} ms " +
+                          $"(x{bareLarge / Mathf.Max(bareSmall, 1e-3f):0.00} for x9 the pixels); " +
+                          $"grass adds {grassy - bareLarge:0.00} ms there");
+            }
+            finally
+            {
+                if (camera != null) camera.targetTexture = null;
+                if (large != null) UnityEngine.Object.Destroy(large);
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Set the scatter density and rebuild what draws it — the board's chunks and the first
         /// ring of the surround, which is strewn at the same density.
         ///

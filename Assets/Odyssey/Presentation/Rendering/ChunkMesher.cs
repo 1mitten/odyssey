@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Presentation.World;
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
@@ -237,8 +238,9 @@ namespace Odyssey.Presentation.Rendering
         // ------------------------------------------------------------- scatter
 
         /// <summary>
-        /// Clumps of grass per hundred grass cells. 140 means every grass cell gets one and two
-        /// in five get a second. Zero turns scatter off entirely.
+        /// Clumps of grass per hundred grass cells, <em>before</em> the land has its say
+        /// (<see cref="GroundScatter.Lushness"/>). 190 means every grass cell gets one and
+        /// nine in ten get a second. Zero turns scatter off entirely.
         ///
         /// <para><b>Was 60, and the reason it was 60 is worth keeping.</b> The old note read:
         /// <em>sparse enough that the meadow reads as a field with grass on it rather than as
@@ -255,7 +257,7 @@ namespace Odyssey.Presentation.Rendering
         public int ScatterDensity { get; set; } = DefaultScatterDensity;
 
         /// <summary>What the game ships with, and what the frame-time pairing measures.</summary>
-        public const int DefaultScatterDensity = 140;
+        public const int DefaultScatterDensity = 190;
 
         int[] _scatterModules = System.Array.Empty<int>();
         bool _scatterResolved;
@@ -300,7 +302,19 @@ namespace Odyssey.Presentation.Rendering
             EnsureScatterModules();
             if (_scatterModules.Length == 0) return;
 
-            int count = GroundScatter.CountFor(x, z, ScatterDensity);
+            // A margin of bare ground where the colony has built (grass-interview.md,
+            // answer 6). Edifices are static and live in the render mirror, so the mesher
+            // can do this for nothing — unlike items and order marks, which move and come
+            // through the clearance field instead. The split is by how often a thing moves,
+            // not by what it is.
+            if (BuiltNear(index, x, z, y, size)) return;
+
+            SampleLand(index, x, z, size, out int wet, out int stony);
+            float lushness = GroundScatter.Lushness(wet, stony);
+            float lushScale = GroundScatter.ClumpScale(lushness);
+
+            int count = GroundScatter.CountFor(x, z,
+                Mathf.RoundToInt(ScatterDensity * GroundScatter.DensityScale(lushness)));
             if (count == 0) return;
 
             // Tufts stand on top of the solid cell, not inside it.
@@ -337,6 +351,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 GroundScatter.Placement(x, z, slot,
                     out float offsetX, out float offsetZ, out float yaw, out float scale);
+                scale *= lushScale;
                 GroundScatter.PullInFromTilled(
                     ref offsetX, ref offsetZ, tilledXPlus, tilledXMinus, tilledZPlus, tilledZMinus);
 
@@ -428,6 +443,70 @@ namespace Odyssey.Presentation.Rendering
         /// was the one thing no test could see. <see cref="GrassMesh"/> is ours, so it always
         /// resolves and the meadow is the same on every machine.</para>
         /// </summary>
+        /// <summary>
+        /// Is anything built in this cell or against it? A wall, a door, a pillar — anything
+        /// the mirror marks as blocking.
+        ///
+        /// <para>Only the four orthogonal neighbours, not the eight: a diagonal margin would
+        /// round off every corner of every building into a bare quarter-circle, which reads
+        /// as the grass being afraid of the wall rather than as ground somebody has cleared.
+        /// </para>
+        ///
+        /// <para><b>It is the layer above that is asked</b>, not this one. Grass is strewn on
+        /// the top of a solid cell and a wall stands in the open cell above that, so asking
+        /// this cell whether it is blocked is asking whether the ground is ground. The first
+        /// draft did exactly that and cleared nothing at all, which no test would have caught
+        /// as a crash and which reads on screen as the feature simply not being there.</para>
+        /// </summary>
+        bool BuiltNear(int index, int x, int z, int y, in GridSize size)
+        {
+            if (y + 1 >= size.SizeY) return false;
+
+            int above = index + size.LayerStride;
+            if (_model.IsBlocking(above)) return true;
+            if (x + 1 < size.SizeX && _model.IsBlocking(above + 1)) return true;
+            if (x > 0 && _model.IsBlocking(above - 1)) return true;
+            if (z + 1 < size.SizeZ && _model.IsBlocking(above + size.SizeX)) return true;
+            if (z > 0 && _model.IsBlocking(above - size.SizeX)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// What the land beside this cell is: how many of the four neighbours are wet, and
+        /// how many are stone. <see cref="GroundScatter.Lushness"/> turns the pair into how
+        /// deep the grass grows.
+        ///
+        /// <para>The <em>drawn</em> terrain, not the real one, for the same reason the scatter
+        /// already reads it that way: a zoned cell is drawn as dirt and must not grow a lush
+        /// fringe along its edge because the soil under the zone happens to be wet.</para>
+        /// </summary>
+        void SampleLand(int index, int x, int z, in GridSize size, out int wet, out int stony)
+        {
+            wet = 0;
+            stony = 0;
+            if (x + 1 < size.SizeX) Weigh(_model.DrawnTerrain(index + 1), ref wet, ref stony);
+            if (x > 0) Weigh(_model.DrawnTerrain(index - 1), ref wet, ref stony);
+            if (z + 1 < size.SizeZ) Weigh(_model.DrawnTerrain(index + size.SizeX), ref wet, ref stony);
+            if (z > 0) Weigh(_model.DrawnTerrain(index - size.SizeX), ref wet, ref stony);
+        }
+
+        static void Weigh(ushort terrain, ref int wet, ref int stony)
+        {
+            if (terrain == NaturalContent.TerrainShallowWater
+                || terrain == NaturalContent.TerrainDeepWater
+                || terrain == NaturalContent.TerrainMarsh)
+            {
+                wet++;
+            }
+            else if (terrain == NaturalContent.TerrainRock
+                || terrain == NaturalContent.TerrainBedrock
+                || terrain == NaturalContent.TerrainPackedGravel
+                || terrain == NaturalContent.TerrainSand)
+            {
+                stony++;
+            }
+        }
+
         void EnsureScatterModules()
         {
             if (_scatterResolved) return;
