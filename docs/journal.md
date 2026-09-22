@@ -10536,3 +10536,54 @@ worth taking was taken: **perspective correction** — leaning the blade tip tow
 thin upright card turns its face to a lens looking down at it. Without it a meadow at this pitch
 reads as grey fuzz, and it is the least obvious thing in the whole unit.
 
+## 2026-09-22 — The grass, played once: lighter, thicker, more of it, and a number that was noise
+
+The owner pressed Play on `claude/illustrated-look`. Pause holds the meadow still and zooming out
+reads well — two of the four questions the playtest row asked, closed. Three changes came back:
+lighter green, thicker blades, and more of it "if performance is ok with it".
+
+All three are tuning and all three are done: root and tip lifted, blades from 45–75 mm to
+75–115 mm with the shoulder taper eased so they do not narrow to spikes, and the density from 60 to
+**140**, which puts a clump in every grass cell and a second in two in five.
+
+**The density comment argued against exactly this, and the argument was about different geometry.**
+It read: *sparse enough that the meadow reads as a field with grass on it rather than as grass with
+a field somewhere underneath, which is what 120 did at board distance.* That was true of the Synty
+cut-outs, which were wide painted cards — two of them in one cell closed the ground over. Thin
+blades do not, so the judgement does not carry across. Rewritten in place with the owner's call
+dated, because the next person to read "120 was tried and rejected" deserves to know it was tried
+on something else.
+
+### The density had five owners
+
+`ChunkMesher`'s default, `TerrainSkirt.TuftDensity`, `OdysseyBootstrap.grassScatter`,
+`SettingsPresenter`'s fallback and two frame-time harnesses each wrote the literal `60`, and every
+one of them meant *the density the game ships with*. Raising it only where the owner would see it
+would have left the benchmarks timing a meadow nobody plays, which is the quietest possible way to
+make a performance number a lie. One constant now, `ChunkMesher.DefaultScatterDensity`, with
+`GrassTests.TheMeadowAndTheSurroundAgreeOnHowThickTheGrassIs` guarding the pair that lives in the
+same assembly — the board and the surround, where a disagreement draws a straight line across the
+view at the rim.
+
+### And the earlier cost measurement was noise, which the second one proves
+
+Measured at density 60 the day before, the first 9,195 clump instances cost 0.06 ms and a second
+8,977 cost 0.86 ms. I recorded that as "not linear and not explained" and noted some of it was
+probably noise. **It was all noise.** The same paired test at 140 and 280 reads 2.93 ms and
+2.78 ms — four times the grass for a tenth of the difference, and *doubling the meadow came out
+faster than not doubling it*. The worst-frame column is the tell, 24–35 ms in the disturbed run
+against 3.6–12.5 ms in the clean one.
+
+The lesson is narrower than "measurements are noisy" and worth having: **a paired measurement
+cancels what the machine does between the two halves, not what it does during them.** When the
+effect is smaller than the spread, one pairing is not enough, and the honest move is to widen the
+effect — here, by measuring 140 against 280 rather than 60 against 120 — until it clears the noise
+or is shown not to.
+
+What the two runs agree on is the thing that actually matters: doubling the meadow costs nine draw
+calls and twenty-one thousand instances. Grass is priced in matrices, exactly as P10 demands.
+
+**Still unmeasured, and said plainly because thicker blades make it worse:** all of this is
+640 × 480 on an RTX 5070 Ti. Grass at a camera looking down a field is an overdraw problem before
+it is anything else, and overdraw is the half of the cost this instrument cannot see.
+

@@ -1210,7 +1210,7 @@ namespace Odyssey.Tests.PlayMode
             boot.seed = 1;
             boot.mapType = mapType;
             boot.barrenMap = barren;
-            boot.grassScatter = 60;
+            boot.grassScatter = ChunkMesher.DefaultScatterDensity;
             boot.cameraRig = rig;
 #if UNITY_EDITOR
             // Real art when the packs are present, the same way the scene gets it. A clone without

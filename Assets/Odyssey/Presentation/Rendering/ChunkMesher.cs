@@ -237,12 +237,25 @@ namespace Odyssey.Presentation.Rendering
         // ------------------------------------------------------------- scatter
 
         /// <summary>
-        /// Tufts of grass per hundred grass cells. 60 means six cells in ten get one tuft and the
-        /// rest are bare — sparse enough that the meadow reads as a field with grass on it rather
-        /// than as grass with a field somewhere underneath, which is what 120 did at board
-        /// distance. Zero turns scatter off entirely.
+        /// Clumps of grass per hundred grass cells. 140 means every grass cell gets one and two
+        /// in five get a second. Zero turns scatter off entirely.
+        ///
+        /// <para><b>Was 60, and the reason it was 60 is worth keeping.</b> The old note read:
+        /// <em>sparse enough that the meadow reads as a field with grass on it rather than as
+        /// grass with a field somewhere underneath, which is what 120 did at board distance.</em>
+        /// That was a true judgement about the Synty cut-outs, which were wide painted cards: two
+        /// of them in a cell closed the ground over. Our clumps are a handful of thin blades and
+        /// do not, so the judgement does not carry across — <b>owner, 2026-09-22, having seen
+        /// them: "more of it please"</b>.</para>
+        ///
+        /// <para>Priced before it was raised rather than after, because more grass is the one
+        /// change here that could cost a frame: <c>FrameTimeTests.TheMeadowCostsWhatItGrows</c>
+        /// pairs this density against a bare board in one run.</para>
         /// </summary>
-        public int ScatterDensity { get; set; } = 60;
+        public int ScatterDensity { get; set; } = DefaultScatterDensity;
+
+        /// <summary>What the game ships with, and what the frame-time pairing measures.</summary>
+        public const int DefaultScatterDensity = 140;
 
         int[] _scatterModules = System.Array.Empty<int>();
         bool _scatterResolved;

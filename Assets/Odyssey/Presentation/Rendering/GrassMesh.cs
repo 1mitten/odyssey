@@ -68,8 +68,15 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Where the blade narrows, as a fraction of its length.</summary>
         const float ShoulderT = 0.55f;
 
-        /// <summary>How wide the blade is at the shoulder, against its width at the root.</summary>
-        const float ShoulderWidth = 0.55f;
+        /// <summary>
+        /// How wide the blade is at the shoulder, against its width at the root.
+        ///
+        /// <para>Raised from 0.55 with the width in <see cref="Build"/> (owner, 2026-09-22:
+        /// thicker). A blade that narrows fast is a spike at any distance the eye can resolve it,
+        /// so thickening the root without thickening the shoulder only makes the spike start
+        /// wider.</para>
+        /// </summary>
+        const float ShoulderWidth = 0.62f;
 
         /// <summary>How far the shading normal is pulled from the blade's own face towards up.</summary>
         const float NormalLift = 0.7f;
@@ -135,7 +142,10 @@ namespace Odyssey.Presentation.Rendering
 
                 float root = Mathf.Lerp(0.02f, 0.16f, Unit(variant, b, 23u));
                 float length = Mathf.Lerp(0.34f, 0.72f, Unit(variant, b, 37u));
-                float width = Mathf.Lerp(0.045f, 0.075f, Unit(variant, b, 53u));
+                // 45-75 mm until the owner saw it (2026-09-22: thicker). A blade at 2.5 m a
+                // cell and a camera tens of metres up is a pixel or two wide, so the honest
+                // width is whatever reads rather than whatever a real blade measures.
+                float width = Mathf.Lerp(0.075f, 0.115f, Unit(variant, b, 53u));
                 float splay = Splay * Mathf.Lerp(0.6f, 1.25f, Unit(variant, b, 71u));
 
                 var outward = new Vector3(Mathf.Cos(bearing), 0f, Mathf.Sin(bearing));

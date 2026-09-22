@@ -243,7 +243,7 @@ namespace Odyssey.Presentation.Rendering
         /// hundred metres. They fade to nothing over the first ring, because a tuft is a
         /// close-range detail and nobody is inspecting the ground twenty metres past the board.
         /// </summary>
-        public int TuftDensity { get; set; } = 60;
+        public int TuftDensity { get; set; } = ChunkMesher.DefaultScatterDensity;
 
         public bool SubmitToGpu { get; set; } = true;
         public int GameObjectLayer { get; set; }

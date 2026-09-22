@@ -132,7 +132,17 @@ namespace Odyssey.Presentation.Bootstrap
 
         [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 60 is a tuft on six cells in ten.")]
         [Range(0, 300)]
-        public int grassScatter = 60;
+        /// <summary>
+        /// Clumps of grass per hundred grass cells, handed to the renderer at build.
+        ///
+        /// <para>Taken from <see cref="ChunkMesher.DefaultScatterDensity"/> rather than written
+        /// here. It was a literal 60, and so were four other places that all meant "the density
+        /// the game ships with" — this field, the scene builder, the settings presenter's
+        /// fallback and two frame-time harnesses. Raising the density on the owner's say-so
+        /// (2026-09-22) would have moved the meadow and left the benchmarks measuring the old
+        /// one, which is the quietest way to make a performance number a lie.</para>
+        /// </summary>
+        public int grassScatter = ChunkMesher.DefaultScatterDensity;
 
         [Tooltip("How far the drawn ground rolls above and below its layer, in metres. Decoration only: the cells stay flat, so nothing here changes pathing, the save or the hash. 0 is the flat board.")]
         [Range(0f, 3f)]

@@ -267,7 +267,7 @@ namespace Odyssey.Tests.PlayMode
             boot.layers = 8;
             boot.seed = 1;
             boot.barrenMap = false;
-            boot.grassScatter = 60;
+            boot.grassScatter = ChunkMesher.DefaultScatterDensity;
             boot.cameraRig = rig;
 
             // The committed catalogue, so the roster cards and the inspect header are photographed

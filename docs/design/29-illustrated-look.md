@@ -192,28 +192,66 @@ convention of the vertical gradient in vertex colour red.
 
 `FrameTimeTests.TheMeadowCostsWhatItGrows`, one barren meadow, three timings seconds apart in one
 session so that whatever else the machine is doing cancels out. RTX 5070 Ti at 640 x 480,
-2026-09-22, under the real player loop with post-processing on:
+2026-09-22, under the real player loop with post-processing on. At the shipped density of 140:
 
 | | frame | draw calls | instances |
 |---|---|---|---|
-| no grass | 3.08 ms | 914 | 34,740 |
-| shipped, density 60 | **3.14 ms** (+0.06) | 1,125 (+211) | 43,935 (+9,195) |
-| density 120 | 3.99 ms (+0.92) | 1,128 (+214) | 52,912 (+18,172) |
+| no grass | 2.67 ms | 914 | 34,740 |
+| **shipped, 140** | **2.93 ms** (+0.26) | 1,130 (+216) | 55,958 (+21,218) |
+| 280 | 2.78 ms (+0.11) | 1,139 (+225) | 77,095 (+42,355) |
 
-**The invariant holds hard, and that is the number that matters.** Doubling the meadow added
-**three** draw calls and nearly nine thousand instances. The 211 calls the first tranche costs are
-the chunks that had no clump in them at all before — a one-off, not a rate; from there the pass is
-priced in matrices, exactly as `docs/bug-patterns.md` P10 demands, and the test asserts it rather
-than merely logging it.
+**Doubling the meadow again cost nine draw calls and twenty-one thousand instances**, which is the
+P10 invariant about as plainly as it can be stated. The 216 calls the first tranche costs are the
+chunks that had no clump in them at all before: a one-off, not a rate.
 
-**Two honest caveats.** The first tranche of 9,195 instances cost 0.06 ms and the second 8,977 cost
-0.86 ms, which is not linear and is not explained; the worst-frame column across all three runs is
-24-35 ms, so some of that is noise rather than grass, and what the figures support is the narrower
-claim that the shipping density is inside the noise. And **every number here is 640 x 480 on a very
-fast GPU.** Grass at a camera looking down a field is an overdraw problem before it is anything
-else, overdraw scales with pixels, and 1080p is nearly seven times as many -- so this measures the
-submission cost honestly and the fill cost barely at all. The density ladder in SS3.1 is the answer
-to that, and the laptop figure has to be taken on the laptop.
+**And doubling it came out *faster* than not doubling it**, which is the honest headline. 2.78
+against 2.93 is not grass getting cheaper; it is the run-to-run spread being larger than the thing
+being measured. At these counts the meadow is inside the noise on this machine, and there is room
+to go further if the owner wants it.
+
+**This corrects the previous reading, and the correction is the point.** Measured at density 60 the
+first tranche of 9,195 instances cost 0.06 ms and a second 8,977 cost 0.86 ms, and this document
+recorded that as "not linear and not explained" with a note that some of it was probably noise. It
+was all noise: the same test at 140 and 280 puts four times as much grass on the board for a tenth
+of that difference, and the worst-frame column across the two runs (24-35 ms then, 3.6-12.5 ms now)
+says which reading was disturbed. **A single paired measurement is not enough when the effect is
+smaller than the spread** — the pairing cancels what the machine is doing between the two halves,
+not what it does during them.
+
+**What this still does not measure.** Every number here is 640 x 480 on a very fast GPU. Grass at a
+camera looking down a field is an overdraw problem before it is anything else, overdraw scales with
+pixels, 1080p is nearly seven times as many, and the blades were made thicker on 2026-09-22, which
+makes overdraw worse rather than better. Roughly half the cost that does show up is CPU submission
+(the World section of the split went 1.088 to 1.603 ms at the earlier density), and that half does
+not scale with resolution — but the other half does. **The density ladder in §3.1 is the answer for
+the laptop, and the laptop figure has to be taken on the laptop.**
+
+### 2.7 The owner's first look, 2026-09-22
+
+Played once, on the branch. Pause holds the meadow still and zooming out reads well, which were two
+of the four questions the playtest row asked. Three changes came back and all three are tuning
+rather than design:
+
+| Asked | Was | Is |
+|---|---|---|
+| lighter green | root (0.18, 0.29, 0.14), tip (0.48, 0.65, 0.24) | root (0.29, 0.42, 0.21), tip (0.62, 0.78, 0.38) |
+| thicker | blades 45-75 mm, shoulder 0.55 of the root | 75-115 mm, shoulder 0.62 |
+| more of it | 60 per hundred cells | **140** - every grass cell gets one, two in five get a second |
+
+**The density comment said 60 was chosen because 120 was wrong, and that judgement was about
+different geometry.** It read: *sparse enough that the meadow reads as a field with grass on it
+rather than as grass with a field somewhere underneath, which is what 120 did at board distance.*
+True of the Synty cut-outs, which were wide painted cards - two in a cell closed the ground over.
+Thin blades do not, so the judgement does not carry across, and the owner overruled it having seen
+them. It is rewritten in place rather than deleted.
+
+**The density had five owners and now has one.** `ChunkMesher`'s default, `TerrainSkirt.TuftDensity`,
+`OdysseyBootstrap.grassScatter`, `SettingsPresenter`'s fallback and two frame-time harnesses each
+wrote the literal 60, and every one meant "the density the game ships with". Raising it only where
+the owner would see it would have left the benchmarks timing a meadow nobody plays - a performance
+number quietly about the wrong world. They all read `ChunkMesher.DefaultScatterDensity` now, and
+`GrassTests.TheMeadowAndTheSurroundAgreeOnHowThickTheGrassIs` guards the pair inside this assembly,
+because a density difference at the board rim is a straight line across the view.
 
 ---
 

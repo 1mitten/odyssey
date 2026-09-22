@@ -36,8 +36,10 @@ Shader "Odyssey/Grass"
         // shade, exactly as every other bucket in the world receives it.
         [MainColor] _BaseColor("Tint", Color) = (1, 1, 1, 1)
 
-        _RootColour("Root colour", Color) = (0.184, 0.286, 0.137, 1)
-        _TipColour("Tip colour", Color) = (0.478, 0.647, 0.239, 1)
+        // Kept in step with GrassLook, which is what actually writes them at runtime; these
+        // are what a material built without it draws, which is a contact sheet or a test.
+        _RootColour("Root colour", Color) = (0.290, 0.416, 0.212, 1)
+        _TipColour("Tip colour", Color) = (0.616, 0.780, 0.376, 1)
 
         // How much of the ramp is spent low down. Above one the root colour hangs on and the
         // blade reads as a dark clump with bright ends, which is the illustrated look; at one it

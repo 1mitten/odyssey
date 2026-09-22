@@ -29,10 +29,10 @@ namespace Odyssey.Presentation.Rendering
         /// thing float. This is the shading the geometry cannot supply, since at board distance a
         /// blade is a pixel and there is no light left to model.
         /// </summary>
-        public static Color Root { get; set; } = new Color(0.184f, 0.286f, 0.137f);
+        public static Color Root { get; set; } = new Color(0.290f, 0.416f, 0.212f);
 
         /// <summary>The colour at the tip. Lighter, warmer and more saturated than the root.</summary>
-        public static Color Tip { get; set; } = new Color(0.478f, 0.647f, 0.239f);
+        public static Color Tip { get; set; } = new Color(0.616f, 0.780f, 0.376f);
 
         /// <summary>
         /// How much of the blade the root colour keeps. Above one it hangs on and the clump reads
@@ -84,8 +84,8 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Back to what the game ships with. For a check harness that changed them.</summary>
         public static void Reset()
         {
-            Root = new Color(0.184f, 0.286f, 0.137f);
-            Tip = new Color(0.478f, 0.647f, 0.239f);
+            Root = new Color(0.290f, 0.416f, 0.212f);
+            Tip = new Color(0.616f, 0.780f, 0.376f);
             RampBias = 1.6f;
             Banding = 0f;
             BandHeight = 0.45f;

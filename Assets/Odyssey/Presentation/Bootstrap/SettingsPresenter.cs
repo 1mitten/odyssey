@@ -45,7 +45,7 @@ namespace Odyssey.Presentation.Bootstrap
         // What "on" means for the two levers that carry an amount rather than a state. Captured
         // from the scene at startup so that turning grass back on restores the density this board
         // was built with, not a number invented here.
-        int _grassDensity = 60;
+        int _grassDensity = ChunkMesher.DefaultScatterDensity;
         float _reliefAmplitude = GroundRelief.BoardAmplitude;
 
         void Awake()

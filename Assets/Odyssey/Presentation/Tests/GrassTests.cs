@@ -282,6 +282,33 @@ namespace Odyssey.Tests.Presentation
                 "a meadow is one bucket a clump variant and nothing like a draw a tuft");
         }
 
+        /// <summary>
+        /// <b>How dense the meadow is has one owner, and the board and the surround both read it.</b>
+        ///
+        /// <para>It had five. <c>ChunkMesher</c>'s own default, <c>TerrainSkirt.TuftDensity</c>,
+        /// <c>OdysseyBootstrap.grassScatter</c>, <c>SettingsPresenter</c>'s fallback and two
+        /// frame-time harnesses each wrote the literal 60, and every one of them meant "the
+        /// density the game ships with". Raising it on the owner's say-so (2026-09-22) would have
+        /// moved the meadow and left the benchmarks timing the old one — a performance number that
+        /// is quietly about a world nobody plays.</para>
+        ///
+        /// <para>The two in this assembly are checked here. The three outside it now reference the
+        /// same constant by name, which a reader can see; this is the pair that could drift
+        /// without anybody noticing, because the rim of the board is exactly where a difference in
+        /// density stops being invisible and starts being a straight line across the view.</para>
+        /// </summary>
+        [Test]
+        public void TheMeadowAndTheSurroundAgreeOnHowThickTheGrassIs()
+        {
+            var world = new RenderTestWorld(8, 8, 3);
+            using var renderer = new ChunkRenderer(world.Model);
+
+            Assert.That(renderer.ScatterDensity, Is.EqualTo(ChunkMesher.DefaultScatterDensity),
+                "the board is not strewn at the shipped density");
+            Assert.That(renderer.Skirt.TuftDensity, Is.EqualTo(ChunkMesher.DefaultScatterDensity),
+                "the surround is strewn at a different density from the board it continues");
+        }
+
         /// <summary>Bare ground is still an option, and it draws nothing at all.</summary>
         [Test]
         public void ZeroDensityIsBareGround() =>

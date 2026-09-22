@@ -2004,7 +2004,7 @@ namespace Odyssey.EditorTools
             // Written explicitly, because the scene serialises these and a C# default changes
             // nothing for a field the scene already holds. Sparse by owner request: six cells in
             // ten get a tuft. Zero on the look seed means a fresh cast of colonists every session.
-            boot.grassScatter = 60;
+            boot.grassScatter = ChunkMesher.DefaultScatterDensity;
             boot.colonistLookSeed = 0;
         }
 

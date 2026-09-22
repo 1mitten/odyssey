@@ -23,22 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
-- **Is the new grass grass, and is the meadow better or just busier?**
-  (`claude/illustrated-look`, `docs/design/29-illustrated-look.md` §2.) The clumps are ours now
-  — blades built in code, coloured root to tip, bent by a travelling wind and leaned towards the
-  camera — in place of three Synty cut-outs. **Top of the list because it decides the direction
-  the sky and the ink then follow**, and because the whole Illustrated look rests on whether a
-  graphic treatment of the ground reads at this camera.
-  Four things only you can answer. Does a clump read as *blades* at the default zoom, or as
-  green fuzz? Does the wind look like weather or like a wobble — and does it stop dead when you
-  pause, which it should? Walk a colonist through a meadow: does the grass sit around their feet
-  or through their shins? And zoom right out: is the field calmer than the old one or noisier?
-  **A wrong answer looks like:** you turn the density down to make the board readable, or you
-  find yourself looking at the ground instead of at the colony. Graphics ▸ Detail ▸ Grass tufts
-  still turns it off entirely; a *density* row is deliberately held for the next unit with the
-  Look switch, so if the answer is "less of it" say so and it arrives with a lever. The shader's
-  levers are `_FaceCamera`, `_RampBias`, `_Banding` and the two colours — say which way you would
-  move them rather than whether you liked it.
+- **Is the grass right now it is lighter, thicker and there is more of it?**
+  (`claude/illustrated-look`, `docs/design/29-illustrated-look.md` §2.7.) **Looked at once,
+  2026-09-22**: pause holds it still and zoomed out it reads well, both closed. Three changes came
+  back and are in — root and tip lifted, blades 45–75 mm → 75–115 mm, density 60 → **140**, which
+  is a clump in every grass cell and a second in two in five.
+  What is left to judge is the same question one turn on. Is it light enough, or has it gone pale
+  against the trees and the terrain? Are the blades thick enough to read at the default zoom, or
+  still wiry? And is 140 the right amount — **there is measured headroom for more**, since
+  doubling it again to 280 came out inside the run-to-run noise on this machine (§2.6).
+  **A wrong answer looks like:** the meadow now competing with the colony for your eye, or a
+  colonist harder to pick out against it than before. The two things that would change my mind
+  about density are you turning it down, or the frame dropping on the laptop rather than this
+  machine — the density row arrives with the Look switch either way.
 
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
