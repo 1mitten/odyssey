@@ -224,3 +224,57 @@ beard by being in a crowd, which is the exact failure `ColonistLook` was written
   on the appearance, so a greyed colonist is simply a new appearance and a new photograph.
 - **A clone without the packs must still build and run headless.** Every row degrades on its own;
   a missing attachment drops that slot, never the colonist.
+
+---
+
+## 7. What was built, 2026-09-22
+
+MC1–MC5 are in. MC6–MC8 are not started.
+
+| Unit | State |
+|---|---|
+| **MC1** gender reaches the code | **Done.** `emit_labels.py` emits `Genders` beside `Names`; `ColonistNames.GenderOf` reads it through the same `PoolIndex` the name derivation uses, so a name and a gender cannot disagree. Gender follows the rolled name, never the displayed one. |
+| **MC2** the catalogue | **Done.** `ModuleEntry` gains `colonistPool`, `sex` and `recolours`; twelve Battle Royale bodies joined the family; Farm, Sci-Fi and Western rows stay resolvable and left the lottery. 179 rows. |
+| **MC3** the appearance | **Done.** `ColonistCastPools`, `HairPiece`, `BeardPiece`, greying, baldness. The body lottery reuses `ColonistLook.For` over the pool array, so a full pool deals exactly what it dealt before. |
+| **MC4** the content tables | **Done.** Fifteen hairs and nine beards, every one measured to recolour. |
+| **MC5** the figure wears them | **Built, and one fault open.** See below. |
+| **MC6** the far form | **Not started.** Nothing under 64 colonists needs it, but it must land before a colony grows past the cap or a colonist loses their beard by being in a crowd. |
+| **MC7** the flat fallback's beard | **Not started.** |
+| **MC8** contact sheet and frame cost | **Sheet shot** (`Logs/cast-portraits.png`); **cost not measured.** |
+
+### The open fault
+
+The attachments draw. `ColonistAttachments` is the one owner and both the live figures and
+`PortraitStudio` wear them through it, so the roster card and the board cannot disagree. Hair reads
+correctly on the contact sheet.
+
+**The beard does not.** It renders as a dark bar across the eyes rather than as a beard on the jaw.
+
+What is already known, so the next session does not re-derive it:
+
+- **The placement is correct and measured** (`BattleRoyaleProbe` §7). On `Character_SportyMale_01`,
+  whose crown is at world y 1.788, `Male_Hair_01` lands at 1.597–1.835 and `Beard_02` at
+  1.521–1.697 with its centre 0.068 forward. Those are the scalp and the jaw. The head bone's world
+  rotation is identity, so an identity local rotation on the piece is right.
+- **It is the beard and not the hair.** On the sheet the bar appears on men and never on women, and
+  women are never dealt a beard. Bald men with no beard have no bar.
+- So the fault is in **what is drawn, not where**: the beard's visible band is its upper edge, with
+  the rest of it either inside the head mesh or not reaching the chin on this body.
+
+**The next move is to halve the search, not to reason about it:** shoot the sheet twice, once with
+only the hair slot enabled and once with only the beard slot, and compare. A single portrait of one
+known body wearing one known beard, at a known scale, settles it. `docs/bug-patterns.md`'s runbook
+for "a tile that looks wrong" is the same discipline — the save that settles it is already on disk.
+
+### Also owed
+
+- **The military bodies barely recolour.** `Character_MilitaryMale_01` classifies `Full` but its
+  cloth slot is 5% of its vertices, and the female one 4%. The camouflage is painted from many
+  swatches and only one is repainted, so the colour roll will hardly show on them. Worth the
+  owner's eye on the contact sheet before deciding whether they stay in the pool.
+- **The female hair pool has nothing authored for it.** Battle Royale's two named female hairs, the
+  bun and the ponytail all span real texture and are excluded, so a woman draws from Battle Royale's
+  default scalp plus PolygonGeneric's eight ungendered pieces — all currently marked `Either`
+  because nobody has looked at them. That split is a contact sheet and the owner's eye (MC8).
+- **`Character_Space_Male_01`** is in the pool and may be helmeted, in which case hair is invisible
+  on it and it should go the way the ghillie suit did. Unchecked.

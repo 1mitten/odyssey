@@ -467,11 +467,52 @@ namespace Odyssey.Presentation.Rendering
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
 
+            // Two empty slots on the head bone, for the hair and the beard this look will be
+            // dressed in. Made with the subject and not per portrait, because the subject is kept
+            // and reused across every colonist wearing this body
+            // (docs/design/29-modular-colonists.md, MC5).
+            //
+            // GetBoneTransform on a disabled Animator is fine and is already relied on below to
+            // aim the camera: what is disabled is the animation update, not the avatar.
+            _hairMesh = null;
+            _hairRenderer = null;
+            _beardMesh = null;
+            _beardRenderer = null;
+            if (animator != null && animator.isHuman)
+            {
+                Transform? head = animator.GetBoneTransform(HumanBodyBones.Head);
+                if (head != null)
+                {
+                    ColonistAttachments.MakeSlot(head, "Hair", instance.layer,
+                        out MeshFilter hf, out MeshRenderer hr);
+                    ColonistAttachments.MakeSlot(head, "Beard", instance.layer,
+                        out MeshFilter bf, out MeshRenderer br);
+                    _hairMesh = hf;
+                    _hairRenderer = hr;
+                    _beardMesh = bf;
+                    _beardRenderer = br;
+                }
+            }
+
             instance.SetActive(false);
             _subject = instance;
             _subjectLook = look;
             return instance;
         }
+
+        MeshFilter? _hairMesh;
+        MeshRenderer? _hairRenderer;
+        MeshFilter? _beardMesh;
+        MeshRenderer? _beardRenderer;
+
+        ColonistAttachments? _attachments;
+
+        /// <summary>
+        /// The hair and beards. Shared with the figure director through one owner, because a
+        /// colonist photographed for their roster card and the same colonist walking around the
+        /// board must not be dressed by two different answers.
+        /// </summary>
+        ColonistAttachments Attachments => _attachments ??= new ColonistAttachments(_catalogue);
 
         void Paint(GameObject subject, ModuleEntry row, in ColonistAppearance appearance)
         {
@@ -479,6 +520,11 @@ namespace Odyssey.Presentation.Rendering
 
             AppearanceCells cells = row.appearance;
             AppearanceCells? usable = cells.Any ? cells : null;
+
+            ColonistAttachments.Wear(_hairMesh, _hairRenderer,
+                Attachments.Hair(appearance.HairPiece), Materials, appearance);
+            ColonistAttachments.Wear(_beardMesh, _beardRenderer,
+                Attachments.Beard(appearance.BeardPiece), Materials, appearance);
 
             var skins = subject.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
             for (int i = 0; i < skins.Length; i++)

@@ -91,6 +91,7 @@ namespace Odyssey.EditorTools
             GenericAttachments(r);
             AttachmentUvs(r, "6b",
                 "Assets/Synty/PolygonGeneric/Prefabs/Characters/Attachments");
+            WhereAPieceLands(r);
 
             string text = r.ToString();
             Directory.CreateDirectory("Logs");
@@ -313,6 +314,96 @@ namespace Odyssey.EditorTools
                     "   {0,-40} tallest body {1:F3} ({2})",
                     Path.GetFileNameWithoutExtension(path),
                     tallest.sharedMesh.bounds.size.y, tallest.name));
+            }
+
+            r.AppendLine();
+        }
+
+        // ---------------------------------------------------------------- question 7
+
+        /// <summary>
+        /// Where a piece actually lands once it is parented to the head bone.
+        ///
+        /// <para>Written after the first contact sheet drew a dark bar across everybody's eyes
+        /// where their hair should have been. The bounds measured in section 3b are in the piece's
+        /// own space; what matters is where they end up in the body's, and the two differ by
+        /// whatever the head bone's rest orientation is.</para>
+        /// </summary>
+        static void WhereAPieceLands(StringBuilder r)
+        {
+            r.AppendLine("-- 7. where a piece lands once parented to the head bone");
+
+            string body = CharacterPrefabs + "/Character_SportyMale_01.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(body);
+            if (prefab == null)
+            {
+                r.AppendLine("   no body to test against");
+                r.AppendLine();
+                return;
+            }
+
+            GameObject instance = UnityEngine.Object.Instantiate(prefab);
+            try
+            {
+                var animator = instance.GetComponent<Animator>();
+                Transform? head = animator != null && animator.isHuman
+                    ? animator.GetBoneTransform(HumanBodyBones.Head)
+                    : null;
+                if (head == null)
+                {
+                    r.AppendLine("   no head bone");
+                    return;
+                }
+
+                Vector3 e = head.localRotation.eulerAngles;
+                r.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "   head '{0}': local euler ({1:F1}, {2:F1}, {3:F1}), world euler ({4:F1}, {5:F1}, {6:F1})",
+                    head.name, e.x, e.y, e.z,
+                    head.rotation.eulerAngles.x, head.rotation.eulerAngles.y,
+                    head.rotation.eulerAngles.z));
+
+                // Where the crown of the body is, for comparison.
+                var skin = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                    .FirstOrDefault(sm => sm.gameObject.activeInHierarchy && sm.sharedMesh != null);
+                if (skin != null)
+                    r.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                        "   body '{0}' world bounds y {1:F3} to {2:F3}",
+                        skin.name, skin.bounds.min.y, skin.bounds.max.y));
+
+                foreach (string name in new[]
+                         {
+                             "SM_Chr_Attach_Male_Hair_01",
+                             "SM_Chr_Attach_Male_Default_Hair_01",
+                             "SM_Chr_Attach_Beard_02",
+                         })
+                {
+                    string path = CharacterPrefabs + "/Attachments/" + name + ".prefab";
+                    var piecePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (piecePrefab == null)
+                    {
+                        r.AppendLine($"   {name,-38} (absent)");
+                        continue;
+                    }
+
+                    GameObject piece = UnityEngine.Object.Instantiate(piecePrefab, head);
+                    piece.transform.localPosition = Vector3.zero;
+                    piece.transform.localRotation = Quaternion.identity;
+                    piece.transform.localScale = Vector3.one;
+
+                    var renderer = piece.GetComponentInChildren<Renderer>(true);
+                    if (renderer != null)
+                        r.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                            "   {0,-38} world y {1:F3} to {2:F3}, centre ({3:F3}, {4:F3}, {5:F3})",
+                            name, renderer.bounds.min.y, renderer.bounds.max.y,
+                            renderer.bounds.center.x, renderer.bounds.center.y,
+                            renderer.bounds.center.z));
+
+                    UnityEngine.Object.DestroyImmediate(piece);
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(instance);
             }
 
             r.AppendLine();

@@ -2058,6 +2058,11 @@ namespace Odyssey.Presentation.World
             AppearanceCells? cells = CellsFor(figure.Look);
             ColonistAppearance look = Appearances.For(pawn.Value, RollSeedOf(pawn));
 
+            // The hair and the beard, before the body: they are part of being dressed in this
+            // pawn's colours rather than a separate pass, so nothing can repaint one and forget
+            // the other (docs/design/29-modular-colonists.md, MC5).
+            Dress(figure, look);
+
             for (int i = 0; i < figure.Skins.Length; i++)
             {
                 SkinnedMeshRenderer skin = figure.Skins[i];
@@ -2086,6 +2091,30 @@ namespace Odyssey.Presentation.World
                 if (figure.Pawn < 0) continue;
                 Repaint(figure, new PawnId(figure.Pawn));
             }
+        }
+
+        ColonistAttachments? _attachments;
+
+        /// <summary>
+        /// The hair and beards, resolved once and shared with every other drawer of a colonist.
+        ///
+        /// <para>Held here rather than resolved here: <see cref="ColonistAttachments"/> is the one
+        /// owner, because <see cref="PortraitStudio"/> dresses the same colonist for their roster
+        /// card and the two must not answer differently.</para>
+        /// </summary>
+        ColonistAttachments Attachments => _attachments ??= new ColonistAttachments(_catalogue);
+
+        /// <summary>
+        /// Put this pawn's hair and beard on, or take them off.
+        /// </summary>
+        void Dress(Figure figure, in ColonistAppearance look)
+        {
+            ColonistAttachments.Wear(
+                figure.HairMesh, figure.HairRenderer, Attachments.Hair(look.HairPiece),
+                Materials, look);
+            ColonistAttachments.Wear(
+                figure.BeardMesh, figure.BeardRenderer, Attachments.Beard(look.BeardPiece),
+                Materials, look);
         }
 
         /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
@@ -2247,6 +2276,22 @@ namespace Odyssey.Presentation.World
             figure.ArtMaterials = new Material?[skins.Length];
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+
+            // After BindWorkBones, which is what finds the head. The slots are empty until a
+            // lease dresses them, so a figure built for a bald colonist costs two disabled
+            // renderers and nothing else.
+            if (figure.Head != null)
+            {
+                ColonistAttachments.MakeSlot(figure.Head, "Hair", _layer,
+                    out MeshFilter hf, out MeshRenderer hr);
+                ColonistAttachments.MakeSlot(figure.Head, "Beard", _layer,
+                    out MeshFilter bf, out MeshRenderer br);
+                figure.HairMesh = hf;
+                figure.HairRenderer = hr;
+                figure.BeardMesh = bf;
+                figure.BeardRenderer = br;
+            }
+
             figure.SoleOffset = MeasureSole(figure);
             // And how long a body there is to lay down. Measured here, beside the sole, because
             // both are one bake of the posed mesh and both are properties of the rig rather than
