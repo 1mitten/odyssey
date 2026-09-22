@@ -278,3 +278,45 @@ for "a tile that looks wrong" is the same discipline — the save that settles i
   because nobody has looked at them. That split is a contact sheet and the owner's eye (MC8).
 - **`Character_Space_Male_01`** is in the pool and may be helmeted, in which case hair is invisible
   on it and it should go the way the ghillie suit did. Unchecked.
+
+
+---
+
+## 8. The setup screen and the colony disagreed
+
+**Owner, 2026-09-22:** *"what you see on the character generation/selection is not what you see when
+you start the game — there is a disconnect."*
+
+They were right, and it was this unit's doing.
+
+**What happened.** `OdysseyBootstrap` assigns the real appearance book in `BuildSession` — but the
+setup screen runs *before* a session exists, so `PortraitStudio.Appearances` was null and its
+fallback answered instead:
+
+```csharp
+Appearances ??= new ColonistAppearanceBook(0u, Rows.Count);   // every row, ungendered, no hair
+```
+
+That was correct for as long as a book was only a seed and a face count. `PawnFigureDirector` even
+said so out loud: *"two books with the same seed and the same face count give the same answers."*
+**MC3 made that false.** A book now carries the gendered pools of bodies, hair and beards, so the
+fallback dealt from all 73 rows with no gender, no hair and no beard, while the session dealt from
+29 gendered rows with both. Pressing Start replaced the book, `Portraits.Clear()` wiped the cache,
+and the person you chose was replaced by somebody else.
+
+**The fix is that a book is built from the catalogue or not at all.** Both fallbacks now call
+`AppearanceBooks.For(0u, catalogue)`, which is the same factory the session uses, so the two cannot
+carry different pools. The seed still differs — 0 against the world's — and that is harmless and
+deliberate: a colonist is dealt from *their own* roll seed, and the book's seed is only the fallback
+for a save written before pawns carried one (`20-avatars.md` §5).
+
+**Two tests in `ColonistLookAgreementTests` pin it**, in the Unity tier because they name a
+catalogue: `TwoBooksBuiltFromTheSameCatalogueDealTheSamePerson` walks forty pawns through a
+pre-session book and a session book and demands the identical appearance, and
+`ABookBuiltFromTheCatalogueOnlyDealsBodiesInThePool` asserts the other half — a book built from a
+row count deals bodies the colony would never give you.
+
+**The lesson, which generalises past this unit.** The failure was not in either book; it was that
+*a type grew a field and a second construction site was not told*. `AppearanceBooks.For` existed
+precisely to be the one owner and a `??=` quietly forked it. Any `??=` that constructs a
+configured object is a second owner waiting to drift — `docs/bug-patterns.md`.

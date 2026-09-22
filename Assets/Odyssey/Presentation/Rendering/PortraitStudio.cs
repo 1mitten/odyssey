@@ -125,7 +125,14 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public Texture2D? For(uint rollSeed, PawnId id)
         {
-            ColonistAppearanceBook book = Appearances ??= new ColonistAppearanceBook(0u, Rows.Count);
+            // Built from the catalogue, never from a row count. A book is not just a seed and a
+            // number any more -- it carries the gendered pools of bodies, hair and beards -- so a
+            // fallback that invented its own dealt a different person from the one the session
+            // deals. That is exactly what the owner reported on 2026-09-22: the colonist chosen on
+            // the setup screen was not the colonist the colony gave them, because the setup screen
+            // runs before BuildSession has assigned the real book and this fallback answered for
+            // it (docs/design/29-modular-colonists.md §8).
+            ColonistAppearanceBook book = Appearances ??= AppearanceBooks.For(0u, _catalogue);
             return For(book.For(id.Value, rollSeed));
         }
 

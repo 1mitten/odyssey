@@ -49,6 +49,77 @@ namespace Odyssey.Presentation.Tests
             return catalogue;
         }
 
+        /// <summary>
+        /// A catalogue with a real colonist pool: some rows in it, some out, and both sexes.
+        /// </summary>
+        static ModuleCatalogue PooledCatalogue()
+        {
+            var catalogue = ScriptableObject.CreateInstance<ModuleCatalogue>();
+            var rows = new List<ModuleEntry>();
+            rows.Add(new ModuleEntry { moduleId = "odyssey.module.wall.panel" });
+
+            for (int i = 0; i < 12; i++)
+                rows.Add(new ModuleEntry
+                {
+                    moduleId = ModuleIds.Colonist(i),
+                    prefabName = "SM_Chr_Test_" + i,
+                    // Only the back half are colonists, so a lottery that ignored the flag would
+                    // deal indices the pool does not contain.
+                    colonistPool = i >= 6,
+                    sex = (i % 2) == 0 ? BodySex.Male : BodySex.Female,
+                });
+
+            catalogue.SetEntries(rows);
+            return catalogue;
+        }
+
+        [Test]
+        public void TwoBooksBuiltFromTheSameCatalogueDealTheSamePerson()
+        {
+            // **The setup screen and the colony must agree** (owner, 2026-09-22: "what you see on
+            // the character generation is not what you see when you start the game").
+            //
+            // They are two books, built at two different moments -- the studio's fallback before a
+            // session exists, and the session's own in BuildSession -- and a colonist is dealt
+            // from their own roll seed, so the two must answer identically. They stopped doing so
+            // the moment a book gained pools and one of the two was still built from a row count.
+            ModuleCatalogue catalogue = PooledCatalogue();
+            try
+            {
+                ColonistAppearanceBook before = AppearanceBooks.For(0u, catalogue);
+                ColonistAppearanceBook session = AppearanceBooks.For(20260922u, catalogue);
+
+                for (int pawn = 1; pawn <= 40; pawn++)
+                {
+                    uint roll = (uint)(pawn * 7919);
+                    Assert.That(session.For(pawn, roll), Is.EqualTo(before.For(pawn, roll)),
+                        $"pawn {pawn} was dealt a different person by the two books");
+                }
+            }
+            finally { Object.DestroyImmediate(catalogue); }
+        }
+
+        [Test]
+        public void ABookBuiltFromTheCatalogueOnlyDealsBodiesInThePool()
+        {
+            // The other half of the same fault: a book built from a row count deals every row,
+            // which is how the setup screen showed bodies the colony would never give you.
+            ModuleCatalogue catalogue = PooledCatalogue();
+            try
+            {
+                ColonistAppearanceBook book = AppearanceBooks.For(3u, catalogue);
+                List<ModuleEntry> family = catalogue.FindFamily(ModuleIds.ColonistBase);
+
+                for (int pawn = 1; pawn <= 100; pawn++)
+                {
+                    int look = book.For(pawn, (uint)(pawn * 104729)).Look;
+                    Assert.That(family[look].colonistPool, Is.True,
+                        $"pawn {pawn} was dealt look {look}, which is not in the colonist pool");
+                }
+            }
+            finally { Object.DestroyImmediate(catalogue); }
+        }
+
         [Test]
         public void TheBookCountsEveryColonistRowIncludingTheUnusableOnes()
         {

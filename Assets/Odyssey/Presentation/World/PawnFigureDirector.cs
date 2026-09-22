@@ -860,15 +860,23 @@ namespace Odyssey.Presentation.World
         /// answer separately would put a different person on screen the moment a colonist crossed
         /// the figure cap, and the fault would be hunted in the simulation.</para>
         ///
-        /// <para>A harness that never sets one gets a book dealt from seed 0 over the same number
-        /// of faces, so an editor tool still draws a varied cast without having to know this type
-        /// exists. That is safe precisely because the derivation is pure: two books with the same
-        /// seed and the same face count give the same answers, object identity or not. Identity
-        /// still matters once overrides exist, which is why the game hands one object to both.</para>
+        /// <para>A harness that never sets one gets a book dealt from seed 0 <b>over the same
+        /// catalogue</b>, so an editor tool still draws a varied cast without having to know this
+        /// type exists. That is safe precisely because the derivation is pure: two books built the
+        /// same way from the same catalogue give the same answers, object identity or not.
+        /// Identity still matters once overrides exist, which is why the game hands one object to
+        /// both.</para>
+        ///
+        /// <para><b>"The same face count" used to be enough and is not any more.</b> A book now
+        /// carries the gendered pools of bodies, hair and beards, so a fallback built from a row
+        /// count deals from every row, ungendered, with no hair — a different person entirely. The
+        /// setup screen hit exactly that and the colonist you picked was not the colonist you got
+        /// (owner, 2026-09-22; <c>docs/design/29-modular-colonists.md</c> §8). Build it from the
+        /// catalogue or do not build it.</para>
         /// </summary>
         public ColonistAppearanceBook Appearances
         {
-            get => _appearances ??= new ColonistAppearanceBook(0u, _looks.Length);
+            get => _appearances ??= AppearanceBooks.For(0u, _catalogue);
             set => _appearances = value;
         }
 
