@@ -2524,3 +2524,38 @@ once a *tick*, and a rig with nothing to draw runs frames far faster than the fi
 **When something is published by the simulation, assert the tick.** Frames are a unit of how fast the
 machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
 both of those are worth logging. The frame count is a diagnostic, never a gate.
+
+## The contact sheet's steep shots are blank, and have been for as long as they have been taken
+
+**Found 2026-09-22, chasing it cost about an hour, and it is still open.**
+
+`MeadowCheck` takes three pictures per condition and calls the third "the play camera", at a pitch
+of 48 degrees and 48 m out — the framing the game is actually played at. **It renders nothing at
+all: a flat frame of sky.** So does every other shot from that harness at a pitch above roughly
+thirty degrees. The two grazing shots, at 14 degrees, are fine and are what every judgement taken
+from those sheets has actually rested on.
+
+**What was ruled out, each by measurement rather than by reading.**
+
+| Suspected | Test | Result |
+|---|---|---|
+| The new grass | a `bare` condition at density 0 | still blank, so nothing to do with grass |
+| The order of the shots in the frame | put the play shot first | still blank; the grazing shot still worked, fourth |
+| The framing arithmetic | logged the camera transform and the focus | both sensible: camera 68.7 m up, aimed at the board 35 m away |
+| The focus sitting 3 m under the drawn surface | aimed at `(activeLayer + 1) * SizeY` instead | no change |
+| The harness being broken in general | ran `ReliefCheck`, which shoots at the same 48 degrees | **its play shot is fine**, so it is not the pitch and not `PlayScene.Shoot` |
+
+So the difference is between `ReliefCheck` and `MeadowCheck`, both of which hook
+`beginCameraRendering` and submit through a hand-built `ChunkRenderer`, and it is *not* the camera.
+The remaining candidates are the generator (`MakeBarren` against ReliefCheck's own def) and the
+`SliceSettings` each passes. Whoever picks this up should start by diffing those two files and
+should not start by re-checking the camera, which is where the hour went.
+
+**Why it matters more than one broken tool.** These sheets are how this project judges a look
+without spending one of the owner's playtests, and the rule is to judge by photograph first. A
+sheet that silently drops its most important frame is the same failure as the camera that rendered
+every contact sheet ungraded for months (`06-rendering-and-camera.md` §2d) and as the frame-time
+test that measured a frame the player never gets: **an instrument that returns a plausible answer
+to a question it did not ask.** The tell here was unmissable once looked at — a uniformly blank
+image — and nobody had looked, because the tool exits zero and writes the file.
+

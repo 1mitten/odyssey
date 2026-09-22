@@ -10450,3 +10450,89 @@ that rule would die.
 `SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
 tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
 both at once would leave the playtest unable to say which one it had judged.
+
+## 2026-09-22 — The concept renders were never committed, and for a year we were wrong about them
+
+The owner asked whether we could have grass like the reference, and whether the game could move
+towards *Dungeons of Hinterberg*. Three of the four images supplied turned out to be **this
+project's own concept renders** — the ones `docs/reference/screenshots/README.md` has been asking
+somebody to copy into `concept/` since 2026-09-15, which nobody ever did. The folder held a lone
+`.gitkeep`, and for a year the *description* in that README was the evidence.
+
+The description was wrong. `06-rendering-and-camera.md` §1 said "the concept renders are *not*
+cel-shaded … they are flat-lit low-poly with a colour atlas and emissive trim", and used that as
+the reason to reject cel shading on 2026-09-15 — a decision quoted as settled in `OutlineFeature.cs`,
+in `b-painted-look-games.md` and in the plan. The pictures are ink-outlined, flat-shaded comic art:
+a black line on every building, two or three values with a hard terminator, a flat blue wash for
+distance. Two of the three things that paragraph said cel shading would *add* are in the pictures
+it said did not have them.
+
+**The pricing in that paragraph still stands and none of it was wrong.** What was wrong was the
+premise, and nothing in this project could have caught it: a description standing in for an image
+is not checkable. The lesson is one line — commit the reference — and the images are now in
+`concept/`, with the Hinterberg one beside them in `hinterberg/`.
+
+What follows from it is that there are **two** targets and they disagree. The concept renders are a
+graphic look. The golden hour this build shipped on 2026-09-16, against six *Station to Station*
+screenshots, is a photographic one. Both are good; neither is a version of the other; they cannot
+be reconciled in one image. The owner's call was to build both behind
+`Graphics ▸ Look ▸ [ Lit | Illustrated ]` and judge them by flicking between them on one save —
+which is the right shape here specifically, because the fixed golden hour became a full day/night
+cycle *the same day it landed*, on the strength of seeing it lit. Ranked: grass, then sky and
+clouds, then the ink; banded colour deferred as "more work". `docs/design/29-illustrated-look.md`.
+
+### The grass was licensed art, and that is why no test could see it
+
+`ChunkMesher.EnsureScatterModules` resolved three Synty foliage prefabs and **dropped any that did
+not find real art** — the right call at the time, since the alternative was fourteen thousand grey
+cubes strewn across a meadow. The cost was that a clone without `Assets/Synty` rendered bare
+ground, and the build runner is such a clone. The largest visible thing in the game was the one
+thing no test could assert about, and `GrassTests` is eleven tests that could not have been written
+last week.
+
+The clump is ours now: `GrassMesh` builds three variants of four to six tapered blades in code,
+authored **in metres with the roots at y = 0** — `ModuleShape.GrassClump`'s fallback box is the
+untouched unit box precisely so the mesher's matrix means what it says. Vertex colour red carries
+the height along the blade and drives three separate things in the shader; the channel was free
+because our code-built meshes carried positions, normals and UV0 and nothing else.
+
+`Odyssey/Grass` is hand-written URP in the house idiom, four passes including **`DepthNormals`**,
+no texture and no alpha clip anywhere — which removes the cut-out overdraw that is the worst thing
+you can have at a camera looking down a meadow at 48°.
+
+### Three things worth recording, two of which were nearly bugs
+
+**The depth-normals prepass has been running every frame the whole time.** `PC_Renderer.asset`
+configures SSAO with `Source: 1`, which is `DepthNormals`, and `PC_RPAsset.asset` keeps
+`m_PrefilterSSAODepthNormals: 0` while stripping all three depth-source variants.
+`OdysseyOutline.shader` declines normals in a comment on the grounds that the prepass "re-renders
+the world" and might not reach our instanced draws — it is avoiding a cost it is already paying.
+This is the open question `d-09-stylised-rendering.md` was built not to depend on, and it makes the
+crease line — the single largest missing piece of the ink look — about eight taps in a pass we
+already run. That note is amended.
+
+**The material swap had to key on the shape, not on the tint.** The obvious wiring is
+`foliage: true ⇒ Odyssey/Grass`, exactly as `water: true ⇒ Odyssey/Water` already works. It is
+wrong: `ChunkMesher.EmitCrop` carries `TintCode.Foliage(0)` too, because a carrot also wants the
+late queue that keeps it out of the ink. Keyed that way, every crop drew as a blade of grass.
+`MaterialCache.Get` takes a separate `grass` flag and both callers ask
+`resolved.Shape == ModuleShape.GrassClump`.
+
+**`StuffPalette.FoliageTints` had to be retuned, and the old numbers explain themselves.** Two of
+the three pushed blue past 2.0 — the only way to get green out of Synty's straw-coloured cut-out is
+to multiply what little blue it has. Over a shader that is already green they make a blue meadow.
+They are gentle now and vary value and warmth rather than hue, because the hue belongs to the
+shader, in one place, for every clump.
+
+### And one idea bought without buying anything
+
+The owner asked about Staggart's *Stylized Grass Shader*. The linked listing is the legacy line and
+will never be ported to Render Graph; there is a Unity 6 successor at €36.80. It was not bought:
+it ships no placement or rendering system (its three routes are Unity Terrain details, plain
+MeshRenderers, or a second paid indirect renderer, and we already own that half), its two headline
+features bake from scene GameObjects we do not have, and as an Extension Asset under our
+gitignore rule a clean clone would fail to compile rather than merely lose the grass. The one idea
+worth taking was taken: **perspective correction** — leaning the blade tip towards the camera so a
+thin upright card turns its face to a lens looking down at it. Without it a meadow at this pitch
+reads as grey fuzz, and it is the least obvious thing in the whole unit.
+

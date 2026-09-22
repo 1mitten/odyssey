@@ -23,6 +23,23 @@ the next session learns to ignore.
 
 ## Open
 
+- **Is the new grass grass, and is the meadow better or just busier?**
+  (`claude/illustrated-look`, `docs/design/29-illustrated-look.md` §2.) The clumps are ours now
+  — blades built in code, coloured root to tip, bent by a travelling wind and leaned towards the
+  camera — in place of three Synty cut-outs. **Top of the list because it decides the direction
+  the sky and the ink then follow**, and because the whole Illustrated look rests on whether a
+  graphic treatment of the ground reads at this camera.
+  Four things only you can answer. Does a clump read as *blades* at the default zoom, or as
+  green fuzz? Does the wind look like weather or like a wobble — and does it stop dead when you
+  pause, which it should? Walk a colonist through a meadow: does the grass sit around their feet
+  or through their shins? And zoom right out: is the field calmer than the old one or noisier?
+  **A wrong answer looks like:** you turn the density down to make the board readable, or you
+  find yourself looking at the ground instead of at the colony. Graphics ▸ Detail ▸ Grass tufts
+  still turns it off entirely; a *density* row is deliberately held for the next unit with the
+  Look switch, so if the answer is "less of it" say so and it arrives with a lever. The shader's
+  levers are `_FaceCamera`, `_RampBias`, `_Banding` and the two colours — say which way you would
+  move them rather than whether you liked it.
+
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
   across a route colonists are using and let them finish while people are crossing. Three things
