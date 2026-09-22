@@ -405,3 +405,37 @@ The units, in the order they should run:
   nothing draws the uniform, which is what today's code already does and costs no content. The
   alternative — the uniform as a real garment the colony starts with a stack of — is more honest and
   more work.
+
+
+---
+
+## 10. The hair colour paints the face, and it always has
+
+**Not introduced by this work, and not fixed by it.** Recorded here because the uniform made it
+impossible to ignore.
+
+**The symptom.** Most colonists have a bar across their eyes in their hair colour. With the brown
+hair the old cast mostly drew it read as shadow or sunglasses and nobody reported it. With a plain
+white uniform and a palette that includes teal (`#2E6B7A`) and plum (`#7A3B5E`), a colony looks like
+it is wearing coloured goggles.
+
+**The measurement.** Shot with the hair colour forced to pure green, the hair rectangle covers the
+scalp, the eyebrows, a band across the eyes, the jaw and the lips — most of the face.
+`ModularProbe` shoots that sheet; set `Hair` to `0x00FF00` and re-run.
+
+**It is pre-existing.** Before changing anything, the swatch rectangles in the rebuilt catalogue were
+compared against those committed before this branch, for `SM_Gen_Chr_Business_Female_01` and
+`SM_Gen_Chr_Street_Male_01`: **identical, byte for byte**. `CharacterSwatches` allows up to two hair
+clusters and the second one is picking up a face cell. This is how colonists have always been
+painted.
+
+**Three ways out, cheapest first.** None chosen; it is the owner's call.
+
+| Option | What it costs | What it risks |
+|---|---|---|
+| **Narrow the palette** to natural hair colours — drop teal and plum | one line of content | does not fix it, only stops it shouting. The bar is still there in brown |
+| **Take the second hair cluster** only when it is head-dominant *and* adjacent to the first | a rule in `CharacterSwatches`, re-classify, judge a contact sheet | re-classification touches all 73 bodies; some genuinely have two hair cells and would lose one |
+| **Exclude the eye and lip clusters explicitly**, the way eyes are already excluded from *being* the hair slot | a second rule beside `MaxEyeVertices`, which exists for exactly this family of mistake | the clusters have to be identified reliably across four packs, which is the work |
+
+The middle option is the one I would back, and the cheapest experiment that decides it is the green
+sheet again after the change: if the green retreats to scalp and brows on every body, it is right.
