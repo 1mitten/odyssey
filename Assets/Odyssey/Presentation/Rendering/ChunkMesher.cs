@@ -404,27 +404,22 @@ namespace Odyssey.Presentation.Rendering
 
 
         /// <summary>
-        /// Resolve the tuft modules once, and keep only the ones that found real art.
+        /// Resolve the clump modules once.
         ///
-        /// Dropping the rest is the important half. Every other module in the world falls back to
-        /// a tinted primitive when its art is missing, which is right for a wall — a box where a
-        /// wall should be is still a wall. A box where a tuft of grass should be is fourteen
-        /// thousand grey cubes strewn across a meadow, so a clone without the packs gets bare
-        /// ground instead, which is what it had before any of this existed.
+        /// <para><b>There is nothing to drop any more, and that is the change.</b> This used
+        /// to resolve three Synty foliage prefabs and keep only the ones that found real art,
+        /// because every other module in the world falls back to a tinted primitive and a box
+        /// where a tuft of grass should be is fourteen thousand grey cubes strewn across a
+        /// meadow. The cure was bare ground: a clone without the packs — which includes the
+        /// build runner — rendered no grass at all, so the largest visible thing in the game
+        /// was the one thing no test could see. <see cref="GrassMesh"/> is ours, so it always
+        /// resolves and the meadow is the same on every machine.</para>
         /// </summary>
         void EnsureScatterModules()
         {
             if (_scatterResolved) return;
             _scatterResolved = true;
-
-            var usable = new List<int>();
-            for (int variant = 0; variant < ModuleIds.GrassTuftCount; variant++)
-            {
-                int module = _model.Library.Resolve(ModuleIds.GrassTuft(variant), ModuleShape.Pillar);
-                ResolvedModule resolved = _model.Library[module];
-                if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
-            }
-            _scatterModules = usable.ToArray();
+            _scatterModules = GrassMesh.Modules(_model.Library);
         }
 
         /// <summary>

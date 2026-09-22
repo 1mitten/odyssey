@@ -211,11 +211,19 @@ namespace Odyssey.Presentation.Rendering
         /// two is still 0.12. Bringing red down is what turns yellow-green into green, and it is
         /// why these multipliers look lopsided.</para>
         /// </summary>
+        /// <summary>
+        /// <b>Retuned when the grass became ours.</b> These were multipliers over Synty's
+        /// straw-coloured cut-out, which is why the first two pushed blue past two: the only
+        /// way to get green out of straw is to multiply what little blue it has. Over
+        /// <c>Odyssey/Grass</c>, which is already green from root to tip, the same numbers make
+        /// a blue meadow. They are gentle now, and they vary value and warmth rather than hue —
+        /// the hue is the shader's to decide, in one place, for every clump.
+        /// </summary>
         static readonly Color[] FoliageTints =
         {
-            new Color(0.55f, 1.00f, 2.20f),            // 0 meadow green
-            new Color(0.45f, 0.86f, 1.80f),            // 1 a deeper green, so a field is not one note
-            new Color(1.00f, 1.00f, 1.00f),            // 2 the odd straw clump, exactly as the pack made it
+            new Color(1.00f, 1.00f, 1.00f),            // 0 the meadow as the shader paints it
+            new Color(0.82f, 0.90f, 0.78f),            // 1 deeper and cooler, so a field is not one note
+            new Color(1.18f, 1.06f, 0.74f),            // 2 the odd straw clump, dried off
         };
 
         /// <summary>How many tints a tuft can wear. One per clump module, so variety costs no draws.</summary>

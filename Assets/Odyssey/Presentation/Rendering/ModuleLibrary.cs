@@ -281,6 +281,42 @@ namespace Odyssey.Presentation.Rendering
             return index;
         }
 
+        /// <summary>
+        /// Register a module the renderer owns outright: our mesh, our material, no catalogue
+        /// row and no pack prefab.
+        ///
+        /// <para><b>Why this is separate from <see cref="Resolve(string, string, ModuleShape, int)"/>.</b>
+        /// That method's whole job is finding art and degrading gracefully when it is absent,
+        /// and it records anything that degrades in <see cref="Missing"/> so the log can name
+        /// it. A clump of grass has no art to find: it is a mesh this assembly builds and a
+        /// shader this assembly ships, identical on a machine with the packs and one without.
+        /// Pushing it through the art path would have it resolve to a primitive, count itself
+        /// as missing, and report a licensing problem that does not exist.</para>
+        ///
+        /// <para><see cref="ResolvedModule.UsesArt"/> is true and
+        /// <see cref="ModulePart.IsFallback"/> is false, which reads oddly for something
+        /// built by <c>FallbackPart</c> until you read what the two mean: <em>did this fall
+        /// back to a primitive because no art was found?</em> It did not. Saying otherwise
+        /// would tell <c>ChunkRenderer.ResolveColour</c> to reach for a solid stand-in
+        /// colour instead of tinting what is drawn.</para>
+        ///
+        /// <para>The material handed in is the shared stand-in and is never drawn with:
+        /// <c>MaterialCache</c> substitutes the real one from the module's shape, the way
+        /// it already does for water. It is passed rather than left null only so that the
+        /// part does not label itself a fallback.</para>
+        /// </summary>
+        public int ResolveOwn(string moduleId, ModuleShape shape, int meshVariant)
+        {
+            if (string.IsNullOrEmpty(moduleId)) return 0;
+            if (_byId.TryGetValue(moduleId, out int existing)) return existing;
+
+            var parts = new[] { FallbackPart(shape, null, FallbackMaterial, meshVariant) };
+            _modules.Add(new ResolvedModule(moduleId, shape, parts, usesArt: true));
+            int index = _modules.Count - 1;
+            _byId[moduleId] = index;
+            return index;
+        }
+
         // ---------------------------------------------------------------- art
 
         /// <summary>
@@ -630,6 +666,7 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.WaterSurface: mesh = WaterMesh.Surface; break;
                 case ModuleShape.WaterFall: mesh = WaterMesh.Fall; break;
                 case ModuleShape.Pillow: mesh = PillowMesh.Mesh; break;
+                case ModuleShape.GrassClump: mesh = GrassMesh.For(meshVariant); break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }
 
@@ -745,6 +782,14 @@ namespace Odyssey.Presentation.Rendering
                     // The unit box, so the caller's scale reads directly as the pillow's size in
                     // metres divided by a cell. Centred on its own middle rather than standing on
                     // a floor, because a pillow is placed by where it lies on a mattress.
+                    size = Vector3.one;
+                    centre = Vector3.zero;
+                    return;
+                case ModuleShape.GrassClump:
+                    // Untouched: a clump is authored in metres with its root at the origin, so
+                    // the local matrix has nothing to do and the instance matrix means exactly
+                    // what it says. Anything else here would be a constant every caller had to
+                    // know about to place a tuft half a metre tall.
                     size = Vector3.one;
                     centre = Vector3.zero;
                     return;

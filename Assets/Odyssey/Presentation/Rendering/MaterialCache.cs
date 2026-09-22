@@ -32,9 +32,10 @@ namespace Odyssey.Presentation.Rendering
             readonly bool _foliage;
             readonly bool _water;
             readonly bool _unlit;
+            readonly bool _grass;
 
             public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage, bool water,
-                bool unlit = false)
+                bool unlit = false, bool grass = false)
             {
                 _base = baseMaterial;
                 _tint = tint;
@@ -43,6 +44,7 @@ namespace Odyssey.Presentation.Rendering
                 _foliage = foliage;
                 _water = water;
                 _unlit = unlit;
+                _grass = grass;
             }
 
             // Foliage is part of the key because a foliage clone carries a queue and a cutoff a
@@ -51,13 +53,13 @@ namespace Odyssey.Presentation.Rendering
             public bool Equals(Key other) =>
                 ReferenceEquals(_base, other._base) && _tint == other._tint &&
                 _emission == other._emission && _ghost == other._ghost &&
-                _unlit == other._unlit &&
+                _unlit == other._unlit && _grass == other._grass &&
                 _foliage == other._foliage && _water == other._water;
 
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() =>
-                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0) ^ (_water ? 1 << 29 : 0);
+                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0) ^ (_water ? 1 << 29 : 0) ^ (_grass ? 1 << 28 : 0);
         }
 
         readonly Dictionary<Key, Material> _cache = new Dictionary<Key, Material>();
@@ -65,6 +67,7 @@ namespace Odyssey.Presentation.Rendering
         Material? _ghostBase;
         Material? _unlitBase;
         Material? _waterBase;
+        Material? _grassBase;
         TreeMaterials? _trees;
 
         public int MaterialCount => _owned.Count;
@@ -140,14 +143,31 @@ namespace Odyssey.Presentation.Rendering
         /// against the depth of the bed behind it. None of that can be reached by tinting a Synty
         /// ground tile, and a clone without the packs draws exactly the same water as one with.
         /// </param>
+        /// <param name="grass">
+        /// Draw with <c>Odyssey/Grass</c> instead of the art material, the way
+        /// <paramref name="water"/> does and for the same reason: what makes grass look
+        /// like grass is the shading — a blade coloured root to tip, bent by the wind and
+        /// leaned towards the camera — and none of that can be reached by tinting a
+        /// cut-out. <b>It is not the same question as <paramref name="foliage"/>.</b> A
+        /// crop carries the foliage tint too, because a carrot also wants the late queue
+        /// that keeps it out of the ink; keying the shader off that bit drew every carrot
+        /// as a blade of grass. The caller asks the module's shape instead.
+        /// </param>
         public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha,
-            bool foliage = false, bool water = false, bool unlit = false)
+            bool foliage = false, bool water = false, bool unlit = false, bool grass = false)
         {
-            Material source = unlit ? UnlitBase : ghost ? GhostBase : water ? WaterBase : baseMaterial;
+            // Grass replaces its source material the same way water does. Ghost still
+            // wins, so a storey above still fades out over the meadow rather than the
+            // meadow drawing solid through it.
+            Material source = unlit ? UnlitBase
+                : ghost ? GhostBase
+                : water ? WaterBase
+                : grass ? GrassBase
+                : baseMaterial;
             var colour = new Color(tint.r, tint.g, tint.b, ghost || unlit ? alpha : water ? tint.a : 1f);
             // Keyed on the material reference rather than its instance id: identity is what we
             // actually mean, and it avoids an API whose name changed between Unity versions.
-            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water, unlit);
+            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water, unlit, grass);
             if (_cache.TryGetValue(key, out Material cached)) return cached;
 
             var material = new Material(source)
@@ -337,6 +357,38 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// The one material every clump of grass is cloned from.
+        ///
+        /// Falls back to plain Lit if <c>Odyssey/Grass</c> is missing, which in practice
+        /// means a player build whose shader was stripped. The clump still draws, in one
+        /// flat colour with no wind, which is the failure mode to want: a shader error that
+        /// renders as nothing gets shipped, and one that renders as a stiff green blade gets
+        /// noticed. <c>ShaderInclusion</c> is what stops it happening at all.
+        /// </summary>
+        Material GrassBase
+        {
+            get
+            {
+                if (_grassBase != null) return _grassBase;
+
+                Shader? shader = Shader.Find("Odyssey/Grass");
+                if (shader != null)
+                {
+                    _grassBase = new Material(shader) { name = "Odyssey/Grass", enableInstancing = true };
+                    GrassLook.Apply(_grassBase);
+                    _owned.Add(_grassBase);
+                    return _grassBase;
+                }
+
+                Debug.LogWarning("Odyssey/Grass shader not found; the meadow will draw flat.");
+                shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                _grassBase = new Material(shader) { name = "Odyssey/Grass(fallback)", enableInstancing = true };
+                _owned.Add(_grassBase);
+                return _grassBase;
+            }
+        }
+
         /// <summary>Destroy every material this cache made. Called when the renderer shuts down.</summary>
         public void Dispose()
         {
@@ -350,6 +402,7 @@ namespace Odyssey.Presentation.Rendering
             _cache.Clear();
             _ghostBase = null;
             _waterBase = null;
+            _grassBase = null;
             _trees?.Dispose();
             _trees = null;
         }

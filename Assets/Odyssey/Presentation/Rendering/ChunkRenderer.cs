@@ -435,7 +435,8 @@ namespace Odyssey.Presentation.Rendering
                 InstanceBucket bucket = buckets[b];
                 if (bucket.Count == 0) continue;
 
-                ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
+                ResolvedModule resolved = _model.Library[bucket.Module];
+                ModulePart part = resolved.Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
 
                 // A tree is the one bucket whose colour is not a tint: it is four colours painted
@@ -449,7 +450,8 @@ namespace Odyssey.Presentation.Rendering
                     : null;
                 Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
                     foliage: TintCode.IsFoliage(bucket.Tint),
-                    water: TintCode.IsWater(bucket.Tint));
+                    water: TintCode.IsWater(bucket.Tint),
+                    grass: resolved.Shape == ModuleShape.GrassClump);
 
                 // Terrain receives shadows but never casts them, and that is not a saving so much
                 // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting

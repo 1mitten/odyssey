@@ -61,6 +61,7 @@ namespace Odyssey.EditorTools
             "Odyssey/Tree",
             "Odyssey/Water",
             "Odyssey/Outline",
+            "Odyssey/Grass",
 
             // The sky, and it was not on the first draft of this list — `ShaderInclusionTests`
             // found it on the run that was meant to confirm the fix, along with `Standard` below.

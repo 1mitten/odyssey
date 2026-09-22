@@ -100,6 +100,18 @@ namespace Odyssey.Presentation.Rendering
         /// the one soft thing in the renderer.
         /// </summary>
         Pillow = 13,
+
+        /// <summary>
+        /// A clump of grass blades, standing on the surface of the cell it is scattered in.
+        ///
+        /// The one shape whose fallback box is the plain unit cube rather than a cell: a
+        /// clump's shape <em>is</em> its size, so <see cref="GrassMesh"/> is authored in
+        /// metres with its root at the origin and the mesher's matrix — position, yaw and a
+        /// uniform scale — places it with no constant to look up. It is also the only shape
+        /// that never comes from the packs; see <see cref="GrassMesh"/> for why the meadow
+        /// stopped being licensed art.
+        /// </summary>
+        GrassClump = 14,
     }
 
     /// <summary>
@@ -599,6 +611,27 @@ namespace Odyssey.Presentation.Rendering
         public static int GrassTuftCount => GrassTufts.Length;
 
         public static string GrassTuft(int variant) => GrassTufts[variant];
+
+        /// <summary>
+        /// The clumps the meadow is actually strewn with, since the grass became ours.
+        ///
+        /// <para>These have no catalogue row and never will: the mesh and the material are
+        /// both the renderer's own, so there is nothing for a row to point at. The three
+        /// <see cref="GrassTuft"/> ids above are kept because the generated catalogue still
+        /// carries their rows and a row pointing at real art is not a thing to delete
+        /// casually — but nothing resolves them any more.</para>
+        /// </summary>
+        static readonly string[] GrassClumps =
+        {
+            Prefix + "scatter.grass.clump.a",
+            Prefix + "scatter.grass.clump.b",
+            Prefix + "scatter.grass.clump.c",
+        };
+
+        /// <summary>How many clumps there are. Must equal <c>GrassMesh.Variants</c>.</summary>
+        public static int GrassClumpCount => GrassClumps.Length;
+
+        public static string GrassClump(int variant) => GrassClumps[variant];
 
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>

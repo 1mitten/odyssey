@@ -670,25 +670,12 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// The tuft meshes, resolved once, keeping only the ones that found real art.
         ///
-        /// Dropping the rest is the same judgement <c>ChunkMesher</c> makes and for the same
-        /// reason: a box where a wall should be is still a wall, and a box where a tuft of grass
-        /// should be is a strewing of grey cubes. A clone without the packs gets bare ground,
-        /// inside the board and outside it alike.
+        /// The same clumps the board is strewn with, resolved through the same call, so the
+        /// first ring of the surround cannot disagree with the meadow it continues. They are
+        /// ours and always resolve; nothing is dropped and a clone without the packs gets the
+        /// same grass inside the board and outside it.
         /// </summary>
-        int[] TuftModules()
-        {
-            if (_tuftModules != null) return _tuftModules;
-
-            var usable = new List<int>();
-            for (int variant = 0; variant < ModuleIds.GrassTuftCount; variant++)
-            {
-                int module = _model.Library.Resolve(ModuleIds.GrassTuft(variant), ModuleShape.Pillar);
-                ResolvedModule resolved = _model.Library[module];
-                if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
-            }
-
-            return _tuftModules = usable.ToArray();
-        }
+        int[] TuftModules() => _tuftModules ??= GrassMesh.Modules(_model.Library);
 
         // -------------------------------------------------------------- trees
 
@@ -822,7 +809,8 @@ namespace Odyssey.Presentation.Rendering
                 var key = (sector, muteStep, p, tintCode, castsShadow, foliage, theme);
                 if (!_index.TryGetValue(key, out Batch? batch))
                 {
-                    batch = NewBatch(parts[p], tintCode, muteStep, castsShadow, foliage, bounds, theme);
+                    batch = NewBatch(parts[p], tintCode, muteStep, castsShadow, foliage, bounds, theme,
+                        grass: resolved.Shape == ModuleShape.GrassClump);
                     batch.Sector = sector;
                     batch.MuteStep = muteStep;
                     batch.Part = p;
@@ -841,7 +829,7 @@ namespace Odyssey.Presentation.Rendering
         }
 
         Batch NewBatch(ModulePart part, int tintCode, int muteStep, bool castsShadow, bool foliage,
-            in Bounds bounds, int theme)
+            in Bounds bounds, int theme, bool grass)
         {
             ChunkRenderer.ResolveColour(tintCode, part.IsFallback, 1f, out Color tint, out Color emission);
             tint = SkirtLayout.Mute(tint, muteStep);
@@ -860,7 +848,7 @@ namespace Odyssey.Presentation.Rendering
                 Mesh = part.Mesh,
                 Submesh = part.Submesh,
                 Material = painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
-                    foliage: foliage),
+                    foliage: foliage, grass: grass),
                 Props = painted != null && theme >= 0
                     ? _materials.Trees.UniformProps(theme, muteStep)
                     : null,

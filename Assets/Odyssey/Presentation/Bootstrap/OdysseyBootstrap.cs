@@ -195,6 +195,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         MenuAmbience? _menuBed;
         DaylightDirector? _daylight;
+        readonly WindDirector _wind = new WindDirector();
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
 
@@ -969,6 +970,10 @@ namespace Odyssey.Presentation.Bootstrap
                 _daylight = new DaylightDirector(key, RenderSettings.skybox);
                 _daylight.Apply(_world.CurrentTick);
             }
+
+            // The wind, unconditionally: it is not part of the day/night cycle and a board
+            // built with the cycle switched off still wants its grass moving.
+            _wind.Apply(_world.CurrentTick);
             if (_figures != null)
             {
                 _figures.BlowLanded += OnBlowLanded;
@@ -1131,6 +1136,10 @@ namespace Odyssey.Presentation.Bootstrap
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
             _daylight?.Apply(_world.CurrentTick);
+
+            // And the wind on the same clock, for the same two reasons: a paused meadow
+            // should hold still, and at speed 3 the grass should hurry with everything else.
+            _wind.Apply(_world.CurrentTick);
         }
 
         /// <summary>
@@ -1154,6 +1163,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_world == null || count <= 0) return;
             _world.Tick(count);
             _daylight?.Apply(_world.CurrentTick);
+            _wind.Apply(_world.CurrentTick);
         }
 
         /// <summary>
@@ -3163,6 +3173,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
             _audio?.Dispose();
             _daylight?.Dispose();
+            _wind.Dispose();
             _figures?.Dispose();
             _doors?.Dispose();
 
