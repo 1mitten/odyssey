@@ -1,8 +1,12 @@
 # 29 — Modular colonists: a body, hair and a beard
 
-**Status: ground and interview complete, 2026-09-22. No code, no import, no plan yet.** This file is
-the record of what the packs actually contain and what the owner decided about them, written at the
-phase boundary so the next session starts from fact rather than from the pack's marketing copy.
+**Status: ground, interview and research complete, 2026-09-22. Pack imported. No plan yet, no
+gameplay code.** This file is the record of what the packs actually contain and what the owner
+decided about them, written at the phase boundary so the next session starts from fact rather than
+from the pack's marketing copy.
+
+**The measurements are `docs/research/e-06-modular-colonists.md`** and they moved two things in §4
+below. Read that file before planning; it is where the numbers live.
 
 Read first: `20-avatars.md` (the portrait and the flat fallback), `06-rendering-and-camera.md` §6c
 (what a figure costs), and the `ColonistLook` class comment, which states the rule this unit is most
@@ -82,10 +86,12 @@ the pool and brings the beards; it is not the mechanism.
    *By the same rule, PolygonGeneric's `Underwear_Male_01` and `Underwear_Female_01` should go too —
    recorded as an inference, not as something the owner said.*
 7. **Hair and beard follow a colonist into the baked instanced far form.** One person looks like one
-   person wherever the camera is and however large the colony. The cost of that — a baked mesh
-   variant per (body, hair, beard) actually in use — is measured before it is spent, not after.
+   person wherever the camera is and however large the colony. *The cost was feared to be a baked
+   mesh variant per (body, hair, beard); the research found it need not be — see §4.*
 8. **One hair colour; the beard takes it a shade off; colonists grey with age.** Baldness is a legal
    outcome for men and becomes likelier with age. Age then reads on the body as well as on the card.
+   *Owner decision to revisit: the measurement in §4 makes an **identical** beard free and a shade
+   off the expensive option. Worth one sentence back before the plan is written.*
 9. **Every outfit is still repainted from the colour palette**, BR's authored camouflage and business
    suit included. A contact sheet is judged before this ships — a two-tone camouflage pattern in a
    rolled colour mostly reads as workwear, but "mostly" is not a thing to find out in a playtest.
@@ -103,7 +109,10 @@ the pool and brings the beards; it is not the mechanism.
   folder and nothing else — and check for a running editor first
   (`Get-CimInstance Win32_Process -Filter "Name='Unity.exe'"`), because that folder is the one real
   copy every worktree junctions to.
-- **Bone naming differs between the packs.** PolygonGeneric uses `Finger_01_L` / `Finger_01_R`;
+- ~~Bone naming differs between the packs~~ — **checked and harmless.** The two humanoid bone maps
+  are identical, 40 bones each, and the project resolves bones only through
+  `Animator.GetBoneTransform`. Every bone the figure director and the tool fitting ask for resolves
+  on a BR rig. The transform names still differ, so the rule stands for any *new* code: PolygonGeneric uses `Finger_01_L` / `Finger_01_R`;
   Battle Royale uses `Finger_01` and `Finger_01 1` — duplicate names, no side suffix. Anything that
   resolves a bone by name rather than through the Humanoid avatar (tool grips, `HandGrip`,
   `Grasp`) has to be checked against a BR rig before it is trusted. The mapped humanoid bones are
@@ -113,11 +122,21 @@ the pool and brings the beards; it is not the mechanism.
   13.3 ms of a 22.5 ms frame at 384 colonists (`PF`, `docs/design/06-rendering-and-camera.md` §6c.2).
   Whatever this unit adds must be measured with a control in the same run, per §6c.1 — the 4.6 µs
   constant is not a per-call toll and must not be used to condemn or to excuse a pass here.
-- **Hair colour stops being an atlas rectangle.** Today `CharacterSwatches` classifies UV clusters
-  and `ColonistMaterials` repaints rectangles of the pack atlas. A hair or beard *attachment* is its
-  own renderer with its own material, so its colour is a material property rather than a rectangle —
-  cleaner, but a second mechanism that must agree with the first, or a colonist gets one hair colour
-  on the scalp and another in the beard. `ColonistMaterials`' key widens; it does not fork.
+- ~~Hair colour stops being an atlas rectangle~~ — **falsified by measurement, 2026-09-22.** Most
+  hair and beard meshes map *every vertex* to the single atlas texel the scalp already uses
+  (u ≈ 0.050, v ≈ 0.198). Repainting the hair rectangle recolours scalp, hair prop and beard
+  together, inseparably. `ColonistMaterials` needs no second mechanism and no widened key, and
+  "the beard matches the hair" is the art's own behaviour rather than a feature. **The reverse is
+  now the expensive option**: a beard a shade off the hair would need a second rectangle and a
+  second colour. Kept struck through because it is a clean example of a plausible mechanism
+  argument that the measurement reversed. `e-06` §6.
+- **Six hair and beard pieces do not recolour**, because they span real texture rather than one
+  swatch — and they include **both** of Battle Royale's named female hairs. Female variety
+  therefore rests on curating PolygonGeneric's ungendered set by hand. `e-06` §7.
+- **The far form must not bake the combination.** `ChunkRenderer.ColonistModule` is one baked mesh
+  per face; baking hair and beard in multiplies that by hair × beard. They are rigid props on a bone
+  and the far pose is fixed, so they draw as two more instanced modules keyed on (mesh, colour).
+  `e-06` §8.
 - **Eyebrows are a separate renderer on the rig** and should take the hair colour, including the
   greying. Nobody has looked at whether they currently do.
 - **The flat fallback avatar has no beard.** `ColonistFace` draws eight hair crowns and three builds
@@ -130,13 +149,22 @@ the pool and brings the beards; it is not the mechanism.
   **If a golden moves, that is the finding** — something reached into the simulation that should not
   have.
 
-## 5. Still open, for the research phase
+## 5. What the research settled, and what it left
 
-- What a baked (body, hair, beard) variant costs, and how many distinct ones a colony of fifty
-  actually produces.
-- Whether BR's rig retargets the existing locomotion clips cleanly, and whether the tool grips land
-  in the right hand on a BR body.
-- Whether BR bodies want a scale other than 1.4 to stand the same height as the current cast.
-- What `Male_Default_Hair_01` and `Female_Default_Hair_01` actually are, and whether "bald" is one of
-  them or the absence of any hair prop.
-- Whether the swatch classifier finds usable skin, hair and cloth clusters in BR's four atlases.
+**Settled** (`e-06-modular-colonists.md`, all measured): the prefabs import clean and every needed
+bone resolves; the heights match to 0.3% so `scale 1.4` is untouched; the swatch classifier reports
+`Full` on fourteen of fifteen bodies with no change to its hard-coded columns; the attachments are
+rigid and authored in head-bone space, in **both** packs, so one mechanism serves both; and the
+colour question reversed itself in our favour.
+
+**Still open, and deliberately left to the unit rather than guessed at:**
+
+- **What any of it costs per frame.** Two extra rigid renderers per live figure against a ceiling of
+  64, and two extra instanced buckets in the far form. Measured with a control in the same run, per
+  `06-rendering-and-camera.md` §6c.1 — never argued from the 4.6 µs constant.
+- **Whether the locomotion clips retarget cleanly on a BR body in motion.** The bones resolve, which
+  is necessary and not sufficient. Nobody has watched the walk.
+- **The UV extent of `Bun_01`, `Ponytail_01`, `Chops_01` and `Moustache_01`** — the probe's name
+  filter missed all four. They must be measured before they enter the pool.
+- **How PolygonGeneric's eight ungendered hairs split by gender**, and what the two `Default_Hair`
+  pieces actually depict. A contact sheet and the owner's eye, not a probe.
