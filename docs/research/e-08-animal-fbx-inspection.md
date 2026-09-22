@@ -2,8 +2,8 @@
 
 **Phase:** Ground, for the animals unit (systems catalogue §9, milestone M5, pulled forward by
 the owner on 2026-09-22). **Status:** done 2026-09-22, read straight from the two files with a
-binary-FBX reader (`tools/`-free, standard library only); nothing has been imported into Unity
-yet, so the in-editor size and the Generic-avatar mapping are still to be measured.
+binary-FBX reader (standard library only), then **measured in Unity the same day** with
+`AnimalProbe` — see the section before "Could not be determined".
 
 ## Question
 
@@ -90,11 +90,31 @@ rat up as the walking proof and let the pig's missing gait be the second unit.
 
 - **High** for everything read from the files: counts, names, clips, materials, scale nodes.
 - **Medium** for the Quaternius attribution.
-- **Low** for the imported size until Unity has been asked.
+- **High** for the imported size, measured from the bones in Unity (see below).
+
+## Measured in Unity, later the same day
+
+`Assets/Editor/Odyssey/AnimalProbe.cs` (`scripts/unity.sh shot Odyssey.EditorTools.AnimalProbe.Shoot`)
+imported both files, read the bone positions and photographed each on a 2.5 m cell beside a
+1 m cube (`docs/reference/screenshots/2026-09-22-animal-sheet.png`).
+
+| | Pig | Rat |
+|---|---|---|
+| Importer's choice | Generic rig, no avatar, file scale 0.01, ×100 on the mesh and armature nodes kept | same, armature ×39.55 |
+| Size as imported | **3.85 × 5.76 × 11.39 m** (w × h × l); head at 3.07 m, feet 5 m apart | **1.63 × 2.88 × 7.07 m** with the tail; body about 2.7 m |
+| Baked-mesh bounds | 0.114 m long — **wrong by a hundred**, because the bind pose folds the node scale in; the bones are the honest number | 0.071 m, the same lie |
+| Import scale applied | **×0.105 → 0.40 × 0.61 × 1.20 m** | **×0.09 → 0.15 × 0.26 × 0.64 m** (body about 0.25 m) |
+| Clips | 2, 24 fps, none looping, no root motion (top-level position curves flat) | 6, same |
+| Skinned bones | 24 | 31 |
+
+The picture before the scale was set is the reason to measure rather than reason: the pig
+covered the whole cell and hid the rat behind it. After it, both stand life-size. **Life-size
+may be too small here** — a colonist stands 2.49 m — which is the first playtest question in
+`docs/plans/animals.md` §6.
 
 ## Could not be determined
 
-- The licence, which decides where the files may live.
-- The imported size and whether Unity maps the rig to a Generic avatar cleanly (the `_end`
-  leaves are harmless; the armature scale on the rat is the thing to check).
-- Whether the pig's `Jump` clip carries root motion.
+- ~~The licence~~ — CC0, per the owner (`animals-interview.md`).
+- ~~The imported size~~ — measured above.
+- ~~Root motion~~ — none in any clip.
+- Whether the rat's Walk and Run loop cleanly once the loop flag is set; a play question.

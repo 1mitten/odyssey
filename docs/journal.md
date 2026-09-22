@@ -10450,3 +10450,42 @@ that rule would die.
 `SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
 tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
 both at once would leave the playtest unable to say which one it had judged.
+
+## 2026-09-22 — Animals: two files in a Downloads folder, and the plan they turned into
+
+The owner dropped `Pig.fbx` and `Rat.fbx` into the conversation and asked for the animals plan
+to be reviewed. There was none — the systems catalogue had said "no animal art exists" since
+Phase 2 and the A9 research lane never ran — so the day went through the phases from the start:
+ground, interview, research, plan, and stopped there for approval.
+
+**The ground was read from the files, not from the editor,** with a forty-line binary-FBX
+reader: Blender 2.79 exports on one quadruped bone convention (the pig's bones are a subset of
+the rat's), no UVs, two flat materials each, the rat with Idle/Walk/Run/Jump/Attack/Death and the
+pig with Idle and Jump only. That last fact decided more than anything else: a pig that cannot
+walk needs a gait from somewhere, and the owner chose a computed one over retargeting the rat's
+or authoring one — the same call as the axe and pick strokes, for the same reason.
+
+**The size was measured, and the first measurement lied.** `SkinnedMeshRenderer.BakeMesh` said
+the pig was 11 cm long; the bone positions said 11.4 m; the picture on a 2.5 m cell agreed with
+the bones. The bind pose folds the node scale in, so a baked mesh is not the honest number for a
+Blender "units scale" export — the bones are, and a photograph beside a known cube is the
+tie-break. Both models now carry an import scale (`AnimalProbe.ImportScale`) that stands them
+life-size, and the first playtest question is whether life-size is right in a world where a
+colonist is 2.49 m tall.
+
+**Three things were already there.** `TraverseMode.Animal` — no ladders, no doors — has been in
+the nav graph since the pathfinding lane, with a mask on every link; `WanderJobDriver` and
+`WanderTarget` drive the mental break's wander; `PawnKindDef` exists, carrying the colonist's
+needs tuning. And `proper-nouns.csv` already calls the pig the *midden hog*. The plan is mostly
+a matter of naming a species and letting a pawn carry a kind.
+
+**One thing was in the way.** `PawnPose.Of` scans every other pawn for the crowd sidestep, once
+per posed pawn per frame (P11, open). Animals are pawns; every one added would sit on both sides
+of that scan. The plan keeps them out of it rather than waiting for the fix.
+
+**The interview** (`docs/research/animals-interview.md`): CC0, so committed; pig wild first,
+livestock later; the rat is vermin, game, threat and the walking proof; the MVP is spawn, wander,
+draw, click, from the debug menu only; rats climb anything and pigs never take a ladder; the
+health model is the unit after. `docs/plans/animals.md` holds the five units and the decisions
+the design doc must record. Save format: temperature is at 9 in review, so animals rebase after
+it and take 10.
