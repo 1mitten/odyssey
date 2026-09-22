@@ -95,8 +95,17 @@ namespace Odyssey.EditorTools
                 {
                     uint roll = (uint)(pawn * 2654435761u % 900000 + 1000);
                     ColonistAppearance a = book.For(pawn, roll);
-                    colony.Add(($"pawn {pawn} look {a.Look} hair {a.HairPiece} beard {a.BeardPiece}",
-                        studio.For(a)));
+
+                    // Name, the gender its CSV row carries, and the sex the colonist was actually
+                    // dealt -- which are the three things "does the name match the character"
+                    // is asking about (owner, 2026-09-22).
+                    var id = new PawnId(pawn);
+                    string name = ColonistNames.Rolled(roll, id);
+                    char named = ColonistNames.GenderOf(roll, id);
+                    char dealt = ColonistAppearance.SexOf(named, roll, pawn);
+
+                    colony.Add(($"{name} [name {named} -> {dealt}] look {a.Look} " +
+                                $"hair {a.HairPiece} beard {a.BeardPiece}", studio.For(a)));
                 }
                 Write("colony.png", colony, report);
 

@@ -191,6 +191,65 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        // ------------------------------------------------------------------ a neutral name
+
+        [Test]
+        public void ANeutralNameIsDealtOneSexAndIsCoherent()
+        {
+            // The fault this replaced: 'n' meant "both pools" slot by slot, so a neutral name
+            // could be given a female body and still grow a beard -- and once a uniform was
+            // issued it meant "male", so all thirty unisex names were men in every colony.
+            ColonistCastPools pools = Pools();
+            for (int i = 1; i <= 400; i++)
+            {
+                char sex = ColonistAppearance.SexOf('n', 6u, i);
+                ColonistAppearance a = ColonistAppearance.Of(6u, i, pools, 'n', 30);
+
+                if (sex == 'f')
+                {
+                    Assert.That(pools.FemaleBodies, Contains.Item(a.Look));
+                    Assert.That(a.BeardPiece, Is.EqualTo(ColonistAppearance.NoPiece),
+                        "a colonist dealt a female body must not also be dealt a beard");
+                }
+                else
+                {
+                    Assert.That(pools.MaleBodies, Contains.Item(a.Look));
+                }
+            }
+        }
+
+        [Test]
+        public void ANeutralNameIsDealtBothSexesAcrossAColony()
+        {
+            // Still "both pools" at the population level -- just not both at once.
+            int women = 0;
+            for (int i = 1; i <= 400; i++)
+                if (ColonistAppearance.SexOf('n', 3u, i) == 'f')
+                    women++;
+
+            Assert.That(women, Is.InRange(120, 280), "a coin that never lands on one side");
+        }
+
+        [Test]
+        public void ANameThatCarriesASexKeepsIt()
+        {
+            for (int i = 1; i <= 100; i++)
+            {
+                Assert.That(ColonistAppearance.SexOf('m', 8u, i), Is.EqualTo('m'));
+                Assert.That(ColonistAppearance.SexOf('f', 8u, i), Is.EqualTo('f'));
+            }
+        }
+
+        [Test]
+        public void TheSexOfANeutralNameSurvivesEverything()
+        {
+            // Pure in the pair, like the name and the age beside it, so the person on the setup
+            // card is the person on the board and the person after a reload.
+            for (int i = 1; i <= 100; i++)
+                Assert.That(ColonistAppearance.SexOf('n', 99u, i),
+                    Is.EqualTo(ColonistAppearance.SexOf('n', 99u, i)));
+        }
+
         // ------------------------------------------------------------------ the uniform
 
         static ColonistCastPools Issued() => new ColonistCastPools(

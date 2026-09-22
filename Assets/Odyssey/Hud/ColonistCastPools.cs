@@ -91,10 +91,9 @@ namespace Odyssey.Hud
         /// <summary>
         /// The uniform body for a gender, or <see cref="NoUniform"/> where there is none.
         ///
-        /// <para>A neutral name takes the male cut, and that is a placeholder rather than a
-        /// judgement: the jumpsuit is one garment with two cuts and there is no third. When
-        /// clothing becomes an item the garment will carry both and the cut will follow the body,
-        /// not the name.</para>
+        /// <para>The cut follows the resolved sex, so a neutral name gets whichever it was dealt
+        /// rather than always the male one. When clothing becomes an item the garment carries both
+        /// cuts and this becomes a property of the garment rather than of the colony.</para>
         /// </summary>
         public int UniformFor(char gender) =>
             gender == 'f'
@@ -119,10 +118,11 @@ namespace Odyssey.Hud
         /// <summary>
         /// The bodies this gender may wear.
         ///
-        /// <para><c>n</c> draws from <b>both</b> pools, which is why this concatenates rather than
-        /// picking a side. It is a real value in <c>colonist-names.csv</c> and not a fallback
-        /// (<c>docs/design/29-modular-colonists.md</c> §6), so silence here would have become an
-        /// accident — a neutral-named colonist quietly always male.</para>
+        /// <para><b>Callers pass a resolved sex, never a raw name gender.</b>
+        /// <see cref="ColonistAppearance.SexOf"/> turns the <c>n</c> of a neutral name into one or
+        /// the other before anything here is asked, so that a colonist is one person rather than a
+        /// different one in each slot. The both-pools branch below is kept only so a caller who
+        /// has not resolved still gets a cast rather than an exception.</para>
         /// </summary>
         public int[] BodiesFor(char gender) => Pick(gender, MaleBodies, FemaleBodies, ref _bothBodies);
 
@@ -132,9 +132,9 @@ namespace Odyssey.Hud
         /// <summary>
         /// Whether this gender is dealt a beard at all.
         ///
-        /// Men and neutral names; never women. A neutral name draws from both pools everywhere
-        /// else, and a beard is the one slot where "both" has no meaning — so it is offered, and
-        /// the ordinary clean-shaven roll decides.
+        /// <para>Men, never women. A neutral name has already been resolved to one or the other
+        /// by <see cref="ColonistAppearance.SexOf"/>, so this never has to decide what a beard
+        /// means for "both" — which it previously answered by growing one on a female body.</para>
         /// </summary>
         public bool CanGrowABeard(char gender) => gender != 'f' && Beards.Length > 0;
 

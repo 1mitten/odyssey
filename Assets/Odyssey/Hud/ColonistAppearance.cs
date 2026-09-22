@@ -185,6 +185,10 @@ namespace Odyssey.Hud
         public static ColonistAppearance Of(
             uint seed, int pawnId, ColonistCastPools pools, char gender, int age)
         {
+            // A neutral name is resolved to a definite sex here, once, and everything below reads
+            // that rather than the name. See SexOf: it is what makes a colonist coherent.
+            gender = SexOf(gender, seed, pawnId);
+
             // The pool is indexed by the *existing* body lottery rather than by a stream of its
             // own. ColonistLook.For's distribution was tuned and is pinned by tests -- a plain
             // remainder deals the opening five the first five rows, which came out as the whole
@@ -221,6 +225,32 @@ namespace Odyssey.Hud
             return new ColonistAppearance(look, skin, hair, cloth, cloth2,
                 HairPieceFor(seed, pawnId, pools, gender, age),
                 BeardPieceFor(seed, pawnId, pools, gender));
+        }
+
+        /// <summary>
+        /// The sex a colonist actually is, which for most of them is the one their name carries.
+        ///
+        /// <para><b>A neutral name is dealt one rather than defaulting to a side.</b> Thirty of the
+        /// two hundred and forty names in <c>colonist-names.csv</c> are <c>n</c> - Avery, Riley,
+        /// Rowan, Wren and the nicknames - and they are neutral because the <i>name</i> is, not
+        /// because the person is. Treating <c>n</c> as "draw from both pools" separately in each
+        /// slot made an incoherent colonist: a female body that could still grow a beard. Treating
+        /// it as "male unless told otherwise", which the uniform did, was worse - it made all
+        /// thirty of them men, in every colony, for ever (owner, 2026-09-22, asking why names and
+        /// characters did not match).</para>
+        ///
+        /// <para>So it is one coin, flipped from the same seed everything else about them comes
+        /// from. Rowan is a man in one colony and a woman in another, and is the same person on
+        /// the setup card, on the board and after a reload - because the flip is a pure function
+        /// of the pair, like the name and the age beside it.</para>
+        ///
+        /// <para>At the population level this is still "both pools", which is what it was always
+        /// for. What it is not any more is both pools <i>at once</i>.</para>
+        /// </summary>
+        public static char SexOf(char gender, uint seed, int pawnId)
+        {
+            if (gender == 'm' || gender == 'f') return gender;
+            return (Mix(seed, pawnId, SexStream) & 1u) == 0u ? 'm' : 'f';
         }
 
         /// <summary>
@@ -319,6 +349,7 @@ namespace Odyssey.Hud
         const uint BeardStream = 0xFD7046C5u;
         const uint BaldStream = 0xB55A4F09u;
         const uint ShavenStream = 0x5BD1E995u;
+        const uint SexStream = 0x9E3779BBu;
 
         /// <summary>One avalanche over (seed, pawn, stream). Integers only, unchecked, no float.</summary>
         static uint Mix(uint seed, int pawnId, uint stream)

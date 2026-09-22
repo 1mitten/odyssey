@@ -439,3 +439,44 @@ painted.
 
 The middle option is the one I would back, and the cheapest experiment that decides it is the green
 sheet again after the change: if the green retreats to scalp and brows on every body, it is right.
+
+
+---
+
+## 11. A neutral name is dealt a sex, once
+
+**Owner, 2026-09-22:** *"is there a way to assign more female/male sounding names to the appropriate
+character?"*
+
+**The data was already right.** `colonist-names.csv` carries a `gender` column and it decides the
+body, so a name and a body can only disagree if the column is wrong. It is not: 120 `m`, 90 `f`, and
+30 `n` — and the thirty are genuinely unisex (Avery, Riley, Rowan, Wren, Greer, Blythe, Emory,
+Marlo, Sable, Fen) or nicknames with no sex at all (Weasel, Spudgun, Treacle, Flower, Holiday).
+
+**What was wrong was what this unit did with `n`.** It was handled slot by slot as "draw from both
+pools", which produced an *incoherent* colonist — a female body that could still be dealt a beard,
+because `CanGrowABeard` only excluded `f`. And once §9's uniform landed it was worse:
+`UniformFor('n')` returned the male cut, so **all thirty unisex names were men, in every colony, for
+ever.** The code said in as many words that this was a placeholder.
+
+**The fix is one coin, flipped once.** `ColonistAppearance.SexOf` resolves `n` to `m` or `f` from the
+same seed everything else about that colonist comes from, at the top of the derivation, and every
+slot below reads the resolved sex rather than the name. Rowan is a man in one colony and a woman in
+another, is the same person on the setup card, on the board and after a reload, and is never both at
+once. At the population level it is still "both pools" — which is all it was ever for.
+
+Four tests in `ColonistCastPoolTests` hold it: a neutral name's body and beard agree with each other,
+both sexes turn up across a colony, a name that carries a sex keeps it, and the flip is pure in the
+pair.
+
+**The evidence is a contact sheet.** `ModularProbe` labels `colony.png` with the name, the gender its
+CSV row carries and the sex actually dealt — `Holiday [name n -> m]`, `Pleb [name n -> f]` — so
+"does the name match the character" is a thing to look at rather than reason about.
+
+### Still the owner's to decide
+
+- **The pool skews male**: 120 to 90, and the neutrals split evenly, so a colony runs about 57% men.
+  One column of one CSV; the wiki lists it so it can be corrected without reading any code.
+- **Nicknames are dealt a sex too.** Spudgun and Treacle become a man or a woman like anyone else.
+  That reads as a person with a nickname, which seems right — but if a nickname should sit on top of
+  a real name rather than replace it, that is a naming decision and not this unit's.
