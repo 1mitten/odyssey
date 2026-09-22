@@ -195,6 +195,7 @@ namespace Odyssey.Hud
             { "ui.debug.panel", "Debug" },
             { "ui.debug.ripen", "Ripen crops" },
             { "ui.debug.skipday", "Skip one day" },
+            { "ui.debug.skipmonth", "Skip one month" },
             { "ui.debug.skipmorning", "Skip to morning" },
             { "ui.debug.spawnpawn", "Spawn colonist" },
             { "ui.debug.tab.cheats", "Cheats" },

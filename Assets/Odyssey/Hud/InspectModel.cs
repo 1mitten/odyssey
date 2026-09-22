@@ -934,7 +934,7 @@ namespace Odyssey.Hud
             // decisions and the pane exists to make the decision obvious. Silent only for a
             // detail that was never told, which in the game never happens.
             if (detail.AmbientTempC != int.MinValue)
-                Row(n++, "temperature", DescribeTemp(detail.AmbientTempC),
+                Row(n++, "temperature", TemperatureLabels.Describe(detail.AmbientTempC),
                     HudTheme.Temperature(detail.AmbientTempC));
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
@@ -1014,15 +1014,6 @@ namespace Odyssey.Hud
                 int byAmount = b.Units.CompareTo(a.Units);
                 return byAmount != 0 ? byAmount : string.CompareOrdinal(a.Name, b.Name);
             });
-        }
-
-        /// <summary>Centi-degrees to the form the pane reads them in: one decimal, signed,
-        /// with the unit. Integer arithmetic throughout — the sign is handled by hand so that
-        /// −12.5 does not arrive as −12.5 by way of a float.</summary>
-        static string DescribeTemp(int centiC)
-        {
-            int magnitude = centiC < 0 ? -centiC : centiC;
-            return (centiC < 0 ? "-" : "") + magnitude / 100 + "." + magnitude % 100 / 10 + " °C";
         }
 
         void Row(int index, string name, string value, HudColour? tint = null)

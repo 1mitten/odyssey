@@ -16,10 +16,28 @@ namespace Odyssey.Sim.Temperature
     /// the outdoor curve, which is a pure function of the tick.
     ///
     /// <para><b>Cadence and cost.</b> One pass per 120 ticks, matching the reference's own
-    /// cadence, over rooms rather than cells: O(rooms + surfaces), never O(cells), which is the
-    /// only reason any of this is affordable beside a 2.5 M cell board. The pass is Jacobi —
-    /// every room's step is computed from the <i>old</i> temperatures and they all move at the
-    /// end — so the order rooms are visited provably cannot matter.</para>
+    /// cadence, over rooms rather than cells: <b>O(rooms + surfaces + standing edifices)</b>,
+    /// never O(cells), which is the only reason any of this is affordable beside a 2.5 M cell
+    /// board. The pass is Jacobi — every room's step is computed from the <i>old</i> temperatures
+    /// and they all move at the end — so the order rooms are visited provably cannot matter.</para>
+    ///
+    /// <para><b>The edifice term is real and it is the one that grows.</b> This summary claimed
+    /// "O(rooms + surfaces)" until it was measured against a board with the edifice count printed
+    /// beside the time (<c>TemperatureCostProbe</c>), and the shape came out the other way round:
+    /// 250 × 250 × 40 barren — 2.5 M cells, <b>0 rooms, 5 edifices</b> — cost 0.0054 ms, while
+    /// 240 × 240 × 16 wooded — 69 rooms, <b>6,311</b> edifices — cost <b>0.171 ms</b>. Nothing in
+    /// those two numbers is the cell count and almost all of the second is the sweep for heat
+    /// sources, which has to visit every standing thing to find the ones that are warm. A wooded
+    /// board is mostly trees, so whatever that sweep does <i>per edifice</i> is what the pass
+    /// costs — and it was asking <c>ConstructionContent.BuildingForEdifice</c>, a linear scan of
+    /// the building table, which is a scan inside a sweep.</para>
+    ///
+    /// <para><b>0.171 ms → 0.051 ms on that board, and 0.041 → 0.013 on the played one</b>, both
+    /// arms in one run so the ratio is this machine's own: <see cref="_heatByEdificeDef"/> is the
+    /// same answer precomputed once, so the inner step is an array read. The term itself is still
+    /// there. A source list maintained as things are raised and pulled down would remove it
+    /// altogether and is the next move if it is ever the reason for a number; it is not today, at
+    /// one pass in 120 ticks and 0.0004 ms a tick amortised on the largest board offered.</para>
     ///
     /// <para><b>State is one dictionary</b>, room key → centi-degrees. Everything else — the
     /// surfaces, the rooms themselves — is derived and rebuilds with the enclosure solve. That
@@ -65,6 +83,22 @@ namespace Odyssey.Sim.Temperature
         /// root's own list, the same one the enclosure grid reads — never a second copy.</summary>
         readonly IReadOnlyList<Worldgen.PlacedEdifice> _edifices;
 
+        /// <summary>
+        /// <c>heatPerPass</c> by edifice id, built once from the content.
+        ///
+        /// <para>The sweep for heat sources visits every standing edifice, and on a wooded board
+        /// almost all of them are trees — so whatever it does per edifice is what the pass costs.
+        /// It asked <c>ConstructionContent.BuildingForEdifice</c>, which is a linear scan of the
+        /// building table, so the inner work was a scan inside a sweep. This is the same answer
+        /// with the scan done once. It is a <i>derived cache of content</i>, not state: nothing
+        /// saves it, nothing hashes it, and a Def reload rebuilds the system that holds it.</para>
+        ///
+        /// <para>Sized off the table rather than off <c>EdificeHandle.Count</c>, because the
+        /// generators stamp ids this table has never heard of and an id past the end must read as
+        /// "not a heat source" rather than as an index.</para>
+        /// </summary>
+        readonly int[] _heatByEdificeDef;
+
         public TemperatureSystem(PawnContext ctx, IReadOnlyList<Worldgen.PlacedEdifice> edifices,
             ClimateDef climate)
         {
@@ -72,6 +106,14 @@ namespace Odyssey.Sim.Temperature
             _edifices = edifices;
             _climate = climate;
             _groundByLayer = new int[ctx.Size.SizeY];
+
+            var table = Construction.ConstructionContent.Buildings;
+            int widest = 0;
+            for (int i = 1; i < table.Count; i++)
+                if (table[i].edifice > widest) widest = table[i].edifice;
+            _heatByEdificeDef = new int[widest + 1];
+            for (int i = 1; i < table.Count; i++)
+                if (table[i].heatPerPass != 0) _heatByEdificeDef[table[i].edifice] = table[i].heatPerPass;
 
             // Rooms resolve their starting temperature the moment they are built, not at the
             // next pass, while the ledger of what their cells used to be is fresh. A room from
@@ -198,8 +240,8 @@ namespace Odyssey.Sim.Temperature
             {
                 var placed = _edifices[e];
                 if (placed.Removed) continue;
-                int heat = Construction.ConstructionContent
-                    .BuildingAt(Construction.ConstructionContent.BuildingForEdifice(placed.Def)).heatPerPass;
+                if (placed.Def >= _heatByEdificeDef.Length) continue;
+                int heat = _heatByEdificeDef[placed.Def];
                 if (heat == 0) continue;
                 if (_slotByKey.TryGetValue(_ctx.Enclosure!.RoomAt(placed.CellIndex), out int slot))
                     _sources[slot] += heat;

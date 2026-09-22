@@ -119,6 +119,7 @@ namespace Odyssey.Presentation.Ui
         ToolTable,
         ToolLamp,
         ToolShelf,
+        ToolCampfire,
         ToolConduit,
         ToolBattery,
         ToolGenerator,

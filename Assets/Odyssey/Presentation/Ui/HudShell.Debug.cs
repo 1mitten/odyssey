@@ -75,6 +75,11 @@ namespace Odyssey.Presentation.Ui
                 "Spends one whole game day of ticks at once (about a fifth of a second). "
                     + "The crop's stage changes arrive at the same hour each press; works while paused",
                 SkipDay));
+            _debugCheats.Add(DebugActionRow(DebugDirector.SkipMonthKey,
+                "Spends a whole game month of ticks at once - twelve days, so a couple of seconds "
+                    + "of standing still. Six presses walk the year: Wash is mild, Glare is warm, "
+                    + "and Rime is the season the campfire exists for",
+                SkipMonth));
             _debugCheats.Add(DebugActionRow(DebugDirector.SkipMorningKey,
                 "Skips the night and hands back the clock at dawn, with a whole watchable day "
                     + "ahead: the harvest happens on screen, not inside the skip",
@@ -253,7 +258,6 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-
         /// A day a press. The day's length is read from the content rather than written here, so
         /// a retuned calendar does not leave this row skipping some other amount.
         /// </summary>
@@ -262,6 +266,20 @@ namespace Odyssey.Presentation.Ui
             var colony = _boot!.Colony;
             if (colony == null) return;
             _boot.DebugSkipTicks(colony.Pawns.Content.DayTicks);
+        }
+
+        /// <summary>
+        /// A month a press, so the year can be walked through and the season seen (design 28).
+        ///
+        /// <para>The day's own length times the calendar's <c>DaysPerMonth</c>, both read rather
+        /// than written, for the reason <see cref="SkipDay"/> gives: two places that hold a
+        /// month's length would be one more thing to keep in step with a retuned calendar.</para>
+        /// </summary>
+        void SkipMonth()
+        {
+            var colony = _boot!.Colony;
+            if (colony == null) return;
+            _boot.DebugSkipTicks(colony.Pawns.Content.DayTicks * Calendar.DaysPerMonth);
         }
 
         void RipenCrops()

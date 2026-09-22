@@ -10538,3 +10538,85 @@ that rule would die.
 `SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
 tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
 both at once would leave the playtest unable to say which one it had judged.
+
+
+## 2026-09-22 — Temperature merged with main: the campfire renumbers, and the season becomes reachable
+
+`main` moved twice under PR #164 while it sat in review — the shelf (#158) and floating crops
+(#163) — and the merge turned out to be the interesting part rather than a formality. **Both
+branches had appended at the same two slots.** The shelf reached `main` first and took edifice 13
+and `BuildingHandle` 7; the campfire had both. The rule for that is already written down in two
+places (`BuildingHandle.Bed`'s own comment records the bed moving from 2 to 5 for exactly this),
+so the campfire moves to 14 and 8. It is only safe because no save with a campfire in it has ever
+left the branch, and that sentence is the whole of the argument.
+
+Eighteen files conflicted. Seventeen were a union — one branch appending a row, the other
+appending a different row to the same table — and resolving them was mechanical. **The interesting
+ones are the two tables that did not conflict at all.** `BuildShapes.Cells` is parallel to
+`BuildingHandle`, and both branches had added a `1` to it; git took one of the two, so the merged
+table was one entry short and the campfire had no shape. `EdificeHandle.Count` and
+`BuildingHandle.Count` likewise merged clean and were both wrong by one.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught the shape table. That test exists *because
+of this exact failure* — its own comment records the day the bed's handle moved from 2 to 5, the
+three-entry table merged in silence, and the bed became a one-cell thing that could not be turned
+while three `DesignateDirector` tests failed and none of them named the cause. It has now earned
+its keep twice, on the same fault, two months apart. **The lesson it teaches is not about shapes:
+a merge conflict marks where two branches wrote different text, and the dangerous case is where
+they wrote the *same* text for different reasons.** Every hand-maintained parallel table in this
+codebase has that property, and only the ones with a length assertion are defended.
+
+**The goldens and the building fingerprint were re-baked, and measured before they were.** A merge
+of two branches that each moved a golden leaves neither side's number right, so taking either
+would have committed a number nothing had produced. `GoldenColonyProbe` — committed by the shelf
+work for exactly this — was run on the merged branch, on the branch head and on `main`, and the
+three outputs **diff clean**: all nine census numbers identical on all three boards across all
+three commits. The hash sees more; no colony does anything different. Which also says something
+quieter and worth writing down: **in the ten-thousand-tick golden windows, temperature changes
+nothing at all**, because those windows sit in the work band, nobody sleeps in them, and the
+boards have no crops. The goldens are not evidence the model bites, and were never going to be.
+
+### Three findings, and one of them is not about code
+
+**The pass is O(standing edifices) and its own summary said it was not.** `TemperatureSystem`
+claimed *"O(rooms + surfaces), never O(cells)"*. Measured with the edifice count printed beside
+the time, the shape is the opposite of the claim: 250 × 250 × 40 barren — 2.5 M cells, 0 rooms,
+**5 edifices** — costs 0.0054 ms, while 240 × 240 × 16 wooded — 69 rooms, **6,311 edifices** —
+costs 0.17 ms. The sweep for heat sources has to visit every standing thing to find the warm ones,
+a wooded board is mostly trees, and it was calling `BuildingForEdifice` — *a linear scan of the
+building table* — once per tree. A scan inside a sweep. Precomputing the answer by edifice id in
+the constructor took it to 0.051 and 0.013 ms, both arms in one run.
+
+The number is not the point. **The point is that a complexity claim in a doc comment is not a
+measurement, and this one had survived a nine-finding review.** It reads as true because the room
+half of the sentence is true, and the half that is not is the half that grows. `P10` in
+`bug-patterns.md` is the drawing-side version of the same thing — a pass that costs once per cell,
+which reviews cannot see — and this is its tick-side twin: a pass that costs once per *thing*,
+hidden behind a cadence that makes the amortised figure look like nothing.
+
+**The form of a temperature had two owners.** The pane's tile row and the clock's outdoor reading
+each carried their own copy of centi-degrees-to-one-signed-decimal, in two assemblies, agreeing by
+luck. P1 again. `TemperatureLabels.Describe` is the one owner now, and the guard **reads the C#
+files** rather than asserting behaviour, because two copies of a rule that happen to agree cannot
+be caught by running either of them. It immediately found `AlmanacCatalogue` writing `20°C` where
+the pane writes `20.0 °C` — prose rather than a second implementation, so exempted, but the
+exemption says what it is leaving unchecked instead of quietly widening the rule to fit.
+
+**And the finding that mattered most was not a bug.** This work's headline sentence is *"Rime
+kills"*, and Rime is months four and five of six. The debug menu offered **Skip one day**. Reaching
+the season the entire model exists for was therefore sixty presses — and the branch's own "still
+owed" note asked only whether *Wash's* chill reads as mild. That is what a question looks like when
+the interesting one cannot be asked: the scope of a playtest had been silently set by the tooling
+rather than by the work. **Skip one month** is one new row using the day row's own mechanism, and
+six presses now walk the year.
+
+Worth keeping as a habit: before handing something over, ask what the playtest instruction actually
+is, and then try to *follow it*. "Fast forward into Rime" was already written in the queue, by
+somebody who had not counted the presses.
+
+**What was deliberately left alone.** `WeatherOffsetC` is a settable seam with nothing setting it,
+so a cold snap cannot be reached in any season — and a debug row for it would have been one line.
+It was not written. The incident that owns weather is deferred work with a design behind it, and a
+debug switch that sets a field an incident is supposed to own is how a seam quietly becomes an
+interface. If the playtest comes back wanting the cold snap first, that is the moment to
+reconsider, and the reason will be on record rather than reconstructed.

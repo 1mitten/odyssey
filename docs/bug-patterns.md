@@ -212,6 +212,18 @@ constant came from each drew a real mesh, and a mark is a unit cube. The counted
 this pattern is the reliable one; the it-must-be-expensive half is a hypothesis to test.
 `docs/design/06-rendering-and-camera.md` §6c.1.
 
+**And once per *thing* rather than once per cell, hidden behind a cadence.** The thermal pass
+(2026-09-22) runs one tick in 120 and sweeps **every standing edifice** to find the ones that are
+warm — so it is priced by how much is on the board, not by how many rooms there are. On a wooded
+board that is trees: 2.5 M cells with 5 edifices cost 0.0054 ms, and 921 k cells with 6,311
+edifices cost 0.17. **The class's own summary said "O(rooms + surfaces), never O(cells)"**, and it
+had survived a nine-finding review, because the sentence is half true and the false half is the
+half that grows. The inner step was `BuildingForEdifice`, a linear scan of the building table — a
+scan inside a sweep — and precomputing it by edifice id took the pass to 0.051 ms.
+**The cadence is what hides it:** amortised over 120 ticks any of those numbers rounds to nothing,
+so the honest figure to look at is the cost of the pass itself and the count it scales with, printed
+side by side. A complexity claim in a doc comment is not a measurement.
+
 **The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
 publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
 paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
@@ -407,6 +419,50 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 ---
 
 ## The register
+
+### 2026-09-22 — A merge with no conflict where the fault was, and a claim that outlived a review (P1, P10)
+
+PR #164 merged with a `main` that had moved twice under it. Eighteen files conflicted and the
+merge was mechanical; **the fault was in a file that did not conflict.**
+
+**Two branches that wrote the same text for different reasons.** `BuildShapes.Cells` is a table
+parallel to `BuildingHandle`, and the shelf branch and the campfire branch had each appended a
+`1` to it. Git saw one added line and took it once. The merged table was one entry short, so the
+campfire silently had no shape — and `EdificeHandle.Count` and `BuildingHandle.Count` merged clean
+and were both wrong by one for the same reason.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught it. **That test exists because of this
+exact failure**, two months earlier: when the bed's handle moved from 2 to 5, the same table
+merged in silence, the bed became a one-cell thing that could not be turned, and three
+`DesignateDirector` tests failed without naming the cause. It has now paid for itself twice on the
+same fault.
+
+**The tell:** a merge conflict marks where two branches wrote *different* text. The dangerous case
+is where they wrote the *same* text for different reasons — which is the normal case for a
+hand-maintained parallel table, since every entry in one is some flavour of `1`, `false` or `""`.
+**The check:** every such table wants a length assertion against the enum it parallels, and only
+the ones that have one are defended. `BuildShapes`, `BuildLabels`, `EdificeLabels`,
+`QualityLabels`, `TerrainLabels` and `ItemLabels` are the family.
+
+**And a golden conflict has exactly one honest resolution.** Both branches had moved all six
+numbers, so neither side's value was right for the merged code and taking either would have
+committed a number nothing had produced. Re-baked, then *measured* with `GoldenColonyProbe` on the
+merged branch, the branch head and `main` — three diffs, clean. Which also established the quieter
+fact that **the goldens were never evidence the thermal model bites**: their windows sit inside the
+work band, nobody sleeps in them, and the boards have no crops.
+
+The other two findings are P1 in its usual clothes (the temperature-to-text form written out in two
+assemblies, agreeing by luck — now `TemperatureLabels`, guarded by a test that reads the C# files)
+and the P10 entry above.
+
+**A third kind, which this catalogue had no room for and gets a sentence here instead.** The work's
+headline claim was *"Rime kills"*; Rime is month five of six; the debug menu offered *Skip one day*.
+Sixty presses. Nothing was broken, every test was green, and the effect was that **the scope of the
+playtest had been set by the tooling rather than by the work** — the branch's own "still owed" note
+asked only about the mild season, which is what a question looks like when the interesting one
+cannot be asked. The check is cheap and belongs beside the handover: **read your own playtest
+instruction and try to follow it.** "Fast forward into Rime" was already written down, by somebody
+who had not counted the presses.
 
 ### 2026-09-21 — Nine faults in a thermal model that had thirteen green tests (P1, P2, P11)
 

@@ -321,3 +321,147 @@ lazy solve runs when a needs interval asks a room's temperature before the next 
 solve). Note that `28-map-size.md`'s 0.298 ms for Standard is the *generated* board, and this
 arm is the lattice world with nine times its regions, so the two were never one measurement;
 the arm's own note says so and now the number in each column names its world.
+
+
+## 13. The merge with `main`, and three more before the playtest — 2026-09-22
+
+`main` moved twice under this branch while it was in review (the shelf, PR #158; floating crops,
+PR #163), and the merge was not a formality: **both branches appended at the same two slots.**
+The shelf reached `main` first and took edifice 13 and `BuildingHandle` 7, so the campfire moves
+to **14 and 8** — the rule `BuildingHandle.Bed` already records against the floor, the deck plate
+and the ladder, and the reason handle order is spelled out as a save contract in both places. No
+save written with a campfire in it has ever left this branch, which is the only thing that makes
+a renumber safe.
+
+Eighteen files conflicted and seventeen of them were a union: one branch appending a row, the
+other appending a different row to the same table. **The tables that did *not* conflict are the
+ones worth naming**, because git merged them in silence and one of them was wrong:
+
+- `BuildShapes.Cells` — both branches added a `1` to the same list, so git took one of them and
+  the campfire had no row at all. `RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught it, which
+  is exactly the failure that test was written for after the bed's handle moved from 2 to 5 and
+  the bed silently became a one-cell thing that could not be turned. It has now earned its keep
+  twice.
+- `EdificeHandle.Count` 13 → **15** and `BuildingHandle.Count` 8 → **9**, neither of which any
+  conflict marker pointed at.
+
+The building fingerprint and all six goldens were re-baked, because a merge of two branches that
+each moved them leaves *neither* side's number right for the merged code — taking either would
+have committed a number nothing had produced. **Measured rather than asserted**, with
+`GoldenColonyProbe` run on the merged branch, on this branch's head and on `main`, and the three
+outputs diff **clean**: every one of the nine census numbers — live things, per-def stacks, item
+cells, the two lister counts, pawn cells, total food, total rest, standing orders, zones —
+is identical on all three boards across all three commits. The hash sees more; no colony does
+anything different.
+
+### 13a. Three findings
+
+**F10 — the pass is O(standing edifices), and its own summary said it was not.**
+`TemperatureSystem`'s class comment claimed *"O(rooms + surfaces), never O(cells)"*. The room half
+is true and the sentence is still wrong, because the sweep for heat sources visits **every
+standing edifice** to find the ones that are warm. Measured with the edifice count printed beside
+the time (`TemperatureCostProbe`, new, `[Explicit]` like every other probe here), the shape came
+out the opposite way round from the claim:
+
+| Board | Cells | Rooms | Standing edifices | One pass |
+|---|---|---|---|---|
+| Scale target, barren (250×250×40) | 2.5 M | 0 | 5 | 0.0054 ms |
+| Standard, wooded (120×120×16) | 230 k | 22 | 1,656 | 0.0411 ms |
+| Huge, wooded (240×240×16) | 921 k | 69 | 6,311 | 0.1714 ms |
+
+Nothing in that column is the cell count, and a board with 2.5 M cells and five edifices is the
+cheapest of the three. A wooded board is mostly trees, so whatever the sweep does *per edifice* is
+what the pass costs — and it was calling `ConstructionContent.BuildingForEdifice`, a **linear scan
+of the building table**, which is a scan inside a sweep.
+
+Fixed by precomputing `heatPerPass` by edifice id once, in the constructor, so the inner step is
+an array read: **0.1714 → 0.0508 ms** on the huge board and **0.0411 → 0.0132** on the played one,
+both arms in one run so the ratio is this machine's own. The term itself is still there and the
+summary now says so with the numbers beside it. A source list maintained as things are raised and
+pulled down would remove it altogether; that is the next move **if** it is ever the reason for a
+number, and at one pass in 120 ticks and 0.0004 ms a tick amortised on the largest board offered,
+it is not today.
+
+**F11 — the form of a temperature had two owners.** The pane's tile row and the clock's outdoor
+reading each carried their own copy of *centi-degrees to one signed decimal with the unit* — the
+same four operations spelled out in two assemblies, agreeing by luck. That is `bug-patterns.md`
+P1, the same fault as the two order-colour tables that disagreed about deconstruct for months, and
+nothing was wrong with either copy on the day it was written: the cost arrives the first time
+somebody is asked to show whole degrees and corrects one of them. `TemperatureLabels.Describe` is
+the one owner now, beside `HudTheme.Temperature` which owns the colour, and
+`TemperatureLabelsTests.TheUnitIsWrittenInExactlyOnePlace` **reads the C# files** to keep it that
+way — the idiom `RegistryTests` and `HudFontTests` already use, and the only one that can catch
+two copies of a rule that happen to agree.
+
+It found one exemption worth recording rather than tidying away: `AlmanacCatalogue` carries fixed
+encyclopedia prose (*"14 days at 20°C"*, *"−25°C below seasonal average"*) which is authored text
+about content, not a rendering of a reading, and a literal cannot drift from a rule it never
+applied. The two consequently use different house styles for the same unit — the pane says
+**20.0 °C** and the almanac says **20°C**. That is a content question for whoever owns the
+almanac's voice, and the test says so in as many words.
+
+**F12 — the headline claim was unreachable, which is a playtest finding rather than a code one.**
+The work's own sentence is *"Rime kills"*, and Rime is months four and five of six. The debug menu
+offered **Skip one day**, so reaching the season the whole model was built for was *sixty presses*
+— and the branch's own "still owed" note asked only whether Wash's chill reads as mild, which is
+what a question looks like when the interesting one cannot be asked. **Skip one month** is a new
+row on the Cheats tab, the same mechanism as the day (the calendar's own `DaysPerMonth` days of
+ticks, read rather than written, so a retuned calendar does not leave it skipping some other
+amount). Six presses walk the year. That is also the better test: seasons are only worth having
+if the turn between them is worth watching.
+
+### 13a-ii. F13 — the campfire's chip drew the placeholder square, and only one tier could see it
+
+`HudGeometryTests.EveryPaletteKeyHasItsOwnShape` fails on `ui.arch.tool.campfire`: *"is on the
+Build palette and has no drawn shape, so it would draw the placeholder square that the
+specification forbids."* The tool went live on the palette without a glyph.
+
+**It had been true for as long as the campfire had existed, and nothing had looked.** That test is
+**PlayMode only** — `PaletteGlyphs` lives in `Odyssey.Presentation`, which the fast tier does not
+compile at all, and EditMode does not carry the test. The branch reported *"Unity EditMode 2,280
+total, 0 failed"* and no PlayMode figure. Three green tiers on top of a fourth nobody ran is
+exactly the shape `docs/lessons.md` already records for the Long tier turning `main` red after
+PR #145 merged clean.
+
+Fixed by drawing one: `HudGlyphKind.ToolCampfire`, a flame over two crossed logs.
+**Drawn rather than borrowed**, unlike the bed, which wears the bunk's shape with a recorded
+reason — a bunk *is* a bed and the lie is only about which kind, whereas there is nothing on this
+palette a fire could borrow from without saying something false. The two logs carry the reading at
+17 px more than the flame does (a flame on its own is a leaf), so they are the wider, more
+separated pair of strokes and the flame sits clear above them.
+
+### 13a-iii. F14 — the naming registry has two heat sources, and the art is on the other one
+
+Not fixed, because it is the owner's call and not a code question.
+`docs/design/icon-keys.csv` carries **both**:
+
+| Key | Name | Milestone | Description |
+|---|---|---|---|
+| `ui.arch.tool.brazier` | Brazier | M3 | "Heat and light, no power, some risk" |
+| `ui.arch.tool.campfire` | Campfire | M4 | "A fire: warmth you can build" |
+
+The thing that now exists in the game is the campfire. **The pixel art is mapped to the
+brazier** — `icon-map.csv` row 239, sheet 03, and the cell's own description is the word
+*"campfire"*. So the owner's sheet has a drawing of the thing that is in the game, filed under the
+name of a thing that is not.
+
+Three ways out, and the choice belongs to whoever owns the naming: remap the `icon-map.csv` row to
+`ui.arch.tool.campfire` and let the brazier stay an unmapped M3 idea; keep both and accept that a
+brazier is a *different* later building (fuelled, indoor, riskier) that will want its own cell;
+or decide the campfire was always the brazier and rename the content. Nothing is broken today —
+the campfire has a vector glyph as of F13 and the wiki and the screen agree — but two registry
+entries for one concept is precisely what the wiki exists to surface, and it has surfaced it.
+
+### 13b. Still open, and deliberately not touched
+
+`WeatherOffsetC` is a settable seam with nothing setting it, so a cold snap's −25 °C — the thing
+the almanac already promises and the arithmetic in `Temperature.xml` is tuned against — cannot be
+reached at all, in any season. A debug row for it would be one line and was **not** written: the
+incident that owns weather is §10's deferred work, and a debug switch that sets a field an
+incident is supposed to own is how a seam quietly becomes an interface. If the playtest comes back
+wanting the cold snap before the incident does, that is the moment to reconsider, and the reason
+will be on record rather than assumed.
+
+Also unchanged from §12a's lower list: the clock reads `OutdoorTempC` off the simulation object;
+the lazy solve from a snapshot read writes room state outside the tick; a wall met from two sides
+by one room counts twice on that side.

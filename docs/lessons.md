@@ -2535,3 +2535,36 @@ once a *tick*, and a rig with nothing to draw runs frames far faster than the fi
 **When something is published by the simulation, assert the tick.** Frames are a unit of how fast the
 machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
 both of those are worth logging. The frame count is a diagnostic, never a gate.
+
+
+## Four tiers, and a branch can report three of them (2026-09-22)
+
+PR #164 reported *"Fast tier 921 + 583 green, Long tier 23 green, Unity EditMode 2,280 total, 0
+failed"* — three tiers, all honest, and **no PlayMode figure**. PlayMode had one real failure
+waiting in it: the campfire was live on the Build palette with no glyph, so its chip drew the
+placeholder square the specification forbids, and it had been that way for as long as the campfire
+had existed.
+
+**Nothing else could have caught it.** `PaletteGlyphs` lives in `Odyssey.Presentation`, which the
+fast tier does not compile at all; EditMode compiles it and does not carry the test;
+`HudGeometryTests` is PlayMode because it needs a panel. So the one tier that was not run was the
+only tier that could see it.
+
+This is the Long tier's lesson again in different clothes — PR #145 merged with three green tiers
+on top of a Long tier nobody ran and turned `main` red on a wall-clock gate. **The rule that comes
+out of both: a report of "tiers green" names every tier, and a tier with no number beside it was
+not run.** "EditMode 2,280, 0 failed" reads like the authoritative gate because CLAUDE.md calls
+EditMode authoritative, and it is — for what it covers.
+
+The four, and what each is the only one able to see:
+
+| Tier | Compiles | Only it can catch |
+|---|---|---|
+| Fast (`test-fast.sh`) | Sim, Sim.Contracts, Hud | nothing exclusively — it is the inner loop, not a gate |
+| Long (`--filter TestCategory=Long`) | the same | soak runs, scale-target round trips, wall-clock gates |
+| Unity EditMode | **everything**, including Presentation and Editor | assembly-definition boundaries, editor tooling, anything that will not compile outside the editor |
+| Unity PlayMode | everything | anything that needs a panel, a frame or a player loop: HUD geometry, glyphs, frame time |
+
+And the player build is the fifth thing, which is not a tier and proves what none of them do: that
+a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
+whether the game runs.

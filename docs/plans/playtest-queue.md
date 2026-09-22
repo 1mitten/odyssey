@@ -23,15 +23,29 @@ the next session learns to ignore.
 
 ## Open
 
-- **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Fast a day
-  forward into **Rime** and stand a colonist outdoors at night: the pane should say a freezing
-  tile, the clock a freezing outdoors, and within hours the colonist's work should slow and then
-  her condition. Then build a hut — walls, door, a floor above — put a **campfire** in it (3 wood,
-  furniture beside the bed) and fast again: the room should hold comfortable, the pane should say
-  so, and sleeping there should rest better than the ground outside. Two things only a keyboard
-  decides: whether Wash's chill is *mild* enough that spring feels benign (the bands in
-  `Temperature.xml`), and whether the campfire's heat feels like a fire or like a radiator — the
-  number is `heatPerPass` in `Buildings.xml` and the design says what it was tuned against.
+- **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
+  debug menu with backtick and press **Skip one month** four times — that is the row this review
+  added, because with only *Skip one day* the season the whole model was built for was sixty
+  presses away and so was never going to be looked at. Watch the clock as you go: the outdoor
+  reading beside the date is the curve, and Wash → Glare → Rime should feel like a year turning
+  rather than a number changing.
+
+  In **Rime**, stand a colonist outdoors at night: the pane should say a freezing tile, the clock
+  a freezing outdoors, and within hours her work should slow and then her condition. Then build a
+  hut — walls, door, a floor above — put a **campfire** in it (3 wood, furniture beside the bed)
+  and skip again: the room should hold comfortable, the pane should say so, and sleeping there
+  should rest better than the ground outside.
+
+  Four things only a keyboard decides. Whether **Wash's chill is mild enough** that spring feels
+  benign — a wrong answer is spring already wanting a fire, and the bands are in
+  `Temperature.xml`. Whether the **campfire feels like a fire or like a radiator** — a wrong
+  answer is one fire holding a hall, or a fire in a cupboard not being uncomfortable; the number
+  is `heatPerPass` in `Buildings.xml` and the design says what it was tuned against. Whether
+  **four hours outdoors in Candle is the right amount of rope** before a colonist is in trouble —
+  a wrong answer is either dying while you are reading the pane, or standing in −13 °C all night
+  and being fine. And whether **going down is worth it**: dig a cellar and click a tile, which
+  should read warmer than the surface in Rime and cooler in Glare — if it reads the same, the
+  ground damping is not arriving where a player would ever meet it.
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
   across a route colonists are using and let them finish while people are crossing. Three things
