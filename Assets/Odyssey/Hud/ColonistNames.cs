@@ -147,7 +147,7 @@ namespace Odyssey.Hud
             // different offsets, which can collide — `ColonistSelect` is what promises they do
             // not, because distinctness there is a fact about a screen of three rather than about
             // a name.
-            int index = (id.Value - 1 + (int)(Offset(rollSeed) % (uint)Pool.Length)) % Pool.Length;
+            int index = PoolIndex(rollSeed, id);
 
             // The cycle suffix is for a colony bigger than the pool, which at 244 names is not a
             // colony this game builds. Kept rather than deleted because it is the one branch that
@@ -156,6 +156,39 @@ namespace Odyssey.Hud
             int cycle = (id.Value - 1) / Pool.Length;
             return cycle == 0 ? Pool[index] : Pool[index] + " " + (cycle + 1);
         }
+
+        /// <summary>
+        /// Where in the pool this colonist reads their name from.
+        ///
+        /// <para>Extracted so that the name and the gender cannot come to disagree. They are the
+        /// same row of the same CSV, and two copies of this arithmetic is the one-rule-two-owners
+        /// pattern that has already cost this project a day more than once
+        /// (<c>docs/bug-patterns.md</c>).</para>
+        /// </summary>
+        static int PoolIndex(uint rollSeed, PawnId id) =>
+            (id.Value - 1 + (int)(Offset(rollSeed) % (uint)Pool.Length)) % Pool.Length;
+
+        /// <summary>
+        /// Whether this colonist is <c>m</c>, <c>f</c> or <c>n</c> — the gender column of the row
+        /// their name came from.
+        ///
+        /// <para><b>It follows the rolled name, never the displayed one.</b> A colonist the player
+        /// renamed keeps the gender they were dealt: renaming somebody should not reshape their
+        /// body, and a player-given name has no gender column to read. This is asked when a
+        /// colonist's appearance is derived, which happens from the same roll seed at the same
+        /// moment their name is.</para>
+        ///
+        /// <para><b><c>n</c> is a real answer and not a fallback.</b> A neutral name draws its body
+        /// and its hair from both pools (<c>docs/design/29-modular-colonists.md</c> §6). The
+        /// invalid-pawn case answers <c>n</c> too, which is the same thing the name derivation does
+        /// when it answers "nobody": no person, no pool.</para>
+        /// </summary>
+        public static char GenderOf(uint rollSeed, PawnId id) =>
+            id.IsValid ? ColonistNamePool.Genders[PoolIndex(rollSeed, id)] : 'n';
+
+        /// <summary>The gender of a pawn in the published frame — the ordinary way to ask.</summary>
+        public static char GenderOf(WorldSnapshot snapshot, PawnId id) =>
+            GenderOf(RollSeedOf(snapshot, id), id);
 
         /// <summary>
         /// Where in the pool a seed starts reading.
