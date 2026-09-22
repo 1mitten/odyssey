@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Hud;
 
 namespace Odyssey.Presentation.Rendering
@@ -22,6 +23,68 @@ namespace Odyssey.Presentation.Rendering
     {
         public static ColonistAppearanceBook For(uint seed, ModuleCatalogue? catalogue) =>
             new ColonistAppearanceBook(
-                seed, catalogue == null ? 1 : catalogue.FindFamily(ModuleIds.ColonistBase).Count);
+                seed,
+                catalogue == null ? 1 : catalogue.FindFamily(ModuleIds.ColonistBase).Count,
+                PoolsFrom(catalogue));
+
+        /// <summary>
+        /// The gendered pools, read off the catalogue
+        /// (<c>docs/design/29-modular-colonists.md</c> §6, MC2/MC4).
+        ///
+        /// <para><b>The body arrays carry family indices, not positions.</b> A row that is not in
+        /// the colonist pool is skipped and <i>the index still advances</i>, because the index is
+        /// what the look space is made of. This is the one line in the whole unit where the fault
+        /// <c>ColonistAppearanceBook</c> warns about would be introduced, and it is why the loop
+        /// counts rather than adds.</para>
+        ///
+        /// <para><b>A piece that does not recolour is not in the pool at all.</b> Six of them span
+        /// real texture instead of one swatch cell and repainting them throws art away
+        /// (<c>docs/research/e-06-modular-colonists.md</c> §7). They are excluded by the content
+        /// flag rather than by a rule here.</para>
+        ///
+        /// <para>Empty pools are legal and mean a clone without the licensed packs: every colonist
+        /// is then dealt body 0, no hair and no beard, and nothing breaks.</para>
+        /// </summary>
+        public static ColonistCastPools PoolsFrom(ModuleCatalogue? catalogue)
+        {
+            if (catalogue == null) return ColonistCastPools.Empty;
+
+            var maleBodies = new List<int>();
+            var femaleBodies = new List<int>();
+            List<ModuleEntry> bodies = catalogue.FindFamily(ModuleIds.ColonistBase);
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                ModuleEntry row = bodies[i];
+                if (!row.colonistPool) continue;
+                if (row.sex != BodySex.Female) maleBodies.Add(i);
+                if (row.sex != BodySex.Male) femaleBodies.Add(i);
+            }
+
+            // A catalogue with no colonist rows at all still has to answer, or the lottery divides
+            // by zero on a machine with no packs.
+            if (maleBodies.Count == 0) maleBodies.Add(0);
+            if (femaleBodies.Count == 0) femaleBodies.Add(0);
+
+            var maleHair = new List<int>();
+            var femaleHair = new List<int>();
+            List<ModuleEntry> hair = catalogue.FindFamily(ModuleIds.HairBase);
+            for (int i = 0; i < hair.Count; i++)
+            {
+                ModuleEntry row = hair[i];
+                if (!row.recolours) continue;
+                if (row.sex != BodySex.Female) maleHair.Add(i);
+                if (row.sex != BodySex.Male) femaleHair.Add(i);
+            }
+
+            var beards = new List<int>();
+            List<ModuleEntry> beard = catalogue.FindFamily(ModuleIds.BeardBase);
+            for (int i = 0; i < beard.Count; i++)
+                if (beard[i].recolours)
+                    beards.Add(i);
+
+            return new ColonistCastPools(
+                maleBodies.ToArray(), femaleBodies.ToArray(),
+                maleHair.ToArray(), femaleHair.ToArray(), beards.ToArray());
+        }
     }
 }

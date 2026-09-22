@@ -185,10 +185,16 @@ namespace Odyssey.Hud
         public static ColonistAppearance Of(
             uint seed, int pawnId, ColonistCastPools pools, char gender, int age)
         {
+            // The pool is indexed by the *existing* body lottery rather than by a stream of its
+            // own. ColonistLook.For's distribution was tuned and is pinned by tests -- a plain
+            // remainder deals the opening five the first five rows, which came out as the whole
+            // starting colony being office workers -- and reusing it means a full pool deals
+            // exactly what it dealt before gendered pools existed. The gendering is then a pure
+            // filter, which is the claim ColonistCastPools makes.
             int[] bodies = pools.BodiesFor(gender);
             int look = bodies.Length == 0
                 ? 0
-                : bodies[(int)(Mix(seed, pawnId, BodyStream) % (uint)bodies.Length)];
+                : bodies[ColonistLook.For(pawnId, bodies.Length, seed)];
 
             Rgb24 skin = Pick(ColonistPalette.Skin, seed, pawnId, SkinStream);
             Rgb24 hair = Pick(ColonistPalette.Hair, seed, pawnId, HairStream);
@@ -274,10 +280,9 @@ namespace Odyssey.Hud
         const uint ClothStream = 0xC2B2AE35u;
         const uint ShadeStream = 0x27D4EB2Fu;
 
-        // Five more streams, each with its own constant for the reason the first four have theirs:
+        // Four more streams, each with its own constant for the reason the first four have theirs:
         // a shortcut that takes one hash modulo several lengths correlates the slots, and the
         // correlation is invisible until somebody looks at fifty colonists at once.
-        const uint BodyStream = 0x165667B1u;
         const uint HairPieceStream = 0xD3A2646Cu;
         const uint BeardStream = 0xFD7046C5u;
         const uint BaldStream = 0xB55A4F09u;

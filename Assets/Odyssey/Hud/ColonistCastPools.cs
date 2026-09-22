@@ -35,6 +35,25 @@ namespace Odyssey.Hud
         public static readonly ColonistCastPools Empty = new ColonistCastPools(
             new[] { 0 }, new[] { 0 }, Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>());
 
+        /// <summary>
+        /// Every body in a family of <paramref name="lookCount"/>, in both pools, with no hair and
+        /// no beards.
+        ///
+        /// <para>What a caller who knows only how many rows there are gets — which is the state
+        /// the game was in before this unit, and is exactly what it dealt then. Kept as a named
+        /// factory rather than an implicit default so that "this colony has no gender information"
+        /// is a thing somebody wrote down.</para>
+        /// </summary>
+        public static ColonistCastPools AllBodies(int lookCount)
+        {
+            if (lookCount < 1) lookCount = 1;
+            var all = new int[lookCount];
+            for (int i = 0; i < lookCount; i++) all[i] = i;
+
+            return new ColonistCastPools(
+                all, all, Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>());
+        }
+
         public ColonistCastPools(
             int[] maleBodies, int[] femaleBodies,
             int[] maleHair, int[] femaleHair, int[] beards)
