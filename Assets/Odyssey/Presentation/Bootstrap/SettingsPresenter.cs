@@ -224,6 +224,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_bootstrap != null)
             {
                 if (_bootstrap.grassScatter > 0) _grassDensity = _bootstrap.grassScatter;
+                director.SeedValue(GraphicsLadder.GrassDensity, _grassDensity);
                 if (_bootstrap.groundRelief > 0f) _reliefAmplitude = _bootstrap.groundRelief;
 
                 // The interface scale is seeded from the screen rather than from the scene,
@@ -247,6 +248,14 @@ namespace Odyssey.Presentation.Bootstrap
             _display = new DisplaySettingsApplier(director);
 
             director.OptionChanged += Apply;
+
+            // **The density ladder lands here and not in DisplaySettingsApplier**, although
+            // that is where every other numeric ladder goes. The applier owns the runtime copy
+            // of the pipeline asset and the things that live on it — VSync, render scale, the
+            // frame cap. How much grass there is is not a display lever: it rebuilds the world's
+            // meshes, which needs the renderer and the model, and neither is anything the
+            // applier has or should acquire.
+            director.LadderChanged += ApplyLadder;
             director.UiScaleChanged += ApplyScale;
             director.CameraSpeedChanged += ApplyCameraSpeed;
             director.DeveloperOverlayChanged += ApplyDeveloperOverlay;
@@ -298,6 +307,7 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (_director == null) return;
             _director.OptionChanged -= Apply;
+            _director.LadderChanged -= ApplyLadder;
             _director.UiScaleChanged -= ApplyScale;
             _director.CameraSpeedChanged -= ApplyCameraSpeed;
             _director.DeveloperOverlayChanged -= ApplyDeveloperOverlay;
@@ -349,6 +359,12 @@ namespace Odyssey.Presentation.Bootstrap
                     Redraw(renderer);
                     break;
 
+                // The toggle and the ladder are one setting wearing two faces, and the toggle
+                // is the older one. It stays because it is what the Detail column offers and
+                // because "off" is a thing people look for, but the *amount* now lives on the
+                // ladder — so flipping the toggle back on restores whatever the ladder says
+                // rather than a remembered number the panel cannot show.
+
                 case GraphicsOption.GroundRelief:
                     // A static, because relief is a drawing offset the mesher and the picker both
                     // consult rather than a property of any one object. The picker reads the field
@@ -372,6 +388,29 @@ namespace Odyssey.Presentation.Bootstrap
                     if (_bootstrap != null) _bootstrap.seeThroughToSelection = on;
                     break;
             }
+        }
+
+        /// <summary>
+        /// A numeric ladder moved. Only the grass is ours; everything else on that event is the
+        /// display applier's, and is ignored here rather than fought over.
+        /// </summary>
+        void ApplyLadder(GraphicsLadder ladder)
+        {
+            if (ladder != GraphicsLadder.GrassDensity || _director == null) return;
+
+            // The event carries the ladder and not its rung — deliberately, since a handler
+            // that was handed a value could act on a stale one if two changes landed together.
+            // Reading it back asks the director what it holds *now*.
+            _grassDensity = _director.Value(GraphicsLadder.GrassDensity);
+
+            ChunkRenderer? renderer = _bootstrap?.Renderer;
+            if (renderer == null) return;
+
+            // Through the toggle's own state, so the two faces of this setting cannot disagree:
+            // moving the ladder while grass is switched off must not switch it back on.
+            bool on = _director.IsOn(GraphicsOption.GrassTufts);
+            renderer.ScatterDensity = on ? _grassDensity : 0;
+            Redraw(renderer);
         }
 
         void Redraw(ChunkRenderer renderer)

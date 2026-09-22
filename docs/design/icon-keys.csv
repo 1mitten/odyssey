@@ -427,6 +427,7 @@ ui.settings.uiscale,Interface scale,ui.settings,M1,"How large the HUD is drawn. 
 ui.settings.shadows,Shadows,ui.settings,M1,"Whether people and buildings cast shadows on the ground"
 ui.settings.surround,Surrounding land,ui.settings,M1,"The land carried past the rim so the board does not end in mid-air"
 ui.settings.grass,Grass tufts,ui.settings,M1,"Tufts strewn over the meadow. Decoration, in no cell and no save"
+ui.settings.grassdensity,How much grass,ui.settings,M3,"How thickly the meadow is strewn, from bare ground to complete cover"
 ui.settings.relief,Ground relief,ui.settings,M1,"The roll of the drawn ground. The cells underneath stay flat"
 ui.settings.seethrough,See through to selection,ui.settings,M1,"Fade whatever stands between the camera and a selected colonist"
 ui.settings.cutaway,Cut away the ceiling,ui.settings,M3,"See into rooms on this layer. Off shows the floor above you"

@@ -272,6 +272,54 @@ makes overdraw worse rather than better. Roughly half the cost that does show up
 not scale with resolution — but the other half does. **The density ladder in §3.1 is the answer for
 the laptop, and the laptop figure has to be taken on the laptop.**
 
+### 2.6b Complete cover, priced — and a prediction that was wrong
+
+The owner played the thickened meadow on 2026-09-22 and came back with three things: it is good, it
+is **not very bushy**, it may not be worth the performance, and — the interesting one — *"would be
+much more to completely cover the land and see what it looks like?"*
+
+**"Not very bushy" had a cause, and it was not the blades.** `GroundScatter.Placement` put every
+clump in a ring from 0.30 to 0.44 of a cell, leaving a disc of about 1.8 square metres — **28% of
+every cell** — permanently bare, whatever the density. The ring was there for a good reason: a
+colonist, a crate and a stack of rations are all drawn at the cell centre, and the mesher could not
+see where any of them were. **The clearance field built the day before is the proper answer to
+exactly that**, so the ring is gone and pawns now stamp themselves alongside items and marks. A
+static approximation of a dynamic fact, outliving the constraint that forced it.
+
+`MaxPerCell` went 3 to 6 in the same change: three clumps cannot cover a 2.5 m cell however large
+each one is, so the ceiling was binding and not the density.
+
+**And the cost of complete cover, at 1920 x 1440:**
+
+| | frame | grass adds | instances | draw calls |
+|---|---|---|---|---|
+| bare | 8.21 ms | — | 34,740 | 914 |
+| Meadow, 190 | 8.83 ms | **+0.63 ms** | 60,059 | 1,131 |
+| Complete, 560 | 9.44 ms | **+1.23 ms** | 108,732 | 1,205 |
+
+**The prediction was wrong and it is recorded because it was wrong.** Before measuring, this
+session put complete cover at "+2 to +3 ms, which is not affordable" and suggested the useful
+outcome would be the owner settling for less. It is **+1.23 ms**: 1.8x the instances for 1.95x the
+cost, so very nearly linear, and the draw count grows by seventy-four across a doubling of the whole
+meadow. The instinct that a fill-bound thing would scale badly was reasonable and simply not what
+the hardware does here.
+
+**What the numbers actually indict is not the grass.** At a play resolution the bare frame is
+already **8.21 ms against a 5 ms budget** with no grass in it at all, and complete cover is about a
+seventh of the total. Cutting the meadow to nothing would leave the frame over budget by more than
+the whole feature costs. That is the standing open question in the renderer, it has a number now,
+and it is not this line of work's to fix.
+
+**So the ladder is the answer rather than a compromise.** `GraphicsLadder.GrassDensity` — Bare,
+Sparse, Meadow, Deep, Complete — puts the look and its price in the owner's hands at the moment they
+are looking at both, which is the only place the question "is it worth the performance" can honestly
+be settled. It is also the laptop tier that §2.6a said had stopped being a nicety.
+
+**Absolutes here are inflated and the ratios are not.** Two Unity processes were live; an earlier run
+of the same paired test with five live processes gave a *lower* bare figure (6.52 ms), which is the
+clearest statement available that the absolute numbers on this machine are worth less than the
+differences measured beside them.
+
 ### 2.7 The owner's first look, 2026-09-22
 
 Played once, on the branch. Pause holds the meadow still and zooming out reads well, which were two

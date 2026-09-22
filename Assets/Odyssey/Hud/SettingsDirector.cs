@@ -76,6 +76,16 @@ namespace Odyssey.Hud
 
         /// <summary>Fullscreen, borderless or a window. <c>UnityEngine.FullScreenMode</c>.</summary>
         DisplayMode,
+
+        /// <summary>
+        /// Clumps of grass per hundred grass cells, before the land has its say.
+        ///
+        /// <para>A graphics setting rather than a decoration toggle because it is the most
+        /// expensive thing on the page: the meadow costs about a sixth of the frame budget at
+        /// a play resolution, and the frame is already over that budget without it
+        /// (<c>29-illustrated-look.md</c> §2.6a). It is the tier that answers the laptop.</para>
+        /// </summary>
+        GrassDensity,
     }
 
     /// <summary>
@@ -310,6 +320,7 @@ namespace Odyssey.Hud
             BuildLayoutKey,
             ExitKey,
             "ui.settings.shadows",
+            "ui.settings.grassdensity",
             "ui.settings.surround",
             "ui.settings.grass",
             "ui.settings.relief",
@@ -392,6 +403,7 @@ namespace Odyssey.Hud
             GraphicsLadder.RenderScale,
             GraphicsLadder.AntiAliasing,
             GraphicsLadder.ShadowDistance,
+            GraphicsLadder.GrassDensity,
             GraphicsLadder.DisplayMode,
         };
 
@@ -424,8 +436,21 @@ namespace Odyssey.Hud
         public const int Uncapped = 0;
 
         /// <summary>The rungs one ladder offers, in the order they are drawn.</summary>
+        /// <summary>
+        /// How thick the meadow is, in clumps per hundred grass cells.
+        ///
+        /// <para>The top rung is there because the owner asked to see it (2026-09-22: "would
+        /// be much more to completely cover the land and see what it looks like?"). At 560 and
+        /// six clumps to a cell the ground is gone, and so is a good deal of the frame — which
+        /// is the point of putting it on a rung rather than in a constant: the question was
+        /// whether it is worth the performance, and that is a question only somebody looking at
+        /// both can answer.</para>
+        /// </summary>
+        public static readonly int[] GrassDensityRungs = { 0, 90, 190, 340, 560 };
+
         public static int[] RungsOf(GraphicsLadder ladder) => ladder switch
         {
+            GraphicsLadder.GrassDensity => GrassDensityRungs,
             GraphicsLadder.VSync => VSyncRungs,
             GraphicsLadder.FrameCap => FrameCapRungs,
             GraphicsLadder.RenderScale => RenderScaleRungs,
@@ -455,6 +480,7 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => 1,
             GraphicsLadder.ShadowDistance => 60,
             GraphicsLadder.DisplayMode => BorderlessWindow,
+            GraphicsLadder.GrassDensity => 190,
             _ => 0,
         };
 
@@ -467,6 +493,7 @@ namespace Odyssey.Hud
             GraphicsLadder.AntiAliasing => "ui.settings.antialias",
             GraphicsLadder.ShadowDistance => "ui.settings.shadowdist",
             GraphicsLadder.DisplayMode => "ui.settings.displaymode",
+            GraphicsLadder.GrassDensity => "ui.settings.grassdensity",
             _ => GraphicsKey,
         };
 
@@ -497,6 +524,14 @@ namespace Odyssey.Hud
                 Windowed => "Windowed",
                 _ => "Borderless",
             },
+            GraphicsLadder.GrassDensity => rung switch
+            {
+                0 => "Bare",
+                90 => "Sparse",
+                340 => "Deep",
+                560 => "Complete",
+                _ => "Meadow",
+            },
             _ => rung.ToString(),
         };
 
@@ -506,6 +541,14 @@ namespace Odyssey.Hud
         /// </summary>
         public static string RungTooltip(GraphicsLadder ladder, int rung) => ladder switch
         {
+            GraphicsLadder.GrassDensity => rung switch
+            {
+                0 => "No grass at all. The cheapest frame there is",
+                90 => "Thin meadow, the ground showing through",
+                340 => "Deep grass, and the ground nearly gone",
+                560 => "The land covered entirely. The dearest thing on this page",
+                _ => "A meadow with the soil breaking through in patches",
+            },
             GraphicsLadder.VSync => rung switch
             {
                 0 => "Draw as fast as the machine can. Tears, and runs the fans",
@@ -546,7 +589,11 @@ namespace Odyssey.Hud
         /// target cost a frame.</para>
         /// </summary>
         public static bool CostsAHitch(GraphicsLadder ladder) =>
-            ladder == GraphicsLadder.RenderScale || ladder == GraphicsLadder.AntiAliasing;
+            ladder == GraphicsLadder.RenderScale
+            || ladder == GraphicsLadder.AntiAliasing
+            // Every chunk in the world is re-meshed, and the surround with it. On the Huge
+            // board that is the meshing budget's whole queue arriving at once.
+            || ladder == GraphicsLadder.GrassDensity;
 
 
         /// <summary>

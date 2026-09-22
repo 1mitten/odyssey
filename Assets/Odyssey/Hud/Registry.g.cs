@@ -598,6 +598,7 @@ namespace Odyssey.Hud
             { "ui.settings.gameplay", "Gameplay" },
             { "ui.settings.graphics", "Graphics" },
             { "ui.settings.grass", "Grass tufts" },
+            { "ui.settings.grassdensity", "How much grass" },
             { "ui.settings.interface", "Interface" },
             { "ui.settings.keys", "Keys" },
             { "ui.settings.panel", "Settings" },

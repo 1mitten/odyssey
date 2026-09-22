@@ -350,11 +350,25 @@ namespace Odyssey.Tests.PlayMode
                 Remesh(boot, shipped);
                 float grassy = 0f;
                 yield return TimeFrames("resolution/grass@1920", boot, WarmupFrames, x => grassy = x);
+                int shippedInstances = boot.Renderer!.InstancesDrawn;
+
+                // The top rung, because the owner asked what completely covering the land
+                // would cost and that is not a question arithmetic can answer: grass is fill,
+                // and fill against a bigger target is the whole thing this test exists to see.
+                int complete = Odyssey.Hud.SettingsDirector.GrassDensityRungs[
+                    Odyssey.Hud.SettingsDirector.GrassDensityRungs.Length - 1];
+                Remesh(boot, complete);
+                float covered = 0f;
+                yield return TimeFrames("resolution/complete@1920", boot, WarmupFrames, x => covered = x);
+                int completeInstances = boot.Renderer!.InstancesDrawn;
 
                 Debug.Log("[FrameTime] grass at 1920 x 1440 against 640 x 480: " +
                           $"bare {bareSmall:0.00} -> {bareLarge:0.00} ms " +
                           $"(x{bareLarge / Mathf.Max(bareSmall, 1e-3f):0.00} for x9 the pixels); " +
-                          $"grass adds {grassy - bareLarge:0.00} ms there");
+                          $"meadow at {shipped} adds {grassy - bareLarge:0.00} ms " +
+                          $"({shippedInstances} instances); " +
+                          $"complete cover at {complete} adds {covered - bareLarge:0.00} ms " +
+                          $"({completeInstances} instances), total frame {covered:0.00} ms");
             }
             finally
             {

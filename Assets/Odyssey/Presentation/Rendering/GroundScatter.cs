@@ -21,8 +21,14 @@ namespace Odyssey.Presentation.Rendering
     /// </summary>
     public static class GroundScatter
     {
-        /// <summary>The most a single cell will ever be given, however high the density goes.</summary>
-        public const int MaxPerCell = 3;
+        /// <summary>
+        /// The most a single cell will ever be given, however high the density goes.
+        ///
+        /// <para>Three until 2026-09-22, when the owner played the thickened meadow and said
+        /// it still was not bushy. Three clumps in a 2.5 m cell cannot cover it however large
+        /// each one is, so the ceiling was the binding constraint and not the density.</para>
+        /// </summary>
+        public const int MaxPerCell = 6;
 
         // Arbitrary and fixed. Different salts make the count, the position and the choice of
         // tuft independent of one another, so cells with two tufts are not also the cells whose
@@ -63,19 +69,27 @@ namespace Odyssey.Presentation.Rendering
         {
             uint salt = SaltPlace + (uint)slot * 7919u;
 
-            // Placed in a ring, not over the whole cell, and that is the whole point of the polar
-            // form. A clump is nearly two metres across; a colonist, a crate and a stack of
-            // rations are all drawn at the **cell centre**. Scattering uniformly put clump centres
-            // on top of them, so grass grew through people's legs and out of the side of crates —
-            // which reads, convincingly and wrongly, as green light coming off the grass.
+            // **The hole in the middle of every cell is gone, and this is the record of why it
+            // was there.** Clumps used to be placed in a ring from 0.30 to 0.44 of a cell,
+            // leaving a disc of about 1.8 square metres — twenty-eight per cent of every cell —
+            // permanently bare, which is most of why the meadow would not thicken however much
+            // was asked of it (owner, 2026-09-22: "it's not very bushy").
             //
-            // Keeping the middle clear costs nothing and needs to know nothing about what is
-            // standing there, which matters: pawns and items live in the published snapshot, not
-            // in the cell mirror the mesher reads, and re-meshing a chunk every time somebody
-            // walked across it would be a far worse cure than the disease.
+            // The reason was sound at the time: a colonist, a crate and a stack of rations are
+            // all drawn at the cell centre, and scattering uniformly put clump centres on top of
+            // them, so grass grew through people's legs and out of the side of crates. The note
+            // here said, correctly, that keeping the middle clear "costs nothing and needs to
+            // know nothing about what is standing there, which matters: pawns and items live in
+            // the published snapshot, not in the cell mirror the mesher reads".
             //
-            // The square root spreads clumps evenly over the ring's area rather than crowding them
-            // against its inner edge, which is what a linear radius would do.
+            // **That is exactly what GrassClearance now does properly.** Items, order marks and
+            // pawns stamp themselves into a field the shader reads, so the grass gets out of the
+            // way of what is actually there rather than of the place where something might be.
+            // The ring was a static approximation of a dynamic fact, and it outlived the
+            // constraint that forced it.
+            //
+            // The square root spreads clumps evenly over the disc's area rather than crowding
+            // them into the middle, which is what a linear radius would do.
             float angle = Unit(x, z, salt) * (Mathf.PI * 2f);
             float radius = Mathf.Lerp(InnerRadius, OuterRadius, Mathf.Sqrt(Unit(x, z, salt + 1u)));
 
@@ -85,11 +99,17 @@ namespace Odyssey.Presentation.Rendering
             scale = 0.7f + Unit(x, z, salt + 3u) * 0.5f;
         }
 
-        /// <summary>How close to the cell centre a tuft may stand, as a fraction of the cell.</summary>
-        public const float InnerRadius = 0.30f;
+        /// <summary>
+        /// How close to the cell centre a clump may stand, as a fraction of the cell. Zero:
+        /// anywhere. See <see cref="Placement"/> for what used to hold it open, and why that
+        /// job moved to <c>GrassClearance</c>.
+        /// </summary>
+        public const float InnerRadius = 0f;
 
-        /// <summary>How far out it may stand. Short of the edge, so a tuft does not straddle the grid.</summary>
-        public const float OuterRadius = 0.44f;
+        /// <summary>How far out it may stand. Short of the edge, so a clump's own centre does
+        /// not straddle the grid — its reach carries it over the line and its neighbours cover
+        /// the corners.</summary>
+        public const float OuterRadius = 0.46f;
 
         /// <summary>
         /// Half the widest clump mesh, in metres: a clump nearly two metres across overhangs

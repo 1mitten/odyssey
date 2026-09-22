@@ -298,6 +298,17 @@ namespace Odyssey.Presentation.Rendering
         /// a wider ring than a stack of logs does.</summary>
         public float MarkClearance { get; set; } = 1.1f;
 
+        /// <summary>
+        /// And for a colonist, who is the reason the scatter used to keep the middle of every
+        /// cell bare.
+        ///
+        /// <para>Wider than an item's, because a person is taller than a stack of rations and
+        /// grass to the waist reads as wading rather than as walking — and because this is the
+        /// ring that replaced <c>GroundScatter</c>'s static hole, which was 0.75 m and there
+        /// whether anybody was standing in it or not.</para>
+        /// </summary>
+        public float PawnClearance { get; set; } = 0.8f;
+
         public void Render(int activeLayer, SliceSettings slice)
         {
             // **Published first, and it is last frame's field.** The grass is submitted
@@ -934,6 +945,13 @@ namespace Odyssey.Presentation.Rendering
             {
                 var cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // **Before the figure check, not after it.** A colonist drawn as a live
+                // animated figure is skipped by the line below, and skipping their clearance
+                // with them would part the grass for the distant stand-ins and close it over
+                // exactly the people you are watching.
+                Clearance.Stamp(CellMetrics.Centre(cell.X, cell.Z, cell.Y), PawnClearance);
+
                 if (drawnAsFigures != null && drawnAsFigures.Contains(pawns[i].Id.Value)) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
