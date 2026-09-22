@@ -28,8 +28,12 @@ the next session learns to ignore.
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five
   things to judge, none a test can answer: whether a **life-size** hog (1.2 m) beside a 2.49 m
   colonist reads as a pig or as a piglet, and whether the rat is visible at all at play height;
-  whether the hog's **computed walk** reads as walking beside the rat's authored one — a wrong
-  answer is legs that paddle, slide or bend the wrong way; whether the **flat two-colour** models
+  whether the hog's **computed trot** reads as a pig trotting beside the rat's authored walk
+  (first look, 2026-09-22: *"looks awful"*, which was a walk cycling once per metre on 23 cm
+  legs; it is a measured-stride trot now) — a wrong answer is feet that still slide, legs that
+  paddle, or a cadence that reads as scurrying, and `QuadrupedGait.SlideFactor` is the dial;
+  whether the **cursor** now sits flush round a selected hog and a rat rather than round the
+  tile, and whether a click on the animal's body lands; whether the **flat two-colour** models
   read as the same game as the Synty colonists; whether a hog at the foot of a ladder **turns
   away** rather than standing at it, and a rat goes up; and whether the wander reads as an animal
   living rather than pacing a corner or standing for minutes. Click one: the pane should say

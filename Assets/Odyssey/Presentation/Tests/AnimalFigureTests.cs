@@ -53,13 +53,13 @@ namespace Odyssey.Tests.Presentation
             Assert.That(hog!.prefab, Is.Not.Null, "the hog's model resolved");
             Assert.That(AssetDatabase.GetAssetPath(hog.prefab), Does.StartWith("Assets/Art/Custom/"),
                 "and it is the project's own, not a pack's");
-            Assert.That(hog.strideMetres, Is.GreaterThan(0f), "the hog walks on a computed gait");
+            Assert.That(hog.quadrupedGait, Is.True, "the hog moves on a computed gait");
             Assert.That(hog.locomotion, Has.Count.EqualTo(1), "over its one idle clip");
             Assert.That(hog.locomotion[0].clip, Is.Not.Null);
             Assert.That(hog.locomotion[0].clip!.isLooping, Is.True, "which loops, or the hog would freeze");
 
             Assert.That(rat!.prefab, Is.Not.Null);
-            Assert.That(rat.strideMetres, Is.Zero, "the rat walks on its own clips");
+            Assert.That(rat.quadrupedGait, Is.False, "the rat walks on its own clips");
             Assert.That(rat.locomotion, Has.Count.EqualTo(3));
             foreach (LocomotionEntry gait in rat.locomotion)
             {
@@ -104,34 +104,46 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void TheHogsLegsSwingWhenItWalksAndRestWhenItStands()
+        public void TheHogsLegsTrotWhenItMovesAndRestWhenItStands()
         {
             ModuleEntry hog = Catalogue().Find(ModuleIds.Animal(1))!;
             Assume.That(hog.prefab, Is.Not.Null);
 
-            GameObject walking = Object.Instantiate(hog.prefab!);
+            GameObject moving = Object.Instantiate(hog.prefab!);
             GameObject standing = Object.Instantiate(hog.prefab!);
             try
             {
-                QuadrupedGait? gait = QuadrupedGait.Bind(walking.transform, hog.strideMetres);
+                QuadrupedGait? gait = QuadrupedGait.Bind(moving.transform);
                 Assert.That(gait, Is.Not.Null, "the rig has the four legs the gait looks for");
 
-                Transform leg = walking.transform.Find("Armature/root/Body/FrontLeg.L/FrontUpLeg.L")
-                    ?? FindDeep(walking.transform, "FrontUpLeg.L")!;
-                Assume.That(leg, Is.Not.Null);
-                Quaternion before = leg.rotation;
+                // The stride is the rig's, not a number anyone typed: the pig's legs are about a
+                // quarter of a metre from shoulder joint to sole, so the cycle turns every few
+                // tenths of a metre rather than every metre. That was the whole of "it looks odd".
+                Assert.That(gait!.LegMetres, Is.InRange(0.15f, 0.35f), $"the measured leg is {gait.LegMetres:F3} m");
+                Assert.That(gait.Stride, Is.InRange(0.2f, 0.7f), $"the derived stride is {gait.Stride:F3} m");
 
-                // A tenth of a second at one metre a second is a tenth of a stride: the left fore
-                // leg is a quarter-cycle ahead, so it is near the top of its swing.
-                gait!.Advance(1f, 0.1f);
-                Assert.That(gait.Phase, Is.EqualTo(0.1f).Within(1e-4f));
-                Assert.That(gait.Weight, Is.GreaterThan(0f), "the walk is fading in");
-                gait.Apply(walking.transform.right, walking.transform.up);
-                Assert.That(Quaternion.Angle(before, leg.rotation), Is.GreaterThan(1f),
-                    "the leg swung");
+                Transform fore = FindDeep(moving.transform, "FrontUpLeg.L")!;
+                Transform hind = FindDeep(moving.transform, "BackUpLeg.R")!;
+                Transform otherFore = FindDeep(moving.transform, "FrontUpLeg.R")!;
+                Quaternion foreBefore = fore.rotation, hindBefore = hind.rotation, otherBefore = otherFore.rotation;
+
+                // A quarter of a stride at full weight.
+                gait.Advance(1f, gait.Stride);
+                gait.Advance(1f, gait.Stride * 0.25f);
+                Assert.That(gait.Phase, Is.EqualTo(0.25f).Within(1e-3f));
+                gait.Apply(moving.transform.right, moving.transform.up);
+
+                float foreSwing = Quaternion.Angle(foreBefore, fore.rotation);
+                float hindSwing = Quaternion.Angle(hindBefore, hind.rotation);
+                Assert.That(foreSwing, Is.GreaterThan(5f), "the left fore leg swung");
+                // A trot: the left fore and the right hind are a diagonal pair and swing together;
+                // the right fore is half a cycle away and swings the other way.
+                Assert.That(hindSwing, Is.EqualTo(foreSwing).Within(2f), "its diagonal partner swung with it");
+                float otherSwing = Quaternion.Angle(otherBefore, otherFore.rotation);
+                Assert.That(otherSwing, Is.EqualTo(foreSwing).Within(2f), "the opposite fore leg swung as far the other way");
 
                 // The control: a hog standing still keeps the clip's pose exactly.
-                QuadrupedGait still = QuadrupedGait.Bind(standing.transform, hog.strideMetres)!;
+                QuadrupedGait still = QuadrupedGait.Bind(standing.transform)!;
                 Transform stillLeg = FindDeep(standing.transform, "FrontUpLeg.L")!;
                 Quaternion rest = stillLeg.rotation;
                 still.Advance(0f, 1f);
@@ -143,8 +155,45 @@ namespace Odyssey.Tests.Presentation
             }
             finally
             {
-                Object.DestroyImmediate(walking);
+                Object.DestroyImmediate(moving);
                 Object.DestroyImmediate(standing);
+            }
+        }
+
+        /// <summary>
+        /// The cursor round an animal is the animal's own box, not the person-sized column
+        /// (owner, 2026-09-22: it highlighted the whole tile). The hog is about 1.2 m long and
+        /// 0.6 m tall; the rat a quarter of that; both boxes are far smaller than the colonist's.
+        /// </summary>
+        [Test]
+        public void AnAnimalsCursorBoxIsItsOwnSizeAndAColonistsIsNot()
+        {
+            var parent = new GameObject("figures");
+            PawnFigureDirector? director = null;
+            try
+            {
+                director = new PawnFigureDirector(Catalogue(), parent.transform, 0);
+                Assume.That(director.Enabled, Is.True);
+                WorldSnapshot frame = Frame(Standing(1, 1, 2, 2), Standing(2, 2, 4, 2));
+                director.Sync(frame, 0, new SliceSettings(), 0f, 1, 0.016f);
+
+                Assert.That(director.TryGetAnimalBox(new PawnId(1), out Matrix4x4 place, out Vector3 hog), Is.True);
+                Assert.That(hog.z, Is.InRange(1.0f, 1.5f), $"the hog's box is its body length, {hog}");
+                Assert.That(hog.y, Is.InRange(0.45f, 0.8f), $"and its standing height, {hog}");
+                Assert.That(hog.x, Is.InRange(0.25f, 0.6f), $"and its width, {hog}");
+                Assert.That(place.GetPosition().y, Is.InRange(0.1f, 0.5f), "centred on the body, not on the floor");
+
+                Assert.That(director.TryGetAnimalBox(new PawnId(2), out _, out Vector3 rat), Is.True);
+                Assert.That(rat.y, Is.LessThan(hog.y * 0.6f), "the rat's box is a rat's");
+                Assert.That(rat.z, Is.LessThan(hog.z), "shorter than the hog's");
+                Assert.That(rat.z, Is.GreaterThan(0.3f), "but the tail is in it");
+
+                Assert.That(director.TryGetAnimalBox(new PawnId(99), out _, out _), Is.False, "no figure, no box");
+            }
+            finally
+            {
+                director?.Dispose();
+                Object.DestroyImmediate(parent);
             }
         }
 
@@ -154,9 +203,8 @@ namespace Odyssey.Tests.Presentation
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
             try
             {
-                Assert.That(QuadrupedGait.Bind(cube.transform, 1f), Is.Null,
+                Assert.That(QuadrupedGait.Bind(cube.transform), Is.Null,
                     "a rig without the four legs walks on its clips, as a colonist with no arms swings no axe");
-                Assert.That(QuadrupedGait.Bind(cube.transform, 0f), Is.Null, "and no stride means no computed walk");
             }
             finally { Object.DestroyImmediate(cube); }
         }

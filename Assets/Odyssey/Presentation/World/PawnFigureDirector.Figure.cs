@@ -58,11 +58,18 @@ namespace Odyssey.Presentation.World
             public int Pawn;
 
             /// <summary>
-            /// The computed walk, for an animal whose row declares a stride and whose rig has the
+            /// The computed gait, for an animal whose row asks for one and whose rig has the
             /// four legs (design 29). Null on every colonist and on an animal that walks on its
             /// own clips.
             /// </summary>
             public QuadrupedGait? Gait;
+
+            /// <summary>
+            /// The figure's drawn box in its own frame, measured at build from the renderers'
+            /// bounds; what an animal's cursor and click box are sized to. Empty on a colonist,
+            /// whose cursor is the one fixed box for the whole cast.
+            /// </summary>
+            public Bounds DrawnBox;
 
             /// <summary>Which face this figure was built from. Fixed for its life; the rig is bound.</summary>
             public int Look;

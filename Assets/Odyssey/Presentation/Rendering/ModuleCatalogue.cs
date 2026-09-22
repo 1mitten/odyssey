@@ -255,12 +255,13 @@ namespace Odyssey.Presentation.Rendering
         public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
 
         /// <summary>
-        /// The stride of a <b>computed</b> quadruped gait, in metres as authored (design 29,
-        /// <c>QuadrupedGait</c>). Zero, the default, means the row's clips are its whole
-        /// locomotion. Set on the hog, which has no walk clip; the rat walks on its own clips.
+        /// Lay a <b>computed</b> four-legged gait over this row's idle (design 29 §8a,
+        /// <c>QuadrupedGait</c>). The stride is measured off the rig's own legs at build, not
+        /// declared here. Off, the default, means the row's clips are its whole locomotion. On for
+        /// the hog, which has no walk clip; the rat walks on its own clips.
         /// </summary>
-        [Tooltip("Stride of a computed four-legged walk, metres as authored. 0 = the clips are the locomotion.")]
-        public float strideMetres;
+        [Tooltip("Lay a computed four-legged gait over the idle. Off = the clips are the locomotion.")]
+        public bool quadrupedGait;
 
         /// <summary>
         /// Which parts of this body's atlas are its skin, its hair and its clothes, so a colonist

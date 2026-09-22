@@ -98,11 +98,11 @@ namespace Odyssey.EditorTools
                     var walker = (GameObject)PrefabUtility.InstantiatePrefab(hogModel, root.transform);
                     walker.transform.position = at;
                     walker.name = $"Hog at phase {phase}";
-                    var gait = Odyssey.Presentation.World.QuadrupedGait.Bind(walker.transform, 1f);
+                    var gait = Odyssey.Presentation.World.QuadrupedGait.Bind(walker.transform);
                     if (gait != null)
                     {
-                        gait.Advance(1f, 1f);      // a whole stride at full weight: phase back to 0
-                        gait.Advance(1f, phase);   // then to the phase asked for
+                        gait.Advance(1f, gait.Stride);      // a whole stride at full weight: phase back to 0
+                        gait.Advance(1f, gait.Stride * phase);   // then to the phase asked for
                         gait.Apply(walker.transform.right, walker.transform.up);
                         Debug.Log($"[AnimalProbe] hog gait phase {gait.Phase:F2} weight {gait.Weight:F2}");
                     }
@@ -117,6 +117,43 @@ namespace Odyssey.EditorTools
                 var centre = new Vector3(column * 2.5f * 0.5f, 0f, 0f);
                 PlayScene.ShootAt(centre, (column + 1) * 2.5f * 1.2f, "Logs/animal-sheet.png");
                 Debug.Log("[AnimalProbe] wrote Logs/animal-sheet.png");
+
+                // The walk as a strip: eight hogs side-on, one per eighth of the cycle, on one
+                // line, photographed from the flank at leg height. A walk is judged in motion,
+                // and this is the nearest a still can come to it (owner, 2026-09-22: "it looks
+                // odd and screwed up").
+                if (hogModel != null)
+                {
+                    var strip = new GameObject("WalkStrip");
+                    strip.transform.SetParent(root.transform, false);
+                    strip.transform.position = new Vector3(0f, 0f, 12f);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        var walker = (GameObject)PrefabUtility.InstantiatePrefab(hogModel, strip.transform);
+                        walker.transform.localPosition = new Vector3(i * 1.5f, 0f, 0f);
+                        walker.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // nose along +X
+                        var gait = Odyssey.Presentation.World.QuadrupedGait.Bind(walker.transform);
+                        if (gait == null) continue;
+                        gait.Advance(1f, gait.Stride);
+                        gait.Advance(1f, gait.Stride * i / 4f);
+                        gait.Apply(walker.transform.right, walker.transform.up);
+                    }
+                    var stripCamera = new GameObject("StripCamera");
+                    try
+                    {
+                        var cam = stripCamera.AddComponent<Camera>();
+                        cam.fieldOfView = 30f;
+                        cam.nearClipPlane = 0.3f;
+                        cam.farClipPlane = 500f;
+                        cam.clearFlags = CameraClearFlags.SolidColor;
+                        cam.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
+                        // From the flank: yaw 180 looks along -Z... the helper's yaw is about the
+                        // focus; 90 degrees off the sheet's default puts the camera on the row's side.
+                        PlayScene.Shoot(cam, strip.transform.position + new Vector3(2.25f, 0.3f, 0f), 6f, 0f, 6.5f, "Logs/hog-walk-strip.png");
+                        Debug.Log("[AnimalProbe] wrote Logs/hog-walk-strip.png");
+                    }
+                    finally { Object.DestroyImmediate(stripCamera); }
+                }
 
                 // And the mid-stride hog alone, close enough to see which way a knee bends. The
                 // sheet above is the scale question; this is the gait question, and the two are
@@ -178,8 +215,8 @@ namespace Odyssey.EditorTools
                     var wb = smr.bounds;
                     sb.AppendLine($"    renderer.bounds (world AABB) centre {wb.center} size {wb.size}  localBounds size {smr.localBounds.size}");
                     foreach (var bone in smr.bones)
-                        if (bone.name == "root" || bone.name == "Head" || bone.name == "Body" || bone.name.EndsWith("Foot.L") || bone.name == "Tail7")
-                            sb.AppendLine($"    bone {bone.name} world {bone.position} lossy {bone.lossyScale}");
+                        if (!bone.name.EndsWith(".R") && !bone.name.StartsWith("Tail"))
+                            sb.AppendLine($"    bone {bone.name} world {bone.position} fwd {bone.forward} up {bone.up}");
                 }
                 var animator = inst.GetComponentInChildren<Animator>();
                 sb.AppendLine($"  animator {(animator ? (animator.avatar ? animator.avatar.name + (animator.avatar.isHuman ? " human" : " generic") + (animator.avatar.isValid ? " valid" : " INVALID") : "no avatar") : "none")}");

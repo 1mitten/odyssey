@@ -78,6 +78,32 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// The union of the renderers' bounds, in the figure's own frame. A renderer's bounds are
+        /// the loose precomputed volume rather than the posed mesh (the class summary says why the
+        /// height is not taken from them), which is exactly right for a cursor: it must not breathe
+        /// with the walk. Measured with the root unrotated, as a fresh instance is.
+        /// </summary>
+        public static Bounds DrawnBounds(SkinnedMeshRenderer?[]? skins, Transform root)
+        {
+            bool any = false;
+            var box = new Bounds();
+            if (skins == null || root == null) return box;
+            for (int i = 0; i < skins.Length; i++)
+            {
+                SkinnedMeshRenderer? skin = skins[i];
+                if (skin == null || !skin.enabled) continue;
+                Bounds world = skin.bounds;
+                Vector3 min = root.InverseTransformPoint(world.min);
+                Vector3 max = root.InverseTransformPoint(world.max);
+                var local = new Bounds(Vector3.zero, Vector3.zero);
+                local.SetMinMax(Vector3.Min(min, max), Vector3.Max(min, max));
+                if (!any) { box = local; any = true; }
+                else box.Encapsulate(local);
+            }
+            return box;
+        }
+
+        /// <summary>
         /// A colonist's drawn height, sole to crown, which is also the length of body there is to
         /// lay down when it sleeps.
         ///

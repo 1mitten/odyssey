@@ -1483,9 +1483,9 @@ namespace Odyssey.EditorTools
             // that do. Scale is 1 because the importer already stands them life-size
             // (AnimalImport); the clip names are the FBX's own take names.
             //
-            // The hog has no walk clip. Its locomotion is the idle alone and its stride declares
-            // a computed walk (QuadrupedGait); a metre is about five sixths of its 1.2 m body,
-            // the research's starting figure. The rat has a walk and a run, and their speeds are
+            // The hog has no walk clip. Its locomotion is the idle alone and the row asks for the
+            // computed gait (QuadrupedGait), whose stride is measured off the rig's own legs at
+            // build. The rat has a walk and a run, and their speeds are
             // DECLARED rather than measured: neither file carries a root-motion twin, so there is
             // nothing to read them off. 0.9 and 2.2 m/s are playtest numbers — a rat that skates
             // wants the walk lower, one that scurries on the spot wants it higher.
@@ -1496,7 +1496,7 @@ namespace Odyssey.EditorTools
                 poseClipName = "Armature|Idle",
                 centreXZ = true, baseAtY = true,
                 scale = Vector3.one,
-                strideMetres = 1.0f,
+                quadrupedGait = true,
                 locomotion = new List<LocomotionEntry>
                 {
                     new LocomotionEntry { clipName = "Armature|Idle", metresPerSecond = 0f },

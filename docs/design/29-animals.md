@@ -123,17 +123,50 @@ so the pool, the create, the repaint and the blend all key on one integer.
 
 **The rat walks on its clips**: Idle, Walk and Run in the same mixer a colonist has, with the
 walk and run speeds *declared* (0.9 and 2.2 m/s) because neither file carries a root-motion twin
-to measure them from. **The hog walks on a computed gait**, `QuadrupedGait`: the row declares a
-stride (1 m) and its locomotion is the idle alone; the gait binds the four legs by the rig's bone
-names at build, advances its phase once a frame from the figure's measured speed, and lays
-forward-kinematic sines over the idle in the pose pass — lateral sequence, hip ±25°, knee 35°
-peaking mid-swing, a 2 cm bob — exactly where `WorkSwing` lays an axe stroke. A rig without the
-four legs gets no gait and walks on its idle, as a colonist without bound arms swings no axe.
+to measure them from. **The hog trots on a computed gait**, `QuadrupedGait`: the row asks for it
+and its locomotion is the idle alone; the gait binds the four legs by the rig's bone names at
+build, **measures the leg** from shoulder or hip joint to sole, advances its phase once a frame
+from the figure's measured speed, and lays forward-kinematic sines over the idle in the pose pass
+— exactly where `WorkSwing` lays an axe stroke. A rig without the four legs gets no gait and
+moves on its idle, as a colonist without bound arms swings no axe.
+
+**Why a trot, and why the stride is measured** (owner, 2026-09-22: *"the pig walking looks
+awful"*). The first version was a lateral-sequence walk cycling once per authored metre. The
+probe's joint report says the rig's legs are **23 cm** from shoulder joint to sole on a 1.2 m
+body; a 23 cm leg swinging 25° covers about 20 cm a cycle, so the feet slid over most of every
+stride while the legs waved slowly, with a 2 cm bob at the same slow rate. A short-legged animal
+at a metre a second does not walk — it trots, on diagonal pairs (left fore with right hind), with
+quick short steps — so the gait is the trot, the stride is **derived** as twice the measured leg
+times the sine of the 30° hip swing (the ground one leg covers in its stance), times a
+`SlideFactor` of 2 that admits a model this squat must either scurry or slide and splits it:
+**0.46 m a cycle**, about 2.2 cycles a second at the hog's pace. The knees are **signed by
+anatomy** — a fore leg folds its carpus back under the body in the swing, a hind leg's hock
+flexes the foot forward — and the idle clip underneath is **frozen as the gait fades in**, or its
+weight-shifting reads as noise under the trot. Judged from a four-phase side-on strip
+(`docs/reference/screenshots/2026-09-22-hog-trot-strip.png`); the numbers are still playtest
+numbers, and `SlideFactor` is the one to move first.
 
 **A Generic rig gets everything a Humanoid one gets except the poses that need named human
 bones**: no work stance, gesture, climb, carry, footing or gaze. It is measured in its own height
 window (a rat is a quarter of a metre and the colonist window would call that a failed bake) and
 does not move the contact sheets' maxima. No swatches: an animal is drawn in its own paint.
+
+## 8b. The cursor and the click
+
+An animal is bracketed and clicked as **its own drawn box**, not as the person-sized column a
+colonist gets (owner, 2026-09-22: the column round a hog highlighted the whole tile). The box is
+the union of the figure's renderer bounds in its own frame, measured once at build — a loose
+box that does not breathe with the trot, which is what a cursor wants — and the bracket is drawn
+turned the way the animal faces, with the item bracket's margin. The click box is the same box
+axis-aligned at the longer of its two footprint sides. `PawnFigureDirector.TryGetAnimalBox` is
+the one owner of both; a colonist's bracket is unchanged. The hog's box is 0.40 × 0.61 × 1.20 m,
+the rat's 0.15 × 0.26 × 0.64 m with its tail; `AnAnimalsCursorBoxIsItsOwnSizeAndAColonistsIsNot`
+pins both.
+
+**The bake lied about these rigs, so the box does not use it.** `FigureBuild.Height` bakes the
+posed mesh, which on these Blender "units scale" rigs reports a hundredth of the truth (the
+register entry of 2026-09-22); the renderer bounds were the reading the picture agreed with, so
+an animal's standing height comes from the box as well.
 
 **Two deliberate gaps.** An animal past the figure cap is **not drawn at all** — the instanced
 baked pass deals every pawn a colonist's face, and a hog wearing one would be worse than no hog

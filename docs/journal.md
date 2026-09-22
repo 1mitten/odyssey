@@ -10537,3 +10537,25 @@ both sides, because the sidestep's per-pawn scan is P11 and open.
 the runner, which has no Synty folder; the animals are committed CC0 art, so
 `AnimalFigureTests` runs there. That was not the reason to commit them, but it is a reason to
 be glad they were.
+
+## 2026-09-22 — The pig's walk, and what a typed metre cost
+
+The owner's first look at the hog: *"it looks odd and screwed up - I can't even explain
+because it's so odd."* The fault was found by measuring rather than by watching: the probe's
+joint report put the rig's legs at 23 cm from shoulder joint to sole on a 1.2 m body, and the
+gait was cycling once per authored metre — a research-table number for a pig-sized quadruped
+that this squat model is not. A 23 cm leg swinging 25° covers about 20 cm a cycle, so the feet
+slid over four fifths of every stride while the legs waved slowly. The number was the whole of
+the oddness; the sines were fine (`bug-patterns.md`, 2026-09-22, P11 again).
+
+The gait is a **trot** now — diagonal pairs, which is what a short-legged animal does at a
+metre a second — with the stride **derived from the measured leg** and one named constant,
+`SlideFactor`, for the compromise a model this squat forces between scurrying and sliding. The
+knees are signed by anatomy (fore folds back, hind folds forward), and the idle clip underneath
+is frozen as the trot fades in. A four-phase side-on strip is the instrument that judged it
+(`docs/reference/screenshots/2026-09-22-hog-trot-strip.png`).
+
+The **cursor** round an animal is now its own drawn box, turned the way it faces, and the click
+box is the same box — `TryGetAnimalBox` owns both. The box comes from the renderer bounds and
+not from a bake, because on these rigs the bake reports a hundredth of the truth; the standing
+height an animal reports comes from the same box for the same reason.

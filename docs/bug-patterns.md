@@ -410,6 +410,29 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-22 — A walk cycling once per authored metre, on legs that are 23 cm long (P11)
+
+Owner, on the first animal figure: *"The pig walking looks awful - it looks odd and screwed up -
+I can't even explain because it's so odd."* The computed gait advanced one cycle per **authored
+stride of 1 m**, a number typed from a research table for a pig-sized quadruped. The rig's own
+legs, read from the joint positions the probe prints, are **0.23 m** from shoulder joint to sole
+on a 1.2 m body: a leg that short swinging 25° covers about 0.2 m a cycle, so the feet slid over
+four fifths of every stride while the legs waved once a second, and a 2 cm bob rode on top at the
+same slow rate. Nothing was wrong with the sines; the number they were driven by described a
+different animal.
+
+**P11 again, in its plainest form: a length written in metres where the rig should have been
+asked.** Every other length in the figure director is deliberately measured off the rig, and the
+one that was typed was the one that looked wrong. The fix measures the leg at bind and derives
+the stride from it — and, because a model this squat must then either scurry or slide, names the
+compromise as one constant (`QuadrupedGait.SlideFactor`) rather than hiding it in a stride.
+
+**What now stops it:** `AnimalFigureTests.TheHogsLegsTrotWhenItMovesAndRestWhenItStands` pins the
+measured leg to the rig (0.15–0.35 m) and the derived stride to what that leg can cover;
+`AnimalProbe.Shoot` writes a four-phase side-on strip so the gait is judged from a picture before
+a playtest. And the wider rule for the next animal: **a gait's numbers come from the rig, and a
+rig's numbers come from its bones or its picture, never from a table.**
+
 ### 2026-09-22 — The baked mesh said eleven centimetres; the bones said eleven metres (P11)
 
 Not a report: a measurement taken before anything was built, which is the point of recording it.

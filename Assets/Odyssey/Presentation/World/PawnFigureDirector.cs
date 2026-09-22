@@ -473,6 +473,31 @@ namespace Odyssey.Presentation.World
         /// Reported from a playtest on 2026-09-16: a colonist chopping a tree could not be
         /// selected at all. The box was on the cell; the colonist was not.
         /// </summary>
+        /// <summary>
+        /// An animal's own box (design 29 §8b): where its figure stands, which way it faces and
+        /// how big it is drawn, so the cursor sits flush round the animal rather than round a
+        /// person-sized column (owner, 2026-09-22). False for a colonist and for any pawn without
+        /// a figure; the caller falls back to the colonist cursor.
+        /// </summary>
+        public bool TryGetAnimalBox(PawnId id, out Matrix4x4 place, out Vector3 size)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn != id.Value || figure.Transform == null) continue;
+                Look? look = LookAt(figure.Look);
+                if (look == null || !look.Animal || figure.DrawnBox.size.sqrMagnitude <= 1e-6f) continue;
+                Transform t = figure.Transform;
+                place = Matrix4x4.TRS(t.TransformPoint(figure.DrawnBox.center), t.rotation, Vector3.one);
+                size = figure.DrawnBox.size;
+                return true;
+            }
+
+            place = default;
+            size = default;
+            return false;
+        }
+
         public bool TryGetFeet(PawnId id, out Vector3 feet)
         {
             for (int i = 0; i < _figures.Count; i++)
@@ -533,8 +558,8 @@ namespace Odyssey.Presentation.World
             /// <summary>An animal's row rather than a colonist's (design 29): no swatches, no work bones, its own height window.</summary>
             public bool Animal;
 
-            /// <summary>Stride of a computed walk, as drawn, or 0 for a rig that walks on its clips.</summary>
-            public float Stride;
+            /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
+            public bool QuadrupedGait;
         }
 
         readonly Look?[] _looks;
@@ -574,7 +599,7 @@ namespace Odyssey.Presentation.World
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
                     Animal = true,
-                    Stride = row.strideMetres * Mathf.Max(0.01f, (Mathf.Abs(row.scale.x) + Mathf.Abs(row.scale.z)) * 0.5f),
+                    QuadrupedGait = row.quadrupedGait,
                 };
             }
             return looks;
@@ -1924,7 +1949,12 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
-                figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
+                // Under a computed gait the idle underneath is frozen as the gait fades in: an
+                // idle that shifts its weight and paws the ground is noise under a trot, and
+                // its pose at the frozen frame is a perfectly good stance to trot from.
+                float rate = running ? blend.Rate : 0f;
+                if (figure.Gait != null) rate *= 1f - figure.Gait.Weight;
+                figure.Clips[i].SetSpeed(rate);
             }
         }
 
@@ -2321,9 +2351,13 @@ namespace Odyssey.Presentation.World
             // does not move the colonists' maxima, which the contact sheets print.
             if (face.Animal)
             {
-                figure.StandingHeight = FigureBuild.Height(figure.Skins, figure.Transform.position.y,
-                    FigureBuild.FallbackHeight, minimum: 0.05f);
-                figure.Gait = QuadrupedGait.Bind(instance.transform, face.Stride);
+                // Measured from the renderers' bounds, not a bake: on these Blender "units
+                // scale" rigs a bake reports a hundredth of the truth (bug-patterns, 2026-09-22)
+                // and the bounds were the reading the picture agreed with. A loose box is what a
+                // cursor wants anyway.
+                figure.DrawnBox = FigureBuild.DrawnBounds(figure.Skins, figure.Transform);
+                figure.StandingHeight = figure.DrawnBox.size.y > 0.02f ? figure.DrawnBox.size.y : FigureBuild.FallbackHeight;
+                figure.Gait = face.QuadrupedGait ? QuadrupedGait.Bind(instance.transform) : null;
             }
             else
             {
