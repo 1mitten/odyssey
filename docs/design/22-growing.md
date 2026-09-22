@@ -587,3 +587,94 @@ planting.
   and none ripe; whether a fully sown, fully ripe two-thousand-cell field holds the budget has not
   been watched, and the ~one-draw-call-per-crop line in §6 is the reason to watch it before the
   first farm the owner actually builds.
+
+## 10. When the ground goes (2026-09-21)
+
+**The report.** *"Made dirt/soil, then it got mined but then the seeds were still hanging in mid
+air. If the terrain is destroyed, mined or something else — then the seeds must also disappear with
+it."* The screenshot is a night shot of a quarried clearing with a scatter of white specks floating
+over it at the height the surface used to be: the seed specks of §6b, drawn from a `_cropAt` that
+nothing had told.
+
+### 10a. Why it happened
+
+`Falling` (`Odyssey.Sim/Pawns/Falling.cs`) is the one place that answers *"what happens to whatever
+is in a cell when the thing it was standing on goes away"*, and mining, floor deconstruction and
+collapse all call it. It knew two kinds: **pawns**, who go to the first real floor at or below, and
+**loose items**, which do the same and merge where they land. A crop is neither. Zones are
+authored state in `TickGroup.Never` and `SiteAllows` is asked when the cell is *painted*, so
+nothing in the system ever re-asked the question after the fact.
+
+The asymmetry is sharp, and it is the tell: `DesignationGrid.CanMine` already refuses the cell
+under a **standing tree**, with a comment saying digging it away "would leave the tree rooted in
+mid-air, and the right answer is to fell it first rather than to invent a falling rule here." A
+sown cell got no such guard, so mining under a field was legal and produced exactly what the guard
+existed to prevent one cell away.
+
+### 10b. The decisions (owner, 2026-09-21)
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | What happens to the crop | **Uprooted, nothing dropped**, at any stage of growth. Rejected: yielding a ripe crop, which would have made quarrying under a field a harvesting technique. |
+| 2 | What happens to the zone paint | **It goes too.** A square left hanging would draw tilled rows on nothing and re-sow itself the moment a colonist could reach it. Repainting a rebuilt floor is one drag, and it is the player saying they meant it. |
+| 3 | Scope | **Crops and wild trees.** Both are rooted in the ground rather than resting on it, and the tree case is reachable by the two callers that never consult the designation grid. |
+| 4 | Guard or consequence | **Consequence.** The alternative — refusing to mine under a zone, symmetrical with the tree guard — would have made a painted field block the pick, which is worse than losing a seed the player chose to dig out. |
+
+### 10c. What was built
+
+Four kinds now, and **two answers**: a colonist and a sack of carrots are *on* the floor and land
+on the next one down; a crop and a tree are *in* the soil, and go with it.
+
+| Piece | Where |
+|---|---|
+| `Falling.PlantsOutOf` — the crop and the paint go with the ground | `Sim/Pawns/Falling.cs` |
+| `Falling.TreesOutOf` — the tree goes, and leaves no wood | same |
+| Both called from `Falling.OutOf`, so mining, `RemoveSlab` and collapse inherit them | same |
+| `Falling.UprootFloatingPlants` — the sweep, the sibling of `DropFloatingItems` | same, run from `SupportSystem.ApplyConsequences` |
+| `GrowingZones.CancelAt(int)` — the by-index sibling of `Cancel(CellRef)`; `Cancel` now delegates to it | `Sim/Growing/GrowingZones.cs` |
+
+Two things this deliberately does **not** do.
+
+- **It does not re-ask `SiteAllows`.** A zone is not cancelled by every change that would have
+  refused it at painting time — §4's rule that a roof raised over a field does not unzone it stands,
+  and the sowing giver asks for itself. The single condition that ends a zone cell from the outside
+  is the one that leaves it *drawn in mid-air*, which is exactly the condition `DropFloatingItems`
+  asks about items.
+- **It does not cancel the zone.** The rule is per cell, not per zone: quarrying one corner of a
+  field leaves the rest of the field alone (`TheFieldNextDoorKeepsItsCrop`).
+
+### 10d. The sweep, and why it walks the zones
+
+`UprootFloatingPlants` walks `GrowingZones.Cells` — the sparse list of painted cells — and not the
+board. On the play board that is nought to a few thousand entries against 120 × 120 × 16 cells, and
+on the scale target it is the difference between free and 2.5 million tests. Planted cells are a
+subset of zoned cells, because `Sow` requires a zone, so one walk covers both. The doomed cells are
+collected before any is cancelled: a cancel writes to the very list being read.
+
+It exists because `OutOf` is told about **one cell**, and a collapse can open ground under a field
+several cells from anything in `_fallen` — the slab that came down was holding the soil up.
+
+### 10e. Measurements
+
+- **The negative control was run.** With the two lines removed from `OutOf`, the three mining tests
+  fail and the rest pass — so the tests fail on the reported bug and not on something else.
+- **No golden moved and no save format changed.** Fast tier 935 Sim + 642 Hud, Long tier 34, all
+  green with the goldens unbaked: nothing in the three standard seeds mines under a field.
+- **Re-run merged with main on 2026-09-22** (the entombment, cursor and session-lifecycle work):
+  fast tier **945 Sim + 675 Hud**, Long tier **34**, EditMode **2,423 / 2,402 / 0 failed**,
+  PlayMode **98 / 93 / 0 failed** on a machine with no other Unity run on it, so the timing tests
+  in it mean what they say.
+- **The state hash does move** the first time a colony does it, which is correct — `GrowingZones`
+  is hashed, and a cancelled cell is a real state change.
+
+### 10f. Not settled
+
+- **The tree half is unreachable today.** Mining is guarded; a collapsing slab or a deconstructed
+  floor under a tree is the reachable case and nothing in the generator puts a tree on a built
+  slab. The rule is stated so the caller that can produce it inherits the answer rather than
+  rediscovering half of it, and `ATreeGoesWithTheGroundAndLeavesNoWood` holds it.
+- **A tree leaves no wood**, by consistency with the crop rather than by a decision of its own.
+  If a player ever loses a stand of timber to a collapse and minds, the one line to change is in
+  `TreesOutOf` and `FellTree` already has the spawn beside it.
+- **Nothing warns before the dig.** A player quarrying under their own field gets no confirmation
+  and no alert afterwards. Whether that wants an alert is a play question.

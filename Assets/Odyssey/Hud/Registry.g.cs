@@ -36,6 +36,7 @@ namespace Odyssey.Hud
             { "ui.alert.raid", "Raid" },
             { "ui.alert.spoilage", "Spoiling" },
             { "ui.alert.starvation", "Starving" },
+            { "ui.alert.storagestuck", "Store cannot be emptied" },
             { "ui.alert.trapped", "Trapped" },
             { "ui.alert.unsupported", "Unsupported span" },
             { "ui.arch.category.floors", "Floors" },

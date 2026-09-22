@@ -1009,6 +1009,80 @@ namespace Odyssey.Presentation.Rendering
 
                 Vector3 floor = CellMetrics.FloorCentre(cell);
 
+                // **On the shelf, not on the floor under it.** A contained thing is published at
+                // its store's cell so that every count of what the colony holds stays right; this
+                // is the one place that has to care which of the two it is looking at.
+                //
+                // It costs no extra draw calls, and that is the point rather than a hope: these
+                // instances land in the per-def bucket that was going to be submitted anyway, so a
+                // forty-shelf warehouse adds matrices and not submissions. The alternative — a pass
+                // of its own over the shelves — is `docs/bug-patterns.md` P10, which cost the
+                // growing zone 2,065 draw calls before it was deleted.
+                if (things[i].Contained)
+                {
+                    int shelfIndex = _model.Size.Index(cell);
+                    Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y,
+                        _model.EdificeFacing(shelfIndex));
+                    Vector3 stand = ShelfShape.SlotCentre(shelf, _model.EdificeFacing(shelfIndex),
+                        things[i].Slot);
+
+                    // **A thing just set on a shelf is still leaving the hands that held it**, the
+                    // same rule the floor path keeps one paragraph down and for the same reason:
+                    // the simulation moves a load in one instant, and an instant transfer drawn
+                    // literally is a teleport. The hands were a third of a metre in front of the
+                    // colonist; the deck is a metre up. Without this the load pops.
+                    Vector3 settling = Vector3.zero;
+                    if (carried != null
+                        && carried.TryGetSettling(things[i].Id.Value, out Vector3 fromHands, out float held))
+                        settling = Vector3.Lerp(fromHands - stand, Vector3.zero,
+                            CarryHandover.Fallen(held));
+
+                    stand += settling;
+
+                    if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe onShelf))
+                    {
+                        // The same ramp and the same spiral, tightened: ItemHeap's recipes are
+                        // sized for a 2.5 m cell floor and a slot is a fifth of that, so at the
+                        // recipe's own numbers neighbouring stacks interleave.
+                        //
+                        // **The count as well as the spread.** Tightening only the spread left
+                        // each heap with its cell-floor population, so eight full slots of wood
+                        // drew twenty-four bundles in one cell's footprint and the rack was
+                        // invisible under them. A bay holds one stack and reads as one or two
+                        // bundles; the fill tell on a shelf is how many bays are taken.
+                        var tight = new ItemHeap.Recipe(
+                            Mathf.Min(onShelf.Fewest, ShelfShape.SlotLumps),
+                            Mathf.Min(onShelf.Biggest, ShelfShape.SlotLumps),
+                            onShelf.Full,
+                            ShelfShape.SlotSpread, onShelf.SizeJitter, lyingDown: onShelf.LyingDown);
+
+                        int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                            stand, tight, _heapPlacements);
+
+                        for (int rock = 0; rock < rocks; rock++)
+                        {
+                            Matrix4x4 placement = _heapPlacements[rock];
+
+                            // **No GroundRelief.Lift here**, unlike the loose-pile path below.
+                            // ShelfShape.Root is already draped, so lifting again would float the
+                            // goods a few centimetres off their own deck on sloping ground — and
+                            // only on sloping ground, which is the kind of fault nobody
+                            // reproduces.
+                            Vector3 at = (Vector3)placement.GetColumn(3);
+                            placement = Matrix4x4.TRS(at, placement.rotation,
+                                placement.lossyScale * ShelfShape.GoodsScale);
+                            AppendItem(def, placement);
+                        }
+
+                        continue;
+                    }
+
+                    AppendItem(def, Matrix4x4.TRS(stand,
+                        Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
+                        Vector3.one * ShelfShape.GoodsScale));
+                    continue;
+                }
+
                 // **A thing just put down is still falling out of the hands that held it.** The
                 // simulation transfers it in one instant, because a thing is in a cell or in a
                 // pair of hands and there is nothing sensible between — but the hands were a
@@ -1265,6 +1339,25 @@ namespace Odyssey.Presentation.Rendering
 
         ResolvedModule? ItemModule(int defIndex) =>
             defIndex >= 0 && defIndex < _itemModules.Length ? _model.Library[_itemModules[defIndex]] : null;
+
+        /// <summary>
+        /// Whether this kind of item resolved to real art, or draws as the stand-in marker.
+        ///
+        /// <para><b>Whether the art resolved, not whether there is a catalogue.</b> The catalogue
+        /// is committed and its prefab references point into the gitignored <c>Assets/Synty</c>,
+        /// so on the self-hosted runner it loads perfectly with every reference null — and every
+        /// item then takes the marker path above, which costs a draw call and <i>no instance</i>.
+        /// A measurement that counts instances measures nothing there and has to say so rather
+        /// than fail. This is the item-side pair of <c>PawnFigureDirector.Enabled</c> and
+        /// <c>PortraitStudio.Available</c>; see <c>CLAUDE.md</c>, "the runner has no
+        /// Assets/Synty".</para>
+        /// </summary>
+        public bool ItemArtResolved(int defIndex)
+        {
+            EnsureItemModules();
+            ResolvedModule? module = ItemModule(defIndex);
+            return module != null && !module.IsEmpty && module.UsesArt;
+        }
 
         void AppendItem(int def, in Matrix4x4 placement)
         {

@@ -150,6 +150,7 @@ namespace Odyssey.Presentation.World
         readonly int _bedModule;
         readonly int _campfireModule;
         readonly int _bedPillowModule;
+        readonly int _shelfModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library, PlantDef[]? plants = null)
         {
@@ -212,6 +213,7 @@ namespace Odyssey.Presentation.World
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
             _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
+            _shelfModule = library.Resolve(ModuleIds.Shelf, ModuleShape.SolidBlock);
         }
 
         /// <summary>
@@ -787,6 +789,9 @@ namespace Odyssey.Presentation.World
         /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
         public int BedPillowModule => _bedPillowModule;
 
+        /// <summary>The facing of whatever rotatable thing stands in this cell, 0–3.</summary>
+        public byte EdificeFacing(int index) => _edificeFacing[index];
+
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
         public byte BedFacing(int index) => _edificeFacing[index];
 
@@ -839,7 +844,14 @@ namespace Odyssey.Presentation.World
         public float StandHeight(int index)
         {
             if ((uint)index >= (uint)_edifice.Length) return 0f;
-            return _edifice[index] == CoreContent.EdificeBed ? BedShape.Size.y : 0f;
+            if (_edifice[index] == CoreContent.EdificeBed) return BedShape.Size.y;
+
+            // **The deck, not the top of the whole thing.** What a player aims at on a shelf is the
+            // goods, and the goods stand on the deck; the back lip is 0.26 m above it, which at the
+            // play camera's 48° is about a tenth of a cell of drift — in the same direction the
+            // bed's own bug went.
+            if (_edifice[index] == CoreContent.EdificeShelf) return ShelfShape.DeckTop;
+            return 0f;
         }
 
         /// <summary>
@@ -870,6 +882,11 @@ namespace Odyssey.Presentation.World
         public float MarkHeight(int index)
         {
             if ((uint)index >= (uint)_edifice.Length) return 0f;
+
+            // **A shelf is the first thing for which "where is it picked" and "where is its mark"
+            // differ.** A deconstruct mark at deck height is buried under a full shelf, so the mark
+            // rides the top of the thing while the pick stays on the deck.
+            if (_edifice[index] == CoreContent.EdificeShelf) return ShelfShape.Top;
             return OccludesFace(index) ? CellMetrics.SizeY : StandHeight(index);
         }
 
@@ -892,6 +909,10 @@ namespace Odyssey.Presentation.World
             // The bed first, before the natural range: its id sits above the trees' but it is not
             // one of theirs, and the natural table below would index past itself for it.
             if (def == CoreContent.EdificeBed) return _bedModule;
+            // And the shelf, for the identical reason and it is worth saying twice: id 13 is above
+            // the trees' 10 and 11, so without this line the natural table below indexes past
+            // itself and every shelf in the colony draws as a conifer.
+            if (def == CoreContent.EdificeShelf) return _shelfModule;
             if (def == CoreContent.EdificeCampfire) return _campfireModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below

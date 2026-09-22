@@ -329,6 +329,20 @@ namespace Odyssey.Tests.Sim
         /// tighter board, not a space problem, and not worth engineering around for one piece of
         /// scrap. <c>ScenarioDefTests.AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid</c>
         /// carries the same note beside the two placement signatures it pins.</para>
+        /// <para><b>Re-baked a sixth time, 2026-09-21, by storage S2 — and it is the first kind
+        /// again, not the second.</b> <c>StorageUnits</c> is a hashed component, so every board in
+        /// the game now contributes one more count to the walk, including the three below, none of
+        /// which has a shelf on it. That moves all six numbers before a tick runs.</para>
+        ///
+        /// <para><b>Measured, and the instrument is committed this time.</b>
+        /// <c>GoldenColonyProbe</c> prints what each colony is made of — live things, per-def
+        /// stacks, the sum of item cells, the two lister counts, the sum of pawn cells, total food
+        /// and rest, standing orders and zones — at generation and after the full run. It is
+        /// written against nothing newer than <c>main</c> on purpose, so the same file runs on both
+        /// branches; it was run on each and the two outputs <b>diff clean</b>. All three colonies
+        /// are identical in every one of those numbers. The hash sees one more zero and the
+        /// colonies do not know it. Earlier re-bakes used a throwaway probe and had to describe it
+        /// afterwards; this one leaves the probe behind so the next re-bake starts with it.</para>
         /// </remarks>
         public static readonly Case Meadow = new Case
         {
@@ -338,8 +352,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 2784470706435368410UL,
-            Simulated = 2974085712833310500UL,
+            Generated = 3323014265006917754UL,
+            Simulated = 4120321472792330164UL,
         };
 
         /// <summary>
@@ -355,8 +369,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 9276739468539713925UL,
-            Simulated = 12767937954027548549UL,
+            Generated = 17477209103796892501UL,
+            Simulated = 17573934566704327877UL,
         };
 
         /// <summary>
@@ -392,8 +406,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 17267362163399855207UL,
-            Simulated = 5462442629106903150UL,
+            Generated = 13209551001083838375UL,
+            Simulated = 7413222100740120350UL,
         };
     }
 }

@@ -5,6 +5,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Storage;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -734,6 +735,7 @@ namespace Odyssey.Presentation.Ui
                     // A 3 px rule under the live tab, not a filled pill: the pane is dark and a
                     // pill reads as a button that has been pressed rather than as a place you are.
                     var underline = new VisualElement();
+                    underline.name = StoreTabUnderlineName;
                     underline.style.height = 3;
                     underline.style.backgroundColor = HudTokens.Convert(HudTheme.Accent);
                     column.Add(underline);
@@ -751,6 +753,15 @@ namespace Odyssey.Presentation.Ui
 
                 _inspectBody.Add(strip);
                 BuildStoragePane();
+
+                // **The store's branch owed this and did not pay it**, while the colonist's
+                // branch a few lines up has always called it. Nothing else establishes which tab
+                // is live, so a freshly built strip drew *both* underlines — they are created
+                // visible — and the pane's own display carried over from whatever the last
+                // subject had left it on: select a store, look at its Tile tab, select another,
+                // and the Storage tab came up blank until a tab was clicked. Reported by the
+                // owner on 2026-09-21, as two separate faults that were one missing call.
+                ShowActiveTab();
             }
 
             if (_inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item)
@@ -1005,6 +1016,27 @@ namespace Odyssey.Presentation.Ui
 
         readonly List<VisualElement> _storageTabUnderlines = new List<VisualElement>();
         VisualElement? _storagePane;
+
+        /// <summary>
+        /// Element names the store pane's own tests find it by.
+        ///
+        /// <para>Named rather than reached through the shell's fields, because the alternative is
+        /// making a dozen private elements internal for one test. These three are the ones whose
+        /// <em>visibility</em> is the assertion — which is a thing neither tier could see before
+        /// and which the owner has now had to report twice.</para>
+        /// </summary>
+        public const string StoreTabUnderlineName = "store-tab-underline";
+        public const string StoreHoldingName = "store-holding";
+        public const string StoreHoldingRowName = "store-holding-row";
+
+        /// <summary>The Holding group: its header summary, its rows, and the pool they come from.</summary>
+        VisualElement? _storeHoldingGroup;
+        VisualElement? _storeHoldingList;
+        Label? _storeHoldingSummary;
+        readonly List<VisualElement> _storeHoldingRows = new List<VisualElement>();
+
+        /// <summary>The contents signature the Holding rows on screen were built from.</summary>
+        int _storeHoldingFilledFor = int.MinValue;
         VisualElement? _storageRows;
         ScrollView? _storageList;
         VisualElement? _storageWarning;
@@ -1078,6 +1110,40 @@ namespace Odyssey.Presentation.Ui
             _storagePane = new VisualElement();
             _storagePane.AddToClassList(StoragePaneClass);
             _storagePane.style.flexDirection = FlexDirection.Column;
+
+            // ---- holding: what is actually in there, which is the question a player clicking a
+            // store is most often asking. It leads the tab because the filter below it answers
+            // "what will it take", which is set once, while this changes all day.
+            _storeHoldingGroup = new VisualElement();
+            _storeHoldingGroup.name = StoreHoldingName;
+            _storeHoldingGroup.style.flexDirection = FlexDirection.Column;
+
+            VisualElement holdingHeader = StorageHeaderRow();
+            holdingHeader.Add(StorageSectionLabel("Holding"));
+            _storeHoldingSummary = HudText.Make(string.Empty, HudTextRole.Body);
+            _storeHoldingSummary.style.unityTextAlign = TextAnchor.MiddleRight;
+            _storeHoldingSummary.style.flexGrow = 1;
+            holdingHeader.Add(_storeHoldingSummary);
+            _storeHoldingGroup.Add(holdingHeader);
+
+            _storeHoldingList = new VisualElement();
+            _storeHoldingList.style.flexDirection = FlexDirection.Column;
+            _storeHoldingList.style.paddingLeft = 14;
+            _storeHoldingList.style.paddingRight = 14;
+            _storeHoldingList.style.paddingBottom = 10;
+            _storeHoldingGroup.Add(_storeHoldingList);
+
+            _storeHoldingGroup.Add(StorageDivider(0.14f));
+            _storagePane.Add(_storeHoldingGroup);
+
+            // **The pool belongs to the tree that has just been thrown away.** Every element
+            // above is new, so the rows remembered from the last build are orphans with no parent
+            // — and the fill loop below would dutifully write text into them while the list on
+            // screen stayed empty. The signature goes with them, or the first sync decides the
+            // rows are already right and returns without adding any. This is the same fault as
+            // the tab underlines above, which is why both lists near them are cleared on build.
+            _storeHoldingRows.Clear();
+            _storeHoldingFilledFor = int.MinValue;
 
             // ---- priority: the section label, and the rung it is on, on one line
             VisualElement priorityHeader = StorageHeaderRow();
@@ -1259,27 +1325,145 @@ namespace Odyssey.Presentation.Ui
         void SyncStoragePanel()
         {
             if (_storagePane == null || !_inspect.IsStore) return;
-
-            var storage = _boot?.Colony?.Pawns.Storage;
-            if (storage == null) return;
-
-            int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
-            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
-            if (slot < 0) return;
-
-            if (StorageSignature(storage, slot) != _storageFilledFor) FillStoragePanel();
+            SyncStoreHolding();
+            if (!TryStoreUnderPane(out _, out _, out _, out int signature)) return;
+            if (signature != _storageFilledFor) FillStoragePanel();
         }
 
-        /// <summary>Everything the rows are drawn from, in one int: the zone, its rung, its filter.</summary>
-        static int StorageSignature(Odyssey.Sim.Storage.StorageZones storage, int slot)
+        /// <summary>
+        /// Show what the store is holding, rebuilding the rows only when they have changed.
+        ///
+        /// <para><b>A signature of its own, not the filter's.</b> The filter changes when a person
+        /// presses something; the contents change whenever a hauler arrives, which the filter's
+        /// signature cannot see. Sharing one would have left the list frozen at whatever was in
+        /// there when the store was selected — the same class of fault as the panel that was one
+        /// action stale, and just as invisible.</para>
+        ///
+        /// <para>Hidden outright over a painted zone: a stockpile's contents are lying on the
+        /// board in front of you, and a list of them would be a second, worse view of something
+        /// already on screen.</para>
+        /// </summary>
+        void SyncStoreHolding()
         {
-            Odyssey.Sim.Storage.StorageSettings settings = storage.SettingsOf(slot);
+            if (_storeHoldingGroup == null || _storeHoldingList == null) return;
+
+            _storeHoldingGroup.style.display =
+                _inspect.IsBuiltStore ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!_inspect.IsBuiltStore) return;
+
+            int signature = _inspect.StoreContentsSignature;
+            if (signature == _storeHoldingFilledFor) return;
+            _storeHoldingFilledFor = signature;
+
+            if (_storeHoldingSummary != null) _storeHoldingSummary.text = _inspect.StoreSummary;
+
+            // One row per kind, plus one line saying so when there are none. Pooled, because this
+            // is a panel that ticks fifteen times a second and a store being loaded is a stream of
+            // small changes rather than one.
+            int wanted = Math.Max(1, _inspect.StoreContents.Count);
+            while (_storeHoldingRows.Count < wanted)
+            {
+                var row = new VisualElement();
+                row.name = StoreHoldingRowName;
+                row.style.flexDirection = FlexDirection.Row;
+                row.style.alignItems = Align.Center;
+                row.style.paddingTop = 2;
+                row.style.paddingBottom = 2;
+
+                Label rowName = HudText.Make(string.Empty, HudTextRole.Body);
+                Label rowAmount = HudText.Make(string.Empty, HudTextRole.Body, numeric: true);
+                rowAmount.style.unityTextAlign = TextAnchor.MiddleRight;
+                rowAmount.style.flexGrow = 1;
+
+                row.Add(rowName);
+                row.Add(rowAmount);
+                _storeHoldingList.Add(row);
+                _storeHoldingRows.Add(row);
+            }
+
+            for (int i = 0; i < _storeHoldingRows.Count; i++)
+            {
+                VisualElement row = _storeHoldingRows[i];
+                bool used = i < wanted;
+                row.style.display = used ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!used) continue;
+
+                var rowName = (Label)row[0];
+                var rowAmount = (Label)row[1];
+
+                if (_inspect.StoreContents.Count == 0)
+                {
+                    rowName.text = "nothing yet";
+                    rowName.style.color = new Color(1f, 1f, 1f, 0.55f);
+                    rowAmount.text = string.Empty;
+                    continue;
+                }
+
+                StoreContentRow content = _inspect.StoreContents[i];
+                rowName.text = content.Name;
+                rowName.style.color = new Color(1f, 1f, 1f, 0.92f);
+                // The bay count only where it adds something: 150 in two bays is a fact about the
+                // store; 40 in one is just the amount, and the number would be noise.
+                rowAmount.text = content.Stacks > 1
+                    ? content.Units + "  (" + content.Stacks + " bays)"
+                    : content.Units.ToString();
+            }
+        }
+
+        /// <summary>
+        /// The store the pane is about — a painted zone, or a shelf — and everything the rows are
+        /// drawn from.
+        ///
+        /// <para><b>One owner, because the panel and its refresh both have to answer it.</b> Two
+        /// copies of the zone-or-shelf branch is two chances for the rows on screen and the
+        /// signature they are compared against to disagree, which would show as a panel that stops
+        /// updating or one that rebuilds every frame.</para>
+        /// </summary>
+        bool TryStoreUnderPane(out Odyssey.Sim.Storage.StorageSettings? settings,
+            out int identity, out int size, out int signature)
+        {
+            settings = null;
+            identity = 0;
+            size = 0;
+            signature = 0;
+
+            var storage = _boot?.Colony?.Pawns.Storage;
+            if (storage == null) return false;
+
+            int store = storage.StoreCellOf(_boot!.Colony!.Grid.Index(_inspect.Cell));
+
+            StorageUnit? unit = _boot.Colony.Pawns.StorageUnits?.AtCell(store);
+            if (unit != null)
+            {
+                settings = _boot.Colony.Pawns.StorageUnits!.SettingsOf(unit);
+                // Negative, so a shelf's identity can never collide with a zone's slot index. The
+                // model resets its remembered categories and its search when this changes, so two
+                // stores sharing a number would carry one's search over to the other.
+                identity = -(unit.Edifice + 1);
+                size = unit.Slots;
+                signature = StorageSignature(identity, settings, size);
+                return true;
+            }
+
+            int slot = storage.ZoneAt(store);
+            if (slot < 0) return false;
+
+            settings = storage.SettingsOf(slot);
+            identity = slot;
+            size = storage.CellsOf(slot).Count;
+            signature = StorageSignature(identity, settings, size);
+            return true;
+        }
+
+        /// <summary>Everything the rows are drawn from, in one int: the store, its rung, its filter.</summary>
+        static int StorageSignature(int identity, Odyssey.Sim.Storage.StorageSettings settings, int size)
+        {
             bool[] allow = settings.Allow;
 
             unchecked
             {
-                int signature = slot * 397 + settings.Priority;
-                signature = signature * 31 + storage.CellsOf(slot).Count;
+                int signature = identity * 397 + settings.Priority;
+                signature = signature * 31 + size;
                 for (int i = 0; i < allow.Length; i++) signature = signature * 31 + (allow[i] ? 1 : 0);
                 return signature;
             }
@@ -1295,17 +1479,22 @@ namespace Odyssey.Presentation.Ui
             if (_storageRows == null || storage == null) return;
 
             int cell = _boot!.Colony!.Grid.Index(_inspect.Cell);
-            int slot = storage.ZoneAt(storage.StoreCellOf(cell));
-            if (slot < 0) return;
 
-            var settings = storage.SettingsOf(slot);
-            _storageFilledFor = StorageSignature(storage, slot);
+            // **Either kind of store.** The intents this panel sends already resolve a cell to
+            // whichever store covers it, painted or built; asking here for a *zone* would find none
+            // over a shelf and leave the tab blank — the panel doing nothing, visibly, which is the
+            // fault design 20 §8 records under "why Assign did nothing, three times".
+            if (!TryStoreUnderPane(out Odyssey.Sim.Storage.StorageSettings? settings,
+                    out int identity, out int size, out int signature))
+                return;
+
+            _storageFilledFor = signature;
             var content = _boot.Colony.Pawns.Content;
             var keys = new List<string>(content.Items.Length);
             for (int i = 0; i < content.Items.Length; i++) keys.Add(ItemLabels.IconKey(i));
 
-            _storageSettings.Show(cell, slot, hasStore: true, settings.Priority,
-                storage.CellsOf(slot).Count, _inspect.Title,
+            _storageSettings.Show(cell, identity, hasStore: true, settings!.Priority,
+                size, _inspect.Title,
                 keys, settings.Accepts, i => (int)content.Items[i].category, Registry.Label);
 
             // ---- the ladder

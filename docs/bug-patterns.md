@@ -342,6 +342,34 @@ configures; the eviction has to live in whatever scans for work. Here the filter
 is why "the filter is obviously right" and "the behaviour is obviously wrong" were both true for
 two days.
 
+### P15 — A pick resolved against the frame before the one on screen
+
+A screen position is turned into a world thing by casting a ray through the camera — and the cast
+happens earlier in the frame than the camera's own move. The input pass reads the pointer and
+resolves it immediately, because that is the natural place to write it; the transform is applied
+further down, because that is the natural place to write *that*; and the two were written months
+apart by people each doing the obvious thing.
+
+**The tell is that it is perfectly accurate when nothing is moving.** Every test passes, because a
+test holds the camera still. Every screenshot is right, because a screenshot is one frame with the
+camera parked. The complaint arrives as a feeling — *"it doesn't seem super accurate"* — with no
+reproduction, because the offset exists only while the player is panning, orbiting or zooming, and
+it vanishes the moment they stop to look at it. It does not converge, either: it is a constant one
+frame of lag rather than an error that settles, so a slow pan is off by a little for ever and a
+fast one is off by a lot.
+
+**The question to ask of any input pass:** *what has this frame already changed that the answer
+depends on, and has it happened yet?* A camera is the obvious one; a slice layer, a scroll offset,
+a panel that has just been resized and a world that has just ticked are all the same shape.
+
+**The fix is ordering, and the repair worth making is that the ordering becomes an invariant.**
+Separating *deciding what the gesture was* from *resolving it against the world* is what makes the
+order expressible at all — the decision can be latched as a verb and a screen point, and then
+there is exactly one place that consults the camera instead of one per gesture. Guard it with a
+test, including the "and nowhere else" half: this one was `SliceCameraRig.Update`, and
+`PointerCursorTests` asserts both that the resolve pass runs after the transform and that no other
+line in the file turns a screen point into a cell.
+
 ---
 
 ### P15 — One version number for many caches, so every edit invalidates all of them
@@ -422,6 +450,106 @@ world *component by component* before and after — five minutes that turned "th
 into "only the thermal section moved".
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-21 — Both tabs underlined, and the contents invisible until you clicked (P1)
+
+Owner, on the store pane: *"storage and tile are both underlined when you enter the shelve menu.
+It should be just stored and also when you do see menu — it doesn't show what it is holding until
+you click on storage when it should show that soon as you click on the shelve."*
+
+**Two reports, one missing line.** The inspect pane rebuilds its tree when the subject changes, and
+the colonist branch of that builder ends with `ShowActiveTab()`. The store branch never called it.
+Nothing else establishes which tab is live, so:
+
+- the underlines are created **visible** and both stayed lit until a tab was clicked;
+- `_storagePane` and `_cellRowsGrid` kept the display the *previous* subject had left them on, so a
+  store selected after one whose Tile tab you had been reading came up with its Storage tab blank.
+
+**A second fault of the same shape sat underneath it.** The Holding list pools its rows in
+`_storeHoldingRows`, and that list was not cleared on rebuild — unlike `_tabChips` and
+`_storageTabUnderlines` two lines away, which are. So after a rebuild the pool held orphans from the
+discarded tree: the fill loop wrote text into elements with no parent while the list on screen
+stayed empty, and the signature check then decided the rows were already right.
+
+**The general shape: state that must be re-established when structure is rebuilt.** Anything a
+builder creates in a default state — a display flag, a selected index, a pooled list of children —
+is *not* carried by the model, so a rebuild resets some of it and leaks the rest. The question to
+ask of any `Build*` method: *what did the last tree know that this one does not?* Every pooled list
+beside a rebuilt element is a candidate, and the tell is a control that works until you look at
+something else and come back.
+
+**What now stops it:** `HudSmokeTests.AStoreOpensOnItsStorageTabShowingWhatItHolds`, which selects a
+stocked shelf, selects away, and selects it **again** — the first selection passes against the
+broken code, because on a virgin pane the defaults happen to read correctly, so only the
+re-selection is a real test. It asserts *display flags*, which is the gap: the fast tier has no
+visual tree and the rest of the Unity tier asserts no appearance, so "built but invisible" was a
+state nothing in the project could see. Three elements gained names (`HudShell.StoreTabUnderlineName`
+and its two neighbours) so a test can find them without the shell opening up its fields.
+
+### 2026-09-21 — Every screenshot tool has been photographing an empty sky (P3-adjacent)
+
+Writing `ShelfCheck` to look at the new rack produced four pictures of blue sky with the goods
+floating in it: no ground, no trees, no shelf. The reflex was to debug the new script. **Running
+`WallCheck` instead — a tool that has worked for days — produced the same empty sky**, and that
+control is the whole diagnosis.
+
+`8b5ecfee` gave the renderer a **meshing budget**: eleven chunks a frame, so that an edit cannot
+stall the frame remeshing nine hundred. It is correct, it is measured, and it shipped with the one
+exception it needs — `PrimeAll`, an unbudgeted walk the composition root calls before the first
+drawn frame, whose own doc comment says a budgeted first frame *"would draw almost nothing and the
+board would arrive in instalments"*. **The composition root is the only caller.** A check script
+builds its own renderer and camera, renders four or five frames, meshes forty-odd chunks of several
+hundred, and photographs the rest of the board as sky. There are twenty-one such scripts and the
+game itself is unaffected, which is why nothing went red.
+
+**The general shape: a new budget needs an audit of everyone who drives the thing by hand, not just
+the one caller you were thinking about.** The exception was written for the loading screen and the
+loading screen got it. Nobody asked who else renders without a composition root — and the harnesses
+that answer "how does this look" are exactly the callers that do, because not having the game's
+wiring is the point of them.
+
+**And a broken screenshot tool does not look broken.** It returns a well-formed PNG of a plausible
+sky at the requested angle, and this project's runbook for a report about how something looks
+starts by taking one. The failure mode is a confident wrong answer drawn from a real photograph of
+the wrong thing, which is `docs/lessons.md`'s "a plausibly wrong result is worse than an obviously
+broken one" with a camera attached.
+
+**What now stops it:** `ShelfCheck` calls `renderer.PrimeAll(start.Y, slice)` before its first
+shot, with a comment saying why. **The other twenty scripts in `Assets/Editor/Odyssey/` still need
+the same one line and are still blind** — a mechanical fix held out of a shelf PR rather than
+forgotten. The durable version is for the shot harness to own the prime instead of each script, so
+that the twenty-second tool cannot be written without it.
+
+### 2026-09-21 — The warehouse measurement failed on the one machine that draws no warehouse (P13)
+
+CI's Unity tier went red on `FrameTimeTests.TheWarehouseCostsWhatItHolds` — the measurement
+`30-shelves.md` §8b owed, written the same day: 34,827 instances against the 35,027 its own control
+demanded. The test passes on this machine. It has never passed on the runner and never could.
+
+**Nothing about shelves was wrong.** `ChunkRenderer.RenderThings` asks `module.UsesArt` before it
+looks at anything else, and draws the deliberately ugly stand-in cube when the answer is no —
+through `DrawMarker`, which increments `DrawCalls` and *not* `InstancesDrawn`, because a marker is
+not an instanced submission and counting it as one would put a fiction in the frame budget. The
+runner has no `Assets/Synty`, so all three hundred and twenty stacks took that path, the contained
+branch the test exists to measure was never reached, and the control — *each stack is at least one
+instance* — was measuring a warehouse that was not drawn. With the packs present the same run reads
+43,935 → 45,015 → 45,015 instances and 1,128 draw calls either way, which is the number that was
+wanted.
+
+**The general shape: a measurement whose subject is absent is not a failure, and must say which it
+is.** This is P13 seen from the test side — the asset cannot draw the thing the code asked for, and
+the fallback is silent — with the twist that here the silence is *correct behaviour* and only the
+assertion is wrong. Two other tests already knew: `FigureCapTests` asks `PawnFigureDirector.Enabled`
+and `PortraitLightingTests` asks `PortraitStudio.Available`, both with a comment saying why the
+catalogue is the wrong question. Items had no such question to ask, so the new test could not have
+asked it.
+
+**What now stops it:** `ChunkRenderer.ItemArtResolved(defIndex)` — the item-side pair of those two,
+returning the identical predicate the marker branch tests rather than a restatement of it — and the
+warehouse case ignores itself on the machines where wood resolves to no art. **Ask it of any new
+measurement in the Unity tier**: *would this number be the same on a machine with no packs, and if
+not, does the test know?* The fast tier cannot see the question at all, and a green local run is
+exactly what makes it invisible.
 
 ### 2026-09-21 — The warning moved the rows it was about, and the pane was an action stale (P1)
 
@@ -1309,6 +1437,73 @@ other bed test places facing 0, which is also what a lost facing looks like.
 
 ---
 
+## Every test used one of each, so the cap was never reached (2026-09-21)
+
+**Symptom.** None, for a day. Three tiers green, the feature demonstrably working, and the number in
+the decision, the handover, the status file and the design document was wrong by a factor of eight.
+
+**The real cause.** A shelf was specified as eight *stacks* — 600 wood. `PutIn` merged a load into
+*the* stack of its def, and `HasSpaceFor` refused a fresh slot for a def already present, so a shelf
+held one stack per **commodity**: 75 wood, one tile's worth. A warehouse unit had quietly become a
+spice rack.
+
+**Why nothing caught it.** Every test put *one stack of each kind* into a shelf — because that is the
+obvious way to fill eight slots when seven commodities exist, and because the capacity question reads
+as answered once "the ninth is refused" passes. The cap that was wrong is the one nobody exercised:
+the second stack of the same thing.
+
+**The check that catches the next one.** `EightStacksOfOneCommodityFillAShelf` fills a store with one
+commodity and asserts the headline number itself — 600 — rather than a slot count.
+
+**The general shape.** When a container is specified by a *quantity* ("eight stacks", "600 wood"),
+test the quantity, not the slot arithmetic. And be suspicious of any test that fills a capacity with
+one of each: it exercises the dimension you were thinking about and not the one a player will use.
+The tell here was that the feature's own playtest question — *does one shelf do the job of eight
+tiles of painted zone?* — was answerable "no" from the code, and nobody asked the code.
+
+## A guard that compares a position, when the thing has stopped having one (2026-09-21)
+
+**Symptom.** A colonist walks to a shelf to fetch wood from it and then stands there. No error, no
+failed job, no stuck flag — the toil simply never advances.
+
+**The real cause.** `JobDriver.LiftToil` had two guards reading `item.Cell == Pawn.Cell`, which asks
+"is the thing still at my feet". That was a complete question while a thing was on the floor or in a
+pair of hands. A thing in a store has **no cell at all**, so the comparison is false for a stack
+sitting perfectly still on the shelf being reached into, and the grasp can never happen.
+
+**Why it survived a reading.** The site does not look wrong. It looks like exactly the defensive
+check it is, and the three obvious sites — the work giver, the reservation, the walk — had all been
+found and fixed. The one that had not was inside a shared toil two layers down, in a file that is not
+about storage at all.
+
+**The measurement that found it.** A control that built a wall from material that existed *only* on a
+shelf. It failed loudly with the delivery never completing, and a probe printing the job tallies
+showed `deliverDone=0` — a job started and never finished, which points at a toil rather than at a
+giver.
+
+**The check that catches the next one.** `PawnContext.WhereIs` and `JobDriver.AtHand` are now the two
+owners of "where is that thing" and "can she reach it from here". The general shape: **when a thing
+gains a third place it can be, every comparison against its position is a question with a stale
+answer, including the ones that look like defensive noise.** Grep for the field, not for the concept.
+
+## A test that could not fail for the reason it named (2026-09-21)
+
+**Symptom.** None. The test was green.
+
+**The real cause.** `AnEmptyingShelfGivesUpItsContents` ran a colony to the end of a fixed number of
+ticks and then asserted the shelf was empty. It was — but not because haulers had emptied it. The
+colonist had finished the deconstruct and `Dissolve` had spilled the contents on the way out. A haul
+path that did not work at all produced exactly the same final state.
+
+**What changed.** The test watches tick by tick and requires the shelf to be empty **while it is
+still standing**. It went red immediately, and the deadlock it then exposed — an emptying store whose
+contents rank below every store and have nowhere to go, against a gate that will not remove the store
+until they have gone — was a real one that no other test could see.
+
+**The general shape.** A test that asserts an **end state** reachable by two paths tests neither.
+Ask what else could produce the state you are asserting; if the answer is "the thing going wrong",
+assert a state only the right path passes through.
+
 ## The method, which is the real lesson
 
 **Measure, do not read.** Reading the code has been wrong on every hard bug in this project, and
@@ -1909,3 +2104,38 @@ the same origin and the toast draws over the panel.
 - **The check:** `HudLayoutTests.TheToastStackIsTheLastThingInTheAlertsColumn` states the order and
   the reason, and two cases in `Cases()` put all three panels in one column at all three
   resolutions. Both confirmed to fail on the pre-fix arithmetic before the fix went in.
+
+## A guard on one side of an asymmetry names the bug on the other (2026-09-21)
+
+**P15.** The owner photographed sown seeds hanging in mid-air over a quarry the colony had dug out
+from under them. `Falling` — the one place that answers *"what happens to whatever is in a cell when
+the thing it was standing on goes away"* — knew **pawns** and **loose items** and nothing else. A
+crop is neither; it is rooted in the soil rather than resting on it, so nothing had ever asked.
+
+**The tell was already written down, one cell away.** `DesignationGrid.CanMine` refuses the ground
+under a standing **tree**, and its comment says why in as many words: digging it away *"would leave
+the tree rooted in mid-air, and the right answer is to fell it first rather than to invent a falling
+rule here."* The same sentence describes a sown cell exactly. One of the two rooted kinds had a
+guard and the other had nothing, and the guard's own prose was the specification of the missing one.
+
+- **The pattern:** a rule written for a set of kinds, and a new kind that joins the set without
+  joining the rule. It does not read as a gap, because every line of the rule is correct — what is
+  missing is a *case*, and a case that was never there leaves no trace in the code to notice.
+- **Where to look for more:** anywhere a guard exists for one member of an obvious pair or family.
+  Ask which siblings it does **not** name, and why not. A comment that explains a refusal in general
+  language (*"rooted in mid-air"*) while the code names one specific thing is the strongest version
+  of this signal.
+- **And the second question: guard, or consequence?** The tree's answer is a guard (the order is
+  refused); the crop's is a consequence (the dig is allowed and the seed goes with the soil). That
+  is a judgement about which side the player would rather be surprised on, and it was the owner's to
+  make — a painted field blocking the pick is worse than losing a seed you chose to dig out. Do not
+  assume symmetry of mechanism just because the situations are symmetric.
+- **The fix went into the shared answer, not the caller.** `Falling.PlantsOutOf` and
+  `Falling.TreesOutOf` are called from `Falling.OutOf`, so mining, `ConstructionGrid.RemoveSlab` and
+  the collapse solver all inherited them at once — and `UprootFloatingPlants` is the sweep for the
+  case no caller is told about, the sibling of `DropFloatingItems`. Three callers, one new rule, no
+  copy.
+- **The check:** `FallingTests.MiningTheSoilUnderAFieldTakesTheSeedWithIt` and its four neighbours,
+  plus `ATreeGoesWithTheGroundAndLeavesNoWood`. **Run with the two lines removed from `OutOf`**: the
+  three mining tests fail and the rest pass, which is what says the tests fail on the reported bug
+  and not on something adjacent.

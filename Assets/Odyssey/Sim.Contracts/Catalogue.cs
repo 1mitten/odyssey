@@ -270,12 +270,18 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Bed = 12;
 
-        /// <summary>The campfire, the second id the interface names that no generator stamps:
-        /// 13, after the bed, and like it the reason <c>CoreContent.EdificeCampfire</c> spells
-        /// the literal beside the ones it must not collide with (design 28 §7).</summary>
-        public const int Campfire = 13;
+        /// <summary>
+        /// The shelf: the second edifice the interface names that no generator stamps, and the
+        /// colony's first buildable store. See <c>CoreContent.EdificeShelf</c>.
+        /// </summary>
+        public const int Shelf = 13;
 
-        public const int Count = 14;
+        /// <summary>The campfire, the third id the interface names that no generator stamps:
+        /// 14, after the shelf, and like it the reason <c>CoreContent.EdificeCampfire</c> spells
+        /// the literal beside the ones it must not collide with (design 28 §7).</summary>
+        public const int Campfire = 14;
+
+        public const int Count = 15;
     }
 
     /// <summary>
@@ -323,10 +329,31 @@ namespace Odyssey.Sim.Contracts
         public const int Bed = 5;
         public const int Door = 6;
 
+        /// <summary>
+        /// A shelf: one cell of furniture that holds an inventory rather than standing in the way
+        /// of one (docs/design/26-storage.md, the S2 branch of the storage line).
+        ///
+        /// <para><b>The colony's first buildable store.</b> A stockpile is painted and a shelf is
+        /// raised, and the difference underneath is where the things go: a zone leaves them on the
+        /// floor one stack to a cell, while a shelf holds eight stacks in an inventory of its own.
+        /// The ground's one-stack-per-cell rule is therefore never touched — six write paths throw
+        /// on a second stack and all six are left alone.</para>
+        ///
+        /// <para>Seven because the door reached main first and took six. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Shelf = 7;
+
         /// <summary>The first heat source (design 28 §7): one cell, blocking, and the one
-        /// building whose <c>heatPerPass</c> is not zero. Appended, as every handle is.</summary>
-        public const int Campfire = 7;
-        public const int Count = 8;
+        /// building whose <c>heatPerPass</c> is not zero.
+        ///
+        /// <para>Eight because the shelf reached main first and took seven, the same
+        /// rule the shelf's own note records against the door. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Campfire = 8;
+
+        public const int Count = 9;
     }
 
     /// <summary>

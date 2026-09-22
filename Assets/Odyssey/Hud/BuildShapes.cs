@@ -19,14 +19,14 @@ namespace Odyssey.Hud
         /// <summary>
         /// Cells the thing occupies, in a line along its facing. Parallel to
         /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed, door,
-        /// campfire.
+        /// shelf, campfire.
         /// </summary>
-        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2, 1, 1 };
+        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2, 1, 1, 1 };
 
         /// <summary>
         /// Whether the ghost may be turned with the rotate key before placing. Parallel to
         /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed, door,
-        /// campfire.
+        /// shelf, campfire.
         ///
         /// <para><b>The ladder joined the list on 2026-09-18 and this row is why the change was not
         /// finished when the def said it was.</b> A def gaining <c>rotates</c> does nothing on its
@@ -36,7 +36,7 @@ namespace Odyssey.Hud
         /// test still green. <c>BuildShapesAgreeWithTheDefs</c> now walks both tables rather than
         /// spot-checking two rows, which is what would have caught it.</para>
         /// </summary>
-        public static readonly bool[] Rotates = { false, false, false, false, true, true, true, false };
+        public static readonly bool[] Rotates = { false, false, false, false, true, true, true, true, false };
 
         public static int CellsOf(int building) =>
             (uint)building < (uint)Cells.Length ? Cells[building] : 1;

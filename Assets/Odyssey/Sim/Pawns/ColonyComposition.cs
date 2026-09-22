@@ -92,6 +92,20 @@ namespace Odyssey.Sim.Pawns
                 pawns.Cells, new Storage.StorageSettingsTable(pawns.Content), pawns.Items, pawns.Chunks);
             pawns.Storage = storage;
             pawns.Items.Membership = storage;
+            // And the built stores, sharing the zones' own settings table rather than keeping a
+            // second one: "what the colony accepts where" stays one table, one save section and
+            // one walk of the hash, whether the store in question was painted or raised. It takes
+            // the designations because a shelf being emptied is derived from the deconstruct order
+            // standing on it, rather than from a flag that could disagree with the order.
+            var units = new Storage.StorageUnits(
+                pawns.Cells, edifices, storage.Settings, pawns.Items, designations);
+            pawns.StorageUnits = units;
+            // And back the other way, which is what makes SettingsAt one resolver rather than two:
+            // the priority and filter intents name a cell, and that cell may be a painted zone's or
+            // a raised shelf's. Without this the whole storage control silently does nothing over a
+            // shelf — the panel opens and closes again, which is the shape of fault design 20 §8
+            // records as "Assign did nothing, three times".
+            storage.Units = units;
             // U29: the seam through which a job that edits the world says the structure changed.
             // Taken off the system rather than passed in beside it, so the solver a collapse is
             // computed from and the solver a wall marks dirty cannot be two different objects.
@@ -154,7 +168,9 @@ namespace Odyssey.Sim.Pawns
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
-                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices, growing, enclosure, storage, temperature))
+                .AddSnapshotContributor(new CellDetailContributor(
+                    pawns.Cells, edifices, growing, enclosure, storage, units, pawns.Items,
+                    temperature))
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
@@ -184,6 +200,7 @@ namespace Odyssey.Sim.Pawns
             incidents.Attach(builder);
             growing.Attach(builder);
             storage.Attach(builder);
+            units.Attach(builder);
             return builder;
         }
     }

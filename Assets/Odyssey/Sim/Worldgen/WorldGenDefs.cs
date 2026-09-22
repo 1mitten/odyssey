@@ -358,13 +358,25 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeBed = 12;
 
         /// <summary>
+        /// A shelf: the colony's first buildable <b>store</b>, and the second thing that arrives
+        /// only by <c>ConstructionGrid.Raise</c> (docs/design/26-storage.md, the S2 branch).
+        ///
+        /// <para><b>13, and the numbers it must not collide with are 10 and 11.</b> Those are the
+        /// trees' — <c>NaturalContent.FirstEdifice</c> reserved them the day woodland landed — and
+        /// 12 is the bed. Spelled as a literal with this note for the reason the bed's own comment
+        /// gives: CoreContent does not depend on the natural tables, and a number that can be read
+        /// beside the ones it must not collide with is safer than an offset to re-derive.</para>
+        /// </summary>
+        public const ushort EdificeShelf = 13;
+
+        /// <summary>
         /// The first heat source (design 28 §7). Like the bed, it arrives only by
         /// <c>ConstructionGrid.Raise</c> — nothing stamps it — and it is the one building whose
         /// <c>heatPerPass</c> is not zero, which is the whole reason it exists: Rime is survivable
-        /// by shelter and fire, and nothing else. 13, the next free id after the bed — spelled as
+        /// by shelter and fire, and nothing else. 14, the next free id after the shelf — spelled as
         /// a literal for the same reason the bed's is.
         /// </summary>
-        public const ushort EdificeCampfire = 13;
+        public const ushort EdificeCampfire = 14;
 
         /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from

@@ -14,11 +14,12 @@ lever three other lines depend on goes above a nicety. **Prefer closing a row to
 when more than about ten rows are open, the next session takes a fix or a measurement, not a new
 feature, unless the owner says otherwise.
 
-**The rule is already breached, and the breach is widening.** There are **49 open rows** as of
-2026-09-21 — 28 on the day this file was written, 29 the day after, 45 now. Sixteen more in two
-days against a ceiling of about ten, and every one of them is a change nobody has looked at. That
-is the finding, not an oversight: the ceiling is where the list should be, not where it is, and a
-rule that is quietly wrong on arrival is a rule the next session learns to ignore.
+**The rule is already breached, and the breach is widening.** There are **58 open rows** as of
+2026-09-22, counted rather than remembered — 28 on the day this file was written, 29 the day
+after, 58 now. Twenty-nine more in three days against a ceiling of about ten, and every one of
+them is a change nobody has looked at. That is the finding, not an oversight: the ceiling is
+where the list should be, not where it is, and a rule that is quietly wrong on arrival is a rule
+the next session learns to ignore.
 
 ## Open
 
@@ -78,6 +79,29 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
   §13.) It used to lay the settings window over the load list. It should now go back one level,
   and do nothing at all on the root column. A wrong answer looks like two screens on top of each
   other again, or an Escape that goes back further than one level.
+
+- **Is the pointer accurate now, and does the crosshair help or clutter?** (`claude/pointer-cursor`,
+  `docs/design/28-pointer-cursor.md`.) Two changes under one question. The game now draws its own
+  cursor — an arrow, and a **crosshair in the armed order's colour** over the world, reverting to
+  the arrow over the HUD — and, separately, **every pick is now resolved after the camera has
+  moved** instead of a frame before it, which is the actual candidate for *"doesn't seem super
+  accurate"*. **Arm Mine and pan hard with W or the edge while the ghost is up**: that is the
+  gesture the old code was wrong on and a still camera never was. A wrong answer looks like the
+  ghost still trailing behind the pointer while the board slides — in which case the remaining
+  offset is `SlicePicker` marching cell boxes against art drawn off them (section 5), and the next
+  move is the overlay that draws the picked box and the raw ray hit together. Also worth one
+  glance: whether a crosshair over the board is a help or a busy little thing in the way, and
+  whether the arrow coming back over a panel reads as *this click will not reach the world*.
+
+- **Does a quarried field read as a loss or as a bug?** (`claude/floating-crops`,
+  `docs/design/22-growing.md` §10.) The reported fault is fixed: mine the soil under a sown cell
+  and the seed and the zone paint go with it rather than hanging in the air. What nobody has judged
+  is the *silence* — there is no confirmation before the dig and no alert after it, so a player who
+  quarries under their own field finds out by looking. **Paint a few cells, sow them, mark the soil
+  under two of them to mine, and watch.** A wrong answer looks like you not noticing the field
+  shrank until much later, or noticing and thinking the game ate your zone by mistake; either sends
+  this to an alert or a confirmation. The other half is the shape left behind: the surviving cells
+  of the field stay zoned, so a field with a bite taken out of it should still read as one field.
 
 - **Does the horizon repeat now there are eight kinds of tree instead of sixteen?**
   (`claude/huge-map`, `docs/design/06-rendering-and-camera.md` §6c.4.) The surround costs its
@@ -165,7 +189,17 @@ rule that is quietly wrong on arrival is a rule the next session learns to ignor
   can empty itself at all**: the search reaches twelve cells, so a rock in the middle of a store
   more than about twenty-four wide has nowhere it can legally be put and will stay put. A store that
   size is exactly what the tool invites you to paint.
-
+- **Does a shelf earn its place?** (`claude/storage-shelves`, `docs/design/30-shelves.md`.) Build one
+  from the Build palette's Furniture row — it is wood or stone, five material, and it turns with R.
+  Then judge three things a test cannot. **Is eight stacks the right size?** One shelf does the job
+  of eight tiles of painted zone; if it feels like it ends the storage game, it is too big, and if
+  you find yourself building six in a row, too small. **Is Preferred the right default?** A new shelf
+  outranks every painted zone, so the colony starts moving goods on to it the moment it is finished —
+  that should read as the shelf working, and if instead you watch haulers cross the map to fill a
+  shelf you put somewhere silly, it wants to be Normal. **Can you read what is on one from across
+  the room?** The goods stand on the deck at a bit over half size, up to four stacks along the front;
+  a wrong answer looks like porridge you have to click to identify, and the fallback is fewer,
+  bigger visual slots.
 - **Do the order marks still draw?** (`claude/mark-pass-batching`,
   `docs/design/06-rendering-and-camera.md` §6c.1.) Every standing-order mark, cut slab and build
   fill now goes through one instanced call per colour instead of one submission per cell. Nothing

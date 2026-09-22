@@ -206,7 +206,29 @@
   </BuildingDef>
 
   <!--
-    THE FIRST HEAT SOURCE (design 28 §7). edifice 13 is CoreContent.EdificeCampfire.
+    THE SHELF. edifice 13 is CoreContent.EdificeShelf — 10 and 11 are the trees, 12 is the bed.
+    blocking false: a shelf is walked past, not around. A blocking one would be a wall a player
+    built by accident, and every placement would be a NavGraph rebuild.
+    needsClearCell true: the cell stops taking loose stacks the moment the shelf is raised, so
+    what is at a shelf's cell is in the shelf.
+    Cost and work are the bed's; a shelf is joinery of the same order.
+  -->
+  <BuildingDef>
+    <defName>Building_Shelf</defName>
+    <label>shelf</label>
+    <edifice>13</edifice>
+    <blocking>false</blocking>
+    <rotates>true</rotates>
+    <needsClearCell>true</needsClearCell>
+    <storageSlots>8</storageSlots>
+    <costCount>5</costCount>
+    <workToBuild>180</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.shelf</iconKey>
+  </BuildingDef>
+
+  <!--
+    THE FIRST HEAT SOURCE (design 28 §7). edifice 14 is CoreContent.EdificeCampfire.
 
     heatPerPass 1200 is in centi-degree-cells: in deepest Rime it holds a 6×6 room at roughly
     +38 °C over the outdoors - comfortable - and in Wash the same fire in the same room runs
@@ -223,7 +245,7 @@
   <BuildingDef>
     <defName>Building_Campfire</defName>
     <label>campfire</label>
-    <edifice>13</edifice>
+    <edifice>14</edifice>
     <blocking>true</blocking>
     <needsClearCell>true</needsClearCell>
     <heatPerPass>1200</heatPerPass>

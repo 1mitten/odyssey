@@ -17,6 +17,27 @@ namespace Odyssey.Hud
     /// Tabs whose systems do not exist yet are present and disabled, so the shape of the game is
     /// visible from the first version — the panel catalogue's guarantee, made concrete.
     /// </summary>
+    /// <summary>
+    /// One kind of thing on a built store: what it is, how much, and in how many of its bays.
+    ///
+    /// <para>A struct in a pooled list rather than a string built per frame, for the pane's usual
+    /// reason — this is rebuilt fifteen times a second while a store is selected.</para>
+    /// </summary>
+    public struct StoreContentRow
+    {
+        /// <summary>The registry key, for the icon beside the name.</summary>
+        public string IconKey;
+
+        /// <summary>The commodity's name, from the registry and never written here.</summary>
+        public string Name;
+
+        /// <summary>Units of it, summed across however many bays hold it.</summary>
+        public int Units;
+
+        /// <summary>How many of the store's bays it occupies.</summary>
+        public int Stacks;
+    }
+
     public struct InspectTab
     {
         public string Name;
@@ -174,6 +195,43 @@ namespace Odyssey.Hud
         public readonly List<int> JobCounts = new List<int>();
 
         public readonly List<InspectTab> Tabs = new List<InspectTab>();
+
+        /// <summary>
+        /// What a built store is holding, one row per kind, biggest first. Empty for everything
+        /// else — a painted zone's contents are on the board and are read off the board.
+        /// </summary>
+        public readonly List<StoreContentRow> StoreContents = new List<StoreContentRow>();
+
+        /// <summary>Whether the store under the pane is one the colony built, rather than painted.</summary>
+        public bool IsBuiltStore { get; private set; }
+
+        /// <summary>
+        /// Everything the Holding rows are drawn from, in one int.
+        ///
+        /// <para>The contents change as haulers arrive, which the filter's signature cannot see —
+        /// so the group has a cheap one of its own and the pane still rebuilds nothing on a frame
+        /// where nothing moved.</para>
+        /// </summary>
+        public int StoreContentsSignature
+        {
+            get
+            {
+                unchecked
+                {
+                    int signature = IsBuiltStore ? 17 : 0;
+                    for (int i = 0; i < StoreContents.Count; i++)
+                    {
+                        signature = signature * 31 + StoreContents[i].IconKey.GetHashCode();
+                        signature = signature * 31 + StoreContents[i].Units;
+                        signature = signature * 31 + StoreContents[i].Stacks;
+                    }
+                    return signature * 31 + StoreSummary.GetHashCode();
+                }
+            }
+        }
+
+        /// <summary>How full a built store is, as the Holding header says it: "4 of 8 stacks".</summary>
+        public string StoreSummary { get; private set; } = string.Empty;
         public readonly List<InspectCommand> Commands = new List<InspectCommand>();
 
         /// <summary>
@@ -290,6 +348,9 @@ namespace Odyssey.Hud
             Commands.Clear();
             _bedUnderPane = false;
             IsStore = false;
+            IsBuiltStore = false;
+            StoreSummary = string.Empty;
+            StoreContents.Clear();
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -535,13 +596,31 @@ namespace Odyssey.Hud
             // The subject stays `Cell`, deliberately: everything below still describes the tile, a
             // zone has no identity a selection could hold on to across an edit, and the pick
             // resolver goes on answering in cells. What changes is what the pane leads with.
-            IsStore = detail.StorageZone >= 0;
+            // **Either kind of store**, since 2026-09-21: a shelf is a store the player built
+            // rather than painted, and a pane that led with the tile for one and with the store for
+            // the other would be the same report arriving a second time. The ordinal is one series
+            // across both, so "Shelf 3" and "Stockpile 3" can never be the same store.
+            IsStore = detail.StoreKind != CellDetail.StoreNone;
+            // A painted zone's contents are on the board and are read off the board; only a built
+            // one has an inside that has to be described. The Holding group hangs off this rather
+            // than off the list being non-empty, so an empty shelf can say it is empty instead of
+            // the section silently not existing.
+            IsBuiltStore = detail.StoreKind == CellDetail.StoreShelf;
             if (IsStore)
             {
+                bool built = detail.StoreKind == CellDetail.StoreShelf;
                 StoreCells = detail.StorageCells;
-                Title = $"{Registry.Label(PaletteTools.Stockpile)} {detail.StorageOrdinal}";
-                Subtitle = StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
-                CellIconKey = PaletteTools.Stockpile;
+
+                string storeKey = built ? PaletteTools.Shelf : PaletteTools.Stockpile;
+                Title = $"{Registry.Label(storeKey)} {detail.StorageOrdinal}";
+                CellIconKey = storeKey;
+
+                // A zone's extent is its tiles; a shelf's is how full it is, because "1 tile" says
+                // nothing at all about a thing that is always one tile.
+                Subtitle = built
+                    ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks"
+                    : StoreCells == 1 ? "1 tile" : $"{StoreCells} tiles";
+                StoreSummary = built ? $"{detail.StoredStacks} of {detail.StoreSlots} stacks" : string.Empty;
                 // Named from the registry, not written here. "Tile" is already the name of a floor
                 // covering in `ui.arch.tool.tile`, so a literal would have been a second copy of a
                 // name the wiki owns — which `RegistryTests` said, and the answer to that test is
@@ -550,6 +629,11 @@ namespace Odyssey.Hud
                 Tabs.Add(new InspectTab { Name = Registry.Label(TabTile), Enabled = true, Reason = string.Empty });
                 if (ActiveTab < 0 || ActiveTab >= Tabs.Count) ActiveTab = 0;
             }
+
+            // Outside the branch on purpose: it clears as well as fills, and a list left behind
+            // by the last selection would be drawn over the next one. Every other field here is
+            // assigned on every path for the same reason.
+            FillStoreContents(snapshot, detail);
 
             string edifice = EdificeLabels.Title(detail.Edifice);
             string terrain = TerrainLabels.Label(detail.Terrain);
@@ -614,10 +698,14 @@ namespace Odyssey.Hud
         /// answer, and a guard that could not tell it from "no store at all" would leave the row
         /// standing over a cell the player had just un-zoned.
         /// </summary>
+        byte _cellRowsStoreKind;
+        byte _cellRowsStoredStacks;
+        byte _cellRowsStoredDef;
+        int _cellRowsStoredUnits;
         int _cellRowsStoragePriority;
 
         static int StoragePriorityOf(CellDetail detail) =>
-            detail.StorageZone >= 0 ? detail.StoragePriority + 1 : 0;
+            detail.StoreKind != CellDetail.StoreNone ? detail.StoragePriority + 1 : 0;
 
         int _cellRowsZonePlant;
         int _cellRowsZoneYield;
@@ -634,14 +722,6 @@ namespace Odyssey.Hud
         public bool BedUnderPane => _bedUnderPane;
 
         bool _bedUnderPane;
-
-        /// <summary>
-        /// Whether the tile under the pane is inside a storage zone, so its storage row can be
-        /// pressed — the pane's second interactive fact, and the way a player says what a store
-        /// takes. Cleared and set on the same cadence as <see cref="BedUnderPane"/>, so a stale
-        /// true cannot outlive the zone it described.
-        /// </summary>
-
 
         /// <summary>
         /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
@@ -701,10 +781,16 @@ namespace Odyssey.Hud
             // took this return, and never set it again. The row went on reading "Assign…" for ever
             // over a control that was dead, and the owner reported being unable to assign a bed
             // three times across two sessions before a test could say why (BedOwnerPickerTests).
-            _bedUnderPane = detail.EdificeQuality > 0;
+            // **And it asks what the thing is, not only whether it has a tier.** A quality above
+            // nought used to be a good enough proxy for "this is a bed" because a bed was the only
+            // thing that took one. The shelf takes none, so it does not trip this — but the next
+            // piece of quality-bearing furniture would, and the row it grew would open the *bed*
+            // picker over it. Three characters against a report.
+            _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
+
 
             if (_cellRowsFor == detail.CellIndex
                 && _cellRowsCost == detail.MoveCostPerMille
@@ -720,6 +806,10 @@ namespace Odyssey.Hud
                 && _cellRowsCropGrowth == detail.CropGrowth
                 && _cellRowsZoneYield == detail.ZoneYield
                 && _cellRowsStoragePriority == StoragePriorityOf(detail)
+                && _cellRowsStoreKind == detail.StoreKind
+                && _cellRowsStoredStacks == detail.StoredStacks
+                && _cellRowsStoredUnits == detail.StoredUnits
+                && _cellRowsStoredDef == detail.StoredDef
                 && _cellRowsIndoors == detail.IsIndoors
                 && _cellRowsTemp == detail.AmbientTempC) return;
 
@@ -737,6 +827,10 @@ namespace Odyssey.Hud
             _cellRowsCropGrowth = detail.CropGrowth;
             _cellRowsZoneYield = detail.ZoneYield;
             _cellRowsStoragePriority = StoragePriorityOf(detail);
+            _cellRowsStoreKind = detail.StoreKind;
+            _cellRowsStoredStacks = detail.StoredStacks;
+            _cellRowsStoredUnits = detail.StoredUnits;
+            _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
             _cellRowsTemp = detail.AmbientTempC;
 
@@ -787,12 +881,48 @@ namespace Odyssey.Hud
             // player changes and the thing that decides where the next armful goes; the size
             // follows it, because a zone has no name until storage groups arrive (S2) and "how
             // big" is the only other thing that tells two of them apart.
-            if (detail.StorageZone >= 0)
+            if (detail.StoreKind != CellDetail.StoreNone)
                 // A fact, not a control: the settings are a tab of their own since 2026-09-21, so
                 // this row says which rung the store is on and nothing opens from it. Two ways in
                 // to one panel is the one a player finds by accident.
                 Row(n++, "storage",
                     Registry.Label(StorageSettingsModel.PriorityKeys[detail.StoragePriority]));
+
+            // What a built store is actually holding, which a painted one has no equivalent of:
+            // its cells are the board and what is on them is read off the board.
+            //
+            // **Counted in stacks, not against a unit total.** "400 of 600" was the recorded form
+            // and it has no honest denominator: 600 is eight times wood's stack limit, and a shelf
+            // full of meals — which stack to twenty — would read "160 of 600" and look nearly
+            // empty. Stacks is the thing a shelf actually meters, and the `× n` form carries the
+            // amount beside it (docs/design/24-pile-reading.md §2).
+            if (detail.StoreKind == CellDetail.StoreShelf)
+            {
+                string holding;
+                if (detail.StoredStacks == 0)
+                    holding = "empty — " + detail.StoreSlots + " stacks free";
+                else
+                {
+                    // **Never a bare number.** This said `46 — 3 of 8 stacks` for a store holding
+                    // more than one kind, because the single-kind byte is 255 there and the amount
+                    // was printed on its own: a quantity of nothing named, which reads as a bug
+                    // whichever way you take it. Nor is it summed and labelled, because 400 wood
+                    // and 20 meals are not 420 of anything. The kinds themselves are listed on the
+                    // Storage tab now, so this line only has to say that there is more than one.
+                    //
+                    // **It falls back rather than trusting the scan.** `StoreContents` is filled
+                    // from the published things, and a caller that hands over a detail row with no
+                    // store cell on it — every test that builds one by hand — would otherwise be
+                    // told this shelf holds "0 kinds", which is a worse lie than the one being
+                    // fixed.
+                    string what = detail.StoredDef != 255
+                        ? Registry.Label(ItemLabels.IconKey(detail.StoredDef)) + " × " + detail.StoredUnits
+                        : StoreContents.Count > 1 ? StoreContents.Count + " kinds" : "mixed";
+                    holding = what + " — " + detail.StoredStacks + " of " + detail.StoreSlots + " stacks";
+                }
+
+                Row(n++, "holding", holding);
+            }
 
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");
@@ -827,6 +957,63 @@ namespace Odyssey.Hud
                 Row(n++, "support", detail.Support.ToString());
 
             while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
+        }
+
+        /// <summary>
+        /// What is in the store under the pane, gathered by kind, biggest first.
+        ///
+        /// <para><b>Off the things, not off a second channel.</b> A contained thing is published
+        /// in <see cref="WorldSnapshot.Things"/> at its store's own cell carrying its container id
+        /// — the decision <c>ThingView.Container</c> records — so the list a player reads and the
+        /// totals the Build palette and the stores panel count are the same rows. A contents
+        /// channel of its own would be the fifth place to look and the one that drifts.</para>
+        ///
+        /// <para>Scanned rather than indexed because a store holds at most a handful of kinds and
+        /// this runs only while one is selected. Sorted by amount so the thing there is most of is
+        /// the thing read first, and ties broken by name so the list does not shuffle under the
+        /// pointer as stacks come and go.</para>
+        /// </summary>
+        void FillStoreContents(WorldSnapshot snapshot, in CellDetail detail)
+        {
+            StoreContents.Clear();
+            if (detail.StoreKind != CellDetail.StoreShelf || detail.StoreCellIndex < 0) return;
+
+            GridSize size = snapshot.Size;
+            var things = snapshot.Things;
+
+            for (int i = 0; i < things.Length; i++)
+            {
+                if (things[i].Container == 0) continue;
+                if (size.Index(things[i].Cell) != detail.StoreCellIndex) continue;
+
+                int def = things[i].DefIndex;
+                int at = -1;
+                for (int row = 0; row < StoreContents.Count; row++)
+                    if (StoreContents[row].IconKey == ItemLabels.IconKey(def)) { at = row; break; }
+
+                if (at < 0)
+                {
+                    StoreContents.Add(new StoreContentRow
+                    {
+                        IconKey = ItemLabels.IconKey(def),
+                        Name = Registry.Label(ItemLabels.IconKey(def)),
+                        Units = things[i].Stack,
+                        Stacks = 1,
+                    });
+                    continue;
+                }
+
+                StoreContentRow had = StoreContents[at];
+                had.Units += things[i].Stack;
+                had.Stacks++;
+                StoreContents[at] = had;
+            }
+
+            StoreContents.Sort(static (a, b) =>
+            {
+                int byAmount = b.Units.CompareTo(a.Units);
+                return byAmount != 0 ? byAmount : string.CompareOrdinal(a.Name, b.Name);
+            });
         }
 
         /// <summary>Centi-degrees to the form the pane reads them in: one decimal, signed,

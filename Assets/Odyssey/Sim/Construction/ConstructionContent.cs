@@ -111,6 +111,16 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int workToBuild = 135;
 
+        /// <summary>
+        /// How many stacks this thing holds, or 0 for anything that is not a store.
+        ///
+        /// <para>A field rather than a rule keyed off the edifice id, for the same reason
+        /// <see cref="needsClearCell"/> is one: it is a fact about the shape of the thing, and the
+        /// table is where facts about things live. It is also what makes a second, larger store one
+        /// row of content rather than a second code path.</para>
+        /// </summary>
+        public int storageSlots;
+
         /// <summary>Construction level a colonist needs before it may take the job. 0 for a wall.</summary>
         public int minSkill;
 
@@ -342,6 +352,18 @@ namespace Odyssey.Sim.Construction
         /// edifice id rather than a building handle, because a standing thing is a
         /// <c>PlacedEdifice</c> and the handle it was ordered from is not kept.
         /// </summary>
+        /// <summary>
+        /// How many stacks the thing standing as this edifice holds, or 0 where it is not a store.
+        /// Asked by edifice id because that is what a cell carries.
+        /// </summary>
+        public static int SlotsOf(ushort edifice)
+        {
+            for (int i = 0; i < Buildings.Count; i++)
+                if (Buildings[i].edifice == edifice && Buildings[i].storageSlots > 0)
+                    return Buildings[i].storageSlots;
+            return 0;
+        }
+
         public static bool NeedsClearCell(ushort edifice)
         {
             for (int i = 0; i < Buildings.Count; i++)
@@ -352,7 +374,7 @@ namespace Odyssey.Sim.Construction
         public static readonly string[] BuildingOrder =
         {
             "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
-            "Building_Bed", "Building_Door", "Building_Campfire",
+            "Building_Bed", "Building_Door", "Building_Shelf", "Building_Campfire",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -456,6 +478,21 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Door", label = "door", edifice = CoreContent.EdificeDoor,
                     blocking = false, rotates = true, costCount = 5, workToBuild = 135, minSkill = 0,
                     iconKey = "ui.arch.tool.door",
+                },
+
+                // The shelf: one cell of furniture that holds an inventory rather than standing in
+                // the way of one (docs/design/26-storage.md). Passable like the bed, because a
+                // blocking shelf is a wall a player built by accident and every placement would be
+                // the 1.19 ms one-cell NavGraph.Rebuild the baseline audit measured. needsClearCell
+                // because the cell it stands in stops taking loose stacks the moment it is raised:
+                // what is at a shelf's cell is in the shelf. The bed's cost and work exactly — a
+                // shelf is joinery of the same order, and eight stacks for five wood is a trade a
+                // player can see the point of without it ending the storage game.
+                new BuildingDef
+                {
+                    defName = "Building_Shelf", label = "shelf", edifice = CoreContent.EdificeShelf,
+                    blocking = false, rotates = true, needsClearCell = true, storageSlots = 8,
+                    costCount = 5, workToBuild = 180, minSkill = 0, iconKey = "ui.arch.tool.shelf",
                 },
 
                 // The first heat source (design 28 §7). Edifice 13, the next free id after the

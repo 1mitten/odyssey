@@ -6,6 +6,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.Ui;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Construction;
@@ -1061,8 +1062,18 @@ namespace Odyssey.Presentation.Bootstrap
 
         bool _speedChangePending;
 
+        /// <summary>
+        /// The pointer's one owner. Not part of a session: the menu has a cursor too, and a
+        /// teardown must not leave the player without one.
+        /// </summary>
+        readonly CursorDirector _cursor = new();
+
         void Update()
         {
+            // Before the session guard, deliberately. There is a pointer on the main screen and
+            // during a load, and both of them are this object's to set.
+            UpdatePointerCursor();
+
             if (_world == null) return;
 
             int speed = _world.GameSpeed;
@@ -1922,6 +1933,18 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // The shelf's ghost, from the shelf's own shape — the same three boxes the mesher
+            // draws, so the thing under the pointer and the thing on the board cannot disagree
+            // about where a shelf stands in its cell. It stands against the back of the cell, so
+            // that disagreement would be visible rather than subtle.
+            if (what.edifice == CoreContent.EdificeShelf)
+            {
+                Matrix4x4 shelf = ShelfShape.Root(cell.X, cell.Z, cell.Y, facing);
+                for (int part = 0; part < ShelfShape.PartCount; part++)
+                    _renderer.DrawGhost(module, tint, ShelfShape.Part(shelf, facing, part));
+                return;
+            }
+
             // A ladder's ghost stands on the face the built one will stand on: the wall it would be
             // fixed to if there is one, and the rotation the player has turned it to if there is
             // not. Asked of the model rather than worked out here, because that rule has one owner
@@ -2555,6 +2578,18 @@ namespace Odyssey.Presentation.Bootstrap
                 }
             }
 
+            // A shelf, for the bed's reason one cell along: it does not fill the cell it stands in,
+            // so a cell highlight is wrong about how big it is and which way it faces. Its box is
+            // off-centre in plan — the carcass is against the back — which is why the bracket asks
+            // ShelfShape rather than being built from the cell here.
+            if (_model.EdificeDef(index) == CoreContent.EdificeShelf)
+            {
+                ShelfShape.WorldBounds(cell.X, cell.Z, cell.Y, _model.EdificeFacing(index),
+                    out Vector3 shelfCentre, out Vector3 shelfSize);
+                _renderer.DrawSelectionBracket(shelfCentre, shelfSize + Vector3.one * ItemCursorMargin, colour);
+                return;
+            }
+
             if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
             {
                 _renderer.DrawCellHighlight(cell, colour);
@@ -2733,8 +2768,28 @@ namespace Odyssey.Presentation.Bootstrap
             return _developerOverlayStyle;
         }
 
+        /// <summary>
+        /// Hand the two facts that decide the pointer to <see cref="CursorDirector"/>: where it is,
+        /// and what is in hand. Both are already published for other reasons, which is why this is
+        /// three lines and not a subscription.
+        ///
+        /// <para>With no rig the pointer is treated as being over the interface — on the main
+        /// screen and between sessions the HUD <i>is</i> the whole screen, and the arrow is what
+        /// belongs there.</para>
+        ///
+        /// <para>See <c>docs/design/28-pointer-cursor.md</c>.</para>
+        /// </summary>
+        void UpdatePointerCursor() => _cursor.Update(
+            cameraRig == null || cameraRig.PointerWasOverInterface,
+            _designate != null ? _designate.Director.Tool : DesignateTool.None);
+
         void OnDestroy()
         {
+            // Give the pointer back before anything else goes. `Cursor.SetCursor` outlives play
+            // mode, so a session that exits holding a crosshair leaves the *editor* wearing one.
+            _cursor.Release();
+            CursorArt.Forget();
+
             TeardownSession();
 
             // And the two things teardown deliberately leaves standing, because neither is part

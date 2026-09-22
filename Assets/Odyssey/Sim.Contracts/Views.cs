@@ -447,13 +447,51 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many are in the pile. A ledger counts these, never the piles.</summary>
         public readonly int Stack;
 
-        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1)
+        /// <summary>
+        /// The store holding this thing, or 0 when it is lying on the floor.
+        ///
+        /// <para><b>A contained thing is still published, at the store's own cell.</b> That is the
+        /// decision, and it is what keeps every consumer of "what does the colony hold" correct
+        /// without being told anything: the stores panel counts stacks and not piles, the build
+        /// palette sums the material it can afford, and the almanac's find-it jumps to a cell.
+        /// Publishing shelved goods on a channel of their own would have given all four a second
+        /// place to look, and the one that was forgotten would have undercounted in silence — a
+        /// player refused a wall they can pay for.</para>
+        ///
+        /// <para>Two consumers must therefore <em>exclude</em> these rows rather than include them,
+        /// and both are about position rather than quantity: the renderer draws them on the shelf
+        /// instead of on the floor, and the picker does not offer them as click targets, because
+        /// clicking a shelf selects the shelf.</para>
+        /// </summary>
+        public readonly int Container;
+
+        /// <summary>
+        /// Which of the store's slots this thing sits on, so the drawn goods have somewhere to
+        /// stand. Meaningless where <see cref="Container"/> is 0.
+        ///
+        /// <para><b>Published rather than derived from the def, and that is the second answer to
+        /// this question.</b> The first was the def itself, which is stable and needs no field —
+        /// and is wrong the moment a store holds two stacks of one kind, which is the ordinary case
+        /// for anything bulky: eight stacks of wood would all draw in the same place.</para>
+        ///
+        /// <para>It is the thing's place in its store's ordered contents, so a store <b>re-packs</b>
+        /// when something leaves it and the goods behind shift along. That is a real motion on
+        /// screen and the honest price of never overlapping two heaps.</para>
+        /// </summary>
+        public readonly byte Slot;
+
+        public bool Contained => Container != 0;
+
+        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1,
+            int container = 0, byte slot = 0)
         {
             Id = id;
             Cell = cell;
             DefIndex = defIndex;
             StuffIndex = stuffIndex;
             Stack = stack;
+            Container = container;
+            Slot = slot;
         }
     }
 
@@ -639,6 +677,39 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One built store — a shelf — as the interface needs to know it.
+    ///
+    /// <para><b>Its own channel rather than a bit on <see cref="StoreView"/>,</b> which is one row
+    /// per <i>cell</i> of a painted zone and exists to tint the ground. A shelf's ground is not
+    /// tinted: the goods standing on it are the tell, and its cells are one each. The two answer
+    /// different questions about different things.</para>
+    ///
+    /// <para>Sparse, one row per store, and it exists so that the alert bar can say a store is
+    /// stuck without the simulation having to decide when to say so. What is published is the
+    /// state; the latch that turns a state into a row is the interface's own, exactly as it is for
+    /// an idle colonist.</para>
+    /// </summary>
+    public readonly struct StorageUnitView
+    {
+        /// <summary>The cell it stands in, as a whole-world index.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>Slots in use, and slots it has.</summary>
+        public readonly byte Stacks, Slots;
+
+        /// <summary>Ordered taken apart, so its contents should be leaving.</summary>
+        public readonly bool Emptying;
+
+        public StorageUnitView(int cellIndex, byte stacks, byte slots, bool emptying)
+        {
+            CellIndex = cellIndex;
+            Stacks = stacks;
+            Slots = slots;
+            Emptying = emptying;
+        }
+    }
+
+    /// <summary>
     /// One standing crop: a planted cell, what grows there, and how far it has got.
     ///
     /// <para><b>Quantised growth, and it is not <see cref="SiteView"/>'s argument repeated.</b>
@@ -772,7 +843,7 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int StorageZone;
 
-        /// <summary>The storage zone's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StorageZone"/> is -1.</summary>
+        /// <summary>The store's <c>StoragePriority</c>, 0 to 4. Meaningless where <see cref="StoreKind"/> is 0.</summary>
         public readonly byte StoragePriority;
 
         /// <summary>How many cells the store covers — the extent the pane's title line carries.</summary>
@@ -790,6 +861,52 @@ namespace Odyssey.Sim.Contracts
         public readonly int StorageOrdinal;
 
         /// <summary>
+        /// What kind of store covers this cell: 0 none, 1 a painted zone, 2 a built one.
+        ///
+        /// <para><b>A byte rather than "a capacity of nought means a zone".</b> The pane says
+        /// different words for the two — a zone is so many tiles, a shelf so many of its stacks in
+        /// use — and deriving the kind from a magic zero is how a shelf with nothing in it comes to
+        /// read as a stockpile.</para>
+        ///
+        /// <para><see cref="StorageCells"/> and <see cref="StorageOrdinal"/> are answered for both
+        /// kinds: a shelf is one cell and takes its place in the same cell-ordered count, so
+        /// "Store 3" means the third store on the board whether it was painted or raised.</para>
+        /// </summary>
+        public readonly byte StoreKind;
+
+        /// <summary>How many of a built store's slots are in use. 0 for anything else.</summary>
+        public readonly byte StoredStacks;
+
+        /// <summary>How many slots a built store has. 0 for anything else.</summary>
+        public readonly byte StoreSlots;
+
+        /// <summary>
+        /// The one commodity a built store holds, as an <c>ItemHandle</c> — or 255 where it is
+        /// empty or holds more than one kind.
+        /// </summary>
+        public readonly byte StoredDef;
+
+        /// <summary>How many units of <see cref="StoredDef"/> are in there.</summary>
+        public readonly int StoredUnits;
+
+        /// <summary>
+        /// The cell the store itself stands in, or -1 where no store covers this one.
+        ///
+        /// <para><b>Not always the cell that was clicked.</b> Solid terrain answers for the cell
+        /// above it, so a click on the ground under a shelf is a click on the shelf, and
+        /// <c>StorageZones.StoreCellOf</c> is the one owner of that rule. It is published because
+        /// contained goods are published at their <em>store's</em> cell: without it a reader of
+        /// this row cannot pick its own store's goods out of <see cref="WorldSnapshot.Things"/>,
+        /// and would have to guess with the clicked cell and be wrong exactly where the pane and
+        /// the panel already disagreed once.</para>
+        /// </summary>
+        public readonly int StoreCellIndex;
+
+        public const byte StoreNone = 0;
+        public const byte StoreZone = 1;
+        public const byte StoreShelf = 2;
+
+        /// <summary>
         /// How warm it is here, in centi-degrees (1,250 is 12.5 °C): the room's air where the
         /// cell is in an enclosed room, the outdoor curve where it is not. Every cell has an
         /// answer in a world with a thermal pass, which every colony has; <see cref="int.MinValue"/>
@@ -802,12 +919,21 @@ namespace Odyssey.Sim.Contracts
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
             bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
-            int storageCells = 0, int storageOrdinal = 0, int ambientTempC = int.MinValue)
+            int storageCells = 0, int storageOrdinal = 0,
+            byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
+            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1,
+            int ambientTempC = int.MinValue)
         {
+            StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
             StoragePriority = storagePriority;
             StorageCells = storageCells;
             StorageOrdinal = storageOrdinal;
+            StoreKind = storeKind;
+            StoredStacks = storedStacks;
+            StoreSlots = storeSlots;
+            StoredDef = storedDef;
+            StoredUnits = storedUnits;
             AmbientTempC = ambientTempC;
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -842,6 +968,7 @@ namespace Odyssey.Sim.Contracts
         SiteView[] _sites = Array.Empty<SiteView>();
         ZoneView[] _zones = Array.Empty<ZoneView>();
         StoreView[] _stores = Array.Empty<StoreView>();
+        StorageUnitView[] _units = Array.Empty<StorageUnitView>();
         PlantView[] _plants = Array.Empty<PlantView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
@@ -906,6 +1033,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many storage-zone cells the world holds, anywhere in it.</summary>
         public int StoreCount { get; private set; }
 
+        /// <summary>How many built stores this frame carries.</summary>
+        public int StorageUnitCount { get; private set; }
+
         /// <summary>How many planted cells are standing.</summary>
         public int PlantCount { get; private set; }
 
@@ -960,6 +1090,10 @@ namespace Odyssey.Sim.Contracts
         /// drawn none. See <see cref="StoreView"/>.
         /// </summary>
         public ReadOnlySpan<StoreView> Stores => new ReadOnlySpan<StoreView>(_stores, 0, StoreCount);
+
+        /// <summary>Every built store on the board. See <see cref="StorageUnitView"/>.</summary>
+        public ReadOnlySpan<StorageUnitView> StorageUnits =>
+            new ReadOnlySpan<StorageUnitView>(_units, 0, StorageUnitCount);
 
         /// <summary>Every standing crop, in cell-index order. See <see cref="PlantView"/>.</summary>
         public ReadOnlySpan<PlantView> Plants => new ReadOnlySpan<PlantView>(_plants, 0, PlantCount);
@@ -1050,6 +1184,7 @@ namespace Odyssey.Sim.Contracts
             SiteCount = 0;
             ZoneCount = 0;
             StoreCount = 0;
+            StorageUnitCount = 0;
             PlantCount = 0;
 
             AspectCount = 0;
@@ -1111,6 +1246,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _stores, StoreCount + 1);
             _stores[StoreCount++] = view;
+        }
+
+        internal void AddStorageUnit(in StorageUnitView view)
+        {
+            Grow(ref _units, StorageUnitCount + 1);
+            _units[StorageUnitCount++] = view;
         }
 
         internal void AddPlant(in PlantView view)

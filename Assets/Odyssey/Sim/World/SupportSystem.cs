@@ -145,6 +145,10 @@ namespace Odyssey.Sim.World
             }
 
             Pawns.Falling.DropFloatingItems(_pawns);
+            // And the rooted kinds, which do not fall but must not be left drawn over the
+            // hole either. A collapse can open ground under a field several cells from any
+            // cell in `_fallen`, because the slab that went was holding the soil up.
+            Pawns.Falling.UprootFloatingPlants(_pawns);
             _fallen.Clear();
         }
 

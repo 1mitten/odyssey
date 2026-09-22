@@ -59,7 +59,23 @@ namespace Odyssey.Tests.Sim
         // 2026-09-20: Appended Building_Door at handle 6 — edifice 2 (CoreContent.EdificeDoor),
         // passable (blocking false), 5 stuff and 135 ticks matching a wall. Gained `rotates`
         // so doors can be oriented by the player before placement and at wall corners/reveals.
-        const ulong BuildingFingerprint = 5521470646937622315UL;
+        // 2026-09-21: Appended Building_Shelf at handle 7 — edifice 13 (CoreContent.EdificeShelf),
+        // the colony's first buildable *store*. Passable and needsClearCell like the bed, 5 stuff
+        // and 180 ticks like the bed, and rotatable because a shelf has a front and a back: it is
+        // drawn with its carcass against one side of its cell, so a shelf that could not be turned
+        // would face the same way in every room. It takes no quality — a container's tier would be
+        // read by nothing, and the pane's owner row keys off a non-zero quality.
+        // Same day, same row: BuildingDef gained `storageSlots`, and the shelf declares 8. A field
+        // rather than a rule keyed off the edifice id, for the reason `needsClearCell` is one — it
+        // is a fact about the shape of the thing — and it is what makes a second, larger store one
+        // row of content rather than a second code path.
+        // 2026-09-22: Appended Building_Campfire at handle 8 — edifice 14, the first heat source
+        // (design 28 §7) and the one building whose `heatPerPass` is not zero. Blocking, wanting a
+        // clear cell like the bed, 3 stuff and 60 ticks. Written at handle 7 / edifice 13 and moved
+        // here on the merge with main: the shelf reached main first and both numbers are contracts,
+        // so the later branch is the one that moves — the same rule Building_Bed records at 5.
+        // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
+        const ulong BuildingFingerprint = 11920351214251548753UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
