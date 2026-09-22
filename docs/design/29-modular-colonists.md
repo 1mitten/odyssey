@@ -168,3 +168,59 @@ colour question reversed itself in our favour.
   filter missed all four. They must be measured before they enter the pool.
 - **How PolygonGeneric's eight ungendered hairs split by gender**, and what the two `Default_Hair`
   pieces actually depict. A contact sheet and the owner's eye, not a probe.
+
+
+---
+
+## 6. The plan
+
+Owner, 2026-09-22: *"do what you recommend"*, against the two questions §5 sent back. So: **the beard
+is the hair colour exactly** — identical is free, a shade off costs a second rectangle and a second
+colour, and identical can never desync — and **I pick the gender split for PolygonGeneric's eight
+ungendered hairs and bring a contact sheet for correction** rather than asking first.
+
+Two facts found while planning, both of which move work earlier:
+
+- **Gender does not reach the code.** `colonist-names.csv` has a `gender` column with three values,
+  `m`, `f` and `n`, and `emit_labels.py` deliberately does not emit it: *"nothing in the game reads
+  either yet, and a generated constant nothing reads is the artefact that misleads the next
+  session."* That was right when it was written and is now the first unit.
+- **A neutral name needs a rule.** `n` is a real value in the CSV. A neutral-named colonist draws
+  their body from **both** pools, dealt from their own seed like everything else. Recorded here
+  because silence would become an accident.
+
+### The units
+
+| Unit | What it does | Tier |
+|---|---|---|
+| **MC1** | `emit_labels.py` emits a `Genders` array beside `Names`, and `ColonistNames.GenderOf`. Both `--check` gates cover it. | fast |
+| **MC2** | The catalogue learns which rows are colonists and which sex each body is. Battle Royale's twelve keepers join the colonist family; Farm, Sci-Fi and Western rows stay resolvable but leave the lottery. | Unity |
+| **MC3** | `ColonistAppearance` gains a hair and a beard index, dealt from their own mixing streams off the same seed, with the pool chosen by gender. Greying is a function of age over the hair colour. | fast |
+| **MC4** | The hair and beard pieces become content: key, prefab, slot, sex, and whether the piece recolours. The six that span real texture are excluded here, in data, not in code. | Unity |
+| **MC5** | A live figure wears them — one rigid prop per slot, parented to `HumanBodyBones.Head`, re-set on every lease exactly as the material already is. **This is the unit that makes it visible.** | Unity |
+| **MC6** | The far form wears them, as two instanced modules at the baked head transform. Not needed for a playtest — a colony under 64 is all live figures — but needed before the colony grows. | Unity |
+| **MC7** | The flat no-art fallback gains a beard, and its crown follows the real hair instead of inventing one. | fast |
+| **MC8** | The contact sheet, and the frame cost measured with a control in the same run. | Unity |
+
+### The order, and why
+
+MC1 → MC3 are Unity-free and fast-tier tested, so they are the spine and they are cheap to get wrong
+and fix. MC2 and MC4 are content. **MC5 is the first unit a player can see**, and it is where the
+first playtest row is owed. MC6 can follow MC5 safely because nothing below 64 colonists uses the
+baked form — but it must land before the colony can grow past the cap, or a colonist loses their
+beard by being in a crowd, which is the exact failure `ColonistLook` was written to prevent.
+
+### What must not be broken on the way
+
+- **The look index space is the catalogue family index, always.** `ColonistAppearanceBook` says so
+  at length and `ColonistLookAgreementTests` pins it. Gendered pools are a *filter over family
+  indices*, never a re-indexing — the lottery picks from a list of legal family indices and returns
+  the family index. Compacting the survivors is precisely the bug the comment records.
+- **Nothing enters the save or the state hash.** An appearance stays a pure function of the pawn's
+  own roll seed. **If a golden moves, that is the finding**, not something to re-bake.
+- **Greying makes the appearance a function of age**, which is new: it was a function of seed and id
+  alone. `ColonistAppearanceBook`'s per-pawn cache is keyed on the seed and must gain the age, or a
+  colonist keeps the hair they were born with for ever. `PortraitStudio` needs nothing — it is keyed
+  on the appearance, so a greyed colonist is simply a new appearance and a new photograph.
+- **A clone without the packs must still build and run headless.** Every row degrades on its own;
+  a missing attachment drops that slot, never the colonist.
