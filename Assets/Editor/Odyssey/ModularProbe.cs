@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using Odyssey.Hud;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim.Contracts;
 using UnityEditor;
 using UnityEngine;
 
@@ -104,6 +105,8 @@ namespace Odyssey.EditorTools
                             i, ColonistAppearance.NoPiece))));
                 Write("hairs.png", hairShots, report);
 
+                SetupAgainstColony(catalogue, materials, report);
+
                 Debug.Log(report.ToString());
             }
             catch (Exception e)
@@ -117,6 +120,63 @@ namespace Odyssey.EditorTools
                 materials?.Dispose();
                 if (exitWhenDone) EditorApplication.Exit(exitCode);
             }
+        }
+
+        /// <summary>
+        /// The setup screen against the colony, in one process
+        /// (owner, 2026-09-22: <i>"the portraits on the character selection screen do not match up
+        /// with what generates in game"</i>).
+        ///
+        /// <para>The two differ in exactly one way that is hard to see by reading: the setup page
+        /// runs <b>before</b> <c>OdysseyBootstrap.BuildSession</c>, so the studio answers from
+        /// whatever book its own fallback built, and the session then replaces the book and clears
+        /// the cache. This reproduces both states in order and compares the appearance a candidate
+        /// is dealt on each side — which is the whole claim, and is either true or it is not.</para>
+        /// </summary>
+        static void SetupAgainstColony(ModuleCatalogue catalogue, ColonistMaterials materials,
+            StringBuilder report)
+        {
+            report.AppendLine();
+            report.AppendLine("-- the setup screen against the colony");
+
+            // 1. What the setup page sees: a studio with no book assigned, exactly as it is before
+            //    a session exists. Its fallback answers.
+            using var setup = new PortraitStudio(catalogue, materials);
+
+            // 2. What the colony gives: the book BuildSession assigns, from the world's seed.
+            const uint WorldSeed = 20260922u;
+            using var colony = new PortraitStudio(catalogue, materials)
+            {
+                Appearances = AppearanceBooks.For(WorldSeed, catalogue),
+            };
+
+            int disagreed = 0;
+            for (int slot = 0; slot < 3; slot++)
+            {
+                // The candidate's own seed and the id that slot will occupy -- the same two
+                // numbers HudShell.Start hands the studio.
+                uint candidate = (uint)(1_000_003 * (slot + 1) + 17);
+                PawnId willBe = Odyssey.Sim.Pawns.ColonistDraw.IdForSlot(slot);
+
+                // Ask through the public call first: PortraitStudio only builds its fallback book
+                // inside For(rollSeed, id), not in the property, so reading the book before any
+                // portrait has been asked for gives null. The setup page asks exactly this way.
+                setup.For(candidate, willBe);
+
+                ColonistAppearance onCard = setup.Appearances!.For(willBe.Value, candidate);
+                ColonistAppearance inGame = colony.Appearances!.For(willBe.Value, candidate);
+
+                bool same = onCard.Equals(inGame);
+                if (!same) disagreed++;
+                report.AppendLine($"   slot {slot} (pawn {willBe.Value}, seed {candidate}): " +
+                                  (same ? "agree" : "DISAGREE"));
+                report.AppendLine($"     card  {onCard}");
+                report.AppendLine($"     game  {inGame}");
+            }
+
+            report.AppendLine(disagreed == 0
+                ? "   the setup screen and the colony agree on all three"
+                : $"   {disagreed} of 3 DISAGREE -- reproduced");
         }
 
         /// <summary>

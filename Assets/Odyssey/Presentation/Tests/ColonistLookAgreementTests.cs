@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim.Contracts;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Tests
@@ -118,6 +119,53 @@ namespace Odyssey.Presentation.Tests
                 }
             }
             finally { Object.DestroyImmediate(catalogue); }
+        }
+
+        [Test]
+        public void PressingStartDoesNotChangeWhoTheCandidateWas()
+        {
+            // The live sequence, in order, in one studio -- which is what the game does and what
+            // two separate studios would not catch:
+            //
+            //   1. the setup page asks for a portrait before any session exists, so the studio
+            //      builds its own fallback book;
+            //   2. the player presses Start and BuildSession assigns the session's book and calls
+            //      Clear();
+            //   3. the roster asks for the same colonist again.
+            //
+            // Step 3 must answer what step 1 answered. It did not while the fallback was built
+            // from a row count rather than from the catalogue, and the owner's report was that the
+            // person on the card was not the person the colony gave them.
+            ModuleCatalogue catalogue = PooledCatalogue();
+            var materials = new ColonistMaterials();
+            var studio = new PortraitStudio(catalogue, materials);
+            try
+            {
+                const int Slot = 0;
+                PawnId willBe = Odyssey.Sim.Pawns.ColonistDraw.IdForSlot(Slot);
+                const uint Candidate = 4242u;
+
+                // Asked the way HudShell.Start asks, which is what builds the fallback book. The
+                // texture is null without a graphics device and that does not matter -- the book
+                // is what is under test.
+                studio.For(Candidate, willBe);
+                ColonistAppearance onCard = studio.Appearances!.For(willBe.Value, Candidate);
+
+                // What BuildSession does, in its order.
+                studio.Appearances = AppearanceBooks.For(20260922u, catalogue);
+                studio.Clear();
+
+                ColonistAppearance inColony = studio.Appearances.For(willBe.Value, Candidate);
+
+                Assert.That(inColony, Is.EqualTo(onCard),
+                    "the colonist chosen on the setup screen is not the colonist the colony gave");
+            }
+            finally
+            {
+                studio.Dispose();
+                materials.Dispose();
+                Object.DestroyImmediate(catalogue);
+            }
         }
 
         [Test]
