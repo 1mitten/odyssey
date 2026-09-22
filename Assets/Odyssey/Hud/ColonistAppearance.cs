@@ -304,17 +304,33 @@ namespace Odyssey.Hud
             }
         }
 
+        /// <summary>
+        /// Two appearances are the same person only if every visible thing about them matches.
+        ///
+        /// <para><b>The piece indices are part of this, and leaving them out was a real bug.</b>
+        /// <see cref="PortraitStudio"/> caches a photograph <i>keyed on the appearance</i> — that
+        /// is its whole performance argument, since two colonists who genuinely look alike should
+        /// share one picture. When hair and beards were added and this was not, every colonist
+        /// with the same body and colours collapsed onto one cache entry, and the first one
+        /// photographed lent its face to all of them. The symptom was a contact sheet on which
+        /// fifteen different hair pieces drew the identical frame.</para>
+        ///
+        /// <para>Anything added to this struct that a drawer can see belongs here too.</para>
+        /// </summary>
         public bool Equals(ColonistAppearance other) =>
             Look == other.Look && Skin.Equals(other.Skin) && Hair.Equals(other.Hair) &&
-            Cloth.Equals(other.Cloth) && Cloth2.Equals(other.Cloth2);
+            Cloth.Equals(other.Cloth) && Cloth2.Equals(other.Cloth2) &&
+            HairPiece == other.HairPiece && BeardPiece == other.BeardPiece;
 
         public override bool Equals(object? obj) => obj is ColonistAppearance other && Equals(other);
 
         public override int GetHashCode() =>
-            unchecked((((Look * 397) ^ (int)Skin.Packed) * 397 ^ (int)Hair.Packed) * 397 ^ (int)Cloth.Packed);
+            unchecked(((((((Look * 397) ^ (int)Skin.Packed) * 397 ^ (int)Hair.Packed) * 397 ^
+                         (int)Cloth.Packed) * 397 ^ HairPiece) * 397) ^ BeardPiece);
 
         public override string ToString() =>
-            "look " + Look + ", skin " + Skin + ", hair " + Hair + ", cloth " + Cloth + "/" + Cloth2;
+            "look " + Look + ", skin " + Skin + ", hair " + Hair + ", cloth " + Cloth + "/" + Cloth2 +
+            ", hairPiece " + HairPiece + ", beard " + BeardPiece;
     }
 
     /// <summary>

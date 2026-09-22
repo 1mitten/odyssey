@@ -191,6 +191,44 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        // ------------------------------------------------------------------ equality
+
+        [Test]
+        public void TwoColonistsDifferingOnlyInHairAreNotTheSamePerson()
+        {
+            // PortraitStudio caches a photograph keyed on the appearance -- that is its whole
+            // performance argument. When hair and beards were added and Equals was not, every
+            // colonist with the same body and colours collapsed onto one cache entry and the
+            // first one photographed lent its face to all of them. The symptom was a contact
+            // sheet on which fifteen different hair pieces drew the identical frame.
+            var a = new ColonistAppearance(1, Skin, Hair, Cloth, Cloth2, 3, 2);
+            var b = new ColonistAppearance(1, Skin, Hair, Cloth, Cloth2, 4, 2);
+            var c = new ColonistAppearance(1, Skin, Hair, Cloth, Cloth2, 3, 5);
+            var same = new ColonistAppearance(1, Skin, Hair, Cloth, Cloth2, 3, 2);
+
+            Assert.That(a, Is.Not.EqualTo(b), "a different hair piece is a different person");
+            Assert.That(a, Is.Not.EqualTo(c), "a different beard is a different person");
+            Assert.That(a, Is.EqualTo(same));
+            Assert.That(a.GetHashCode(), Is.EqualTo(same.GetHashCode()));
+        }
+
+        [Test]
+        public void ADictionaryKeyedOnAppearanceTellsThePiecesApart()
+        {
+            // The property the cache actually needs, asserted the way the cache uses it.
+            var seen = new HashSet<ColonistAppearance>();
+            for (int piece = 0; piece < 15; piece++)
+                seen.Add(new ColonistAppearance(1, Skin, Hair, Cloth, Cloth2, piece,
+                    ColonistAppearance.NoPiece));
+
+            Assert.That(seen.Count, Is.EqualTo(15));
+        }
+
+        static readonly Rgb24 Skin = Rgb24.FromHex(0xE0B088);
+        static readonly Rgb24 Hair = Rgb24.FromHex(0x3B2A1E);
+        static readonly Rgb24 Cloth = Rgb24.FromHex(0x4A4F55);
+        static readonly Rgb24 Cloth2 = Rgb24.FromHex(0x2A2E33);
+
         [Test]
         public void TheSameSeedAndPawnAlwaysDealTheSamePerson()
         {

@@ -101,6 +101,42 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Switch off whatever the pack already put on this body's head.
+        ///
+        /// <para><b>PolygonGeneric ships hair, hats, hoods, headsets, sunglasses and beards as
+        /// skinned children of the body, left active</b> — <c>CharacterSwatches</c> records the
+        /// same thing, having been caught by it when the largest-mesh rule was written. So a body
+        /// dealt one of our hair pieces wore two hairstyles at once, and a colonist could not be
+        /// given a bare head at all.</para>
+        ///
+        /// <para>It is also how the owner's *"anyone with headwear for the time being"* is
+        /// answered without losing the body: the cap comes off, the person stays in the colony
+        /// (owner, 2026-09-22).</para>
+        ///
+        /// <para>Matched on <c>_Attach_</c>, which is the packs' own naming for a thing worn
+        /// rather than a thing you are. A body child is named after the body — <c>Character_…</c>
+        /// or <c>SM_Gen_Chr_Business_Female_01</c> — and <c>Eyes</c> and <c>Eyebrows</c> are named
+        /// for themselves, so none of them match. Battle Royale's armour overlays do match and are
+        /// already inactive, so switching them off changes nothing.</para>
+        /// </summary>
+        public static int BareTheHead(GameObject instance)
+        {
+            int off = 0;
+            var renderers = instance.GetComponentsInChildren<Renderer>(includeInactive: true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                GameObject go = renderers[i].gameObject;
+                if (go.name.IndexOf("_Attach_", StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (!go.activeSelf) continue;
+
+                go.SetActive(false);
+                off++;
+            }
+
+            return off;
+        }
+
+        /// <summary>
         /// Hang an empty renderer off the head bone, ready to be dressed.
         ///
         /// <para>It starts disabled and is only switched on when something gives it a mesh, so a

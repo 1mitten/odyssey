@@ -2228,6 +2228,10 @@ namespace Odyssey.Presentation.World
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
 
+            // Whatever the pack already put on this head comes off, so our hair is the only hair
+            // and a bare head is reachable at all (docs/design/29-modular-colonists.md).
+            ColonistAttachments.BareTheHead(instance);
+
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
             //

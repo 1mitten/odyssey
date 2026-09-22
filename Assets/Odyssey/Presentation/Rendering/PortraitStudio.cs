@@ -467,6 +467,10 @@ namespace Odyssey.Presentation.Rendering
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
 
+            // The same bare head the figure director gives, or a colonist's portrait and the
+            // colonist would be wearing different things.
+            ColonistAttachments.BareTheHead(instance);
+
             // Two empty slots on the head bone, for the hair and the beard this look will be
             // dressed in. Made with the subject and not per portrait, because the subject is kept
             // and reused across every colonist wearing this body
