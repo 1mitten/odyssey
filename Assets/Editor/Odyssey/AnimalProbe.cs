@@ -222,7 +222,14 @@ namespace Odyssey.EditorTools
                     director.Sync(colony.World.Views.Current, start.Y, slice, 0f, colony.Pawns.Content.Movement.movePerTick, dt);
                     director.Evaluate(dt);
                     if (frame % 20 == 0 || frame == 179)
-                        sb.AppendLine($"frame {frame,3} cell {hog.Cell} path {hog.HasPath}: " + LegReport(root.transform));
+                    {
+                        // Measured on the figure the director is actually posing, not on the
+                        // first rig a search of the hierarchy happens to find: the pool keeps
+                        // rigs that are never posed, and the first version of this report
+                        // read one of those.
+                        Transform posed = FigureOf(director, hog.Id.Value) ?? root.transform;
+                        sb.AppendLine($"frame {frame,3} cell {hog.Cell} progress {hog.MoveProgress} path {hog.HasPath} {GaitReport(director, hog.Id.Value)} rigs {CountDeep(root.transform, "BackUpLeg.L")}: " + LegReport(posed));
+                    }
                 }
                 Debug.Log("[AnimalProbe] moving hog " + sb);
                 File.WriteAllText("Logs/animal-moving.txt", sb.ToString());
@@ -360,19 +367,85 @@ namespace Odyssey.EditorTools
             }
         }
 
+        /// <summary>
+        /// One line per leg: the segment lengths as drawn, the fold between them, and where the
+        /// sole is. <b>The rig's <c>Foot</c> bones are not in the leg chain</b> — they are the
+        /// IK targets the author animated against, siblings of the legs that sit on the ground
+        /// whatever the leg above them does — so nothing here is measured against one. The
+        /// first version of this report was, and it said the legs "held to the millimetre" while
+        /// they folded through ninety degrees: it was reading the body bob. Each segment is its
+        /// bone's own axis, which on this rig points down the leg, and the sole is the lower
+        /// segment's end, at the length it has at rest.
+        /// </summary>
+        static readonly System.Collections.Generic.Dictionary<string, float> _lowerRest = new();
+
         static string LegReport(Transform root)
         {
             string[] legs = { "BackUpLeg.L", "FrontUpLeg.L", "BackUpLeg.R", "FrontUpLeg.R" };
+            string[] lows = { "BackLowLeg.L", "FrontLowLeg.L", "BackLowLeg.R", "FrontLowLeg.R" };
             string[] feet = { "BackFoot.L", "FrontFoot.L", "BackFoot.R", "FrontFoot.R" };
             var parts = new System.Collections.Generic.List<string>();
             for (int i = 0; i < 4; i++)
             {
                 Transform? up = FindDeep(root, legs[i]);
+                Transform? low = FindDeep(root, lows[i]);
                 Transform? foot = FindDeep(root, feet[i]);
-                if (up == null || foot == null) { parts.Add(legs[i] + " unbound"); continue; }
-                parts.Add($"{legs[i]} len {Vector3.Distance(up.position, foot.position):F3} footY {foot.position.y:F3}");
+                if (up == null || foot == null || low == null) { parts.Add(legs[i] + " unbound"); continue; }
+                float upper = Vector3.Distance(up.position, low.position);
+                // The lower segment's length is the rest distance from its joint to the target on
+                // the ground, which the target's own height gives back whatever the pose is.
+                if (!_lowerRest.TryGetValue(lows[i], out float lower))
+                    _lowerRest[lows[i]] = lower = Vector3.Distance(low.position, foot.position);
+                float fold = Vector3.Angle(up.up, low.up);
+                Vector3 sole = low.position + low.up * lower;
+                parts.Add($"{legs[i]} upper {upper:F3} fold {fold:F0} soleY {sole.y - foot.position.y:+0.000;-0.000}");
             }
             return string.Join("  ", parts);
+        }
+
+        /// <summary>
+        /// The computed gait's own state for one pawn's figure, read by reflection because the
+        /// figure list is the director's own business and an instrument may look where a
+        /// caller may not. Says whether the gait is engaged at all — the question the leg report
+        /// cannot answer on its own.
+        /// </summary>
+        static Transform? FigureOf(Odyssey.Presentation.World.PawnFigureDirector director, int pawnId)
+        {
+            var field = typeof(Odyssey.Presentation.World.PawnFigureDirector).GetField("_figures",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (field?.GetValue(director) is not System.Collections.IEnumerable figures) return null;
+            foreach (object figure in figures)
+            {
+                var type = figure.GetType();
+                if ((int)type.GetField("Pawn")!.GetValue(figure)! != pawnId) continue;
+                return type.GetField("Transform")!.GetValue(figure) as Transform;
+            }
+            return null;
+        }
+
+        static int CountDeep(Transform root, string name)
+        {
+            int n = root.name == name ? 1 : 0;
+            for (int i = 0; i < root.childCount; i++) n += CountDeep(root.GetChild(i), name);
+            return n;
+        }
+
+        static string GaitReport(Odyssey.Presentation.World.PawnFigureDirector director, int pawnId)
+        {
+            var field = typeof(Odyssey.Presentation.World.PawnFigureDirector).GetField("_figures",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (field?.GetValue(director) is not System.Collections.IEnumerable figures) return "gait ?";
+            foreach (object figure in figures)
+            {
+                var type = figure.GetType();
+                if ((int)type.GetField("Pawn")!.GetValue(figure)! != pawnId) continue;
+                var gait = type.GetField("Gait")!.GetValue(figure) as Odyssey.Presentation.World.QuadrupedGait;
+                float speed = (float)type.GetField("Speed")!.GetValue(figure)!;
+                return gait == null
+                    ? $"speed {speed:F2} gait none"
+                    : $"speed {speed:F2} weight {gait.Weight:F2} phase {gait.Phase:F2} stride {gait.Stride:F3}";
+            }
+            return "gait no-figure";
         }
 
         static Transform? FindDeep(Transform root, string name)

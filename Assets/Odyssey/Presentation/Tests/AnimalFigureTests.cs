@@ -125,22 +125,35 @@ namespace Odyssey.Tests.Presentation
                 Transform fore = FindDeep(moving.transform, "FrontUpLeg.L")!;
                 Transform hind = FindDeep(moving.transform, "BackUpLeg.R")!;
                 Transform otherFore = FindDeep(moving.transform, "FrontUpLeg.R")!;
+                Transform foreLow = FindDeep(moving.transform, "FrontLowLeg.L")!;
+                Transform otherLow = FindDeep(moving.transform, "FrontLowLeg.R")!;
                 Quaternion foreBefore = fore.rotation, hindBefore = hind.rotation, otherBefore = otherFore.rotation;
+                Quaternion foreLowBefore = foreLow.rotation, otherLowBefore = otherLow.rotation;
+                Vector3 right = moving.transform.right;
 
-                // A quarter of a stride at full weight.
+                // A quarter of a stride at full weight: the right fore is a quarter into its
+                // stance and the left fore, half a cycle away, is in the middle of its swing.
                 gait.Advance(1f, gait.Stride);
                 gait.Advance(1f, gait.Stride * 0.25f);
                 Assert.That(gait.Phase, Is.EqualTo(0.25f).Within(1e-3f));
-                gait.Apply(moving.transform.right, moving.transform.up);
+                gait.Apply(right, moving.transform.up);
 
-                float foreSwing = Quaternion.Angle(foreBefore, fore.rotation);
-                float hindSwing = Quaternion.Angle(hindBefore, hind.rotation);
-                Assert.That(foreSwing, Is.GreaterThan(5f), "the left fore leg swung");
+                float foreSwing = PitchAbout(foreBefore, fore.rotation, right);
+                float hindSwing = PitchAbout(hindBefore, hind.rotation, right);
+                float otherSwing = PitchAbout(otherBefore, otherFore.rotation, right);
+                Assert.That(Mathf.Abs(foreSwing), Is.GreaterThan(5f), "the left fore leg swung");
                 // A trot: the left fore and the right hind are a diagonal pair and swing together;
                 // the right fore is half a cycle away and swings the other way.
-                Assert.That(hindSwing, Is.EqualTo(foreSwing).Within(2f), "its diagonal partner swung with it");
-                float otherSwing = Quaternion.Angle(otherBefore, otherFore.rotation);
-                Assert.That(otherSwing, Is.EqualTo(foreSwing).Within(2f), "the opposite fore leg swung as far the other way");
+                Assert.That(Mathf.Sign(hindSwing), Is.EqualTo(Mathf.Sign(foreSwing)), "its diagonal partner swung the same way");
+                Assert.That(hindSwing, Is.EqualTo(foreSwing).Within(4f), "and about as far: a pelvis rocks a little less than a scapula slides");
+                Assert.That(Mathf.Sign(otherSwing), Is.EqualTo(-Mathf.Sign(foreSwing)), "the opposite fore leg swung the other way");
+                // Stance and swing are different shapes (owner, 2026-09-22, fifth look): the
+                // planted leg is straight and its carpus only follows the hip, while the swinging
+                // leg's carpus is folded back to carry the foot low and flat.
+                float plantedFold = PitchAbout(otherLowBefore, otherLow.rotation, right) - otherSwing;
+                float swingingFold = PitchAbout(foreLowBefore, foreLow.rotation, right) - foreSwing;
+                Assert.That(Mathf.Abs(plantedFold), Is.LessThan(1f), "the planted right fore is straight");
+                Assert.That(Mathf.Abs(swingingFold), Is.GreaterThan(20f), "the swinging left fore has its carpus folded");
 
                 // The control: a hog standing still keeps the clip's pose exactly.
                 QuadrupedGait still = QuadrupedGait.Bind(standing.transform)!;
@@ -207,6 +220,97 @@ namespace Odyssey.Tests.Presentation
                     "a rig without the four legs walks on its clips, as a colonist with no arms swings no axe");
             }
             finally { Object.DestroyImmediate(cube); }
+        }
+
+        /// <summary>
+        /// The step is a stance and a swing, not a sine (owner, 2026-09-22, fifth look): a
+        /// planted foot sweeps back in a straight line at the body's speed, and a swinging one
+        /// lifts quickly, carries flat and plants sharply, with no fold at all while planted.
+        /// </summary>
+        [Test]
+        public void TheStepIsAStanceAndASwingNotASine()
+        {
+            float duty = QuadrupedGait.Duty;
+            Assert.That(QuadrupedGait.HipAt(0f), Is.EqualTo(1f).Within(1e-4f), "the foot plants fully forward");
+            Assert.That(QuadrupedGait.HipAt(duty * 0.5f), Is.EqualTo(0f).Within(1e-4f), "sweeps back in a straight line");
+            Assert.That(QuadrupedGait.HipAt(duty), Is.EqualTo(-1f).Within(1e-4f), "and lifts fully back");
+            Assert.That(QuadrupedGait.HipAt(0.999f), Is.EqualTo(1f).Within(1e-2f), "and is at the front again as the cycle closes");
+            for (float p = 0f; p < duty; p += 0.05f)
+                Assert.That(QuadrupedGait.FlexAt(p), Is.Zero, $"no fold while planted, at {p:F2}");
+            float swing = 1f - duty;
+            Assert.That(QuadrupedGait.FlexAt(duty + swing * 0.34f), Is.EqualTo(1f).Within(1e-3f), "folded within a third of the swing: a quick lift");
+            Assert.That(QuadrupedGait.FlexAt(duty + swing * 0.5f), Is.EqualTo(1f), "and held: a flat carry");
+            Assert.That(QuadrupedGait.FlexAt(duty + swing * 0.74f), Is.EqualTo(1f), "until the last quarter");
+            Assert.That(QuadrupedGait.FlexAt(0.999f), Is.LessThan(0.01f), "and straight as it lands: a sharp plant");
+        }
+
+        /// <summary>
+        /// A foot leaves the ground in its swing and lands in front of where it stood (owner,
+        /// 2026-09-22, fifth look). Measured where the sole is drawn — the lower segment's end,
+        /// along its own bone — because the rig's <c>Foot</c> bones are IK targets outside the
+        /// chain that sit on the ground whatever the leg does. This is the test that would have
+        /// caught the first signs: with them, the hind sole went three centimetres <i>under</i>
+        /// the ground at mid-swing and every foot planted behind where it had lifted.
+        /// </summary>
+        [Test]
+        public void AFootLiftsInItsSwingAndPlantsInFront()
+        {
+            ModuleEntry hog = Catalogue().Find(ModuleIds.Animal(1))!;
+            Assume.That(hog.prefab, Is.Not.Null);
+            GameObject moving = Object.Instantiate(hog.prefab!);
+            try
+            {
+                QuadrupedGait gait = QuadrupedGait.Bind(moving.transform)!;
+                Vector3 forward = moving.transform.forward, up = moving.transform.up, right = moving.transform.right;
+                string[] lows = { "BackLowLeg.L", "FrontLowLeg.L", "BackLowLeg.R", "FrontLowLeg.R" };
+                string[] feet = { "BackFoot.L", "FrontFoot.L", "BackFoot.R", "FrontFoot.R" };
+                var rest = new Vector3[4];
+                var length = new float[4];
+                for (int i = 0; i < 4; i++)
+                {
+                    Transform low = FindDeep(moving.transform, lows[i])!;
+                    length[i] = Vector3.Distance(low.position, FindDeep(moving.transform, feet[i])!.position);
+                    rest[i] = Sole(low, length[i]);
+                }
+
+                // Weight up, then to the plant of the left hind (phase 0): its sole is in front
+                // of its rest and on the ground; half a cycle on, mid-swing, it is lifted.
+                gait.Advance(1f, gait.Stride);
+                gait.Apply(right, up);
+                Vector3 planted = Sole(FindDeep(moving.transform, lows[0])!, length[0]);
+                Assert.That(Vector3.Dot(planted - rest[0], forward), Is.GreaterThan(0.05f), "the hind foot plants in front of where it stands");
+                Assert.That(Vector3.Dot(planted - rest[0], up), Is.InRange(-0.01f, 0.06f), "and on, or just above, the ground: a straight leg reaching forward stands its sole a few centimetres up, which the plant closes");
+                Vector3 forePlanted = Sole(FindDeep(moving.transform, lows[1])!, length[1]);
+                Assert.That(Vector3.Dot(forePlanted - rest[1], forward), Is.LessThan(-0.03f), "the left fore, half a cycle away, is at the back of its stance");
+
+                float swingMid = QuadrupedGait.Duty + (1f - QuadrupedGait.Duty) * 0.5f;
+                gait.Advance(1f, gait.Stride * swingMid);
+                gait.Apply(right, up);
+                for (int i = 0; i < 4; i++)
+                {
+                    Vector3 sole = Sole(FindDeep(moving.transform, lows[i])!, length[i]);
+                    float lift = Vector3.Dot(sole - rest[i], up);
+                    bool swinging = i == 0 || i == 3;
+                    if (swinging)
+                        Assert.That(lift, Is.GreaterThan(0.015f), $"{lows[i]} is lifted mid-swing, not dragged: {lift * 100f:F1} cm");
+                    else
+                        Assert.That(lift, Is.InRange(-0.02f, 0.04f), $"{lows[i]} is planted: {lift * 100f:F1} cm");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(moving);
+            }
+        }
+
+        static Vector3 Sole(Transform lower, float length) => lower.position + lower.up * length;
+
+        /// <summary>The signed pitch from one rotation to another about an axis, degrees.</summary>
+        static float PitchAbout(Quaternion before, Quaternion after, Vector3 axis)
+        {
+            (after * Quaternion.Inverse(before)).ToAngleAxis(out float angle, out Vector3 a);
+            if (angle > 180f) { angle = 360f - angle; a = -a; }
+            return angle * Mathf.Sign(Vector3.Dot(a, axis));
         }
 
         static Transform? FindDeep(Transform root, string name)

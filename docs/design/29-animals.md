@@ -179,8 +179,8 @@ walk and run speeds *declared* (0.9 and 2.2 m/s) because neither file carries a 
 to measure them from. **The hog trots on a computed gait**, `QuadrupedGait`: the row asks for it
 and its locomotion is the idle alone; the gait binds the four legs by the rig's bone names at
 build, **measures the leg** from shoulder or hip joint to sole, advances its phase once a frame
-from the figure's measured speed, and lays forward-kinematic sines over the idle in the pose pass
-— exactly where `WorkSwing` lays an axe stroke. A rig without the four legs gets no gait and
+from the figure's measured speed, and lays a forward-kinematic step — a stance and a swing per
+leg, below — over the idle in the pose pass, exactly where `WorkSwing` lays an axe stroke. A rig without the four legs gets no gait and
 moves on its idle, as a colonist without bound arms swings no axe.
 
 **Why a trot, and why the stride is measured** (owner, 2026-09-22: *"the pig walking looks
@@ -205,6 +205,74 @@ camera, and ten centimetres of foot travel was not. What reads as twisting is al
 before each leg: a wander picks a new heading every few seconds and the figure turns on the spot
 to face it before the legs carry it. A walk clip for the pig would still be better than any of
 this.
+
+**Fifth look — the step is a stance and a swing, not a sine** (owner, 2026-09-22: *"the pig's
+leg movement is not quite there"*, with a note on how a pig's legs actually work: the scapula
+floats and drives the front stride, the carpus and the hock are one-axis hinges, the hock bends
+backwards while the stifle bends forwards, a trot is diagonal pairs half a cycle apart with a
+foot planted for the first half, the swing is *"a quick lift, a flat carry close to the ground
+and a sharp downward plant"*, the pelvis drops twice a stride and is lowest at the quarter
+points, and the spine neither rolls nor yaws more than a few degrees). Three of those the gait
+already had — the diagonal pairing, the hinge about one axis, the two-cycle bob — and three it
+did not, which is the whole of this look:
+
+- **A planted foot holds the ground.** A sine has the hip moving fastest at mid-stance and
+  slowest at the ends, so the foot slid against the body's own motion twice a cycle. `HipAt`
+  now sweeps the hip back in a *straight line* over the stance (`Duty`, 0.6 of the cycle: a
+  trot is near a half, and a little over reads as weight on the legs) and returns it, eased, in
+  the swing. The stride follows from that with nothing typed: the ground one leg covers in its
+  stance, `2·L·sin(A)`, over the duty factor — **0.46 m** on the rig's 23 cm legs, so
+  `SlideFactor` is **one** and stays as a dial.
+- **The swing has a shape.** `FlexAt` is nought through the whole stance, folds the carpus or
+  hock to 40° within the first third of the swing, holds it there while the foot carries flat
+  and low, and unfolds it over the last quarter so the foot lands straight. The old cosine had
+  the fold peaking at mid-swing and still half-folded as the foot planted.
+- **The leg reaches from the shoulder blade.** The rig has a root bone per leg at the body's
+  centre line above the upper leg (`FrontLeg.L`, `BackLeg.R`, …), which the gait had never
+  driven; it now swings 8° in front and 5° behind in phase with the hip, the scapula float and
+  the pelvis rock, so a front stride is not pinned at the shoulder. The hip swing came down from
+  40° to 30° at the upper leg, because the root adds to it and the reach was measured, not
+  guessed.
+
+The bob's sign was also wrong — the body *rose* at the quarter points and now drops 12 mm there
+— and the joint signs were already the anatomy the owner drew: the hind lower segment's pivot
+at 11 cm is the hock and folds forward, the fore's at 9 cm is the carpus and folds back.
+`TheStepIsAStanceAndASwingNotASine` pins the two profiles; the trot test now measures a *signed*
+pitch about the figure's right axis, because at a quarter cycle the planted and the swinging leg
+are no longer mirror images and should not be. Judged again from the four-phase strip and the
+moving probe; the numbers are still playtest numbers, and **a walk clip would still be better**.
+
+**Two things the rig cannot do, recorded rather than faked.** The owner's foot-roll — a heel
+pivot on the plant and a toe pivot on the lift — needs a hoof bone at the end of the chain, and
+this rig has none: the lower segment runs from the carpus or hock to the sole in one bone, and
+the four `Foot` bones are **not in the leg chain at all**. They are the IK targets the author
+animated against, siblings of the legs that sit on the ground whatever the leg above them does.
+That was also the moving probe's fault: its leg report measured from the joint to the `Foot`
+bone and said the lengths "held to the millimetre" through three looks, while the legs above
+were folding through ninety degrees — it was reading the body bob. The report now measures the
+segments along their own bone axes and puts the sole at the lower segment's end. And the roll
+and yaw the owner bounded at a few degrees are nought here, because the body bone is driven in
+height only; a sway is easy to add and easy to overdo, and the strip is the place to judge it.
+
+**And the corrected probe found the signs backwards.** A positive pitch about the figure's
+right swings a hanging leg *backwards* — Unity's left hand takes up to forward and forward to
+down — so the hip's "forward" reach had been a swing back, the fold had been landing at
+mid-stance rather than mid-swing, and the hind foot was extended rather than tucked: the
+report read its sole three centimetres under the ground at mid-swing. `ForwardSign` names the
+convention once, `KneeSign` is the hock forward and the carpus back in that convention, and
+`AFootLiftsInItsSwingAndPlantsInFront` measures the sole where it is drawn — the lower
+segment's end along its own bone — and asserts a swinging foot is up and a planting one is in
+front. That is the assertion three looks had been missing.
+
+**What is left is geometry, and it is recorded rather than tuned away.** A straight leg
+reaching 38° forward stands its sole about five centimetres above the ground at the plant and
+again at the lift, and touches only at mid-stance; the probe reads +6 cm just after a plant and
+−1.5 cm at mid-stance, where the bob puts the body lowest. Closing that is what the owner's IK
+targets and pole vectors do — the leg bends to keep the sole down — and this gait is forward
+kinematics on purpose, for the same reason the work swing is: one number per joint, no solver,
+nothing to converge. The extension a bent-at-rest leg can give back is one and a half
+centimetres, which is not enough. If the hover shows from the play camera the cheap move is to
+narrow the reach, at the cost of cadence; the honest one is still a walk clip.
 
 **The legs are written from their rest, never pre-multiplied** (owner, 2026-09-22, second look:
 *"the legs are spindles ... too thin"*, with a screenshot of legs drawn as rods longer than the

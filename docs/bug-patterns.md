@@ -476,6 +476,15 @@ one that was typed was the one that looked wrong. The fix measures the leg at bi
 the stride from it — and, because a model this squat must then either scurry or slide, names the
 compromise as one constant (`QuadrupedGait.SlideFactor`) rather than hiding it in a stride.
 
+**And the instrument that certified the fix was measuring the wrong thing** (found on the fifth
+look, 2026-09-22). `AnimalProbe.ShootMoving`'s leg report took the joint-to-`Foot` distance and
+reported it holding to the millimetre; the rig's `Foot` bones are IK targets outside the leg
+chain, planted on the ground whatever the leg does, so the number could only ever move with the
+body bob. It was a true statement about the wrong length. The report now measures each segment
+along its own bone axis and puts the sole at the lower segment's end; it reads a ninety-degree
+fold and a lifted sole on the swinging leg and nought on the planted one. **Check a new
+instrument against a pose it should reject before trusting a pose it accepts.**
+
 **What now stops it:** `AnimalFigureTests.TheHogsLegsTrotWhenItMovesAndRestWhenItStands` pins the
 measured leg to the rig (0.15–0.35 m) and the derived stride to what that leg can cover;
 `AnimalProbe.Shoot` writes a four-phase side-on strip so the gait is judged from a picture before

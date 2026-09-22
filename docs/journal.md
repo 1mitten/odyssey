@@ -10625,3 +10625,54 @@ on the PR, so the boundary rule is everyone's now. Two goldens moved and the mea
 the probe says why in one number per board: the sum of the pawns' cells, with food, rest, items
 and orders identical. A break wander ends a step later. That is the first re-bake in this unit
 where the colony itself changed rather than the hash seeing more, and it is written down as such.
+
+## 2026-09-22 — The pig's step, from the owner's own account of a pig
+
+The fifth look at the hog came with something better than a screenshot: a description of how a
+pig's legs work. The scapula floats and drives the front stride; the carpus and the hock are
+hinges on one axis; the hock bends backwards while the stifle bends forwards; a trot is diagonal
+pairs half a cycle apart, each foot planted for the first half; a swing is a quick lift, a flat
+carry close to the ground and a sharp plant; the pelvis drops twice a stride, lowest at the
+quarter points; and the spine neither rolls nor yaws.
+
+Held against the gait, half of that was already there and half was the fault. The diagonal
+pairing, the one-axis hinge and the two-cycle bob were in. What was not was any difference
+between a foot on the ground and a foot in the air. A sine on the hip has the foot moving fastest
+at mid-stance, when it should be moving at exactly the body's speed backwards and no faster, and
+the cosine on the knee had the fold peaking at mid-swing and still half there as the foot
+planted. Both sinusoids were smooth and both were wrong in the same way: they described a leg
+that never touches anything.
+
+The gait now has a stance and a swing. The hip sweeps back in a straight line for six tenths of
+the cycle and returns, eased, in the rest; the fold is nought through the stance, full within the
+first third of the swing, held, and gone by the plant. Two things fell out. The stride became
+geometric — the reach of one stance over the duty factor, 0.46 m on the rig's legs — so the slide
+factor that had been the tuning dial through three looks is one, and stays only as a dial. And
+the rig's root bone per leg, at the centre line above the upper leg, turned out to be the scapula
+the owner named, undriven until now; it swings a few degrees with the hip and the front stride
+stops looking pinned at the shoulder. The bob's sign was wrong as well: the body rose at the
+quarter points where it should drop.
+
+The trot test had to change its question. At a quarter cycle the planted leg and the swinging
+leg were mirror images under the sine and are not under a step, so the assertion that the
+opposite fore "swung as far the other way" is now that it swung the *other way*, measured as a
+signed pitch, and that the planted leg is straight while the swinging one is folded. A walk clip
+would still be better than all of this, and the owner has been asked whether the pack has one.
+
+The probe then caught its own fault. The moving hog's leg report, which had certified the rods
+fix by reading lengths that "held to the millimetre", read the same lengths under the new gait
+while the folds it also printed swung through ninety degrees — impossible on one rig. The `Foot`
+bones it measured to are the rig's IK targets, siblings of the legs that sit on the ground
+whatever the leg does, so the joint-to-foot distance could only ever move with the body bob, and
+that is what three looks had been reading. The report measures the segments along their own
+bones now. The lesson is the one the instrument was meant to teach: a number that never moves
+is either a guarantee or a gauge that is not connected, and the way to tell is to feed it a
+pose it should reject.
+
+Connected, it found the signs backwards within a minute: the hind sole three centimetres under
+the ground at mid-swing. A positive pitch about the figure's right swings a hanging leg back,
+not forward, so "reach" had been retreat and the fold had been landing at mid-stance. Every
+look since the first had been judged from a strip in which the legs moved the wrong way round
+and nobody, the owner included, could say what was wrong beyond "odd" — which is what a gait
+running backwards under a body moving forwards looks like. The sign is one named constant now
+and a test measures the sole.

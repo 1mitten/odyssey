@@ -43,7 +43,11 @@ the next session learns to ignore.
   the wander expiring mid-step; the detector reads none now), whether a hog or rat ever climbs a
   **mined face or a rock** that has no ramp drawn (a wrong answer is one on top of an outcrop or
   up a dug step), and whether the wider trot now reads as **legs moving** rather than the body
-  twisting — a wrong answer is still a twist, and the honest fix is a walk clip; whether the **flat two-colour** models
+  twisting — a wrong answer is still a twist, and the honest fix is a walk clip; after the
+  fifth look (2026-09-22, the owner's note on how a pig's legs work), whether a planted foot now
+  **holds the ground** while the body passes over it and the swinging one lifts, carries flat
+  and plants — a wrong answer is a foot that slides backwards against the ground or a leg that
+  is still bent as it lands; whether the **flat two-colour** models
   read as the same game as the Synty colonists; whether a hog at the foot of a ladder **turns
   away** rather than standing at it, and a rat goes up; and whether the wander reads as an animal
   living rather than pacing a corner or standing for minutes. Click one: the pane should say
