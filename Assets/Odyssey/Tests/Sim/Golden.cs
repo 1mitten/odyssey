@@ -242,6 +242,14 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        /// <remarks>
+        /// <b>All six numbers re-baked 2026-09-22 for animals</b> (design 29 section 6): a pawn's
+        /// kind entered <c>Pawn.ContributeTo</c> beside its roll seed, so every Generated and
+        /// Simulated hash moved by the hash seeing one more zero per colonist. Measured, not
+        /// assumed: <see cref="GoldenColonyProbe"/> run on <c>main</c> and on the branch, same
+        /// file, diffs clean in every number on all three boards. No golden world has an animal
+        /// in it (the debug menu is the only spawner), so nothing here walks differently.
+        /// </remarks>
         ///
         /// <remarks>
         /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
@@ -341,8 +349,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 615383821407621446UL,
-            Simulated = 7995543106961639164UL,
+            Generated = 16291183492068493670UL,
+            Simulated = 1835418700386341276UL,
         };
 
         /// <summary>
@@ -358,8 +366,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 9909738171743405583UL,
-            Simulated = 17073261919835053677UL,
+            Generated = 16544611470612847695UL,
+            Simulated = 12822355184187399901UL,
         };
 
         /// <summary>
@@ -395,8 +403,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 13717291003262180184UL,
-            Simulated = 8271998455538527332UL,
+            Generated = 5027966950043598296UL,
+            Simulated = 2948596161527354308UL,
         };
     }
 }

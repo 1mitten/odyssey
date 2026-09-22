@@ -144,7 +144,14 @@ namespace Odyssey.Tests.Sim
         // starting zone moving to a real `StorageZones` does move them, and that is measured
         // separately. The day a golden window includes a zone, the curve will move a hash and that
         // will be correct.
-        const ulong ContentFingerprint = 9529039565603056167UL;
+        //
+        // Moved a twelfth time, 2026-09-22, by animals (design 29 §1): SpeciesDef arrived with
+        // three rows — the person, the midden hog and the duct rat — and PawnKindDef gained
+        // `species`, with two animal kinds beside the colonist's. Taken from a freshly loaded
+        // pack. Every Simulated AND Generated golden moved with it, and not for this: the pawn's
+        // kind entered the hash the same day (§6), and the golden colony probe run on both
+        // branches diffs clean in every number — the hash sees one more zero per colonist.
+        const ulong ContentFingerprint = 18061545185568841636UL;
 
 
         [Test]
