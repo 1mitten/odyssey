@@ -151,7 +151,11 @@ namespace Odyssey.Tests.Sim
         // pack. Every Simulated AND Generated golden moved with it, and not for this: the pawn's
         // kind entered the hash the same day (§6), and the golden colony probe run on both
         // branches diffs clean in every number — the hash sees one more zero per colonist.
-        const ulong ContentFingerprint = 18061545185568841636UL;
+        //
+        // Moved a thirteenth time, 2026-09-22, the same day: the midden hog's movePerMille went
+        // 700 to 600 after the owner's first look at the trot ("way too fast"). No golden moved:
+        // no golden world has an animal in it.
+        const ulong ContentFingerprint = 5760087318366849525UL;
 
 
         [Test]

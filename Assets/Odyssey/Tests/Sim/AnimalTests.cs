@@ -284,7 +284,7 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo(standard * person.InnatePacePerMille() / 1_000 * person.ConditionPerMille() / 1_000),
                 "the species factor is exact for a person: no colonist's speed moved");
             Assert.That(hog.MoveRatePerMille(),
-                Is.EqualTo(standard * hog.InnatePacePerMille() / 1_000 * hog.ConditionPerMille() / 1_000 * 700 / 1_000));
+                Is.EqualTo(standard * hog.InnatePacePerMille() / 1_000 * hog.ConditionPerMille() / 1_000 * 600 / 1_000));
             Assert.That(rat.MoveRatePerMille(),
                 Is.EqualTo(standard * rat.InnatePacePerMille() / 1_000 * rat.ConditionPerMille() / 1_000 * 900 / 1_000));
         }

@@ -410,6 +410,30 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-22 — Legs drawn as rods: a pose multiplied onto itself, frame after frame
+
+Owner, with a screenshot: *"The pig is terrible - the legs and spindles and too thin."* The legs
+were drawn as thin rods longer than the body, which the model never had: every still taken of it
+at rest, and every still taken with the gait applied to a bare instance, showed a stubby pig.
+The difference in the game was the animator. The computed gait pitched each leg bone by
+pre-multiplying onto its current rotation, exactly as the colonists' `WorkSwing` does — and that
+is safe only while the clip underneath rewrites every bone before every pass. Under the game's
+own loop, with the idle held at speed nought beneath the gait, it did not, and the same pitch
+landed on top of last frame's, and the frame before's, until the skin stretched along a bone
+pointing somewhere no leg points. `PawnFigureDirector.Evaluate`'s own comment names this trap
+for the sleep pose ("the figure winds itself into a spiral"); the gait walked into it anyway.
+
+**The shape: an additive pose whose base is assumed, not owned.** Anything that composes onto
+"whatever is there" is correct only under an assumption about who wrote "there" and when. The
+fix is to own the base: capture each driven bone's rest at bind and write the pose absolutely,
+so nothing about what the clip did that frame can reach the answer.
+
+**What now stops it:** `AnimalProbe.ShootMoving` runs a real hog under the director's real
+animator for three seconds and prints leg lengths every twenty frames — a length that grows is
+compounding, one that holds is not — and photographs the result. And the standing instruments
+were the wrong ones: a still on a bare instance can never show a fault that only the animator
+produces, which is why the earlier strips looked fine and the game did not.
+
 ### 2026-09-22 — A walk cycling once per authored metre, on legs that are 23 cm long (P11)
 
 Owner, on the first animal figure: *"The pig walking looks awful - it looks odd and screwed up -

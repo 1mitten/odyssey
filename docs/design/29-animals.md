@@ -146,6 +146,25 @@ weight-shifting reads as noise under the trot. Judged from a four-phase side-on 
 (`docs/reference/screenshots/2026-09-22-hog-trot-strip.png`); the numbers are still playtest
 numbers, and `SlideFactor` is the one to move first.
 
+**The legs are written from their rest, never pre-multiplied** (owner, 2026-09-22, second look:
+*"the legs are spindles ... too thin"*, with a screenshot of legs drawn as rods longer than the
+body). The first pass pitched each bone onto whatever rotation it already had, as `WorkSwing`
+does for a colonist, which is safe only while the clip underneath rewrites every bone before
+every pass; under the game's own loop, with the idle held at speed nought under the gait, the
+pitches compounded and the legs wound into rods. The gait now captures each driven bone's rest
+at bind and writes the pose absolutely, so nothing the clip did or did not write that frame can
+reach it. `AnimalProbe.ShootMoving` is the instrument: a real colony, a real hog, the director's
+own animator, three seconds of trot, leg lengths printed every twenty frames and a photograph at
+the end (`docs/reference/screenshots/2026-09-22-hog-moving.png`). The lengths hold to the
+millimetre. **"Way too fast"** in the same look moved the hog's pace from 700 to 600 per mille
+and `SlideFactor` from 2 to 2.5: about 1.7 cycles a second at 0.9 m/s.
+
+**The model is not the problem, and a walk clip would still be better.** The stills at rest show
+the pig as it was made; every fault so far has been in what was laid over it. The supplied file
+carries only Idle and Jump. If the pack it came from has a walk or a trot for the pig — the
+author's animal sets usually ship one per animal, sometimes as a separate file — the catalogue row
+takes it as a gait beside the idle and the computed trot is switched off by its one flag.
+
 **A Generic rig gets everything a Humanoid one gets except the poses that need named human
 bones**: no work stance, gesture, climb, carry, footing or gaze. It is measured in its own height
 window (a rat is a quarter of a metre and the colonist window would call that a failed bake) and

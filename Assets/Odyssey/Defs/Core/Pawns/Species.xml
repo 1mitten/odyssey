@@ -29,7 +29,7 @@
     The midden hog: pig-descended, thrives on refuse heaps, the reliable meat animal
     (docs/design/proper-nouns.csv, creature.scavenger). Wild first; livestock is a later unit.
 
-    An ambler: 700 per mille of the colonist's walk. A hog never takes a ladder and cannot open a
+    An ambler: 600 per mille of the colonist's walk (was 700; owner, 2026-09-22: the trot read as "way too fast"). A hog never takes a ladder and cannot open a
     door, which is what TraverseMode.Animal already meant before any animal existed. Rests are
     INVENTED: five to fifteen seconds between legs at sixty ticks a second, a radius of eight
     cells so a hog drifts rather than paces. All three are playtest numbers.
@@ -39,7 +39,7 @@
     <labelKey>ui.pawn.hog</labelKey>
     <person>false</person>
     <bodyLengthMm>1200</bodyLengthMm>
-    <movePerMille>700</movePerMille>
+    <movePerMille>600</movePerMille>
     <traverseMode>Animal</traverseMode>
     <wanderRadius>8</wanderRadius>
     <restTicksMin>300</restTicksMin>

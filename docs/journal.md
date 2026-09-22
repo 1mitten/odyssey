@@ -10559,3 +10559,23 @@ The **cursor** round an animal is now its own drawn box, turned the way it faces
 box is the same box — `TryGetAnimalBox` owns both. The box comes from the renderer bounds and
 not from a bake, because on these rigs the bake reports a hundredth of the truth; the standing
 height an animal reports comes from the same box for the same reason.
+
+## 2026-09-22 — The pig's legs as rods, and the still that could not have shown it
+
+The owner's second look came with a screenshot: the hog's legs drawn as thin rods longer than
+the body. Every still taken until then — at rest, and with the gait applied to a bare instance —
+had shown a stubby pig, so the instrument was wrong before the code was: a still on a bare
+instance can never show a fault that only the animator produces. `AnimalProbe.ShootMoving` is
+the instrument that can — a real colony, a real hog, the director's own animator, three seconds
+of trot with leg lengths printed every twenty frames and a photograph at the end.
+
+Under it, the fault is what `PawnFigureDirector.Evaluate`'s own comment warns of for the sleep
+pose: an additive pose pre-multiplied onto whatever the bone already had, compounding frame on
+frame whenever the clip underneath is not the one rewriting the bone first. The gait now captures
+each driven bone's rest at bind and writes the pose absolutely, so the clip's behaviour cannot
+reach it; the leg lengths hold to the millimetre and the photograph is a pig mid-trot.
+
+"Way too fast" in the same look moved the hog's pace from 700 to 600 per mille and the gait's
+slide factor from 2 to 2.5, about 1.7 cycles a second. The model itself has never been the
+problem, and the honest answer to "is there another file" is yes: a walk or trot clip for this
+pig, if the pack has one, replaces the computed gait with one flag.

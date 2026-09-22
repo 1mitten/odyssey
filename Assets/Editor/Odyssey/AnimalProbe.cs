@@ -176,6 +176,112 @@ namespace Odyssey.EditorTools
             }
         }
 
+        /// <summary>
+        /// The hog under the figure director's own path — the animator, the graph, the idle clip
+        /// and the pose pass — moving for a hundred frames, with each leg's shoulder-to-sole
+        /// length printed as it goes and a side-on photograph at the end. Written because the
+        /// stills that looked right were taken on a bare instance with no animator, and the game
+        /// showed legs drawn as rods (owner, 2026-09-22). A leg length that grows frame by frame
+        /// is compounding; one that stays is not.
+        /// <c>scripts/unity.sh shot Odyssey.EditorTools.AnimalProbe.ShootMoving</c>.
+        /// </summary>
+        public static void ShootMoving()
+        {
+            int exitCode = 0;
+            GameObject? root = null;
+            Odyssey.Presentation.World.PawnFigureDirector? director = null;
+            try
+            {
+                var catalogue = AssetDatabase.LoadAssetAtPath<Odyssey.Presentation.Rendering.ModuleCatalogue>(PlayScene.CataloguePath);
+                root = new GameObject("MovingHog");
+                PlayScene.BuildSheetLighting(root.transform);
+                director = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, root.transform, 0);
+                var sb = new StringBuilder();
+                sb.AppendLine($"director enabled {director.Enabled}");
+
+                // A real colony, a real hog, the real snapshot: the world ticks at sixty a second
+                // and the director sees exactly what the game publishes.
+                var size = new Odyssey.Sim.Contracts.GridSize(40, 40, 16);
+                Odyssey.Sim.Pawns.ScenarioDef scenario = Odyssey.Sim.Pawns.ScenarioDef.Bare();
+                scenario.colonists = 1;
+                scenario.beds = 1;
+                scenario.startingFellRadius = 0;
+                Odyssey.Sim.Pawns.ColonyWorld colony = Odyssey.Sim.Pawns.ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: false);
+                Odyssey.Sim.Contracts.CellRef start = colony.Start;
+                int cell = size.Index(start.X + 3, start.Z, start.Y);
+                Odyssey.Sim.Pawns.Pawn hog = colony.Pawns.Pawns.Spawn(cell, Odyssey.Sim.Pawns.PawnKindIndex.MiddenHog);
+                int waited = 0;
+                while (!hog.HasPath && waited < 20_000) { colony.World.Tick(); waited++; }
+                sb.AppendLine($"hog set off after {waited} ticks; path length {hog.PathLength}");
+
+                const float dt = 1f / 60f;
+                var slice = new Odyssey.Presentation.CameraRig.SliceSettings();
+                for (int frame = 0; frame < 180; frame++)
+                {
+                    colony.World.Tick();
+                    director.Sync(colony.World.Views.Current, start.Y, slice, 0f, colony.Pawns.Content.Movement.movePerTick, dt);
+                    director.Evaluate(dt);
+                    if (frame % 20 == 0 || frame == 179)
+                        sb.AppendLine($"frame {frame,3} cell {hog.Cell} path {hog.HasPath}: " + LegReport(root.transform));
+                }
+                Debug.Log("[AnimalProbe] moving hog " + sb);
+                File.WriteAllText("Logs/animal-moving.txt", sb.ToString());
+
+                Transform? figure = null;
+                foreach (Transform child in root.transform) if (child.name.StartsWith("Animal figure")) figure = child;
+                if (figure != null)
+                {
+                    var cam = new GameObject("MovingCamera");
+                    try
+                    {
+                        var c = cam.AddComponent<Camera>();
+                        c.fieldOfView = 30f; c.nearClipPlane = 0.3f; c.farClipPlane = 500f;
+                        c.clearFlags = CameraClearFlags.SolidColor; c.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
+                        PlayScene.Shoot(c, figure.position + Vector3.up * 0.3f, 8f, 90f, 3.5f, "Logs/hog-moving.png");
+                        Debug.Log("[AnimalProbe] wrote Logs/hog-moving.png");
+                    }
+                    finally { Object.DestroyImmediate(cam); }
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[AnimalProbe] moving failed: " + e);
+                exitCode = 1;
+            }
+            finally
+            {
+                director?.Dispose();
+                if (root != null) Object.DestroyImmediate(root);
+                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            }
+        }
+
+        static string LegReport(Transform root)
+        {
+            string[] legs = { "BackUpLeg.L", "FrontUpLeg.L", "BackUpLeg.R", "FrontUpLeg.R" };
+            string[] feet = { "BackFoot.L", "FrontFoot.L", "BackFoot.R", "FrontFoot.R" };
+            var parts = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < 4; i++)
+            {
+                Transform? up = FindDeep(root, legs[i]);
+                Transform? foot = FindDeep(root, feet[i]);
+                if (up == null || foot == null) { parts.Add(legs[i] + " unbound"); continue; }
+                parts.Add($"{legs[i]} len {Vector3.Distance(up.position, foot.position):F3} footY {foot.position.y:F3}");
+            }
+            return string.Join("  ", parts);
+        }
+
+        static Transform? FindDeep(Transform root, string name)
+        {
+            if (root.name == name) return root;
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform? found = FindDeep(root.GetChild(i), name);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         static void Report(string path, StringBuilder sb)
         {
             sb.AppendLine("== " + path);

@@ -33,7 +33,9 @@ the next session learns to ignore.
   legs; it is a measured-stride trot now) — a wrong answer is feet that still slide, legs that
   paddle, or a cadence that reads as scurrying, and `QuadrupedGait.SlideFactor` is the dial;
   whether the **cursor** now sits flush round a selected hog and a rat rather than round the
-  tile, and whether a click on the animal's body lands; whether the **flat two-colour** models
+  tile, and whether a click on the animal's body lands; and, after the second look ("legs are
+  spindles", 2026-09-22), whether the hog's body and legs now stay the model's own shape while it
+  trots — a wrong answer is any leg longer than the body is tall; whether the **flat two-colour** models
   read as the same game as the Synty colonists; whether a hog at the foot of a ladder **turns
   away** rather than standing at it, and a rat goes up; and whether the wander reads as an animal
   living rather than pacing a corner or standing for minutes. Click one: the pane should say

@@ -6,48 +6,52 @@ namespace Odyssey.Presentation.World
     /// <summary>
     /// A computed four-legged gait, for a rig that has no walk clip (design 29 §8a;
     /// <c>docs/research/c-procedural-quadruped-gait.md</c>). The hog's whole locomotion is one
-    /// idle clip; this lays a <b>trot</b> over it, in the manner <c>WorkSwing</c> lays an axe
-    /// stroke over a colonist's idle: forward-kinematic sines on the hip and the knee of each leg,
-    /// written after the mixer has played, about the figure's own right axis so the same numbers
-    /// drive any rig with the four-leg bone convention.
+    /// idle clip; this lays a <b>trot</b> over it: forward-kinematic sines on the hip and the knee
+    /// of each leg, about the figure's own right axis so the same numbers drive any rig with the
+    /// four-leg bone convention.
     ///
-    /// <para><b>Why a trot and not a walk, and why the stride is measured</b> (owner, 2026-09-22:
-    /// <i>"the pig walking looks awful"</i>). The first version was a lateral-sequence walk cycling
-    /// once per authored metre. The rig's legs are 23 cm from shoulder joint to sole on a 1.2 m
-    /// body, and a 23 cm leg swinging 25° covers about 20 cm a cycle — so the feet slid over most
-    /// of every stride while the legs waved slowly, and a 2 cm bob rode on top at the same slow
-    /// rate. A short-legged animal at a metre a second does not walk; it trots, on diagonal pairs,
-    /// with quick short steps. The stride is therefore <i>derived from the leg the rig actually
-    /// has</i> — twice the leg length times the sine of the hip swing, the ground one leg covers
-    /// in its stance — and the cycle turns as fast as that stride demands. <see cref="SlideFactor"/>
-    /// admits that a stylised model this squat must either scurry or slide, and splits it.</para>
+    /// <para><b>The legs are set from their rest pose, never pre-multiplied onto whatever is
+    /// there</b> (owner, 2026-09-22, second look: <i>"the legs are spindles"</i>). The first
+    /// version multiplied a pitch onto each bone's current rotation, the way the colonists' work
+    /// pose does — which is safe there only as long as the clip underneath rewrites every bone
+    /// before every pass, and under the game's own loop, with the idle held at speed nought under
+    /// the gait, the hog's legs came out as rods. Every bone this gait drives is captured at
+    /// <see cref="Bind"/> and <see cref="Apply"/> writes its pose <i>absolutely</i> from that rest,
+    /// so nothing about what the clip did or did not write that frame can reach the answer:
+    /// <c>AnimalProbe.ShootMoving</c> runs the hog under the director's real animator for three
+    /// seconds and its leg lengths hold to the millimetre.</para>
     ///
-    /// <para><b>The phase is advanced once a frame</b> from the figure's measured speed
-    /// (<see cref="Advance"/>) and the angles are applied in the idempotent pose pass
-    /// (<see cref="Apply"/>), which may run twice a frame; splitting the two is what keeps a
-    /// second pass from taking a second step.</para>
+    /// <para><b>Why a trot and why the stride is measured</b> (owner, 2026-09-22, first look). The
+    /// rig's legs are 23 cm from shoulder joint to sole on a 1.2 m body; a walk cycling once per
+    /// authored metre slid the feet over most of every stride. A short-legged animal at speed
+    /// trots, on diagonal pairs, with quick short steps; the stride is derived from the leg the rig
+    /// actually has — twice the leg times the sine of the hip swing, the ground one leg covers in
+    /// its stance — and <see cref="SlideFactor"/> admits that a model this squat must either
+    /// scurry or slide, and splits it.</para>
     ///
-    /// <para><b>The knees are signed by anatomy.</b> A fore leg folds its lower segment back under
-    /// the body during the swing (the carpus flexes toward the tail); a hind leg's hock flexes the
-    /// other way, foot forward and up. Both are the direction that clears the ground.</para>
+    /// <para>The phase is advanced once a frame from the figure's measured speed
+    /// (<see cref="Advance"/>) and the angles are applied in the pose pass (<see cref="Apply"/>).
+    /// The knees are signed by anatomy: a fore leg folds its lower segment back under the body in
+    /// the swing, a hind leg's hock flexes the foot forward.</para>
     /// </summary>
     public sealed class QuadrupedGait
     {
         /// <summary>Hip fore-aft swing, half amplitude in degrees.</summary>
-        public const float HipDegrees = 30f;
+        public const float HipDegrees = 28f;
 
         /// <summary>Knee flex at mid-swing, degrees, signed per leg by <see cref="KneeSign"/>.</summary>
-        public const float KneeDegrees = 30f;
+        public const float KneeDegrees = 25f;
 
         /// <summary>Body bob, metres, twice per cycle: once per diagonal pair landing.</summary>
-        public const float BobMetres = 0.012f;
+        public const float BobMetres = 0.01f;
 
         /// <summary>
         /// How much further the body travels per cycle than the legs geometrically cover. 1 is
-        /// no sliding at all and a squat rig scurrying at three or four cycles a second; 2 halves
-        /// the cadence and lets the feet slide the other half. A playtest number.
+        /// no sliding at all and a squat rig scurrying at three or four cycles a second; 2.5
+        /// brings the cadence to about a trot's and a half while the feet slide the rest. A
+        /// playtest number (owner, 2026-09-22: "way too fast" at 2).
         /// </summary>
-        public const float SlideFactor = 2f;
+        public const float SlideFactor = 2.5f;
 
         /// <summary>Below this the legs ease back to the clip's pose rather than stepping on the spot.</summary>
         public const float StandingSpeed = 0.05f;
@@ -67,7 +71,10 @@ namespace Odyssey.Presentation.World
 
         readonly Transform?[] _upper = new Transform?[4];
         readonly Transform?[] _lower = new Transform?[4];
+        readonly Quaternion[] _upperRest = new Quaternion[4];
+        readonly Quaternion[] _lowerRest = new Quaternion[4];
         readonly Transform? _body;
+        readonly Vector3 _bodyRest;
 
         /// <summary>Shoulder or hip joint to sole, metres as drawn, averaged over the four legs.</summary>
         public float LegMetres { get; }
@@ -83,16 +90,25 @@ namespace Odyssey.Presentation.World
 
         QuadrupedGait(Transform?[] upper, Transform?[] lower, Transform? body, float legMetres)
         {
-            for (int i = 0; i < 4; i++) { _upper[i] = upper[i]; _lower[i] = lower[i]; }
+            for (int i = 0; i < 4; i++)
+            {
+                _upper[i] = upper[i];
+                _lower[i] = lower[i];
+                _upperRest[i] = upper[i] != null ? upper[i]!.localRotation : Quaternion.identity;
+                _lowerRest[i] = lower[i] != null ? lower[i]!.localRotation : Quaternion.identity;
+            }
             _body = body;
+            _bodyRest = body != null ? body.localPosition : Vector3.zero;
             LegMetres = legMetres;
             Stride = 2f * legMetres * Mathf.Sin(HipDegrees * Mathf.Deg2Rad) * SlideFactor;
         }
 
         /// <summary>
-        /// Find the four legs by the rig's bone names and measure them, or null if the rig has
-        /// none of them — an animal whose art is a different convention simply moves on its idle,
-        /// as a colonist with no bound arms swings no axe.
+        /// Find the four legs by the rig's bone names, measure them and remember their rest, or
+        /// null if the rig has none of them — an animal whose art is a different convention simply
+        /// moves on its idle, as a colonist with no bound arms swings no axe. Bind with the rig in
+        /// the pose the gait should rest on: a fresh instance, or one the idle has been evaluated
+        /// on to once.
         /// </summary>
         public static QuadrupedGait? Bind(Transform root)
         {
@@ -138,9 +154,9 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// Lay the gait over whatever the mixer wrote. Idempotent for a given phase: every angle
-        /// is derived from <see cref="Phase"/> and pre-multiplied onto the clip's pose, so a
-        /// second pass on a freshly written skeleton gives the same legs.
+        /// Write the legs for the current phase, from their rest pose. Idempotent: every bone is
+        /// reset to the rotation it had at <see cref="Bind"/> and then pitched, so neither a second
+        /// pass in the same frame nor a clip that never writes the bone can change the answer.
         /// </summary>
         public void Apply(Vector3 right, Vector3 up)
         {
@@ -153,19 +169,21 @@ namespace Odyssey.Presentation.World
                 // on the forward peak — and the knee flexes there, in the direction that clears
                 // the ground for that end of the animal. Straight through the stance.
                 float flex = KneeSign[i] * KneeDegrees * Mathf.Max(0f, Mathf.Cos(p * Mathf.PI * 2f)) * Weight;
-                Pitch(_upper[i], right, hip);
-                Pitch(_lower[i], right, flex);
+                Pitch(_upper[i], _upperRest[i], right, hip);
+                Pitch(_lower[i], _lowerRest[i], right, flex);
             }
             if (_body != null)
             {
                 float bob = BobMetres * 0.5f * (1f - Mathf.Cos(Phase * Mathf.PI * 4f)) * Weight;
+                _body.localPosition = _bodyRest;
                 _body.position += up * bob;
             }
         }
 
-        static void Pitch(Transform? bone, Vector3 axis, float degrees)
+        static void Pitch(Transform? bone, Quaternion rest, Vector3 axis, float degrees)
         {
             if (bone == null) return;
+            bone.localRotation = rest;
             bone.rotation = Quaternion.AngleAxis(degrees, axis) * bone.rotation;
         }
     }
