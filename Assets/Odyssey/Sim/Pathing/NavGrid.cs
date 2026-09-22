@@ -107,8 +107,17 @@ namespace Odyssey.Sim.Pathing
         /// May this mode enter shallow water? People wade (design 20); the animal modes do not.
         /// Deep water is impassable to everyone and is not a question of mode.
         /// </summary>
-        public static bool Swims(TraverseMode mode) =>
-            mode != TraverseMode.Animal && mode != TraverseMode.Climber;
+        public static bool Swims(TraverseMode mode) => !IsAnimal(mode);
+
+        /// <summary>The two animal modes: no water, and no hop that is not a terrace ramp.</summary>
+        public static bool IsAnimal(TraverseMode mode) =>
+            mode == TraverseMode.Animal || mode == TraverseMode.Climber;
+
+        /// <summary>
+        /// The bits every mode has; the animal modes are stripped by
+        /// <see cref="NavGraph.HopMask"/> where a hop is not a ramp.
+        /// </summary>
+        public const byte AnimalMask = (1 << (int)TraverseMode.Animal) | (1 << (int)TraverseMode.Climber);
     }
 
     /// <summary>

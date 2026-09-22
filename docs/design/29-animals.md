@@ -62,6 +62,24 @@ animal costs one integer increment a tick.
 The circuit breaker applies to animals as to anyone: an animal with nowhere reachable to go
 falls into the stand-down, which is a rest by another name.
 
+### 3a. A job ends on a cell, never between two
+
+**An animal's job expires at the next cell boundary** (owner, 2026-09-22: a hog *"went past the
+tree, then suddenly appeared before it again, snapped/teleported back and walked through it
+again"*). Ending a job drops the step in progress — `ClearPath` zeroes the move progress — so
+the simulation puts the pawn back on the cell it was leaving while its figure had been drawn
+most of the way into the next: a snap of up to a cell, backwards. The wander's expiry is 1,200
+ticks and a hog's eight-cell leg at its pace can be longer, so the expiry landed mid-step. The
+snap detector (`AnimalProbe.Snaps`: a wooded colony, six animals, a hundred seconds with a frame
+between every pair of ticks, every drawn position recorded) found four in a hundred seconds, all
+at the tick a wander expired. `TickPawn` now lets an animal's expired job run on to the next
+cell — at most one step late — and the detector finds none. `AnAnimalsJobNeverEndsMidStep`
+holds the invariant: every job an animal starts begins with its move progress at nought.
+
+Colonists keep the old rule for now, deliberately: their wander is the mental break's, and the
+change would move every golden. **They have the same snap**, at the end of a break, and it is
+recorded as a known gap.
+
 ## 4. The third dimension
 
 **Rats climb anything; hogs never take a ladder; neither swims.** The species' `traverseMode`
@@ -72,6 +90,16 @@ the link by the mask that was there before this unit. The hog's mode is `Travers
 (no ladders, no manipulable doors, and now no water); the rat's is the new `Climber` — as
 `Colonist`, but no water. Stairs (`U44`) are not built; the day they are, both modes allow them
 and nothing here changes.
+
+**An animal hops only where a ramp is drawn** (owner, 2026-09-22: *"saw a pig climb a
+stone/mine - guard them from climb up rocks/mines"*). The one-block hop is the whole of unaided
+vertical movement, and a person takes it anywhere the upper end is a block top: up a mined face,
+on to a rock, over the edge of a cut. An animal takes it only where the lower cell is the foot
+of a terrace step — the cell `TerraceFoot` says a bank is drawn in, whose cost class is the
+slope's — because that is the one place the ground is drawn as something four legs could climb.
+`NavGraph.HopMask` is the one owner: the region link, the step check and the search all ask it.
+Digging out a step's floor turns it into a cut face and closes it to animals in the same
+rebuild; `AnAnimalHopsOnlyWhereARampIsDrawn` does exactly that, with a colonist as the control.
 
 **No animal swims** (owner, 2026-09-22: *"animals can't swim by default, especially rats and
 pigs"*). `TraverseModes.Swims` says which modes may enter shallow water — people wade (design
@@ -164,7 +192,14 @@ anatomy** — a fore leg folds its carpus back under the body in the swing, a hi
 flexes the foot forward — and the idle clip underneath is **frozen as the gait fades in**, or its
 weight-shifting reads as noise under the trot. Judged from a four-phase side-on strip
 (`docs/reference/screenshots/2026-09-22-hog-trot-strip.png`); the numbers are still playtest
-numbers, and `SlideFactor` is the one to move first.
+numbers, and `SlideFactor` is the one to move first. **Third look** (owner, 2026-09-22:
+*"twisting in one spot when it should be taking steps with its legs"*): the hip swing went from
+28° to 40° and the knee from 25° to 35°, with `SlideFactor` lowered from 2.5 to 1.6 so the
+cadence stays at about 1.7 cycles a second — the limbs have to be seen to move from the play
+camera, and ten centimetres of foot travel was not. What reads as twisting is also the turn
+before each leg: a wander picks a new heading every few seconds and the figure turns on the spot
+to face it before the legs carry it. A walk clip for the pig would still be better than any of
+this.
 
 **The legs are written from their rest, never pre-multiplied** (owner, 2026-09-22, second look:
 *"the legs are spindles ... too thin"*, with a screenshot of legs drawn as rods longer than the

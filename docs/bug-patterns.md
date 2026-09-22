@@ -410,6 +410,31 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-22 — A hog walks past a tree, snaps back a cell, walks past it again
+
+Owner: *"saw a pig walk through a tree went past it then suddenly appear before the tree again
+and snapped/teleported back to a position then walked through it again."* The snap detector
+(`AnimalProbe.Snaps`) found four in a hundred seconds, every one a hog, every one on the tick a
+wander job **expired**. The simulation is discrete: a pawn is on a cell with progress toward the
+next, and the figure is drawn that fraction of the way along. Ending a job clears the path and
+zeroes the progress, so the pawn is back on the cell it was leaving and the figure — drawn 85% of
+the way into the next — snaps back to it. The wander's expiry is 1,200 ticks and a hog's leg at
+its pace can be longer, so the expiry landed mid-step, reliably, at ticks 1,200 and 3,200.
+
+**The shape: a discrete state dropped under a continuous drawing.** Anything that resets a
+pawn's step — a job ending, a path cleared, a reservation lost — resets the figure by a cell.
+The fix for an animal is to end the job on a cell rather than between two: the expiry waits for
+progress to reach nought, at most one step late. **Colonists have the same snap** at the end of a
+mental-break wander and keep it for now, because their rule moves every golden; it is a known
+gap in `CLAUDE.md`.
+
+**What now stops it:** `AnAnimalsJobNeverEndsMidStep` — every job an animal starts begins with
+its move progress at nought, over twenty thousand ticks — and `AnimalProbe.Snaps`, which is the
+instrument the report needed: a hundred seconds of six animals under the director with every
+drawn position recorded, and every frame that moves a figure more than 0.35 m or backwards
+against its own motion printed with the simulation's view of that pawn. It read four before the
+fix and none after.
+
 ### 2026-09-22 — Legs drawn as rods: a pose multiplied onto itself, frame after frame
 
 Owner, with a screenshot: *"The pig is terrible - the legs and spindles and too thin."* The legs

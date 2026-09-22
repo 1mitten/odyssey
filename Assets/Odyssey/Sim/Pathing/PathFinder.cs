@@ -511,6 +511,8 @@ namespace Odyssey.Sim.Pathing
             // solid terrain. See NavGraph.UpperEndIsABlockTop — without it every floor of every
             // building is one hop from the floor below and stairs are decoration.
             if (!_graph.UpperEndIsABlockTop(n > from ? n : from)) return;
+            // And an animal only where the lower end is a drawn ramp. See NavGraph.HopMask.
+            if (!_graph.HopAllowed(n > from ? from : n, mode)) return;
 
             if (occupancy != null && occupancy(n)) ng += MoveCost.OccupiedBias;
             RelaxExplicit(from, n, ng, goal, mode, stamp, rstamp, constrained);

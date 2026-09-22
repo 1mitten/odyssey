@@ -37,21 +37,24 @@ namespace Odyssey.Presentation.World
     public sealed class QuadrupedGait
     {
         /// <summary>Hip fore-aft swing, half amplitude in degrees.</summary>
-        public const float HipDegrees = 28f;
+        public const float HipDegrees = 40f;
 
         /// <summary>Knee flex at mid-swing, degrees, signed per leg by <see cref="KneeSign"/>.</summary>
-        public const float KneeDegrees = 25f;
+        public const float KneeDegrees = 35f;
 
         /// <summary>Body bob, metres, twice per cycle: once per diagonal pair landing.</summary>
         public const float BobMetres = 0.01f;
 
         /// <summary>
         /// How much further the body travels per cycle than the legs geometrically cover. 1 is
-        /// no sliding at all and a squat rig scurrying at three or four cycles a second; 2.5
-        /// brings the cadence to about a trot's and a half while the feet slide the rest. A
-        /// playtest number (owner, 2026-09-22: "way too fast" at 2).
+        /// no sliding at all and a squat rig scurrying at three or four cycles a second. The
+        /// cadence it gives with the swing above is about 1.7 cycles a second at the hog's pace;
+        /// the swing was widened from 28° to 40° and this lowered to keep that cadence, because
+        /// the owner saw "twisting in one spot" rather than legs (2026-09-22, third look) — the
+        /// limbs must be seen to move from the play camera, and 10 cm of foot travel was not.
+        /// A playtest number.
         /// </summary>
-        public const float SlideFactor = 2.5f;
+        public const float SlideFactor = 1.6f;
 
         /// <summary>Below this the legs ease back to the clip's pose rather than stepping on the spot.</summary>
         public const float StandingSpeed = 0.05f;

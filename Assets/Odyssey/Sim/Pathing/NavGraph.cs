@@ -833,8 +833,24 @@ namespace Odyssey.Sim.Pathing
             _linkCostBA[id] = HopCost(up: false);
             _linkOneWay[id] = false;
             _linkSpan[id] = 1;
-            _linkMode[id] = TraverseModes.AllMask;
+            _linkMode[id] = HopMask(lower);
         }
+
+        /// <summary>
+        /// Who may take a hop whose lower end is this cell. Everyone, where the lower cell is the
+        /// foot of a terrace step — the ground is drawn as a ramp there, and going up or down it
+        /// is what an animal does. Nobody animal where it is not: a mined face, a rock a person
+        /// scrambles on to, the edge of a cut (owner, 2026-09-22: <i>"saw a pig climb a
+        /// stone/mine - guard them from climb up rocks/mines"</i>). The cost class is the slope's
+        /// exactly where <c>TerraceFoot</c> says a ramp is drawn, so the rule and the picture
+        /// cannot disagree. One owner for the region link, the step check and the search.
+        /// </summary>
+        public byte HopMask(int lower) =>
+            Grid.CostClass[lower] == Worldgen.Natural.NaturalContent.CostClassSlope
+                ? TraverseModes.AllMask
+                : (byte)(TraverseModes.AllMask & ~TraverseModes.AnimalMask);
+
+        public bool HopAllowed(int lower, TraverseMode mode) => TraverseModes.Allows(HopMask(lower), mode);
 
         void TryFallEdge(int zone, int from, int hole, int y)
         {
@@ -1370,7 +1386,9 @@ namespace Odyssey.Sim.Pathing
             if (IsHop(a, b))
             {
                 int upper = a.Y > b.Y ? from : to;
-                if (UpperEndIsABlockTop(upper) && Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode))
+                int lower = a.Y > b.Y ? to : from;
+                if (UpperEndIsABlockTop(upper) && HopAllowed(lower, mode)
+                    && Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode))
                     return true;
             }
 

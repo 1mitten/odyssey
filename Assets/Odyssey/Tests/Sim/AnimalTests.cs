@@ -384,6 +384,87 @@ namespace Odyssey.Tests.Sim
             Assert.That(legs, Is.GreaterThan(10), "the animals walked enough for the rule to have been tested");
         }
 
+        /// <summary>
+        /// <b>An animal's job never ends mid-step</b> (owner, 2026-09-22: a hog "went past the
+        /// tree, then suddenly appeared before it again"). A job that ends drops the step in
+        /// progress and puts the pawn back on the cell it was leaving, while its figure was drawn
+        /// most of the way into the next — a snap. So every job an animal starts begins with its
+        /// move progress at nought: it is standing on a cell, not between two. The wander's expiry
+        /// is 1,200 ticks and a hog's leg can be longer, which is what made this reproducible.
+        /// </summary>
+        [Test]
+        public void AnAnimalsJobNeverEndsMidStep()
+        {
+            ColonyWorld colony = Board();
+            Pawn hog = colony.Pawns.Pawns.Spawn(GroundNear(colony, 2, 0), PawnKindIndex.MiddenHog);
+            Pawn rat = colony.Pawns.Pawns.Spawn(GroundNear(colony, -2, 0), PawnKindIndex.DuctRat);
+            int starts = 0;
+            int lastHog = -1, lastRat = -1;
+            for (int tick = 0; tick < 20_000; tick++)
+            {
+                colony.World.Tick();
+                if (hog.CurrentJob != null && hog.JobStartTick != lastHog)
+                {
+                    lastHog = hog.JobStartTick;
+                    starts++;
+                    Assert.That(hog.MoveProgress, Is.Zero, $"the hog began a job between two cells on tick {tick}");
+                }
+                if (rat.CurrentJob != null && rat.JobStartTick != lastRat)
+                {
+                    lastRat = rat.JobStartTick;
+                    starts++;
+                    Assert.That(rat.MoveProgress, Is.Zero, $"the rat began a job between two cells on tick {tick}");
+                }
+            }
+            Assert.That(starts, Is.GreaterThan(40), "enough jobs began for the rule to have been tested");
+        }
+
+        /// <summary>
+        /// <b>An animal hops only where a ramp is drawn</b> (owner, 2026-09-22: "saw a pig climb a
+        /// stone/mine"). A block one layer up is raised beside the start; its natural foot cells
+        /// are terrace steps, drawn as ramps, and a hog may go up. Then every foot cell's floor is
+        /// marked as dug out — the mark an excavation leaves, which is what turns a step into a cut
+        /// face with no ramp — and the hog may not, while a colonist still may.
+        /// </summary>
+        [Test]
+        public void AnAnimalHopsOnlyWhereARampIsDrawn()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = Size.FromIndex(TheColonist(colony).Cell);
+            for (int dz = 3; dz <= 5; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                Paint(colony, Size.Index(start.X + dx, start.Z + dz, start.Y), Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass);
+            colony.Pawns.Nav.Rebuild();
+
+            int top = Size.Index(start.X, start.Z + 4, start.Y + 1);
+            Assume.That(colony.Grid.IsWalkable(top), Is.True, "the top of the block is ground");
+            Pawn hog = colony.Pawns.Pawns.Spawn(GroundNear(colony, 2, 0), PawnKindIndex.MiddenHog);
+            Pawn rat = colony.Pawns.Pawns.Spawn(GroundNear(colony, -2, 0), PawnKindIndex.DuctRat);
+            Pawn person = TheColonist(colony);
+
+            Assert.That(colony.Pawns.Reachable(person, top, person.Mode), Is.True, "a colonist can get on to the block");
+            Assert.That(colony.Pawns.Reachable(hog, top, hog.Mode), Is.True, "and so can a hog while the steps are natural: ramps are drawn");
+            Assert.That(colony.Pawns.Reachable(rat, top, rat.Mode), Is.True, "and a rat");
+
+            // Dig out every foot cell's floor: the ring round the block, one layer down.
+            for (int dz = 2; dz <= 6; dz++)
+            for (int dx = -2; dx <= 2; dx++)
+            {
+                if (dz >= 3 && dz <= 5 && dx >= -1 && dx <= 1) continue;
+                int foot = Size.Index(start.X + dx, start.Z + dz, start.Y);
+                int floor = foot - Size.LayerStride;
+                colony.Grid.Flags[floor] |= CellFlags.Discovered;
+                colony.Pawns.Nav.MarkDirty(foot);
+            }
+            colony.Pawns.Nav.Rebuild();
+            Assume.That(Odyssey.Sim.Worldgen.TerraceFoot.IsFoot(colony.Grid, Size.Index(start.X, start.Z + 2, start.Y)), Is.False,
+                "the fixture turned the steps into cut faces");
+
+            Assert.That(colony.Pawns.Reachable(person, top, person.Mode), Is.True, "the control: a colonist scrambles up a cut face");
+            Assert.That(colony.Pawns.Reachable(hog, top, hog.Mode), Is.False, "a hog does not");
+            Assert.That(colony.Pawns.Reachable(rat, top, rat.Mode), Is.False, "nor does a rat");
+        }
+
         // ---- pace -------------------------------------------------------------------------
 
         [Test]

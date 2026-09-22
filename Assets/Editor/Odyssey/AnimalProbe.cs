@@ -256,6 +256,110 @@ namespace Odyssey.EditorTools
             }
         }
 
+        /// <summary>
+        /// The snap detector (owner, 2026-09-22: <i>"I've seen pigs snap to different positions
+        /// in various scenarios - could you check it never snaps or teleports"</i>). A wooded
+        /// colony with trees and terraces, three hogs and three rats, a hundred seconds of the
+        /// director's own path with a frame between every pair of ticks — and every figure's
+        /// drawn position recorded each frame. A snap is a frame in which a figure moved more than
+        /// <c>SnapMetres</c>, or moved backwards against its own previous motion by more than
+        /// <c>ReverseMetres</c>. Each one is printed with the simulation's view of that pawn on
+        /// that tick, which is the only way to say <i>why</i>.
+        /// <c>scripts/unity.sh exec Odyssey.EditorTools.AnimalProbe.Snaps</c> → <c>Logs/animal-snaps.txt</c>.
+        /// </summary>
+        public static void Snaps()
+        {
+            int exitCode = 0;
+            GameObject? root = null;
+            Odyssey.Presentation.World.PawnFigureDirector? director = null;
+            try
+            {
+                const float SnapMetres = 0.35f;
+                const float ReverseMetres = 0.12f;
+                var catalogue = AssetDatabase.LoadAssetAtPath<Odyssey.Presentation.Rendering.ModuleCatalogue>(PlayScene.CataloguePath);
+                root = new GameObject("Snaps");
+                director = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, root.transform, 0);
+                var sb = new StringBuilder();
+
+                var size = new Odyssey.Sim.Contracts.GridSize(60, 60, 16);
+                Odyssey.Sim.Pawns.ScenarioDef scenario = Odyssey.Sim.Pawns.ScenarioDef.Bare();
+                scenario.colonists = 1;
+                scenario.beds = 1;
+                scenario.startingFellRadius = 0;
+                Odyssey.Sim.Pawns.ColonyWorld colony = Odyssey.Sim.Pawns.ColonyWorld.Build(size, 7u, scenario, barren: false, wooded: true);
+                Odyssey.Sim.Contracts.CellRef start = colony.Start;
+                var animals = new System.Collections.Generic.List<Odyssey.Sim.Pawns.Pawn>();
+                for (int i = 0; i < 6; i++)
+                {
+                    int cell = colony.Grid.NearestWalkableInColumn(start.X + (i % 3) * 2 - 2, start.Z + (i / 3) * 2 - 1, start.Y);
+                    if (cell < 0) continue;
+                    animals.Add(colony.Pawns.Pawns.Spawn(cell, i % 2 == 0 ? Odyssey.Sim.Pawns.PawnKindIndex.MiddenHog : Odyssey.Sim.Pawns.PawnKindIndex.DuctRat));
+                }
+                sb.AppendLine($"{animals.Count} animals on a wooded 60x60, start {start}");
+
+                var slice = new Odyssey.Presentation.CameraRig.SliceSettings();
+                var last = new System.Collections.Generic.Dictionary<int, Vector3>();
+                var lastMove = new System.Collections.Generic.Dictionary<int, Vector3>();
+                int snaps = 0, reverses = 0, frames = 0, layerChanges = 0;
+                var lastLayer = new System.Collections.Generic.Dictionary<int, int>();
+                const float dt = 1f / 60f;
+                for (int tick = 0; tick < 6_000; tick++)
+                {
+                    colony.World.Tick();
+                    for (int half = 0; half < 2; half++)
+                    {
+                        float alpha = half == 0 ? 0f : 0.5f;
+                        director.Sync(colony.World.Views.Current, start.Y + 2, slice, alpha,
+                            colony.Pawns.Content.Movement.movePerTick, half == 0 ? dt : 0f);
+                        director.Evaluate(half == 0 ? dt : 0f);
+                        frames++;
+                        foreach (Odyssey.Sim.Pawns.Pawn animal in animals)
+                        {
+                            if (!director.TryGetFeet(animal.Id, out Vector3 at)) continue;
+                            int id = animal.Id.Value;
+                            Odyssey.Sim.Contracts.CellRef cell = size.FromIndex(animal.Cell);
+                            if (lastLayer.TryGetValue(id, out int ly) && ly != cell.Y) layerChanges++;
+                            lastLayer[id] = cell.Y;
+                            if (last.TryGetValue(id, out Vector3 was))
+                            {
+                                Vector3 move = at - was;
+                                float dist = move.magnitude;
+                                bool snap = dist > SnapMetres;
+                                bool reverse = lastMove.TryGetValue(id, out Vector3 prev) && prev.sqrMagnitude > 1e-6f
+                                    && Vector3.Dot(move, prev.normalized) < -ReverseMetres;
+                                if (snap || reverse)
+                                {
+                                    if (snap) snaps++; else reverses++;
+                                    Odyssey.Sim.Pawns.Job? job = animal.CurrentJob;
+                                    int next = animal.HasPath ? animal.Path[animal.PathIndex] : -1;
+                                    sb.AppendLine($"tick {tick} alpha {alpha:F1} pawn {id} kind {animal.Kind} {(snap ? "SNAP" : "REVERSE")} " +
+                                        $"{dist:F2} m (dy {move.y:F2}) cell {cell} next {(next >= 0 ? size.FromIndex(next).ToString() : "-")} " +
+                                        $"progress {animal.MoveProgress}/{animal.MoveStepCost} job {(job != null ? job.DefIndex.ToString() : "none")} " +
+                                        $"target {(job != null ? job.TargetCell : -1)} pathLen {animal.PathLength} idx {animal.PathIndex} pending {animal.PathPending} failed {animal.PathFailed}");
+                                }
+                                lastMove[id] = move;
+                            }
+                            last[id] = at;
+                        }
+                    }
+                }
+                sb.AppendLine($"frames {frames}: {snaps} snaps over {SnapMetres} m, {reverses} reversals over {ReverseMetres} m, {layerChanges} layer changes");
+                Debug.Log("[AnimalProbe] snaps " + sb);
+                File.WriteAllText("Logs/animal-snaps.txt", sb.ToString());
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("[AnimalProbe] snaps failed: " + e);
+                exitCode = 1;
+            }
+            finally
+            {
+                director?.Dispose();
+                if (root != null) Object.DestroyImmediate(root);
+                if (Application.isBatchMode) EditorApplication.Exit(exitCode);
+            }
+        }
+
         static string LegReport(Transform root)
         {
             string[] legs = { "BackUpLeg.L", "FrontUpLeg.L", "BackUpLeg.R", "FrontUpLeg.R" };

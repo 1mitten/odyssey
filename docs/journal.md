@@ -10595,3 +10595,27 @@ it is the mental break's and moving it moves every golden.
 One thing about the harness: painting terrain behind the graph's back leaves its per-cell cost
 class stale, and the first version of the water test read a stream as clear ground. The graph
 refreshes what it is told has changed — `MarkDirty` — and the test helper now tells it.
+
+## 2026-09-22 — The snap that was an expiry, and the hop that was a rock
+
+The owner's fourth look had four items and the instrument came first: `AnimalProbe.Snaps`,
+a wooded colony with six animals run for a hundred seconds under the director with a frame
+between every pair of ticks, every drawn position recorded, every jump or reversal printed
+with the simulation's view of that pawn. It found four snaps, all hogs, all on the tick a
+wander **expired** — 1,200 ticks, shorter than a hog's longest leg — and the expiry dropped
+the step in progress, so the pawn went back to the cell it was leaving while the figure had
+been drawn most of the way into the next. That is "went past the tree, then snapped back and
+walked through it again", exactly. An animal's expiry now waits for the next cell boundary; the
+detector reads none; colonists keep their old rule and their own version of the snap as a
+recorded gap, because the change would move every golden.
+
+The hog on the rock was the one-block hop, which a person takes anywhere the upper end is a
+block top. An animal now takes it only where the lower cell is the foot of a terrace step —
+where a ramp is drawn — and `NavGraph.HopMask` is the one owner for the link, the step check
+and the search. Digging a step's floor out turns it into a cut face and closes it to animals in
+the same rebuild, which is what the test does with a colonist as the control.
+
+"Twisting in one spot": the hip swing went to 40° and the knee to 35° with the slide factor
+lowered to keep the cadence, so the legs travel far enough to be seen from the play camera.
+The turn on the spot before each leg is the wander picking a new heading, and a walk clip
+would still be the better answer to all of it.
