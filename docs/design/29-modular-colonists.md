@@ -480,3 +480,26 @@ CSV row carries and the sex actually dealt — `Holiday [name n -> m]`, `Pleb [n
 - **Nicknames are dealt a sex too.** Spudgun and Treacle become a man or a woman like anyone else.
   That reads as a person with a nickname, which seems right — but if a nickname should sit on top of
   a real name rather than replace it, that is a naming decision and not this unit's.
+
+
+---
+
+## 12. Why every portrait went magenta
+
+**Owner, 2026-09-22, with a screenshot:** *"the portraits on the character selection are displaying
+[incorrectly] — completely pink."*
+
+Flat magenta with the right silhouette: meshes and attachments resolved, the material did not. Full
+account and the check it earns are in `docs/bug-patterns.md` (P14). In short:
+
+`PortraitStudio` caches the subject GameObject and reuses it while the look is unchanged. Ending a
+colony disposes `ColonistMaterials` — destroying every material it cloned — and sets the studio's
+`Materials` to null. **The subject was not part of that teardown**, so it survived wearing destroyed
+materials, and `Paint` then returned early because `Materials` was null and never reassigned them.
+
+**§9's uniform is why it became visible.** With seventy-three bodies the subject was nearly always
+rebuilt by the next colonist and picked up fresh materials; with two, it is reused almost every time.
+
+`Materials` is now a property whose setter drops the subject and clears the pictures, and
+`OdysseyBootstrap.Portraits` hands the studio live materials back when it is asked for one after a
+colony has ended instead of leaving it unpainted for the rest of the session.

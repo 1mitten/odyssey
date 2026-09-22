@@ -65,8 +65,54 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// How a colonist is painted. The same object the figures hold where there is a colony, so
         /// a portrait and the person walking around cannot be painted differently.
+        ///
+        /// <para><b>Changing it throws the cached subject away, and that is the whole point of it
+        /// being a property.</b> The subject is a live GameObject whose renderers wear materials
+        /// <see cref="ColonistMaterials"/> <i>owns and destroys</i>. A colony ending disposes them
+        /// and sets this to null — and the subject survived that, still pointing at materials
+        /// Unity had destroyed, which it draws as magenta. The owner's report was that every
+        /// portrait on the setup screen was pink (2026-09-22).</para>
+        ///
+        /// <para><b>It was latent for as long as there were seventy-three bodies</b>, because the
+        /// subject is kept only while the look is unchanged and a different colonist almost always
+        /// rebuilt it. The issued uniform (<c>docs/design/29-modular-colonists.md</c> §9) took the
+        /// cast down to two looks, so the stale subject is reused nearly every time and a rare
+        /// fault became the normal one.</para>
         /// </summary>
-        public ColonistMaterials? Materials { get; set; }
+        public ColonistMaterials? Materials
+        {
+            get => _materials;
+            set
+            {
+                if (ReferenceEquals(_materials, value)) return;
+                _materials = value;
+
+                // Both halves, because both are painted with materials that have just gone: the
+                // subject wears them and every cached picture was taken through them.
+                DropSubject();
+                Clear();
+            }
+        }
+
+        ColonistMaterials? _materials;
+
+        /// <summary>
+        /// Throw away the body being photographed, so the next portrait builds a fresh one.
+        ///
+        /// <para>Destroy rather than merely forget: it is a live GameObject parked under the rig,
+        /// and leaking one per session is the same class of leak <c>ModuleLibrary.Dispose</c>
+        /// exists to prevent.</para>
+        /// </summary>
+        void DropSubject()
+        {
+            if (_subject != null) UnityEngine.Object.Destroy(_subject);
+            _subject = null;
+            _subjectLook = -1;
+            _hairMesh = null;
+            _hairRenderer = null;
+            _beardMesh = null;
+            _beardRenderer = null;
+        }
 
         /// <summary>
         /// Who everybody is. Set to the game's own book when there is a colony, so an override —
@@ -453,12 +499,7 @@ namespace Odyssey.Presentation.Rendering
         {
             if (_subject != null && _subjectLook == look) return _subject;
 
-            if (_subject != null)
-            {
-                UnityEngine.Object.Destroy(_subject);
-                _subject = null;
-                _subjectLook = -1;
-            }
+            DropSubject();
 
             GameObject instance = UnityEngine.Object.Instantiate(row.prefab!, _rig!.transform);
             instance.name = "subject";
