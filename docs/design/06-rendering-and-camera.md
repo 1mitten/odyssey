@@ -13,7 +13,15 @@ Two of those are already confirmed available rather than hoped for:
 
 The concept renders show the *outskirts* map, which is a later map type. The art direction carries over; the prototype map stays the ruined city.
 
-**Cel shading was raised and rejected on 2026-09-15.** Worth recording so it is not reopened: the concept renders are *not* cel-shaded. They are flat-lit low-poly with a colour atlas and emissive trim, which is the native Synty look and what the imported packs already give us. True cel shading means banded lighting and usually hard outlines, which would be a deliberate step *past* the renders rather than a way of matching them. It would also cost an own-authored shader, an outline pass inside an already-tight render budget, and a fix for banded lighting fighting the depth-darkening cue on layers below the slice. **The target is the screenshots as they are.** Owner decision: stick to the plan and the screenshots.
+**Cel shading was raised and rejected on 2026-09-15, and the rejection rested on a false premise.** Rewritten in place on 2026-09-22 rather than deleted, the way §2d's golden-hour reversal is, so the reasoning stays legible.
+
+What this section said was: *the concept renders are not cel-shaded; they are flat-lit low-poly with a colour atlas and emissive trim, which is the native Synty look, so true cel shading would be a step past the renders rather than a way of matching them. The target is the screenshots as they are.* It also priced the work: an own-authored shader, an outline pass inside a tight budget, and a fix for banded lighting fighting the depth-darkening cue below the slice.
+
+**The pricing still stands. The premise does not.** The renders were described here and never committed — `docs/reference/screenshots/README.md` asked for a year and the folder held a lone `.gitkeep` — so for a year the description *was* the evidence. The owner re-supplied them on 2026-09-22 and they are now in `concept/`. They are ink-outlined, flat-shaded comic art: a black line on every building, two or three values with a hard terminator, a flat blue wash for distance. Two of the three things the old paragraph said cel shading would add are already in the pictures it said did not have them.
+
+So the honest statement of the target is that there are **two** of them and they disagree. The concept renders are a *graphic* look. The golden hour this build shipped on 2026-09-16 (§2d), against six *Station to Station* screenshots, is a *photographic* one. Both are good and neither is a version of the other. **Owner decision, 2026-09-22: build both and make it a setting** — `Graphics ▸ Look ▸ [ Lit | Illustrated ]` — and judge them by flicking between them on one save rather than by arguing from stills. The grass, the sky and the ink come first and banded colour is deferred; `docs/design/29-illustrated-look.md` owns all of it, and the old objection about the slice cue is recorded there as the thing still unsolved rather than as a reason not to start.
+
+**The lesson worth keeping is not about shading.** A description standing in for an image was wrong for a year, was quoted as settled in at least three places, and nothing in the project could catch it. Commit the reference.
 
 ## 2. Drawing the world
 

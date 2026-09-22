@@ -505,13 +505,39 @@ a measurement, because almost nobody publishes fullscreen-pass timings for a nam
 figures Unity itself gives for SSAO are relative ("doubles the load", "very high impact"). The
 recommendation does not depend on those estimates being right to better than a factor of two.
 
+## Answered since, 2026-09-22
+
+**The prepass this note spends §1.4, §4 and §5 working around has been running every frame the
+whole time.** `Assets/Settings/PC_Renderer.asset` configures the SSAO renderer feature with
+`Source: 1`, which is `DepthSource.DepthNormals`, and `PC_RPAsset.asset` confirms it by keeping
+`m_PrefilterSSAODepthNormals: 0` while stripping all three depth-source variants. So
+`_CameraNormalsTexture` exists today at **zero incremental cost**, and the note's top-ranked
+recommendation — reconstructing normals from depth to avoid a prepass we did not have — solves a
+problem that is not there. The crease term should simply read the texture:
+`ConfigureInput(Depth | Normal)` and `SampleSceneNormals()`.
+
+Two caveats that the reconstruction route would not have had, and which are the real work:
+`Odyssey/Character` has no `DepthNormals` pass, so colonists are absent from the buffer (they are
+inked by their own hull instead, which is why nobody noticed); and `Odyssey/Water` has neither
+`DepthOnly` nor `DepthNormals`, which is **deliberate** — it is queued Transparent with
+`ZWrite Off` so the depth texture holds the bed rather than the surface.
+
+What remains genuinely unsettled is the narrower question of whether our instanced draws are
+*enumerated* by `DrawRenderers`, which the Frame Debugger check below still answers. But nothing
+now depends on it: `Odyssey/Tree` carries a `DepthNormals` pass and was given one precisely
+because "the outline feature reads normals where it has them", which is evidence that somebody
+has already seen it work.
+
+See `docs/design/29-illustrated-look.md` §1 and §4.
+
 ## Could not be determined
 
 - **Whether `Graphics.RenderMeshInstanced` submissions are enumerated by
   `ScriptableRenderContext.DrawRenderers`,** and therefore whether they appear in the DepthNormals
   prepass and in `RenderObjects` features. Documentation is silent; the `RenderParams` fields argue
   yes. The Frame Debugger check above settles it in five minutes, and the recommendation is
-  deliberately built not to depend on the answer.
+  deliberately built not to depend on the answer. *(Partly answered above on 2026-09-22: the
+  prepass exists and is free; whether our draws reach it is still the open half.)*
 - **Measured per-frame costs** for any of these passes on 2022 mid-range laptop hardware. No
   published benchmarks were found for URP fullscreen edge detection, URP SSAO at specific settings,
   or anisotropic Kuwahara in Unity. All §6 figures are estimates.

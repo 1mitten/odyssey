@@ -4,12 +4,25 @@ Purpose (brief §8): information-design analysis only. What each image communica
 
 ## Storage
 
-Images pasted into chat reach the assistant as pixels, not files, so they could not be committed from the remote session. Please copy each image into `concept/` under the names below (the folder exists with a `.gitkeep`) so the next session can open them. Until then, the descriptions here are the record.
+**Added 2026-09-22.** For a year this section asked somebody to copy the concept renders into
+`concept/`, and until now nobody had: images pasted into chat reach the assistant as pixels
+rather than as files, so the descriptions below were the only record. The owner re-supplied
+them and they are now on disk. **This mattered more than it sounds** — see the note under the
+table.
 
-| File (please add) | Supplied | Source |
+| File | Supplied | Source |
 |---|---|---|
-| `concept/01-compound-day.png` | 2026-09-15, session `cool-gates` | Concept render supplied by the owner (Synty-style low-poly sci-fi colony, daytime) |
-| `concept/02-composite-night.png` | 2026-09-15, session `cool-gates` | Concept composite of four views (combat, trade, research, hospital), night |
+| `concept/01-compound-day-desert.jpg` | 2026-09-15, session `cool-gates`; committed 2026-09-22 | Concept render supplied by the owner (sci-fi colony in desert outskirts, daytime) |
+| `concept/01b-compound-day-meadow.jpg` | 2026-09-22 | The same compound on green meadow. Not previously described here. |
+| `concept/02-composite-night.jpg` | 2026-09-15, session `cool-gates`; committed 2026-09-22 | Concept composite of four views (combat, trade, research, hospital), night |
+
+**The pictures contradict what this repository has said about them since 2026-09-15.**
+`06-rendering-and-camera.md` §1 recorded that "the concept renders are *not* cel-shaded … they
+are flat-lit low-poly with a colour atlas and emissive trim", and used that as the reason to
+reject cel shading. They are ink-outlined, flat-shaded comic art: every building carries a black
+line, the shading is two or three values with a hard terminator, and the distance is a flat blue
+wash. A description standing in for an image was wrong for a year and nothing could catch it.
+`docs/design/29-illustrated-look.md` §1 is where that is dealt with.
 
 These are concept images of what the game may look like, not captures of an existing game. They show a RimWorld-derived HUD grammar over a Synty-style 3D scene, which is the target look.
 
@@ -75,3 +88,28 @@ focus with blur above and below.
 adopted, fog moves onto the board as a warm haze that agrees with the sky's horizon, a light-shaft
 pass is written, and a subtle always-on tilt-shift is added. All of it is post-processing and light
 rig; none of it is a cell, a save field or a hash.
+
+## Dungeons of Hinterberg — the graphic reference (added 2026-09-22)
+
+`hinterberg/doh-01-mountain-overworld.jpg`, a press screenshot of *Dungeons of Hinterberg*
+(Microbird Games, 2024), supplied by the owner as the direction for the **Illustrated** look
+(`docs/design/29-illustrated-look.md`). Reference only, on the same terms as the *Station to
+Station* folder: nothing is traced, copied or reproduced, and the subject is the rendering
+rather than the art.
+
+**What it shows.** A heavy, even ink line on everything, including interior creases where two
+surfaces of the same colour meet. Flat banded colour with a hard terminator and almost no
+gradient. A flat saturated sky with drawn, posterised clouds that carry their own dark rim.
+Distance handled as flat blue-grey layers rather than as a smooth haze. Tall stylised grass
+blades in the near field, reading as blades and not as speckle. A little halftone in shadow.
+
+**Why there are now two references pointing different ways.** `station-to-station/` is the
+*photographic* look this build shipped in 2026-09-16 — raking sun, warm haze, bloom. This is the
+*graphic* look, and it is much closer to the concept renders above. They are not reconcilable in
+one image, which is why the Look is a setting with two rungs rather than a decision.
+
+**Published breakdown.** The developers describe a deferred pipeline writing a material id into
+a gbuffer channel, with per-material outline type, colour and width read from it, and tinted
+toon ramps per material. We cannot copy that — the renderer is forward and the world is drawn
+with `RenderMeshInstanced` — but our equivalent of their interior lines is the crease term in
+`29-illustrated-look.md` §4, read from a depth-normals prepass we already pay for.
