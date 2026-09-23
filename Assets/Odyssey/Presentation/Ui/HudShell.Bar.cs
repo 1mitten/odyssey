@@ -217,6 +217,11 @@ namespace Odyssey.Presentation.Ui
             _barDivider.style.display = DisplayStyle.Flex;
         }
 
+        const string PowerOverlayKey = "ui.overlay.power";
+
+        /// <summary>The Menu's power row, lit while the overlay is on.</summary>
+        VisualElement? _powerOverlayRow;
+
         static readonly string[] OverlayKeys =
         {
             "ui.overlay.temperature", "ui.overlay.light", "ui.overlay.beauty", "ui.overlay.cleanliness",
@@ -244,12 +249,30 @@ namespace Odyssey.Presentation.Ui
             {
                 var overlay = new VisualElement();
                 overlay.AddToClassList("menu__row");
-                overlay.AddToClassList("menu__row--off");
                 var icon = new IconBadge(key, IconBadge.BarSize);
                 icon.Inherit(HudTokens.TextMeta);
                 overlay.Add(icon);
                 overlay.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "menu__label"));
-                overlay.tooltip = Registry.Label(key) + " — overlay channels arrive with M4";
+
+                // Power is the first channel that renders (design 32 §9): every conduit, shown
+                // whatever is armed, until the row is pressed again. The rest stay disabled with
+                // their reason, which is the catalogue's rule for a control that is not ready.
+                if (key == PowerOverlayKey)
+                {
+                    overlay.tooltip = Registry.Label(key) + " — show every conduit, whatever is armed";
+                    _powerOverlayRow = overlay;
+                    overlay.RegisterCallback<ClickEvent>(_ =>
+                    {
+                        if (_directors == null) return;
+                        _directors.Overlays.TogglePower();
+                        overlay.EnableInClassList("menu__row--on", _directors.Overlays.PowerVisible);
+                    });
+                }
+                else
+                {
+                    overlay.AddToClassList("menu__row--off");
+                    overlay.tooltip = Registry.Label(key) + " — overlay channels arrive with M4";
+                }
                 _menuPopup.Add(overlay);
             }
 

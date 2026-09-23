@@ -80,6 +80,15 @@ floors on every layer the net touches.
   for a cost of one is nothing or one.
 - **Nothing else can take a line out.** Mining cannot reach a cell a line may be in (lines are
   never in solid terrain), a collapse takes floors and trees, and a line needs no support.
+- **Who lays it, and from where.** One job (`LayConduit`) fetches the one wood, carries it, works
+  the line in at the Construction rate and puts the rest of the stack down: a separate delivery
+  would be a second walk to put one plank beside the cell the same colonist then walks back to. A
+  line is worked **like a slab** (`BuildWorkGiver.StandToBuild`): from beside it, or from the
+  storey below. So a riser climbs as far as there is somewhere to stand beside it — up a wall
+  whose storeys have floors, up a shaft with a landing at each level — and **a line ordered two
+  storeys into open air with nothing to stand on is accepted and never laid.** That is the same
+  answer a slab in mid-air gets, recorded here rather than guarded, because every real riser has
+  floors beside it.
 
 ## 4. Nets and attachment
 
@@ -165,12 +174,29 @@ reads. Colours: live, dark, idle, ordered, marked for removal. Matrices are rebu
 power state or the slice changes; hiding is not submitting, and the world's meshes are never
 touched. The sim publishes each line's six-way links, so presentation never works adjacency out.
 
+- **The shader is our own** (`Odyssey/PowerLine`: unlit, depth-test Always, Overlay queue).
+  URP's Unlit carries its depth test as fixed state on some versions and a property on others,
+  and a material setting a property its shader does not read is a line that silently goes back
+  behind the walls. It is on `ShaderInclusion.Required`, so the player build keeps it.
+- **Two tiers**: lines on the active layer at full strength, lines on every other layer at 38%.
+  Drawn through everything at one strength is a tangle nobody can read the depth of.
+- **The watch.** Built lines are published only while presentation watches them (process §3).
+  The bootstrap sends `WatchPower` when the visibility answer changes and never otherwise; a
+  paused world answers at once. Orders and removal marks are published and drawn whatever the
+  visibility says.
+- **The cursor.** A line has no module to ghost, so the hover and the drag draw the cell's plate
+  in the build accent, red where refused.
+
 ## 10. Interface
 
 - **Palette, Power**: Conduit (dragged in a line, never widened into a box), Remove conduit,
   Generator, Heater.
-- **Pane**: a power building says its net's supply and demand, whether it is powered or burning,
-  its fuel, and offers *Switch on* / *Switch off*. One owner writes watts (`Hud/PowerLabels`).
+- **Pane**: a power building says what it is doing — switched off, not connected (with what to
+  do about it), the net is short, out of fuel, carrying 175 W of 1,000 W — its hopper in whole
+  wood, its net's balance, and a **switch row** the shell turns a press on into
+  `SetPowerSwitch`, set above the rows' early return exactly as the bed's owner row is. A line in
+  the clicked cell is named only while the lines are drawn. One owner writes watts
+  (`Hud/PowerLabels`).
 - **Alerts**: *Power failure* (`ui.alert.powerloss`) while any net is dark with demand;
   *Out of fuel* (`ui.alert.nofuel`) while a switched-on generator is empty and its net wants power.
 - **Overlay**: the Menu's *Power* row goes live.

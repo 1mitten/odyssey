@@ -534,6 +534,9 @@ namespace Odyssey.Presentation.Ui
             /// </summary>
             public bool IsPick;
 
+            /// <summary>Whether the pickable row is a power building's switch rather than a bed's owner (design 32 §5).</summary>
+            public bool IsSwitch;
+
             /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
             public HudColour? LastTint;
 
@@ -680,6 +683,8 @@ namespace Odyssey.Presentation.Ui
         void Attach(HudDirectors directors)
         {
             _directors = directors;
+            // A new session's overlay starts off; the menu row must not go on saying otherwise.
+            _powerOverlayRow?.EnableInClassList("menu__row--on", directors.Overlays.PowerVisible);
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;
             _directors.Settings.Changed += OnSettingsChanged;
@@ -1062,7 +1067,7 @@ namespace Odyssey.Presentation.Ui
             // model rather than switched on the tool here: ArmedPinned is what the orders strip
             // lights its button from, so one question answers the word, the colour and the lit
             // button, and the three cannot drift apart.
-            string order = _palette?.ArmedPinned ?? string.Empty;
+            string order = _palette?.ArmedOrder ?? string.Empty;
 
             // The order's own registry name — the same words the wiki prints, the palette's
             // breadcrumb says and the strip's tooltip repeats (owner: "keep the consistent in the
@@ -1081,7 +1086,7 @@ namespace Odyssey.Presentation.Ui
             // The border, in the held order's own colour — the same four tokens the strip paints
             // its buttons with. A build tool is not an order and has no hue of its own, which is
             // what the accent is doing here.
-            HudColour hue = (order.Length > 0 ? HudTheme.PinnedActionHue(order) : null)
+            HudColour hue = (order.Length > 0 ? HudTheme.ArmedOrderHue(order) : null)
                             ?? HudTheme.Accent;
             Color edge = HudTokens.Convert(hue);
             _armedBanner.style.borderTopColor = _armedBanner.style.borderRightColor =

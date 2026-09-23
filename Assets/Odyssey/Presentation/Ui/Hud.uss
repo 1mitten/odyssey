@@ -1340,6 +1340,9 @@
 
 .menu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
 .menu__row--off { opacity: 0.42; }
+/* An overlay that is showing (design 32 §9: the power row). The accent at the pressed-chip
+   strength, so an overlay left on is visible in the menu that turns it off. */
+.menu__row--on { background-color: rgba(111, 211, 227, 0.14); }
 .menu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
 .menu__label {

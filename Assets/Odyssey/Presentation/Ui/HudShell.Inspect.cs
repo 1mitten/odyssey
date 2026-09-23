@@ -846,7 +846,9 @@ namespace Odyssey.Presentation.Ui
                 CellRowView captured = view;
                 view.Root.RegisterCallback<ClickEvent>(_ =>
                 {
-                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                    if (!captured.IsPick) return;
+                    if (captured.IsSwitch) ThrowPowerSwitch();
+                    else ToggleBedPicker(captured.Root);
                 });
 
                 _cellRowsGrid.Add(view.Root);
@@ -873,7 +875,8 @@ namespace Odyssey.Presentation.Ui
                 // The storage row is a fact again, not a control: the settings are a tab of their
                 // own now, so a row that opened a popover would be a second way in to the same
                 // thing and the one a player found by accident.
-                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                bool switchPick = row.Name == InspectModel.PowerSwitchRow && _inspect.PowerSwitchUnderPane;
+                bool pick = (row.Name == "owner" && _inspect.BedUnderPane) || switchPick;
                 // The pickable row's value is set in the heavier Row role, which is where weight
                 // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
                 // assign button bolder" is a role here rather than a font-style there.
@@ -899,15 +902,28 @@ namespace Odyssey.Presentation.Ui
                     else view.Value.style.color = StyleKeyword.Null;
                 }
 
-                if (view.IsPick != pick)
+                if (view.IsPick != pick || view.IsSwitch != switchPick)
                 {
                     view.IsPick = pick;
+                    view.IsSwitch = switchPick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
-                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
+                    // The bed's glyph is a bed: the switch row wears the chevron alone.
+                    view.Glyph.style.display = pick && !switchPick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Root.tooltip = switchPick ? "Switch it on or off — at once, nobody is sent"
+                        : pick ? "Choose whose bed this is" : null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Throw the switch of the power building under the pane (design 32 §5): an intent, like
+        /// every command, applied while paused and at once — no colonist walks over to do it.
+        /// </summary>
+        void ThrowPowerSwitch()
+        {
+            _boot?.World?.Intents.Submit(new Intent(IntentKind.SetPowerSwitch, _inspect.Cell,
+                _inspect.PowerSwitchOn ? 0 : 1));
         }
 
         // ---- the bed's owner picker: the pane's first interactive fact ------------------------

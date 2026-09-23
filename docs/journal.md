@@ -10620,3 +10620,53 @@ It was not written. The incident that owns weather is deferred work with a desig
 debug switch that sets a field an incident is supposed to own is how a seam quietly becomes an
 interface. If the playtest comes back wanting the cold snap first, that is the moment to
 reconsider, and the reason will be on record rather than reconstructed.
+
+
+## 2026-09-23 — Power: a generator, the lines, a heater
+
+The owner asked for power in the RimWorld mould — a wood generator, lines to what needs
+electricity, the lines hidden except while being worked on — and was interviewed before anything
+was built (design 32 §2 holds the eleven answers). A clean-room research pass (a-07) backed all of
+them and supplied the reference's numbers: 1,000 W, a 75-wood hopper, 22 wood a day, 175 W heaters.
+Built on `origin/claude/temperature-core`, because the local checkout was 115 commits behind its
+own remote — found by the design agent reading the wrong tree, which is this project's standing
+lesson about checkouts arriving at the next session unannounced.
+
+**A line is not an edifice, and that decision shaped everything after it.** "Anywhere, under
+anything" means a cell holds a wall and a line at once, and the edifice slot holds one thing. So
+lines live in their own layer (`PowerGrid`, a bitset and a sorted list), with their own order lane
+— a wall order and a line order share a cell — and their own claim kind, so a builder on the wall
+does not lock out the colonist laying the line. The order still arrives as `PlaceBuilding`, and the
+construction grid's `Allows`, `WhereItWouldLand` and `RunLayerFor` all delegate to one rule, so the
+cursor and the order cannot drift: the P1 lesson taken before the fault rather than after.
+
+**Deconstruct does not take lines**, and that was a default taken without asking (§2a). It takes
+one thing a cell — the building, then our floor — so folding lines in would make rerouting a wire
+under a floor cost the floor. Lines get their own *Remove conduit* tool instead. The playtest row
+asks whether a player looks for it there.
+
+**The net solve was measured seven times too slow and rewritten before merge.** The first cut
+flooded outward with a binary search per face: 3.1 ms for one edit at 10,000 lines, the audit's
+`NavGraph.Rebuild` fault in a new costume. A union-find over the sorted list, each face found from
+its lower side by a pointer that only ever moves forward, is linear with no search: 0.43 ms at
+10,000, 0.08 ms at 2,000. The measurement was the only thing that could have said so; the code
+read as linear both times.
+
+**Whole-net-dark needs demand to count what is switched on, not what is powered** — a-07's
+observation, and the reason the reference's shedding flickers. Counting only the powered would let
+a dark net drop its demand, relight, and go dark again every solve.
+
+**The goldens moved once, and the proof was sharper than the census.** Three job defs add three
+counter pairs to the job system's hash. Rather than compare colony censuses, the hash was cut back
+(uncommitted) to the first twelve defs, and all three boards then matched the *previous* goldens
+exactly — so the new givers never fired and the new scan order changed no job anywhere. And
+`JobSystem.Load` stopped refusing a save with fewer job defs than the build: defs are append-only,
+so a shorter list is simply an older save, and the refusal had made every save older than the last
+new job unloadable for a reason that was never true.
+
+**Two side-findings.** `WorkGiverRegistrationTests` walked every permutation of the givers; eleven
+givers made that 11! and two minutes for one test, and a twelfth would have made it twenty. It
+samples orders now — every rotation, every reversal, five thousand seeded shuffles — which is the
+same question at a fixed price, with `NoTwoGiversCanTieInTheSort` still guarding the total order
+that makes the answer true. And a line in open air two storeys above anything standable is accepted
+and never laid, the same answer a slab in mid-air gets; recorded in design 32 §3 rather than guarded.

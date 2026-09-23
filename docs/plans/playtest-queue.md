@@ -23,6 +23,22 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does power read?** (`claude/power`, `docs/design/32-power.md`; follows `claude/temperature-core`.)
+  Grant wood from the debug menu, then open Build → **Power**. Drag a **Conduit** run from open
+  ground *through a wall* into a room; put a **Heater** beside the run inside and a **Generator**
+  beside it outside. Watch the lines appear the moment the tool is armed and vanish when it is put
+  down; a hauler should fill the generator unasked; the heater's pane should go from *not
+  connected* to *powered*, and the room should warm. Then build a sixth heater on the same net and
+  watch the whole net go dark and the *Power failure* alert rise.
+
+  Four things only a keyboard decides. Whether **a line drawn through walls reads as inside the
+  wall** or as a glitch floating over it — a wrong answer is a player thinking the line runs across
+  the roof. Whether **a dark net reads as dark without opening the pane** — red lines and the alert
+  should be enough; a wrong answer is clicking heaters to find out why the room is cold. Whether
+  **five heaters to a generator** is the right size — a wrong answer is never needing a second
+  generator, or needing one for the first room. And whether **the Remove conduit tool** is where a
+  player looks for it, or whether they reach for Deconstruct and are surprised it leaves the line.
+
 - **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
   debug menu with backtick and press **Skip one month** four times — that is the row this review
   added, because with only *Skip one day* the season the whole model was built for was sixty
