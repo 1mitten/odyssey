@@ -70,6 +70,12 @@ namespace Odyssey.Presentation.Rendering
             _beards = Resolve(catalogue, ModuleIds.BeardBase);
         }
 
+        /// <summary>How many hair pieces there are, so a drawer can size a bucket per piece.</summary>
+        public int HairCount => _hair.Length;
+
+        /// <summary>How many beards there are.</summary>
+        public int BeardCount => _beards.Length;
+
         public Piece Hair(int index) => At(_hair, index);
 
         public Piece Beard(int index) => At(_beards, index);

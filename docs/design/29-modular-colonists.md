@@ -503,3 +503,55 @@ rebuilt by the next colonist and picked up fresh materials; with two, it is reus
 `Materials` is now a property whose setter drops the subject and clears the pictures, and
 `OdysseyBootstrap.Portraits` hands the studio live materials back when it is asked for one after a
 colony has ended instead of leaving it unpainted for the rest of the session.
+
+
+---
+
+## 13. MC6 — the far form wears them
+
+A colonist past the sixty-four-figure cap is drawn from a baked mesh instanced by placement matrix.
+It now wears the same hair and beard the live figure does.
+
+### What was built
+
+**Two more instanced buckets, never a bake.** Baking hair and beard into the body mesh would
+multiply the mesh variants by hair × beard and turn a bounded set of a few dozen into one bounded
+only by colony size. They are rigid props on a bone and the baked pose is fixed, so **the head is a
+constant per body** and a piece is one mesh instanced across everyone wearing it. The bucket key is
+the piece, not the person (`e-06` §8).
+
+**The submit loop iterates pieces, not colonists**, so the pass costs **at most 24 draw calls** —
+fifteen hairs and nine beards — whatever the colony is. Each increments `ChunkRenderer.DrawCalls`,
+which is the thing P10 was written about: a pass that does not count itself is a pass nobody can see.
+
+**The head is captured at bake time, because there is nothing to ask afterwards.** A baked module is
+a mesh and a matrix; the rig it came from is instantiated, posed, measured and destroyed inside
+`ModuleLibrary.CollectSkinned`. The head bone is read there, *after* the pose is sampled, and pushed
+through the same `place` normalisation every part gets — so it inherits the pivot convention and the
+1.4 scale rather than having them applied a second time by a caller who might get one of them wrong.
+`ResolvedModule.Head` and `HasHead` carry it.
+
+**The bake bares the head too.** `CollectSkinned` takes every *active* skinned renderer, and
+PolygonGeneric ships hair, hats and hoods as active children — so without
+`ColonistAttachments.BareTheHead` in the bake, a colonist past the cap wore the pack's own hair while
+the same colonist in front of the camera wore ours. Two drawers, two answers, which is the fault
+`ColonistLook`'s header exists to warn about.
+
+**The far body is not recoloured per colonist and the hair matches that.** `SubmitInstances` draws
+the baked body through `MaterialCache` with the pack's colours and no tint; a head that was tinted
+would be the one part of a distant figure that varied.
+
+### What is measured, and what is not
+
+`FarColonistHeadTests` runs against the **real art** and asserts what could silently be wrong: every
+body in the pool bakes with a head bone, that head sits in the top 40% of the body's own bounds and
+within 0.35 m of its centre in plan, and a PolygonGeneric body bakes with no `_Attach_` mesh in it.
+Both tests `Assert.Ignore` when the art did not resolve — the right question is whether the art
+resolved, never whether there is a catalogue, because the catalogue is committed and its references
+point into the gitignored folder.
+
+**The frame cost is still not measured**, and the draw-call bound above is *structural* rather than
+measured: `RenderTestWorld` builds its library with no art, so the existing draw-call harness cannot
+reach this pass. Measuring it properly means a harness with the real catalogue and a snapshot of
+pawns past the cap, which is its own small unit. Until then the claim stands on the shape of the
+loop, and that is stated here rather than dressed up as a number.
