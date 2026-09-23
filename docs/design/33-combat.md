@@ -1755,3 +1755,131 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
+
+### 9c. At the hip (built 2026-09-23, `claude/combat-c2-r3`)
+
+Owner, playtest: *"Baseball bat wasn't close enough to hips/waist when not drawn. Same goes for
+machete."* Every number in §8b's hip fit was invented and none had been seen. This round measured
+it, photographed it, and replaced it with a fit taken off the drawn meshes.
+
+**The instrument.** `SheathGauge` bakes the posed skin and splits off the arms. It then takes every
+sampled point of the weapon's surface to the nearest body triangle. The points are 1 cm apart and
+come off the real mesh, which the editor can read. A point is *inside* when a ray cast outward
+from it meets skin: the thigh it is in, or the skirt it is under. `PawnFigureDirector.TryMeasureSheath`
+exposes it. `SheathProbe` (`scripts/unity.sh shot Odyssey.EditorTools.SheathProbe.Shoot`) prints
+it for all 29 bodies in the colonist pool with each weapon, over three seconds of idle. It also
+photographs four bodies front and side. The first version signed the gap by the nearest face's
+normal. It read the lower edge of a jacket, an open boundary, as ten centimetres of thigh, and so
+it reported intersections that were not there. The ray replaced it.
+
+**Before** (the §8b fit, measured with the final gauge). Nearest point of the weapon to the body,
+cm:
+
+| Body | Bat | Crowbar | Machete | Arc blade |
+|---|---|---|---|---|
+| `SM_Gen_Chr_Street_Male_01` | 2.5 | 2.9 | 1.2 | 0.9 |
+| `SM_Gen_Chr_Street_Female_01` | 6.7 | 4.7 | 5.1 | 3.0 |
+| `Character_MilitaryMale_01` | 6.0 | 5.4 | 6.3 | 5.8 |
+| `Character_70sFemale_01` | 7.4 | 6.7 | 6.6 | 4.9 |
+| **all 29, median (max)** | 6.2 (10.9) | 4.5 (6.9) | 5.1 (8.1) | 3.0 (6.0) |
+
+Every weapon leaned 25.7° from plumb. No weapon was inside the body: the owner saw a gap, not an
+intersection. `2026-09-23-sheathed-{bat,crowbar,machete,arcblade}-before.png` shows each weapon
+hanging in the line of the hanging hand, not against the thigh.
+
+**After**, at two instants of the idle a second apart (`WeaponSheathGapTests`):
+
+| Body | Bat | Crowbar | Machete | Arc blade |
+|---|---|---|---|---|
+| `SM_Gen_Chr_Street_Male_01` | 1.6–1.7 | 1.7–1.8 | 2.2 | 1.1 |
+| `SM_Gen_Chr_Street_Female_01` | 2.0 | 1.8–2.0 | 2.2 | 2.8–2.9 |
+| `Character_MilitaryMale_01` | 2.2–2.3 | 2.3 | 1.5–1.6 | 4.0–4.2 |
+| `Character_70sFemale_01` | 1.7 | 1.1–1.3 | 1.6–1.8 | 1.5 |
+| **all 29, median (max)** | 2.1 (4.0) | 2.1 (3.9) | 2.1 (2.7) | 2.6 (5.0) |
+
+Nothing is inside. The lean is 7.9–12.9°. The handle's top is 29–31 cm above the pelvis bone.
+The lowest point is 10–14 cm off the floor. The pictures are
+`docs/reference/screenshots/2026-09-23-sheathed-{bat,crowbar,machete,arcblade}.png`: one row per
+body in the order above, with the front on the left and the figure's left side on the right.
+
+**The fit** (`PawnFigureDirector.Sheath.cs`, `SheathSurface`, `WeaponProfile`):
+
+1. **The hip is a relief, not a point.** At bind, the drawn skin on the figure's left is mapped
+   over height and depth. Each cell of `SheathSurface` holds how far out the body reaches there.
+   Separately, it holds how far in the hanging arm comes. The relief is kept in the pelvis's
+   space, and so is the weapon.
+2. **The relief is the whole idle's envelope.** It is built from six samples of the idle clip.
+   `Desynchronise` starts every pawn's idle at a phase of its own, and the idle shifts weight
+   between the legs. A relief of the first frame fitted one instant. Measured: a refit in the pose
+   on screen closed a 4 cm gap to 2.8 cm. The relief is measured **once per look** and shared.
+3. **Arms are told from body by surface, not by bone.** A point belongs to the limb whose
+   *surface* is nearest: the distance to the bone less a thickness. The thicknesses, as fractions
+   of height, are torso 0.065, thigh 0.045, shin 0.03, upper arm 0.022, forearm 0.018 and hand
+   0.01. The hand is a fan from the wrist to each mapped fingertip. The first relief used the old
+   rule, bone distance only with the hand as a line on from the forearm. The hanging fingers came
+   out as hip, about 7 cm outboard of the skin, which is the size of the gap the owner reported.
+   It is the likeliest cause of the §8b gap. This is **inferred**: §8b's `HipReach` was never
+   instrumented.
+4. **A weapon is its measured profile.** The weapon meshes are not marked readable, so a player
+   cannot measure them. `WeaponProfileBake` cuts each one in the editor into 32 slices along its
+   long axis. The slices are committed as numbers in `WeaponProfiles.g.cs`. `WeaponProfileTests`
+   fails when the numbers and the art disagree. Bounds would make a bat's handle as fat as its
+   barrel, and a crowbar's shaft as deep as its claw. Hung by its bounds centre, the crowbar's
+   shaft sat in front of the thigh (photographed).
+5. **Where it hangs.** The point a quarter of the way up from the butt goes at the hip joint's
+   height. It goes at the depth where the side of the hip and upper thigh stands out furthest.
+   That depth is set by the weapon's own line, not its bounds centre: the middle of its
+   front-to-back spread, band by band. The weapon leans back 8°. It is splayed out by the whole
+   degree, 0–10°, that brings the belt end nearest the hip. Several male builds stand wider at the
+   knee than at the hip, and a plumb weapon then stands off the hip by the whole difference
+   (measured 4–7 cm). A weapon longer than the leg is lifted until its lowest point clears the
+   floor by 0.02 of the figure's height. Only the arc blade needs this, and it puts its hilt at the
+   ribs.
+6. **How far out.** The weapon slides out until every point clears the relief by
+   `SheathClearance`, 0.004 of height (about 1 cm). To clear the arm relief as well, it may move
+   up to 0.06 of height back and never more than 0.02 forward. If no depth clears, it stays at the
+   side.
+
+**Do not undo by tidying:**
+
+- **The envelope, not one frame.** A single-frame relief is right for one pawn id and wrong for
+  the next.
+- **The profile table, not the bounds.** Bounds put the bat 2 cm further out and the crowbar's
+  shaft in front of the leg. Run `scripts/unity.sh exec Odyssey.EditorTools.WeaponProfileBake.Run`
+  when a weapon's art changes.
+- **Back, not forward, past the hand.** The first search went both ways. Every bat and machete
+  walked 12–22 cm forward, in front of the knee, to dodge a hand the relief could not clear.
+- **No grace cells on the body relief.** A one-cell dilation added about a centimetre of air to
+  every fit (measured).
+- **The gauge's ray, not a face normal.** The nearest-face sign reports phantom intersections at
+  every open edge (see the instrument, above).
+
+**Tests.** `WeaponSheathGapTests.EverySheathedWeaponSitsAgainstTheHip` checks four bodies, four
+weapons and two idle instants. The nearest point must be 0.8–3.0 cm from the body. A weapon
+longer than the leg may be up to 4.5 cm. No point may be inside, and the lean must be within 15°.
+Nothing may go through the floor. The top must be at most 0.2 of height above the pelvis, unless
+the weapon was lifted to clear the floor. **Negative control:** the test failed against the §8b
+fit on 2026-09-23. It failed on the lean everywhere, and on the gap: 6.7, 4.7 and 5.1 cm on the
+feminine body alone. `WeaponProfileTests` holds the table to the meshes, and a bat's handle to
+under 0.7 of its barrel. EditMode, filtered to the weapon and sheath fixtures: 17/17.
+
+**Cost.** Once per look: six skin bakes of the cropped left side, classified and rasterised. The
+slowest look took **27 ms** in the editor. It is paid on the first figure built of a look, and
+never again in a session. Once per weapon swap: about 10k profile points against the relief,
+tried at 11 splays and up to 13 depths. Nothing is per frame. Not measured in a player.
+
+**Open.**
+
+- **The hanging hand overlaps the weapon in the idle** on the bat and the crowbar: the gauge's arm
+  gap is 0.0–1.3 cm on several bodies. No depth within 0.06 of height behind clears both the
+  thigh and the hand, so the fit stays at the side and the hand hangs over the handle. For the
+  owner: a hand resting on it, or the weapon behind the hand?
+- **Walking is not measured.** The sheath rides the pelvis, and the thigh swings forward through
+  it in the stride.
+- **The arc blade is 1.7 m drawn, longer than the leg.** Its hilt sits at the ribs and its guard
+  at the elbow. It is 3.8–4.2 cm off the military build and 5.0 cm at worst across the cast. It
+  may belong on the back, which is a decision, not a fit.
+- **Across the cast, 7 bats and 5 crowbars sit 3.0–4.0 cm off.** All are wide-stance male builds
+  or one idle phase in six. This is the price of an envelope that forbids intersection.
+- The draw's hand-on-hilt sampling still aims at the hip's surface beside the joint, not at the
+  fitted weapon's grip.
