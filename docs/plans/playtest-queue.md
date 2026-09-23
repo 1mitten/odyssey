@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the Inventory tab find things, and does Go land where you meant?** (`claude/research-tab`,
+  `docs/design/35-inventory-tab.md`.) F2 with a few stockpiles and a shelf holding goods. Judge
+  whether a second click on an item row reads as "go there" or surprises you; whether Go landing on
+  the store's largest stack, with the slice moved to its layer, is where you expected the camera;
+  and whether the store pane that opens is the one the row named. A wrong answer is the camera
+  landing on the store's corner away from the goods, or a pane titled with a different number.
+
+- **Does the Research tab read at a glance with no mechanism behind it?** (`claude/research-tab`,
+  `docs/design/34-research-tab.md`.) F3, press Research on Generators, Queue on Electric light,
+  then debug menu *Finish research*. Judge whether the four statuses read with the words covered,
+  and whether the flat window and 22 px close beside the rounded Work tab look like one interface
+  or two — a wrong answer is wanting them unified, and which way.
+
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five

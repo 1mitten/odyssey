@@ -146,7 +146,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#colonists">Colonists<b>40</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>40</b></a></li>
-<li><a href="#world">World and interface<b>96</b></a></li>
+<li><a href="#research">Research<b>26</b></a></li>
+<li><a href="#world">World and interface<b>110</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
@@ -155,9 +156,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>716</b><i>named entries</i></div>
+<div class="stat"><b>759</b><i>named entries</i></div>
 <div class="stat"><b>270</b><i>with icon art</i></div>
-<div class="stat m"><b>446</b><i>no art yet</i></div>
+<div class="stat m"><b>489</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2416,8 +2417,185 @@ footer code{font-size:11.5px;color:var(--ink2)}
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
+<section id="research" data-sec="1">
+<h2>Research <em class="count">26 entries</em></h2>
+<p class="blurb">What the colony can learn, grouped by field, and the words the Research tab uses about it. A project's description here is the body of its detail pane: the screen reads this column, so correcting a line here corrects the game. Only Power is listed yet, and the projects are placeholders until the research mechanism exists (design 34).</p>
+<h3 class="nsh">Fields</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.research.category.power" data-hay="power ui.research.category.power making current, carrying it and storing it " data-gap="1">
+<div class="nm">Power<span class="k">ui.research.category.power</span></div>
+<div class="dsc">Making current, carrying it and storing it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+</div>
+<h3 class="nsh">Projects</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.research.project.wiring" data-hay="wiring ui.research.project.wiring running current from where it is made to where it is wanted, along conduit. everything electrical starts here. " data-gap="1">
+<div class="nm">Wiring<span class="k">ui.research.project.wiring</span></div>
+<div class="dsc">Running current from where it is made to where it is wanted, along conduit. Everything electrical starts here.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.project.generators" data-hay="generators ui.research.project.generators a burner that turns fuel into current. loud and hungry, and the first power a colony can count on. " data-gap="1">
+<div class="nm">Generators<span class="k">ui.research.project.generators</span></div>
+<div class="dsc">A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.project.lighting" data-hay="electric light ui.research.project.lighting light that does not burn. a room stays usable after dark, at a steady draw on its net. " data-gap="1">
+<div class="nm">Electric light<span class="k">ui.research.project.lighting</span></div>
+<div class="dsc">Light that does not burn. A room stays usable after dark, at a steady draw on its net.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.project.batteries" data-hay="batteries ui.research.project.batteries charge put by against the hours a generator stands idle or a panel sees no sun. " data-gap="1">
+<div class="nm">Batteries<span class="k">ui.research.project.batteries</span></div>
+<div class="dsc">Charge put by against the hours a generator stands idle or a panel sees no sun.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.project.solar" data-hay="solar arrays ui.research.project.solar free current by day and none at night, which is why it wants batteries behind it. " data-gap="1">
+<div class="nm">Solar arrays<span class="k">ui.research.project.solar</span></div>
+<div class="dsc">Free current by day and none at night, which is why it wants batteries behind it.</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+</div>
+<h3 class="nsh">Project states</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.research.status.researching" data-hay="researching ui.research.status.researching being worked on now " data-gap="1">
+<div class="nm">Researching<span class="k">ui.research.status.researching</span></div>
+<div class="dsc">Being worked on now</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.status.available" data-hay="available ui.research.status.available everything it needs is done " data-gap="1">
+<div class="nm">Available<span class="k">ui.research.status.available</span></div>
+<div class="dsc">Everything it needs is done</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.status.done" data-hay="done ui.research.status.done finished; what it unlocks is the colony's " data-gap="1">
+<div class="nm">Done<span class="k">ui.research.status.done</span></div>
+<div class="dsc">Finished; what it unlocks is the colony's</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.status.locked" data-hay="locked ui.research.status.locked something it needs is not done yet " data-gap="1">
+<div class="nm">Locked<span class="k">ui.research.status.locked</span></div>
+<div class="dsc">Something it needs is not done yet</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+</div>
+<h3 class="nsh">The Research tab's words</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.research.hud.now" data-hay="now ui.research.hud.now the label of the strip that says what is being researched " data-gap="1">
+<div class="nm">Now<span class="k">ui.research.hud.now</span></div>
+<div class="dsc">The label of the strip that says what is being researched</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.then" data-hay="then {list} ui.research.hud.then what the queue does next, after the project in hand " data-gap="1">
+<div class="nm">then {list}<span class="k">ui.research.hud.then</span></div>
+<div class="dsc">What the queue does next, after the project in hand</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.idle" data-hay="nothing being researched. pick a project. ui.research.hud.idle the now strip when no project is in hand " data-gap="1">
+<div class="nm">Nothing being researched. Pick a project.<span class="k">ui.research.hud.idle</span></div>
+<div class="dsc">The Now strip when no project is in hand</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.project" data-hay="project ui.research.hud.project column heading " data-gap="1">
+<div class="nm">Project<span class="k">ui.research.hud.project</span></div>
+<div class="dsc">Column heading</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.status" data-hay="status ui.research.hud.status column heading " data-gap="1">
+<div class="nm">Status<span class="k">ui.research.hud.status</span></div>
+<div class="dsc">Column heading</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.cost" data-hay="cost ui.research.hud.cost column heading " data-gap="1">
+<div class="nm">Cost<span class="k">ui.research.hud.cost</span></div>
+<div class="dsc">Column heading</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.meta" data-hay="{category}, cost {cost} ui.research.hud.meta the line under a selected project's name " data-gap="1">
+<div class="nm">{category}, cost {cost}<span class="k">ui.research.hud.meta</span></div>
+<div class="dsc">The line under a selected project's name</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.needs" data-hay="needs ui.research.hud.needs the projects that must be done first " data-gap="1">
+<div class="nm">Needs<span class="k">ui.research.hud.needs</span></div>
+<div class="dsc">The projects that must be done first</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.unlocks" data-hay="unlocks ui.research.hud.unlocks what finishing the project gives the colony " data-gap="1">
+<div class="nm">Unlocks<span class="k">ui.research.hud.unlocks</span></div>
+<div class="dsc">What finishing the project gives the colony</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.leadsto" data-hay="leads to ui.research.hud.leadsto the projects this one opens up " data-gap="1">
+<div class="nm">Leads to<span class="k">ui.research.hud.leadsto</span></div>
+<div class="dsc">The projects this one opens up</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.none" data-hay="none ui.research.hud.none an empty list in the facts " data-gap="1">
+<div class="nm">None<span class="k">ui.research.hud.none</span></div>
+<div class="dsc">An empty list in the facts</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.needsfirst" data-hay="needs {project} first. ui.research.hud.needsfirst why a locked project cannot be started " data-gap="1">
+<div class="nm">Needs {project} first.<span class="k">ui.research.hud.needsfirst</span></div>
+<div class="dsc">Why a locked project cannot be started</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.research" data-hay="research ui.research.hud.research start this project now " data-gap="1">
+<div class="nm">Research<span class="k">ui.research.hud.research</span></div>
+<div class="dsc">Start this project now</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.queue" data-hay="queue ui.research.hud.queue research this project after the one in hand " data-gap="1">
+<div class="nm">Queue<span class="k">ui.research.hud.queue</span></div>
+<div class="dsc">Research this project after the one in hand</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.unqueue" data-hay="unqueue ui.research.hud.unqueue take this project back out of the queue " data-gap="1">
+<div class="nm">Unqueue<span class="k">ui.research.hud.unqueue</span></div>
+<div class="dsc">Take this project back out of the queue</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+<div class="row gap" id="ui.research.hud.pause" data-hay="pause ui.research.hud.pause stop researching, keeping the progress " data-gap="1">
+<div class="nm">Pause<span class="k">ui.research.hud.pause</span></div>
+<div class="dsc">Stop researching, keeping the progress</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">RS</div>
+</div>
+</div>
+<p class="empty" hidden>No entries in this section match.</p>
+</section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">96 entries</em></h2>
+<h2>World and interface <em class="count">110 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2792,6 +2970,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.tab.inventory" data-hay="inventory ui.tab.inventory everything in the colony's stores, and which store holds it " data-gap="1">
+<div class="nm">Inventory<span class="k">ui.tab.inventory</span></div>
+<div class="dsc">Everything in the colony's stores, and which store holds it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
 </div>
 <h3 class="nsh">Game speed</h3>
 <div class="tbl">
@@ -3023,6 +3207,88 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="ms">M3</div>
 </div>
 </div>
+<h3 class="nsh">The Inventory tab's words</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.inventory.hud.search" data-hay="find an item ui.inventory.hud.search the search field's placeholder " data-gap="1">
+<div class="nm">Find an item<span class="k">ui.inventory.hud.search</span></div>
+<div class="dsc">The search field's placeholder</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.item" data-hay="item ui.inventory.hud.item column heading " data-gap="1">
+<div class="nm">Item<span class="k">ui.inventory.hud.item</span></div>
+<div class="dsc">Column heading</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.places" data-hay="places ui.inventory.hud.places column heading: how many stores hold the item " data-gap="1">
+<div class="nm">Places<span class="k">ui.inventory.hud.places</span></div>
+<div class="dsc">Column heading: how many stores hold the item</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.total" data-hay="total ui.inventory.hud.total column heading: how many the colony's stores hold " data-gap="1">
+<div class="nm">Total<span class="k">ui.inventory.hud.total</span></div>
+<div class="dsc">Column heading: how many the colony's stores hold</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.where" data-hay="where ui.inventory.hud.where column heading " data-gap="1">
+<div class="nm">Where<span class="k">ui.inventory.hud.where</span></div>
+<div class="dsc">Column heading</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.qty" data-hay="qty ui.inventory.hud.qty column heading " data-gap="1">
+<div class="nm">Qty<span class="k">ui.inventory.hud.qty</span></div>
+<div class="dsc">Column heading</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.go" data-hay="go ui.inventory.hud.go move the camera to this store and select it " data-gap="1">
+<div class="nm">Go<span class="k">ui.inventory.hud.go</span></div>
+<div class="dsc">Move the camera to this store and select it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.goto" data-hay="go to {place} ui.inventory.hud.goto the primary button: the selected store " data-gap="1">
+<div class="nm">Go to {place}<span class="k">ui.inventory.hud.goto</span></div>
+<div class="dsc">The primary button: the selected store</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.inplaces" data-hay="{category}, in {count} places ui.inventory.hud.inplaces the line under a selected item's name " data-gap="1">
+<div class="nm">{category}, in {count} places<span class="k">ui.inventory.hud.inplaces</span></div>
+<div class="dsc">The line under a selected item's name</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.inplace" data-hay="{category}, in 1 place ui.inventory.hud.inplace the line under a selected item's name when one store holds it " data-gap="1">
+<div class="nm">{category}, in 1 place<span class="k">ui.inventory.hud.inplace</span></div>
+<div class="dsc">The line under a selected item's name when one store holds it</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.hint" data-hay="go moves the camera to that place and selects it. clicking the item row itself goes to the place holding the most. ui.inventory.hud.hint the hint under the list of places " data-gap="1">
+<div class="nm">Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most.<span class="k">ui.inventory.hud.hint</span></div>
+<div class="dsc">The hint under the list of places</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.empty" data-hay="nothing is in a store yet. ui.inventory.hud.empty the table when the colony's stores are empty " data-gap="1">
+<div class="nm">Nothing is in a store yet.<span class="k">ui.inventory.hud.empty</span></div>
+<div class="dsc">The table when the colony's stores are empty</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+<div class="row gap" id="ui.inventory.hud.nomatch" data-hay="no item matches. ui.inventory.hud.nomatch the table when a search finds nothing " data-gap="1">
+<div class="nm">No item matches.<span class="k">ui.inventory.hud.nomatch</span></div>
+<div class="dsc">The table when a search finds nothing</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">INV</div>
+</div>
+</div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
@@ -3217,7 +3483,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 716, "gaps": 446};</script>
+<script>window.WIKI={"total": 759, "gaps": 489};</script>
 <script>
 (function(){
   var D = window.WIKI;

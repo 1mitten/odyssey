@@ -132,6 +132,8 @@ namespace Odyssey.Presentation.Bootstrap
                         _shell != null && _shell.MenuOpen,
                         _bootstrap?.Directors?.Work.Open == true,
                         _bootstrap?.Directors?.Almanac.Open == true,
+                        _bootstrap?.Directors?.Inventory.Open == true,
+                        _bootstrap?.Directors?.Research.Open == true,
                         // Null while a colony is running: the main screen and the game are the two
                         // halves of a session's life and only one of them is ever up.
                         _shell != null && _shell.Menu.Showing ? _shell.Menu.Screen : null))
@@ -160,6 +162,12 @@ namespace Odyssey.Presentation.Bootstrap
                     break;
                 case EscapeAction.CloseAlmanac:
                     _bootstrap?.Directors?.Almanac.SetOpen(false);
+                    break;
+                case EscapeAction.CloseInventory:
+                    _bootstrap?.Directors?.Inventory.SetOpen(false);
+                    break;
+                case EscapeAction.CloseResearch:
+                    _bootstrap?.Directors?.Research.SetOpen(false);
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);

@@ -40,6 +40,8 @@ namespace Odyssey.Hud
         /// always one with nothing behind it.
         /// </summary>
         F1,
+        F2,
+        F3,
         F9,
     }
 
@@ -93,6 +95,12 @@ namespace Odyssey.Hud
         /// Open or close the Almanac reference browser. F9 on the command bar.
         /// </summary>
         Almanac,
+
+        /// <summary>Open or close the Inventory tab (design 35), on F2. Appended, so no stored binding shifts.</summary>
+        InventoryTab,
+
+        /// <summary>Open or close the Research tab (design 34), on the F3 the bar has advertised since M1.</summary>
+        ResearchTab,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -179,6 +187,8 @@ namespace Odyssey.Hud
             (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
             (HotkeyAction.WorkTab,          HudKey.F1,        HudKey.None),
             (HotkeyAction.Almanac,          HudKey.F9,        HudKey.None),
+            (HotkeyAction.InventoryTab,     HudKey.F2,        HudKey.None),
+            (HotkeyAction.ResearchTab,      HudKey.F3,        HudKey.None),
         };
 
         /// <summary>
@@ -360,6 +370,8 @@ namespace Odyssey.Hud
             HotkeyAction.DebugMenu => "ui.keys.debugmenu",
             HotkeyAction.WorkTab => "ui.keys.worktab",
             HotkeyAction.Almanac => "ui.keys.almanac",
+            HotkeyAction.InventoryTab => "ui.keys.inventory",
+            HotkeyAction.ResearchTab => "ui.keys.research",
             _ => KeysKey,
         };
 

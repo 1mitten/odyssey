@@ -10824,3 +10824,41 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+
+## 2026-09-23 — The Research and Inventory tabs (designs 34, 35)
+
+Two owner specs in one afternoon, both for windows docked in the Work tab's corner, so one PR.
+Research (F3) was asked for as **interface only** — *"only include power for now but we'll create
+the mechanism later"* — and Inventory (F2) was folded in mid-session.
+
+**Research is a placeholder state, said plainly.** There is no research system, so the project in
+hand, the queue and what is done live in `ResearchDirector` on the interface side: session state,
+unsaved, unhashed. Progress never moves; the debug menu's *Finish research* is the only way a
+project becomes done. That is deliberate, and the seam the bench will drive (`Advance`) is tested
+now so the mechanism unit starts from a contract rather than a guess. Wiring starts done because
+the power branch builds conduit with no research at all.
+
+**A project's description needed a route to the screen**, and the rule is that content is written
+once. The registry emitted names only, so `emit_labels.py` now also emits the description column
+for the `ui.research.project` namespace (`Registry.Describe`). One namespace rather than all seven
+hundred rows, so the generated file does not carry tooltip seeds nothing draws.
+
+**Inventory needed a store's name, and the name had one owner in the simulation.** "Stockpile 3"
+is `StorageZones.OrdinalOfCell`, one series across zones and shelves in cell order, and it reached
+the interface only for the one selected cell. The HUD could have re-derived it from the published
+rows — the zone cells are sorted, so the first row of a zone is its first cell — and that would
+have been P1 (one rule, two owners) written on purpose. It is published on `StoreView` and
+`StorageUnitView` instead, once per zone per publish, and `StoreOrdinalTests` holds the published
+number to the pane's. Views are not hashed, so nothing moved.
+
+**Go selects the cell, not the pile.** A pick on a stockpile cell selects what lies there first,
+because that is what a click usually means; Go is asking for the store, and the pane leads with
+the store only when the cell is the subject. So `SelectionDirector.ChooseCell` exists, and
+`HudDirectors.ChooseStore` moves the slice as the roster does rather than keeping it as the
+Animals tab does: a store may be underground.
+
+**Where the specs were not followed, the design docs say so** (34 §5, 35 §5): the shipped bar
+rather than a 44 px one, the shipped wash and rule tokens, the contrast-corrected category hues,
+and six place rows. The new windows are flat with a 22 px close as specced, which leaves them
+different from Work and Animals — an inconsistency for the owner to settle, not one to tidy
+silently.

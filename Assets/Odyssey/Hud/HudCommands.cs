@@ -97,11 +97,18 @@ namespace Odyssey.Hud
         /// <summary>Opens the Almanac in-game reference wiki (F9).</summary>
         public const string AlmanacKey = "ui.tab.almanac";
 
+        /// <summary>Opens the Inventory tab (design 35): what the stores hold, and where. F2, between Work and Research.</summary>
+        public const string InventoryKey = "ui.tab.inventory";
+
+        /// <summary>Opens the Research tab (design 34). F3, which the bar has advertised since M1.</summary>
+        public const string ResearchKey = "ui.tab.research";
+
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
             (BuildKey, "B", ""),
             (WorkKey, "F1", ""),
-            ("ui.tab.research", "F3", "research arrives with M7"),
+            (InventoryKey, "F2", ""),
+            (ResearchKey, "F3", ""),
             ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
             ("ui.tab.animals", "F5", "animals arrive with M5"),
             ("ui.tab.wildlife", "F6", "wildlife arrives with M5"),

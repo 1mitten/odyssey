@@ -82,6 +82,10 @@ namespace Odyssey.Presentation.Ui
                 "Brings every standing crop to ripeness at once, daylight window and all - "
                     + "the harvest half without the four-day wait",
                 RipenCrops));
+            _debugCheats.Add(DebugActionRow(DebugDirector.FinishResearchKey,
+                "Completes the project being researched and starts the next in the queue - the "
+                    + "only way a project becomes done until research is a mechanism",
+                FinishResearch));
             _debugTraceRow = DebugToggleRow(DebugDirector.TraceKey,
                 "Stops or starts this session's performance trace. Off, then a second session on, "
                     + "is how the tracer itself gets ruled out of a report about stutter",

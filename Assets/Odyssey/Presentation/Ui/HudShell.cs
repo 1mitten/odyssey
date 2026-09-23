@@ -631,6 +631,8 @@ namespace Odyssey.Presentation.Ui
             BuildSettings();
             BuildDebug();
             BuildWork();
+            BuildInventory();
+            BuildResearch();
             BuildAlmanac();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
@@ -699,6 +701,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged += OnDebugTabChanged;
             _directors.Work.Changed += OnWorkChanged;
             _directors.Work.ModeChanged += OnWorkModeChanged;
+            _directors.Inventory.Changed += OnInventoryChanged;
+            _directors.Research.Changed += OnResearchChanged;
+            _directors.Research.StateChanged += OnResearchStateChanged;
             _directors.Almanac.Changed += OnAlmanacChanged;
             _directors.Almanac.Navigated += OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
@@ -736,6 +741,8 @@ namespace Odyssey.Presentation.Ui
             // without this the panel a player left open in the last colony stays on the screen
             // over the next one, drawing the last colony's rows.
             OnWorkChanged();
+            OnInventoryChanged();
+            OnResearchChanged();
         }
 
         void Detach()
@@ -760,6 +767,9 @@ namespace Odyssey.Presentation.Ui
             _directors.Debug.TabChanged -= OnDebugTabChanged;
             _directors.Work.Changed -= OnWorkChanged;
             _directors.Work.ModeChanged -= OnWorkModeChanged;
+            _directors.Inventory.Changed -= OnInventoryChanged;
+            _directors.Research.Changed -= OnResearchChanged;
+            _directors.Research.StateChanged -= OnResearchStateChanged;
             _directors.Almanac.Changed -= OnAlmanacChanged;
             _directors.Almanac.Navigated -= OnAlmanacNavigated;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
@@ -875,6 +885,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshSpeed();
                 RefreshBuildPalette();
                 RefreshWork();
+                RefreshInventory();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -1124,6 +1135,15 @@ namespace Odyssey.Presentation.Ui
             if (world == null || _directors == null) return;
 
             SelectionDirector selection = _directors.Selection;
+
+            // The Inventory and Research tabs never show beside the inspect pane (designs 35 and
+            // 34): a selection - including the one Go makes - puts them away and gives the corner
+            // to the pane.
+            if (!selection.IsEmpty)
+            {
+                _directors.Inventory.SetOpen(false);
+                _directors.Research.SetOpen(false);
+            }
 
             // The pane and the palette dock into the same bottom-left corner, so the corner holds
             // one of them. Opening the palette has cleared the selection since 2026-09-17; this is

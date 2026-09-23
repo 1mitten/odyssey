@@ -92,6 +92,11 @@ namespace Odyssey.Presentation.Ui
             Label capLabel = HudText.Make(command.Hotkey, HudTextRole.Hotkey, ussClass: "cmd__key");
             item.Add(capLabel);
 
+            // The Inventory and Research items are washed while their tabs are open, as Build is
+            // while the palette is.
+            if (command.Key == HudCommands.InventoryKey) _inventoryItem = item;
+            if (command.Key == HudCommands.ResearchKey) _researchItem = item;
+
             // Build is the one cap on the bar that names a binding rather than a promise: it
             // follows the binding map when the player moves the key.
             if (command.Key == HudCommands.BuildKey)
@@ -124,6 +129,8 @@ namespace Odyssey.Presentation.Ui
         {
             if (key == HudCommands.BuildKey) SetBuildPalette(!BuildPaletteOpen);
             else if (key == HudCommands.WorkKey) _directors?.Work.Toggle();
+            else if (key == HudCommands.InventoryKey) _directors?.Inventory.Toggle();
+            else if (key == HudCommands.ResearchKey) _directors?.Research.Toggle();
             else if (key == HudCommands.AlmanacKey) ToggleAlmanac();
             else if (key == HudCommands.MenuKey) ToggleMenu();
         }
@@ -152,6 +159,12 @@ namespace Odyssey.Presentation.Ui
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.WorkTab))
                 _directors?.Work.Toggle();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.InventoryTab))
+                _directors?.Inventory.Toggle();
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ResearchTab))
+                _directors?.Research.Toggle();
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Almanac))
                 ToggleAlmanac();
@@ -865,7 +878,8 @@ namespace Odyssey.Presentation.Ui
             }),
             ("Interface", new[]
             {
-                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.DebugMenu,
+                HotkeyAction.BuildPalette, HotkeyAction.WorkTab, HotkeyAction.InventoryTab,
+                HotkeyAction.ResearchTab, HotkeyAction.DebugMenu,
             }),
         };
 

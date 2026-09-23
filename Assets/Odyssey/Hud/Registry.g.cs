@@ -187,6 +187,7 @@ namespace Odyssey.Hud
             { "ui.command.unequip", "Unequip" },
             { "ui.command.uninstall", "Uninstall" },
             { "ui.command.wear", "Wear" },
+            { "ui.debug.finishresearch", "Finish research" },
             { "ui.debug.givefood", "Give food" },
             { "ui.debug.givestone", "Give stone" },
             { "ui.debug.givewood", "Give wood" },
@@ -230,6 +231,19 @@ namespace Odyssey.Hud
             { "ui.health.stomach", "Stomach" },
             { "ui.health.torso", "Torso" },
             { "ui.health.wound", "Wound" },
+            { "ui.inventory.hud.empty", "Nothing is in a store yet." },
+            { "ui.inventory.hud.go", "Go" },
+            { "ui.inventory.hud.goto", "Go to {place}" },
+            { "ui.inventory.hud.hint", "Go moves the camera to that place and selects it. Clicking the item row itself goes to the place holding the most." },
+            { "ui.inventory.hud.inplace", "{category}, in 1 place" },
+            { "ui.inventory.hud.inplaces", "{category}, in {count} places" },
+            { "ui.inventory.hud.item", "Item" },
+            { "ui.inventory.hud.nomatch", "No item matches." },
+            { "ui.inventory.hud.places", "Places" },
+            { "ui.inventory.hud.qty", "Qty" },
+            { "ui.inventory.hud.search", "Find an item" },
+            { "ui.inventory.hud.total", "Total" },
+            { "ui.inventory.hud.where", "Where" },
             { "ui.item.axe", "Axe" },
             { "ui.item.bedroll", "Bedroll" },
             { "ui.item.binoculars", "Binoculars" },
@@ -270,9 +284,11 @@ namespace Odyssey.Hud
             { "ui.keys.forward", "Camera forward" },
             { "ui.keys.frame", "Frame the map" },
             { "ui.keys.growzone", "Growing zone tool" },
+            { "ui.keys.inventory", "Inventory tab" },
             { "ui.keys.left", "Camera left" },
             { "ui.keys.mine", "Mine tool" },
             { "ui.keys.pause", "Pause" },
+            { "ui.keys.research", "Research tab" },
             { "ui.keys.right", "Camera right" },
             { "ui.keys.slicedown", "Slice down" },
             { "ui.keys.sliceup", "Slice up" },
@@ -576,6 +592,32 @@ namespace Odyssey.Hud
             { "ui.res.tallow", "Tallow" },
             { "ui.res.wire", "Wire" },
             { "ui.res.wood", "Wood" },
+            { "ui.research.category.power", "Power" },
+            { "ui.research.hud.cost", "Cost" },
+            { "ui.research.hud.idle", "Nothing being researched. Pick a project." },
+            { "ui.research.hud.leadsto", "Leads to" },
+            { "ui.research.hud.meta", "{category}, cost {cost}" },
+            { "ui.research.hud.needs", "Needs" },
+            { "ui.research.hud.needsfirst", "Needs {project} first." },
+            { "ui.research.hud.none", "None" },
+            { "ui.research.hud.now", "Now" },
+            { "ui.research.hud.pause", "Pause" },
+            { "ui.research.hud.project", "Project" },
+            { "ui.research.hud.queue", "Queue" },
+            { "ui.research.hud.research", "Research" },
+            { "ui.research.hud.status", "Status" },
+            { "ui.research.hud.then", "then {list}" },
+            { "ui.research.hud.unlocks", "Unlocks" },
+            { "ui.research.hud.unqueue", "Unqueue" },
+            { "ui.research.project.batteries", "Batteries" },
+            { "ui.research.project.generators", "Generators" },
+            { "ui.research.project.lighting", "Electric light" },
+            { "ui.research.project.solar", "Solar arrays" },
+            { "ui.research.project.wiring", "Wiring" },
+            { "ui.research.status.available", "Available" },
+            { "ui.research.status.done", "Done" },
+            { "ui.research.status.locked", "Locked" },
+            { "ui.research.status.researching", "Researching" },
             { "ui.schedule.anything", "Anything" },
             { "ui.schedule.eat", "Eat" },
             { "ui.schedule.meditate", "Meditate" },
@@ -676,6 +718,7 @@ namespace Odyssey.Hud
             { "ui.tab.build", "Build" },
             { "ui.tab.colonists", "Colonists" },
             { "ui.tab.factions", "Factions" },
+            { "ui.tab.inventory", "Inventory" },
             { "ui.tab.menu", "Menu" },
             { "ui.tab.research", "Research" },
             { "ui.tab.schedule", "Schedule" },
@@ -740,5 +783,22 @@ namespace Odyssey.Hud
         /// </summary>
         public static string Label(string key) =>
             Labels.TryGetValue(key, out string? label) ? label : key;
+
+        /// <summary>
+        /// The description column, for the few namespaces whose description is drawn as
+        /// well as their name (emit_labels.py, DESCRIBED).
+        /// </summary>
+        public static readonly Dictionary<string, string> Descriptions = new Dictionary<string, string>
+        {
+            { "ui.research.project.batteries", "Charge put by against the hours a generator stands idle or a panel sees no sun." },
+            { "ui.research.project.generators", "A burner that turns fuel into current. Loud and hungry, and the first power a colony can count on." },
+            { "ui.research.project.lighting", "Light that does not burn. A room stays usable after dark, at a steady draw on its net." },
+            { "ui.research.project.solar", "Free current by day and none at night, which is why it wants batteries behind it." },
+            { "ui.research.project.wiring", "Running current from where it is made to where it is wanted, along conduit. Everything electrical starts here." },
+        };
+
+        /// <summary>A key's description, or empty when the registry draws none for it.</summary>
+        public static string Describe(string key) =>
+            Descriptions.TryGetValue(key, out string? text) ? text : string.Empty;
     }
 }
