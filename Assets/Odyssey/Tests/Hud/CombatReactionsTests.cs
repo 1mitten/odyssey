@@ -156,6 +156,36 @@ namespace Odyssey.Tests.Hud
                 "a stun ends the swing outright");
         }
 
+        /// <summary>
+        /// A reaction hands the layer to the body's own swing once, and does not take it back when
+        /// the swing's window closes: the follow-through plays on and the flinch is laid over it.
+        /// One hand-over per blow, not a flicker between two clips.
+        /// </summary>
+        [Test]
+        public void AReactionHandsTheLayerToTheSwingOnceAndIsLaidOverIt()
+        {
+            var track = new ReactionTrack();
+            track.Take(HitReaction.Flinch, HitSide.Front, 0.87f, false);
+            track.Step(0.05f);
+
+            Assert.That(track.Show(true, 0.4f), Is.EqualTo(ActionShown.Reaction), "early in her wind-up, the reaction");
+            Assert.That(track.Overlay(ActionShown.Reaction).IsRest, Is.True, "and nothing laid over it");
+
+            Assert.That(track.Show(true, 0.7f), Is.EqualTo(ActionShown.Swing), "her swing comes back to land");
+            Assert.That(track.Yielded, Is.True);
+            Assert.That(track.Overlay(ActionShown.Swing).IsRest, Is.False, "with the flinch laid over it");
+
+            Assert.That(track.Show(true, 1.6f), Is.EqualTo(ActionShown.Swing), "and keeps it through the follow-through");
+            Assert.That(track.Show(false, 0f), Is.EqualTo(ActionShown.Nothing), "and the reaction does not come back after");
+
+            track.Take(HitReaction.Flinch, HitSide.Left, 0.87f, false);
+            Assert.That(track.Yielded, Is.False, "a new blow is a new reaction");
+            Assert.That(track.Show(true, 1.6f), Is.EqualTo(ActionShown.Reaction), "a blow in the follow-through cuts it short");
+
+            track.Step(1f);
+            Assert.That(track.Overlay(ActionShown.Swing).IsRest, Is.True, "nothing over a swing once it has run out");
+        }
+
         // ---- The knock-back ------------------------------------------------------------------------
 
         [Test]
@@ -386,9 +416,8 @@ namespace Odyssey.Tests.Hud
                     f.Track.Step(dt);
                     bool swinging = tick < f.SwingEnd;
                     float phase = (tick - f.SwingStart) / f.Arm.Windup;
-                    ActionShown shown = CombatReactions.Arbitrate(swinging, phase, f.Track.Live, f.Track.CancelsSwing);
-                    seen = shown == ActionShown.Reaction
-                           || (shown == ActionShown.Swing && f.Track.Live && !f.Track.Pose().IsRest);
+                    ActionShown shown = f.Track.Show(swinging, phase);
+                    seen = shown == ActionShown.Reaction || !f.Track.Overlay(shown).IsRest;
                 }
 
                 for (int i = 0; i < f.Blows.Count; i++)

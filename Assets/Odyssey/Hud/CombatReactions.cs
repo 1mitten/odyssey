@@ -250,6 +250,14 @@ namespace Odyssey.Hud
         /// <summary>Whether it ended the body's own swing (<see cref="CombatReactions.CancelsSwing"/>).</summary>
         public bool CancelsSwing;
 
+        /// <summary>
+        /// Whether the body's own swing has taken the clip layer back from it. Once it has, the
+        /// reaction does not return to the layer when the swing's window closes — the swing's
+        /// follow-through plays on — and is seen only as the computed flinch laid over it. One
+        /// hand-over per blow, not a flicker between two clips.
+        /// </summary>
+        public bool Yielded;
+
         public bool Live => Kind != HitReaction.None && Seconds < Span;
 
         /// <summary>Whether <paramref name="incoming"/> would replace what is running.</summary>
@@ -265,6 +273,7 @@ namespace Odyssey.Hud
             Seconds = 0f;
             Span = span;
             CancelsSwing = cancelsSwing;
+            Yielded = false;
             return true;
         }
 
@@ -279,12 +288,36 @@ namespace Odyssey.Hud
         /// <summary>The computed shape at this instant (<see cref="CombatReactions.Pose"/>).</summary>
         public ReactionPose Pose() => CombatReactions.Pose(Kind, Side, Seconds);
 
+        /// <summary>
+        /// Who has the clip layer this frame (<see cref="CombatReactions.Arbitrate"/>), remembering a
+        /// hand-over to the swing (<see cref="Yielded"/>). <paramref name="swingPhase"/> is 0 at the
+        /// start of the body's own wind-up and 1 on its impact tick.
+        /// </summary>
+        public ActionShown Show(bool swinging, float swingPhase)
+        {
+            bool live = Live;
+            ActionShown shown = CombatReactions.Arbitrate(swinging, swingPhase, live && !Yielded,
+                CancelsSwing);
+            if (live && swinging && shown == ActionShown.Swing) Yielded = true;
+            return shown;
+        }
+
+        /// <summary>
+        /// The computed flinch to lay over whatever the layer shows this frame, or rest: over the
+        /// swing that holds it, and over the idle or the walk once a reaction that yielded to that
+        /// swing outlives it — so a blow is seen for its whole flinch whatever took the layer.
+        /// Nothing when the reaction itself is showing, or over.
+        /// </summary>
+        public ReactionPose Overlay(ActionShown shown) =>
+            shown != ActionShown.Reaction && Live ? Pose() : default;
+
         public void Clear()
         {
             Kind = HitReaction.None;
             Seconds = 0f;
             Span = 0f;
             CancelsSwing = false;
+            Yielded = false;
         }
     }
 
