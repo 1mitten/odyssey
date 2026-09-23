@@ -101,3 +101,43 @@ One branch. `claude/combat-c2` sits on `main` after PR #176 (C1 and wildlife) an
 another open branch needs. Temperature (`claude/temperature-core`) is independent of it — combat adds
 save sections, not a format bump — so either may merge first; whichever goes second re-runs the fast,
 Long and Unity tiers after merging `main`, because both change what a pawn saves and hashes.
+
+## The round after the playtest (2026-09-23)
+
+The owner played checkpoints 2 and 3: *"It's mostly pretty decent."* Four asks, interviewed and
+built as design 33 §7, integrated on **`D:\code\odyssey-combat-drawn`**, branch
+**`claude/combat-c2-polish`**. Synty is junctioned. Press Play, then New game.
+
+### What changed
+
+| Change | Was | Is | Where |
+|---|---|---|---|
+| Right-click a weapon | the colonist was sent at once, with no sign of it | a menu at the pointer: *Equip machete* / *Cancel*; nothing is sent until you choose | §7a |
+| After ordering an equip | no line | the same order line and floor bracket as a drafted move (no diamond); *Equipping* on the activity line | §7a |
+| Right-click an enemy | attacked with no visible sign | attacks at once, and a **red lock-on ring** snaps in under the target, flashes once, stays faint, and fades when it goes down or dies or the order changes | §7b |
+| Two or more attacking one target | could stand on the same tile | each takes the nearest free cell beside the target, side by side; a ninth waits one cell back | §7c |
+| Escape with the menu open | — | closes the menu first | §7a |
+| Blood | none | still none visible; the hook for the blood unit is in place | §7d |
+
+### What to test
+
+| Test | Look for | A wrong answer looks like |
+|---|---|---|
+| Select an undrafted colonist, right-click the machete, pick *Equip* | a readable menu by the pointer, then a line to the weapon and *Equipping* | the menu under the arrow or off-screen; or it is still not clear who is being sent (tell me if the colonist's name should be on the row) |
+| Close the menu by Escape, a click elsewhere, an orbit, or clicking another colonist | it goes every time | it stays, or the closing click also does something |
+| Draft two, select both, right-click a marauder | the ring closes in and flashes, then stays faint until the marauder is down | noticed only as it lands (0.2 s too quick), the flash reads as a glitch, or the ring is lost on grass or at night |
+| Watch the two attackers arrive | they stand side by side on the side they came from | both on one tile, or one walking round to the far side for no reason |
+| Right-click a hog | the ring fits the hog's length | a person-sized ring, or off centre |
+| Right-click the ground with a drafted colonist | an instant move, no menu | a menu appears |
+
+### Tests on the combined branch
+
+- **Fast tier:** Sim 1,172 and Hud 837, 0 failed. **Long tier:** 39. Both content gates pass.
+- **Unity:** EditMode 2,884 total, 0 failed, including the first compile of the menu and the ring. PlayMode 107 total, 0 failed, with no other batch run going.
+- **Goldens:** none moved.
+
+### Questions for you
+
+- **Is a hog's bite sharp or blunt?** You said bites draw more blood, but `Species.xml` gives the hog's tusks *Blunt* and the rat's bite *Sharp*. The blood hook follows the content, so as it stands a hog draws the smaller, blunt puff (§7d).
+- **Should Rescue join the menu?** It is instant today (right-click a downed colonist). Putting it in the menu would make it two clicks, so it is your call.
+- **Blood** is the next unit, built to your answers in §7d.
