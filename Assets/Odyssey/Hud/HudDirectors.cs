@@ -101,6 +101,21 @@ namespace Odyssey.Hud
             return true;
         }
 
+        /// <summary>
+        /// The Animals tab's path (design 30 §6; owner, 2026-09-23: "can the depth remain the
+        /// same"): the selection and the camera jump, and <b>the slice left where it is</b>. A
+        /// wild animal is almost always on the surface the player is looking at, and a row click
+        /// that also moved the depth read as the view lurching. An animal below the slice is
+        /// selected and jumped to all the same; the player changes depth if they want to see it.
+        /// </summary>
+        public bool ChooseAnimal(PawnId id, WorldSnapshot snapshot)
+        {
+            if (!snapshot.TryGetPawn(id, out PawnView view)) return false;
+            Selection.Choose(id);
+            Camera.JumpTo(view.Cell);
+            return true;
+        }
+
         /// <summary>Once per interface frame, before anything reads the selection.</summary>
         public void Refresh(WorldSnapshot snapshot) => Selection.Refresh(snapshot);
     }

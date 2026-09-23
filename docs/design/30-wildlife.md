@@ -159,9 +159,11 @@ measures the built window. Tamed-animal columns are appended to the right of Doi
 widen the window; nothing is drawn for them, not even greyed.
 
 **The tab and the inspect pane never show together.** Opening the tab clears the selection, as
-opening Build does; any selection — including the one a row click makes through the roster
-path (`HudDirectors.ChooseColonist`: layer, selection, camera) — closes the tab, so the pane
-that then shows the animal has the corner to itself. The brief also specifies a selected-row
+opening Build does; any selection — including the one a row click makes
+(`HudDirectors.ChooseAnimal`: selection and camera, **and the depth left where it is** — owner,
+2026-09-23: "can the depth remain the same"; the roster path's layer change read as the view
+lurching, and a wild animal is almost always on the surface being looked at) — closes the tab,
+so the pane that then shows the animal has the corner to itself. The brief also specifies a selected-row
 style, accent fill with on-accent ink; it is built, and under this rule it is never seen,
 because no selection survives the tab being open. Kept because it is cheap and the rule may
 move when the tamed half arrives.

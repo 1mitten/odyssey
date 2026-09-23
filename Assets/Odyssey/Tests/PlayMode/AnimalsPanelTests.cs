@@ -113,7 +113,7 @@ namespace Odyssey.Tests.PlayMode
 
                 // A selection — the row click's outcome — puts the tab away for the inspect pane.
                 Assert.That(aHog, Is.Not.Null);
-                directors.ChooseColonist(aHog!.Id, world.Views.Current);
+                directors.ChooseAnimal(aHog!.Id, world.Views.Current);
                 yield return null;
                 Assert.That(directors.Animals.Open, Is.False, "the tab and the pane never show together");
                 Assert.That(panel.resolvedStyle.display, Is.EqualTo(DisplayStyle.None));
