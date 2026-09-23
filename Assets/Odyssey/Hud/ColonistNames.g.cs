@@ -20,10 +20,11 @@ namespace Odyssey.Hud
     /// this array indexed by arithmetic on a saved seed, so reordering the CSV renames
     /// every colonist in every existing save. Add to the end; never sort.</para>
     ///
-    /// <para>Gender and register are columns of the CSV and are deliberately not emitted
-    /// here: nothing in the game reads either yet, and a generated constant nothing reads
-    /// is the artefact that misleads the next session. The wiki shows them so the owner
-    /// can correct them.</para>
+    /// <para><b>Gender is emitted; register is not.</b> Gender picks which bodies and
+    /// which hair a colonist may be dealt (<c>docs/design/29-modular-colonists.md</c>), so
+    /// it is read by the game and belongs here. Register is still a column nothing reads,
+    /// and a generated constant nothing reads is the artefact that misleads the next
+    /// session. The wiki shows both so the owner can correct them.</para>
     /// </summary>
     public static class ColonistNamePool
     {
@@ -60,6 +61,32 @@ namespace Odyssey.Hud
             "Bingo", "Lucky G", "Pleb", "Jonny", "Johnny", "Bishop", "Pete", "Dwayne",
             "Mungo", "Treacle", "Sausage", "Gardino", "Gary", "Gazza", "Smithy", "Johno",
             "Spudgun", "Spud", "Tommy", "Preston", "Flower", "Holiday", "Bert", "Trent",
+        };
+
+        /// <summary>
+        /// The gender of each name, in the same order: 240 entries, one per
+        /// <see cref="Names"/> entry and the same length by construction.
+        ///
+        /// <para><c>m</c>, <c>f</c> or <c>n</c>. <c>n</c> is a real value and not a
+        /// fallback: a neutral name draws its body and hair from both pools.</para>
+        /// </summary>
+        public static readonly char[] Genders =
+        {
+            'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f',
+            'm', 'f', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm',
+            'f', 'm', 'n', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f',
+            'm', 'f', 'm', 'f', 'm', 'f', 'm', 'n', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f',
+            'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'f', 'm', 'n', 'm', 'f', 'm',
+            'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm',
+            'f', 'm', 'f', 'm', 'n', 'm', 'f', 'm', 'f', 'm', 'n', 'f', 'm', 'f', 'm', 'm',
+            'n', 'f', 'm', 'f', 'm', 'f', 'm', 'n', 'f', 'm', 'm', 'f', 'm', 'n', 'f', 'm',
+            'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'n', 'm', 'f', 'm', 'n', 'm', 'f', 'm',
+            'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'n', 'm',
+            'f', 'm', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f',
+            'm', 'n', 'm', 'f', 'm', 'f', 'm', 'f', 'm', 'f', 'n', 'f', 'm', 'f', 'm', 'f',
+            'm', 'f', 'm', 'f', 'n', 'f', 'm', 'n', 'n', 'f', 'm', 'm', 'm', 'm', 'm', 'n',
+            'n', 'n', 'm', 'm', 'm', 'm', 'm', 'm', 'n', 'n', 'n', 'm', 'm', 'm', 'm', 'm',
+            'm', 'n', 'n', 'n', 'm', 'm', 'n', 'm', 'n', 'n', 'm', 'm', 'n', 'n', 'm', 'm',
         };
     }
 }

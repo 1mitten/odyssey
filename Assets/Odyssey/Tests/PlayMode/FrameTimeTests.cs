@@ -332,6 +332,65 @@ namespace Odyssey.Tests.PlayMode
         /// only comparison this machine supports. The figure ceiling is deliberately left at its
         /// default: what is being measured is the game as it ships, not a hypothetical.</para>
         /// </summary>
+        /// <summary>
+        /// What the hair and beards actually cost, against the same colony with them switched off
+        /// (<c>docs/design/29-modular-colonists.md</c> §13).
+        ///
+        /// <para><b>Two colony sizes, because they exercise different code.</b> At 64 everyone is a
+        /// live figure and the cost is two extra rigid renderers each — which is the case a real
+        /// colony is in, since the figure cap is 64 and the audit's scale target is fifty. At 192
+        /// everyone past the cap is in the baked far form instead, where the cost is instanced
+        /// buckets keyed on the piece rather than the person.</para>
+        ///
+        /// <para><b>On and off in the same run, twice each, alternating.</b> §6c.1: this machine's
+        /// frame numbers drift by more between runs than most passes cost — the city canary moved
+        /// from 2.01 to 4.01 ms in an afternoon on what a sibling worktree was doing. A number from
+        /// a different run is not a control. Alternating catches a drift that happens to fall
+        /// between the two halves.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheAttachmentsCostWhatTheyDraw()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+
+                foreach (int size in new[] { 64, 192 })
+                {
+                    yield return GrowColonyTo(boot, size);
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+
+                    float onA = 0f, offA = 0f, onB = 0f, offB = 0f;
+
+                    ColonistAttachments.Enabled = true;
+                    yield return TimeFrames($"attach/{pawns}/on", boot, 30, x => onA = x);
+                    ColonistAttachments.Enabled = false;
+                    yield return TimeFrames($"attach/{pawns}/off", boot, 30, x => offA = x);
+                    ColonistAttachments.Enabled = true;
+                    yield return TimeFrames($"attach/{pawns}/on", boot, 30, x => onB = x);
+                    ColonistAttachments.Enabled = false;
+                    yield return TimeFrames($"attach/{pawns}/off", boot, 30, x => offB = x);
+                    ColonistAttachments.Enabled = true;
+
+                    float on = (onA + onB) * 0.5f;
+                    float off = (offA + offB) * 0.5f;
+                    Debug.Log($"[FrameTime] attachments at {pawns} pawns, " +
+                              $"{boot.Figures?.FigureCount ?? 0} figures: " +
+                              $"on {on:0.000} ms (runs {onA:0.000}/{onB:0.000}), " +
+                              $"off {off:0.000} ms (runs {offA:0.000}/{offB:0.000}), " +
+                              $"cost {on - off:+0.000;-0.000} ms");
+                }
+            }
+            finally
+            {
+                ColonistAttachments.Enabled = true;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
@@ -355,8 +414,14 @@ namespace Odyssey.Tests.PlayMode
                     int pawns = boot.World!.Views.Current.Pawns.Length;
                     float mean = 0f;
                     yield return TimeFrames($"colony/{pawns}", boot, 30, x => mean = x);
+                    // Draw calls beside the frame, because the colonist passes either cost draws
+                    // per person or they do not, and the sweep spans the figure cap -- so the
+                    // control for "what the hair and beard pass costs" is the same run at 64
+                    // figures, where nobody is drawn in the far form at all
+                    // (docs/design/29-modular-colonists.md section 13).
                     Debug.Log($"[FrameTime] colony {pawns} pawns, " +
-                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms");
+                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms, " +
+                              $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
                 }
             }
             finally

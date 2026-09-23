@@ -219,6 +219,15 @@ namespace Odyssey.Presentation.Bootstrap
                     _portraits = new PortraitStudio(moduleCatalogue,
                         _colonistMaterials ??= new ColonistMaterials());
                 }
+                else if (_portraits.Materials == null)
+                {
+                    // A colony ending takes the materials with it -- deliberately, since the
+                    // pictures were rendered through them. The studio outlives the colony, so
+                    // asking for it again has to give it live ones back or it would photograph
+                    // every colonist from then on with no shader at all.
+                    ColonistMaterials.AdoptInkFrom();
+                    _portraits.Materials = _colonistMaterials ??= new ColonistMaterials();
+                }
 
                 return _portraits;
             }

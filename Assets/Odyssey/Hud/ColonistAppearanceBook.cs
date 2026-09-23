@@ -57,10 +57,29 @@ namespace Odyssey.Hud
         /// (<c>docs/design/20-avatars.md</c>).</para>
         /// </summary>
         public ColonistAppearanceBook(uint seed, int lookCount)
+            : this(seed, lookCount, ColonistCastPools.AllBodies(lookCount))
+        {
+        }
+
+        public ColonistAppearanceBook(uint seed, int lookCount, ColonistCastPools pools)
         {
             Seed = seed;
             LookCount = lookCount < 1 ? 1 : lookCount;
+            Pools = pools;
         }
+
+        /// <summary>
+        /// Which bodies, hair and beards this colony may be dealt, split by gender
+        /// (<c>docs/design/29-modular-colonists.md</c> §6).
+        ///
+        /// <para><b>Separate from <see cref="LookCount"/> and not a replacement for it.</b> The
+        /// count is every row of the family, holes included, and it is what
+        /// <c>ChunkRenderer</c> sizes its per-face arrays from — so it must stay the family size
+        /// whatever the lottery does. The pools are a filter over the same indices. Two different
+        /// questions about one index space, and conflating them is how look <c>i</c> stops being
+        /// row <c>i</c>.</para>
+        /// </summary>
+        public ColonistCastPools Pools { get; }
 
         /// <summary>
         /// The appearance of a pawn: an override if one was set, otherwise derived.
@@ -101,7 +120,15 @@ namespace Odyssey.Hud
             if (_cache.TryGetValue(pawnId, out Entry cached) && cached.Seed == seed)
                 return cached.Appearance;
 
-            ColonistAppearance made = ColonistAppearance.Of(seed, pawnId, LookCount);
+            // Gender and age come from the same roll seed the name and the trade do, so a
+            // colonist's body agrees with the person on their card. Both are Unity-free
+            // derivations in this assembly, which is why the whole appearance still runs in the
+            // fast tier (docs/design/29-modular-colonists.md §6).
+            var id = new PawnId(pawnId);
+            ColonistAppearance made = ColonistAppearance.Of(
+                seed, pawnId, Pools,
+                ColonistNames.GenderOf(seed, id),
+                ColonistIdentity.Age(seed, id));
             _cache[pawnId] = new Entry(seed, made);
             return made;
         }

@@ -10450,3 +10450,53 @@ that rule would die.
 `SlicePicker` marches cell *boxes*, and a terrace ramp, a bank, an inset Synty wall panel and a
 tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
 both at once would leave the playtest unable to say which one it had judged.
+
+
+## 2026-09-22 — Modular colonists, and four caches that were right until something moved
+
+`docs/design/29-modular-colonists.md`, `docs/research/e-06-modular-colonists.md`, PR #168.
+
+**The pack was not what it said on the tin, and that was the first useful finding.** POLYGON Battle
+Royale advertises modular characters; what it ships is one rig carrying fifteen *whole* outfits with
+one enabled, plus rigid props for hair and beards. Nothing below the neck is separable — which
+`e-05` had already concluded a year of sessions earlier and which is worth re-reading before anyone
+buys a pack for its modularity again.
+
+**The second finding was better: we already owned the mechanism.** PolygonGeneric's installed
+prefabs carry hair, hats and hoods on the same rig, and the project had wired up only the body half.
+The modular system was worth building whether or not the new pack arrived.
+
+**Everything risky was measured before it was argued.** The prefabs import despite a pre-2018.3
+format; the two packs' humanoid bone maps are identical, forty each, so the finger-naming difference
+is harmless; the heights match to 0.3% so `scale 1.4` stands; and the swatch classifier reports
+`Full` on fourteen of fifteen bodies with no change to its hard-coded columns. **The one that paid
+for the whole exercise**: most hair and beard meshes map every vertex to the single atlas texel the
+scalp uses, so repainting the hair rectangle recolours all three together. A matching beard is free.
+The pre-measurement belief — that hair colour would need a second mechanism — was written down and
+then falsified by its own probe, which is the point of writing it down.
+
+**Then four faults, and they rhyme.** Each was a thing that cached or assumed an identity, and each
+stayed correct until something underneath it changed:
+
+1. `ColonistAppearance.Equals` kept its old idea of "the same person" after two fields were added,
+   so the portrait cache handed fifteen hairstyles one picture. My first reading of that contact
+   sheet blamed the beard, and was wrong — the measurement said the placement was correct and I
+   argued with it instead of believing it.
+2. The setup screen's fallback built an appearance book from a *row count*, which stopped meaning
+   the same thing the moment a book carried gendered pools. `PawnFigureDirector`'s own comment
+   stated the broken invariant in as many words.
+3. `[Serializable]` landed on a new enum instead of `ModuleEntry`, and the catalogue serialised to
+   472 bytes with no entries **while still logging "160/177 rows have art"**. Found by rebuilding,
+   not by reading.
+4. `PortraitStudio`'s cached subject outlived the materials it wore, so every portrait went magenta
+   after a colony ended. Latent for as long as there were seventy-three bodies; the issued uniform
+   took the cast to two looks and made a rare fault the normal one.
+
+The register entry is `docs/bug-patterns.md` P14, and the generalisation is worth more than the fix:
+**a cache keyed on identity outlives a change to what identity means.** Three of those four are that
+sentence.
+
+**The uniform came last and was the owner's call**: everyone in a clean jumpsuit, white with a slight
+blue tint, so identity moves onto the face and clothing becomes progression rather than noise. It is
+applied *after* the rolls rather than instead of them, so taking it off when clothing becomes an item
+gives back exactly the cast that would have been dealt — which is what makes §9c safe to build on.

@@ -1257,6 +1257,15 @@ Sight, Audio, Doors, Overlays — stays under 0.02 ms throughout.
   it measures linear. Actors is every pawn without a figure, so it is (N-64) x N — quadratic, and
   it measures quadratic: 147,456 pairs at 384 pawns, each with a `Vector3.Distance`, which at
   about 90 ns a pair is 13 ms against the 13.275 measured.
+- **Confirmed again 2026-09-23, from a sweep that was measuring something else** (PR #168, the
+  modular colonists). `Actors` went 0.027 ms at 64 figures to **17.208 ms at 384**, with the frame at
+  4.04 and 30.35 ms — while draw calls moved 1,125 → 1,152 and the hair-and-beard pass beside it,
+  measured against a control in the same run, cost a flat **0.05 ms at both 64 and 192**. So the
+  growth is neither submission nor the newest per-pawn pass, and the quadratic model above holds at
+  ~117 ns a pair on a busier machine. **The prompt for whoever picks this up is
+  `docs/plans/pf-crowd-scan.md`**, including the reason the fix can be exact: `CrowdFarRadius` is
+  3.0 m, `Proximity` returns zero beyond it, so every pair the scan discards contributes nothing and
+  a 3 m cull is bit-identical.
 
 **The knee the owner saw is the figure ceiling**, not because the ceiling is wrong but because
 crossing it is where the quadratic term starts: below 64 there are no stand-ins and the only crowd

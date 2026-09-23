@@ -1038,6 +1038,150 @@ namespace Odyssey.EditorTools
         /// The owner's veto is meant to be exercised here: strike a name, rebuild the catalogue,
         /// and that face stops appearing. Nothing else has to change.
         /// </summary>
+        /// <summary>
+        /// One row of the cast: the prefab, and whether a <i>colonist</i> may be dealt it
+        /// (<c>docs/design/29-modular-colonists.md</c> §3).
+        ///
+        /// <para><b>Out of the pool is not out of the catalogue.</b> Every row here stays in the
+        /// colonist family and stays resolvable — the city's own inhabitants, traders and raiders
+        /// will want the Sci-Fi, Farm and Western bodies — they simply leave the lottery. The
+        /// family index space is what the look space is made of, so it must not be compacted.</para>
+        /// </summary>
+        readonly struct CastRow
+        {
+            public CastRow(string prefab, bool pool) { Prefab = prefab; Pool = pool; }
+            public readonly string Prefab;
+            public readonly bool Pool;
+        }
+
+        /// <summary>
+        /// The colonist pool is Battle Royale plus PolygonGeneric — the two packs that ship hair
+        /// and beards (owner, 2026-09-22). The rest of the cast is kept and flagged out.
+        /// </summary>
+        /// <summary>
+        /// Lazy, not a static initialiser. C# runs static field initialisers in declaration order
+        /// and this one reads <see cref="Colonists"/>, which is declared below it -- so eager
+        /// initialisation read a null array and the whole type failed to initialise.
+        /// </summary>
+        static CastRow[] Cast => _cast ??= BuildCast();
+
+        static CastRow[]? _cast;
+
+        static CastRow[] BuildCast()
+        {
+            var rows = new System.Collections.Generic.List<CastRow>();
+            foreach (string p in Colonists) rows.Add(new CastRow(p, InPool(p)));
+            foreach (string p in BattleRoyaleColonists) rows.Add(new CastRow(p, true));
+            return rows.ToArray();
+        }
+
+        /// <summary>
+        /// PolygonGeneric's people are in; everything else in the older list is not.
+        ///
+        /// Matched on the pack's own prefix rather than on a second hand-written list, because two
+        /// lists of the same thirty names is the one-rule-two-owners pattern and they would drift
+        /// the first time somebody added a body.
+        /// </summary>
+        static bool InPool(string prefab) =>
+            prefab.StartsWith("SM_Gen_Chr_", StringComparison.Ordinal);
+
+        /// <summary>
+        /// The colony's issued uniform: one body per sex, and the only thing a colonist wears
+        /// until clothing is an item (owner, 2026-09-22 — <i>"a basic clean space uniform"</i>).
+        ///
+        /// <para>PolygonGeneric's jumpsuit pair, because it is the one matched male/female garment
+        /// in either pack that reads as issued kit rather than as somebody's own clothes.</para>
+        /// </summary>
+        static bool IsUniform(string prefab) =>
+            prefab == "SM_Gen_Chr_Jumpsuit_Male_01" || prefab == "SM_Gen_Chr_Jumpsuit_Female_01";
+
+        /// <summary>
+        /// The Battle Royale bodies a colonist may be dealt: six male-shaped and six
+        /// female-shaped.
+        ///
+        /// <para><b>Three of the pack's fifteen are deliberately absent.</b> The ghillie suit has
+        /// no visible head, so hair and beard are invisible on it — and it is 15,347 vertices
+        /// against a body's 3,500. The topless male and the sports-bra female are out on register,
+        /// and because a bare torso leaves the clothing-colour roll almost nothing to paint
+        /// (owner, 2026-09-22; <c>docs/research/e-06-modular-colonists.md</c> §3).</para>
+        /// </summary>
+        static readonly string[] BattleRoyaleColonists =
+        {
+            "Character_BusinessMale_01",
+            "Character_MercenaryMale_01",
+            "Character_MilitaryMale_01",
+            "Character_RedneckMale_01",
+            "Character_SportyMale_01",
+            "Character_SportyMale_02",
+
+            "Character_70sFemale_01",
+            "Character_GothFemale_01",
+            "Character_MercenaryFemale_01",
+            "Character_MilitaryFemale_01",
+            "Character_SportyFemale_01",
+            "Character_SportyFemale_02",
+        };
+
+        /// <summary>
+        /// The hair a colonist can be dealt, and which pool it belongs to.
+        ///
+        /// <para><b>Every piece here recolours.</b> Six more exist in the two packs and are absent
+        /// on purpose: they span real texture rather than the single atlas cell the scalp uses, so
+        /// repainting them throws art away — <c>Male_Hair_04</c>, <c>Male_Hair_05</c>,
+        /// <c>Female_Hair_01</c>, <c>Female_Hair_Pigtails_01</c>, <c>Beard_04</c>,
+        /// <c>SM_Gen_Chr_Attach_Hair_05</c>, <c>Bun_01</c> and <c>Ponytail_01</c>. Measured, not
+        /// judged (<c>docs/research/e-06-modular-colonists.md</c> §7).</para>
+        ///
+        /// <para><b>The bun and the ponytail are the loss that hurts.</b> They were the only two
+        /// visibly feminine pieces in either pack and both span real texture, so the female pool
+        /// has nothing authored for it at all beyond Battle Royale's default scalp.</para>
+        ///
+        /// <para><b>PolygonGeneric's eight are marked Either, and that is a placeholder with a
+        /// reason.</b> The pack does not label them by sex and nobody has looked at them. Marking
+        /// them Either rather than guessing means women have nine hair options instead of one —
+        /// Battle Royale's only recolouring female hair is its default — and it is the contact
+        /// sheet, not this file, that should decide the split (MC8).</para>
+        /// </summary>
+        static readonly (string Prefab, BodySex Sex)[] Hairs =
+        {
+            ("SM_Chr_Attach_Male_Default_Hair_01", BodySex.Male),
+            ("SM_Chr_Attach_Male_Hair_01", BodySex.Male),
+            ("SM_Chr_Attach_Male_Hair_02", BodySex.Male),
+            ("SM_Chr_Attach_Male_Hair_03", BodySex.Male),
+            ("SM_Chr_Attach_Male_Hair_06", BodySex.Male),
+            ("SM_Chr_Attach_Male_Hair_07", BodySex.Male),
+
+            ("SM_Chr_Attach_Female_Default_Hair_01", BodySex.Female),
+
+            ("SM_Gen_Chr_Attach_Hair_04", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_06", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_07", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_08", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_09", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_09_alt", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_10", BodySex.Either),
+            ("SM_Gen_Chr_Attach_Hair_11", BodySex.Either),
+        };
+
+        /// <summary>
+        /// The beards. <c>Beard_04</c> is absent for the reason the excluded hair is.
+        ///
+        /// <para>A beard is painted from the hair's own atlas cell, so it is the hair colour
+        /// exactly and there is nothing here to colour it with.</para>
+        /// </summary>
+        static readonly string[] Beards =
+        {
+            "SM_Chr_Attach_Beard_02",
+            "SM_Chr_Attach_Beard_03",
+            "SM_Chr_Attach_Beard_05",
+            "SM_Chr_Attach_Beard_06",
+            "SM_Chr_Attach_Beard_07",
+            "SM_Gen_Chr_Attach_Beard_01",
+            "SM_Gen_Chr_Attach_Beard_02",
+            "SM_Gen_Chr_Attach_Chops_01",
+            "SM_Gen_Chr_Attach_Moustache_01",
+        };
+
         static readonly string[] Colonists =
         {
             // PolygonGeneric — the everyday population.
@@ -1475,12 +1619,42 @@ namespace Odyssey.EditorTools
             // few pixels once the camera pulls back, which is how five colonists managed to be
             // invisible before. The board view wants them read at a glance, so they are drawn
             // half again as large, which brings them to 2.5 m and still leaves headroom in a cell.
-            for (int variant = 0; variant < Colonists.Length; variant++) Colonist(variant);
+            for (int variant = 0; variant < Cast.Length; variant++) Colonist(variant);
+            for (int variant = 0; variant < Hairs.Length; variant++) Hair(variant);
+            for (int variant = 0; variant < Beards.Length; variant++) Beard(variant);
 
-            // One row per face a colonist can wear. See Colonists for the cast and the argument.
+            // One row per hair piece. A rigid prop parented to the head bone with an identity
+            // transform, measured in both packs -- no offset to fit and no per-body special case
+            // (docs/research/e-06-modular-colonists.md §4). It carries no pose clip and no
+            // locomotion: it is not a rig, it rides one.
+            void Hair(int variant)
+            {
+                rows.Add(new ModuleEntry
+                {
+                    moduleId = ModuleIds.Hair(variant), shape = ModuleShape.Pillar,
+                    prefabName = Hairs[variant].Prefab,
+                    sex = Hairs[variant].Sex,
+                    recolours = true,
+                    centreXZ = false, baseAtY = false,
+                });
+            }
+
+            void Beard(int variant)
+            {
+                rows.Add(new ModuleEntry
+                {
+                    moduleId = ModuleIds.Beard(variant), shape = ModuleShape.Pillar,
+                    prefabName = Beards[variant],
+                    sex = BodySex.Male,
+                    recolours = true,
+                    centreXZ = false, baseAtY = false,
+                });
+            }
+
+            // One row per face a colonist can wear. See Cast for the roster and the argument.
             void Colonist(int variant)
             {
-                string prefab = Colonists[variant];
+                string prefab = Cast[variant].Prefab;
 
                 // The locomotion pack ships every clip masculine and feminine, and the packs name
                 // their characters, so the two can simply be matched up. It costs one string test
@@ -1494,6 +1668,9 @@ namespace Odyssey.EditorTools
                 {
                     moduleId = ModuleIds.Colonist(variant), shape = ModuleShape.Pillar,
                     prefabName = prefab,
+                    colonistPool = Cast[variant].Pool,
+                    uniform = IsUniform(prefab),
+                    sex = feminine ? BodySex.Female : BodySex.Male,
                     poseClipName = $"A_Idle_Standing_{suffix}",
                     centreXZ = true, baseAtY = true,
                     scale = new Vector3(1.4f, 1.4f, 1.4f),

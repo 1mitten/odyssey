@@ -111,6 +111,20 @@ namespace Odyssey.Presentation.Rendering
     /// <see cref="prefabName"/> records what the reference was, so the editor tool can rebuild it
     /// once the packs are imported and so a missing row can name itself in the log.
     /// </summary>
+    /// <summary>
+    /// Which gendered pool a body or a hair piece belongs to
+    /// (<c>docs/design/29-modular-colonists.md</c> §6).
+    ///
+    /// <see cref="Either"/> is not "unknown": PolygonGeneric's hair is not authored per sex, and a
+    /// piece marked Either is legal for anybody. A body is always one or the other.
+    /// </summary>
+    public enum BodySex
+    {
+        Either = 0,
+        Male = 1,
+        Female = 2,
+    }
+
     [Serializable]
     public sealed class ModuleEntry
     {
@@ -166,6 +180,44 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Uniform scale applied to the art. 1 unless a piece must be stretched to the cell.")]
         public Vector3 scale = Vector3.one;
+
+        /// <summary>
+        /// May a colonist be dealt this body?
+        ///
+        /// <para><b>False does not mean the row is dead.</b> The Farm, Sci-Fi City and Western
+        /// Frontier bodies stay in the colonist family and stay resolvable — the city's own
+        /// inhabitants, traders and raiders will want them — they simply leave the lottery
+        /// (owner, 2026-09-22). The family index space is unchanged, which is the point: it is
+        /// the look index space, and compacting it is the fault
+        /// <c>ColonistAppearanceBook</c> records.</para>
+        /// </summary>
+        public bool colonistPool;
+
+        /// <summary>
+        /// Which gendered pool this row belongs to — a body's shape, or a hair piece's register.
+        /// </summary>
+        public BodySex sex = BodySex.Either;
+
+        /// <summary>
+        /// Does this piece recolour?
+        ///
+        /// <para>Most hair and beard meshes map every vertex to the single atlas texel the scalp
+        /// already uses, so repainting the hair rectangle recolours all three together. Six do
+        /// not — they span real texture, and repainting them throws art away
+        /// (<c>docs/research/e-06-modular-colonists.md</c> §7). Those are excluded here, in data,
+        /// rather than by a rule in code.</para>
+        /// </summary>
+        public bool recolours = true;
+
+        /// <summary>
+        /// Is this body the colony's issued uniform?
+        ///
+        /// <para>Exactly one row per sex carries it. Until clothing is a thing a colonist can be
+        /// given (<c>docs/design/29-modular-colonists.md</c> §9), every colonist wears the uniform
+        /// and the rest of the pool is what the clothing system will draw from — so the pool is
+        /// kept and flagged rather than emptied.</para>
+        /// </summary>
+        public bool uniform;
 
         /// <summary>
         /// Take only the *material* from the prefab and keep the primitive box for the mesh.
@@ -525,6 +577,27 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The id of one colonist variant. Variant 0 keeps the unsuffixed id.</summary>
         public static string Colonist(int variant) =>
             variant <= 0 ? ColonistBase : ColonistBase + "." + variant.ToString();
+
+        /// <summary>
+        /// Hair pieces a colonist can be dealt, as a family
+        /// (<c>docs/design/29-modular-colonists.md</c>).
+        ///
+        /// <para>A rigid prop parented to <c>HumanBodyBones.Head</c> with an identity transform —
+        /// measured, in both packs (<c>docs/research/e-06-modular-colonists.md</c> §4). There is
+        /// no offset to fit and no per-body special case.</para>
+        /// </summary>
+        public const string HairBase = Prefix + "attach.hair";
+
+        /// <summary>The id of one hair piece.</summary>
+        public static string Hair(int variant) =>
+            variant <= 0 ? HairBase : HairBase + "." + variant.ToString();
+
+        /// <summary>Beards, on exactly the same terms as <see cref="HairBase"/>.</summary>
+        public const string BeardBase = Prefix + "attach.beard";
+
+        /// <summary>The id of one beard.</summary>
+        public static string Beard(int variant) =>
+            variant <= 0 ? BeardBase : BeardBase + "." + variant.ToString();
 
         // Loose items lying in a cell: a crate of rations to be eaten, a heap of scrap to be
         // hauled. These are drawn by the actor pass for the same reason the colonist is — they

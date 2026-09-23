@@ -2098,3 +2098,37 @@ guard and the other had nothing, and the guard's own prose was the specification
   plus `ATreeGoesWithTheGroundAndLeavesNoWood`. **Run with the two lines removed from `OutOf`**: the
   three mining tests fail and the rest pass, which is what says the tests fail on the reported bug
   and not on something adjacent.
+
+### 2026-09-22 — Every portrait on the setup screen was magenta (P14)
+
+**Symptom.** The owner's screenshot: three candidate cards and a detail pane, every colonist a flat
+pink silhouette. The shapes were right — head, hair, shoulders — so meshes and attachments resolved.
+Only the material was wrong, which in Unity means the error shader.
+
+**Cause: a cached object outlived the materials it wears.** `PortraitStudio` keeps one subject
+GameObject and reuses it while the look is unchanged. A colony ending disposes `ColonistMaterials`,
+which `DestroyImmediate`s every material it cloned, and sets the studio's `Materials` to null —
+deliberately, because the pictures were rendered through them. **The subject was not part of that.**
+It survived, still pointing at destroyed materials, and `Paint` then early-returned because
+`Materials` was null, so nothing reassigned them. Unity draws a destroyed material as magenta.
+
+**Why it appeared only now.** It was latent for as long as there were seventy-three bodies: the
+subject is kept only while the look is unchanged, so a different colonist almost always rebuilt it
+and got fresh materials off the prefab. The issued uniform took the cast down to **two** looks, so
+the stale subject is reused nearly every time. A rare fault became the normal one.
+
+**The fix.** `Materials` is a property, and setting it drops the subject and clears the pictures —
+both are painted with materials that have just gone. The composition root also hands the studio live
+materials back when it is asked for one after a colony ended, rather than leaving it permanently
+unpainted.
+
+**The check this earns.** *An object cached across a session boundary must be dropped by whatever
+disposes the things it holds.* The texture cache was already handled — the comment beside it even
+says "a cached texture whose shader is gone is worse than one render" — and the subject beside it
+was not. When something is disposed, ask what else is still holding it, and prefer a property setter
+that invalidates over a comment asking callers to remember.
+
+**The generalisation of P14: a cache keyed on identity outlives a change to what identity means.**
+Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
+person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
+same picture. Both are caches that were right until something underneath them moved.
