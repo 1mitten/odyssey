@@ -1853,7 +1853,9 @@
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 280px;
+    /* 280 until 2026-09-24 (owner: "make the debug menu bigger"): wide enough now for the Spawn
+       tab's two columns of headed rows (design 33 §9i). */
+    width: 460px;
 }
 
 .settings__tabs {

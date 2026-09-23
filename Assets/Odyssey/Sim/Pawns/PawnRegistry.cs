@@ -116,6 +116,41 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// <c>DebugArmColonists</c> (design 33 §9i; owner, 2026-09-24: "an option to wield every colonist
+        /// with a random melee weapon ... for testing"). Every colonist who is standing and holds
+        /// nothing is dealt one of the content's melee weapons — a roll on her own stream, so a seed
+        /// deals the same arms every time — made on the nearest cell that can take it and taken
+        /// straight up (<see cref="WeaponHand.TakeUp"/>), exactly as <see cref="IWeaponRules.ArmOnSpawn"/>
+        /// arms a marauder. A colonist already holding a weapon keeps it; a downed one is skipped.
+        /// <c>AlreadyInThatState</c> when there was nobody to arm.
+        /// </summary>
+        public IntentRejection HandleDebugArmColonists(Intent intent)
+        {
+            var weapons = new List<int>();
+            ItemDef[] items = _ctx.Content.Items;
+            for (int i = 0; i < items.Length; i++) if (items[i].weapon != null) weapons.Add(i);
+            if (weapons.Count == 0) return IntentRejection.NotPermitted;
+
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            int armed = 0;
+            for (int i = 0; i < _pawns.Count; i++)
+            {
+                Pawn pawn = _pawns[i];
+                if (!pawn.IsColonist || pawn.Downed || pawn.EquippedItem != 0) continue;
+
+                var rng = DeterministicRandom.ForTick(_ctx.Seed, tick, PawnPurpose.DebugArm ^ (uint)pawn.Id.Value);
+                int def = weapons[rng.NextInt(weapons.Count)];
+                int cell = _ctx.Items.NearestCellWithSpace(_ctx.Cells, pawn.Cell, def, 1, JobDriver.DropSearchRadius);
+                if (cell < 0) continue;
+
+                ThingId id = _ctx.Items.Spawn(def, cell);
+                WeaponHand.TakeUp(pawn, _ctx.Items.Get(id)!, _ctx);
+                armed++;
+            }
+            return armed > 0 ? IntentRejection.None : IntentRejection.AlreadyInThatState;
+        }
+
         /// <summary>How far round the spawn point a debug spawn looks for a free tile, in rings.</summary>
         public const int SpawnSpreadRings = 4;
 

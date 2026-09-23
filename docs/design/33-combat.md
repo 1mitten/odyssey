@@ -2381,3 +2381,30 @@ now aims three columns away from its own colonist, because the column it used wa
 spread off.
 
 | *"This all needs to be coordinated at the right times for effect"* — four recordings: a critical sword slice, two whooshes, a thud | **Whoosh** on every swing with a weapon, hit or miss, peaking about 0.1 s before the blow; fists and bites silent. **Slice** instead of the whoosh on a sharp weapon's critical, peaking on the impact; a blunt critical keeps the whoosh. **Thud** on every landed hit, fists and bites too, crits under the slice. Placed in the world like the axe. | §9g |
+
+### 9i. The debug menu for testing a fight (built 2026-09-24)
+
+**Owner, 2026-09-24:** *"make the debug menu bigger, make a category for each type of spawn —
+items, enemies ... also include an option to wield every colonist with a random melee weapon."*
+
+- **Wider:** 280 px to 460 px (`.debug` in `Hud.uss`).
+- **The Spawn tab is grouped under headings**, in two columns:
+  - on the left, who: **Colonists** (Spawn colonist, **Arm every colonist**), **Hostiles** (Spawn marauder, **Spawn 3 marauders**), **Animals** (midden hog, duct rat);
+  - on the right, what: **Weapons** (the four) and **Items** (50 wood, stone, meals).
+
+  The Items rows moved here from the Cheats tab, which keeps the clock, the crops, the overlay and
+  the trace. The headings are the Keys tab's `.settings__section`, so nothing is new in the
+  stylesheet but the width.
+- **`DebugDirector.SpawnRow`** gained `Group` and `Repeat`. The table is the fast tier's
+  (`TheSpawnTabIsGroupedUnderNamedHeadings`, `TheNewRowsSendWhatTheySay`), and the shell only lays it
+  out. *Spawn 3 marauders* is one intent sent three times at one column, and the simulation spreads
+  each onto its own tile (§9h).
+- **`IntentKind.DebugArmColonists`** (`PawnRegistry.HandleDebugArmColonists`) gives every colonist
+  who is standing and holds nothing one of the content's melee weapons.
+  - The weapon is rolled on her own stream (`PawnPurpose.DebugArm`), so a seed deals the same arms
+    every time.
+  - It is made beside her and taken straight into her hand, as a marauder is armed at spawn. Being
+    undrafted, it then hangs at her hip (§8b).
+  - A colonist who already holds a weapon keeps it, a downed one and animals are skipped, and a
+    second click arms nobody (`AlreadyInThatState`).
+  - `DebugArmColonistsTests` fail with the handler unregistered.

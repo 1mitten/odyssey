@@ -1299,6 +1299,9 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const uint MeleeCritical = 0xD807_AA98;
 
+        /// <summary>The debug menu's "Arm every colonist" (design 33 §9i): which weapon each colonist is dealt.</summary>
+        public const uint DebugArm = 0x243F_6A88;
+
         /// <summary>
         /// Whether a critical blow knocks its target back (<see cref="CombatDef.knockbackPerMille"/>).
         /// SHA-256's tenth round constant.
