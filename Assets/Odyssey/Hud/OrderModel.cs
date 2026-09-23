@@ -76,16 +76,15 @@ namespace Odyssey.Hud
         /// <b>a pawn under the pointer included</b>: a colonist's hit box is 1.15 by 2.7 metres,
         /// which at the play camera covers most of the cell behind her, so ignoring a click that
         /// touched a pawn made every order just behind your own squad do nothing (review,
-        /// 2026-09-23). The attack and rescue orders will claim the pawns they are about — an
-        /// animal, a hostile, a downed colonist, a colonist under Ctrl — and leave the rest as
-        /// moves.
+        /// 2026-09-23). The fight's orders (<see cref="CombatOrders.Route"/>) claim the pawns and
+        /// things they are about — an animal, a hostile, a downed colonist, a colonist under Ctrl,
+        /// a weapon — and leave the rest as moves, a building included until C6.
         /// </summary>
         public static void RightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot,
             CellRef? cell, PawnId under, bool ctrl, List<Intent> into)
         {
-            // The fight's orders claim the clicks they are about first (design 33 §5): attack,
-            // rescue, equip. CombatOrders is lane C's file and answers no until lane C writes it,
-            // so until then every click is the move it was in C1.
+            // The fight's orders claim the clicks they are about first (design 33 §5j): attack,
+            // rescue, equip. What they leave is the move it was in C1.
             if (CombatOrders.Route(selection, snapshot, cell, under, ctrl, into)) return;
 
             if (cell == null) return;
@@ -134,6 +133,23 @@ namespace Odyssey.Hud
                     into[into.Count - 1] = new DraftedMark(aspect.Pawn, aspect.Value);
                 }
             }
+        }
+
+        /// <summary>
+        /// Is a right-click on the world worth hearing for this selection — does it hold a
+        /// colonist, drafted or not? The presenter's gate before it hit-tests.
+        ///
+        /// <para><b>Wider than <see cref="AnyDrafted"/>, and that is the point</b> (design 33 §5j):
+        /// a right-click on a weapon sends the primary colonist for it whether drafted or not, so a
+        /// selection with nobody drafted in it has to be asked. Everything else a right-click does
+        /// still needs a draft, and <see cref="RightClick"/> sends nothing for an undrafted
+        /// selection pointing at anything but a weapon. An animal alone takes no orders.</para>
+        /// </summary>
+        public static bool HearsRightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot)
+        {
+            for (int i = 0; i < selection.Count; i++)
+                if (IsColonist(snapshot, selection[i])) return true;
+            return false;
         }
 
         /// <summary>Does anything in the selection take orders — is a right-click worth hearing?</summary>
