@@ -21,11 +21,19 @@ namespace Odyssey.Sim.Pawns
     ///
     /// <para><b>Everything it knows is saved.</b> The toil and its progress, the job's
     /// <see cref="Job.TargetCell"/> (the target's cell during the wind-up — what
-    /// <see cref="WorkFocus"/> reports), <see cref="Job.WorkTicks"/> (the tick of the last re-plan,
+    /// <see cref="WorkFocus"/> reports — and while approaching, the target's cell the side was
+    /// chosen against), <see cref="Job.WorkTicks"/> (the tick of the last re-plan,
     /// the precedent <c>BuildJobDriver</c> set for a driver's own use of that field),
     /// <see cref="Job.DestCell"/> (<see cref="ToTheDeath"/> or -1), and on the pawn the target,
     /// the swing clock, the destination and the step progress. No decision reads the path, which
     /// is not saved, so a save taken mid-swing resumes on the same ticks.</para>
+    ///
+    /// <para><b>Side by side</b> (design 33 §7c). The walk is to a side of the target, not to its
+    /// cell: <see cref="Melee.ChooseSide"/> picks the free cell beside it nearest the attacker, or
+    /// one ring back when all eight are held. A side is held by walking to it or standing on it —
+    /// <see cref="Pawn.Destination"/> and <see cref="Pawn.Cell"/>, both saved — so two attackers
+    /// never stand on one tile and no new state was needed. The drafted hold's blow is exempt: it
+    /// strikes from wherever she stands, and holds her cell as her side.</para>
     ///
     /// <para><b>When it ends.</b> The target gone, dead, or — unless the job was ordered on a pawn
     /// already down — down (the owner's "until one of them goes down"); unreachable; out of reach
@@ -89,38 +97,78 @@ namespace Odyssey.Sim.Pawns
             // the cell just landed on. Read off the saved progress, never off the path.
             bool boundary = Pawn.MoveProgress < Pawn.MoveRatePerMille();
 
-            if (Melee.InReach(ctx, Pawn, target, mode))
+            // A drafted colonist's own blow at an adjacent threat: she strikes from where she stands.
+            bool hold = Pawn.Drafted && !Job.PlayerForced;
+            bool inReach = Melee.InReach(ctx, Pawn, target, mode);
+
+            if (inReach)
             {
                 // Land a step that is well under way; stop on one that has barely begun.
                 if (!boundary) return JobStatus.Ongoing;
-                Pawn.ClearPath();
-                Pawn.Destination = -1;
 
-                if (tick >= Pawn.NextSwingTick) StartSwing(ctx, target, tick);
-                return JobStatus.Ongoing;
+                // Side by side (design 33 §7c): she stops here only if it is a side of her own.
+                if (hold || MayFightFrom(ctx, target, tick))
+                {
+                    Pawn.ClearPath();
+                    Pawn.Destination = -1;
+
+                    if (tick >= Pawn.NextSwingTick) StartSwing(ctx, target, tick);
+                    return JobStatus.Ongoing;
+                }
             }
 
-            // A drafted colonist's own blow at an adjacent threat never chases: she holds.
-            if (Pawn.Drafted && !Job.PlayerForced) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+            // The hold never chases: out of reach, she holds again.
+            if (hold) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
 
             // A hunt, a revenge or a self-defence thinks again now and then.
             if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks) return JobStatus.Succeeded;
 
             if (!ctx.Reachable(Pawn, target.Cell, mode)) return JobStatus.Failed;
 
-            // Re-plan to where the target now stands: at once when not walking, else only at a
-            // step boundary (so the step in hand is never snapped back) and no oftener than the
-            // content allows.
+            // Choose a side again (design 33 §7c) — the chase's own re-plan, against where the target
+            // now stands. Walking: only at a step boundary (so the step in hand is never snapped
+            // back), once the target has left the cell the side was chosen against, and no oftener
+            // than the content allows. Not walking: at once when it has left, or the attack is new;
+            // otherwise at the same cadence, which is how one waiting a ring back finds a side
+            // freed up. Job.TargetCell is the target's cell the side was chosen against.
             int dest = Pawn.Destination;
-            if (dest != target.Cell
-                && (dest < 0 || (boundary && tick - Job.WorkTicks >= ctx.Content.Combat.chaseRepathTicks)))
+            bool moved = Job.TargetCell != target.Cell;
+            bool due = tick - Job.WorkTicks >= ctx.Content.Combat.chaseRepathTicks;
+            bool choose = dest >= 0 ? boundary && moved && due : moved || due || Job.WorkTicks == 0;
+            if (choose)
             {
-                dest = target.Cell;
                 Job.WorkTicks = tick;
+                Job.TargetCell = target.Cell;
+                dest = Melee.ChooseSide(ctx, Pawn, target, mode);
+                if (dest < 0)
+                {
+                    // Nowhere free within two of it: wait where she is and look again.
+                    Pawn.ClearPath();
+                    Pawn.Destination = -1;
+                    return JobStatus.Ongoing;
+                }
             }
+
+            // Standing a ring back, or wherever nothing was free, until it is time to look again.
+            if (dest < 0) return JobStatus.Ongoing;
 
             JobStatus walk = GotoCell(ctx, dest);
             return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+        }
+
+        /// <summary>
+        /// May she fight from the cell she is on (design 33 §7c)? Never from the target's own cell,
+        /// and never from a side another attacker holds — so walking past a side somebody else is
+        /// making for, she walks on. <b>Scales with the pawns on the board</b>, and is asked only when
+        /// the answer can have changed: at a step boundary in reach while walking, and before each
+        /// swing. One standing waiting for her swing clock is on a side she already took, so she is
+        /// not asked every tick.
+        /// </summary>
+        bool MayFightFrom(PawnContext ctx, Pawn target, int tick)
+        {
+            if (Pawn.Cell == target.Cell) return false;
+            if (Pawn.Destination < 0 && tick < Pawn.NextSwingTick && Job.WorkTicks != 0) return true;
+            return !Melee.SideTaken(ctx, Pawn, Pawn.Cell);
         }
 
         void StartSwing(PawnContext ctx, Pawn target, int tick)
