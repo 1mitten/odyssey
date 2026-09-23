@@ -189,6 +189,15 @@ namespace Odyssey.Hud
 
             if (inspect.Subject == InspectSubject.Colonist)
             {
+                // An animal opens its own Fauna entry (design 30; owner, 2026-09-23: "make sure
+                // the almanac is up-to-date with animals"), by the kind's registry name, which
+                // is the entry's name.
+                if (inspect.IsAnimal)
+                {
+                    string kind = Registry.Label(inspect.KindIconKey);
+                    return AlmanacCatalogue.GetEntry(kind) != null ? ("Fauna", kind) : null;
+                }
+
                 if (string.Equals(inspect.ActiveTabName, "Skills", StringComparison.OrdinalIgnoreCase))
                     return ("Skills", "Construction");
                 if (string.Equals(inspect.ActiveTabName, "Needs", StringComparison.OrdinalIgnoreCase))

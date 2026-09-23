@@ -88,6 +88,8 @@ ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
 ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
 ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
+ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first"
+ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -105,6 +107,8 @@ ui.status.downed,Downed,ui.status,M2,Cannot move. Needs rescue
 ui.status.bleeding,Bleeding,ui.status,M2,Losing blood. Timed problem
 ui.status.burning,On fire,ui.status,M2,Burning now
 ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
+ui.status.wandering,Wandering,ui.status,AN,"An animal on a leg of its own: going somewhere nearby for no reason"
+ui.status.resting,Resting,ui.status,AN,"An animal between legs"
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
@@ -280,7 +284,7 @@ ui.tab.schedule,Schedule,ui.tab,M1,"Folded into Work: one table says who does wh
 ui.tab.research,Research,ui.tab,M1,"The tree, and what is being worked on"
 ui.tab.colonists,Colonists,ui.tab,M1,"Everyone, at a glance"
 ui.tab.animals,Animals,ui.tab,M1,Tame beasts and their training
-ui.tab.wildlife,Wildlife,ui.tab,M1,What is out there
+ui.tab.wildlife,Wildlife,ui.tab,M1,"What is out there. Listed under Animals for now; not on the bar"
 ui.tab.bills,Bills,ui.tab,M1,Standing production orders
 ui.tab.trade,Trade,ui.tab,M1,Caravans and traders
 ui.tab.factions,Factions,ui.tab,M1,"Who likes us, and how much"
@@ -459,6 +463,11 @@ ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.debugmenu,Debug menu,ui.keys,M3,"Open the debug menu"
 ui.keys.worktab,Work tab,ui.keys,M3,"Open the work priority grid"
 ui.keys.almanac,Almanac,ui.keys,M3,"Open and close the Almanac reference browser"
+ui.keys.draft,Draft,ui.keys,M3,"Draft or release the selected colonists"
+ui.keys.animals,Animals,ui.keys,WL,"Open and close the Animals tab"
+ui.animals.kind,Kind,ui.animals,WL,"What sort of animal it is"
+ui.animals.doing,Doing,ui.animals,WL,"Wandering or resting"
+ui.animals.empty,No animals on the board,ui.animals,WL,"The Animals tab with nothing to list"
 ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Stored on the machine, in decibels"
 ui.settings.camspeed,Camera speed,ui.settings,M3,"How fast the camera pans and zooms, as a share of its tuned speed"
 ui.settings.buildlayout,Build palette layout,ui.settings,M3,"Which of the three shapes the Build palette takes: rows, rail or bar"
@@ -470,10 +479,13 @@ ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
 ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
 ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
+ui.debug.tab.spawn,Spawn,ui.debug,AN,"Colonists and animals, placed near the camera"
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
 ui.debug.skipmonth,Skip one month,ui.debug,M4,"Spends a whole game month of ticks at once, so the year and its seasons can be walked through"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
+ui.debug.spawnhog,Spawn midden hog,ui.debug,AN,"Adds a wild midden hog near the camera"
+ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
 ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"

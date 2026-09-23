@@ -66,6 +66,8 @@ namespace Odyssey.Presentation.Bootstrap
         HotkeyDirector Hotkeys =>
             _bootstrap?.Directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
 
+        SelectionPresenter? _selection;
+
         void Awake()
         {
             _bootstrap = GetComponent<OdysseyBootstrap>();
@@ -191,15 +193,22 @@ namespace Odyssey.Presentation.Bootstrap
         /// (<c>PressGesture</c>), so swinging the camera around with a tool armed leaves the tool
         /// armed.</para>
         ///
-        /// <para><b>With nothing armed this does nothing, on purpose.</b> That gesture is reserved
-        /// for the forced-order context menu — right-click a site with a colonist selected and pick
-        /// "build this now" (<c>docs/design/15-building.md</c> §8). Giving it a second meaning here
-        /// would have to be taken back then, and a gesture that means two things depending on state
-        /// nobody can see is the fault the Escape key already taught this project once.</para>
+        /// <para><b>With nothing armed it is an order</b> (design 33 §2f), handed to
+        /// <see cref="SelectionPresenter.Order"/>, which owns the hit-test that says who is under
+        /// the pointer. It was deliberately inert until the draft, held for the forced-order menu
+        /// of <c>docs/design/15-building.md</c> §8 — and an order to a drafted colonist is that
+        /// same act, the player overruling the scan for a colonist, so the reservation is being
+        /// spent on what it was kept for. This presenter keeps first refusal: a tool in hand still
+        /// only puts the tool down, so the gesture never means two things at once.</para>
         /// </summary>
-        void OnWorldRightClicked()
+        void OnWorldRightClicked(CellRef? cell, Ray ray)
         {
-            if (Director.Tool == DesignateTool.None) return;
+            if (Director.Tool == DesignateTool.None)
+            {
+                if (_selection == null) _selection = GetComponent<SelectionPresenter>();
+                _selection?.Order(cell, ray);
+                return;
+            }
 
             // One press, one step of unwinding (owner, 2026-09-17). A half-drawn run is thrown
             // away and the tool stays in hand, so a misjudged anchor costs one click rather than a

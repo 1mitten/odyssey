@@ -23,6 +23,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -32,6 +36,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -53,6 +58,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -62,6 +71,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -83,6 +93,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -92,6 +106,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -113,6 +128,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -122,6 +141,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -143,6 +163,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -152,6 +176,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -173,6 +198,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -182,6 +211,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -203,6 +233,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -212,6 +246,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -233,6 +268,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -242,6 +281,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -263,6 +303,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -272,6 +316,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -293,6 +338,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -302,6 +351,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -323,6 +373,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -332,6 +386,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -353,6 +408,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -362,6 +421,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -383,6 +443,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -392,6 +456,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -413,6 +478,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -422,6 +491,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -443,6 +513,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -452,6 +526,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -473,6 +548,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -482,6 +561,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -503,6 +583,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -512,6 +596,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -533,6 +618,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -542,6 +631,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -563,6 +653,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: -1.15}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -572,6 +666,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -593,6 +688,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: -1.15}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -602,6 +701,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -691,6 +791,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -700,6 +804,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -721,6 +826,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -730,6 +839,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -751,6 +861,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -760,6 +874,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -781,6 +896,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -790,6 +909,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -811,6 +931,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -820,6 +944,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -841,6 +966,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -850,6 +979,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -871,6 +1001,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -880,6 +1014,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -901,6 +1036,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -910,6 +1049,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -931,6 +1071,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -940,6 +1084,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -961,6 +1106,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -970,6 +1119,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -991,6 +1141,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1000,6 +1154,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1021,6 +1176,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1030,6 +1189,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1051,6 +1211,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1060,6 +1224,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1081,6 +1246,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1090,6 +1259,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1111,6 +1281,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 622765764f944614ebdf232c6d33f022, type: 2}
     materialName: Mat_Grass_Textures_01
@@ -1120,6 +1294,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1141,6 +1316,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 277550534fdc44c4ca35aff476d9aee3, type: 2}
     materialName: Mat_Dirt_01
@@ -1150,6 +1329,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1171,6 +1351,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: ae0d5b704718f9047878075d3fd13c0e, type: 2}
     materialName: Mat_Gravel_01
@@ -1180,6 +1364,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1201,6 +1386,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 85a97bd83bea37340836687cf20aa474, type: 2}
     materialName: Mat_Mud_01
@@ -1210,6 +1399,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1231,6 +1421,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 277550534fdc44c4ca35aff476d9aee3, type: 2}
     materialName: Mat_Dirt_01
@@ -1240,6 +1434,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1261,6 +1456,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1270,6 +1469,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1291,6 +1491,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1300,6 +1504,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1321,6 +1526,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1330,6 +1539,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1351,6 +1561,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1360,6 +1574,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1381,6 +1596,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1390,6 +1609,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1411,6 +1631,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1420,6 +1644,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1441,6 +1666,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1450,6 +1679,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1471,6 +1701,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1480,6 +1714,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1501,6 +1736,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1510,6 +1749,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1531,6 +1771,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1540,6 +1784,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1561,6 +1806,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1570,6 +1819,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1591,6 +1841,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1600,6 +1854,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1621,6 +1876,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
     materialName: Mat_Rock_Rough_01
@@ -1630,6 +1889,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1651,6 +1911,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1660,6 +1924,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1681,6 +1946,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1690,6 +1959,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1711,6 +1981,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1720,6 +1994,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1741,6 +2016,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1750,6 +2029,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1771,6 +2051,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1780,6 +2064,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1801,6 +2086,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1810,6 +2099,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1831,6 +2121,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1840,6 +2134,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1861,6 +2156,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1870,6 +2169,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1891,6 +2191,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1900,6 +2204,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1921,6 +2226,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1930,6 +2239,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1951,6 +2261,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1960,6 +2274,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -1981,6 +2296,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -1990,6 +2309,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2011,6 +2331,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2020,6 +2344,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2041,6 +2366,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2050,6 +2379,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2071,6 +2401,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2080,6 +2414,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2101,6 +2436,10 @@ MonoBehaviour:
     offset: {x: 0, y: -0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2110,6 +2449,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2131,6 +2471,10 @@ MonoBehaviour:
     offset: {x: 0, y: -0.05, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2140,6 +2484,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2161,6 +2506,10 @@ MonoBehaviour:
     offset: {x: 0, y: -0.25, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2170,6 +2519,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2191,6 +2541,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2200,6 +2554,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2221,6 +2576,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2230,6 +2589,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2251,6 +2611,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2260,6 +2624,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2281,6 +2646,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2290,6 +2659,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2311,6 +2681,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2320,6 +2694,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -2341,6 +2716,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2362,6 +2741,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2408,6 +2788,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2429,6 +2813,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2475,6 +2860,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 1
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2496,6 +2885,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2542,6 +2932,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 1
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2563,6 +2957,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2609,6 +3004,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2630,6 +3029,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2676,6 +3076,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2697,6 +3101,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2743,6 +3148,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2764,6 +3173,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2810,6 +3220,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2831,6 +3245,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2877,6 +3292,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2898,6 +3317,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -2944,6 +3364,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -2965,6 +3389,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3011,6 +3436,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3032,6 +3461,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3078,6 +3508,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3099,6 +3533,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3145,6 +3580,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3166,6 +3605,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3212,6 +3652,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3233,6 +3677,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3279,6 +3724,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3300,6 +3749,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3346,6 +3796,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3367,6 +3821,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3413,6 +3868,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3434,6 +3893,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3480,6 +3940,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3501,6 +3965,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin: []
       hair:
@@ -3537,6 +4002,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3558,6 +4027,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin: []
       hair:
@@ -3599,6 +4069,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3620,6 +4094,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -3651,6 +4126,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3672,6 +4151,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3718,6 +4198,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3739,6 +4223,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin: []
       hair:
@@ -3780,6 +4265,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3801,6 +4290,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3847,6 +4337,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3868,6 +4362,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3919,6 +4414,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3940,6 +4439,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -3986,6 +4486,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4007,6 +4511,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin: []
       hair:
@@ -4043,6 +4548,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4064,6 +4573,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4110,6 +4620,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4131,6 +4645,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4177,6 +4692,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4198,6 +4717,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4244,6 +4764,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4265,6 +4789,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4311,6 +4836,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4332,6 +4861,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin: []
       hair:
@@ -4368,6 +4898,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4389,6 +4923,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4435,6 +4970,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4456,6 +4995,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4502,6 +5042,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4523,6 +5067,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4569,6 +5114,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4590,6 +5139,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4636,6 +5186,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4657,6 +5211,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4708,6 +5263,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4729,6 +5288,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4780,6 +5340,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4801,6 +5365,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4847,6 +5412,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4868,6 +5437,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4919,6 +5489,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -4940,6 +5514,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -4991,6 +5566,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5012,6 +5591,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5063,6 +5643,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5084,6 +5668,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5130,6 +5715,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5151,6 +5740,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5197,6 +5787,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5218,6 +5812,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5264,6 +5859,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5285,6 +5884,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5336,6 +5936,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5357,6 +5961,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5403,6 +6008,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5424,6 +6033,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5475,6 +6085,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5496,6 +6110,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5547,6 +6162,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5568,6 +6187,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5619,6 +6239,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5640,6 +6264,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5686,6 +6311,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5707,6 +6336,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5753,6 +6383,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5774,6 +6408,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5820,6 +6455,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5841,6 +6480,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5892,6 +6532,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5913,6 +6557,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -5964,6 +6609,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -5985,6 +6634,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6031,6 +6681,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6052,6 +6706,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6103,6 +6758,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6124,6 +6783,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6170,6 +6830,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6191,6 +6855,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6242,6 +6907,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6263,6 +6932,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6314,6 +6984,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6335,6 +7009,7 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6386,6 +7061,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6407,6 +7086,7 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    quadrupedGait: 0
     appearance:
       skin:
       - serializedVersion: 2
@@ -6448,6 +7128,1936 @@ MonoBehaviour:
       cloth2Verts: 256
       totalVerts: 4139
       quality: 1
+  - moduleId: odyssey.module.pawn.colonist.61
+    shape: 4
+    prefab: {fileID: 1415556995387802, guid: 18ff8a7a7ca91ff4bab92d116fa797c8, type: 3}
+    prefabName: Character_BusinessMale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01579987
+        y: 0.184103
+        width: 0.0023999996
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.014438143
+        y: 0.16234916
+        width: 0.0023999996
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.20311458
+        y: 0.111463
+        width: 0.002417624
+        height: 0.0025193542
+      cloth2:
+      - serializedVersion: 2
+        x: 0.18944326
+        y: 0.12497809
+        width: 0.0024000108
+        height: 0.0024000034
+      skinVerts: 813
+      hairVerts: 128
+      clothVerts: 1253
+      cloth2Verts: 422
+      totalVerts: 3485
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.62
+    shape: 4
+    prefab: {fileID: 1513220350763136, guid: 325c2a72f558d4e419ec4f9ea74e54f5, type: 3}
+    prefabName: Character_MercenaryMale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01885738
+        y: 0.1848741
+        width: 0.002746733
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.017398557
+        y: 0.16347285
+        width: 0.0024002679
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.022470077
+        y: 0.1651494
+        width: 0.0031334832
+        height: 0.004422426
+      cloth:
+      - serializedVersion: 2
+        x: 0.17427383
+        y: 0.091161504
+        width: 0.0024000108
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.17415957
+        y: 0.075720325
+        width: 0.0024000108
+        height: 0.0024002045
+      skinVerts: 842
+      hairVerts: 128
+      clothVerts: 843
+      cloth2Verts: 758
+      totalVerts: 3525
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.63
+    shape: 4
+    prefab: {fileID: 1938837853794670, guid: 30c23f6bcd4f35648bbfc61c9f671e51, type: 3}
+    prefabName: Character_MilitaryMale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.016265592
+        y: 0.1848741
+        width: 0.00696047
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.017398557
+        y: 0.16347285
+        width: 0.0024002679
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.022470077
+        y: 0.1651494
+        width: 0.0031334832
+        height: 0.004422426
+      cloth:
+      - serializedVersion: 2
+        x: 0.0040074624
+        y: 0.277942
+        width: 0.0023999996
+        height: 0.0024009347
+      cloth2:
+      - serializedVersion: 2
+        x: 0.7399673
+        y: 0.43120834
+        width: 0.002400279
+        height: 0.002399981
+      skinVerts: 798
+      hairVerts: 128
+      clothVerts: 165
+      cloth2Verts: 92
+      totalVerts: 3299
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.64
+    shape: 4
+    prefab: {fileID: 1564443653002224, guid: 7126961e40fcaf34297e9547d17c2f70, type: 3}
+    prefabName: Character_RedneckMale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.016598424
+        y: 0.1848741
+        width: 0.0050056893
+        height: 0.0066230297
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.017398557
+        y: 0.16347285
+        width: 0.0024002679
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.022470077
+        y: 0.1651494
+        width: 0.0031334832
+        height: 0.004422426
+      cloth:
+      - serializedVersion: 2
+        x: 0.014783241
+        y: 0.32642165
+        width: 0.002699528
+        height: 0.0024000108
+      cloth2:
+      - serializedVersion: 2
+        x: 0.10055407
+        y: 0.35144207
+        width: 0.0033895597
+        height: 0.004186243
+      skinVerts: 784
+      hairVerts: 128
+      clothVerts: 543
+      cloth2Verts: 424
+      totalVerts: 3738
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.65
+    shape: 4
+    prefab: {fileID: 1834572944770430, guid: 948bbd331c306c945ba7d4f6d7d76d61, type: 3}
+    prefabName: Character_SportyMale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017463613
+        y: 0.18646923
+        width: 0.0024951957
+        height: 0.0024440438
+      hair:
+      - serializedVersion: 2
+        x: 0.014223766
+        y: 0.16374615
+        width: 0.0026336852
+        height: 0.0025489181
+      - serializedVersion: 2
+        x: 0.04861479
+        y: 0.19675246
+        width: 0.0024000034
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.21863808
+        y: 0.09823566
+        width: 0.0024000108
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.21865332
+        y: 0.09085525
+        width: 0.0024000257
+        height: 0.0024000108
+      skinVerts: 864
+      hairVerts: 176
+      clothVerts: 1796
+      cloth2Verts: 360
+      totalVerts: 3975
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.66
+    shape: 4
+    prefab: {fileID: 1946735617089952, guid: a980100c51505dc469368879b38464e0, type: 3}
+    prefabName: Character_SportyMale_02
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017430902
+        y: 0.18646091
+        width: 0.0025279075
+        height: 0.0024523586
+      hair:
+      - serializedVersion: 2
+        x: 0.014534552
+        y: 0.16389602
+        width: 0.0023999996
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.04861479
+        y: 0.19675246
+        width: 0.0024000034
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.099915355
+        y: 0.25263855
+        width: 0.003358312
+        height: 0.004786074
+      cloth2:
+      - serializedVersion: 2
+        x: 0.13131078
+        y: 0.37464738
+        width: 0.0038481653
+        height: 0.006230384
+      skinVerts: 1152
+      hairVerts: 176
+      clothVerts: 435
+      cloth2Verts: 404
+      totalVerts: 3510
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.67
+    shape: 4
+    prefab: {fileID: 1278689708014708, guid: 86fbce35c5d130147bc5b953dbf3059c, type: 3}
+    prefabName: Character_70sFemale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.02084834
+        y: 0.18580522
+        width: 0.0024344362
+        height: 0.002898693
+      - serializedVersion: 2
+        x: 0.011140337
+        y: 0.18481572
+        width: 0.0052851625
+        height: 0.006233871
+      hair:
+      - serializedVersion: 2
+        x: 0.048731912
+        y: 0.19667152
+        width: 0.0024000332
+        height: 0.0024000257
+      - serializedVersion: 2
+        x: 0.07972167
+        y: 0.22884983
+        width: 0.002399996
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.011259162
+        y: 0.150829
+        width: 0.0024000145
+        height: 0.0024000108
+      cloth2:
+      - serializedVersion: 2
+        x: 0.020950338
+        y: 0.1348946
+        width: 0.002848331
+        height: 0.0026158988
+      skinVerts: 1045
+      hairVerts: 159
+      clothVerts: 180
+      cloth2Verts: 157
+      totalVerts: 2763
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.68
+    shape: 4
+    prefab: {fileID: 1911775350683022, guid: daa9c4ca5ba6fe045b6458a025ba298d, type: 3}
+    prefabName: Character_GothFemale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.016714342
+        y: 0.18480678
+        width: 0.0027296096
+        height: 0.0027303398
+      hair:
+      - serializedVersion: 2
+        x: 0.048936423
+        y: 0.19695768
+        width: 0.0025206432
+        height: 0.0025206506
+      - serializedVersion: 2
+        x: 0.015959581
+        y: 0.21011896
+        width: 0.0024003573
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.21820547
+        y: 0.10875402
+        width: 0.0024000108
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.11031744
+        y: 0.19341141
+        width: 0.002399996
+        height: 0.0024000406
+      skinVerts: 787
+      hairVerts: 134
+      clothVerts: 902
+      cloth2Verts: 472
+      totalVerts: 3504
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.69
+    shape: 4
+    prefab: {fileID: 1534467912851604, guid: 8a24513771aad7b4fb0e3d52c969a2c4, type: 3}
+    prefabName: Character_MercenaryFemale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.020186147
+        y: 0.18580522
+        width: 0.003096629
+        height: 0.0039037764
+      - serializedVersion: 2
+        x: 0.011140337
+        y: 0.18619604
+        width: 0.0053700097
+        height: 0.0048535466
+      hair:
+      - serializedVersion: 2
+        x: 0.07926836
+        y: 0.19470187
+        width: 0.0024000555
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.015959581
+        y: 0.21011896
+        width: 0.0024003573
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.23332335
+        y: 0.1051891
+        width: 0.002404198
+        height: 0.0024903864
+      cloth2:
+      - serializedVersion: 2
+        x: 0.23338039
+        y: 0.12138713
+        width: 0.0032794178
+        height: 0.0034870058
+      skinVerts: 1014
+      hairVerts: 116
+      clothVerts: 810
+      cloth2Verts: 603
+      totalVerts: 4453
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.70
+    shape: 4
+    prefab: {fileID: 1485438405061212, guid: 5d65c3bd98b79f84e996821ebfc0a190, type: 3}
+    prefabName: Character_MilitaryFemale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.016265592
+        y: 0.1848741
+        width: 0.007017184
+        height: 0.003948927
+      hair:
+      - serializedVersion: 2
+        x: 0.04659601
+        y: 0.19669504
+        width: 0.002400063
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.011140337
+        y: 0.18864949
+        width: 0.0024001487
+        height: 0.0024001002
+      cloth:
+      - serializedVersion: 2
+        x: 0.0040074624
+        y: 0.277942
+        width: 0.0023999996
+        height: 0.0024009347
+      cloth2:
+      - serializedVersion: 2
+        x: 0.7399673
+        y: 0.43120834
+        width: 0.002400279
+        height: 0.002399981
+      skinVerts: 881
+      hairVerts: 126
+      clothVerts: 160
+      cloth2Verts: 96
+      totalVerts: 3384
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.71
+    shape: 4
+    prefab: {fileID: 1351662411566064, guid: 747e5359c417b5d46bed4a579eba5c06, type: 3}
+    prefabName: Character_SportyFemale_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.011140337
+        y: 0.18447633
+        width: 0.005794946
+        height: 0.00657326
+      - serializedVersion: 2
+        x: 0.019031068
+        y: 0.18537551
+        width: 0.0042517073
+        height: 0.0034959167
+      hair:
+      - serializedVersion: 2
+        x: 0.04878779
+        y: 0.18965693
+        width: 0.0024000034
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.015959581
+        y: 0.21011896
+        width: 0.0024003573
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.07882514
+        y: 0.25236288
+        width: 0.003553465
+        height: 0.002399981
+      cloth2:
+      - serializedVersion: 2
+        x: 0.078473575
+        y: 0.22830783
+        width: 0.003932461
+        height: 0.0038957596
+      skinVerts: 946
+      hairVerts: 116
+      clothVerts: 904
+      cloth2Verts: 341
+      totalVerts: 3846
+      quality: 1
+  - moduleId: odyssey.module.pawn.colonist.72
+    shape: 4
+    prefab: {fileID: 1605408588197318, guid: 136486fd3adeccb4a93bbede6d9d4a99, type: 3}
+    prefabName: Character_SportyFemale_02
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    colonistPool: 1
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+    quadrupedGait: 0
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017362352
+        y: 0.1864837
+        width: 0.002551416
+        height: 0.0024442226
+      hair:
+      - serializedVersion: 2
+        x: 0.04832994
+        y: 0.19674443
+        width: 0.0024181828
+        height: 0.0024076104
+      - serializedVersion: 2
+        x: 0.015959581
+        y: 0.21011896
+        width: 0.0024003573
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.20453367
+        y: 0.0936347
+        width: 0.0024000108
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.39953396
+        y: 0.48959202
+        width: 0.0025597513
+        height: 0.003556043
+      skinVerts: 1000
+      hairVerts: 116
+      clothVerts: 678
+      cloth2Verts: 568
+      totalVerts: 4395
+      quality: 1
+  - moduleId: odyssey.module.attach.hair
+    shape: 4
+    prefab: {fileID: 1553320175195256, guid: 1fe153fdea188ed4e892bb4c9972beae, type: 3}
+    prefabName: SM_Chr_Attach_Male_Default_Hair_01
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.048489377
+        y: 0.19775683
+        width: 0.0024000816
+        height: 0.0024000853
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 320
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 320
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.1
+    shape: 4
+    prefab: {fileID: 1964416899909496, guid: de83cd92389c3bd4f97bcce0a9b2714a, type: 3}
+    prefabName: SM_Chr_Attach_Male_Hair_01
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.049715895
+        y: 0.19647582
+        width: 0.0024001226
+        height: 0.0024001002
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 373
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 373
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.2
+    shape: 4
+    prefab: {fileID: 1346800952627374, guid: 9e97aa60fb05bc54db3ac4c1ae34bb8c, type: 3}
+    prefabName: SM_Chr_Attach_Male_Hair_02
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04903381
+        y: 0.1964757
+        width: 0.0032401308
+        height: 0.0039377958
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 246
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 246
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.3
+    shape: 4
+    prefab: {fileID: 1146829034728444, guid: 3ceca72bcb48a4642bb4f845c93e2a19, type: 3}
+    prefabName: SM_Chr_Attach_Male_Hair_03
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.0499505
+        y: 0.19684972
+        width: 0.0024001226
+        height: 0.00240013
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 598
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 598
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.4
+    shape: 4
+    prefab: {fileID: 1787159064215936, guid: 0fba6aa0583f5794c976afadb4b60f28, type: 3}
+    prefabName: SM_Chr_Attach_Male_Hair_06
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.047948677
+        y: 0.19726534
+        width: 0.0024001226
+        height: 0.0024000108
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 331
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 331
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.5
+    shape: 4
+    prefab: {fileID: 1614463849732976, guid: 2b3554e8e5bb72a49b25995c0af62a5a, type: 3}
+    prefabName: SM_Chr_Attach_Male_Hair_07
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.048392918
+        y: 0.19697206
+        width: 0.0028276592
+        height: 0.0025520325
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 140
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 140
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.6
+    shape: 4
+    prefab: {fileID: 1521171663515148, guid: 3722dd800daac424dac0695259ae2045, type: 3}
+    prefabName: SM_Chr_Attach_Female_Default_Hair_01
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 2
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.049507584
+        y: 0.19845055
+        width: 0.0024000444
+        height: 0.0024000257
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 438
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 438
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.7
+    shape: 4
+    prefab: {fileID: 5359095326366316309, guid: 6acd4702716c64b49bd8504d04baea3b, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_04
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04795649
+        y: 0.19705956
+        width: 0.0036040395
+        height: 0.0034487545
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 533
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 533
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.8
+    shape: 4
+    prefab: {fileID: 4248136288128711640, guid: 6599356a61fd47a4eaaeed1ac887d65a, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_06
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04710408
+        y: 0.19739856
+        width: 0.00340005
+        height: 0.0033124685
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 964
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 964
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.9
+    shape: 4
+    prefab: {fileID: 1090390649989844869, guid: d30df5bb55089ad4a989b1473c7a2293, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_07
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.049050655
+        y: 0.19578098
+        width: 0.00326512
+        height: 0.0034000427
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 3542
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 3542
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.10
+    shape: 4
+    prefab: {fileID: 1213043109083764429, guid: d8091c7a2d9d8f2448b954f8720e99d5, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_08
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.045380615
+        y: 0.19554724
+        width: 0.0034000203
+        height: 0.003302902
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 1236
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 1236
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.11
+    shape: 4
+    prefab: {fileID: 3051544637601550317, guid: 69ac49a48a29c9448ac5a507d38a3301, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_09
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04325976
+        y: 0.1959926
+        width: 0.003274195
+        height: 0.0034000427
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 254
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 254
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.12
+    shape: 4
+    prefab: {fileID: 1816054855935763832, guid: 260657d29bfb17c47841ae7a62fcf3f4, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_09_alt
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.050902266
+        y: 0.19555606
+        width: 0.00340005
+        height: 0.003264591
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 614
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 614
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.13
+    shape: 4
+    prefab: {fileID: 1272386763867106638, guid: 515a24c6c0ff2404782d8d7c7de093af, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_10
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04741885
+        y: 0.18972512
+        width: 0.0072089955
+        height: 0.010401323
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 401
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 401
+      quality: 1
+  - moduleId: odyssey.module.attach.hair.14
+    shape: 4
+    prefab: {fileID: 593454656204496684, guid: 8f87914eee5a99b4381f0a1c7fdcd158, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Hair_11
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.049910508
+        y: 0.1971358
+        width: 0.00340008
+        height: 0.0033000559
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 635
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 635
+      quality: 1
+  - moduleId: odyssey.module.attach.beard
+    shape: 4
+    prefab: {fileID: 1395447336697490, guid: 85622633d5d3be041b1046022b49ba23, type: 3}
+    prefabName: SM_Chr_Attach_Beard_02
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04890122
+        y: 0.19580038
+        width: 0.0024000928
+        height: 0.0024001598
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 430
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 430
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.1
+    shape: 4
+    prefab: {fileID: 1699811905562804, guid: cbcd1c298510d4c48b4bcf78775d2dbe, type: 3}
+    prefabName: SM_Chr_Attach_Beard_03
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.0492868
+        y: 0.19675763
+        width: 0.0024001226
+        height: 0.0024001002
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 336
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 336
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.2
+    shape: 4
+    prefab: {fileID: 1787760780986768, guid: a06008e7cd183a944a56bb0d368d6067, type: 3}
+    prefabName: SM_Chr_Attach_Beard_05
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.04977413
+        y: 0.19821902
+        width: 0.0024000928
+        height: 0.0024019182
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 427
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 427
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.3
+    shape: 4
+    prefab: {fileID: 1858514242760228, guid: f33d4807920b5d84e927b8c82ac33f28, type: 3}
+    prefabName: SM_Chr_Attach_Beard_06
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.048351724
+        y: 0.19715798
+        width: 0.002400063
+        height: 0.0024000853
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 646
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 646
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.4
+    shape: 4
+    prefab: {fileID: 1583257336742216, guid: 19309ad8de603e442841465c06251a6e, type: 3}
+    prefabName: SM_Chr_Attach_Beard_07
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.048799474
+        y: 0.19675799
+        width: 0.0024001226
+        height: 0.0024009645
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 178
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 178
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.5
+    shape: 4
+    prefab: {fileID: 3252513830353061635, guid: 5552d13d2d0636b4b84403bca027f0c0, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Beard_01
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.049937207
+        y: 0.18919067
+        width: 0.0033999905
+        height: 0.0033733845
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 758
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 758
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.6
+    shape: 4
+    prefab: {fileID: 5381899529043745372, guid: 2c3db847c027ff04f9f95cf539c047de, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Beard_02
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.045734543
+        y: 0.19599517
+        width: 0.00340005
+        height: 0.0032648444
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 459
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 459
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.7
+    shape: 4
+    prefab: {fileID: 4158117797329843660, guid: 1d06f16f48b790548b778a5bdf7a69d6, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Chops_01
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.047469158
+        y: 0.19539519
+        width: 0.0034000203
+        height: 0.0031742156
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 250
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 250
+      quality: 1
+  - moduleId: odyssey.module.attach.beard.8
+    shape: 4
+    prefab: {fileID: 4609227968844860818, guid: 6b5f1a42b82110e49988de1ad2a41fd9, type: 3}
+    prefabName: SM_Gen_Chr_Attach_Moustache_01
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 1
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.047211844
+        y: 0.19683787
+        width: 0.0030659065
+        height: 0.0027938485
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 124
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 124
+      quality: 1
+  - moduleId: odyssey.module.pawn.animal.hog
+    shape: 4
+    prefab: {fileID: 919132149155446097, guid: 4a05467d051682c4788592b32f244768, type: 3}
+    prefabName: Pig
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: -8945691123924629249, guid: 4a05467d051682c4788592b32f244768, type: 3}
+    poseClipName: Armature|Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: Armature|Idle
+      clip: {fileID: -8945691123924629249, guid: 4a05467d051682c4788592b32f244768, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    quadrupedGait: 1
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.pawn.animal.rat
+    shape: 4
+    prefab: {fileID: 919132149155446097, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+    prefabName: Rat
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 7628754178218877552, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+    poseClipName: RatArmature|Rat_Idle
+    poseClipTime: 0
+    locomotion:
+    - clipName: RatArmature|Rat_Idle
+      clip: {fileID: 7628754178218877552, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: RatArmature|Rat_Walk
+      clip: {fileID: 7369953533816513705, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0.9
+    - clipName: RatArmature|Rat_Run
+      clip: {fileID: -5573254151428076804, guid: 84b54a4e64593d9418f72dbd733ff161, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 2.2
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
@@ -6458,6 +9068,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.6, y: 1.6, z: 1.6}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6467,6 +9081,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -6488,6 +9103,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1.5, y: 1.5, z: 1.5}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6497,6 +9116,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -6518,6 +9138,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.4, y: 0.4, z: 0.4}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6527,6 +9151,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -6548,6 +9173,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.35, y: 0.35, z: 0.35}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6557,6 +9186,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -6578,6 +9208,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.16, y: 0.16, z: 0.16}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6587,6 +9221,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -6608,6 +9243,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.5, y: 0.5, z: 0.5}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6617,6 +9256,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []
@@ -6638,6 +9278,10 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 0.6, y: 0.6, z: 0.6}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -6647,6 +9291,7 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    quadrupedGait: 0
     appearance:
       skin: []
       hair: []

@@ -398,6 +398,200 @@ namespace Odyssey.Tests.PlayMode
         /// only comparison this machine supports. The figure ceiling is deliberately left at its
         /// default: what is being measured is the game as it ships, not a hypothetical.</para>
         /// </summary>
+        /// <summary>
+        /// What the hair and beards actually cost, against the same colony with them switched off
+        /// (<c>docs/design/29-modular-colonists.md</c> §13).
+        ///
+        /// <para><b>Two colony sizes, because they exercise different code.</b> At 64 everyone is a
+        /// live figure and the cost is two extra rigid renderers each — which is the case a real
+        /// colony is in, since the figure cap is 64 and the audit's scale target is fifty. At 192
+        /// everyone past the cap is in the baked far form instead, where the cost is instanced
+        /// buckets keyed on the piece rather than the person.</para>
+        ///
+        /// <para><b>On and off in the same run, twice each, alternating.</b> §6c.1: this machine's
+        /// frame numbers drift by more between runs than most passes cost — the city canary moved
+        /// from 2.01 to 4.01 ms in an afternoon on what a sibling worktree was doing. A number from
+        /// a different run is not a control. Alternating catches a drift that happens to fall
+        /// between the two halves.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheAttachmentsCostWhatTheyDraw()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+
+                foreach (int size in new[] { 64, 192 })
+                {
+                    yield return GrowColonyTo(boot, size);
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+
+                    float onA = 0f, offA = 0f, onB = 0f, offB = 0f;
+
+                    ColonistAttachments.Enabled = true;
+                    yield return TimeFrames($"attach/{pawns}/on", boot, 30, x => onA = x);
+                    ColonistAttachments.Enabled = false;
+                    yield return TimeFrames($"attach/{pawns}/off", boot, 30, x => offA = x);
+                    ColonistAttachments.Enabled = true;
+                    yield return TimeFrames($"attach/{pawns}/on", boot, 30, x => onB = x);
+                    ColonistAttachments.Enabled = false;
+                    yield return TimeFrames($"attach/{pawns}/off", boot, 30, x => offB = x);
+                    ColonistAttachments.Enabled = true;
+
+                    float on = (onA + onB) * 0.5f;
+                    float off = (offA + offB) * 0.5f;
+                    Debug.Log($"[FrameTime] attachments at {pawns} pawns, " +
+                              $"{boot.Figures?.FigureCount ?? 0} figures: " +
+                              $"on {on:0.000} ms (runs {onA:0.000}/{onB:0.000}), " +
+                              $"off {off:0.000} ms (runs {offA:0.000}/{offB:0.000}), " +
+                              $"cost {on - off:+0.000;-0.000} ms");
+                }
+            }
+            finally
+            {
+                ColonistAttachments.Enabled = true;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// What the crowd scan costs, and how much of it was the quadratic rather than the
+        /// constant factor under it (<c>docs/design/25-pawn-steering.md</c>, "Making the scan
+        /// stop walking the colony").
+        ///
+        /// <para><b>Three arms, because the plan warned against two.</b>
+        /// <c>docs/plans/pf-crowd-scan.md</c> named hoisting <c>WhereItIsNow</c> out of the inner
+        /// loop as the cheap candidate and said to measure it alone before building a spatial
+        /// index on top of an unmeasured constant factor. <c>CrowdScan.Cached</c> is exactly that
+        /// hoist and nothing else; <c>Bucketed</c> adds the cull. Measuring all three in one run
+        /// is the only way to say which of the two bought the frame back.</para>
+        ///
+        /// <para><b>Alternating, twice each, in one run</b> — the shape
+        /// <c>TheAttachmentsCostWhatTheyDraw</c> established. This machine's frame numbers drift
+        /// by more between runs than most passes cost, so a reading from another run is not a
+        /// control, and a drift that happens to land between two halves would otherwise be read
+        /// as the pass.</para>
+        ///
+        /// <para><b>Three colony sizes spanning the figure ceiling.</b> At 64 everybody is a live
+        /// figure, so <c>Actors</c> scans nobody and whatever <c>Figures</c> costs is the 64 x N
+        /// linear scan on its own — which is the open question the plan asked to answer on the
+        /// way. At 192 and 384 the quadratic term is what is being measured.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCrowdScanCostsWhatItVisits()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+
+                foreach (int size in new[] { 64, 192, 384 })
+                {
+                    yield return GrowColonyTo(boot, size);
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+
+                    foreach (CrowdScan mode in new[] { CrowdScan.Span, CrowdScan.Cached, CrowdScan.Bucketed })
+                    {
+                        float a = 0f, b = 0f;
+                        double[] splitA = System.Array.Empty<double>();
+                        double[] splitB = System.Array.Empty<double>();
+
+                        PawnCrowdIndex.Mode = mode;
+                        yield return TimeFrames($"crowd/{pawns}/{mode}", boot, 30,
+                            x => a = x, s => splitA = s);
+                        yield return TimeFrames($"crowd/{pawns}/{mode}", boot, 30,
+                            x => b = x, s => splitB = s);
+
+                        double Section(OdysseyBootstrap.FrameSection section) =>
+                            (splitA[(int)section] + splitB[(int)section]) * 0.5;
+
+                        Debug.Log($"[FrameTime] crowd {mode} at {pawns} pawns, " +
+                                  $"{boot.Figures?.FigureCount ?? 0} figures: " +
+                                  $"frame {(a + b) * 0.5f:0.000} ms (runs {a:0.000}/{b:0.000}), " +
+                                  $"Figures {Section(OdysseyBootstrap.FrameSection.Figures):0.000} ms, " +
+                                  $"Actors {Section(OdysseyBootstrap.FrameSection.Actors):0.000} ms, " +
+                                  $"Crowd {Section(OdysseyBootstrap.FrameSection.Crowd):0.000} ms, " +
+                                  $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
+                    }
+                }
+            }
+            finally
+            {
+                PawnCrowdIndex.Mode = CrowdScan.Bucketed;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// What the aspect lookup costs, against the scan it replaced, in one run.
+        ///
+        /// <para><b>The second O(N squared) found by fixing the first</b>
+        /// (<c>docs/design/31-aspect-lookup.md</c>, out of <c>25-pawn-steering.md</c> §9d). A
+        /// colonist publishes 57 aspect rows every tick, so the published set is 57 × colonists;
+        /// <c>TryGetPawnAspect</c> scanned it, and the far-form renderer called it once per
+        /// colonist it drew. <c>WorldSnapshot.IndexAspects</c> is the control — false is the scan,
+        /// true is the lazy index — and <c>AspectScaleTests.TheIndexAndTheScanAgreeRowForRow</c>
+        /// is what makes it a control rather than two games.</para>
+        ///
+        /// <para>Alternating, twice each, at three colony sizes spanning the figure ceiling — the
+        /// shape <c>TheAttachmentsCostWhatTheyDraw</c> established, because this machine drifts by
+        /// more between runs than most passes cost.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheAspectLookupCostsWhatItScans()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+
+                foreach (int size in new[] { 64, 192, 384 })
+                {
+                    yield return GrowColonyTo(boot, size);
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+                    int rows = boot.World!.Views.Current.AspectCount;
+
+                    float scanA = 0f, indexA = 0f, scanB = 0f, indexB = 0f;
+                    double[] scanSplit = System.Array.Empty<double>();
+                    double[] indexSplit = System.Array.Empty<double>();
+
+                    WorldSnapshot.IndexAspects = false;
+                    yield return TimeFrames($"aspect/{pawns}/scan", boot, 30, x => scanA = x, s => scanSplit = s);
+                    WorldSnapshot.IndexAspects = true;
+                    yield return TimeFrames($"aspect/{pawns}/index", boot, 30, x => indexA = x, s => indexSplit = s);
+                    WorldSnapshot.IndexAspects = false;
+                    yield return TimeFrames($"aspect/{pawns}/scan", boot, 30, x => scanB = x);
+                    WorldSnapshot.IndexAspects = true;
+                    yield return TimeFrames($"aspect/{pawns}/index", boot, 30, x => indexB = x);
+
+                    double Part(double[] split, OdysseyBootstrap.FrameSection section) =>
+                        split.Length > (int)section ? split[(int)section] : 0d;
+
+                    Debug.Log($"[FrameTime] aspects at {pawns} pawns ({rows} rows, " +
+                              $"{(pawns > 0 ? rows / pawns : 0)} a colonist), " +
+                              $"{boot.Figures?.FigureCount ?? 0} figures: " +
+                              $"scan {(scanA + scanB) * 0.5f:0.000} ms ({scanA:0.000}/{scanB:0.000}), " +
+                              $"index {(indexA + indexB) * 0.5f:0.000} ms ({indexA:0.000}/{indexB:0.000}); " +
+                              $"Actors {Part(scanSplit, OdysseyBootstrap.FrameSection.Actors):0.000} -> " +
+                              $"{Part(indexSplit, OdysseyBootstrap.FrameSection.Actors):0.000} ms, " +
+                              $"Figures {Part(scanSplit, OdysseyBootstrap.FrameSection.Figures):0.000} -> " +
+                              $"{Part(indexSplit, OdysseyBootstrap.FrameSection.Figures):0.000} ms");
+                }
+            }
+            finally
+            {
+                WorldSnapshot.IndexAspects = true;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
@@ -421,8 +615,14 @@ namespace Odyssey.Tests.PlayMode
                     int pawns = boot.World!.Views.Current.Pawns.Length;
                     float mean = 0f;
                     yield return TimeFrames($"colony/{pawns}", boot, 30, x => mean = x);
+                    // Draw calls beside the frame, because the colonist passes either cost draws
+                    // per person or they do not, and the sweep spans the figure cap -- so the
+                    // control for "what the hair and beard pass costs" is the same run at 64
+                    // figures, where nobody is drawn in the far form at all
+                    // (docs/design/29-modular-colonists.md section 13).
                     Debug.Log($"[FrameTime] colony {pawns} pawns, " +
-                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms");
+                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms, " +
+                              $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
                 }
             }
             finally

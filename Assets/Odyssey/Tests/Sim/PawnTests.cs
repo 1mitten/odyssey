@@ -452,7 +452,9 @@ namespace Odyssey.Tests.Sim
             var colony = Colony.Build();
             var order = new List<string>();
             foreach (var node in colony.Jobs.Tree) order.Add(node.Name);
-            Assert.That(order, Is.EqualTo(new[] { "MentalState", "CriticalNeeds", "Work", "Idle" }));
+            // Drafted sits above the needs branch, or a drafted colonist wanders off to eat
+            // (design 33 §2b).
+            Assert.That(order, Is.EqualTo(new[] { "MentalState", "Drafted", "CriticalNeeds", "Work", "Idle" }));
         }
 
         [Test]

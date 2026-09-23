@@ -193,6 +193,31 @@ namespace Odyssey.Tests.Hud
             Assert.That(MoodBands.Band(roster.Cards[1].Mood), Is.EqualTo("breaking"));
         }
 
+        /// <summary>
+        /// The roster is the colony's people (design 29 §2). An animal is a pawn in the same
+        /// snapshot with a kind that is not the colonist's, and it gets no card, no name and no
+        /// slot — the control is the colonist beside it, who keeps hers.
+        /// </summary>
+        [Test]
+        public void AnAnimalHasNoCardOnTheRoster()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 1, 0), 600, 800, 800, JobHandle.Wait));
+            snapshot.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 1, 0), 600, 800, 800, JobHandle.Wander,
+                kind: 1));
+            snapshot.AddPawn(new PawnView(new PawnId(3), new CellRef(3, 1, 0), 600, 800, 800, JobHandle.Wait));
+
+            var roster = new RosterModel();
+            roster.Refresh(snapshot, selected: new PawnId(2));
+
+            Assert.That(roster.TotalCount, Is.EqualTo(2), "two people; the animal is not counted");
+            Assert.That(roster.Cards.Count, Is.EqualTo(2));
+            Assert.That(roster.Cards[0].Id, Is.EqualTo(new PawnId(1)));
+            Assert.That(roster.Cards[1].Id, Is.EqualTo(new PawnId(3)));
+            Assert.That(new List<PawnId>(roster.CustomOrder), Has.No.Member(new PawnId(2)),
+                "and it holds no slot to be dragged into");
+        }
+
         [Test]
         public void PaginationDividesColonistsIntoDiscretePagesAndClampsPage()
         {
@@ -415,8 +440,51 @@ namespace Odyssey.Tests.Hud
                 "with reasons");
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            Assert.That(pane.Commands.Count(c => c.Enabled), Is.Zero,
-                "no colonist command is wired yet, and none may pretend to be");
+            // The draft is the one command wired (design 33 §2f); the rest may not pretend to be.
+            Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
+                Is.EqualTo(new[] { InspectModel.DraftKey }),
+                "only Draft is wired, and none of the others may pretend to be");
+        }
+
+        /// <summary>
+        /// A clicked animal (design 29 §8): the pane says its species, what it is doing and
+        /// where it is, and carries nothing a person has — no name, no tabs, no commands, no
+        /// skills. The control is the colonist pane above, which has all of them.
+        /// </summary>
+        [Test]
+        public void AnAnimalPaneSaysSpeciesActivityAndWhereAndNothingAPersonHas()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(new PawnView(new PawnId(4), new CellRef(6, 7, 2), 800, 800, 600, JobHandle.Wander,
+                kind: 1));
+            snapshot.AddPawn(new PawnView(new PawnId(5), new CellRef(6, 8, 2), 800, 800, 600, JobHandle.Wait,
+                kind: 2));
+
+            var pane = new InspectModel();
+            pane.SetColonist(new PawnId(4));
+            pane.Refresh(snapshot);
+
+            Assert.That(pane.IsAnimal, Is.True);
+            Assert.That(pane.Title, Is.EqualTo(Registry.Label("ui.pawn.hog")), "the species, not a person's name");
+            Assert.That(pane.Subtitle, Is.EqualTo("animal"));
+            Assert.That(pane.Job, Is.EqualTo(Registry.Label("ui.status.wandering")), "a leg reads as wandering, never as idle");
+            Assert.That(pane.KindIconKey, Is.EqualTo("ui.pawn.hog"));
+            Assert.That(pane.Layer, Is.EqualTo(2));
+            Assert.That(pane.Tabs, Is.Empty);
+            Assert.That(pane.Commands, Is.Empty);
+            Assert.That(pane.Skills, Is.Empty);
+
+            pane.SetColonist(new PawnId(5));
+            pane.Refresh(snapshot);
+            Assert.That(pane.Title, Is.EqualTo(Registry.Label("ui.pawn.rat")));
+            Assert.That(pane.Job, Is.EqualTo(Registry.Label("ui.status.resting")), "a rest reads as resting");
+
+            // And back to a person: the flag is cleared and the pane is hers again.
+            snapshot.AddPawn(new PawnView(new PawnId(6), new CellRef(1, 1, 0), 620, 710, 720, JobHandle.Eat));
+            pane.SetColonist(new PawnId(6));
+            pane.Refresh(snapshot);
+            Assert.That(pane.IsAnimal, Is.False);
+            Assert.That(pane.Tabs, Is.Not.Empty);
         }
 
         /// <summary>

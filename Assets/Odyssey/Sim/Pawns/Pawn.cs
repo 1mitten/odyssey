@@ -74,19 +74,23 @@ namespace Odyssey.Sim.Pawns
 
         uint _rollSeed;
 
-        public Pawn(PawnId id, int cell, PawnContent content)
+        public Pawn(PawnId id, int cell, PawnContent content, int kind = 0)
         {
             Id = id;
             Cell = cell;
             Content = content;
+            Kind = kind;
+            PawnKindDef kindDef = content.KindOf(kind);
             Needs = new int[NeedIndex.Count];
-            for (int i = 0; i < NeedIndex.Count && i < content.Kind.startingNeeds.Length; i++)
-                Needs[i] = content.Kind.startingNeeds[i];
-            Mood = content.Kind.startingMood;
-            MoodTarget = content.Kind.startingMood;
-            // Comfortable until a world with a thermal pass says otherwise: a bare pawn fixture
-            // has no thermal system, and zero — freezing — would have been a silently cold
-            // test world (design 28 §8).
+            for (int i = 0; i < NeedIndex.Count && i < kindDef.startingNeeds.Length; i++)
+                Needs[i] = kindDef.startingNeeds[i];
+            Mood = kindDef.startingMood;
+            MoodTarget = kindDef.startingMood;
+            // Comfortable until a world with a thermal pass says otherwise: a bare pawn
+            // fixture has no thermal system, and zero — freezing — would have been a
+            // silently cold test world (design 28 §8). Read from the colonist's tuning and
+            // not the kind's: a hog has no comfort band of its own yet, and the midpoint of
+            // the one band there is beats inventing a second (design 29).
             AmbientTempC = (content.Temperature.comfortMinC + content.Temperature.comfortMaxC) / 2;
             WorkPriorities = new byte[WorkTypeIndex.Count];
             for (int i = 0; i < WorkPriorities.Length; i++) WorkPriorities[i] = 3;
@@ -101,6 +105,63 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The content set this pawn reads its tuning from. Frozen, shared, never copied.</summary>
         public PawnContent Content { get; }
+
+        /// <summary>
+        /// What this pawn is, as an index into <see cref="PawnContent.Kinds"/> (design 29 §1).
+        /// The colonist is 0, and so is every pawn from before kinds existed. Saved in a section
+        /// of its own (<c>PawnKindSection</c>) and hashed here, beside the roll seed and for the
+        /// same reason: saved state that is not derived belongs in the hash.
+        ///
+        /// <para>Settable only by the loader, which builds the pawn before the section that
+        /// names its kind is read. Nothing else may change what a pawn is.</para>
+        /// </summary>
+        public int Kind { get; internal set; }
+
+        /// <summary>
+        /// An animal that has decided to walk off the board (design 30 §3). Set by the wildlife
+        /// level-keeper, read by the animal's own think node, which then heads for the nearest
+        /// edge; saved in its own section and folded into the hash beside the kind.
+        /// </summary>
+        public bool Leaving { get; internal set; }
+
+        /// <summary>
+        /// Under the player's hand (design 33 §2): work stops, the colonist holds its position or
+        /// walks where it is sent, and it neither eats nor sleeps. Set only through
+        /// <see cref="JobSystem.SetDrafted"/>, which ends the job in hand as it changes. Saved in
+        /// <c>CombatSection</c> and folded into the hash beside the kind, so a colony nobody
+        /// drafts hashes as it did before drafting existed.
+        /// </summary>
+        public bool Drafted { get; internal set; }
+
+        /// <summary>
+        /// The tick the draft last had something to do — the draft itself or the latest order. Four
+        /// quiet hours after it the colonist undrafts itself (<see cref="PawnContent.DraftQuietTicks"/>).
+        /// Meaningless, unsaved and unhashed while <see cref="Drafted"/> is false.
+        /// </summary>
+        public int DraftQuietSinceTick { get; internal set; }
+
+        /// <summary>
+        /// The cell an interrupted colonist is still stepping into, or -1 (design 33 §2d).
+        ///
+        /// <para>An order given mid-step used to end the job, and ending a job drops the step in
+        /// progress: the pawn stayed on the cell it was leaving while its figure had been drawn
+        /// most of the way into the next, so every draft and every re-aimed right-click snapped
+        /// the figure back by up to a cell. <see cref="JobSystem.Interrupt"/> keeps that one step
+        /// instead, and the job loop holds every driver until it lands. Cleared by
+        /// <see cref="ClearPath"/>, so whatever drops the step drops the mark. Saved and hashed while set, because it is a path the world cannot
+        /// re-derive: its destination is gone with the job that chose it.</para>
+        /// </summary>
+        public int FinishingStepTo { get; internal set; } = -1;
+
+        /// <summary>The species this pawn's kind spawns as: what walks. See <see cref="SpeciesDef"/>.</summary>
+        public SpeciesDef Species => Content.SpeciesOf(Kind);
+
+        /// <summary>
+        /// A colonist, as against an animal. Every pawn-wide system asks this once at the top of
+        /// its loop (design 29 §2): an animal has no needs tick, no mood, no skills, no work and no
+        /// schedule, and the same movement, doors and falling as anyone.
+        /// </summary>
+        public bool IsPerson => Species.person;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -416,11 +477,26 @@ namespace Odyssey.Sim.Pawns
         /// later in the same product. The terrain's own price is not here and must never be —
         /// the planner already charges the cell being entered, and a pawn factor in the step
         /// cost would count it twice (§4g).
+        ///
+        /// <para>The species' own pace is the last factor (design 29 §5): 1,000 for a person,
+        /// which is exact, so no colonist's speed moved when it arrived; 700 for a hog and 900
+        /// for a rat.</para>
         /// </summary>
         public virtual int MoveRatePerMille() =>
             Content.Movement.movePerTick * Rates.Scale
                 * InnatePacePerMille() / 1_000
-                * ConditionPerMille() / 1_000;
+                * ConditionPerMille() / 1_000
+                * Species.movePerMille / 1_000
+                * UrgencyPerMille() / 1_000;
+
+        /// <summary>
+        /// The run (design 17 §4f, design 33 §2h): a drafted colonist moves at
+        /// <see cref="MovementDef.draftedPacePerMille"/> of her own pace, and 1,000 — exact — for
+        /// anybody else, so no undrafted pawn's speed moved and no golden with it. The last factor
+        /// in the product, after condition, so a starving colonist runs slower than a well one.
+        /// A seam, not a model: the day there is fleeing or an emergency job, it answers here.
+        /// </summary>
+        public virtual int UrgencyPerMille() => Drafted ? Content.Movement.draftedPacePerMille : 1_000;
 
         /// <summary>
         /// The pace this colonist was dealt, per mille of the standard walk, rolled once from
@@ -506,10 +582,11 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// How this pawn traverses. Taken from the current job and fixed for its whole life: a
         /// mode that changed halfway through a walk would silently invalidate the path the pawn
-        /// is standing on.
+        /// is standing on. Between jobs it is the species' own (design 29 §4), which is what a
+        /// wander target is tested for reachability under.
         /// </summary>
         public virtual TraverseMode Mode =>
-            CurrentJob != null ? CurrentJob.Mode : TraverseMode.Colonist;
+            CurrentJob != null ? CurrentJob.Mode : Species.traverseMode;
 
         /// <summary>Whether the pawn will consider work at all this think.</summary>
         public virtual bool WillWork() => !IsBroken && !Asleep;
@@ -707,6 +784,13 @@ namespace Odyssey.Sim.Pawns
             MoveProgress = 0;
             PathPending = false;
             PathFailed = false;
+
+            // A kept step is a path (design 33 §2d): whatever drops the path — arrival, a step
+            // that stopped being legal, a fall, an eviction, a job ending — drops the mark with it,
+            // or it would stay saved and hashed and a load would rebuild a step that no longer
+            // exists. JobSystem.Interrupt sets it after its own clear, which is the one place it
+            // is ever set.
+            FinishingStepTo = -1;
         }
 
         internal void AdoptPath(int[] cells, int length)
@@ -736,6 +820,17 @@ namespace Odyssey.Sim.Pawns
             // U40. Saved state that is not derived belongs in the hash (OQ-50), and this decides
             // what a pawn is. Every Simulated golden moved when it arrived, deliberately.
             hash.Add(unchecked((int)RollSeed));
+            // Design 29 §6. Every Simulated golden moved when it arrived, by the hash seeing one
+            // more zero per colonist — measured to be that and nothing else.
+            // Leaving rides in the kind's word: a colonist never leaves, so a board with no
+            // animals hashes exactly as it did before wildlife (design 30 §3).
+            // The draft rides in the same word, and its clock only while it is set (design 33
+            // §2a): a colony nobody drafts hashes exactly as it did before drafting existed.
+            // A finishing step (design 33 §2d) is flagged in the same word for the same reason.
+            hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
+                | (FinishingStepTo >= 0 ? 1 << 18 : 0));
+            if (Drafted) hash.Add(DraftQuietSinceTick);
+            if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);

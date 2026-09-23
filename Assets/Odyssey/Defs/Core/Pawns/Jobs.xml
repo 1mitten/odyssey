@@ -161,6 +161,24 @@
   </JobDef>
 
   <!--
+    The draft (design 33 section 2c). A drafted colonist is always doing one of these two: standing
+    where it was put, or walking to where it was sent. Neither expires - the hold ends when the
+    draft's quiet hours run out, the move when it arrives - and neither may be taken away by a
+    casual think, because the player put them there.
+  -->
+  <JobDef>
+    <defName>Job_DraftHold</defName>
+    <driver>12</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Goto</defName>
+    <driver>13</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <!--
     Power (design 32). Laying a line fetches its one wood and lays it in one job, priced by
     ConstructionContent.WorkFor like any build, so there is no workTicks here - Job_Build's argument.
     Taking one up is priced like deconstructing. Both train construction and settle as building
@@ -168,7 +186,7 @@
   -->
   <JobDef>
     <defName>Job_LayConduit</defName>
-    <driver>12</driver>
+    <driver>14</driver>
     <expiryTicks>12000</expiryTicks>
     <trainsSkill>3</trainsSkill>
     <experiencePerWorkTick>110</experiencePerWorkTick>
@@ -177,7 +195,7 @@
 
   <JobDef>
     <defName>Job_RemoveConduit</defName>
-    <driver>13</driver>
+    <driver>15</driver>
     <expiryTicks>12000</expiryTicks>
     <trainsSkill>3</trainsSkill>
     <experiencePerWorkTick>110</experiencePerWorkTick>
@@ -186,7 +204,7 @@
 
   <JobDef>
     <defName>Job_Refuel</defName>
-    <driver>14</driver>
+    <driver>16</driver>
     <expiryTicks>6000</expiryTicks>
     <trainsSkill>0</trainsSkill>
     <experiencePerWorkTick>110</experiencePerWorkTick>

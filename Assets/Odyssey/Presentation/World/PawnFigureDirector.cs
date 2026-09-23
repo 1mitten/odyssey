@@ -473,6 +473,31 @@ namespace Odyssey.Presentation.World
         /// Reported from a playtest on 2026-09-16: a colonist chopping a tree could not be
         /// selected at all. The box was on the cell; the colonist was not.
         /// </summary>
+        /// <summary>
+        /// An animal's own box (design 29 §8b): where its figure stands, which way it faces and
+        /// how big it is drawn, so the cursor sits flush round the animal rather than round a
+        /// person-sized column (owner, 2026-09-22). False for a colonist and for any pawn without
+        /// a figure; the caller falls back to the colonist cursor.
+        /// </summary>
+        public bool TryGetAnimalBox(PawnId id, out Matrix4x4 place, out Vector3 size)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn != id.Value || figure.Transform == null) continue;
+                Look? look = LookAt(figure.Look);
+                if (look == null || !look.Animal || figure.DrawnBox.size.sqrMagnitude <= 1e-6f) continue;
+                Transform t = figure.Transform;
+                place = Matrix4x4.TRS(t.TransformPoint(figure.DrawnBox.center), t.rotation, Vector3.one);
+                size = figure.DrawnBox.size;
+                return true;
+            }
+
+            place = default;
+            size = default;
+            return false;
+        }
+
         public bool TryGetFeet(PawnId id, out Vector3 feet)
         {
             for (int i = 0; i < _figures.Count; i++)
@@ -529,11 +554,56 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Gait speeds as drawn, i.e. after Scale. See <see cref="GroundSpeeds"/>.</summary>
             public float[] Speeds = Array.Empty<float>();
+
+            /// <summary>An animal's row rather than a colonist's (design 29): no swatches, no work bones, its own height window.</summary>
+            public bool Animal;
+
+            /// <summary>Lay the computed four-legged gait over the idle; the rig is measured at build.</summary>
+            public bool QuadrupedGait;
         }
 
         readonly Look?[] _looks;
         readonly int _usableLooks;
         readonly ModuleCatalogue? _catalogue;
+
+        /// <summary>
+        /// One slot per animal <b>kind</b>, indexed as <c>ModuleIds.Animal</c> is — 0 is the
+        /// colonist and is always null here. A look index at or past <see cref="_looks"/>' length
+        /// names one of these (<see cref="AnimalLookIndex"/>), so the pool, the create and the
+        /// repaint all key on one integer whatever the figure is.
+        /// </summary>
+        readonly Look?[] _animalLooks;
+        readonly int _usableAnimalLooks;
+
+        int AnimalLookIndex(int kind) => _looks.Length + kind;
+
+        Look? LookAt(int look) =>
+            look < _looks.Length ? _looks[look]
+            : look - _looks.Length < _animalLooks.Length ? _animalLooks[look - _looks.Length]
+            : null;
+
+        static Look?[] AnimalLooksFrom(ModuleCatalogue? catalogue)
+        {
+            var looks = new Look?[ModuleIds.AnimalNames.Length];
+            if (catalogue == null) return looks;
+            for (int kind = 1; kind < looks.Length; kind++)
+            {
+                ModuleEntry? row = catalogue.Find(ModuleIds.Animal(kind));
+                if (row == null || row.prefab == null) continue;
+                LocomotionEntry[] gaits = Gaits(row);
+                if (gaits.Length == 0) continue;
+                looks[kind] = new Look
+                {
+                    Prefab = row.prefab,
+                    Scale = row.scale,
+                    Gaits = gaits,
+                    Speeds = GroundSpeeds(gaits, row.scale),
+                    Animal = true,
+                    QuadrupedGait = row.quadrupedGait,
+                };
+            }
+            return looks;
+        }
 
         /// <summary>
         /// Where a colonist's colours come from. Null draws every figure in the pack's own paint,
@@ -605,7 +675,15 @@ namespace Odyssey.Presentation.World
         readonly List<int> _retired = new List<int>();
 
         /// <summary>True when there is at least one usable face, so figures can be made at all.</summary>
-        public bool Enabled => _usableLooks > 0;
+        public bool Enabled => _usableLooks > 0 || _usableAnimalLooks > 0;
+
+        /// <summary>
+        /// True when a colonist can be drawn at all: at least one colonist row resolved to art.
+        /// The question a colonist test must ask, and not <see cref="Enabled"/>, since the animal
+        /// rows are the project's own art and make the director able to draw on the machine
+        /// with no licensed packs (2026-09-23, the runner's PlayMode tier).
+        /// </summary>
+        public bool CanDrawColonists => _usableLooks > 0;
 
         /// <summary>
         /// The size of the face lottery: every colonist row the catalogue has, holes included.
@@ -803,6 +881,8 @@ namespace Odyssey.Presentation.World
             _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
             for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
+            _animalLooks = AnimalLooksFrom(catalogue);
+            for (int i = 0; i < _animalLooks.Length; i++) if (_animalLooks[i] != null) _usableAnimalLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
                 _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
             Chips = new ChipDirector(parent, layer);
@@ -860,15 +940,23 @@ namespace Odyssey.Presentation.World
         /// answer separately would put a different person on screen the moment a colonist crossed
         /// the figure cap, and the fault would be hunted in the simulation.</para>
         ///
-        /// <para>A harness that never sets one gets a book dealt from seed 0 over the same number
-        /// of faces, so an editor tool still draws a varied cast without having to know this type
-        /// exists. That is safe precisely because the derivation is pure: two books with the same
-        /// seed and the same face count give the same answers, object identity or not. Identity
-        /// still matters once overrides exist, which is why the game hands one object to both.</para>
+        /// <para>A harness that never sets one gets a book dealt from seed 0 <b>over the same
+        /// catalogue</b>, so an editor tool still draws a varied cast without having to know this
+        /// type exists. That is safe precisely because the derivation is pure: two books built the
+        /// same way from the same catalogue give the same answers, object identity or not.
+        /// Identity still matters once overrides exist, which is why the game hands one object to
+        /// both.</para>
+        ///
+        /// <para><b>"The same face count" used to be enough and is not any more.</b> A book now
+        /// carries the gendered pools of bodies, hair and beards, so a fallback built from a row
+        /// count deals from every row, ungendered, with no hair — a different person entirely. The
+        /// setup screen hit exactly that and the colonist you picked was not the colonist you got
+        /// (owner, 2026-09-22; <c>docs/design/29-modular-colonists.md</c> §8). Build it from the
+        /// catalogue or do not build it.</para>
         /// </summary>
         public ColonistAppearanceBook Appearances
         {
-            get => _appearances ??= new ColonistAppearanceBook(0u, _looks.Length);
+            get => _appearances ??= AppearanceBooks.For(0u, _catalogue);
             set => _appearances = value;
         }
 
@@ -886,6 +974,10 @@ namespace Odyssey.Presentation.World
             _frame == null ? 0u : ColonistNames.RollSeedOf(_frame, pawn);
 
         int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value, RollSeedOf(pawn));
+
+        /// <summary>An animal's look is its kind's row; a person's is the face the book dealt.</summary>
+        int LookFor(in PawnView pawn) =>
+            pawn.Kind != 0 ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -914,6 +1006,12 @@ namespace Odyssey.Presentation.World
             int look = LookFor(pawn);
             return (uint)look < (uint)_looks.Length && _looks[look] != null;
         }
+
+        /// <summary>The same question of a view, which is the only thing that knows a pawn's kind.</summary>
+        bool CanDraw(in PawnView pawn) =>
+            pawn.Kind != 0
+                ? (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null
+                : CanDraw(pawn.Id);
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
@@ -1013,7 +1111,7 @@ namespace Odyssey.Presentation.World
                 // A face that did not resolve is not drawn here at all: the pawn falls through to
                 // the baked path, which will draw whatever that row does resolve to (a marker, if
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
-                if (!CanDraw(pawns[i].Id)) continue;
+                if (!CanDraw(in pawns[i])) continue;
 
                 _eligible.Add(i);
             }
@@ -1024,8 +1122,8 @@ namespace Odyssey.Presentation.World
             {
                 int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
-                    World, pawns, out Vector3 steer);
-                Figure figure = Lease(pawns[i].Id, position);
+                    World, pawns, Crowd, out Vector3 steer);
+                Figure figure = Lease(in pawns[i], position);
                 Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
@@ -1116,6 +1214,15 @@ namespace Odyssey.Presentation.World
         /// director's own root, which is what a harness with no camera gets.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+        /// <summary>
+        /// This frame's crowd buckets, or null for the plain scan.
+        ///
+        /// <para>Set once a frame by the composition root, which rebuilds one index and hands the
+        /// same one to every pass that poses a pawn — see <c>OdysseyBootstrap</c> and
+        /// <see cref="Odyssey.Presentation.Rendering.PawnCrowdIndex"/>. Null is correct and merely
+        /// slow, which is what a harness or an editor tool with no bootstrap gets.</para>
+        /// </summary>
+        public Odyssey.Presentation.Rendering.PawnCrowdIndex? Crowd { get; set; }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
         /// tool can step the clock deliberately rather than relying on a running player.</summary>
@@ -1371,6 +1478,10 @@ namespace Odyssey.Presentation.World
             // as long as the pose is worth anything. See WorkEaseSeconds.
             float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : running ? 1f : 0f;
             figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
+
+            // The computed walk's cycle steps on here, once a frame, from the speed this figure
+            // was measured at last frame; the pose pass only applies it (design 29).
+            figure.Gait?.Advance(figure.Speed, deltaTime);
 
             // The swing's own clock, which runs only while there is work. Freezing it between
             // jobs rather than letting it free-run means a colonist's first blow at a new tree
@@ -1843,7 +1954,7 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Blend(Figure figure, float speed, bool running)
         {
-            Look look = _looks[figure.Look]!;
+            Look look = LookAt(figure.Look)!;
 
             // **A swimmer has ground speed and must not walk on it.** The gait reads speed from
             // how far the figure moved this frame, which is the right rule everywhere else and
@@ -1863,7 +1974,12 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
-                figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
+                // Under a computed gait the idle underneath is frozen as the gait fades in: an
+                // idle that shifts its weight and paws the ground is noise under a trot, and
+                // its pose at the frozen frame is a perfectly good stance to trot from.
+                float rate = running ? blend.Rate : 0f;
+                if (figure.Gait != null) rate *= 1f - figure.Gait.Weight;
+                figure.Clips[i].SetSpeed(rate);
             }
         }
 
@@ -2058,6 +2174,11 @@ namespace Odyssey.Presentation.World
             AppearanceCells? cells = CellsFor(figure.Look);
             ColonistAppearance look = Appearances.For(pawn.Value, RollSeedOf(pawn));
 
+            // The hair and the beard, before the body: they are part of being dressed in this
+            // pawn's colours rather than a separate pass, so nothing can repaint one and forget
+            // the other (docs/design/29-modular-colonists.md, MC5).
+            Dress(figure, look);
+
             for (int i = 0; i < figure.Skins.Length; i++)
             {
                 SkinnedMeshRenderer skin = figure.Skins[i];
@@ -2088,24 +2209,51 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        ColonistAttachments? _attachments;
+
+        /// <summary>
+        /// The hair and beards, resolved once and shared with every other drawer of a colonist.
+        ///
+        /// <para>Held here rather than resolved here: <see cref="ColonistAttachments"/> is the one
+        /// owner, because <see cref="PortraitStudio"/> dresses the same colonist for their roster
+        /// card and the two must not answer differently.</para>
+        /// </summary>
+        ColonistAttachments Attachments => _attachments ??= new ColonistAttachments(_catalogue);
+
+        /// <summary>
+        /// Put this pawn's hair and beard on, or take them off.
+        /// </summary>
+        void Dress(Figure figure, in ColonistAppearance look)
+        {
+            ColonistAttachments.Wear(
+                figure.HairMesh, figure.HairRenderer, Attachments.Hair(look.HairPiece),
+                Materials, look);
+            ColonistAttachments.Wear(
+                figure.BeardMesh, figure.BeardRenderer, Attachments.Beard(look.BeardPiece),
+                Materials, look);
+        }
+
         /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
         AppearanceCells? CellsFor(int look)
         {
             if (_catalogue == null) return null;
+            // An animal has no swatches: it is drawn in its own paint (design 29).
+            if (look >= _looks.Length) return null;
             List<ModuleEntry> rows = _catalogue.FindFamily(ModuleIds.ColonistBase);
             if ((uint)look >= (uint)rows.Count) return null;
             AppearanceCells cells = rows[look].appearance;
             return cells.Any ? cells : null;
         }
 
-        Figure Lease(PawnId pawn, Vector3 at)
+        Figure Lease(in PawnView view, Vector3 at)
         {
+            PawnId pawn = view.Id;
             if (_byPawn.TryGetValue(pawn.Value, out Figure? existing)) return existing;
 
             // The pool is keyed by face as well as by being free: a figure is a *built* prefab
             // with a graph bound to its own rig, so handing a parked one to a pawn wearing a
             // different face would put the wrong person on screen rather than save any work.
-            int look = LookFor(pawn);
+            int look = LookFor(in view);
             Figure figure = Free(look) ?? Create(look);
             Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
@@ -2187,9 +2335,11 @@ namespace Odyssey.Presentation.World
 
         Figure Create(int look)
         {
-            Look face = _looks[look]!;
+            Look face = LookAt(look)!;
             GameObject instance = UnityEngine.Object.Instantiate(face.Prefab, _parent);
-            instance.name = $"Colonist figure {_figures.Count} ({face.Prefab.name})";
+            instance.name = face.Animal
+                ? $"Animal figure {_figures.Count} ({face.Prefab.name})"
+                : $"Colonist figure {_figures.Count} ({face.Prefab.name})";
             instance.transform.localScale = face.Scale;
             SetLayer(instance.transform, _layer);
 
@@ -2198,6 +2348,10 @@ namespace Odyssey.Presentation.World
             // click meant for the ground.
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+            // Whatever the pack already put on this head comes off, so our hair is the only hair
+            // and a bare head is reachable at all (docs/design/29-modular-colonists.md).
+            ColonistAttachments.BareTheHead(instance);
 
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
@@ -2247,14 +2401,45 @@ namespace Odyssey.Presentation.World
             figure.ArtMaterials = new Material?[skins.Length];
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+
+            // After BindWorkBones, which is what finds the head. The slots are empty until a
+            // lease dresses them, so a figure built for a bald colonist costs two disabled
+            // renderers and nothing else.
+            if (figure.Head != null)
+            {
+                ColonistAttachments.MakeSlot(figure.Head, "Hair", _layer,
+                    out MeshFilter hf, out MeshRenderer hr);
+                ColonistAttachments.MakeSlot(figure.Head, "Beard", _layer,
+                    out MeshFilter bf, out MeshRenderer br);
+                figure.HairMesh = hf;
+                figure.HairRenderer = hr;
+                figure.BeardMesh = bf;
+                figure.BeardRenderer = br;
+            }
+
             figure.SoleOffset = MeasureSole(figure);
             // And how long a body there is to lay down. Measured here, beside the sole, because
             // both are one bake of the posed mesh and both are properties of the rig rather than
-            // of the colonist wearing it.
-            figure.StandingHeight = MeasureBody(figure);
-            if (figure.StandingHeight > MeasuredStandingHeight)
-                MeasuredStandingHeight = figure.StandingHeight;
-            if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
+            // of the colonist wearing it. An animal is measured in its own window — a rat is a
+            // quarter of a metre and the colonist window would call that a failed bake — and
+            // does not move the colonists' maxima, which the contact sheets print.
+            if (face.Animal)
+            {
+                // Measured from the renderers' bounds, not a bake: on these Blender "units
+                // scale" rigs a bake reports a hundredth of the truth (bug-patterns, 2026-09-22)
+                // and the bounds were the reading the picture agreed with. A loose box is what a
+                // cursor wants anyway.
+                figure.DrawnBox = FigureBuild.DrawnBounds(figure.Skins, figure.Transform);
+                figure.StandingHeight = figure.DrawnBox.size.y > 0.02f ? figure.DrawnBox.size.y : FigureBuild.FallbackHeight;
+                figure.Gait = face.QuadrupedGait ? QuadrupedGait.Bind(instance.transform) : null;
+            }
+            else
+            {
+                figure.StandingHeight = MeasureBody(figure);
+                if (figure.StandingHeight > MeasuredStandingHeight)
+                    MeasuredStandingHeight = figure.StandingHeight;
+                if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
+            }
             _figures.Add(figure);
             return figure;
         }

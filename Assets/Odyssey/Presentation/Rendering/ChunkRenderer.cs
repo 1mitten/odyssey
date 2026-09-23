@@ -89,6 +89,15 @@ namespace Odyssey.Presentation.Rendering
         /// everything, which is what a headless measurement wants.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+        /// <summary>
+        /// This frame's crowd buckets, or null for the plain scan.
+        ///
+        /// <para>Set once a frame by the composition root, which rebuilds one index and hands the
+        /// same one to every pass that poses a pawn — see <c>OdysseyBootstrap</c> and
+        /// <see cref="Odyssey.Presentation.Rendering.PawnCrowdIndex"/>. Null is correct and merely
+        /// slow, which is what a harness or an editor tool with no bootstrap gets.</para>
+        /// </summary>
+        public Odyssey.Presentation.Rendering.PawnCrowdIndex? Crowd { get; set; }
 
         /// <summary>Tracks loose items falling between layers and provides their drop offset.</summary>
         public ItemFallingTracker FallingItems { get; } = new ItemFallingTracker();
@@ -764,7 +773,14 @@ namespace Odyssey.Presentation.Rendering
         public static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
-            if (TintCode.IsLinen(tintCode))
+            if (TintCode.IsStoreEdge(tintCode))
+            {
+                // The store's own hue, flat: the line says where the store ends, so it is the
+                // order colour itself rather than the ground pulled a third of the way towards it.
+                tint = StoredGrade;
+                emission = Color.black;
+            }
+            else if (TintCode.IsLinen(tintCode))
             {
                 // One colour, whatever art or stuff is underneath: bedding is bedding.
                 tint = StuffPalette.Linen;
@@ -900,7 +916,10 @@ namespace Odyssey.Presentation.Rendering
             int highest = slice.HighestVisibleLayer(activeLayer, _model.Size.SizeY);
 
             EnsureColonistModules();
+            EnsureAttachmentBuckets();
             System.Array.Clear(_colonistCounts, 0, _colonistCounts.Length);
+            System.Array.Clear(_hairCounts, 0, _hairCounts.Length);
+            System.Array.Clear(_beardCounts, 0, _beardCounts.Length);
 
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
@@ -909,14 +928,23 @@ namespace Odyssey.Presentation.Rendering
                 if (cell.Y < lowest || cell.Y > highest) continue;
                 if (drawnAsFigures != null && drawnAsFigures.Contains(pawns[i].Id.Value)) continue;
 
+                // An animal is drawn only as a figure (design 29): this pass deals every pawn a
+                // colonist's face, and a hog past the figure cap wearing one would be worse than
+                // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
+                if (pawns[i].Kind != 0) continue;
+
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
                 // and it is shared with the animated figures so the two cannot disagree.
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model, pawns);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model, pawns, Crowd);
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap. Same object, same answer.
-                int variant = Cast.LookFor(snapshot, pawns[i].Id);
+                // Asked once and carried. LookFor is For(...).Look, and the far form needs the
+                // whole appearance for the hair and the beard -- so asking for both cost every
+                // far colonist two snapshot aspect lookups and two dictionary hits a frame.
+                ColonistAppearance look = Cast.For(snapshot, pawns[i].Id);
+                int variant = look.Look;
                 if ((uint)variant >= (uint)_colonistModules.Length) variant = 0;
                 ResolvedModule colonist = ColonistModule(variant);
 
@@ -934,10 +962,23 @@ namespace Odyssey.Presentation.Rendering
                     continue;
                 }
 
-                AppendColonist(variant, Matrix4x4.TRS(
+                Matrix4x4 placement = Matrix4x4.TRS(
                     position,
                     Quaternion.Euler(0f, FacingOf(pawns[i].Id, heading), 0f),
-                    Vector3.one));
+                    Vector3.one);
+                AppendColonist(variant, placement);
+
+                // Whatever this colonist is wearing on their head, at the head of the body they
+                // are wearing. The appearance is the same object the figures read, so the person
+                // past the cap is the person in front of the camera.
+                if (colonist.HasHead && ColonistAttachments.Enabled)
+                {
+                    Matrix4x4 head = placement * colonist.Head;
+                    if (Attachments.Hair(look.HairPiece).Usable)
+                        AppendPiece(look.HairPiece, head, _hairPlacements, _hairCounts);
+                    if (Attachments.Beard(look.BeardPiece).Usable)
+                        AppendPiece(look.BeardPiece, head, _beardPlacements, _beardCounts);
+                }
 
                 // No beacon over a real figure. It was there to make a grey box findable, and
                 // against the same orange the item markers use it read as one more piece of
@@ -949,6 +990,14 @@ namespace Odyssey.Presentation.Rendering
                 if (_colonistCounts[variant] > 0)
                     SubmitInstances(ColonistModule(variant),
                         _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
+
+            for (int i = 0; i < _hairCounts.Length; i++)
+                if (_hairCounts[i] > 0)
+                    SubmitPiece(Attachments.Hair(i), _hairPlacements[i], _hairCounts[i]);
+
+            for (int i = 0; i < _beardCounts.Length; i++)
+                if (_beardCounts[i] > 0)
+                    SubmitPiece(Attachments.Beard(i), _beardPlacements[i], _beardCounts[i]);
 
             RenderThings(snapshot, lowest, highest, material, carried, tickAlpha, movePerTick);
         }
@@ -1272,7 +1321,7 @@ namespace Odyssey.Presentation.Rendering
                 else
                 {
                     Vector3 body = PawnPose.Of(pawn, tickAlpha, movePerTick,
-                        out Vector3 heading, _model, snapshot.Pawns);
+                        out Vector3 heading, _model, snapshot.Pawns, Crowd);
                     if (heading.sqrMagnitude < 1e-6f) heading = Vector3.forward;
                     yaw = FacingOf(pawnId, heading);
                     at = body
@@ -1422,6 +1471,60 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>The baked module for one face, baking it the first time it is asked for.</summary>
+        ColonistAttachments? _attachments;
+        Matrix4x4[][] _hairPlacements = System.Array.Empty<Matrix4x4[]>();
+        int[] _hairCounts = System.Array.Empty<int>();
+        Matrix4x4[][] _beardPlacements = System.Array.Empty<Matrix4x4[]>();
+        int[] _beardCounts = System.Array.Empty<int>();
+
+        /// <summary>
+        /// The hair and beards a far colonist wears
+        /// (<c>docs/design/29-modular-colonists.md</c>, MC6).
+        ///
+        /// <para><b>The same object the figures and the portraits hold</b>, so a colonist does not
+        /// change hair on crossing the figure cap — which is the fault <c>ColonistLook</c>'s header
+        /// warns about, arriving through a different door.</para>
+        /// </summary>
+        ColonistAttachments Attachments =>
+            _attachments ??= new ColonistAttachments(_model.Library.Catalogue);
+
+        /// <summary>
+        /// Hair and beards are drawn as <b>two more instanced buckets</b>, never baked into the
+        /// body mesh.
+        ///
+        /// <para>Baking them in would multiply the mesh variants by hair × beard and turn a
+        /// bounded set of a few dozen into one bounded only by colony size. They are rigid props
+        /// on a bone and the baked pose is fixed, so the head transform is a constant per body and
+        /// a piece is one mesh instanced across everyone wearing it: the bucket key is the piece,
+        /// not the person (<c>docs/research/e-06-modular-colonists.md</c> §8).</para>
+        /// </summary>
+        void EnsureAttachmentBuckets()
+        {
+            if (_hairCounts.Length != 0) return;
+
+            _hairCounts = new int[Mathf.Max(1, Attachments.HairCount)];
+            _hairPlacements = new Matrix4x4[_hairCounts.Length][];
+            for (int i = 0; i < _hairCounts.Length; i++) _hairPlacements[i] = new Matrix4x4[16];
+
+            _beardCounts = new int[Mathf.Max(1, Attachments.BeardCount)];
+            _beardPlacements = new Matrix4x4[_beardCounts.Length][];
+            for (int i = 0; i < _beardCounts.Length; i++) _beardPlacements[i] = new Matrix4x4[16];
+        }
+
+        static void AppendPiece(int index, in Matrix4x4 placement,
+            Matrix4x4[][] into, int[] counts)
+        {
+            if ((uint)index >= (uint)counts.Length) return;
+
+            Matrix4x4[] bucket = into[index];
+            if (counts[index] == bucket.Length)
+            {
+                System.Array.Resize(ref bucket, bucket.Length * 2);
+                into[index] = bucket;
+            }
+            bucket[counts[index]++] = placement;
+        }
+
         ResolvedModule ColonistModule(int variant)
         {
             if (_colonistModules[variant] < 0)
@@ -1469,6 +1572,40 @@ namespace Odyssey.Presentation.Rendering
         /// <paramref name="scratch"/> is the caller's own buffer for placement × part, grown here
         /// so a caller never has to size it against a part count it cannot see.
         /// </summary>
+        /// <summary>
+        /// One hair piece or beard, instanced across everyone wearing it.
+        ///
+        /// <para>Drawn through <see cref="MaterialCache"/> with the pack's own colours and no tint,
+        /// which is <b>exactly what the baked body beside it gets</b>: the far form is not
+        /// recoloured per colonist, and a head that was would be the one part of a distant figure
+        /// that varied.</para>
+        /// </summary>
+        void SubmitPiece(in ColonistAttachments.Piece piece, Matrix4x4[] placements, int count)
+        {
+            if (count == 0 || piece.Mesh == null) return;
+
+            Material material = _materials.Get(
+                piece.Material, Color.white, Color.black, ghost: false, alpha: 1f);
+
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                // Hair sitting flush on a scalp that already casts one. See ColonistAttachments.
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = true,
+            };
+
+            int sent = 0;
+            while (sent < count)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, count - sent);
+                if (SubmitToGpu)
+                    Graphics.RenderMeshInstanced(rp, piece.Mesh, 0, placements, n, sent);
+                DrawCalls++;
+                sent += n;
+            }
+        }
+
         void SubmitInstances(ResolvedModule module, Matrix4x4[] placements, int count,
             ref Matrix4x4[] scratch)
         {
@@ -2398,6 +2535,50 @@ namespace Odyssey.Presentation.Rendering
             DrawCalls++;
             InstancesDrawn += n;
         }
+
+        /// <summary>
+        /// A straight bar from one point to another in the bracket's lit, translucent material — the
+        /// line from a drafted colonist to where it has been sent (design 33 §2g). One submission.
+        /// </summary>
+        public void DrawSegment(Vector3 from, Vector3 to, float thickness, Color colour)
+        {
+            Vector3 along = to - from;
+            float length = along.magnitude;
+            if (length < 0.01f) return;
+
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            Matrix4x4 bar = Matrix4x4.TRS((from + to) * 0.5f, Quaternion.LookRotation(along / length),
+                new Vector3(thickness, thickness, length));
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, bar);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
+        /// <summary>
+        /// A small cube stood on its corner — a diamond — in the bracket's material: the drafted
+        /// marker over a colonist's head (design 33 §2g). One submission.
+        /// </summary>
+        public void DrawMarker(Vector3 centre, float size, Color colour)
+        {
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            Matrix4x4 diamond = Matrix4x4.TRS(centre, MarkerTurn, Vector3.one * size);
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, diamond);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
+        /// <summary>Turned 45 degrees about the vertical, then tipped on to a corner.</summary>
+        static readonly Quaternion MarkerTurn = Quaternion.Euler(0f, 45f, 0f) * Quaternion.Euler(35.264f, 0f, 45f);
 
         public void Dispose()
         {

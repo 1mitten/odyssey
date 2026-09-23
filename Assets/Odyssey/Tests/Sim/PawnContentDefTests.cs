@@ -145,8 +145,38 @@ namespace Odyssey.Tests.Sim
         // separately. The day a golden window includes a zone, the curve will move a hash and that
         // will be correct.
         //
-        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 12),
-        // Job_RemoveConduit (13) and Job_Refuel (14). The first two train construction and settle
+        // Moved a twelfth time, 2026-09-22, by animals (design 29 §1): SpeciesDef arrived with
+        // three rows — the person, the midden hog and the duct rat — and PawnKindDef gained
+        // `species`, with two animal kinds beside the colonist's. Taken from a freshly loaded
+        // pack. Every Simulated AND Generated golden moved with it, and not for this: the pawn's
+        // kind entered the hash the same day (§6), and the golden colony probe run on both
+        // branches diffs clean in every number — the hash sees one more zero per colonist.
+        //
+        // Moved a thirteenth time, 2026-09-22, the same day: the midden hog's movePerMille went
+        // 700 to 600 after the owner's first look at the trot ("way too fast"). No golden moved:
+        // no golden world has an animal in it.
+        //
+        // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
+        // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
+        // can't swim by default"). No golden moved.
+        // 2026-09-23: SpeciesDef gained `nocturnal` and the duct rat sets it (design 30 §4).
+        //
+        // Moved a fifteenth time, 2026-09-23, by the draft (design 33 §2c): Job_DraftHold and
+        // Job_Goto at drivers 12 and 13, and PawnTuningDef gained draftQuietTicks (10,000 — four
+        // in-game hours, the reference's auto-undraft). Taken from a freshly loaded pack.
+        //
+        // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
+        // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
+        // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
+        //
+        // Moved again, 2026-09-23, merging temperature into a main that had taken combat and
+        // wildlife. Neither side's number covers the merged pack - main's has the combat and
+        // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
+        // loaded pack rather than adopted from either. Third pass of the same resolution in one
+        // day; main is moving under this branch faster than it is being reviewed.
+        //
+        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 14),
+        // Job_RemoveConduit (15) and Job_Refuel (16), after the draft's two. The first two train construction and settle
         // as building does; refuelling trains hauling. Every golden moved with them, because the
         // job system hashes a completed and failed counter for every def — measured to be those
         // six zeros and nothing else (Golden.cs).
@@ -155,7 +185,11 @@ namespace Odyssey.Tests.Sim
         // metal now — labelled so, and stacking to 50 where it lay one to a cell — because power
         // lines and machines are built from it. No golden moved: the starting kit's scatter still
         // places one piece to an empty cell, which is what it always placed.
-        const ulong ContentFingerprint = 6571152878564343262UL;
+        //
+        // Moved again, 2026-09-24, merging main (combat, wildlife, temperature) into power: the
+        // draft's two jobs keep drivers 12 and 13 and power's three follow at 14-16. Neither
+        // side's number covers the merged pack, so it is re-taken from a freshly loaded pack.
+        const ulong ContentFingerprint = 5505190820075516158UL;
 
 
         [Test]

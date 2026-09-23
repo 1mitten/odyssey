@@ -54,8 +54,40 @@ namespace Odyssey.Presentation.World
             public SkinnedMeshRenderer[] Skins = Array.Empty<SkinnedMeshRenderer>();
             public Material?[] ArtMaterials = Array.Empty<Material?>();
 
+            /// <summary>
+            /// The hair and the beard this figure is wearing, as two renderers parented to the
+            /// head bone (<c>docs/design/29-modular-colonists.md</c>, MC5).
+            ///
+            /// <para><b>Built once with the figure and re-dressed on every lease</b>, exactly as
+            /// the materials are and for the same reason: the pool is keyed on the face, so one
+            /// body is lent to colonists with different hair. Instantiating a prefab per lease
+            /// would put an allocation and a destroy in the middle of a colonist walking on
+            /// screen; swapping <c>sharedMesh</c> costs nothing.</para>
+            ///
+            /// <para>Null on a machine with no licensed art, and disabled whenever the pawn was
+            /// dealt no piece — bald and clean-shaven are ordinary outcomes, not failures.</para>
+            /// </summary>
+            public MeshFilter? HairMesh;
+            public MeshRenderer? HairRenderer;
+            public MeshFilter? BeardMesh;
+            public MeshRenderer? BeardRenderer;
+
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
+
+            /// <summary>
+            /// The computed gait, for an animal whose row asks for one and whose rig has the
+            /// four legs (design 29). Null on every colonist and on an animal that walks on its
+            /// own clips.
+            /// </summary>
+            public QuadrupedGait? Gait;
+
+            /// <summary>
+            /// The figure's drawn box in its own frame, measured at build from the renderers'
+            /// bounds; what an animal's cursor and click box are sized to. Empty on a colonist,
+            /// whose cursor is the one fixed box for the whole cast.
+            /// </summary>
+            public Bounds DrawnBox;
 
             /// <summary>Which face this figure was built from. Fixed for its life; the rig is bound.</summary>
             public int Look;

@@ -53,9 +53,19 @@ namespace Odyssey.Sim.Pawns
         /// no partially-initialised intermediate state, and the driver pool built up front so no
         /// job start ever allocates.
         /// </summary>
-        public Pawn Spawn(int cell)
+        public Pawn Spawn(int cell) => Spawn(cell, kind: 0);
+
+        /// <summary>How many kinds this build has: the bound a saved kind is checked against.</summary>
+        public int KindCount => _ctx.Content.Kinds.Length == 0 ? 1 : _ctx.Content.Kinds.Length;
+
+        /// <summary>
+        /// Build a pawn of a kind at a cell (design 29 §1). Kind 0 is the colonist and is what
+        /// <see cref="Spawn(int)"/> makes; anything else is an animal, and the caller has checked
+        /// the kind against <see cref="KindCount"/>.
+        /// </summary>
+        public Pawn Spawn(int cell, int kind)
         {
-            var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content);
+            var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content, kind);
             // The world's seed unless a caller says otherwise (U40). This is what keeps every
             // colony nobody chose rolling exactly what it rolled before pawns had seeds of their
             // own, so no scenario, headless run or fixture had to change.
@@ -86,12 +96,18 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public IntentRejection HandleSpawnPawn(Intent intent)
         {
+            // A is the kind (design 29 §7): 0 is the colonist this intent always made, so nothing
+            // that sends it today changed; a kind this build does not have is refused, not clamped.
+            int kind = intent.A;
+            if (kind < 0 || kind >= KindCount) return IntentRejection.NotPermitted;
+
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
             if (index < 0) return IntentRejection.NotPermitted;
-            Pawn pawn = Spawn(index);
-            pawn.RollPassions();
+            Pawn pawn = Spawn(index, kind);
+            // An animal has no skills to be passionate about (design 29 §2).
+            if (pawn.IsPerson) pawn.RollPassions();
             return IntentRejection.None;
         }
 
@@ -139,6 +155,24 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// Take a pawn off the board (design 30 §3). The first thing that ever removes one: there
+        /// is no health model and no death, so until wildlife could walk off the edge nothing
+        /// left the registry. Reservations are released; the job is the caller's to have ended,
+        /// because the registry does not know the job system. Iteration order — ascending id — is
+        /// kept by removing in place and renumbering the index after it, which is O(n) on an
+        /// event that happens a few times a day.
+        /// </summary>
+        public void Despawn(Pawn pawn)
+        {
+            if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
+            if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
+            _ctx.Reservations.ReleaseAll(pawn);
+            _pawns.RemoveAt(index);
+            _byId.Remove(pawn.Id.Value);
+            for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
+        }
+
         /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
         public Pawn Adopt(Pawn pawn)
         {
@@ -164,6 +198,8 @@ namespace Odyssey.Sim.Pawns
             new DeconstructJobDriver(),
             new SowJobDriver(),
             new HarvestJobDriver(),
+            new DraftHoldJobDriver(),
+            new GotoJobDriver(),
             new LayConduitJobDriver(),
             new RemoveConduitJobDriver(),
             new RefuelJobDriver(),
@@ -254,7 +290,17 @@ namespace Odyssey.Sim.Pawns
                     pawn.GestureSerial,
                     pawn.Asleep,
                     movePerMille,
-                    moveDeltaPerMille));
+                    moveDeltaPerMille,
+                    pawn.Kind));
+
+                // An animal publishes its kind and its pace and nothing else of what follows
+                // (design 29 §2): it has no skills, no work, no schedule, no name and nothing in
+                // its arms. The pace goes out because the figure's gait speed is read off it.
+                if (!pawn.IsPerson)
+                {
+                    writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+                    continue;
+                }
 
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.
@@ -318,6 +364,15 @@ namespace Odyssey.Sim.Pawns
                 // publishes for every colonist and not only a working one: whatever draws a
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+
+                // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
+                // new. The order cell only while a move is being walked.
+                if (pawn.Drafted)
+                {
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.Drafted, 1);
+                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Goto)
+                        writer.AddPawnAspect(pawn.Id, CombatAspects.OrderCell, pawn.CurrentJob.TargetCell);
+                }
 
                 // What she has in her arms (design 24 §5b). Two rows, and only while there is
                 // something to publish — a carried thing has no cell, so it is delisted from the

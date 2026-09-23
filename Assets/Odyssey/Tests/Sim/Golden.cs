@@ -253,6 +253,21 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        /// <remarks>
+        /// <b>All six numbers re-baked 2026-09-22 for animals</b> (design 29 section 6): a pawn's
+        /// kind entered <c>Pawn.ContributeTo</c> beside its roll seed, so every Generated and
+        /// Simulated hash moved by the hash seeing one more zero per colonist. Measured, not
+        /// assumed: <see cref="GoldenColonyProbe"/> run on <c>main</c> and on the branch, same
+        /// file, diffs clean in every number on all three boards. No golden world has an animal
+        /// in it (the debug menu is the only spawner), so nothing here walks differently.
+        /// <para><b>Two Simulated numbers re-baked again the same day, and this time the colony
+        /// did change.</b> A job's expiry waits for the next cell boundary for every pawn now
+        /// (design 29 section 3a), so a mental-break wander ends one step later than it did. The
+        /// played board and the city moved; the bare meadow, where nobody breaks in the window,
+        /// did not. The probe on <c>main</c> and here differs in one number on each of the two
+        /// boards - the sum of the pawns' cells - and in nothing else: food, rest, items and
+        /// orders identical. That is a step taken, not a hash seeing more.</para>
+        /// </remarks>
         ///
         /// <remarks>
         /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
@@ -344,7 +359,15 @@ namespace Odyssey.Tests.Sim
         /// colonies do not know it. Earlier re-bakes used a throwaway probe and had to describe it
         /// afterwards; this one leaves the probe behind so the next re-bake starts with it.</para>
         ///
-        /// <para><b>Re-baked a seventh time, 2026-09-23, by power (design 32) — the first kind
+        /// <para><b>Re-baked a seventh time, 2026-09-23, by the draft (design 33 §2c) — the first
+        /// kind again.</b> Two jobs joined the job table, and <c>JobSystem</c> hashes a completed
+        /// and a failed counter per job def, so every board in the game contributes four more
+        /// zeros before a tick runs: all six numbers move, the three here included. The drafted
+        /// flag itself is hashed only while it is set, so it moved nothing. Measured with
+        /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
+        /// outputs diff clean for all three colonies.</para>
+        ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by power (design 32) — the first kind
         /// again.</b> Three job defs were appended (lay a line, take one up, refuel), and the job
         /// system hashes a completed and a failed counter for every def, so every board's walk
         /// gains six zeros and all six numbers move before a tick runs. The power grid itself adds
@@ -356,7 +379,27 @@ namespace Odyssey.Tests.Sim
         /// set — and all three boards then matched the <i>previous</i> committed values exactly,
         /// generated and simulated. So nothing but those six zeros moved: the new givers never
         /// fired and the new scan order changed no colonist's job on any board.</para>
+        ///
+        /// <para><b>Re-baked again on 2026-09-24, merging main into power.</b> Main had re-baked
+        /// for the draft's two jobs and this branch for power's three; the merged job table has
+        /// all five (drafting keeps 12 and 13, power follows at 14 to 16), so neither side's
+        /// numbers were produced by the merged code. <c>GoldenColonyProbe</c> run on the merge and
+        /// on <c>origin/main</c> (ee1f9fdc) <b>diffs clean</b> on all three boards: the hash sees
+        /// three more pairs of zeros, and no colony does anything different.</para>
         /// </remarks>
+        /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
+        /// that had gained animals, and neither side's numbers were right for the merged code.</b>
+        /// Both branches had moved all six — main for the pawn's kind entering the hash, this one
+        /// for the colonist's last-felt ambient and each room's energy residual — so taking either
+        /// side would have committed a number nothing had produced. Re-baked afresh, which is the
+        /// only honest resolution of a golden conflict.</para>
+        ///
+        /// <para><b>Measured before they were written.</b> <c>GoldenColonyProbe</c> run on the
+        /// merged branch and on <c>main</c>: the two outputs <b>diff clean</b>. Every census
+        /// number — live things, per-def stacks, item cells, the two lister counts, pawn cells,
+        /// total food, total rest, standing orders, zones — is identical on all three boards. The
+        /// hash sees more; no colony does anything different.</para>
+
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -365,8 +408,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 11552823097496681018UL,
-            Simulated = 6715434159358208820UL,
+            Generated = 5251020562371429562UL,
+            Simulated = 7418675576234737140UL,
         };
 
         /// <summary>
@@ -382,8 +425,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 4676366490719315253UL,
-            Simulated = 10211521241862932645UL,
+            Generated = 3881740183191474605UL,
+            Simulated = 6116194826114977703UL,
         };
 
         /// <summary>
@@ -419,8 +462,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 5687831706379191367UL,
-            Simulated = 4759845650515605086UL,
+            Generated = 5742139862679591188UL,
+            Simulated = 2871813967894379842UL,
         };
     }
 }

@@ -205,6 +205,20 @@ namespace Odyssey.Sim.Contracts
         SetStorageFilter,
 
         /// <summary>
+        /// Draft or release one colonist (design 33 §2d): <c>A</c> is a <c>PawnId</c> value and
+        /// <c>B</c> is 1 to draft, 0 to release. Drafting ends the job in hand — keeping the step
+        /// in progress — and holds the colonist where it stands.
+        /// </summary>
+        SetDrafted,
+
+        /// <summary>
+        /// Send one drafted colonist to a cell (design 33 §2d): <see cref="Intent.Cell"/> is the
+        /// cell the player clicked, lifted to where a colonist stands in that column, and <c>A</c>
+        /// a <c>PawnId</c> value. Refused for a colonist who is not drafted.
+        /// </summary>
+        OrderMove,
+
+        /// <summary>
         /// Mark the built line in <see cref="Intent.Cell"/> for a colonist to take up (design 32
         /// §3). Its own kind rather than a <see cref="Designate"/>, because a designation is one
         /// byte per cell and a cell with a line in it very often has a wall or a floor in it too,
@@ -300,6 +314,10 @@ namespace Odyssey.Sim.Contracts
             IntentKind.CancelStorage => true,
             IntentKind.SetStoragePriority => true,
             IntentKind.SetStorageFilter => true,
+            // The draft and its orders (design 33 §2d): a player's order over a colonist, which is
+            // the thing a player pauses to give — a fight is planned with the clock stopped.
+            IntentKind.SetDrafted => true,
+            IntentKind.OrderMove => true,
             // Taking a line up and throwing a switch are orders over a cell like any other: the
             // player authored them and nothing needs to run to make them true (design 32).
             IntentKind.RemoveConduit => true,

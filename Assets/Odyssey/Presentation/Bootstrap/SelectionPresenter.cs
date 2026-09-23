@@ -110,6 +110,36 @@ namespace Odyssey.Presentation.Bootstrap
             directors.Selection.Pick(picked, under, world.Views.Current, additive: shift);
         }
 
+        /// <summary>
+        /// A right-click with no tool armed (design 33 §2f), handed on by
+        /// <see cref="DesignatePresenter"/>. <see cref="OrderModel.RightClick"/> decides; this only
+        /// supplies the two things a Unity-free model cannot find for itself — who is under the
+        /// pointer, by the same hit-test a left click uses, and whether Ctrl is held — and carries
+        /// the answer to the world. A selection with nobody drafted in it is not asked at all, so
+        /// a right-click that is not an order costs nothing.
+        /// </summary>
+        public void Order(CellRef? cell, Ray ray)
+        {
+            var world = _bootstrap?.World;
+            var directors = _bootstrap?.Directors;
+            if (world == null || directors == null) return;
+
+            WorldSnapshot snapshot = world.Views.Current;
+            IReadOnlyList<PawnId> selection = directors.Selection.Pawns;
+            if (!OrderModel.AnyDrafted(selection, snapshot)) return;
+
+            PawnId under = cell.HasValue ? PawnUnderRay(snapshot, ray, cell.Value.Y) : PawnId.None;
+            bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
+
+            _orders.Clear();
+            OrderModel.RightClick(selection, snapshot, cell, under, ctrl, _orders);
+            for (int i = 0; i < _orders.Count; i++) world.Intents.Submit(_orders[i]);
+            _orders.Clear();
+        }
+
+        // Scratch for Order: filled and emptied inside one call, never state.
+        readonly List<Intent> _orders = new List<Intent>();
+
         void OnBoxSelected(Rect screenRect, bool additive)
         {
             var world = _bootstrap?.World;
@@ -240,10 +270,23 @@ namespace Odyssey.Presentation.Bootstrap
                 // a pawn drawn by the instanced pass. A working figure is stepped off its cell to
                 // reach the wood, so the pose and the screen disagree by most of a stride exactly
                 // while a colonist is chopping — which is when the player is trying to click them.
-                if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(
-                        pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
-                var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                Bounds bounds;
+                if (pawn.Kind != 0 && _bootstrap?.Figures != null
+                    && _bootstrap.Figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 animal))
+                {
+                    // An animal is clicked through its own drawn box, the one the cursor draws
+                    // (owner, 2026-09-22). Axis-aligned at the longer of its two footprint sides,
+                    // which is a square a turned hog still fits inside.
+                    float side = Mathf.Max(animal.x, animal.z);
+                    bounds = new Bounds(place.GetPosition(), new Vector3(side, animal.y, side));
+                }
+                else
+                {
+                    if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                        feet = Odyssey.Presentation.Rendering.PawnPose.Of(
+                            pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
+                    bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                }
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
 
                 nearest = distance;

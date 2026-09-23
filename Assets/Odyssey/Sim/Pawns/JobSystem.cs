@@ -53,7 +53,7 @@ namespace Odyssey.Sim.Pawns
     /// before the next think runs. That single rule is what a reservation leak is the absence of,
     /// and it is the fault a ten-day unattended run surfaces and a two-minute test does not.
     /// </summary>
-    public sealed class JobSystem : IWorldSystem, IStateHashable, ISaveable
+    public sealed partial class JobSystem : IWorldSystem, IStateHashable, ISaveable
     {
         readonly PawnContext _ctx;
         readonly ThinkNode[] _tree;
@@ -178,6 +178,8 @@ namespace Odyssey.Sim.Pawns
         public static ThinkNode[] DefaultTree() => new ThinkNode[]
         {
             new MentalStateThinkNode(),
+            // Above the needs branch, or a drafted colonist wanders off to eat (design 33 §2b).
+            new DraftedThinkNode(),
             new CriticalNeedsThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
@@ -291,6 +293,9 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn.BreakTicksLeft > 0)
             {
+                // A break is the one state the player may not command through (design 33 §2b).
+                // The draft's own job is ended as a failure a few lines down, like any other.
+                if (pawn.Drafted) pawn.Drafted = false;
                 pawn.BreakTicksLeft--;
                 if (pawn.BreakTicksLeft == 0)
                 {
@@ -306,10 +311,31 @@ namespace Odyssey.Sim.Pawns
                 }
             }
 
+            // An interrupted colonist lands the step she was part way through before her job does
+            // anything at all (design 33 §2d). Held here, for every driver, rather than in the walk
+            // toil: a job whose first toil is not a walk — lying down where she stands, working
+            // the stance she happens to be on — would otherwise start while the figure was still
+            // stepping away. The mover clears the mark on arrival; this is the backstop for a
+            // step that was dropped by something else.
+            if (pawn.FinishingStepTo >= 0)
+            {
+                if (pawn.HasPath && pawn.Cell != pawn.FinishingStepTo) return;
+                pawn.FinishingStepTo = -1;
+            }
+
             if (pawn.CurrentJob != null)
             {
                 var def = _ctx.Content.Jobs[pawn.CurrentJob.DefIndex];
-                if (def.expiryTicks > 0 && tick - pawn.JobStartTick >= def.expiryTicks)
+                // A job expires at the next cell boundary, never mid-step (design 29 §3a; owner,
+                // 2026-09-22: a hog "went past the tree, then suddenly appeared before it again").
+                // Ending a job drops the step in progress, so the pawn is put back on the cell it
+                // was leaving while its figure was already drawn most of the way into the next —
+                // a snap of up to a cell. Waiting for progress to reach nought costs at most one
+                // step and is the whole of the fix. It was animals only for an afternoon, with
+                // the colonists' snap at the end of a mental-break wander recorded as a gap; the
+                // owner asked for the gap closed the same day, and every golden re-baked for it.
+                bool expired = def.expiryTicks > 0 && tick - pawn.JobStartTick >= def.expiryTicks;
+                if (expired && pawn.MoveProgress == 0)
                 {
                     EndJob(pawn, JobStatus.Succeeded);
                 }
@@ -373,26 +399,21 @@ namespace Odyssey.Sim.Pawns
             JobsStarted = reader.ReadInt();
             JobsFailed = reader.ReadInt();
 
-            // **Fewer is fine; more is not.** Job defs are appended and never inserted — a def's
-            // number is a save contract (PawnContent.FromDefs) — so a save from before the last
-            // few were added holds exactly the first `count` of this build's, in the same order,
-            // and the rest simply have no history yet. Until power (design 32) this refused any
-            // difference, which made every save taken before a new job arrived unloadable for a
-            // reason that was never true. More defs than this build knows is a save from a newer
-            // build, and guessing at that would attribute one job's history to another.
+            // Fewer is an older save and is fine: the job table is append-only, so the defs the
+            // save does not know are exactly the newest ones, and nothing ever ran them (design 33
+            // §5). It refused any difference until the draft's two jobs arrived, which would have
+            // made every earlier save unloadable. More is a save from a newer build, and guessing
+            // at that mapping would silently attribute one job's history to another.
             int count = reader.ReadInt();
             if (count > _completed.Length)
                 throw new SaveLoadException(
-                    $"The save has {count} job defs and this build has {_completed.Length}: it was " +
-                    "written by a newer build, and guessing at the mapping would silently attribute " +
-                    "one job's history to another.");
+                    $"The save has {count} job defs and this build has {_completed.Length}. A save " +
+                    "from a newer build cannot be read by an older one.");
 
-            System.Array.Clear(_completed, 0, _completed.Length);
-            System.Array.Clear(_failed, 0, _failed.Length);
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < _completed.Length; i++)
             {
-                _completed[i] = reader.ReadInt();
-                _failed[i] = reader.ReadInt();
+                _completed[i] = i < count ? reader.ReadInt() : 0;
+                _failed[i] = i < count ? reader.ReadInt() : 0;
             }
         }
 
@@ -407,7 +428,11 @@ namespace Odyssey.Sim.Pawns
                 pawn.JobStartsInWindow = 0;
             }
 
-            if (pawn.JobStartsInWindow >= _ctx.Content.ThinkLoopLimit)
+            // A drafted colonist is exempt (design 33 §2b): her own tree gives only the hold, which
+            // cannot loop, and every other start is an order the player clicked — ten brisk
+            // right-clicks are a player, not a fault, and parking her in a plain wait for them
+            // would drop the draft's hold.
+            if (pawn.JobStartsInWindow >= _ctx.Content.ThinkLoopLimit && !pawn.Drafted)
             {
                 var standDown = pawn.JobBuffer;
                 standDown.Reset(JobIndex.Wait);
@@ -418,14 +443,21 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
+            // An animal consults the animal tree (design 29 §3), never the colonist's: a node
+            // that returned false for a person would be a node every colonist evaluated on
+            // every think, and the animal's whole mind is one node anyway.
+            ThinkNode[] tree = pawn.IsPerson ? _tree : AnimalTree;
             var job = pawn.JobBuffer;
-            for (int i = 0; i < _tree.Length; i++)
+            for (int i = 0; i < tree.Length; i++)
             {
                 job.Reset(JobIndex.Wait);
-                if (!_tree[i].TryGiveJob(pawn, _ctx, job)) continue;
+                if (!tree[i].TryGiveJob(pawn, _ctx, job)) continue;
                 if (StartJob(pawn, job, tick)) return;
             }
         }
+
+        /// <summary>The whole of an animal's mind. Shared: the node holds no state.</summary>
+        static readonly ThinkNode[] AnimalTree = { new AnimalIdleThinkNode() };
 
         /// <summary>
         /// Claim everything, then run. A driver whose claims cannot all be taken releases what it
@@ -745,17 +777,150 @@ namespace Odyssey.Sim.Pawns
         }
     }
 
-    /// <summary>Picking somewhere nearby to drift to. Shared by idling and by the break.</summary>
+    /// <summary>
+    /// An animal between jobs (design 29 §3): one roll on its own stream, and either a leg — a
+    /// reachable cell within the species' radius, under the species' traverse mode — or a rest
+    /// for a jittered span between the species' two bounds. Roughly two thinks in five are legs.
+    /// Scales with the animals that are between jobs on a tick and with nothing else; a resting
+    /// animal costs one integer increment a tick.
+    ///
+    /// <para>Not a branch of the colonist's tree, on purpose; see <c>JobSystem.Think</c>.</para>
+    /// </summary>
+    public sealed class AnimalIdleThinkNode : ThinkNode
+    {
+        public override string Name => "AnimalIdle";
+
+        /// <summary>Legs per hundred thinks. INVENTED; a playtest number.</summary>
+        public const int LegPerCent = 40;
+
+        /// <summary>Off its hours an animal takes this many times fewer legs and rests this many times longer.</summary>
+        public const int OffHoursFactor = 3;
+
+        /// <summary>The board clock's night, in hours: from 20:00 up to 06:00 (design 30 §4).</summary>
+        public const int NightFrom = 20, NightTo = 6;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            SpeciesDef species = pawn.Species;
+            var rng = DeterministicRandom.ForTick(
+                ctx.Seed, ctx.CurrentTick, PawnPurpose.AnimalMind ^ (uint)pawn.Id.Value);
+
+            // An animal that has decided to go heads for the nearest edge it can reach (design
+            // 30 §3), leg by leg: the wander's expiry cuts a long walk into pieces and this picks
+            // the edge again from wherever the last piece ended.
+            if (pawn.Leaving)
+            {
+                if (Wildlife.WildlifeSystem.IsEdge(ctx.Size, pawn.Cell))
+                {
+                    // On the edge: stand, and the level-keeper takes it from here on its next
+                    // rare tick. Another leg from here would be a walk along the edge for ever.
+                    job.Reset(JobIndex.Wait);
+                    job.Mode = species.traverseMode;
+                    job.WorkTicks = (int)TickGroup.Rare;
+                    return true;
+                }
+                if (EdgeTarget.Fill(pawn, ctx, job, species.traverseMode)) return true;
+            }
+
+            bool active = IsNight(ctx) == species.nocturnal;
+            int legPerCent = active ? LegPerCent : LegPerCent / OffHoursFactor;
+            if (rng.NextInt(100) < legPerCent &&
+                WanderTarget.Fill(pawn, ctx, job, species.wanderRadius, species.traverseMode, avoidSlopes: true))
+                return true;
+
+            int span = species.restTicksMax > species.restTicksMin
+                ? species.restTicksMin + rng.NextInt(species.restTicksMax - species.restTicksMin + 1)
+                : species.restTicksMin;
+            if (!active) span *= OffHoursFactor;
+            job.Reset(JobIndex.Wait);
+            job.Mode = species.traverseMode;
+            job.WorkTicks = span > 0 ? span : 1;
+            return true;
+        }
+
+        public static bool IsNight(PawnContext ctx)
+        {
+            int day = ctx.Content.DayTicks;
+            int hour = day <= 0 ? 12 : (int)((long)(ctx.CurrentTick % day) * 24 / day);
+            return hour >= NightFrom || hour < NightTo;
+        }
+    }
+
+    /// <summary>
+    /// The nearest cell on the board's outer ring an animal can reach (design 30 §3): the four
+    /// edges are walked outward from the point on each nearest the animal, and the first
+    /// reachable cell on the nearest edge wins. Bounded by the board's side, and cheap: a
+    /// reachability test is two region reads.
+    /// </summary>
+    static class EdgeTarget
+    {
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, TraverseMode mode)
+        {
+            GridSize size = ctx.Size;
+            CellRef from = size.FromIndex(pawn.Cell);
+            int best = -1, bestDist = int.MaxValue;
+            int reach = System.Math.Max(size.SizeX, size.SizeZ);
+            for (int edge = 0; edge < 4; edge++)
+            {
+                for (int k = 0; k < reach; k++)
+                {
+                    bool found = false;
+                    for (int sgn = -1; sgn <= 1; sgn += 2)
+                    {
+                        if (k == 0 && sgn == 1) continue;
+                        int x, z;
+                        switch (edge)
+                        {
+                            case 0: x = 0; z = from.Z + sgn * k; break;
+                            case 1: x = size.SizeX - 1; z = from.Z + sgn * k; break;
+                            case 2: z = 0; x = from.X + sgn * k; break;
+                            default: z = size.SizeZ - 1; x = from.X + sgn * k; break;
+                        }
+                        if (x < 0 || z < 0 || x >= size.SizeX || z >= size.SizeZ) continue;
+                        int dist = System.Math.Max(System.Math.Abs(x - from.X), System.Math.Abs(z - from.Z));
+                        if (dist >= bestDist) { found = true; break; }
+                        int cell = ctx.Cells.NearestWalkableInColumn(x, z, from.Y);
+                        if (cell < 0 || cell == pawn.Cell || !ctx.Reachable(pawn, cell, mode)) continue;
+                        best = cell;
+                        bestDist = dist;
+                        found = true;
+                        break;
+                    }
+                    if (found) break;
+                }
+            }
+            if (best < 0) return false;
+            job.Reset(JobIndex.Wander);
+            job.TargetCell = best;
+            job.Mode = mode;
+            return true;
+        }
+    }
+
+    /// <summary>Picking somewhere nearby to drift to. Shared by idling, by the break and by an animal.</summary>
     static class WanderTarget
     {
-        public static bool Fill(Pawn pawn, PawnContext ctx, Job job)
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job) =>
+            Fill(pawn, ctx, job, ctx.Content.Break.wanderRadius, TraverseMode.Colonist, avoidSlopes: false);
+
+        /// <summary>
+        /// The same pick under a given radius and traverse mode (design 29 §3, §4). The mode goes
+        /// on the job, where the hauler's goes, so the walk is planned and validated under the
+        /// species' own rules — a hog at the foot of a ladder is refused the link by the mask the
+        /// graph already carries.
+        /// </summary>
+        /// <para><paramref name="avoidSlopes"/> refuses the foot cell of a terrace step as a
+        /// destination (owner, 2026-09-22: an animal must not rest on one — it is drawn as a ramp,
+        /// and a body resting in it is drawn on the ramp and then snaps to the floor when it sets
+        /// off). Walking <i>through</i> one is unchanged. Animals only, for now: a colonist's
+        /// wander is the mental break's, and moving it would move every golden.</para>
+        public static bool Fill(Pawn pawn, PawnContext ctx, Job job, int radius, TraverseMode mode, bool avoidSlopes)
         {
             var rng = DeterministicRandom.ForTick(
                 ctx.Seed, ctx.CurrentTick, PawnPurpose.Wander ^ (uint)pawn.Id.Value);
 
             GridSize size = ctx.Size;
             CellRef from = size.FromIndex(pawn.Cell);
-            int radius = ctx.Content.Break.wanderRadius;
 
             for (int attempt = 0; attempt < 8; attempt++)
             {
@@ -765,10 +930,12 @@ namespace Odyssey.Sim.Pawns
 
                 int cell = size.Index(x, z, from.Y);
                 if (cell == pawn.Cell) continue;
-                if (!ctx.Reachable(pawn, cell)) continue;
+                if (avoidSlopes && ctx.Nav.Grid.CostClass[cell] == Worldgen.Natural.NaturalContent.CostClassSlope) continue;
+                if (!ctx.Reachable(pawn, cell, mode)) continue;
 
                 job.Reset(JobIndex.Wander);
                 job.TargetCell = cell;
+                job.Mode = mode;
                 return true;
             }
 

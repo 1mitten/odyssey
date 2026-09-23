@@ -34,16 +34,22 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Cut a ripe crop and gather what it yields.</summary>
         public const int Harvest = 11;
 
+        /// <summary>A drafted colonist standing where it was put (design 33 §2c).</summary>
+        public const int DraftHold = 12;
+
+        /// <summary>A drafted colonist walking to the cell the player named (design 33 §2c).</summary>
+        public const int Goto = 13;
+
         /// <summary>Fetch one wood and lay an ordered power line with it (design 32 §3).</summary>
-        public const int LayConduit = 12;
+        public const int LayConduit = 14;
 
         /// <summary>Take up a power line marked for removal.</summary>
-        public const int RemoveConduit = 13;
+        public const int RemoveConduit = 15;
 
         /// <summary>Carry fuel to a generator below half and fill it (design 32 §6).</summary>
-        public const int Refuel = 14;
+        public const int Refuel = 16;
 
-        public const int Count = 15;
+        public const int Count = 17;
     }
 
     /// <summary>

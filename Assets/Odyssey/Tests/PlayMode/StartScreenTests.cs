@@ -274,7 +274,11 @@ namespace Odyssey.Tests.PlayMode
                 // And the colony is the three that were on the setup page — the same
                 // claim one level up, and the one no fast-tier test can make because it spans the
                 // screen, the director, the bootstrap and ColonyRequest.
-                Assert.That(boot.Colony!.Pawns.Pawns.Count, Is.EqualTo(ColonistSelect.Slots),
+                // The people, not the pawns: the world seeds its own animals beside them
+                // (design 30), and none of those was on the setup page.
+                int people = 0;
+                foreach (Odyssey.Sim.Pawns.Pawn pawn in boot.Colony!.Pawns.Pawns.All) if (pawn.IsPerson) people++;
+                Assert.That(people, Is.EqualTo(ColonistSelect.Slots),
                     "the colony is not the size the screen offered");
             }
             finally

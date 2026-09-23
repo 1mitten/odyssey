@@ -35,6 +35,8 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < pawns.Count; i++)
             {
                 var pawn = pawns[i];
+                // An animal has no skills to decay (design 29 §2).
+                if (!pawn.IsPerson) continue;
                 for (int skill = 0; skill < content.Skills.Length; skill++)
                 {
                     int decay = content.Skills[skill].DecayPerInterval(pawn.SkillLevel(skill), interval, content.DayTicks);

@@ -42,12 +42,24 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world = null) =>
-            Of(in pawn, tickAlpha, movePerTick, out heading, world, default, out _);
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, default, null, out _);
 
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world,
             ReadOnlySpan<PawnView> otherPawns) =>
-            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, out _);
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, null, out _);
+
+        /// <summary>
+        /// The same pose, with an index saying who is near enough to be worth asking about.
+        ///
+        /// <para><paramref name="index"/> must have been rebuilt from <paramref name="otherPawns"/>
+        /// this frame. Null is the plain scan, which is what every fixture and every caller
+        /// without one gets, and what <see cref="PawnCrowdIndex"/> is measured against.</para>
+        /// </summary>
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, PawnCrowdIndex? index) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, index, out _);
 
         /// <summary>
         /// The same pose, with the sub-tile steering it applied handed back separately.
@@ -61,7 +73,13 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
             out Vector3 heading, WorldRenderModel? world,
-            ReadOnlySpan<PawnView> otherPawns, out Vector3 steer)
+            ReadOnlySpan<PawnView> otherPawns, out Vector3 steer) =>
+            Of(in pawn, tickAlpha, movePerTick, out heading, world, otherPawns, null, out steer);
+
+        /// <summary>See the overload above, and <see cref="PawnCrowdIndex"/> for the index.</summary>
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world,
+            ReadOnlySpan<PawnView> otherPawns, PawnCrowdIndex? index, out Vector3 steer)
         {
             steer = Vector3.zero;
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
@@ -183,18 +201,60 @@ namespace Odyssey.Presentation.Rendering
                 float envelope = SteeringCurve.Bell(s);
 
                 // 1. Passing traffic and standing colonists.
+                //
+                // **This walked the whole colony for every pawn it posed** — O(N squared), and
+                // measured on 2026-09-23 at 15.8 ms of a 27.8 ms frame in `Actors` alone at 384
+                // colonists, against 0.02 ms at 64 (`docs/plans/pf-crowd-scan.md`). What follows
+                // is three ways of reaching the *same* answer, not three behaviours: see
+                // `PawnCrowdIndex` for why the cull is exact rather than approximate, and
+                // `PawnCrowdIndexTests` for that claim pinned pawn by pawn.
+                //
+                // The index is used only when it was rebuilt from this very span. A length that
+                // does not match means somebody has handed us last frame's index or another
+                // snapshot's, and the cached positions would be wrong — so fall back to the scan,
+                // which is always right and merely slow.
                 float crowd = 0f;
-                for (int i = 0; i < otherPawns.Length; i++)
+                // Animals are outside the sidestep on both sides (design 29 §7 of the plan): a
+                // hog does not dodge a colonist and a colonist does not dodge a hog. Recorded
+                // against P11, whose per-pawn scan this is; CrowdWeight is where the other side
+                // of it lives. Merged over the crowd index on 2026-09-23: the gate is on the
+                // posed pawn and the weight, whichever scan finds the pair.
+                if (pawn.Kind == 0)
                 {
-                    ref readonly var other = ref otherPawns[i];
-                    if (other.Id == pawn.Id) continue;
+                    bool usable = index != null && index.Count == otherPawns.Length &&
+                                  PawnCrowdIndex.Mode != CrowdScan.Span;
 
-                    float near = SteeringCurve.Proximity(
-                        Vector3.Distance(hereNow, SteeringCurve.WhereItIsNow(in other)));
-                    if (near <= 0f) continue;
-
-                    float weight = near * SteeringCurve.InTheWay(headingDir, in other);
-                    if (weight > crowd) crowd = weight;
+                    if (usable && PawnCrowdIndex.Mode == CrowdScan.Bucketed)
+                    {
+                        foreach (int i in index!.Near(hereNow))
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                index.PositionAt(i));
+                            if (weight > crowd) crowd = weight;
+                        }
+                    }
+                    else if (usable)
+                    {
+                        // CrowdScan.Cached: the same N-squared visit, but reading each pawn's position
+                        // from the frame's cache instead of recomputing it once per pair. Kept as a
+                        // measurement arm rather than a mode anybody plays, because the plan asked
+                        // what the constant factor alone was worth before an index was built on it.
+                        for (int i = 0; i < otherPawns.Length; i++)
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                index!.PositionAt(i));
+                            if (weight > crowd) crowd = weight;
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0; i < otherPawns.Length; i++)
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                SteeringCurve.WhereItIsNow(in otherPawns[i]));
+                            if (weight > crowd) crowd = weight;
+                        }
+                    }
                 }
                 lateral += SteeringCurve.MaxLateralOffset * envelope * crowd;
 
@@ -242,6 +302,32 @@ namespace Odyssey.Presentation.Rendering
                     WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, s), along.z);
 
             return OnTheDrawnGround(along, pawn, s, world, pace);
+        }
+
+        /// <summary>
+        /// How much room one other colonist asks for, 0 to 1: nothing at all if it is out of
+        /// range, out of the way, or the pawn itself.
+        ///
+        /// <para><b>One copy, called by all three scans of <see cref="CrowdScan"/>.</b> The
+        /// exactness claim in <see cref="PawnCrowdIndex"/> is worth nothing unless the survivors
+        /// are weighed by the identical arithmetic however they were found, and three inlined
+        /// copies of this would be three chances to drift apart — which is the same fault
+        /// <see cref="PawnPose"/> itself exists to prevent between the far form and the live
+        /// figures.</para>
+        ///
+        /// <para><paramref name="otherAt"/> is passed in rather than computed here because it is
+        /// the one term the cached and bucketed scans already know: it was recomputed once per
+        /// *pair* and there are only N distinct answers.</para>
+        /// </summary>
+        static float CrowdWeight(in PawnView other, in PawnView self, Vector3 hereNow,
+                                 Vector3 headingDir, Vector3 otherAt)
+        {
+            if (other.Id == self.Id) return 0f;
+            // An animal is outside the sidestep on both sides (design 29): nobody dodges a hog.
+            if (other.Kind != 0) return 0f;
+            float near = SteeringCurve.Proximity(Vector3.Distance(hereNow, otherAt));
+            if (near <= 0f) return 0f;
+            return near * SteeringCurve.InTheWay(headingDir, in other);
         }
 
         /// <summary>
