@@ -1755,3 +1755,132 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
+| *"This all needs to be coordinated at the right times for effect"* — four recordings: a critical sword slice, two whooshes, a thud | **Whoosh** on every swing with a weapon, hit or miss, peaking about 0.1 s before the blow; fists and bites silent. **Slice** instead of the whoosh on a sharp weapon's critical, peaking on the impact; a blunt critical keeps the whoosh. **Thud** on every landed hit, fists and bites too, crits under the slice. Placed in the world like the axe. | §9g |
+
+### 9g. The sound of a blow
+
+**Owner, 2026-09-23**, supplying four recordings from Pixabay: a violent sword slice — *"critical
+hits with a sword. To be played as sword is swinging"*; two swing whooshes — *"sword variation
+sounds to be played during the relevant moment of the swoosh (not too early). 2 variations"*; and a
+cinematic thud — *"use this for someone get hit melee (default for now). Play it as the weapon
+connects."* And: *"This all needs to be coordinated at the right times for effect."*
+
+**The interview's answers (owner):**
+
+1. **Whoosh: every swing with a weapon** — bat, crowbar, machete, arc blade — hit or miss. **Fists
+   and animal bites are silent.** Two takes, one picked at random per swing. **Its loudest moment
+   lands about 0.1 s before the blow connects**: never early, never on top of the thud.
+2. **Critical slice: the blow's outcome is settled when the swing's wind-up starts.** The simulation
+   publishes `CombatEventKind.SwingCritical` (11) **instead of** `Swing` when the blow it has rolled
+   will land critical; `Amount` is the wind-up, as a swing's is. With a **sharp** weapon (machete,
+   arc blade) the slice plays **instead of** the whoosh, timed so its biggest moment lands on the
+   impact. A **blunt** critical (bat, crowbar) keeps the whoosh.
+3. **Thud: every landed hit**, any weapon, fists and bites too, and under the slice on a critical;
+   its transient exactly on the impact. **Misses and dodges are the whoosh alone.**
+4. **Placed in the world like the axe**: 3D, fading with distance, so every master is mono.
+
+**The one timing fact everything rests on: the impact is known when the swing starts.** A swing is
+published at the tick its wind-up begins with the wind-up in ticks, and the blow lands at the one
+plus the other — the arithmetic the drawn swing times its contact by (§6B). So a whoosh can start
+*before* the blow, which is the only way its peak can come before the thud. The thud cannot be
+scheduled the same way, because whether a blow lands is not published until it does; it plays on
+the `Hit` event's frame, and the file is cut so that frame is its transient.
+
+**The bake** (`tools/audio/bake_combat.sh`, its header holds every measurement). Each source is cut
+at a fixed head time — not a silence threshold, because the offset of the loudest moment is a timing
+constant and a threshold moves it — downmixed to mono **first** (a limiter ahead of the downmix held
+each channel to −3 and the sum then peaked 3 dB over it), tail-trimmed with a fade, and levelled on
+the loudest 400 ms momentary loudness against a −3 dBFS ceiling measured with astats. The two
+whooshes are cut so their peaks line up, so one constant times both.
+
+| File | Length | Loudest 10 ms, middle | Peak | Max M | Note |
+|---|---|---|---|---|---|
+| `combat-whoosh.wav` | 0.200 s | **0.041 s** | −5.1 dBFS | −21.0 LUFS | the swing, take one |
+| `combat-whoosh_01.wav` | 0.180 s | **0.041 s** | −4.5 dBFS | −21.0 LUFS | take two, lined up with one |
+| `combat-crit-slice.wav` | 1.100 s | **0.065 s** | −3.0 dBFS | −16.8 LUFS | the ceiling binds; the 2.2 s ring cut to 1.1 s |
+| `combat-hit.wav` | 0.750 s | **0.013 s** | −3.0 dBFS | −18.5 LUFS | lifted 7.5 dB into a limiter: −23.5 → −18.5 to the ear |
+
+The slice's loudest *sample* is later (0.24 s, the body of the cut), but its loudest 10 ms is the
+edge meeting the target, which is the moment the owner means. The balance against the axe is baked:
+at one catalogue Volume (0.65) the thud sits about 6 dB over a felling blow at the same distance
+and the whoosh about 4 dB over — a fight is heard over woodcutting, not under it.
+
+**The timing model** is `Hud/CombatSoundTiming.cs`, Unity-free, with the schedule beside it
+(`CombatSoundSchedule`):
+
+- `WhooshPeakSeconds = 0.040`, `SlicePeakSeconds = 0.065`, `ThudPeakSeconds = 0.013` — the bake's
+  numbers. **A re-bake that moves them changes them in the same commit**; the EditMode
+  `CombatSoundTests.EachClipIsLoudestWhereTheTimingSaysItIs` reads the imported clips and fails
+  otherwise.
+- **Real time at the current speed.** The clock is the last tick run plus the frame's fraction
+  towards the next (the bootstrap's `_tickAlpha`), and a tick is `1 / (60 × speed)` s: at ×3 the
+  impact is three times nearer. Paused, the rate is 0 and nothing waiting starts, or is let go.
+- **Never early, at most a frame late.** Each frame a waiting cue starts if starting it now lands
+  its peak no earlier than it belongs — 0.1 s before the impact for the whoosh, on it for the slice.
+  The frame before, it would have been early. So a whoosh peaks between 0.1 s and 0.1 s less a frame
+  before the blow, and a slice between the impact and a frame after.
+- **Seen too late.** A whoosh whose peak would land within **0.04 s** of the blow is let go rather
+  than smeared into the thud (`WhooshClearanceSeconds`, INVENTED — about where two onsets stop
+  fusing). A slice is played up to **0.1 s** late (`SliceLateSeconds`, INVENTED), because a critical
+  is the headline and a little late beats silent. **The quickest swing at the top speed cannot be on
+  time and is still heard**: the machete's 22 ticks at ×3 is 0.122 s, less than the whoosh's 0.14 s
+  to its lead, so it starts on the frame it is read and peaks about 0.07 s before the blow.
+- **A swing replaces its swinger's last**, and a swinger **downed, killed or knocked back** loses the
+  swing in the air and its sound. The last is an assumption about round 3's knock-down (that it
+  interrupts a wind-up); if it does not, drop `KnockedBack` from `CombatSoundSchedule.Hear`.
+- **Held weapon or not** is `BloodSides.IsHeldWeapon`, and **sharp or blunt** `BloodSides.IsSharp` —
+  the blood seam's table, read once off the content, so the Defs stay the one owner of which weapon
+  is which (§7d). An event's weapon is an item def with an attack, or −1 for fists and bites.
+
+**Presentation.** `CombatFeedback` asks the schedule about every event it hands on
+(`Sounds.Hear`): a swing is scheduled and makes no sound on its own frame, a hit returns the thud,
+anything else plays its named sound as before (`SoundIds.ForCombat`, where a swing is now null).
+After the frame's events it starts every cue that is due (`SoundTheDue`), from the swinger's drawn
+feet — or, if the swinger has left the frame, the cell the blow was aimed at. The thud plays from
+the struck. The schedule is a fixed array of 64, one per fighter at most, so nothing allocates and
+the cost is the fighters swinging, never the colony; it is cleared on a world change and at
+teardown. `PawnFigureDirector.OnCombatEvent` draws a `SwingCritical` as a `Swing`, and
+`CombatFeedback.WhereOf` hears it from the swinger.
+
+**The catalogue** (`AudioSetup`): three rows on the Effects bus, placed at the axe's 20–200 m.
+**No cooldown on any of them**: the director's cooldown is per sound, so any cooldown swallows a
+second fighter's blow read in the same frame, which at ×3 in a group fight is most of them. The
+bound is the voice budget, and the priorities say who yields — a whoosh (140) gives its voice to a
+thud (110) or a slice (100). The whoosh gets 6% pitch and 12% level variance on its two takes, the
+thud the axe's 7% and 15% on its one, the slice none: a pitched slice moves its peak off the impact.
+
+**`SwingCritical` was added to `Sim.Contracts/Views.cs` here, ahead of the simulation change that
+publishes it** (another lane). A merge keeps exactly one copy. Until the simulation publishes it,
+nothing slices: every critical is a `Swing` and whooshes.
+
+**Tests.** Fast tier `CombatSoundTimingTests` (17): the whoosh peaks a tenth before the blow and
+never earlier at ×1, ×2 and ×3 and at 60 and 144 frames a second; the slice on the impact; the same
+swing heard three times sooner at ×3; paused nothing starts and nothing is let go, resumed it starts
+on time; a whoosh seen too late is let go and one merely late plays at once; the quickest swing at
+the top speed is still heard clear of the blow; fists and bites silent, critical or not; a sharp
+critical slices and a blunt one whooshes; every landed hit thuds and a miss or a dodge does not; a
+downed, dead or knocked-back swinger loses its sound; a new swing replaces the last; the schedule
+overflows and clears. **Negative controls seen to fail** (each broken alone, then restored): a cue
+played the moment it is seen (10 fail); the speed ignored (7); the pause ignored (1); a sharp
+critical that whooshes (5); fists that whoosh (1); a late whoosh played on the thud (1); a
+knocked-back swinger that keeps its whoosh (1). EditMode `CombatSoundTests` (2) holds the shipped
+rows — placed, Effects, mono, no cooldown, two whooshes, an unpitched slice — and reads each
+imported clip's loudest 10 ms against the constants, to 5 ms. **Red until `AudioSetup.Build` has
+run**, because that writes the rows. `CombatDrawnTests.EveryMomentOfAFightHasItsSoundOrNone` now
+says a swing is null on its frame and names the three cues.
+
+**Never compiled here:** `CombatFeedback.cs`, `SoundIds.cs`, `OdysseyBootstrap.cs`,
+`PawnFigureDirector.Combat.cs`, `AudioSetup.cs`, `CombatSoundTests.cs`, `CombatDrawnTests.cs`. The
+new WAVs have no `.meta` until Unity imports them; the integrator runs
+`Odyssey.EditorTools.AudioSetup.Build` and commits the metas and the rewritten
+`AudioCatalogue.asset`.
+
+**Licence:** all four are Pixabay, under the Pixabay Content License — use in a product without
+attribution, modification allowed, no redistribution on their own — committed with the game as §2i's
+draft is. **The owner to confirm the sources.**
+
+**Open.** Whether 0.1 s is the lead the ear wants at ×1 (it is a number the owner gave, and a
+playtest settles it); whether the thud's lift is enough beside the axe; the misses', downs' and
+deaths' named sounds (`CombatMiss`, `CombatDown`, `CombatDeath`) are still in no catalogue; a swing
+abandoned mid-wind-up by anything but a fall (its target dying, say) still whooshes (or slices), which is
+honest — the arm was already moving.
