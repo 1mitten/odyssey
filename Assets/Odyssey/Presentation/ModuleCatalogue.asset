@@ -10198,3 +10198,93 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.anim.combat.sheath.draw
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Draw_Sword_Masc
+      clip: {fileID: -1799629646076063188, guid: 1e112675476098345a62bc14cbf8a7ef, type: 3}
+      variant: Masc
+      impactSeconds: 0
+    - clipName: A_Draw_Sword_Femn
+      clip: {fileID: 1972962540892491625, guid: 3f6f85425f929304198f743d3902c6b0, type: 3}
+      variant: Femn
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.anim.combat.sheath.sheathe
+    shape: 0
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 0
+    baseAtY: 0
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    lieFlat: 0
+    scale: {x: 1, y: 1, z: 1}
+    colonistPool: 0
+    sex: 0
+    recolours: 1
+    uniform: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    combat:
+    - clipName: A_Sheathe_Sword_Masc
+      clip: {fileID: 2918243416346985125, guid: febb68dd712756c4c883a3e4f482d3b1, type: 3}
+      variant: Masc
+      impactSeconds: 0
+    - clipName: A_Sheathe_Sword_Femn
+      clip: {fileID: 4741049883773862030, guid: 8d7a574352a5f294fa488a9148bc9ceb, type: 3}
+      variant: Femn
+      impactSeconds: 0
+    quadrupedGait: 0
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
