@@ -307,6 +307,7 @@ namespace Odyssey.Sim.Pawns
                 if (pawn.Drafted) flags |= PawnFlags.Drafted;
                 if (pawn.Downed) flags |= PawnFlags.Downed;
                 if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;
+                if (pawn.KnockedDownAt(world.CurrentTick)) flags |= PawnFlags.KnockedDown;
                 if (pawn.CarriedBy != 0) flags |= PawnFlags.Carried;
                 // Drawn or sheathed (design 33 §8b): a report derived here from saved state, so
                 // it is neither saved nor hashed and no golden can move with it.

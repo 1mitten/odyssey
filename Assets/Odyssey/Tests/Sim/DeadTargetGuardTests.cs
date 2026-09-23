@@ -35,7 +35,7 @@ namespace Odyssey.Tests.Sim
             {
                 Swings++;
                 SwingOutcome o = base.Resolve(attacker, defender, armament, ctx, tick);
-                return o.Landed ? new SwingOutcome(o.Result, o.DamageMilli * 10, o.StunTicks) : o;
+                return o.Landed ? new SwingOutcome(o.Result, o.DamageMilli * 10, o.StunTicks, o.Critical, o.Knockback) : o;
             }
         }
 
@@ -102,7 +102,7 @@ namespace Odyssey.Tests.Sim
             static bool IsAgainst(CombatEventKind kind) =>
                 kind == CombatEventKind.Swing || kind == CombatEventKind.Hit || kind == CombatEventKind.Dodge
                 || kind == CombatEventKind.Stun || kind == CombatEventKind.Critical || kind == CombatEventKind.KnockedBack
-                || kind == (CombatEventKind)11;
+                || kind == CombatEventKind.SwingCritical;
 
             void Flag(string what)
             {

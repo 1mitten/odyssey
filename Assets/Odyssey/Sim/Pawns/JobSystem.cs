@@ -334,7 +334,12 @@ namespace Odyssey.Sim.Pawns
             // a drafted colonist the player's order, and each carries on when the stun wears off —
             // a stun is a pause, not an interrupt. The mover's half is MovementSystem.Advance.
             // Nought in every golden window, so no golden moves.
-            if (pawn.StunnedAt(tick)) return;
+            //
+            // A knock-down holds it the same way (design 33 §9b), for the second and a half it lies
+            // where the blow put it. The knockback already ended its job, so there is nothing to
+            // pause; what this holds back is the tree, which would otherwise give it a job — and
+            // an order given meanwhile starts, and waits here until it stands.
+            if (pawn.StunnedAt(tick) || pawn.KnockedDownAt(tick)) return;
 
             if (pawn.CurrentJob != null)
             {

@@ -7,7 +7,7 @@ namespace Odyssey.Sim.Pawns
     /// The one <see cref="IMeleeRules"/>. <b>Lane A's file</b> (<c>docs/plans/combat-contracts.md</c>,
     /// design 33 §6A).
     ///
-    /// <para><b>A swing is four rolls, each on its own stream</b>, drawn from
+    /// <para><b>A swing is up to six rolls, each on its own stream</b>, drawn from
     /// <c>(ctx.Seed, tick, salt ^ attacker id)</c> the way every other pawn roll is:</para>
     /// <list type="number">
     /// <item><b>Hit</b> on <see cref="PawnPurpose.MeleeHit"/>, against the attacker's level on
@@ -20,7 +20,16 @@ namespace Odyssey.Sim.Pawns
     /// inclusive of both ends.</item>
     /// <item><b>Stun</b> on <see cref="PawnPurpose.Stun"/>, for a <b>blunt</b> blow whose attack
     /// carries a chance. A sharp blow never stuns, whatever its numbers say.</item>
+    /// <item><b>Critical</b> on <see cref="PawnPurpose.MeleeCritical"/> (design 33 §9b), for a blow
+    /// that landed: <see cref="CombatDef.critChancePerMille"/> plus a little per four attacker
+    /// levels, and ×<see cref="CombatDef.critDamagePerMille"/> on the damage. A critical then rolls
+    /// its <b>knockback</b> on <see cref="PawnPurpose.Knockback"/>, surer with a blunt weapon.</item>
     /// </list>
+    ///
+    /// <para><b>Rolled when the wind-up begins, not when it lands</b> (design 33 §9g), so the
+    /// tick in each stream is the swing's first. The attack driver asks, keeps the answer on the
+    /// pawn through the wind-up, and publishes <see cref="CombatEventKind.SwingCritical"/> in
+    /// place of <see cref="CombatEventKind.Swing"/> for a critical that will land.</para>
     ///
     /// <para>Separate streams rather than one stream drawn four times, so a change to one curve —
     /// the dodge chance, say — cannot shift what the hit roll saw: that is the test
@@ -65,8 +74,25 @@ namespace Odyssey.Sim.Pawns
                 if (stunRoll.NextInt(1_000) < attack.stunPerMille) stun = attack.stunTicks;
             }
 
-            return new SwingOutcome(CombatEventKind.Hit, damage, stun);
+            // The critical (design 33 §9b): half as much again, and a chance to knock the target
+            // back — the chance rolled here, the ground behind the target judged at the impact.
+            var critRoll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.MeleeCritical ^ who);
+            if (critRoll.NextInt(1_000) >= CriticalChancePerMille(attacker, ctx))
+                return new SwingOutcome(CombatEventKind.Hit, damage, stun);
+
+            damage = (int)((long)damage * ctx.Content.Combat.critDamagePerMille / 1_000);
+            var knockRoll = DeterministicRandom.ForTick(ctx.Seed, tick, PawnPurpose.Knockback ^ who);
+            bool knockback = knockRoll.NextInt(1_000) < KnockbackChancePerMille(armament, ctx);
+            return new SwingOutcome(CombatEventKind.Hit, damage, stun, critical: true, knockback: knockback);
         }
+
+        public virtual int CriticalChancePerMille(Pawn attacker, PawnContext ctx) =>
+            ctx.Content.Combat.CritChancePerMille(MeleeLevel(attacker));
+
+        public virtual int KnockbackChancePerMille(in Armament armament, PawnContext ctx) =>
+            armament.Attack.damageKind == DamageKind.Blunt
+                ? ctx.Content.Combat.knockbackBluntPerMille
+                : ctx.Content.Combat.knockbackPerMille;
 
         /// <summary>
         /// The attack's figure in thousandths, spread uniformly over

@@ -116,16 +116,18 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void ARepeatedAttackOrderIsQuietAndKeepsTheSwingInTheAir()
         {
-            var (colony, a, b, rules) = Duel();
-            TickUntil(colony, () => Swing(a)?.InWindup == true, 1_500, "she never wound up a swing");
+            var (colony, a, b, _) = Duel();
+            var tape = new Tape();
+            TickUntil(colony, () => { tape.Read(colony); return Swing(a)?.InWindup == true; }, 1_500, "she never wound up a swing");
             int started = a.JobStartTick;
-            int landed = rules.TicksOf(a).Count;
+            int landed = tape.Landed(a).Count;
 
             Assert.That(Attack(colony, a, b), Is.EqualTo(IntentRejection.AlreadyInThatState));
             Assert.That(a.JobStartTick, Is.EqualTo(started), "the order restarted her attack");
             Assert.That(Swing(a)?.InWindup, Is.True, "the swing in the air was lost");
             int windup = colony.Pawns.Content.Combat.fists.windupTicks;
-            TickUntil(colony, () => rules.TicksOf(a).Count > landed, windup + 2, "the wound-up swing never landed");
+            TickUntil(colony, () => { tape.Read(colony); return tape.Landed(a).Count > landed; }, windup + 2,
+                "the wound-up swing never landed");
 
             // The control: B's blow back at A is the hold's, not an order, so ordering it is new.
             TickUntil(colony, () => b.CurrentJob?.DefIndex == JobIndex.AttackMelee, 600, "B never struck back");
@@ -200,7 +202,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AStunnedAttackersSwingDoesNotLand()
         {
-            var (colony, a, _, rules) = Duel();
+            var (colony, a, _, _) = Duel();
             TickUntil(colony, () => Swing(a) is { InWindup: true } s && s.ToilProgress > 0, 1_500, "no wind-up");
 
             int stunnedAt = colony.World.CurrentTick;
@@ -211,9 +213,9 @@ namespace Odyssey.Tests.Sim
             // The swings begun after the stun that have had time to land, against the blows that did.
             int windup = colony.Pawns.Content.Combat.fists.windupTicks;
             int last = colony.World.CurrentTick - 1;
-            var swingsAfter = tape.By(a, CombatEventKind.Swing).Where(e => e.Tick >= stunnedAt && e.Tick + windup <= last)
+            var swingsAfter = tape.Swings(a).Where(e => e.Tick >= stunnedAt && e.Tick + windup <= last)
                 .Select(e => e.Tick).ToList();
-            var landedAfter = rules.TicksOf(a).Where(t => t >= stunnedAt).ToList();
+            var landedAfter = tape.Landed(a).Where(t => t >= stunnedAt).ToList();
             Assert.That(landedAfter.Count, Is.GreaterThan(0), "she never swung again after the stun");
             Assert.That(landedAfter.Count, Is.EqualTo(swingsAfter.Count), "a swing began before the stun landed after it");
             Assert.That(landedAfter[0], Is.EqualTo(swingsAfter[0] + windup));

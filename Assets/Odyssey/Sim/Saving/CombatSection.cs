@@ -20,6 +20,11 @@ namespace Odyssey.Sim.Saving
     /// next swing tick, the stun, the retaliation and its end, the equipped weapon, the order's
     /// target pawn and the carrier. Layout 1 is still read.</para>
     ///
+    /// <para><b>Layout 3</b> is the third playtest's round (design 33 §9b, §9g): the knock-down
+    /// clock and the swing in the air — its result word, damage and stun, decided when the wind-up
+    /// began. Four ints appended to every record, so a record is read the same way whatever is set;
+    /// layouts 1 and 2 still load, with nobody knocked down and no swing in the air.</para>
+    ///
     /// <para>Hashing is <see cref="Pawn.ContributeTo"/>'s, not this section's. What it writes is
     /// exactly what that hashes, and <see cref="HasState"/> is the same question
     /// <c>Pawn.HasCombatState</c> answers, plus the draft's two.</para>
@@ -32,9 +37,10 @@ namespace Odyssey.Sim.Saving
     {
         /// <summary>
         /// The record layout this build writes. 1 is C1's: flags, quiet tick, finishing step. 2 is
-        /// the combat contracts step's: C1's four, then the eight combat fields.
+        /// the combat contracts step's: C1's four, then the eight combat fields. 3 appends the
+        /// knock-down clock and the pending swing (design 33 §9b, §9g).
         /// </summary>
-        public const int Layout = 2;
+        public const int Layout = 3;
 
         const int FlagDrafted = 1;
         const int FlagDowned = 2;
@@ -74,6 +80,12 @@ namespace Odyssey.Sim.Saving
                 writer.Write(pawn.EquippedItem);
                 writer.Write(pawn.CombatTarget);
                 writer.Write(pawn.CarriedBy);
+
+                // Layout 3.
+                writer.Write(pawn.KnockedDownUntilTick);
+                writer.Write(pawn.PendingSwing);
+                writer.Write(pawn.PendingDamageMilli);
+                writer.Write(pawn.PendingStunTicks);
             }
             _scratch.Clear();
         }
@@ -104,6 +116,13 @@ namespace Odyssey.Sim.Saving
                 int target = two ? reader.ReadInt() : 0;
                 int carriedBy = two ? reader.ReadInt() : 0;
 
+                // Layout 3: nobody knocked down and no swing in the air before it.
+                bool three = layout >= 3;
+                int knockedUntil = three ? reader.ReadInt() : 0;
+                int pendingSwing = three ? reader.ReadInt() : 0;
+                int pendingDamage = three ? reader.ReadInt() : 0;
+                int pendingStun = three ? reader.ReadInt() : 0;
+
                 Pawn? pawn = _pawns.Get(new Contracts.PawnId(id));
                 if (pawn == null) continue;
 
@@ -119,6 +138,10 @@ namespace Odyssey.Sim.Saving
                 pawn.EquippedItem = equipped;
                 pawn.CombatTarget = target;
                 pawn.CarriedBy = carriedBy;
+                pawn.KnockedDownUntilTick = knockedUntil;
+                pawn.PendingSwing = pendingSwing;
+                pawn.PendingDamageMilli = pendingDamage;
+                pawn.PendingStunTicks = pendingStun;
 
                 // A step an order interrupted, rebuilt as the one-step path it was (design 33
                 // §2d). The pawn section has already restored the progress into it, and

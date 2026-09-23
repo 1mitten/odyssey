@@ -109,7 +109,8 @@ namespace Odyssey.Tests.Sim
             for (int t = 0; t < Trials; t++)
             {
                 SwingOutcome o = rules.Resolve(a, b, machete, colony.Pawns, 10_000 + t);
-                if (!o.Landed) continue;
+                // A critical is half as much again (design 33 §9b), and CriticalsLandAtTheirRate owns it.
+                if (!o.Landed || o.Critical) continue;
                 landed++;
                 if (o.DamageMilli < low) low = o.DamageMilli;
                 if (o.DamageMilli > high) high = o.DamageMilli;
