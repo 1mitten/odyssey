@@ -23,6 +23,14 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a brawl read as a brawl?** (design 33 §8c, `claude/combat-guard`). The tests prove
+  that nobody in a fight shares a tile. Whether it looks right is for a person to judge. Spawn four
+  marauders round two undrafted colonists standing side by side, and watch the fight form. Then
+  draft two colonists standing on one tile, and spawn a marauder by them. One of them should
+  step onto the next tile, and both should fight from where they stand. A wrong answer is a spread that
+  reads as a queue or a dance rather than a scrum. A drafted colonist's step off a shared tile
+  that looks like a twitch, or like leaving her post, is also wrong.
+
 - **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
   Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
   should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
