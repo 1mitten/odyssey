@@ -449,6 +449,31 @@ reason it named"* in the register below, reached from the opposite direction.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-23 — A stockpile drag paints nothing
+
+Owner: *"I can't seem to create stockpiles anymore"*, then *"There is no visual to the stockpile
+or indicator or marker - has this somehow been removed"*. It had not been removed and it was being
+created: the session log had no stockpile order refused, and `StockpileDragTests`, handing the
+presenter a box, published nine zone cells. **The zone existed and was not drawn.**
+
+On natural ground a store's cell is the air over the ground (`StoreCellOf`), and the wash is on the
+ground's top face — meshed by the terrain cell a layer down, which washes itself when the cell
+above is stored (`WorldRenderModel.IsStoredAbove`). A chunk is one layer, so that face is in a
+different chunk from the store. `StorageZones.Mark` dirtied only the store's own chunk. **That was
+enough until 2026-09-21**, when chunks got their own versions (P15, `0df9514b`): before it, any mark
+bumped one board-wide version and re-meshed everything, the ground included. The per-chunk fix was
+right, and its own note said *"a cell edit must now dirty every chunk whose mesh depends on it —
+the global version was forgiving under-marking"*. This was the under-marking it forgave.
+
+**Measured both ways in one test:** without the fix the store's chunk is at version 2 and the
+ground's at 1; with it both are at 2. `Mark` now dirties the layer below as well.
+
+**The check this earns.** When a cache stops being global, list every reader that looks at a cell
+other than its own — `IsStoredAbove`, and anything else named *Above* or *Below* — and check that
+whatever changes that other cell marks this chunk too. The fast tier cannot see it (no meshing)
+and the picture is only wrong where nothing else happens to re-mesh the chunk, which on open
+grass is everywhere.
+
 ### 2026-09-22 — A hog walks past a tree, snaps back a cell, walks past it again
 
 Owner: *"saw a pig walk through a tree went past it then suddenly appear before the tree again

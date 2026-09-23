@@ -51,7 +51,16 @@ namespace Odyssey.Tests.PlayMode
                     BindingFlags.Instance | BindingFlags.NonPublic)!;
                 drag.Invoke(presenter, new object[] { anchor, head });
 
-                for (int i = 0; i < 10; i++) yield return null;
+                // Until the tick has taken the orders and the renderer has had its frames, not a
+                // fixed count: a warm second world runs frames faster than ticks.
+                var model = boot.Model!;
+                int stride = boot.World.Size.LayerStride;
+                float until = Time.realtimeSinceStartup + 3f;
+                while (Time.realtimeSinceStartup < until &&
+                       (boot.World.Views.Current.Stores.Length == 0 ||
+                        !model.IsStoredAbove(boot.World.Views.Current.Stores[0].CellIndex - stride)))
+                    yield return null;
+                for (int i = 0; i < 5; i++) yield return null;
 
                 int stores = boot.World.Views.Current.Stores.Length;
                 Debug.Log($"[StockpileDrag] box {anchor} to {head} from a colonist at {at}: " +
@@ -59,6 +68,23 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(stores, Is.GreaterThan(0),
                     "a stockpile drag beside a colonist published no zone cells, so the fault is " +
                     "after the pointer: the director, the presenter's submit or the simulation");
+
+                // **And it is drawn** (owner, 2026-09-23: "There is no visual to the stockpile").
+                // On natural ground a store's cell is the air above the ground, and the wash is on
+                // the ground's top face, which the chunk one layer down meshes (IsStoredAbove).
+                // Since chunks keep their own versions, that chunk re-meshes only if it was marked,
+                // so it must be at least as fresh as the store's own chunk, which the mark bumped.
+                int storeCell = boot.World.Views.Current.Stores[0].CellIndex;
+                CellRef store = boot.World.Size.FromIndex(storeCell);
+                CellRef ground = boot.World.Size.FromIndex(storeCell - stride);
+                Assert.That(model.IsStoredAbove(storeCell - stride), Is.True,
+                    "the render mirror did not hear about the store");
+                int storeVersion = model.ChunkVersion(model.Chunks.ChunkIndexOfCell(store));
+                int groundVersion = model.ChunkVersion(model.Chunks.ChunkIndexOfCell(ground));
+                Debug.Log($"[StockpileDrag] store {store} chunk version {storeVersion}, ground {ground} chunk version {groundVersion}");
+                Assert.That(groundVersion, Is.GreaterThanOrEqualTo(storeVersion),
+                    "the chunk that meshes the ground under the stockpile is older than the stockpile, " +
+                    "so it was never re-meshed and the wash cannot be on screen");
             }
             finally
             {
@@ -95,7 +121,9 @@ namespace Odyssey.Tests.PlayMode
                 yield return null;
                 click.Invoke(presenter, new object[] { head });
 
-                for (int i = 0; i < 10; i++) yield return null;
+                float until = Time.realtimeSinceStartup + 3f;
+                while (Time.realtimeSinceStartup < until && boot.World.Views.Current.Stores.Length == 0)
+                    yield return null;
 
                 int stores = boot.World.Views.Current.Stores.Length;
                 Debug.Log($"[StockpileDrag] click {anchor} then {head}: {stores} stockpile cells published");

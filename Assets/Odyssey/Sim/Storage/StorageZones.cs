@@ -347,7 +347,18 @@ namespace Odyssey.Sim.Storage
         void Mark(int index)
         {
             if (_chunks == null) return;
-            _chunks.MarkDirty(_grid.Size.FromIndex(index));
+            CellRef cell = _grid.Size.FromIndex(index);
+            _chunks.MarkDirty(cell);
+
+            // **And the layer below, which is where the wash is drawn on natural ground.** A
+            // store's cell there is the air over the ground (StoreCellOf), but the ground's top
+            // face is meshed by the terrain cell under it, which washes itself when the cell
+            // above is stored (WorldRenderModel.IsStoredAbove) — a different chunk, because a
+            // chunk is one layer. Marking only the store's own chunk was enough while one mark
+            // re-meshed the whole board; since chunks keep their own versions (2026-09-21) it
+            // left every stockpile on grass undrawn (owner, 2026-09-23: "There is no visual to
+            // the stockpile"). docs/bug-patterns.md P15.
+            if (cell.Y > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z, cell.Y - 1));
         }
 
         // ---- the intent seam ---------------------------------------------------------------------

@@ -255,10 +255,7 @@ namespace Odyssey.Presentation.Ui
                 () => _directors?.Research.SetOpen(false), ResearchLayout.Width, ResearchLayout.Height,
                 ResearchLayout.HeaderHeight, out VisualElement header);
 
-            // The Esc cap sits before the X, as the spec draws it.
-            Label esc = HudText.Make("Esc", HudTextRole.Hotkey, ussClass: "cmd__key");
-            esc.style.color = HudTokens.TextFaint;
-            header.Insert(header.childCount - 1, esc);
+            // No Esc cap beside the X (owner, 2026-09-23), the same as the Inventory tab.
 
             _researchPanel.Add(BuildResearchNow());
 
