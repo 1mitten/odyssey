@@ -1,28 +1,29 @@
 #nullable enable
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The fight's own pass over the pawns (design 33 §3, §5): where a swing that has reached its
-    /// wind-up tick is resolved and applied, where a stun and a retaliation run out, where a
-    /// downed animal heals and a downed colonist in a bed does, and where a death is deferred.
-    /// <b>Lane A's file</b> (<c>docs/plans/combat-contracts.md</c>).
+    /// The fight's own pass over the pawns (design 33 §3, §6A): where a swing that has reached the
+    /// end of its wind-up is resolved and applied, where a stun, a swing clock and a retaliation
+    /// run out, and where the hurt heal. <b>Lane A's file</b> (<c>docs/plans/combat-contracts.md</c>).
+    /// The outcome of a blow is applied in <c>CombatSystem.Apply.cs</c>, through one method.
     ///
     /// <para><b>Registered in the Pawns phase at order 25</b> — after the job pipeline (20) has
     /// decided who swings, before movement (30) steps anybody — so a blow is decided against the
     /// positions the jobs saw and lands before anyone walks out of reach.</para>
     ///
-    /// <para><b>An empty tick from the contracts step.</b> Lane A fills it and, per
-    /// <c>docs/process.md</c> §3, states what it scales with here. The shape the design expects is
-    /// "the pawns in a fight, plus one comparison per pawn": a colony at peace should pay a branch
-    /// a pawn and nothing else, which the 20-against-20 row in <c>TickBenchmarkTests</c> will
-    /// measure.</para>
+    /// <para><b>Scales with the pawns on the board, one branch each, plus the swings landing this
+    /// tick and the hurt pawns whose needs interval falls on it.</b> A colony at peace pays four
+    /// integer comparisons a pawn a tick and changes nothing: no field it touches is set, so
+    /// nothing it does reaches the hash, which is why no golden moved. The 20-against-20 row in
+    /// <c>TickBenchmarkTests</c> measures it with a fight on.</para>
     ///
-    /// <para>Not <see cref="Odyssey.Sim.Contracts.IStateHashable"/>: every piece of combat state it
-    /// touches is hashed where it lives — on the pawn (<see cref="Pawn.ContributeTo"/>), in the
-    /// corpse registry and in the edifice damage store.</para>
+    /// <para>Not <see cref="IStateHashable"/>: every piece of combat state it touches is hashed where
+    /// it lives — on the pawn (<see cref="Pawn.ContributeTo"/>), in the corpse registry and in the
+    /// edifice damage store.</para>
     /// </summary>
-    public class CombatSystem : IWorldSystem
+    public partial class CombatSystem : IWorldSystem
     {
         readonly PawnContext _ctx;
         readonly JobSystem _jobs;
@@ -50,9 +51,124 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The context the fight reads and writes through: its rules, hooks, log and corpses.</summary>
         public PawnContext Context => _ctx;
 
-        /// <summary>Scales with: nothing, until lane A fills it.</summary>
+        /// <summary>
+        /// Scales with the pawns (one branch each), plus the swings landing and the heals due. The
+        /// list is walked by index and never changes length inside it: a death is deferred.
+        /// </summary>
         public virtual void Tick(SimWorld world)
         {
+            _ctx.Sync(world);
+            int tick = world.CurrentTick;
+            int interval = _ctx.Content.NeedsIntervalTicks;
+
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                Pawn pawn = pawns[i];
+
+                if (pawn.Driver is AttackMeleeJobDriver swing && swing.InWindup) LandOrLose(pawn, swing, tick);
+
+                // The clocks run out: back to nought, so a pawn over its fight carries no combat
+                // state and hashes exactly as it did before it (design 33 §6).
+                if (pawn.StunnedUntilTick != 0 && tick >= pawn.StunnedUntilTick) pawn.StunnedUntilTick = 0;
+                if (pawn.NextSwingTick != 0 && tick >= pawn.NextSwingTick
+                    && !(pawn.Driver is AttackMeleeJobDriver { InWindup: true }))
+                    pawn.NextSwingTick = 0;
+                if (pawn.RetaliateAgainst != 0 && tick >= pawn.RetaliateUntilTick)
+                {
+                    pawn.RetaliateAgainst = 0;
+                    pawn.RetaliateUntilTick = 0;
+                }
+
+                // Healing, on the needs cadence and the needs system's own phase spreading, over
+                // the hurt only: a whole pawn costs this one comparison.
+                if (pawn.HpMilli < pawn.HpMaxMilli && interval > 0 && (tick + pawn.Id.Value) % interval == 0)
+                    Heal(pawn, tick, interval);
+            }
+        }
+
+        /// <summary>
+        /// A swing in the air: lost if its attacker is stunned, down or dead (design 33 §5j — a
+        /// stun is a pause for the job, so the wind-up would otherwise wait out the stun and land
+        /// afterwards, which is the swing the stun exists to deny); else, once wound up, resolved
+        /// and applied.
+        /// </summary>
+        void LandOrLose(Pawn attacker, AttackMeleeJobDriver swing, int tick)
+        {
+            if (attacker.StunnedAt(tick) || attacker.Downed || Melee.IsDead(attacker))
+            {
+                swing.EndSwing();
+                return;
+            }
+
+            Armament armament = _ctx.WeaponRules.ArmamentOf(attacker, _ctx);
+            if (!swing.WindupDone(armament)) return;
+            swing.EndSwing();
+
+            Pawn? target = _ctx.Pawns.Get(new PawnId(attacker.CombatTarget));
+            if (target == null) return;
+
+            // Stepped out of reach during the wind-up, or struck down by somebody else before this
+            // blow arrived on a job that stops at that: the blow falls on air.
+            bool whiff = Melee.IsDead(target)
+                || !Melee.InReach(_ctx, attacker, target, attacker.Mode)
+                || (target.Downed && attacker.CurrentJob!.DestCell != AttackMeleeJobDriver.ToTheDeath);
+
+            SwingOutcome outcome = whiff
+                ? new SwingOutcome(CombatEventKind.Miss)
+                : _ctx.MeleeRules.Resolve(attacker, target, armament, _ctx, tick);
+            ApplySwing(attacker, target, armament, outcome, tick);
+        }
+
+        /// <summary>
+        /// One needs interval's healing (design 33 §1): an animal anywhere, at
+        /// <see cref="CombatDef.animalHealPerDay"/>; a colonist only lying in a bed, at
+        /// <see cref="CombatDef.bedHealPerDay"/>; a hostile never — a marauder stays down until it
+        /// is killed. Exact over a day: the fraction a single interval cannot carry is spent by the
+        /// interval index, the way <c>Pawn.RestGainPerInterval</c> spends rest's.
+        /// </summary>
+        void Heal(Pawn pawn, int tick, int interval)
+        {
+            CombatDef combat = _ctx.Content.Combat;
+            int perDay;
+            if (!pawn.IsPerson) perDay = combat.animalHealPerDay;
+            else if (pawn.IsColonist && InBed(pawn)) perDay = combat.bedHealPerDay;
+            else return;
+
+            int day = _ctx.Content.DayTicks;
+            if (perDay <= 0 || day <= 0) return;
+
+            long index = (tick + pawn.Id.Value) / interval;
+            long before = index * perDay * interval / day;
+            long after = (index + 1) * perDay * interval / day;
+            int amount = (int)(after - before);
+            if (amount <= 0) return;
+
+            int hp = pawn.HpMilli + amount;
+            pawn.HpMilli = hp > pawn.HpMaxMilli ? pawn.HpMaxMilli : hp;
+
+            if (pawn.Downed && (long)pawn.HpMilli * 1_000 >= (long)pawn.HpMaxMilli * combat.downedRecoverAtPerMille)
+                Recover(pawn, tick);
+        }
+
+        /// <summary>
+        /// Lying in a bed: down or asleep, on a cell the colony has a bed in. Standing beside one
+        /// is not being in it.
+        /// </summary>
+        bool InBed(Pawn pawn)
+        {
+            if (!pawn.Downed && !pawn.Asleep) return false;
+            var beds = _ctx.Items.Beds;
+            int low = 0, high = beds.Count - 1, cell = pawn.Cell;
+            while (low <= high)
+            {
+                int mid = (low + high) >> 1;
+                int value = beds[mid];
+                if (value == cell) return true;
+                if (value < cell) low = mid + 1;
+                else high = mid - 1;
+            }
+            return false;
         }
     }
 }

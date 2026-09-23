@@ -564,8 +564,14 @@ namespace Odyssey.Sim.Pawns
         /// anybody else, so no undrafted pawn's speed moved and no golden with it. The last factor
         /// in the product, after condition, so a starving colonist runs slower than a well one.
         /// A seam, not a model: the day there is fleeing or an emergency job, it answers here.
+        /// <para>That day is combat's (design 33 §6A): a pawn chasing to strike or running from a
+        /// blow runs too, or a hunt at walking pace never closes on a colonist walking away. No
+        /// golden window fights, so no golden moved.</para>
         /// </summary>
-        public virtual int UrgencyPerMille() => Drafted ? Content.Movement.draftedPacePerMille : 1_000;
+        public virtual int UrgencyPerMille() =>
+            Drafted || (CurrentJob != null && (CurrentJob.DefIndex == JobIndex.AttackMelee || CurrentJob.DefIndex == JobIndex.Flee))
+                ? Content.Movement.draftedPacePerMille
+                : 1_000;
 
         /// <summary>
         /// The pace this colonist was dealt, per mille of the standard walk, rolled once from
