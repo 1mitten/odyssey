@@ -27,6 +27,10 @@ namespace Odyssey.Sim.Pawns
             if (pawn.Drafted == want) return IntentRejection.AlreadyInThatState;
             if (want && pawn.IsBroken) return IntentRejection.NotPermitted;
 
+            // Spent: the hold would let go on its first tick and she would lie down again, so the
+            // key would wake a collapsed colonist for one frame and do nothing else (design 33 §2b).
+            if (want && pawn.Needs[NeedIndex.Rest] <= 0) return IntentRejection.NotPermitted;
+
             SetDrafted(pawn, want, IntentTick);
             return IntentRejection.None;
         }
@@ -56,9 +60,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// <c>OrderMove(cell, A = pawn)</c>: walk there and hold (design 33 §2d).
         ///
-        /// <para>The clicked cell is lifted to where a colonist would stand in that column — the
-        /// debug spawn's rule, because a click names the ground and a colonist stands on it — and
-        /// must be reachable. Only a drafted colonist takes the order, as in the reference: a
+        /// <para>The clicked cell is lifted to where a colonist would stand on it
+        /// (<see cref="StandAt"/>), because a click names the ground and a colonist stands on it —
+        /// and must be reachable. Only a drafted colonist takes the order, as in the reference: a
         /// right-click on an undrafted colonist's behalf is not a gesture this build gives a
         /// meaning. A colonist sent where another drafted colonist already stands or is going is
         /// spread to the nearest free cell beside it (<see cref="Spread"/>).</para>
@@ -71,7 +75,7 @@ namespace Odyssey.Sim.Pawns
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
-            int dest = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
+            int dest = StandAt(cell.X, cell.Z, cell.Y);
             if (dest < 0 || !_ctx.Reachable(pawn, dest, TraverseMode.Colonist)) return IntentRejection.NotPermitted;
             dest = Spread(pawn, dest);
 
@@ -149,9 +153,8 @@ namespace Odyssey.Sim.Pawns
                 int x = at.X + dx, z = at.Z + dz;
                 if (!size.Contains(x, z, at.Y)) continue;
 
-                int cell = _ctx.Cells.NearestWalkableInColumn(x, z, at.Y);
-                if (cell < 0 || System.Math.Abs(size.FromIndex(cell).Y - at.Y) > 1) continue;
-                if (Taken(pawn, cell)) continue;
+                int cell = StandAt(x, z, at.Y);
+                if (cell < 0 || Taken(pawn, cell)) continue;
                 if (!_ctx.Reachable(pawn, cell, TraverseMode.Colonist)) continue;
                 return cell;
             }
@@ -159,7 +162,32 @@ namespace Odyssey.Sim.Pawns
             return want;
         }
 
-        /// <summary>Is another drafted colonist standing on this cell, or on its way to it?</summary>
+        /// <summary>
+        /// Where a colonist stands for a click on <c>(x, z, y)</c>: that cell if a colonist can
+        /// stand in it, else the one above — the click named the block and she stands on top of it
+        /// — else the one below, for a click on the air over a lower terrace. Never further.
+        ///
+        /// <para><b>Not <c>NearestWalkableInColumn</c></b>, which the first version used: it looks
+        /// down before up at every distance, so a click on the ground over a cavern sent the
+        /// colonist into the cavern, and a column with nothing near the click sent her wherever
+        /// the column did have a floor, any number of layers away. The debug spawn wants that
+        /// search; an order wants the surface the player pointed at, or a refusal.</para>
+        /// </summary>
+        int StandAt(int x, int z, int y)
+        {
+            GridSize size = _ctx.Size;
+            if (!size.Contains(x, z, y)) return -1;
+
+            int cell = size.Index(x, z, y);
+            if (_ctx.Cells.IsWalkable(cell)) return cell;
+            if (y + 1 < size.SizeY && _ctx.Cells.IsWalkable(cell + size.LayerStride)) return cell + size.LayerStride;
+            if (y > 0 && _ctx.Cells.IsWalkable(cell - size.LayerStride)) return cell - size.LayerStride;
+            return -1;
+        }
+
+        /// <summary>
+        /// Is another drafted colonist standing on this cell, landing on it, or on its way to it?
+        /// </summary>
         bool Taken(Pawn pawn, int cell)
         {
             var pawns = _ctx.Pawns.All;
@@ -167,6 +195,7 @@ namespace Odyssey.Sim.Pawns
             {
                 Pawn other = pawns[i];
                 if (other == pawn || !other.Drafted) continue;
+                if (other.FinishingStepTo == cell) return true;
                 Job? job = other.CurrentJob;
                 if (job != null && job.DefIndex == JobIndex.Goto)
                 {

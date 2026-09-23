@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.World;
 
 namespace Odyssey.Tests.Sim
 {
@@ -276,6 +277,82 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(firstNew, Is.EqualTo(into), "the step in progress was thrown away");
             Assert.That(pawn.FinishingStepTo, Is.EqualTo(-1), "the kept step outlived its landing");
+        }
+
+        /// <summary>
+        /// A click names the ground block, and the order means the surface on top of it — even
+        /// with a cavern under it. The first version lifted the click with the debug spawn's
+        /// column search, which looks down before up, so it found the cavern, found it
+        /// unreachable and refused the order: a right-click on any ground over a hollow did
+        /// nothing at all.
+        /// </summary>
+        [Test]
+        public void AClickOnGroundOverACavernSendsHerToTheSurface()
+        {
+            var colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            Draft(colony, pawn);
+            colony.World.Tick(200);
+
+            int surface = CellEast(colony, pawn, 5);
+            CellRef at = Size.FromIndex(surface);
+            Assume.That(at.Y, Is.GreaterThanOrEqualTo(3), "no room for a cavern under this board");
+            int ground = Size.Index(at.X, at.Z, at.Y - 1);
+            int hollow = Size.Index(at.X, at.Z, at.Y - 2);
+            Assume.That(colony.Grid.IsSolidTerrain(ground) && colony.Grid.IsSolidTerrain(hollow));
+
+            // Hollow out the block under the ground: a sealed pocket with a floor, which the
+            // debug spawn's search would find first.
+            colony.Grid.Flags[hollow] &= ~CellFlags.SolidTerrain;
+            colony.Pawns.Nav.MarkDirty(hollow);
+            colony.RebuildDerived();
+            Assume.That(colony.Grid.IsWalkable(hollow), "the pocket is not standable, so it tests nothing");
+
+            Assert.That(Send(colony, new Intent(IntentKind.OrderMove, Size.FromIndex(ground), pawn.Id.Value)),
+                Is.EqualTo(IntentRejection.None), "a click on the ground over a hollow was refused");
+            Assert.That(pawn.CurrentJob!.TargetCell, Is.EqualTo(surface), "sent somewhere other than the surface clicked");
+        }
+
+        [Test]
+        public void AColonistWithNoRestLeftCannotBeDrafted()
+        {
+            var colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            pawn.Needs[NeedIndex.Rest] = 0;
+            Assert.That(Draft(colony, pawn), Is.EqualTo(IntentRejection.NotPermitted));
+            Assert.That(pawn.Drafted, Is.False);
+        }
+
+        /// <summary>
+        /// Released mid-step, she lands the step before her next job does anything — whatever that
+        /// job is. The kept step is held by the job loop for every driver, not by the walk toil,
+        /// because a job that begins by lying down or working where she stands never walks.
+        /// </summary>
+        [Test]
+        public void ReleasedMidStepSheLandsTheStepBeforeTheNextJobActs()
+        {
+            var colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            Draft(colony, pawn);
+            colony.World.Tick(60);
+            Move(colony, pawn, CellEast(colony, pawn, 8));
+            for (int t = 0; t < 400 && !(pawn.HasPath && pawn.MoveProgress > 0); t++) colony.World.Tick();
+            Assume.That(pawn.HasPath && pawn.MoveProgress > 0, "never caught her mid-step");
+
+            int from = pawn.Cell;
+            int into = pawn.Path[pawn.PathIndex];
+
+            // Spent, so the job she is given the moment she is released is a collapse where she
+            // stands — a job with no walk in it at all.
+            pawn.Needs[NeedIndex.Rest] = 0;
+            Assert.That(Draft(colony, pawn, on: false), Is.EqualTo(IntentRejection.None));
+
+            for (int t = 0; t < 400 && pawn.Cell == from; t++)
+            {
+                Assert.That(pawn.Asleep, Is.False, "she lay down part way through a step");
+                colony.World.Tick();
+            }
+            Assert.That(pawn.Cell, Is.EqualTo(into), "the step in progress was not landed");
         }
 
         // ---- the record ----------------------------------------------------------------------

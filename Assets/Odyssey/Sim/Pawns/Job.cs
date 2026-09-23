@@ -437,14 +437,6 @@ namespace Odyssey.Sim.Pawns
         {
             if (dest < 0) return JobStatus.Failed;
 
-            // An interrupted colonist lands the step it was part way through before this walk
-            // plans anything (design 33 §2d): planning now would clear that step and snap the
-            // figure back to the cell it was leaving. Never true for a pawn nobody interrupted.
-            if (Pawn.FinishingStepTo >= 0)
-            {
-                if (Pawn.HasPath && Pawn.Cell != Pawn.FinishingStepTo) return JobStatus.Ongoing;
-                Pawn.FinishingStepTo = -1;
-            }
 
             if (Pawn.Cell == dest)
             {

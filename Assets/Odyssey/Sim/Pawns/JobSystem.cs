@@ -311,6 +311,18 @@ namespace Odyssey.Sim.Pawns
                 }
             }
 
+            // An interrupted colonist lands the step she was part way through before her job does
+            // anything at all (design 33 §2d). Held here, for every driver, rather than in the walk
+            // toil: a job whose first toil is not a walk — lying down where she stands, working
+            // the stance she happens to be on — would otherwise start while the figure was still
+            // stepping away. The mover clears the mark on arrival; this is the backstop for a
+            // step that was dropped by something else.
+            if (pawn.FinishingStepTo >= 0)
+            {
+                if (pawn.HasPath && pawn.Cell != pawn.FinishingStepTo) return;
+                pawn.FinishingStepTo = -1;
+            }
+
             if (pawn.CurrentJob != null)
             {
                 var def = _ctx.Content.Jobs[pawn.CurrentJob.DefIndex];
