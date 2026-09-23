@@ -830,9 +830,29 @@ namespace Odyssey.Presentation.World
             renderer.sharedMaterials = materials;
         }
 
-        /// <summary>Hand a lent figure back to the pool, parked and at rest.</summary>
+        /// <summary>
+        /// Draw a lent figure or not, for a fall on a layer the slice shows or hides. Its renderers
+        /// are forced off rather than the object put away, because a bake reads only the parts
+        /// that are active and enabled, and an animator put away mid-fall would stop posing.
+        /// </summary>
+        public void ShowCorpse(CorpseLoan loan, bool shown)
+        {
+            if ((uint)loan.Index >= (uint)_figures.Count) return;
+            Figure figure = _figures[loan.Index];
+            if (figure.CorpseHidden == !shown) return;
+            figure.CorpseHidden = !shown;
+            foreach (Renderer renderer in figure.GameObject.GetComponentsInChildren<Renderer>(includeInactive: true))
+                renderer.forceRenderingOff = !shown;
+        }
+
+        /// <summary>
+        /// Hand a lent figure back to the pool, parked and at rest. A loan outliving its director —
+        /// a session torn down mid-fall — has nothing to hand back to and is let go.
+        /// </summary>
         public void ReturnCorpse(CorpseLoan loan)
         {
+            if ((uint)loan.Index >= (uint)_figures.Count) return;
+            ShowCorpse(loan, true);
             Figure figure = _figures[loan.Index];
             figure.Borrowed = false;
             figure.Pawn = -1;

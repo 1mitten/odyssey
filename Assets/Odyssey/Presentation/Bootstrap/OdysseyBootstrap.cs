@@ -1436,7 +1436,9 @@ namespace Odyssey.Presentation.Bootstrap
             // then the moments since last frame, handed on once each, and the words they float.
             DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
             _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
-            _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio);
+            _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
+                Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue)),
+                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
@@ -3390,9 +3392,12 @@ namespace Odyssey.Presentation.Bootstrap
             }
             _audio?.Dispose();
             _daylight?.Dispose();
+            // The corpses before the figures: a body still falling hands its lent figure back as
+            // it goes, and after the figures that indexed a cleared list and threw out of the
+            // teardown, which a pause on a death and a load reached (review, 2026-09-23).
+            _corpses?.Dispose();
             _figures?.Dispose();
             _doors?.Dispose();
-            _corpses?.Dispose();
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
 

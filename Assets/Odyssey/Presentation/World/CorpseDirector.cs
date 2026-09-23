@@ -26,9 +26,14 @@ namespace Odyssey.Presentation.World
     /// <para><b>A corpse that cannot be drawn as a body</b> — no art for its face on this machine —
     /// is a grey capsule lying along the way it fell, which is what the runner draws.</para>
     ///
+    /// <para><b>A pawn killed where it lay downed is found lying</b>, not stood up to fall again:
+    /// the director keeps last frame's downed pawns, because the frame that carries the corpse no
+    /// longer carries the pawn.</para>
+    ///
     /// <para><b>Per-frame cost scales with the corpses on the board</b> (<c>docs/process.md</c> §3),
     /// which a colony counts on its fingers: one visibility test each, and a pose and an evaluate
-    /// for the few still falling.</para>
+    /// for the few still falling — <b>and with the pawns</b>, for one flag test each to remember
+    /// which are down.</para>
     /// </summary>
     public sealed class CorpseDirector : IDisposable
     {
@@ -61,6 +66,10 @@ namespace Odyssey.Presentation.World
             public bool Marker;
             public bool Visible = true;
         }
+
+        // The pawns down in the last frame and in this one, swapped each frame.
+        HashSet<int> _downedBefore = new HashSet<int>();
+        HashSet<int> _downedNow = new HashSet<int>();
 
         readonly Dictionary<int, Body> _bodies = new Dictionary<int, Body>();
         readonly List<int> _gone = new List<int>();
@@ -117,14 +126,23 @@ namespace Odyssey.Presentation.World
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
             int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
 
+            _downedNow.Clear();
+            ReadOnlySpan<PawnView> pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+                if (pawns[i].IsDowned) _downedNow.Add(pawns[i].Id.Value);
+
             ReadOnlySpan<CorpseView> corpses = snapshot.Corpses;
             for (int i = 0; i < corpses.Length; i++)
             {
                 CorpseView corpse = corpses[i];
+                bool visible = corpse.Cell.Y >= lowest && corpse.Cell.Y <= highest;
                 if (!_bodies.TryGetValue(corpse.Id, out Body? body))
                 {
-                    bool fresh = _seenAFrame && snapshot.Running && snapshot.Tick - corpse.Tick <= FreshTicks;
-                    body = Start(corpse, fresh);
+                    // Killed where it lay: it is already on the ground, so it is found lying
+                    // rather than stood up to fall a second time (review, 2026-09-23).
+                    bool fresh = _seenAFrame && snapshot.Running && snapshot.Tick - corpse.Tick <= FreshTicks
+                        && !_downedBefore.Contains(corpse.Pawn.Value);
+                    body = Start(corpse, fresh, visible);
                     _bodies[corpse.Id] = body;
                 }
                 body.Stamp = _stamp;
@@ -136,13 +154,16 @@ namespace Odyssey.Presentation.World
                     if (body.Seconds >= body.Loan.DyingSeconds) Finish(body);
                 }
 
-                bool visible = corpse.Cell.Y >= lowest && corpse.Cell.Y <= highest;
                 if (visible != body.Visible || body.Object != null && body.Object.activeSelf != visible)
                 {
                     body.Visible = visible;
                     if (body.Object != null) body.Object.SetActive(visible);
                 }
+                // A fall on a layer the slice does not draw is not drawn either.
+                if (body.Loan != null) _figures!.ShowCorpse(body.Loan, visible);
             }
+
+            (_downedBefore, _downedNow) = (_downedNow, _downedBefore);
 
             _gone.Clear();
             foreach (KeyValuePair<int, Body> pair in _bodies)
@@ -156,12 +177,13 @@ namespace Odyssey.Presentation.World
             _seenAFrame = true;
         }
 
-        Body Start(in CorpseView corpse, bool fresh)
+        Body Start(in CorpseView corpse, bool fresh, bool visible)
         {
             var body = new Body
             {
                 Id = corpse.Id,
                 Cell = corpse.Cell,
+                Visible = visible,
                 Floor = GroundRelief.Lift(CellMetrics.FloorCentre(corpse.Cell)),
                 Yaw = CombatPose.YawOfFacing(corpse.Facing),
             };
@@ -196,8 +218,10 @@ namespace Odyssey.Presentation.World
             body.Object = _figures!.BakeCorpse(loan, _root, _layer, body.Meshes);
             _figures.ReturnCorpse(loan);
             body.Loan = null;
-            body.Object.SetActive(body.Visible);
+            // Measured while it is active: an inactive renderer's bounds are an empty box at the
+            // origin, which the click missed and the cursor bracketed (review, 2026-09-23).
             body.Box = BoundsOf(body.Object);
+            body.Object.SetActive(body.Visible);
         }
 
         void MakeMarker(Body body, bool animal)

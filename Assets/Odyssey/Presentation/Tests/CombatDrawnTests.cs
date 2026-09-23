@@ -697,5 +697,187 @@ namespace Odyssey.Tests.Presentation
             Assert.That((fill - start).magnitude, Is.EqualTo(CombatMarks.BarWidth * 0.25f).Within(1e-5f));
 
         }
+
+        // ---- The review's corpse and floater faults (2026-09-23) -----------------------------------
+
+        /// <summary>A frame of a running world, which is what a fall is seen in.</summary>
+        static WorldSnapshot Running(int tick, params PawnView[] pawns)
+        {
+            var snapshot = new WorldSnapshot();
+            snapshot.BeginWrite(tick, new GridSize(12, 12, 4), 0, gameSpeed: 1);
+            foreach (PawnView pawn in pawns) snapshot.AddPawn(pawn);
+            return snapshot;
+        }
+
+        /// <summary>A hog: its row is the project's own art, so these run on the runner too.</summary>
+        static PawnView Hog(int id, int x, int z, int y = 0, PawnFlags flags = PawnFlags.None) =>
+            new PawnView(new PawnId(id), new CellRef(x, z, y), 800, 800, 600, JobHandle.Wait, kind: 1, flags: flags);
+
+        static CorpseView HogCorpse(int id, int pawn, int x, int z, int y, int tick) =>
+            new CorpseView(id, new PawnId(pawn), 1, 11u, new CellRef(x, z, y), tick, 2, PawnFlags.None);
+
+        /// <summary>Renderers under <paramref name="root"/> that would draw this frame.</summary>
+        static int Drawn(GameObject root)
+        {
+            int n = 0;
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(includeInactive: false))
+                if (renderer.enabled && !renderer.forceRenderingOff) n++;
+            return n;
+        }
+
+        /// <summary>
+        /// Putting a session down while a body is still falling does not throw. The bootstrap
+        /// disposed the figures before the corpses, and handing the lent figure back then indexed
+        /// a cleared list — so pausing on a death and loading threw out of <c>TeardownSession</c>
+        /// and left a half-torn session. The order is fixed there; this is the guard beneath it, a
+        /// loan handed back to a director that has already let its figures go.
+        /// </summary>
+        [Test]
+        public void AFallCutShortByATeardownHandsItsFigureBackQuietly()
+        {
+            var world = new RenderTestWorld(8, 8, 3);
+            var parent = new GameObject("corpses");
+            PawnFigureDirector? figures = null;
+            CorpseDirector? corpses = null;
+            try
+            {
+                figures = new PawnFigureDirector(Catalogue(), parent.transform, 0);
+                corpses = new CorpseDirector(world.Model, null, figures, parent.transform, 0);
+                CorpseView corpse = HogCorpse(3, 12, 2, 2, 0, 1_000);
+                Assume.That(figures.CanDrawCorpse(corpse), Is.True, "the hog's row resolves");
+
+                corpses.Sync(Running(990), 0, new SliceSettings(), 1f / 60f);
+                WorldSnapshot frame = Running(1_000);
+                frame.AddCorpse(corpse);
+                corpses.Sync(frame, 0, new SliceSettings(), 1f / 60f);
+                Assert.That(corpses.Falling, Is.EqualTo(1), "the control: a fresh death is seen falling");
+
+                figures.Dispose();
+                CorpseDirector falling = corpses;
+                Assert.DoesNotThrow(() => falling.Dispose(), "a fall cut short by the teardown threw");
+                corpses = null;
+            }
+            finally
+            {
+                corpses?.Dispose();
+                figures?.Dispose();
+                Object.DestroyImmediate(parent);
+            }
+        }
+
+        /// <summary>
+        /// A pawn killed where it lay downed is not stood back up to fall again: its body is baked
+        /// lying at once. The control is a pawn killed on its feet in the same frame, which falls.
+        /// Before the fix both fell, from standing (review, 2026-09-23).
+        /// </summary>
+        [Test]
+        public void APawnKilledWhileDownIsFoundLyingAndOneKilledStandingFalls()
+        {
+            var world = new RenderTestWorld(8, 8, 3);
+            var parent = new GameObject("corpses");
+            PawnFigureDirector? figures = null;
+            CorpseDirector? corpses = null;
+            try
+            {
+                figures = new PawnFigureDirector(Catalogue(), parent.transform, 0);
+                corpses = new CorpseDirector(world.Model, null, figures, parent.transform, 0);
+                CorpseView down = HogCorpse(3, 12, 2, 2, 0, 1_000), standing = HogCorpse(4, 13, 5, 5, 0, 1_000);
+                Assume.That(figures.CanDrawCorpse(down), Is.True, "the hog's row resolves");
+
+                corpses.Sync(Running(999, Hog(12, 2, 2, flags: PawnFlags.Downed), Hog(13, 5, 5)), 0, new SliceSettings(), 1f / 60f);
+                WorldSnapshot frame = Running(1_000);
+                frame.AddCorpse(down);
+                frame.AddCorpse(standing);
+                corpses.Sync(frame, 0, new SliceSettings(), 1f / 60f);
+
+                Assert.That(corpses.Count, Is.EqualTo(2));
+                Assert.That(corpses.Falling, Is.EqualTo(1), "the one killed standing falls; the one killed lying does not");
+                Assert.That(corpses.TryGetBox(3, out Bounds box), Is.True);
+                Assert.That(box.size.y, Is.LessThan(1.2f), $"the downed one lies at once: {box.size}");
+            }
+            finally
+            {
+                corpses?.Dispose();
+                figures?.Dispose();
+                Object.DestroyImmediate(parent);
+            }
+        }
+
+        /// <summary>
+        /// A body falling on a layer that is not drawn is not drawn, and one that finishes its fall
+        /// there is found where it lies once the layer is drawn again. Before the fix the lent
+        /// figure fell in full view on a hidden layer, and a body baked while hidden measured the
+        /// bounds of inactive renderers — a zero box at the world's origin, so the click missed it
+        /// and the cursor bracketed the origin (review, 2026-09-23).
+        /// </summary>
+        [Test]
+        public void ABodyFallingOnAHiddenLayerIsHiddenAndIsFoundWhereItLies()
+        {
+            var world = new RenderTestWorld(8, 8, 3);
+            var parent = new GameObject("corpses");
+            PawnFigureDirector? figures = null;
+            CorpseDirector? corpses = null;
+            try
+            {
+                figures = new PawnFigureDirector(Catalogue(), parent.transform, 0);
+                corpses = new CorpseDirector(world.Model, null, figures, parent.transform, 0);
+                var cell = new CellRef(2, 2, 0);
+                CorpseView corpse = HogCorpse(3, 12, cell.X, cell.Z, cell.Y, 1_000);
+                Assume.That(figures.CanDrawCorpse(corpse), Is.True, "the hog's row resolves");
+
+                // Layer 2 active with nothing drawn below it: the corpse's layer 0 is not drawn.
+                var hidden = new SliceSettings { below = BelowMode.Hide };
+                var shown = new SliceSettings();
+                corpses.Sync(Running(990), 2, hidden, 1f / 60f);
+                WorldSnapshot frame = Running(1_000);
+                frame.AddCorpse(corpse);
+
+                corpses.Sync(frame, 0, shown, 1f / 60f);
+                Assume.That(corpses.Falling, Is.EqualTo(1), "a fresh death is seen falling");
+                Assert.That(Drawn(parent), Is.GreaterThan(0), "the control: a fall on a drawn layer is drawn");
+
+                corpses.Sync(frame, 2, hidden, 1f / 60f);
+                Assert.That(Drawn(parent), Is.Zero, "a body falling on a hidden layer was drawn");
+
+                for (int i = 0; i < 20 && corpses.Falling > 0; i++) corpses.Sync(frame, 2, hidden, 0.25f);
+                Assert.That(corpses.Falling, Is.Zero, "the fall never finished");
+                Assert.That(Drawn(parent), Is.Zero, "a body baked on a hidden layer was drawn");
+
+                corpses.Sync(frame, 0, shown, 1f / 60f);
+                Assert.That(Drawn(parent), Is.GreaterThan(0), "the body is drawn once its layer is");
+                Assert.That(corpses.TryGetBox(3, out Bounds box), Is.True);
+                Vector3 floor = CellMetrics.FloorCentre(cell);
+                Assert.That(new Vector2(box.center.x - floor.x, box.center.z - floor.z).magnitude, Is.LessThan(CellMetrics.SizeXZ),
+                    $"its box is where it lies: {box.center} against the cell at {floor}");
+                Assert.That(box.size.magnitude, Is.GreaterThan(0.3f), $"and has a size: {box.size}");
+            }
+            finally
+            {
+                corpses?.Dispose();
+                figures?.Dispose();
+                Object.DestroyImmediate(parent);
+            }
+        }
+
+        /// <summary>
+        /// A word floats only over a fight on a drawn layer, as the health bars do; the fight is
+        /// still handed on (the figures and the sound take every event). Before the fix a fight
+        /// three layers down floated "Miss" over the grass above it (review, 2026-09-23).
+        /// </summary>
+        [Test]
+        public void AFightOffTheDrawnLayersFloatsNoWords()
+        {
+            var feedback = new CombatFeedback();
+            object world = new object();
+            feedback.Consume(Events(1), world, null, null);
+
+            // The events are on layer 0; draw layers 1 to 3.
+            feedback.Consume(Events(1, 2), world, null, null, lowestLayer: 1, highestLayer: 3);
+            Assert.That(feedback.Handled, Is.EqualTo(1), "the event is still handed on");
+            Assert.That(feedback.Floaters.Alive.Count, Is.Zero, "a word floated over a fight nobody can see");
+
+            feedback.Consume(Events(1, 2, 3), world, null, null, lowestLayer: 0, highestLayer: 3);
+            Assert.That(feedback.Floaters.Alive.Count, Is.EqualTo(1), "the control: a fight on a drawn layer floats its word");
+        }
     }
 }

@@ -25,7 +25,10 @@ namespace Odyssey.Presentation.Bootstrap
     /// <para><b>Where each event goes</b> (<see cref="Handle"/>): to the figures, which draw the
     /// swing's timing and the reactions (<see cref="PawnFigureDirector.OnCombatEvent"/>); to the
     /// sound (<see cref="SoundIds.ForCombat"/>), from where it happened; and to the floating words,
-    /// whose text and ink are <see cref="CombatFeedbackModel"/>'s.</para>
+    /// whose text and ink are <see cref="CombatFeedbackModel"/>'s. <b>A word floats only over a
+    /// fight on a drawn layer</b>, as the health bars do: the overlay draws above the whole world,
+    /// so a fight in a cave below or above the cut-away would otherwise float its words over
+    /// whatever hides it (review, 2026-09-23). The figures and the sound take every event.</para>
     ///
     /// <para><b>Per-frame cost scales with the events since the last frame</b>, at most the
     /// published tail of <see cref="CombatEventView.PublishedTail"/>, and never with the colony.</para>
@@ -53,7 +56,10 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>Raised once for every event handed on, after it has been routed. For tests and diagnostics.</summary>
         public event Action<CombatEventView>? Handed;
 
-        public void Consume(WorldSnapshot snapshot, object? world, PawnFigureDirector? figures, AudioDirector? audio)
+        /// <param name="lowestLayer">The lowest layer drawn; a word below it is not floated.</param>
+        /// <param name="highestLayer">The highest layer drawn; a word above it is not floated.</param>
+        public void Consume(WorldSnapshot snapshot, object? world, PawnFigureDirector? figures, AudioDirector? audio,
+            int lowestLayer = int.MinValue, int highestLayer = int.MaxValue)
         {
             var events = snapshot.CombatEvents;
             if (!ReferenceEquals(world, _world))
@@ -68,7 +74,7 @@ namespace Odyssey.Presentation.Bootstrap
             for (int i = 0; i < events.Length; i++)
             {
                 if (events[i].Id <= _watermark) continue;
-                Handle(events[i], snapshot, figures, audio);
+                Handle(events[i], snapshot, figures, audio, lowestLayer, highestLayer);
                 _watermark = events[i].Id;
                 Handled++;
             }
@@ -76,17 +82,17 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>One new event: the figures, the sound, the floating word.</summary>
         void Handle(in CombatEventView combatEvent, WorldSnapshot snapshot, PawnFigureDirector? figures,
-            AudioDirector? audio)
+            AudioDirector? audio, int lowestLayer, int highestLayer)
         {
             figures?.OnCombatEvent(combatEvent);
 
-            Vector3 at = WhereOf(combatEvent, snapshot, figures, out float height);
+            Vector3 at = WhereOf(combatEvent, snapshot, figures, out float height, out int layer);
 
             string? sound = SoundIds.ForCombat(combatEvent.Kind);
             if (sound != null) audio?.PlayOneShot(sound, at + Vector3.up * (height * 0.5f));
 
             string text = CombatFeedbackModel.FloatingText(combatEvent);
-            if (text.Length > 0)
+            if (text.Length > 0 && layer >= lowestLayer && layer <= highestLayer)
                 Floaters.Add(text, CombatFeedbackModel.FloatingColour(combatEvent), at + Vector3.up * height,
                     CombatFeedbackModel.FloatingSeconds(combatEvent));
 
@@ -96,16 +102,19 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>
         /// Where a moment happened, at the feet of whoever it happened to: the struck pawn's drawn
         /// figure where it has one, else its cell, else the event's own cell. A swing is heard from
-        /// the swinger. <paramref name="height"/> is how tall the pawn is drawn, for the word.
+        /// the swinger. <paramref name="height"/> is how tall the pawn is drawn, for the word, and
+        /// <paramref name="layer"/> the layer it happened on.
         /// </summary>
         static Vector3 WhereOf(in CombatEventView combatEvent, WorldSnapshot snapshot, PawnFigureDirector? figures,
-            out float height)
+            out float height, out int layer)
         {
             PawnId who = combatEvent.Kind == CombatEventKind.Swing ? combatEvent.Attacker : combatEvent.Target;
             height = WordLift;
+            layer = combatEvent.Cell.Y;
 
             if (who.IsValid && snapshot.TryGetPawn(who, out PawnView pawn))
             {
+                layer = pawn.Cell.Y;
                 if (pawn.IsAnimal)
                     height = figures != null && figures.TryGetAnimalBox(who, out _, out Vector3 box)
                         ? box.y + 0.4f

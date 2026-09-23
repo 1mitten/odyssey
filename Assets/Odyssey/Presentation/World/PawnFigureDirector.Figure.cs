@@ -81,6 +81,12 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public bool Borrowed;
 
+            /// <summary>
+            /// A lent figure falling on a layer that is not drawn: every renderer under it forced
+            /// off (<see cref="ShowCorpse"/>), undone when it is handed back.
+            /// </summary>
+            public bool CorpseHidden;
+
             /// <summary>The fight as this figure is drawing it: its action, its held states, its clip layer.</summary>
             public CombatState Fight = new CombatState();
 

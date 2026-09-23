@@ -666,8 +666,11 @@ at her. So a vengeful hog, or a colonist who Ctrl-attacked her, is answered by t
     tried first, and it failed: the struck colonist landed the step she was on, which took her out
     of reach; she found nobody beside her and went back to wandering while the marauder beat her
     down (measured).
-- **A marauder** struck by a colonist it was not fighting re-thinks, and its hunt then finds the
-  colonist beside it.
+- **A marauder** struck by a colonist it is not fighting remembers her for `retaliationTicks`, and
+  its hunt prefers her while she stands and can be reached. Chasing somebody else, it is
+  interrupted and turns on her at once; **already trading blows with a colonist beside it, it keeps
+  to her**, and the hitter is next when she goes down (§6F — the first version interrupted every
+  time, which lost the swing in the air and still chose the nearer or lower-id colonist).
 - **A drafted colonist** reacts to nothing here: her hold fights.
 
 ### 6A.7 The one spine edit: a chase runs
@@ -692,6 +695,9 @@ marauder, or a colonist.
 - **`B = 0` stays refused** (C6).
 - The order ends the job in hand through `Interrupt`, names the target on the pawn, and starts a
   forced `Job_AttackMelee`. An order given on a pawn already down is `ToTheDeath`.
+- **The same order again is `AlreadyInThatState`** — the same target, forced, to the same end — and
+  changes nothing (§6F). A confirm-click is sent for every selected drafted colonist, and a restart
+  lost the swing in the air while the pawn's clock still waited out its cooldown.
 
 ### 6A.9 What it costs
 
@@ -1050,3 +1056,36 @@ grip are INVENTED and unseen; a downed pawn past the 64-figure cap is drawn stan
 colonist's click box is the standing one; a corpse always falls through the front death variant;
 swapping weapons draws no put-down of the old one; `PawnKindLabels.Marauder = 3` is a Hud copy of
 `PawnKindIndex.Marauder` with nothing holding the two together.
+
+## 6F. The review (2026-09-23)
+
+Two reviewers read the integrated branch and reported eight faults. All eight were real; each is
+fixed with a test that was seen to fail without the fix. **No golden moved** — no golden window
+fights — and no save format changed: a marauder's retaliation lives in the fields a colonist's
+already uses, which were saved and hashed.
+
+| Fault | What the player saw | Fixed | Test |
+|---|---|---|---|
+| A marauder struck by a second colonist was interrupted, then re-chose the nearest — a tie to the lower id | the swing it had wound up vanished, it waited a whole cooldown, and two colonists could keep it from landing anything; it seldom turned on the one hitting it | `CombatSystem.React` records the hitter on the marauder for `retaliationTicks`; `HostileThinkNode` prefers her; no interrupt while it fights somebody beside it (§6A.6) | `HostileTests.AMarauderChasingSomebodyElseTurnsOnTheColonistWhoHitsIt`, `…InAFightKeepsItsSwingWhenASecondColonistHitsIt` |
+| The same attack order again restarted the job | clicking a target again faster than a wind-up stopped a drafted colonist landing any blow | `AlreadyInThatState` for the order already in hand (§6A.8) | `AttackDriverTests.ARepeatedAttackOrderIsQuietAndKeepsTheSwingInTheAir` |
+| The teardown disposed the figures before the corpses | a death on screen, pause, then Load / New game / Leave to menu threw, and a load left a half-built session | the corpses go first; `ReturnCorpse` lets go of a loan whose director is gone | `CorpseTeardownTests` (PlayMode), `CombatDrawnTests.AFallCutShortByATeardownHandsItsFigureBackQuietly` |
+| A pawn killed while downed played its whole fall from standing | finishing a downed marauder stood the body up and knocked it over again | `CorpseDirector` keeps last frame's downed pawns and bakes theirs lying at once | `CombatDrawnTests.APawnKilledWhileDownIsFoundLyingAndOneKilledStandingFalls` |
+| The corpse pane's cache outlived the selection | click a corpse, a colonist, the same corpse: the corpse wore her name and job | every other subject clears it | `CombatPaneTests.ACorpseChosenAgainAfterSomethingElseIsNamedAgain` |
+| A falling body ignored the slice, and one baked while hidden measured an empty box | a body fell in view on a layer not drawn; afterwards a click missed it and the cursor bracketed the world's origin | the lent figure's renderers are forced off with its layer; the box is measured before the body is hidden | `CombatDrawnTests.ABodyFallingOnAHiddenLayerIsHiddenAndIsFoundWhereItLies` |
+| The floating words ignored the slice | *-7* and *Miss* floated over the grass above a fight in a cave | a word floats only for a fight on a drawn layer, the bars' rule; figures and sound still take every event | `CombatDrawnTests.AFightOffTheDrawnLayersFloatsNoWords` |
+| The pane wrote *colonist*, *hostile*, *animal* as literals | nothing yet; renaming a kind in `icon-keys.csv` would have left the pane on the old word | `Registry.Label(ui.pawn.*)` lower-cased, once, on the living and the corpse pane alike | `RegistryTests.TheInspectPaneWritesNoPawnKindItself` |
+
+**Why a marauder in a fight keeps to it.** The reviewer offered two fixes: turn on every hitter, or
+leave a swing in the air alone. Turning on every hitter makes two colonists either side of a
+marauder swap its target on every blow, and each swap lost a swing — the fault again, by another
+road. So the hitter is remembered, a chase is abandoned for her, and a fight beside somebody is not.
+The attack in reach never re-thinks (§6A.2), so a marauder holds to the colonist in front of it
+until she goes down, and then the hitter is next rather than whoever is nearest.
+
+**A downed pawn's death is read in presentation, not saved.** The corpse could have carried a
+"was down" bit, but it would be saved and hashed state whose only reader is a two-second fall that
+a load never plays. `CorpseDirector` reads it off the frame before — one flag test per pawn a frame.
+
+**`RegistryTests` polices six namespaces, case-sensitively, and still does.** Extending it to
+`ui.pawn.*` would have missed the pane's lower-cased words and caught a GameObject named "Corpse"
+and a USS class "colonist". The new test reads `InspectModel.cs` alone, ignoring case.
