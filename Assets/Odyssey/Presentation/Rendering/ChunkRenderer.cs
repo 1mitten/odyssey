@@ -2570,6 +2570,25 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn++;
         }
 
+        /// <summary>
+        /// A flat ring lying on the ground in the bracket's lit, translucent material — the
+        /// lock-on ring under an attack order's target (design 33 §7b). <paramref name="placement"/>
+        /// carries the drape, the lift and the radius in x and z; the mesh is
+        /// <see cref="PrimitiveMeshes.UnitRing"/>. One submission.
+        /// </summary>
+        public void DrawRing(Matrix4x4 placement, Color colour)
+        {
+            var rp = new RenderParams(BracketMaterial(colour))
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+            if (SubmitToGpu) Graphics.RenderMesh(rp, PrimitiveMeshes.UnitRing, 0, placement);
+            DrawCalls++;
+            InstancesDrawn++;
+        }
+
         /// <summary>Turned 45 degrees about the vertical, then tipped on to a corner.</summary>
         static readonly Quaternion MarkerTurn = Quaternion.Euler(0f, 45f, 0f) * Quaternion.Euler(35.264f, 0f, 45f);
 

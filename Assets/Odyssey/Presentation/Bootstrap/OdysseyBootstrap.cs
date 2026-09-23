@@ -1432,6 +1432,8 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.FlushCellPlates();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
+            // The lock-on ring under whoever the selection is attacking (design 33 §7b).
+            DrawLockOnRings(_world.Views.Current, movePerTick, activeLayer, slice);
             // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
             // then the moments since last frame, handed on once each, and the words they float.
             DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
@@ -2686,6 +2688,116 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
             }
         }
+
+        /// <summary>
+        /// The lock-on ring (design 33 §7b; owner, 2026-09-23: <i>"paints a red transparent circle
+        /// quickly around the selected enemy to indicate that target"</i>): a flat red ring under
+        /// every pawn a selected, drafted colonist is attacking, snapping in from 1.6 times its
+        /// footprint on the frame the order is published. Which targets and how far through the
+        /// animation are <see cref="LockOnRings"/>' — fast-tier tested — and this only finds where
+        /// each target stands and draws. <b>Read off the frame, not the click</b>: a refused order
+        /// publishes no target and draws nothing.
+        ///
+        /// <para>The ring lies <b>draped</b> on the ground under the feet — the relief's tilt from
+        /// <see cref="GroundRelief.Drape"/>, the height from the drawn figure, which is lifted on
+        /// to the same ground — so it neither floats on a slope nor cuts into one. A target that
+        /// dies leaves the frame, so the ring's last place is remembered for its fade. A target
+        /// on a layer the slice does not draw draws no ring, the health bars' rule.</para>
+        ///
+        /// <para>One submission per ring, and at most one ring per target: it scales with the
+        /// fight the selection is in, never with the board. Its opacity is quantised
+        /// (<see cref="LockOnRing.Quantise"/>), so the animation reuses a bounded set of cached
+        /// materials instead of minting one per frame.</para>
+        /// </summary>
+        void DrawLockOnRings(WorldSnapshot snapshot, int movePerTick, int activeLayer, SliceSettings slice)
+        {
+            if (_renderer == null || _model == null) return;
+
+            SelectionDirector? selection = Directors?.Selection;
+            IReadOnlyList<PawnId> selected = selection != null ? selection.Pawns : Array.Empty<PawnId>();
+            _lockOn.Update(snapshot, selected, Time.unscaledTime, _world);
+
+            IReadOnlyList<LockOnRings.Ring> rings = _lockOn.Rings;
+            if (rings.Count == 0)
+            {
+                _ringPlaces.Clear();
+                return;
+            }
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
+
+            for (int i = 0; i < rings.Count; i++)
+            {
+                LockOnRings.Ring ring = rings[i];
+                if (snapshot.TryGetPawn(ring.Target, out PawnView pawn))
+                    _ringPlaces[ring.Target.Value] = RingPlaceOf(in pawn, movePerTick);
+                if (!_ringPlaces.TryGetValue(ring.Target.Value, out RingPlace place)) continue;
+                if (place.Layer < lowest || place.Layer > highest || ring.Alpha <= 0f) continue;
+
+                float radius = place.Radius * ring.Scale;
+                Matrix4x4 at = GroundRelief.Drape(new Vector3(place.Centre.x, 0f, place.Centre.z));
+                at.m13 = place.Centre.y + LockOnRingLift;
+                Color colour = Ui.HudTokens.Convert(OrderColours.Attack.WithAlpha(ring.Alpha));
+                _renderer.DrawRing(at * Matrix4x4.Scale(new Vector3(radius, 1f, radius)), colour);
+            }
+
+            // Forget the places of targets whose rings have gone. The scratch list is reused.
+            if (_ringPlaces.Count <= rings.Count) return;
+            _ringPlacesGone.Clear();
+            foreach (int target in _ringPlaces.Keys)
+            {
+                bool live = false;
+                for (int i = 0; i < rings.Count && !live; i++) live = rings[i].Target.Value == target;
+                if (!live) _ringPlacesGone.Add(target);
+            }
+            for (int i = 0; i < _ringPlacesGone.Count; i++) _ringPlaces.Remove(_ringPlacesGone[i]);
+        }
+
+        /// <summary>
+        /// Where a ring stands under a pawn, and how wide it is at rest: an animal's own drawn box
+        /// (<see cref="PawnFigureDirector.TryGetAnimalBox"/>) centred where the box is, a person
+        /// the colonist cursor's box at the feet, and a person lying down half a body's length.
+        /// </summary>
+        RingPlace RingPlaceOf(in PawnView pawn, int movePerTick)
+        {
+            if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+
+            if (pawn.IsAnimal && _figures != null
+                && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 box, out Vector3 size))
+            {
+                Vector3 middle = box.GetPosition();
+                return new RingPlace(new Vector3(middle.x, feet.y, middle.z),
+                    LockOnRing.FootRadius(size.x, size.z), pawn.Cell.Y);
+            }
+
+            float radius = pawn.IsDowned && pawn.IsPerson
+                ? LockOnRing.DownedRadius
+                : LockOnRing.FootRadius(colonistCursor.x, colonistCursor.z);
+            return new RingPlace(feet, radius, pawn.Cell.Y);
+        }
+
+        readonly struct RingPlace
+        {
+            public readonly Vector3 Centre;
+            public readonly float Radius;
+            public readonly int Layer;
+
+            public RingPlace(Vector3 centre, float radius, int layer)
+            {
+                Centre = centre;
+                Radius = radius;
+                Layer = layer;
+            }
+        }
+
+        readonly LockOnRings _lockOn = new LockOnRings();
+        readonly Dictionary<int, RingPlace> _ringPlaces = new Dictionary<int, RingPlace>();
+        readonly List<int> _ringPlacesGone = new List<int>();
+
+        /// <summary>How far above the ground the ring lies, in metres: clear of the ground mesh, under a boot.</summary>
+        const float LockOnRingLift = 0.02f;
 
         // Who was drafted last frame, and in which world: the draft sound's memory.
         readonly HashSet<int> _draftedLastFrame = new HashSet<int>();
