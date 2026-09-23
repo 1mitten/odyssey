@@ -355,8 +355,14 @@ namespace Odyssey.Tests.PlayMode
                     int pawns = boot.World!.Views.Current.Pawns.Length;
                     float mean = 0f;
                     yield return TimeFrames($"colony/{pawns}", boot, 30, x => mean = x);
+                    // Draw calls beside the frame, because the colonist passes either cost draws
+                    // per person or they do not, and the sweep spans the figure cap -- so the
+                    // control for "what the hair and beard pass costs" is the same run at 64
+                    // figures, where nobody is drawn in the far form at all
+                    // (docs/design/29-modular-colonists.md section 13).
                     Debug.Log($"[FrameTime] colony {pawns} pawns, " +
-                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms");
+                              $"{boot.Figures?.FigureCount ?? 0} figures: {mean:0.00} ms, " +
+                              $"{boot.Renderer?.DrawCalls ?? 0} draw calls");
                 }
             }
             finally

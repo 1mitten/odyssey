@@ -550,8 +550,39 @@ Both tests `Assert.Ignore` when the art did not resolve — the right question i
 resolved, never whether there is a catalogue, because the catalogue is committed and its references
 point into the gitignored folder.
 
-**The frame cost is still not measured**, and the draw-call bound above is *structural* rather than
-measured: `RenderTestWorld` builds its library with no art, so the existing draw-call harness cannot
-reach this pass. Measuring it properly means a harness with the real catalogue and a snapshot of
-pawns past the cap, which is its own small unit. Until then the claim stands on the shape of the
-loop, and that is stated here rather than dressed up as a number.
+### Measured, 2026-09-23
+
+`FrameTimeTests.TheFrameAgainstColonySize` already sweeps a colony from 8 to 384 on the real board,
+which spans the 64-figure cap — so **the control for "what the hair and beard pass costs" is the same
+run at 64 figures**, where nobody is in the far form at all. It now logs draw calls beside the frame.
+
+| Colony | Figures | Frame | Draw calls |
+|---|---|---|---|
+| 8 | 8 | 2.41 ms | 1,125 |
+| 32 | 32 | 3.03 ms | 1,125 |
+| **64** | **64** | **4.04 ms** | **1,125** ← nobody in the far form |
+| 96 | 64 | 5.20 ms | 1,147 |
+| 128 | 64 | 6.47 ms | 1,149 |
+| 192 | 64 | 10.36 ms | 1,151 |
+| 256 | 64 | 15.67 ms | 1,151 |
+| 384 | 64 | 30.35 ms | 1,152 |
+
+**The draw-call claim is now measured rather than structural.** The whole far-form colonist pass —
+bodies, hair and beards together — adds **27 draw calls at most**, and going from 96 to 384 colonists,
+a fourfold colony, adds **five**. Draws scale with the number of distinct *pieces* in use, not with
+the number of people, which is what MC6 was designed to guarantee and what P10 exists to catch.
+
+**The frame does not, and that is not this pass.** The actor pass goes 0.027 ms at 64 figures to
+17.21 ms at 384 — super-linear, and the shape matches the open `PF` finding exactly: `PawnPose.Of`
+scans every other pawn for the crowd sidestep, once per posed pawn, every frame
+(`06-rendering-and-camera.md` §6c.2). Per far colonist this unit adds one matrix multiply, two array
+indices and two array writes — O(1), against roughly **15.6 µs per far pawn** the actor pass already
+costs at that scale. It is noise on top of the thing that actually needs fixing.
+
+**What this means in practice.** At the colony sizes this game is played at, the far form barely
+exists: the figure cap is 64 and the audit's scale target is fifty, so a normal colony never enters
+this path at all. Where it does, it costs draws in pieces and its per-person work is constant.
+
+**Still unmeasured:** the live-figure side. Two extra rigid renderers per figure against a ceiling of
+64 is bounded, but no run isolates it — `Figures` goes 0.102 ms at 8 to 1.526 ms at 64 in the same
+sweep, and none of that is attributed to the attachments specifically.

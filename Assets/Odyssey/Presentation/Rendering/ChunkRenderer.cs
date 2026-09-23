@@ -919,7 +919,11 @@ namespace Odyssey.Presentation.Rendering
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap. Same object, same answer.
-                int variant = Cast.LookFor(snapshot, pawns[i].Id);
+                // Asked once and carried. LookFor is For(...).Look, and the far form needs the
+                // whole appearance for the hair and the beard -- so asking for both cost every
+                // far colonist two snapshot aspect lookups and two dictionary hits a frame.
+                ColonistAppearance look = Cast.For(snapshot, pawns[i].Id);
+                int variant = look.Look;
                 if ((uint)variant >= (uint)_colonistModules.Length) variant = 0;
                 ResolvedModule colonist = ColonistModule(variant);
 
@@ -948,7 +952,6 @@ namespace Odyssey.Presentation.Rendering
                 // past the cap is the person in front of the camera.
                 if (colonist.HasHead)
                 {
-                    ColonistAppearance look = Cast.For(snapshot, pawns[i].Id);
                     Matrix4x4 head = placement * colonist.Head;
                     if (Attachments.Hair(look.HairPiece).Usable)
                         AppendPiece(look.HairPiece, head, _hairPlacements, _hairCounts);
