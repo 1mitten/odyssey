@@ -315,6 +315,7 @@
     <label>heater</label>
     <edifice>16</edifice>
     <blocking>true</blocking>
+    <rotates>true</rotates>
     <needsClearCell>true</needsClearCell>
     <powerDrawW>175</powerDrawW>
     <heatPerPass>1000</heatPerPass>

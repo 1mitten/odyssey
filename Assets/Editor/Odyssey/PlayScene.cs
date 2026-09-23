@@ -1253,19 +1253,23 @@ namespace Odyssey.EditorTools
             });
 
             // Power (design 32 §14, the owner's picks of 2026-09-23). Pack props fitted to their
-            // footprint rather than given a measured scale: the generator into its two cells, the
-            // air-conditioning unit — a heat pump in all but name — into its one, each standing on
-            // the floor with a little clearance to the cell's edge. A clone without the packs
-            // resolves them to nothing and draws the tinted block per cell, as it always did.
+            // footprint rather than given a measured scale. §14c, after the owner found both
+            // standing off their walls with awkward gaps: the generator *fills* its two cells to
+            // 5 cm of every edge, stretched along its length, and the air-conditioning unit — a
+            // heat pump in all but name — stands with its back on the back edge of its cell,
+            // 2.4 m across. A clone without the packs resolves them to nothing and draws the
+            // tinted block per cell, as it always did.
             rows.Add(new ModuleEntry
             {
                 moduleId = ModuleIds.Generator, shape = ModuleShape.Pillar, prefabName = "SM_Prop_Generator_01",
-                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.1f, 4.4f), fitHeight = 2.4f,
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.4f, 4.9f), fitHeight = 2.1f,
+                fitStretch = true,
             });
             rows.Add(new ModuleEntry
             {
                 moduleId = ModuleIds.Heater, shape = ModuleShape.Pillar, prefabName = "SM_Prop_AirConditioningUnit_01",
-                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.0f, 2.0f), fitHeight = 2.2f,
+                centreXZ = true, baseAtY = true, fitFootprint = new Vector2(2.4f, 2.4f), fitHeight = 2.2f,
+                fitAgainstBack = true,
             });
 
             // Street surfaces: the half tiles are exactly one cell square.

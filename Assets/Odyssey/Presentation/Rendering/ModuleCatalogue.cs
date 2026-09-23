@@ -169,8 +169,8 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>
         /// Fit the model into this rectangle, in metres — <c>x</c> across, <c>y</c> along the
-        /// facing — scaled uniformly and turned a quarter if its own long side runs the other way
-        /// (design 32 §14). Zero is off, which every row before power is. It exists because a pack
+        /// facing, the model's own +Z being its front — scaled uniformly unless
+        /// <see cref="fitStretch"/> says otherwise (design 32 §14, §14c). Zero is off, which every row before power is. It exists because a pack
         /// prop is modelled at whatever size its artist chose, and a row that had to carry a
         /// measured scale would be a number nobody could check without opening the editor.
         /// </summary>
@@ -178,6 +178,21 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>With <see cref="fitFootprint"/>: never taller than this, in metres. Zero is no ceiling.</summary>
         public float fitHeight;
+
+        /// <summary>
+        /// With <see cref="fitFootprint"/>: scale each axis on its own so the model <b>fills</b>
+        /// the rectangle and the height, rather than fitting its tightest axis and leaving gaps on
+        /// the other two. For a machine that is two cells long (design 32 §14c): fitted uniformly,
+        /// the generator stood 3.1 m long in 5 m of footprint with a metre of daylight at each end.
+        /// </summary>
+        public bool fitStretch;
+
+        /// <summary>
+        /// With <see cref="fitFootprint"/>: stand the model's back on the back edge of the
+        /// rectangle rather than centring it, so a thing placed beside a wall stands against it
+        /// (design 32 §14c). The back is the model's −Z; its front looks out along the facing.
+        /// </summary>
+        public bool fitAgainstBack;
 
         /// <summary>
         /// Take only the *material* from the prefab and keep the primitive box for the mesh.

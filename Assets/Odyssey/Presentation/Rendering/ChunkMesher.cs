@@ -645,9 +645,12 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificeHeater:
                     if (shape == ModuleShape.Pillar)
                     {
+                        // The generator's facing is where its second cell lies, so it is the
+                        // player's; the heater's is drawing only, and backs on to a wall (§14c).
                         if (_model.EdificeHead(index))
-                            AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone), PropShape.Root(
-                                x, z, y, _model.EdificeFacing(index), def == CoreContent.EdificeGenerator ? 2 : 1));
+                            AddBody(batch, module, TintCode.Stuff(CoreContent.StuffNone), def == CoreContent.EdificeGenerator
+                                ? PropShape.Root(x, z, y, _model.EdificeFacing(index), 2)
+                                : PropShape.Root(x, z, y, _model.BackedFacing(index), 1));
                         return;
                     }
                     break;

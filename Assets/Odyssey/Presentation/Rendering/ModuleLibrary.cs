@@ -416,23 +416,21 @@ namespace Odyssey.Presentation.Rendering
             // rule rather than to each row, or every future walked-on piece has to remember it.
             else if (entry.topAtY) normalise.y = bounds.max.y - CellMetrics.SlabLift;
 
-            // A prop fitted to a footprint (design 32 §14): scaled uniformly into the rectangle and
-            // turned a quarter when its own long side is its X, so the long side runs along the
-            // facing — which is +Z, the way the second cell of a two-cell record lies.
-            float yaw = entry.yaw;
+            // A prop fitted to a footprint (design 32 §14, §14c). The rectangle is across by along
+            // the facing, which is the model's own +Z — the way its front looks and the way the
+            // second cell of a two-cell record lies. No quarter turn is guessed from the model's
+            // proportions any more: that turned the air-conditioning unit side-on to its wall,
+            // and which way a prop's front is is the row's business (its yaw), not its shape's.
             Vector3 scale = SafeScale(entry);
-            if (entry.fitFootprint.x > 0f && entry.fitFootprint.y > 0f && bounds.size.x > 0f && bounds.size.z > 0f)
+            Vector3 offset = entry.offset;
+            if (FitScale(entry, bounds.size, out Vector3 fitted))
             {
-                bool turn = bounds.size.x > bounds.size.z;
-                float along = turn ? bounds.size.x : bounds.size.z;
-                float across = turn ? bounds.size.z : bounds.size.x;
-                float fit = Mathf.Min(entry.fitFootprint.y / along, entry.fitFootprint.x / across);
-                if (entry.fitHeight > 0f && bounds.size.y > 0f) fit = Mathf.Min(fit, entry.fitHeight / bounds.size.y);
-                scale = new Vector3(fit, fit, fit);
-                if (turn) yaw += 90f;
+                scale = fitted;
+                if (entry.fitAgainstBack)
+                    offset.z += BackOffset(entry.fitFootprint.y, bounds.size.z * fitted.z);
             }
 
-            Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, yaw, 0f), scale)
+            Matrix4x4 place = Matrix4x4.TRS(offset, Quaternion.Euler(0f, entry.yaw, 0f), scale)
                               * Matrix4x4.Translate(-normalise);
 
             var parts = new ModulePart[merged.Count];
@@ -715,6 +713,39 @@ namespace Odyssey.Presentation.Rendering
             }
             return null;
         }
+
+        /// <summary>
+        /// The scale that fits a model of this size into a row's <c>fitFootprint</c> and
+        /// <c>fitHeight</c> (design 32 §14c): uniform by its tightest axis, or each axis filled on
+        /// its own when the row says <c>fitStretch</c>. False when the row asks for no fit.
+        /// </summary>
+        public static bool FitScale(ModuleEntry entry, Vector3 size, out Vector3 scale)
+        {
+            scale = Vector3.one;
+            if (entry.fitFootprint.x <= 0f || entry.fitFootprint.y <= 0f || size.x <= 0f || size.z <= 0f)
+                return false;
+
+            float across = entry.fitFootprint.x / size.x;
+            float along = entry.fitFootprint.y / size.z;
+            float up = entry.fitHeight > 0f && size.y > 0f ? entry.fitHeight / size.y : float.PositiveInfinity;
+            if (entry.fitStretch)
+            {
+                // Height takes the across scale when no ceiling is set, so an unbounded row does
+                // not come out flat or a tower.
+                scale = new Vector3(across, float.IsPositiveInfinity(up) ? across : up, along);
+                return true;
+            }
+
+            float fit = Mathf.Min(Mathf.Min(across, along), up);
+            scale = new Vector3(fit, fit, fit);
+            return true;
+        }
+
+        /// <summary>
+        /// How far along +Z a centred model of this fitted depth moves so its back (-Z) stands on
+        /// the back edge of a rectangle this long (design 32 §14c).
+        /// </summary>
+        public static float BackOffset(float length, float depth) => (depth - length) * 0.5f;
 
         /// <summary>A zero scale in a deserialised row would silently delete the module.</summary>
         static Vector3 SafeScale(ModuleEntry entry) =>

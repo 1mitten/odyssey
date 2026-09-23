@@ -45,6 +45,10 @@ the next session learns to ignore.
   player looks for it, or whether they reach for Deconstruct and are surprised it leaves the line.
   And whether **scrap metal is scarce in the right way** — a wrong answer is the wreckage never
   being worth the walk, or ten piles being all the power a colony ever needs.
+  And (§14c) whether **the machines sit flush**: the generator filling both its cells, a heater
+  put beside a wall turning its back to it, R choosing the wall in a corner. A wrong answer is
+  the stretched generator reading as distorted, or the air-conditioner's grille facing the wall
+  (its front was read off the mesh, not seen).
 
 - **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
   debug menu with backtick and press **Skip one month** four times — that is the row this review

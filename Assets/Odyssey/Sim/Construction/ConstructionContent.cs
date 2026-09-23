@@ -590,11 +590,12 @@ namespace Odyssey.Sim.Construction
 
                 // The electric heater (design 32 §7): a-07's 175 W, and 1,000 heat a pass into its
                 // room only while powered and switched on — the campfire's shape behind a gate.
-                // One cell, blocking, wanting a clear cell; 10 stuff and 240 ticks.
+                // One cell, blocking, wanting a clear cell; 10 stuff and 240 ticks. It rotates
+                // (§14c): the facing is drawing only, and backs on to a wall where there is one.
                 new BuildingDef
                 {
                     defName = "Building_Heater", label = "heater", edifice = CoreContent.EdificeHeater,
-                    blocking = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
+                    blocking = true, rotates = true, needsClearCell = true, powerDrawW = 175, heatPerPass = 1_000,
                     costCount = 10, partItem = ItemHandle.Salvage, partCount = 5,
                     workToBuild = 240, minSkill = 0,
                     iconKey = "ui.arch.tool.heater",

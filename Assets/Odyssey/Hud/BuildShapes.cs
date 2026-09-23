@@ -36,7 +36,7 @@ namespace Odyssey.Hud
         /// test still green. <c>BuildShapesAgreeWithTheDefs</c> now walks both tables rather than
         /// spot-checking two rows, which is what would have caught it.</para>
         /// </summary>
-        public static readonly bool[] Rotates = { false, false, false, false, true, true, true, true, false, false, true, false };
+        public static readonly bool[] Rotates = { false, false, false, false, true, true, true, true, false, false, true, true };
 
         /// <summary>
         /// Whether a drag places a <b>line</b> and never widens into a box. Parallel to

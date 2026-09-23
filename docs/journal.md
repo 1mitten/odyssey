@@ -10706,3 +10706,18 @@ One Long-tier run failed `ATickThatDoesNothingAllocatesNextToNothing` once and p
 after it, at the documented 1.6 and 3.3 bytes a tick. Recorded rather than retried away: a
 GC-sensitive figure on a machine running several editors is exactly where a one-off lives, and if
 it comes back, the per-tick allocations of the new power paths are the place to look first.
+
+## 2026-09-23 — Power, third look: the machines stand flush
+
+The owner found the generator and heater standing off their walls "with spacing that is awkward",
+and that neither would turn. Measured rather than reasoned: the two FBX files were read for their
+vertex bounds (0.61 x 0.58 x 0.91 m and 0.94 x 0.70 x 0.64 m), which showed the uniform fit had left
+the generator 3.1 m long in 5 m of footprint and the heater centred. The heater also did not rotate
+at all — `rotates` was false in the content — and the generator does, so "doesn't rotate" was
+probably the heater.
+
+The generator now fills its footprint (a stretch along its length), and the heater stands with its
+back on the back edge of its cell and faces away from a wall where there is one, R choosing among
+walls rather than being overruled by them — the ladder's rule would have left "doesn't rotate" true
+against every wall. Which way the air-conditioner's front looks was read off the mesh (its detail is
+at +Z, the pivot on the plain back face), not seen, and is the first thing to look at. Design 32 §14c.

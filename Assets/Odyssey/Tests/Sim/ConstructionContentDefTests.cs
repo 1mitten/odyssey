@@ -87,7 +87,9 @@ namespace Odyssey.Tests.Sim
         // `partCount` replace it — a second payment in one fixed item beside the chosen material.
         // The conduit is all part (costCount 0, one scrap metal); the generator takes 20 scrap
         // metal and the heater 5 beside their wood or stone.
-        const ulong BuildingFingerprint = 15847031730655314357UL;
+        // Same day, third look (design 32 §14c): the heater rotates. Its facing is drawing only
+        // and backs on to a wall where there is one; nothing in the simulation reads it.
+        const ulong BuildingFingerprint = 5691991369606031804UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

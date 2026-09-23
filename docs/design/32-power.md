@@ -291,9 +291,37 @@ way back to it to cancel it; and a line made of wood read wrong. The owner's ans
   the same switch. The rail's squeeze gives up the strip's room as it does the orders'.
 - **Art** (the owner's picks): the generator is Battle Royale's `SM_Prop_Generator_01`, the heater
   Sci-Fi City's `SM_Prop_AirConditioningUnit_01`, fitted into their footprints at bake time
-  (`ModuleEntry.fitFootprint` / `fitHeight`, scaled uniformly and turned so the long side runs along
-  the facing) and drawn once from the head at the middle of the footprint (`PropShape`, shared by the
+  (`ModuleEntry.fitFootprint` / `fitHeight`; §14c replaced the first fit) and drawn once from the head at the middle of the footprint (`PropShape`, shared by the
   mesher and the cursor). Without the packs they are the tinted block per cell, as before. The rows
   live in `PlayScene`, so the committed catalogue gains them when *Odyssey → Presentation → Rebuild
   module catalogue* is run.
 
+### 14c. Flush in their footprint (third look, 2026-09-23)
+
+The owner: *"the generator and heater don't rotate or blueprint/place flush with the current
+walls/doors etc — it's a bit off and places with spacing that is awkward."* Measured off the two
+FBX files rather than guessed:
+
+| | As modelled | First fit (uniform) | Now |
+|---|---|---|---|
+| Generator | 0.61 × 0.58 × 0.91 m | 2.1 × 2.0 × 3.1 m, centred: **0.95 m of daylight at each end** of its 5 m | **2.4 × 2.1 × 4.9 m** — fills both cells to 5 cm of every edge |
+| Heater | 0.94 × 0.70 × 0.64 m, pivot on its back | turned side-on, 1.4 m deep, **centred in the cell**; could not rotate | **2.4 m across, back 5 cm off the back edge**, rotates |
+
+- **The generator is stretched to fill** (`fitStretch`): 1.4 times longer than its own proportion.
+  A uniform fit cannot fill a 2 : 1 footprint with a 1.5 : 1 engine without being 3 m wide; a
+  machine that stands off both ends of its own footprint reads as a placing mistake, and a slightly
+  long engine block does not. Its facing is where its second cell lies, so it stays the player's.
+- **The heater stands with its back on the back edge** (`fitAgainstBack`) and **rotates**. Its
+  facing is drawing only, so it is decided in presentation: `WorldRenderModel.BackedFacing` keeps
+  the player's facing when a wall is behind it, and otherwise takes R's next quarter turn that backs
+  on to one — so in a corner R chooses the wall and in the open R chooses freely. This parts company
+  with the ladder's rule, where the wall wins outright and R does nothing: that would have kept
+  *"doesn't rotate"* true against every wall. Doors do not count as a wall (`OccludesFace`).
+- **No quarter turn is guessed from a model's proportions any more.** The first fit turned any
+  model wider than deep, which put the air-conditioner's grille side-on to its wall. Which way a
+  prop's front looks is the row's `yaw`; both of these face +Z as modelled.
+- The mesher and the cursor both ask `PropShape` and `BackedFacing`, so the ghost stands where the
+  built thing will. `PropFitTests` pins both fits from the models' measured sizes (so it holds
+  without the packs) and the three facing cases.
+- **Not done:** the heater's facing is not re-drawn when a wall is built beside it in a
+  *neighbouring chunk* — the ladder's facing has the same limit and nobody has met it.

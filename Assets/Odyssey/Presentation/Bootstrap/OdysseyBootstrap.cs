@@ -1959,7 +1959,9 @@ namespace Odyssey.Presentation.Bootstrap
             if ((what.edifice == CoreContent.EdificeGenerator || what.edifice == CoreContent.EdificeHeater)
                 && _model != null && _model.Library[module].Shape == ModuleShape.Pillar)
             {
-                _renderer.DrawGhost(module, tint, PropShape.Root(cell.X, cell.Z, cell.Y, facing, what.footprint));
+                int drawn = what.edifice == CoreContent.EdificeHeater
+                    ? _model.BackedFacing(_model.Size.Index(cell.X, cell.Z, cell.Y), facing) : facing;
+                _renderer.DrawGhost(module, tint, PropShape.Root(cell.X, cell.Z, cell.Y, drawn, what.footprint));
                 return;
             }
 

@@ -726,6 +726,35 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// Which way a one-cell machine that stands against a wall faces, 0–3 — the heater today
+        /// (design 32 §14c). The mesher and the build cursor both ask here, for the reason
+        /// <see cref="LadderFacing(int, int)"/> is one method rather than two.
+        ///
+        /// <para><b>Its back to a wall when there is one.</b> The player's facing is kept when the
+        /// cell behind it is a wall; otherwise the rotate key's next quarter turn that backs on to
+        /// one is taken, so in a corner R chooses which wall and in the open R chooses freely. The
+        /// ladder's rule lets the wall win outright, which is right for a thing bolted to rock and
+        /// wrong here: the owner reported the heater "doesn't rotate", and a rule that ignored R
+        /// against every wall would have kept that true.</para>
+        /// </summary>
+        public int BackedFacing(int index) => BackedFacing(index, _edificeFacing[index] & 3);
+
+        /// <summary>The same for a machine not built yet, with <paramref name="chosen"/> the cursor's facing.</summary>
+        public int BackedFacing(int index, int chosen)
+        {
+            CellRef cell = Size.FromIndex(index);
+            for (int turn = 0; turn < Directions.Count; turn++)
+            {
+                int facing = (chosen + turn) & 3;
+                int back = Directions.Opposite(facing);
+                int nx = cell.X + Directions.DeltaX[back], nz = cell.Z + Directions.DeltaZ[back];
+                if (Size.Contains(nx, nz, cell.Y) && OccludesFace(Size.Index(nx, nz, cell.Y)))
+                    return facing;
+            }
+            return chosen & 3;
+        }
+
+        /// <summary>
         /// The direction a door frame and sliding leaf face to align with adjacent walls, 0–3 (<see cref="Directions"/>).
         ///
         /// <para>Facing points along the opening (the walkway), with the frame running perpendicular to it.
