@@ -10500,3 +10500,53 @@ sentence.
 blue tint, so identity moves onto the face and clothing becomes progression rather than noise. It is
 applied *after* the rolls rather than instead of them, so taking it off when clothing becomes an item
 gives back exactly the cast that would have been dealt — which is what makes §9c safe to build on.
+
+## 2026-09-23 — the crowd scan, and the cheap candidate that was half the bill
+
+`PawnPose.Of` walked the whole pawn span for every pawn it posed. `docs/plans/pf-crowd-scan.md` had
+the evidence and an instruction with it: reproduce the cost on your own machine before starting,
+because the numbers in that file were taken beside several editors.
+
+**That instruction earned its keep twice.** The clear-machine baseline put `Actors` at 15.8 ms of a
+27.8 ms frame at 384 colonists against the plan's 13.3 of 22.5 — same shape, different machine, and
+the per-pair cost the two imply (128 ns against 117) is what says they are the same effect rather
+than two. It also turned up an arithmetic slip in the plan: it gives 147,456 pairs at 384 and calls
+that `(N − 64) × N`, but 147,456 is `384²` and `(N − 64) × N` is 122,880. Recorded in §9a, because
+the next person to check the model would otherwise find it 20% out and go hunting a second effect.
+
+**The plan's other instruction mattered more.** It named two candidates — hoist `WhereItIsNow` out
+of the inner loop, or build a spatial index — and said to measure the hoist alone first, because
+building the index subsumes it and afterwards the two cannot be told apart. So the control is
+three-valued rather than a bool: `Span`, `Cached` (the hoist and nothing else), `Bucketed`. At 384
+colonists the hoist alone took `Actors` from 17.26 ms to 9.71. **Forty-four per cent of the cost was
+one line**, and against a `Span`-only control the index would have been credited with all of it.
+
+The fix itself is unremarkable and that is the point: a 3 m bucket grid, rebuilt once a frame in the
+composition root, shared by the three passes that pose a pawn. It is allowed to exist because the
+cull is **exact** — `Proximity` is `SmoothStep((3 − d) / 1.5)`, exactly zero at the radius, and the
+loop already discarded a zero — so the sidestep the owner judged is not re-opened. Frame at 384:
+**27.81 → 14.99 ms**. At the scale target of fifty it changes nothing, which was known before it was
+built.
+
+**Two things came out of it that are worth more than the milliseconds.**
+
+The first is a testing lesson, and I only have it because I mutated the constant. `PawnCrowdIndex`'s
+bucket was set to the 3 m radius; I changed it to the 2.5 m cell — a plausible tidy-up and a real
+off-by-one — and `EveryScanModeDrawsTheIdenticalPose`, 220 pawns and the headline claim of the whole
+unit, **passed**. The crowd term reduces with a `max`, and a pawn at 2.93 m is worth 0.007 of the
+envelope, so on a crowded fixture there is always a nearer neighbour to hide the miss behind. The
+test named for exactness was blind to the only way the cull could be wrong. `docs/bug-patterns.md`
+P16, and the fixture that does catch it has two pawns and no crowd at all: where the smallest
+contribution is the *decisive* one.
+
+The second is that removing one quadratic exposed another. `Actors` is still `(N − 64) × N`-shaped
+after the cull — 43.8 ns a pair at 192 and 43.2 at 384, flat across a five-fold range, the same
+signature that found the crowd scan. It is `Cast.LookFor` → `ColonistNames.RollSeedOf` →
+`WorldSnapshot.TryGetPawnAspect`, **a linear scan over every published aspect, once per far-form pawn
+per frame**. Left alone deliberately: this unit was asked to fix `PawnPose.Of`, and that one is in
+the snapshot contract. It is the next PF unit.
+
+**And an operational note.** Three attempts were needed to get a clean measurement. The first queue
+raced my own EditMode run — a batch run that has printed its results can still be shutting down —
+and a single "is the machine clear" sample is not enough. The waiter now wants three consecutive
+quiet checks. That belongs in `docs/lessons.md` beside the run that finishes without exiting.

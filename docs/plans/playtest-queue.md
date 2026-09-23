@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the frame still fall over at a high colony count?** (PR for `claude/pf-crowd-scan`,
+  `docs/design/25-pawn-steering.md` §9.) This closes the other half of the 2026-09-20 report —
+  *"it seemed to hover 1.7 ms no matter the colony size but then frames dropped after so many
+  colonists"*. The knee was the crowd sidestep scanning every colonist per colonist; at 384 the
+  frame is now 14.99 ms against 27.81. **One question only, and only at a high count**: spawn
+  colonists past a couple of hundred with the overlay up and say whether the frame still bends,
+  and where. A wrong answer looks like a bend at the same place it was before, which would mean
+  the remaining quadratic (§9d, the aspect scan) is the one that was being felt. **Nothing to look
+  at below about a hundred** — at the scale target this changes nothing, and a test proves the
+  drawn sidestep is bit-for-bit what it was, so there is deliberately no "does it still look
+  right" row here.
+
+
 - **Can you tell three colonists apart without reading their names, and does the colony read as a
   crew?** (PR #168, `docs/design/29-modular-colonists.md`.) Everyone now wears the same issued
   jumpsuit and identity is carried entirely by face, hair and beard. Three things only a person can
