@@ -1443,7 +1443,8 @@ namespace Odyssey.Presentation.Bootstrap
             _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio,
                 Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model?.LowestOutdoorLayer ?? int.MaxValue)),
-                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY));
+                slice.HighestVisibleLayer(activeLayer, _world.Views.Current.Size.SizeY),
+                _tickAlpha, ticksPerSecond);
             _floaterView?.Draw(_combatFeedback.Floaters,
                 cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
@@ -3556,6 +3557,7 @@ namespace Odyssey.Presentation.Bootstrap
             _floaterView?.Dispose();
             _combatFeedback.Floaters.Clear();
             _combatFeedback.Blood.Clear();
+            _combatFeedback.Sounds.Clear();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is

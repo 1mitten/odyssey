@@ -89,5 +89,13 @@ namespace Odyssey.Hud
             if ((uint)attackerKind < (uint)_natural.Length && _natural[attackerKind] is bool natural) return natural;
             return _fists;
         }
+
+        /// <summary>
+        /// Was the blow struck with a weapon held in the hand — an item with an attack — rather than
+        /// fists or a natural attack? The sound of a blow asks it (design 33 §9g): every swing of a
+        /// bat, a crowbar, a machete or an arc blade whooshes, and fists and bites are silent. The
+        /// same table as <see cref="IsSharp"/>, so the Defs stay the one owner of what a weapon is.
+        /// </summary>
+        public bool IsHeldWeapon(int weapon) => (uint)weapon < (uint)_weapon.Length && _weapon[weapon].HasValue;
     }
 }

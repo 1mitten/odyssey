@@ -355,6 +355,7 @@ namespace Odyssey.Presentation.World
             switch (combatEvent.Kind)
             {
                 case CombatEventKind.Swing:
+                case CombatEventKind.SwingCritical: // a swing whose blow will be critical: drawn alike (design 33 §9g)
                     if (_byPawn.TryGetValue(combatEvent.Attacker.Value, out Figure? attacker))
                         TimeSwing(attacker, combatEvent);
                     return;
