@@ -141,3 +141,48 @@ built as design 33 §7, integrated on **`D:\code\odyssey-combat-drawn`**, branch
 - **Is a hog's bite sharp or blunt?** You said bites draw more blood, but `Species.xml` gives the hog's tusks *Blunt* and the rat's bite *Sharp*. The blood hook follows the content, so as it stands a hog draws the smaller, blunt puff (§7d).
 - **Should Rescue join the menu?** It is instant today (right-click a downed colonist). Putting it in the menu would make it two clicks, so it is your call.
 - **Blood** is the next unit, built to your answers in §7d.
+
+## The second round (2026-09-23)
+
+**First:** the last playtest was on `D:\code\odyssey-combat` (`claude/combat-c2`), which had none of
+the first round's changes. That is why no menu appeared. **Play this in
+`D:\code\odyssey-combat-drawn`**, branch `claude/combat-c2-polish`: Synty is junctioned and the
+Library is imported. Open it from Unity Hub, or close the editor on `D:\code\odyssey-combat` and
+say so, and that folder will be switched.
+
+### What changed
+
+| Change | Was | Is | Where |
+|---|---|---|---|
+| The bar over a pawn's head | flickered bright and dull as the camera moved (two see-through bars fought over which was drawn on top) | steady: built from pieces that never overlap; deeper green `#32b349`, amber, red; thicker, with a dark backing and outline | design 33 §8a |
+| A colonist's weapon | always in the hand once equipped | at the **left hip**; drawn with the pack's draw clip when drafted, when the target is within 2 tiles, or when fighting back; put away about 2 s after, or on release | §8b |
+| A marauder's weapon | in the hand | always in the hand, unchanged | §8b |
+| Working while armed | — | the tool takes the hand; the weapon stays at the hip, visible | §8b |
+| Fighters on one tile | a hunter could stand on a body being finished off; two drafted colonists could swing from one tile, or hold one tile together | nobody in a fight stands on another fighter's tile; drafting two on one tile moves one to the next | §8c |
+| Marauders overlapping | — | step round colonists and each other like colonists (animals stay out of it) | §8c |
+
+### What to test
+
+| Test | Look for | A wrong answer looks like |
+|---|---|---|
+| Equip an undrafted colonist, then let her work | the weapon hangs at her left hip, blade down, and the axe is in her hand | the weapon floats off the hip, clips through the leg, or is in the hand while she works |
+| Press T on her | the blade draw sound, and the draw clip moves the weapon from hip to hand | it snaps without the clip, the hand grabs air, or the weapon jumps early or late |
+| Release her with no fight near | it goes back to the hip after a moment | it stays out, or vanishes |
+| Spawn a marauder by an undrafted, armed colonist | she draws when it is 2 tiles away and fights back | she fights with the weapon still at her hip |
+| After a fight she was struck in | the weapon stays out for the retaliation window (20 s) | you find 20 s too long: say so and it can be the 2 s hold instead |
+| Watch the bars through a fight, panning the camera | steady and deep green | still flickering: the cause lies elsewhere |
+| Four marauders round two colonists | everyone on their own tile, marauders stepping round each other | two on one tile, or marauders merging |
+| Draft two colonists standing on one tile | one steps onto the next tile | a twitch, or it looks like deserting |
+
+### Tests on the combined branch
+
+- **Fast tier:** Sim 1,196 and Hud 851. **Long tier:** 40, including a 12-colony brawl sweep that fails on any shared tile. Both content gates pass.
+- **Unity:** EditMode 2,936 total and PlayMode 107 total, 0 failed in each.
+- **Goldens:** none moved.
+- **The catalogue:** rebuilt and classified, now 196 rows with the draw and sheathe clips resolved.
+
+### Guesses the playtest settles
+
+The hip placement (lean, splay, offset), the moment the hand takes the weapon on bodies other than the
+first two measured, whether the sword's draw clip suits a bat or crowbar, and the bar's sizes and
+opacities are all our own numbers, not yet seen on screen.
