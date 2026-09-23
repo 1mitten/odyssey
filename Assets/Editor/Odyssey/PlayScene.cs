@@ -1623,6 +1623,46 @@ namespace Odyssey.EditorTools
             for (int variant = 0; variant < Hairs.Length; variant++) Hair(variant);
             for (int variant = 0; variant < Beards.Length; variant++) Beard(variant);
 
+            // The animals (design 29): one row per kind, by the name ModuleIds keeps for it. The
+            // art is the project's own (CC0, Assets/Art/Custom/Animals) rather than a pack's, so
+            // these rows resolve on a machine with no Synty folder at all — the first figures
+            // that do. Scale is 1 because the importer already stands them life-size
+            // (AnimalImport); the clip names are the FBX's own take names.
+            //
+            // The hog has no walk clip. Its locomotion is the idle alone and the row asks for the
+            // computed gait (QuadrupedGait), whose stride is measured off the rig's own legs at
+            // build. The rat has a walk and a run, and their speeds are
+            // DECLARED rather than measured: neither file carries a root-motion twin, so there is
+            // nothing to read them off. 0.9 and 2.2 m/s are playtest numbers — a rat that skates
+            // wants the walk lower, one that scurries on the spot wants it higher.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Animal(1), shape = ModuleShape.Pillar,
+                prefabName = "Pig",
+                poseClipName = "Armature|Idle",
+                centreXZ = true, baseAtY = true,
+                scale = Vector3.one,
+                quadrupedGait = true,
+                locomotion = new List<LocomotionEntry>
+                {
+                    new LocomotionEntry { clipName = "Armature|Idle", metresPerSecond = 0f },
+                },
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Animal(2), shape = ModuleShape.Pillar,
+                prefabName = "Rat",
+                poseClipName = "RatArmature|Rat_Idle",
+                centreXZ = true, baseAtY = true,
+                scale = Vector3.one,
+                locomotion = new List<LocomotionEntry>
+                {
+                    new LocomotionEntry { clipName = "RatArmature|Rat_Idle", metresPerSecond = 0f },
+                    new LocomotionEntry { clipName = "RatArmature|Rat_Walk", metresPerSecond = 0.9f },
+                    new LocomotionEntry { clipName = "RatArmature|Rat_Run", metresPerSecond = 2.2f },
+                },
+            });
+
             // One row per hair piece. A rigid prop parented to the head bone with an identity
             // transform, measured in both packs -- no offset to fit and no per-body special case
             // (docs/research/e-06-modular-colonists.md §4). It carries no pose clip and no
@@ -1790,6 +1830,10 @@ namespace Odyssey.EditorTools
 
         static ModuleCatalogue BuildCatalogueAsset()
         {
+            // The animal models' import settings first, so the rows below resolve models that
+            // are already life-size with looping gaits (design 29). Idempotent.
+            AnimalImport.Apply();
+
             var rows = Rows();
             var cache = new Dictionary<string, GameObject?>(StringComparer.Ordinal);
             foreach (ModuleEntry row in rows)
@@ -1797,7 +1841,7 @@ namespace Odyssey.EditorTools
                 if (string.IsNullOrEmpty(row.prefabName)) continue;
                 if (!cache.TryGetValue(row.prefabName, out GameObject? prefab))
                 {
-                    prefab = FindSyntyPrefab(row.prefabName);
+                    prefab = FindSyntyPrefab(row.prefabName) ?? FindCustomModel(row.prefabName);
                     cache[row.prefabName] = prefab;
                 }
                 row.prefab = prefab;
@@ -1821,7 +1865,7 @@ namespace Odyssey.EditorTools
                 if (string.IsNullOrEmpty(row.poseClipName)) continue;
                 if (!clips.TryGetValue(row.poseClipName, out AnimationClip? clip))
                 {
-                    clip = FindSyntyClip(row.poseClipName);
+                    clip = FindSyntyClip(row.poseClipName) ?? FindCustomClip(row.poseClipName);
                     clips[row.poseClipName] = clip;
                 }
                 row.poseClip = clip;
@@ -1880,9 +1924,44 @@ namespace Odyssey.EditorTools
         {
             if (string.IsNullOrEmpty(name)) return null;
             if (cache.TryGetValue(name, out AnimationClip? cached)) return cached;
-            AnimationClip? clip = FindSyntyClip(name);
+            AnimationClip? clip = FindSyntyClip(name) ?? FindCustomClip(name);
             cache[name] = clip;
             return clip;
+        }
+
+        /// <summary>
+        /// The project's own models, under <c>Assets/Art/Custom</c> — committed, so they resolve
+        /// everywhere, unlike the packs (design 29). Exact file name, any subfolder.
+        /// </summary>
+        static GameObject? FindCustomModel(string exactName)
+        {
+            if (!Directory.Exists(Path.GetFullPath("Assets/Art/Custom"))) return null;
+            string[] guids = AssetDatabase.FindAssets($"{exactName} t:Model", new[] { "Assets/Art/Custom" });
+            string? path = guids
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(p => string.Equals(Path.GetFileNameWithoutExtension(p), exactName,
+                    StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .FirstOrDefault();
+            return path == null ? null : AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        /// <summary>
+        /// A clip inside one of the project's own models, by the clip's <b>own</b> name — the
+        /// FBX take name, such as <c>Armature|Idle</c> — rather than the file's, because every
+        /// clip an animal has lives in the one file that is the animal.
+        /// </summary>
+        static AnimationClip? FindCustomClip(string exactName)
+        {
+            if (!Directory.Exists(Path.GetFullPath("Assets/Art/Custom"))) return null;
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { "Assets/Art/Custom" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
+                    if (asset is AnimationClip clip && clip.name == exactName)
+                        return clip;
+            }
+            return null;
         }
 
         /// <summary>

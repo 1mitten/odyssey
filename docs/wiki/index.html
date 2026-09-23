@@ -149,11 +149,11 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>81</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
-<li><a href="#colonists">Colonists<b>36</b></a></li>
+<li><a href="#colonists">Colonists<b>40</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>40</b></a></li>
 <li><a href="#world">World and interface<b>96</b></a></li>
-<li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
+<li><a href="#proper-nouns">Proper nouns<b>30</b></a></li>
 </ul></nav>
 <main>
 <div class="lede"><h1>Every named thing in the game</h1>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>709</b><i>named entries</i></div>
+<div class="stat"><b>716</b><i>named entries</i></div>
 <div class="stat"><b>270</b><i>with icon art</i></div>
-<div class="stat m"><b>439</b><i>no art yet</i></div>
+<div class="stat m"><b>446</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1729,7 +1729,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">36 entries</em></h2>
+<h2>Colonists <em class="count">40 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1775,6 +1775,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Rots, upsets people, can be buried or worse</div>
 <div class="art"><span class="pill">high</span> anatomy</div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.pawn.hog" data-hay="midden hog ui.pawn.hog pig-descended, thrives on refuse heaps. wild for now; the one you meet first " data-gap="1">
+<div class="nm">Midden hog<span class="k">ui.pawn.hog</span></div>
+<div class="dsc">Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AN</div>
+</div>
+<div class="row gap" id="ui.pawn.rat" data-hay="duct rat ui.pawn.rat vermin from the ducts and the caverns. climbs anything " data-gap="1">
+<div class="nm">Duct rat<span class="k">ui.pawn.rat</span></div>
+<div class="dsc">Vermin from the ducts and the caverns. Climbs anything</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AN</div>
 </div>
 </div>
 <h3 class="nsh">Needs</h3>
@@ -1961,6 +1973,18 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">Under direct order, not the work list</div>
 <div class="art"><span class="pill">med</span> tools and weapons</div>
 <div class="ms">M2</div>
+</div>
+<div class="row gap" id="ui.status.wandering" data-hay="wandering ui.status.wandering an animal on a leg of its own: going somewhere nearby for no reason " data-gap="1">
+<div class="nm">Wandering<span class="k">ui.status.wandering</span></div>
+<div class="dsc">An animal on a leg of its own: going somewhere nearby for no reason</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AN</div>
+</div>
+<div class="row gap" id="ui.status.resting" data-hay="resting ui.status.resting an animal between legs " data-gap="1">
+<div class="nm">Resting<span class="k">ui.status.resting</span></div>
+<div class="dsc">An animal between legs</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">AN</div>
 </div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
@@ -3008,8 +3032,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
-<h2>Proper nouns <em class="count">29 entries</em></h2>
-<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 29 have no name at all</strong>, including the city the whole prototype is set in.</p>
+<h2>Proper nouns <em class="count">30 entries</em></h2>
+<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 30 have no name at all</strong>, including the city the whole prototype is set in.</p>
 <div class="tbl">
 <div class="row head"><div>Category</div><div>Name</div><div>Notes</div><div class="st">Status</div></div>
 <div class="row" id="world.planet" data-hay="the world carrow a city-world: one settlement that grew until it covered the planet. short, bleak, easy to say, and it survives being said a thousand times. the register throughout is english industrial rather than classical or invented-exotic: a working future, not a mythic one proposed" data-gap="0">
@@ -3100,6 +3124,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="nm">Pack animal<span class="k">creature.pack</span></div>
 <div>dray hog</div>
 <div class="dsc">A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="creature.vermin" data-hay="city vermin duct rat the rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on proposed" data-gap="0">
+<div class="nm">City vermin<span class="k">creature.vermin</span></div>
+<div>duct rat</div>
+<div class="dsc">The rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on</div>
 <div class="st proposed">proposed</div>
 </div>
 <div class="row" id="calendar.structure" data-hay="the calendar 6 months of 12 days, 72-day year three seasons of two months each. a short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. days stay 24 hours for legibility proposed" data-gap="0">
@@ -3193,7 +3223,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 709, "gaps": 439};</script>
+<script>window.WIKI={"total": 716, "gaps": 446};</script>
 <script>
 (function(){
   var D = window.WIKI;

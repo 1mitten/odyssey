@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-36 entries, 18 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+40 entries, 22 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -15,6 +15,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Animal** | `ui.pawn.animal` | Tame or wild creature | sheet 06 (action tiles), med | M2 |
 | **Synth** | `ui.pawn.synth` | Machine intelligence. Not alive, not harmless <br>**Needs:** a machine intelligence. Nothing in the sheets is recognisably robotic | no art | M2 |
 | **Corpse** | `ui.pawn.corpse` | Rots, upsets people, can be buried or worse | sheet 07 (anatomy), high | M2 |
+| **Midden hog** | `ui.pawn.hog` | Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first | no art | AN |
+| **Duct rat** | `ui.pawn.rat` | Vermin from the ducts and the caverns. Climbs anything | no art | AN |
 
 ## Needs
 
@@ -59,6 +61,8 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Bleeding** | `ui.status.bleeding` | Losing blood. Timed problem | sheet 06 (action tiles), low | M2 |
 | **On fire** | `ui.status.burning` | Burning now | sheet 06 (action tiles), high | M2 |
 | **Drafted** | `ui.status.drafted` | Under direct order, not the work list | sheet 05 (tools and weapons), med | M2 |
+| **Wandering** | `ui.status.wandering` | An animal on a leg of its own: going somewhere nearby for no reason | no art | AN |
+| **Resting** | `ui.status.resting` | An animal between legs | no art | AN |
 
 ---
 
