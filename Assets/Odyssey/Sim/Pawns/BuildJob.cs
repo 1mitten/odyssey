@@ -90,7 +90,7 @@ namespace Odyssey.Sim.Pawns
         /// refusing to take wood out of one would mean a colony that can only build from wood it
         /// has not tidied away yet.</para>
         /// </summary>
-        static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex)
+        internal static ColonyItem? NearestLoad(Pawn pawn, PawnContext ctx, int defIndex)
         {
             ColonyItem? best = null;
             int bestDistance = int.MaxValue;

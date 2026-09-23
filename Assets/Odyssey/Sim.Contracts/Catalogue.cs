@@ -34,7 +34,16 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Cut a ripe crop and gather what it yields.</summary>
         public const int Harvest = 11;
 
-        public const int Count = 12;
+        /// <summary>Fetch one wood and lay an ordered power line with it (design 32 §3).</summary>
+        public const int LayConduit = 12;
+
+        /// <summary>Take up a power line marked for removal.</summary>
+        public const int RemoveConduit = 13;
+
+        /// <summary>Carry fuel to a generator below half and fill it (design 32 §6).</summary>
+        public const int Refuel = 14;
+
+        public const int Count = 15;
     }
 
     /// <summary>

@@ -373,13 +373,22 @@ namespace Odyssey.Sim.Pawns
             JobsStarted = reader.ReadInt();
             JobsFailed = reader.ReadInt();
 
+            // **Fewer is fine; more is not.** Job defs are appended and never inserted — a def's
+            // number is a save contract (PawnContent.FromDefs) — so a save from before the last
+            // few were added holds exactly the first `count` of this build's, in the same order,
+            // and the rest simply have no history yet. Until power (design 32) this refused any
+            // difference, which made every save taken before a new job arrived unloadable for a
+            // reason that was never true. More defs than this build knows is a save from a newer
+            // build, and guessing at that would attribute one job's history to another.
             int count = reader.ReadInt();
-            if (count != _completed.Length)
+            if (count > _completed.Length)
                 throw new SaveLoadException(
-                    $"The save has {count} job defs and this build has {_completed.Length}. Def " +
-                    "migration is not written yet, and guessing at the mapping would silently " +
-                    "attribute one job's history to another.");
+                    $"The save has {count} job defs and this build has {_completed.Length}: it was " +
+                    "written by a newer build, and guessing at the mapping would silently attribute " +
+                    "one job's history to another.");
 
+            System.Array.Clear(_completed, 0, _completed.Length);
+            System.Array.Clear(_failed, 0, _failed.Length);
             for (int i = 0; i < count; i++)
             {
                 _completed[i] = reader.ReadInt();

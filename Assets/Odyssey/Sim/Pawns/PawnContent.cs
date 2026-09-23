@@ -144,6 +144,9 @@ namespace Odyssey.Sim.Pawns
         public const int Deconstruct = JobHandle.Deconstruct;
         public const int Sow = JobHandle.Sow;
         public const int Harvest = JobHandle.Harvest;
+        public const int LayConduit = JobHandle.LayConduit;
+        public const int RemoveConduit = JobHandle.RemoveConduit;
+        public const int Refuel = JobHandle.Refuel;
         public const int Count = JobHandle.Count;
     }
 
@@ -943,7 +946,9 @@ namespace Odyssey.Sim.Pawns
                 "Job_Deliver", "Job_Build", "Job_Deconstruct",
                 // Appended, never inserted: a job def index rides every pawn's current job and
                 // every save taken with one running, so its number is a save contract.
-                "Job_Sow", "Job_Harvest");
+                "Job_Sow", "Job_Harvest",
+                // Power (design 32), appended for the same reason.
+                "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing");

@@ -654,6 +654,7 @@ namespace Odyssey.Hud
             { "ui.status.idle", "Idle" },
             { "ui.status.mining", "Mining" },
             { "ui.status.recreating", "Recreating" },
+            { "ui.status.refuelling", "Refuelling" },
             { "ui.status.sleeping", "Sleeping" },
             { "ui.status.sowing", "Sowing" },
             { "ui.status.tending", "Tending" },

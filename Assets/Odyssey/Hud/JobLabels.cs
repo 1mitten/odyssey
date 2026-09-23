@@ -35,6 +35,9 @@ namespace Odyssey.Hud
             Idle, Idle, "ui.status.felling", "ui.status.mining",
             "ui.status.hauling", "ui.status.building", "ui.status.deconstructing",
             "ui.status.sowing", "ui.status.harvesting",
+            // Power (design 32): laying a line is building, taking one up is deconstructing, and
+            // feeding a generator has a word of its own.
+            "ui.status.building", "ui.status.deconstructing", "ui.status.refuelling",
         };
 
         public static string IconKey(int jobDef) =>

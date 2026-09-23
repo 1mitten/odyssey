@@ -144,7 +144,13 @@ namespace Odyssey.Tests.Sim
         // starting zone moving to a real `StorageZones` does move them, and that is measured
         // separately. The day a golden window includes a zone, the curve will move a hash and that
         // will be correct.
-        const ulong ContentFingerprint = 3819759943885241130UL;
+        //
+        // 2026-09-23, power (design 32): three JobDefs appended — Job_LayConduit (driver 12),
+        // Job_RemoveConduit (13) and Job_Refuel (14). The first two train construction and settle
+        // as building does; refuelling trains hauling. Every golden moved with them, because the
+        // job system hashes a completed and failed counter for every def — measured to be those
+        // six zeros and nothing else (Golden.cs).
+        const ulong ContentFingerprint = 5397468250427084813UL;
 
 
         [Test]
