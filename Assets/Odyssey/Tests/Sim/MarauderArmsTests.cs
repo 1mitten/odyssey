@@ -29,7 +29,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(machete.DefIndex, Is.EqualTo(ItemIndex.Machete));
             Assert.That(machete.Cell, Is.EqualTo(-1), "a held weapon keeps a cell");
             Assert.That(machete.CarriedBy, Is.EqualTo(marauder.Id.Value));
-            Assert.That(ctx.Items.LooseItems, Does.Not.Contain(machete.Id.Value - 1), "the machete is on a lister");
+            Assert.That(ctx.Items.LooseItems, Has.No.Member(machete.Id.Value - 1), "the machete is on a lister");
             Assert.That(ctx.WeaponRules.ArmamentOf(marauder, ctx).ItemDef, Is.EqualTo(ItemIndex.Machete));
         }
 
