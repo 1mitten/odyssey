@@ -132,6 +132,23 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int heatPerPass;
 
+        /// <summary>
+        /// How much warmer the thing's <b>own cell</b> is than the air around it, in
+        /// centi-degrees (design 31 §15). Zero for everything that is not a heat source.
+        ///
+        /// <para><b>A different thing from <see cref="heatPerPass"/>, and the pair is the point.</b>
+        /// That one is energy pushed into the room's air — slow, shared by the whole room, and
+        /// the same campfire is an oven in a cupboard and a warm corner in a hall. This is
+        /// <i>radiance</i>: what a fire does to you by shining on you, which is immediate, local,
+        /// and no different in a cupboard than in a hall. Design 28 models the air and refuses to
+        /// store anything per cell; this is a pure function of how far away you are standing, so
+        /// it needs no storage at all.</para>
+        ///
+        /// <para>Tuning the two apart is why they are separate fields. Making one tile read hot by
+        /// raising <c>heatPerPass</c> would cook the whole hut.</para>
+        /// </summary>
+        public int radiantC;
+
         /// <summary>The registry key the interface names it by. Never a label, never a filename.</summary>
         public string iconKey = "";
     }
@@ -504,7 +521,7 @@ namespace Odyssey.Sim.Construction
                 new BuildingDef
                 {
                     defName = "Building_Campfire", label = "campfire", edifice = CoreContent.EdificeCampfire,
-                    blocking = true, needsClearCell = true, heatPerPass = 1_200,
+                    blocking = true, needsClearCell = true, heatPerPass = 1_200, radiantC = 2_600,
                     costCount = 3, workToBuild = 60, minSkill = 0,
                     iconKey = "ui.arch.tool.campfire",
                 },

@@ -241,6 +241,18 @@
     costCount 3 and workToBuild 60: kindling and a ring of stones, the cheapest thing in the
     table beside the deck plate. It burns steadily in v1; fuel is a recorded hook, and the
     campfire sound is already in the library waiting for the day something plays it.
+
+    radiantC 2600 is a DIFFERENT thing from heatPerPass and the pair is the point (design 31
+    section 15). heatPerPass warms the room's air, slowly and everywhere at once. radiantC is
+    what the fire does to you by shining on you: immediate, local, and no different in a
+    cupboard than in a hall. 2600 puts the fire's own cell at about 45 C in Wash - past the
+    35 C the pane already draws red at, and past heatstrokeC, so standing in it is a bad idea
+    by the tuning rather than by a new rule. The ring one cell out lands in the amber band.
+
+    In deep Rime the same fire reads about 13 C at its own cell and is not red, which is
+    correct rather than a miss: the colour tracks whether it is DANGEROUS, and a fire in
+    freezing air is the opposite of dangerous. That is the owner's own distinction - red for
+    danger, amber for passive benefit - falling out of absolute temperature.
   -->
   <BuildingDef>
     <defName>Building_Campfire</defName>
@@ -249,6 +261,7 @@
     <blocking>true</blocking>
     <needsClearCell>true</needsClearCell>
     <heatPerPass>1200</heatPerPass>
+    <radiantC>2600</radiantC>
     <costCount>3</costCount>
     <workToBuild>60</workToBuild>
     <minSkill>0</minSkill>

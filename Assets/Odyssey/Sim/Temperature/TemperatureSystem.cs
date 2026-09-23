@@ -99,6 +99,34 @@ namespace Odyssey.Sim.Temperature
         /// </summary>
         readonly int[] _heatByEdificeDef;
 
+        /// <summary><c>radiantC</c> by edifice id, built once from the content beside
+        /// <see cref="_heatByEdificeDef"/> and for the same reason.</summary>
+        readonly int[] _radiantByEdificeDef;
+
+        /// <summary>
+        /// Where the warm things are and how warm, refreshed by each pass (design 31 §15).
+        ///
+        /// <para>This is the whole of what radiance costs in storage: a handful of entries, not a
+        /// field over 2.5 M cells. <see cref="CellTemp"/> walks it, so a board with no fire on it
+        /// pays one <c>Count == 0</c> test and nothing else — which is every board in the game
+        /// until somebody builds one.</para>
+        /// </summary>
+        readonly List<RadiantSource> _radiant = new List<RadiantSource>(8);
+
+        readonly struct RadiantSource
+        {
+            public readonly int Cell;
+            public readonly int Room;
+            public readonly int CentiC;
+
+            public RadiantSource(int cell, int room, int centiC)
+            {
+                Cell = cell;
+                Room = room;
+                CentiC = centiC;
+            }
+        }
+
         public TemperatureSystem(PawnContext ctx, IReadOnlyList<Worldgen.PlacedEdifice> edifices,
             ClimateDef climate)
         {
@@ -112,8 +140,12 @@ namespace Odyssey.Sim.Temperature
             for (int i = 1; i < table.Count; i++)
                 if (table[i].edifice > widest) widest = table[i].edifice;
             _heatByEdificeDef = new int[widest + 1];
+            _radiantByEdificeDef = new int[widest + 1];
             for (int i = 1; i < table.Count; i++)
+            {
                 if (table[i].heatPerPass != 0) _heatByEdificeDef[table[i].edifice] = table[i].heatPerPass;
+                if (table[i].radiantC != 0) _radiantByEdificeDef[table[i].edifice] = table[i].radiantC;
+            }
 
             // Rooms resolve their starting temperature the moment they are built, not at the
             // next pass, while the ledger of what their cells used to be is fresh. A room from
@@ -211,7 +243,80 @@ namespace Odyssey.Sim.Temperature
         {
             if ((uint)cell >= (uint)_ctx.Size.CellCount) return OutdoorTempC(tick);
             int room = _ctx.Enclosure != null ? _ctx.Enclosure.RoomAt(cell) : 0;
+            return RoomTempC(cell, tick) + RadianceAt(cell, room);
+        }
+
+        /// <summary>
+        /// The <b>air</b> at this cell and nothing else: its room's scalar, or the outdoor curve
+        /// where it is in no room. What design 28 models.
+        ///
+        /// <para><b>Ask for this when you mean the room, and <see cref="CellTemp"/> when you mean
+        /// what it is like to stand somewhere.</b> The two were one method until radiance arrived
+        /// (design 31 §15), and the day they parted four tests of the air model started failing —
+        /// not because the air had changed but because they were reading a cell with a fire in it
+        /// and getting the fire as well. That is the right answer to the question
+        /// <c>CellTemp</c> asks and the wrong answer to the one they were asking, which is why
+        /// there are now two questions.</para>
+        /// </summary>
+        public int RoomTempC(int cell, long tick)
+        {
+            if ((uint)cell >= (uint)_ctx.Size.CellCount) return OutdoorTempC(tick);
+            int room = _ctx.Enclosure != null ? _ctx.Enclosure.RoomAt(cell) : 0;
             return room != 0 && _tempByKey.TryGetValue(room, out int temp) ? temp : OutdoorTempC(tick);
+        }
+
+        /// <summary>
+        /// What standing here adds on top of the room's air, in centi-degrees: the radiance of
+        /// every heat source close enough to shine on this cell (design 31 §15).
+        ///
+        /// <para><b>Design 28 models the air and this does not.</b> That model is one scalar per
+        /// room and refuses — correctly — to store anything per cell, because per-cell is what
+        /// makes a thermal model unaffordable beside a 2.5 M cell board. Radiance needs no storage
+        /// at all: it is a pure function of how far away the fire is, so it is computed on the
+        /// way out rather than kept. The two are different physics as well as different code — a
+        /// fire warms the room slowly by heating its air, and warms <i>you</i> at once by shining
+        /// on you — and keeping them named apart is what stops one being folded into the other.
+        /// </para>
+        ///
+        /// <para><b>Walls stop it, and the test for that is one comparison.</b> A source only
+        /// reaches cells in its own room, which is right for a fire behind a wall and costs no
+        /// ray. Outdoors both rooms are 0, so the test passes and distance alone decides, which
+        /// is also right: a fire in a field does warm the grass beside it.</para>
+        ///
+        /// <para><b>Chebyshev</b>, so the ring is square and matches the grid the player is
+        /// looking at. Radiance does not cross layers: a fire is not a floor heater.</para>
+        /// </summary>
+        public int RadianceAt(int cell, int room)
+        {
+            if (_radiant.Count == 0) return 0;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(cell);
+
+            int total = 0;
+            for (int i = 0; i < _radiant.Count; i++)
+            {
+                RadiantSource source = _radiant[i];
+                if (source.Room != room) continue;
+
+                CellRef from = size.FromIndex(source.Cell);
+                if (from.Y != at.Y) continue;
+
+                int dx = at.X > from.X ? at.X - from.X : from.X - at.X;
+                int dz = at.Z > from.Z ? at.Z - from.Z : from.Z - at.Z;
+                int steps = dx > dz ? dx : dz;
+                if (steps > TemperatureConductance.RadiantRangeCells) continue;
+
+                // Integer falloff, compounded a cell at a time, the way the ground's damping is:
+                // no power, no float, and the same answer on both runtimes.
+                int warmth = source.CentiC;
+                for (int s = 0; s < steps; s++)
+                    warmth = warmth * TemperatureConductance.RadiantFalloffPerMille / 1_000;
+
+                total += warmth;
+            }
+
+            return total;
         }
 
         // ---- the pass -------------------------------------------------------------------------
@@ -236,15 +341,23 @@ namespace Odyssey.Sim.Temperature
             // apart from the exchanges, because the quarter clamp below is a bound on how fast
             // two temperatures may approach each other and a source is not an approach: a fire
             // in a room at one with the outdoors has every right to push it away.
+            _radiant.Clear();
             for (int e = 0; e < _edifices.Count; e++)
             {
                 var placed = _edifices[e];
                 if (placed.Removed) continue;
                 if (placed.Def >= _heatByEdificeDef.Length) continue;
+
+                int room = _ctx.Enclosure!.RoomAt(placed.CellIndex);
+
+                // The air half: energy into the room (design 28 §7).
                 int heat = _heatByEdificeDef[placed.Def];
-                if (heat == 0) continue;
-                if (_slotByKey.TryGetValue(_ctx.Enclosure!.RoomAt(placed.CellIndex), out int slot))
-                    _sources[slot] += heat;
+                if (heat != 0 && _slotByKey.TryGetValue(room, out int slot)) _sources[slot] += heat;
+
+                // And the radiant half, which is not room-bound and is remembered rather than
+                // applied: CellTemp asks it per cell, on the way out (design 31 §15).
+                int radiant = _radiantByEdificeDef[placed.Def];
+                if (radiant != 0) _radiant.Add(new RadiantSource(placed.CellIndex, room, radiant));
             }
 
             var pawns = _ctx.Pawns.All;

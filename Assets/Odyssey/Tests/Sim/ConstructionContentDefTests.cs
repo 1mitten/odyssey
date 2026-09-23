@@ -75,7 +75,17 @@ namespace Odyssey.Tests.Sim
         // here on the merge with main: the shelf reached main first and both numbers are contracts,
         // so the later branch is the one that moves — the same rule Building_Bed records at 5.
         // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
-        const ulong BuildingFingerprint = 11920351214251548753UL;
+        // 2026-09-23: BuildingDef gained `radiantC`, and Building_Campfire declares 2600 of it
+        // (design 31 §15). A different quantity from `heatPerPass` and deliberately a second
+        // field rather than a tuning of the first: heatPerPass is energy into the room's AIR,
+        // shared by the whole room and slow, while radiantC is what the fire does to you by
+        // shining on you — immediate, local, and the same in a cupboard as in a hall. Making
+        // one tile read hot by raising heatPerPass would have cooked the whole hut.
+        //
+        // No golden moved, which is the tell that it is inert without a source: radiance is a
+        // pure function of distance to a heat source and no golden board has a campfire on it.
+        // RadiantHeatTests.ABoardWithNoFireReadsExactlyTheAir is the assertion of that.
+        const ulong BuildingFingerprint = 13622076912742221888UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
