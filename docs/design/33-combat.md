@@ -580,8 +580,11 @@ nought (§6A.5), so a colony that fought and healed hashes as one that never fou
 - **Re-plan** to the target's cell only when the target has left the cell the walk leads to. At
   once if the pawn is not walking; otherwise at a step boundary (`MoveProgress` under one tick's
   movement, so the step in hand is never snapped back), no oftener than `chaseRepathTicks` (60).
-  The computed brief said ~20; the Def says 60 and content is frozen, so 60.
-- **In reach mid-step**, the step is landed first; at the boundary the pawn stops and swings.
+  The computed brief said ~20; the Def says 60 and content is frozen, so 60. **Since §7c the walk
+  is to a side of the target, not to its cell**, and the re-plan chooses the side again; the
+  cadence is unchanged.
+- **In reach mid-step**, the step is landed first; at the boundary the pawn stops and swings —
+  on a side nobody else holds (§7c).
 - **It ends:**
   - when the target is gone or dead;
   - when the target is down — unless the order was given on a pawn already down, which is
@@ -1101,3 +1104,87 @@ settled each one. They are built on `claude/combat-c2-polish` from `50ced466`.
 | *"When I right click to attack an enemy it wasn't clear"* | **Right-clicking an enemy attacks at once, with a lock-on ring.** An enemy has one sensible order, so it takes one click, and the menu is for things with several. A translucent red ring appears at 1.6× the target's footprint and snaps onto its feet in about 0.2 s (ease-out). It flashes once as it lands, then stays as a faint ring under the target while the attack order holds. It fades when the target goes down or dies, or the order changes. | §7b |
 | *"2 colonists attacking within the same tile ... should position themselves side by side"* | **Each takes the nearest free side.** Every attacker claims a different cell next to the target, the free one nearest to it, so two arriving from the west stand side by side on the west flank. If all eight cells are taken, the extra waits one ring back. No two attackers ever share a tile. | §7c |
 | *"We also need a blood effect ... even better blood splatter"* | **The seam is cut now; blood is built as the next unit.** Every landed hit spurts, scaled: sharp hits (machete, arc blade, bites) spurt more and leave a splatter, blunt hits (bat, crowbar, fists) a smaller puff and a smaller mark. Misses and dodges draw nothing. Downs and deaths leave a pool under the body. Ground marks fade over about one in-game day, capped (around 200, oldest first). They are **presentation only**: not saved, not simulated, nothing to clean. | §7d |
+
+### 7c. Side by side (built 2026-09-23, `claude/combat-pos`)
+
+Simulation only, fast and Long tiers, no Unity. **No golden moved, no save format changed, no new
+state**: no golden window fights, and a side is read off fields every pawn already saves and hashes.
+
+**What an attacker does.** Every `Job_AttackMelee` — a drafted colonist under orders, the
+self-defence, the hunt, an animal's revenge — walks to a **side** of its target rather than to its
+cell. `Melee.ChooseSide` picks it:
+
+1. Of the eight cells beside the target on its layer that she could strike it from (`IsLegalStep`
+   into the target — `Melee.InReach`'s own test, so no blow through a wall's corner) and can reach,
+   the one **no other attacker holds, nearest her**. Nearest is the squared distance in cells from
+   where she stands; a tie goes to the first in a fixed scan, −Z to +Z then −X to +X. So two
+   arriving from the west stand on the west flank, side by side.
+2. All eight held: the nearest free cell **one ring back** (Chebyshev distance 2) that she can stand
+   on and reach. She waits there, out of reach, and looks again every `chaseRepathTicks` (60), so a
+   side that frees up is taken within 60 ticks.
+3. That ring full too (24 attackers on one target, or a corridor): she waits where she is and looks
+   again at the same cadence.
+
+**A side is held by walking to it or standing on it** — `Melee.SideOf`: the pawn's `Destination`,
+else its `Cell`. Only a pawn in an attack on its feet holds one (`Melee.IsInAnAttack`), on **any**
+target, so a scrum of two fights does not stack either. Nothing new is saved, and a load holds every
+claim it saved. The claims are read in the order the pawns tick — by id — and never out of a
+dictionary; the mask round the target is a 5 × 5 `int`.
+
+**Where she stops.** In reach at a step boundary she stops and swings only on a side of her own
+(`AttackMeleeJobDriver.MayFightFrom`): never on the target's own cell, never on a side another
+attacker holds. So walking past a side somebody else is making for, she walks on. In reach on an
+unheld cell she stops there, as she always did — for her it is the nearest free side.
+
+**When she chooses again** — the chase's own re-plan (§6A.2), same cadence. `Job.TargetCell` now
+also means, while approaching, *the target's cell the side was chosen against*:
+
+- walking: at a step boundary, once the target has left that cell, no oftener than 60 ticks;
+- not walking: at once when the target has left it or the attack is new (`Job.WorkTicks == 0`),
+  else every 60 ticks — which is the waiter's look for a freed side.
+
+**The drafted hold is exempt.** Her blow at an adjacent threat still strikes from wherever she
+stands and never chases (§6A.2); her cell is her side, so others avoid it. Two drafted colonists
+*ordered* onto one target are forced attacks and spread like anybody.
+
+**What it costs.** `ChooseSide` is one pass over the pawns (an integer comparison each for those
+not fighting) plus the 24 cells within two of the target — never the board — and is asked at the
+chase cadence, not per tick. `MayFightFrom`'s pass over the pawns is asked at a step boundary in
+reach while walking, and before each swing; one standing on her side waiting out her swing clock is
+not asked. `TickBenchmarkTests.TwentyAgainstTwenty`, one session, Windows dev machine, before and
+after:
+
+| | Tick, mean | Pawns phase, mean | Swings in the window |
+|---|---|---|---|
+| Before §7c | 0.069 ms | 0.013 ms | 203 |
+| After §7c | 0.070–0.073 ms | 0.018–0.019 ms | 208 |
+
+About 5 µs a tick on the pawns phase for forty pawns fighting; the tick is inside its own noise.
+
+**Tests** (`SideBySideTests`, fast tier). Every one failed with the driver withheld (measured, with
+the per-tick check both on and off, so the end-state assertions were seen to fail on their own):
+two from one side end side by side on that flank (before: one tile); nine on one fill the eight
+sides and the ninth waits at distance 2 (before: three tiles among nine); the waiter takes a side
+that frees up; a target sent ten cells away is surrounded again where it stops (before: all four on
+one tile); three marauders hunting one colonist stand on three sides of her; a save taken while
+five close resumes on an equal hash 600 ticks on. Every tick of every fight asserts no two attackers
+standing on one tile and no two holding one side. Sim fast tier 1,170 (from 1,164), Hud 797, Long 39,
+all green; `GoldenMasterTests` green without a re-bake.
+
+**Do not undo by tidying:**
+
+- **The side is `Destination`, else `Cell`.** A reservation or a claim table would be new saved,
+  hashed state for something the pawn already carries; a claim on the job alone would miss the
+  hold, whose side is simply where she stands.
+- **"Nearest" is to the attacker, not to the target.** Nearest the target puts the second arrival on
+  whichever orthogonal comes first in the scan, not on the flank she came from.
+- **Not asking `MayFightFrom` per tick of a standing attacker.** Nobody else ever chooses a cell
+  somebody stands on, so her side stays hers; asking again each tick would be a pass over the pawns
+  per attacker per tick for an answer that cannot change.
+- **The hold stays exempt.** A drafted colonist who stepped off her cell to find a side would be
+  chasing, and the hold never chases.
+
+**Open.** A pawn landing the step an order interrupted (`FinishingStepTo`) runs no job until it
+lands, so for those few ticks it holds no side and may pass over one; nothing stops on it. A pawn
+walking to a side does not notice another taking it until she arrives, where she chooses again —
+which only the hold can cause, by striking from a cell someone was making for.
