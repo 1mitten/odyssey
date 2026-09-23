@@ -577,6 +577,13 @@ namespace Odyssey.Presentation.Rendering
         public const string Shelf = Prefix + "shelf";
 
         /// <summary>
+        /// The line round a stockpile's outer edge (owner, 2026-09-23: "wash + edge outline"). No
+        /// art is meant to exist for it: it resolves to the plain slab primitive, which the edge
+        /// tint colours flat, the way the bed's placeholder is a box the tint colours.
+        /// </summary>
+        public const string StoreEdge = Prefix + "storeedge";
+
+        /// <summary>
         /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every
         /// tick and are drawn from the published snapshot, so these are resolved once and drawn by
         /// the actor pass rather than meshed into a chunk.

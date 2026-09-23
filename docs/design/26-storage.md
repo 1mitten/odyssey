@@ -552,3 +552,31 @@ would take `Registry.Label` away from the model, break the test above, and churn
 snapshot for a name the game still uses internally — so the wiki goes on being the reference for
 the game's vocabulary rather than an inventory of strings currently on a screen. Worth revisiting
 when the Def set generates the registry (`CLAUDE.md`, the content wiki section).
+
+## 13. A stockpile you cannot see, and the line round it — 2026-09-23
+
+**Reported:** *"I can't seem to create stockpiles anymore"*, then *"There is no visual to the
+stockpile or indicator or marker - has this somehow been removed"*. It had not been removed and the
+zone was being made; it was not being **drawn**. On natural ground a store's cell is the air over
+the ground, and its wash is on the ground's top face, meshed by the chunk a layer down
+(`IsStoredAbove`). `StorageZones.Mark` dirtied only the store's own chunk, which was enough until
+chunks got their own versions on 2026-09-21; since then the ground chunk never re-meshed.
+`Mark` now dirties the layer below. `StockpileDragTests` holds it, measured both ways
+(`docs/bug-patterns.md`, the 2026-09-23 register entry).
+
+**The owner's answers** (interview, same day): the painting preview had shown, so the input was
+never at fault; the wash stays; **an outline goes round the zone's outer edge**; and the look says
+nothing about priority or fullness.
+
+**The outline is baked, not drawn.** `ChunkMesher.EmitStoreEdge` puts a 0.15 m strip
+(`CellMetrics.StoreEdgeWidth`) on each side of a stored cell whose neighbour is not stored, in the
+store hue at full strength (`TintCode.StoreEdge`, bit 28) — the order colour the wash is pulled a
+third of the way towards. So a block's interior grid is never drawn: the old growing-zone cover's
+interior borders are what the owner objected to. It is placed at the store's own cell, where a slab
+would be, and lifted 6 mm over a slab's surface, so bare ground and built floors take the same
+strip. **Cost: one bucket per chunk that holds a store and nothing per frame** (P10). Because a
+neighbour joining or leaving changes a cell's line, `Mark` dirties the four neighbours' chunks as
+well. `StoreEdgeTests`: a 2 x 2 block and a lone cell give exactly 8 + 4 strips.
+
+**Open:** the width and the hue are a first guess for the owner's eye; a strip can hide under grass
+tufts on a meadow, which the first look will say.

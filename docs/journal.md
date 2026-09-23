@@ -11113,3 +11113,23 @@ It was not written. The incident that owns weather is deferred work with a desig
 debug switch that sets a field an incident is supposed to own is how a seam quietly becomes an
 interface. If the playtest comes back wanting the cold snap first, that is the moment to
 reconsider, and the reason will be on record rather than reconstructed.
+
+## 2026-09-23 — A stockpile you could not see (design 26 §13)
+
+Reported three ways in an evening — *"I can't seem to create stockpiles anymore"*, *"There is no
+visual to the stockpile"*, and then *"big delay and in another case didn't appear"*, *"having more
+than one stockpile - seemed to not draw the other one"*. One fault: the zone was made and its chunk
+was not re-meshed. On grass a store's cell is the air over the ground and its wash is on the ground's
+top face, meshed a layer down; `StorageZones.Mark` dirtied only the store's own chunk, which stopped
+being enough when chunks got their own versions on 2026-09-21. A stockpile showed only when
+something else re-meshed its ground — a felled tree, a job nearby — which is exactly a delay, a
+never, and one of two. Found on `claude/research-tab`, measured both ways there, and split out here
+because it is on `main` and every branch the owner plays inherits it.
+
+**Two lessons.** *"Was it made"* and *"is it on screen"* are two questions; the first test asked only
+the first and sent the diagnosis to the pointer for a round. And the last two reports came from
+sessions in other worktrees (`odyssey-power`, `odyssey-review-164`) that did not have the fix — the
+editor log's project path is the first thing to read before chasing a second cause.
+
+The owner's interview added an outline round the zone's outer edge, baked into the chunk: one bucket
+per chunk with a store, nothing per frame.
