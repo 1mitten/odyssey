@@ -56,6 +56,7 @@ next page when its items run on. Category headings count as rows.
 |---|---|---|
 | Category hues `#7fb85a #d95a6a #b0793f ...` | `HudTheme.ItemCategoryHues` | The spec copied the storage brief's originals; the pane shipped contrast-corrected ones (`StorageThemeTests`), and "reused from the stockpile pane" means those. |
 | Go at 12/500 | 12/400 | 500 is not a step of the 12 px role. |
+| QTY heading | COUNT | `HudGeometryTests.NoLabelIsAThreeLetterPlaceholder` holds the HUD to no two- or three-letter capitalised fragments, an acceptance criterion of the interface rebuild. |
 | Places listed without limit | **six rows** | What the pane's height holds under the identity band, the hint and the pinned button. A seventh store holding one item is not listed; recorded below. |
 | Bar 44 high, 12% wash | as design 34 §5 | Same reasons. |
 

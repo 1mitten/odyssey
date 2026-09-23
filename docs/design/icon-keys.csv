@@ -723,7 +723,7 @@ ui.research.project.generators,Generators,ui.research.project,RS,"A burner that 
 ui.research.project.lighting,Electric light,ui.research.project,RS,"Light that does not burn. A room stays usable after dark, at a steady draw on its net."
 ui.research.project.batteries,Batteries,ui.research.project,RS,"Charge put by against the hours a generator stands idle or a panel sees no sun."
 ui.research.project.solar,Solar arrays,ui.research.project,RS,"Free current by day and none at night, which is why it wants batteries behind it."
-ui.research.hud.now,Now,ui.research.hud,RS,The label of the strip that says what is being researched
+ui.research.hud.now,Current,ui.research.hud,RS,"The label of the strip that says what is being researched. Not Now, which the HUD reads as a placeholder"
 ui.research.hud.then,"then {list}",ui.research.hud,RS,"What the queue does next, after the project in hand"
 ui.research.hud.idle,Nothing being researched. Pick a project.,ui.research.hud,RS,The Now strip when no project is in hand
 ui.research.hud.project,Project,ui.research.hud,RS,Column heading
@@ -750,7 +750,7 @@ ui.inventory.hud.item,Item,ui.inventory.hud,INV,Column heading
 ui.inventory.hud.places,Places,ui.inventory.hud,INV,"Column heading: how many stores hold the item"
 ui.inventory.hud.total,Total,ui.inventory.hud,INV,"Column heading: how many the colony's stores hold"
 ui.inventory.hud.where,Where,ui.inventory.hud,INV,Column heading
-ui.inventory.hud.qty,Qty,ui.inventory.hud,INV,Column heading
+ui.inventory.hud.qty,Count,ui.inventory.hud,INV,"Column heading: how many of the item the store holds. Not Qty, which the HUD reads as a placeholder"
 ui.inventory.hud.go,Go,ui.inventory.hud,INV,Move the camera to this store and select it
 ui.inventory.hud.goto,Go to {place},ui.inventory.hud,INV,The primary button: the selected store
 ui.inventory.hud.inplaces,"{category}, in {count} places",ui.inventory.hud,INV,The line under a selected item's name

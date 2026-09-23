@@ -33,7 +33,7 @@ What the colony can learn, grouped by field, and the words the Research tab uses
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Now** | `ui.research.hud.now` | The label of the strip that says what is being researched | no art | RS |
+| **Current** | `ui.research.hud.now` | The label of the strip that says what is being researched. Not Now, which the HUD reads as a placeholder | no art | RS |
 | **then {list}** | `ui.research.hud.then` | What the queue does next, after the project in hand | no art | RS |
 | **Nothing being researched. Pick a project.** | `ui.research.hud.idle` | The Now strip when no project is in hand | no art | RS |
 | **Project** | `ui.research.hud.project` | Column heading | no art | RS |

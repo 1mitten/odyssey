@@ -145,7 +145,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Places** | `ui.inventory.hud.places` | Column heading: how many stores hold the item | no art | INV |
 | **Total** | `ui.inventory.hud.total` | Column heading: how many the colony's stores hold | no art | INV |
 | **Where** | `ui.inventory.hud.where` | Column heading | no art | INV |
-| **Qty** | `ui.inventory.hud.qty` | Column heading | no art | INV |
+| **Count** | `ui.inventory.hud.qty` | Column heading: how many of the item the store holds. Not Qty, which the HUD reads as a placeholder | no art | INV |
 | **Go** | `ui.inventory.hud.go` | Move the camera to this store and select it | no art | INV |
 | **Go to {place}** | `ui.inventory.hud.goto` | The primary button: the selected store | no art | INV |
 | **{category}, in {count} places** | `ui.inventory.hud.inplaces` | The line under a selected item's name | no art | INV |

@@ -70,9 +70,19 @@ with the Animals tab's pager in a 30 px foot. Nothing scrolls.
 | Spec | Built | Why |
 |---|---|---|
 | Command bar 44 high, 32 px items, 14 px icons | the shipped 48 px bar | Restyling the bar moves the dock line of every panel; it is its own unit if wanted. |
-| Active item 12% accent | the bar's existing `.cmd--on` wash (18%) | One rule for every bar item: Build, Menu and Work already use it. |
+| Active item 12% accent | the bar's existing `.cmd--on` wash (18%) | One rule for the bar: Build and Menu already use it. |
 | `--rule` at 7% | `HudTheme.Divider` at 9% | The existing token; a second rule colour would be a seventh grey. |
+| NOW strip label | CURRENT | `HudGeometryTests.NoLabelIsAThreeLetterPlaceholder` holds the HUD to no two- or three-letter capitalised fragments, an acceptance criterion of the interface rebuild. |
 | Window flat, 22 px close | as specced | Unlike Work and Animals, which keep the 5 px radius and 26 px close. Worth unifying one way or the other; the owner's call. |
+
+## 5b. Measured
+
+`DockedTabGeometryTests` (PlayMode) lays both windows out in a 1920 x 1080 panel and asserts the
+specified size, the same size after the table re-sorts, and no descendant outside the frame. Its
+first run used the batch runner's own small game view, where the panel scales to about 0.39: every
+1 px border then rounds up to a whole physical pixel (2.57 layout units), the 34 px header to 36,
+and the body pushed 5 px out of the bottom. That is the runner's screen and not the window, but it
+is also what a **very small window** would do, since the heights are fixed and the frame clips.
 
 ## 6. Open
 
