@@ -10676,3 +10676,151 @@ look since the first had been judged from a strip in which the legs moved the wr
 and nobody, the owner included, could say what was wrong beyond "odd" — which is what a gait
 running backwards under a body moving forwards looks like. The sign is one named constant now
 and a test measures the sole.
+
+## 2026-09-22 — Modular colonists, and four caches that were right until something moved
+
+`docs/design/29-modular-colonists.md`, `docs/research/e-06-modular-colonists.md`, PR #168.
+
+**The pack was not what it said on the tin, and that was the first useful finding.** POLYGON Battle
+Royale advertises modular characters; what it ships is one rig carrying fifteen *whole* outfits with
+one enabled, plus rigid props for hair and beards. Nothing below the neck is separable — which
+`e-05` had already concluded a year of sessions earlier and which is worth re-reading before anyone
+buys a pack for its modularity again.
+
+**The second finding was better: we already owned the mechanism.** PolygonGeneric's installed
+prefabs carry hair, hats and hoods on the same rig, and the project had wired up only the body half.
+The modular system was worth building whether or not the new pack arrived.
+
+**Everything risky was measured before it was argued.** The prefabs import despite a pre-2018.3
+format; the two packs' humanoid bone maps are identical, forty each, so the finger-naming difference
+is harmless; the heights match to 0.3% so `scale 1.4` stands; and the swatch classifier reports
+`Full` on fourteen of fifteen bodies with no change to its hard-coded columns. **The one that paid
+for the whole exercise**: most hair and beard meshes map every vertex to the single atlas texel the
+scalp uses, so repainting the hair rectangle recolours all three together. A matching beard is free.
+The pre-measurement belief — that hair colour would need a second mechanism — was written down and
+then falsified by its own probe, which is the point of writing it down.
+
+**Then four faults, and they rhyme.** Each was a thing that cached or assumed an identity, and each
+stayed correct until something underneath it changed:
+
+1. `ColonistAppearance.Equals` kept its old idea of "the same person" after two fields were added,
+   so the portrait cache handed fifteen hairstyles one picture. My first reading of that contact
+   sheet blamed the beard, and was wrong — the measurement said the placement was correct and I
+   argued with it instead of believing it.
+2. The setup screen's fallback built an appearance book from a *row count*, which stopped meaning
+   the same thing the moment a book carried gendered pools. `PawnFigureDirector`'s own comment
+   stated the broken invariant in as many words.
+3. `[Serializable]` landed on a new enum instead of `ModuleEntry`, and the catalogue serialised to
+   472 bytes with no entries **while still logging "160/177 rows have art"**. Found by rebuilding,
+   not by reading.
+4. `PortraitStudio`'s cached subject outlived the materials it wore, so every portrait went magenta
+   after a colony ended. Latent for as long as there were seventy-three bodies; the issued uniform
+   took the cast to two looks and made a rare fault the normal one.
+
+The register entry is `docs/bug-patterns.md` P14, and the generalisation is worth more than the fix:
+**a cache keyed on identity outlives a change to what identity means.** Three of those four are that
+sentence.
+
+**The uniform came last and was the owner's call**: everyone in a clean jumpsuit, white with a slight
+blue tint, so identity moves onto the face and clothing becomes progression rather than noise. It is
+applied *after* the rolls rather than instead of them, so taking it off when clothing becomes an item
+gives back exactly the cast that would have been dealt — which is what makes §9c safe to build on.
+
+## 2026-09-23 — the crowd scan, and the cheap candidate that was half the bill
+
+`PawnPose.Of` walked the whole pawn span for every pawn it posed. `docs/plans/pf-crowd-scan.md` had
+the evidence and an instruction with it: reproduce the cost on your own machine before starting,
+because the numbers in that file were taken beside several editors.
+
+**That instruction earned its keep twice.** The clear-machine baseline put `Actors` at 15.8 ms of a
+27.8 ms frame at 384 colonists against the plan's 13.3 of 22.5 — same shape, different machine, and
+the per-pair cost the two imply (128 ns against 117) is what says they are the same effect rather
+than two. It also turned up an arithmetic slip in the plan: it gives 147,456 pairs at 384 and calls
+that `(N − 64) × N`, but 147,456 is `384²` and `(N − 64) × N` is 122,880. Recorded in §9a, because
+the next person to check the model would otherwise find it 20% out and go hunting a second effect.
+
+**The plan's other instruction mattered more.** It named two candidates — hoist `WhereItIsNow` out
+of the inner loop, or build a spatial index — and said to measure the hoist alone first, because
+building the index subsumes it and afterwards the two cannot be told apart. So the control is
+three-valued rather than a bool: `Span`, `Cached` (the hoist and nothing else), `Bucketed`. At 384
+colonists the hoist alone took `Actors` from 17.26 ms to 9.71. **Forty-four per cent of the cost was
+one line**, and against a `Span`-only control the index would have been credited with all of it.
+
+The fix itself is unremarkable and that is the point: a 3 m bucket grid, rebuilt once a frame in the
+composition root, shared by the three passes that pose a pawn. It is allowed to exist because the
+cull is **exact** — `Proximity` is `SmoothStep((3 − d) / 1.5)`, exactly zero at the radius, and the
+loop already discarded a zero — so the sidestep the owner judged is not re-opened. Frame at 384:
+**27.81 → 14.99 ms**. At the scale target of fifty it changes nothing, which was known before it was
+built.
+
+**Two things came out of it that are worth more than the milliseconds.**
+
+The first is a testing lesson, and I only have it because I mutated the constant. `PawnCrowdIndex`'s
+bucket was set to the 3 m radius; I changed it to the 2.5 m cell — a plausible tidy-up and a real
+off-by-one — and `EveryScanModeDrawsTheIdenticalPose`, 220 pawns and the headline claim of the whole
+unit, **passed**. The crowd term reduces with a `max`, and a pawn at 2.93 m is worth 0.007 of the
+envelope, so on a crowded fixture there is always a nearer neighbour to hide the miss behind. The
+test named for exactness was blind to the only way the cull could be wrong. `docs/bug-patterns.md`
+P16, and the fixture that does catch it has two pawns and no crowd at all: where the smallest
+contribution is the *decisive* one.
+
+The second is that removing one quadratic exposed another. `Actors` is still `(N − 64) × N`-shaped
+after the cull — 43.8 ns a pair at 192 and 43.2 at 384, flat across a five-fold range, the same
+signature that found the crowd scan. It is `Cast.LookFor` → `ColonistNames.RollSeedOf` →
+`WorldSnapshot.TryGetPawnAspect`, **a linear scan over every published aspect, once per far-form pawn
+per frame**. Left alone deliberately: this unit was asked to fix `PawnPose.Of`, and that one is in
+the snapshot contract. It is the next PF unit.
+
+**And an operational note.** Three attempts were needed to get a clean measurement. The first queue
+raced my own EditMode run — a batch run that has printed its results can still be shutting down —
+and a single "is the machine clear" sample is not enough. The waiter now wants three consecutive
+quiet checks. That belongs in `docs/lessons.md` beside the run that finishes without exiting.
+
+## 2026-09-23 — the second quadratic, and a comment that stopped being true
+
+Fixing the crowd scan (above) left `Actors` still growing as `(N − 64) × N`. The design note named
+the suspect — `WorldSnapshot.TryGetPawnAspect` — and left it, because that one is in the snapshot
+contract rather than in steering. This is that unit, done the same day.
+
+**The whole fault is one stale comment.** `TryGetPawnAspect` walked every published row, and its own
+doc comment justified it: *"the published set is tens of rows on a real colony — sparse is the whole
+shape of `PawnAspect` — so an index would cost a dictionary per frame to save arithmetic that does
+not show up."* That was **true when it was written**. The Work tab's priorities (two rows per work
+type) and the colonist schedule (twenty-four rows) were both added afterwards, both publish for
+every colonist unconditionally, and both had good reasons written down at the time. Nobody connected
+them back to the comment that their existence falsified.
+
+**I predicted ~97 rows a colonist by reading the publish loop. The measurement said 57.** That is the
+second time in two units the arithmetic-from-reading was wrong and the cheap measurement was right,
+and `AspectScaleTests` is now a fast-tier guard so the next feature that adds a per-colonist row has
+to look at the number.
+
+The fix is a lazy index, built on the first lookup of each published frame. Lazy is the whole of the
+decision: indexing as rows are published would put the cost inside the *tick*, and would charge every
+world that publishes aspects whether anything ever read one — a headless golden run reads none at
+all. Rejected too: publishing the roll seed as a field on `PawnView`, which would have made the
+renderer's lookup free and left the other fifty-six call sites on the quadratic. The problem was
+never the roll seed.
+
+**The result is larger than the unit.** `Actors` at 384 colonists 4.59 → 0.83 ms, `Figures`
+6.39 → 0.74 — and `Figures` is now *flat* at 0.74 across 64, 192 and 384, which is the first time
+the figure ceiling has actually capped anything. It never did: the cap pins the posed figures at 64,
+but each was making a lookup that grew with the whole colony. The colony sweep is
+2.20 / 2.61 / 3.21 / 3.37 / 3.53 / 3.75 / 4.99 / **4.82 ms** across 8 to 384 pawns. **There is no
+knee.** At 384 the frame has gone 27.81 → 14.99 → 4.82 ms over the two units, and the Play report
+that started it — *"it seemed to hover 1.7 ms no matter the colony size but then frames dropped after
+so many colonists"* — is answered: what is left is the hover.
+
+**And the invalidation test was worthless on its first writing**, which is the P16 lesson arriving
+again by a different door. I removed the index invalidation deliberately and all six tests passed.
+Two reasons, both worth knowing: the snapshots are double-buffered, so each buffer merely builds its
+index once; and the index maps a key to a *row number*, while the rows are republished in the same
+order every tick — so a stale table still pointed at the right row, and the value read off it was
+fresh. A stale index is only wrong when the **set** of rows changes. The test now spawns a colonist
+who did not exist when either buffer built its index, and queries both buffers first so neither can
+pass by never having built one. That version fails on the mutation.
+
+**The generalisation, and it is now a paragraph in P12:** the crowd scan was 3.5× the aspect scan, so
+while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
+term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
+than declaring it linear.**

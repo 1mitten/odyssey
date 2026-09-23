@@ -53,6 +53,34 @@ the next session learns to ignore.
   living rather than pacing a corner or standing for minutes. Click one: the pane should say
   *Midden hog · Wandering* or *Resting*, with no face, needs or tabs; the roster should not gain
   a card. Both scales are one number each in `AnimalImport.Scales`.
+- **Does the frame still fall over at a high colony count?** (PRs #171 and the aspect-lookup PR,
+  `docs/design/25-pawn-steering.md` §9 and `31-aspect-lookup.md`.) **One row for two units**, because
+  they are one answer. Spawn colonists past a couple of
+  hundred with the overlay up: the sweep now runs 2.2 to 4.8 ms across 8 to 384 colonists on this
+  machine with no knee in it, against 27.8 ms at 384 before. A wrong answer looks like a bend
+  anywhere in that range, which would mean a third term nobody has measured. **Nothing to look at
+  below about a hundred**, and a test proves the drawn sidestep is bit-for-bit unchanged, so there
+  is deliberately no "does it still look right" row.
+- **Can you tell three colonists apart without reading their names, and does the colony read as a
+  crew?** (PR #168, `docs/design/29-modular-colonists.md`.) Everyone now wears the same issued
+  jumpsuit and identity is carried entirely by face, hair and beard. Three things only a person can
+  answer: whether **three candidates** on the setup screen are distinguishable at a glance;
+  whether a colony of five reads as *a crew in uniform* rather than as clones; and whether the
+  uniform's white **takes the light** at dusk and dawn or goes to a flat hole in the frame. A wrong
+  answer looks like: you still click each card to tell who is who, or the suit glows white at
+  golden hour.
+
+- **Do the names suit the people?** (Same PR, §11.) A name's CSV row picks the body, and the thirty
+  unisex names are now dealt a sex rather than defaulting to male. Worth a few rerolls. A wrong
+  answer looks like a name that reads female on a body that does not, or the same unisex name
+  always coming out male across several colonies. **The pool skews male 120:90** and that is one
+  CSV column if you want it evened.
+
+- **Is the hair colour on the face a problem now?** (Same PR, §10.) Pre-existing and unchanged —
+  the hair rectangle paints the scalp, brows, a band across the eyes, the jaw and the lips. It was
+  invisible under brown hair and a varied cast; against a white uniform with teal and plum in the
+  palette it may not be. If it reads as goggles rather than as shadow, §10 has three costed ways
+  out and the cheapest experiment that decides between them.
 
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
