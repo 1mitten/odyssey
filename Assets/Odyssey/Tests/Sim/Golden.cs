@@ -30,6 +30,17 @@ namespace Odyssey.Tests.Sim
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
     ///
+    /// <para><b>All six moved again on 2026-09-21, the temperature review's fixes (design 28
+    /// §12), and here is the sentence.</b> Two more fields entered the hash — a colonist's
+    /// last-felt ambient (F8) and each room's energy residual (F7) — which is the whole of the
+    /// <c>Generated</c> move on all three: with those two lines disabled every tick-zero hash
+    /// came back to the committed value. <c>Simulated</c> moved on the two boards that have
+    /// caverns and not on the barren one, and it was measured component by component: cells,
+    /// pawns and edifices hash identically before and after on all three; only the thermal
+    /// section differs, because a cavern now converges instead of stopping a cell count short
+    /// (the residual) and a cavern under a cavern is no longer charged to the sky (F6). Nothing
+    /// a colonist did changed.</para>
+    ///
     /// <para><b>All six numbers moved on 2026-09-17, and here is the sentence.</b> The list of
     /// standing buildings entered the state hash (<c>EdificeSaveSection</c>): what a wall is made
     /// of was outside it until then, so a wooden wall and a stone wall in the same cell hashed
@@ -356,6 +367,19 @@ namespace Odyssey.Tests.Sim
         /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
         /// outputs diff clean for all three colonies.</para>
         /// </remarks>
+        /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
+        /// that had gained animals, and neither side's numbers were right for the merged code.</b>
+        /// Both branches had moved all six — main for the pawn's kind entering the hash, this one
+        /// for the colonist's last-felt ambient and each room's energy residual — so taking either
+        /// side would have committed a number nothing had produced. Re-baked afresh, which is the
+        /// only honest resolution of a golden conflict.</para>
+        ///
+        /// <para><b>Measured before they were written.</b> <c>GoldenColonyProbe</c> run on the
+        /// merged branch and on <c>main</c>: the two outputs <b>diff clean</b>. Every census
+        /// number — live things, per-def stacks, item cells, the two lister counts, pawn cells,
+        /// total food, total rest, standing orders, zones — is identical on all three boards. The
+        /// hash sees more; no colony does anything different.</para>
+
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -364,8 +388,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 11435578929042502374UL,
-            Simulated = 6849796621813291164UL,
+            Generated = 12790787154328167162UL,
+            Simulated = 3706175734146959988UL,
         };
 
         /// <summary>
@@ -381,15 +405,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            // 2026-09-23, wildlife (design 30): the meadow is seeded with nine animals at tick
-            // zero, so both values move; the bare meadow did not, and the colony probe says the
-            // colonists' economy is identical — the difference is the animals and nothing else.
-            // And again the same afternoon for the scatter (design 30 §2: sounders apart and
-            // loose); the probe read the same as the first time — the animals' cells, nothing else.
-            // 2026-09-23 again, the draft's two job defs (see the meadow's remarks): four more
-            // zeros in the job counters; the probe diffs clean.
-            Generated = 14177109647017402279UL,
-            Simulated = 11101947533371264551UL,
+            Generated = 16220491228864799437UL,
+            Simulated = 15373625479848544007UL,
         };
 
         /// <summary>
@@ -425,10 +442,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
-            // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
-            Generated = 16760212594496635847UL,
-            Simulated = 17350012236707786580UL,
+            Generated = 15126826616277547412UL,
+            Simulated = 3524714457912801410UL,
         };
     }
 }

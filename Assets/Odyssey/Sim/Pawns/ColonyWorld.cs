@@ -159,6 +159,11 @@ namespace Odyssey.Sim.Pawns
                 // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
                 // older save, which loads with nobody drafted.
                 new CombatSection(pawns.Pawns),
+                // Appended, as every section since the first has been: the room temperatures,
+                // keyed by room. A save from before temperature has no section and loads with
+                // every room at the outdoor curve — which is what it was, in a world where
+                // nothing was ever cold (design 28 §9).
+                pawns.Temperature!,
             };
         }
 

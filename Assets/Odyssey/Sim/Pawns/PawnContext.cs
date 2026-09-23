@@ -78,6 +78,13 @@ namespace Odyssey.Sim.Pawns
         public World.EnclosureGrid? Enclosure { get; set; }
 
         /// <summary>
+        /// The thermal pass (design 28), when the world has one. Null in a bare pawn fixture,
+        /// exactly as <see cref="Enclosure"/> is — a fixture that never meant to be cold reads
+        /// the outdoor curve and nothing here is the wiser.
+        /// </summary>
+        public Temperature.TemperatureSystem? Temperature { get; set; }
+
+        /// <summary>
         /// The structure of this cell changed, so the boundary above it has to be re-judged.
         ///
         /// <para>Both the cell and the one above it, always, because they are two different

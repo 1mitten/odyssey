@@ -148,6 +148,7 @@ namespace Odyssey.Presentation.World
         readonly int _wallCoreModule;
         readonly int _waterFallModule;
         readonly int _bedModule;
+        readonly int _campfireModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
         readonly int _storeEdgeModule;
@@ -211,6 +212,7 @@ namespace Odyssey.Presentation.World
             // When real two-cell art exists a catalogue row on this id upgrades it everywhere,
             // with no code change — the same deal every other module id already offers.
             _bedModule = library.Resolve(ModuleIds.Bed, ModuleShape.SolidBlock);
+            _campfireModule = library.Resolve(ModuleIds.Campfire, ModuleShape.SolidBlock);
 
             // The pillow is a module of its own so it can be a rounded shape and a linen colour
             // whatever the bed's frame is made of (BedShape, PillowMesh).
@@ -916,6 +918,7 @@ namespace Odyssey.Presentation.World
             // the trees' 10 and 11, so without this line the natural table below indexes past
             // itself and every shelf in the colony draws as a conifer.
             if (def == CoreContent.EdificeShelf) return _shelfModule;
+            if (def == CoreContent.EdificeCampfire) return _campfireModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.

@@ -219,6 +219,25 @@ namespace Odyssey.Presentation.Ui
                     Polyline(painter, true, p(4, 15), p(20, 15));
                     return;
 
+                // A campfire: a flame over two crossed logs.
+                //
+                // Drawn rather than borrowed, unlike the bed above. The bed can wear the bunk's
+                // shape because a bunk IS a bed and the lie is only about which kind; there is
+                // nothing on this palette a fire could borrow from without saying something
+                // false. The two logs carry the reading at 17 px more than the flame does —
+                // a flame alone is a leaf — so they are the wider, more separated pair of
+                // strokes and the flame sits clear above them.
+                case HudGlyphKind.ToolCampfire:
+                    Polyline(painter, true, p(4, 17), p(20, 21));
+                    Polyline(painter, true, p(4, 21), p(20, 17));
+                    painter.BeginPath();
+                    painter.MoveTo(p(12, 3));
+                    painter.BezierCurveTo(p(17, 8), p(16.5f, 12), p(12, 14.5f));
+                    painter.BezierCurveTo(p(7.5f, 12), p(7, 8), p(12, 3));
+                    painter.ClosePath();
+                    painter.Stroke();
+                    return;
+
                 // ------------------------------------------------------ power
 
                 // A conduit: a run with a junction box on it.
@@ -480,6 +499,7 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.table", HudGlyphKind.ToolTable },
             { "ui.arch.tool.lamp", HudGlyphKind.ToolLamp },
             { "ui.arch.tool.shelf", HudGlyphKind.ToolShelf },
+            { "ui.arch.tool.campfire", HudGlyphKind.ToolCampfire },
 
             { "ui.arch.tool.conduit", HudGlyphKind.ToolConduit },
             { "ui.arch.tool.battery", HudGlyphKind.ToolBattery },

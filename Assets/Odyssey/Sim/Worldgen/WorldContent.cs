@@ -107,7 +107,7 @@ namespace Odyssey.Sim.Worldgen
         /// load half of it.
         /// </summary>
         public static DefLoader Register(DefLoader loader) =>
-            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>();
+            loader.Register<TerrainDef>().Register<OreKindDef>().Register<PlantDef>().Register<ClimateDef>();
 
         /// <summary>
         /// The whole terrain table, in index order. A missing or misspelt kind throws here
@@ -140,7 +140,20 @@ namespace Odyssey.Sim.Worldgen
 
         /// <summary>Drop the cached table, so the next read reloads. Paired with
         /// <c>ContentPack.Reset</c>, which is the only thing that should call it.</summary>
-        internal static void Forget() => _table = null;
+        internal static void Forget()
+        {
+            _table = null;
+            _climate = null;
+        }
+
+        static ClimateDef? _climate;
+
+        /// <summary>
+        /// The climate the running game reads, loaded once like the terrain table. The thermal
+        /// system asks for it once at construction and again never, but the cache costs nothing
+        /// and keeps the same shape as <see cref="Table"/> beside it.
+        /// </summary>
+        public static ClimateDef Climate => _climate ??= One<ClimateDef>(ContentPack.Core, "Climate_Temperate");
 
         /// <summary>The ore kinds, resolved into the same struct the generator already draws from.</summary>
         public static NaturalContent.OreKind[] OresFromDefs(DefDatabase defs)

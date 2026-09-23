@@ -168,7 +168,13 @@ namespace Odyssey.Tests.Sim
         // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
         // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
         // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
-        const ulong ContentFingerprint = 15492604582855010655UL;
+        //
+        // Moved again, 2026-09-23, merging temperature into a main that had taken combat and
+        // wildlife. Neither side's number covers the merged pack - main's has the combat and
+        // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
+        // loaded pack rather than adopted from either. Third pass of the same resolution in one
+        // day; main is moving under this branch faster than it is being reviewed.
+        const ulong ContentFingerprint = 8058600451355972608UL;
 
 
         [Test]

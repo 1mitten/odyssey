@@ -496,7 +496,7 @@ namespace Odyssey.Tests.Sim
                 // so the dirty block is waiting when NavigationSystem rebuilds in phase 2 of the
                 // *next* tick. The cost therefore lands on WorldSystems, which is where a
                 // colonist's own mined cell would land it.
-                miner = new MineOneCell(cells, nav, s);
+                miner = new MineOneCell(cells, nav, s, pawns.Enclosure);
                 world.Register(miner);
             }
 
@@ -538,12 +538,18 @@ namespace Odyssey.Tests.Sim
         {
             readonly CellGrid _cells;
             readonly NavGraph _nav;
+            readonly EnclosureGrid? _enclosure;
             uint _s;
 
-            public MineOneCell(CellGrid cells, NavGraph nav, uint seed)
+            /// <param name="enclosure">The colony's enclosure, so the edit marks what a real
+            /// mined cell marks. Until 2026-09-21 this arm marked nav alone, and the enclosure
+            /// solve — the largest cost of a real edit on Huge — was never in the number
+            /// (`docs/lessons.md`).</param>
+            public MineOneCell(CellGrid cells, NavGraph nav, uint seed, EnclosureGrid? enclosure = null)
             {
                 _cells = cells;
                 _nav = nav;
+                _enclosure = enclosure;
                 _s = seed == 0 ? 1u : seed;
             }
 
@@ -564,6 +570,7 @@ namespace Odyssey.Tests.Sim
 
                     _cells.Flags[idx] &= ~CellFlags.SolidTerrain;
                     _nav.MarkDirty(idx);
+                    _enclosure?.MarkDirty(idx);
                     Mined++;
                     return;
                 }

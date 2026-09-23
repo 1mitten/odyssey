@@ -2,7 +2,7 @@
 
 Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.
 
-81 entries, 23 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+82 entries, 24 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Architect categories
 
@@ -69,6 +69,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Comms console** | `ui.arch.tool.comms` | Talk to factions and traders | sheet 08 (salvage gear), high | M3 |
 | **Bunk** | `ui.arch.tool.bunk` | Cheap sleeping. Poor comfort | sheet 03 (camp and crafting), high | M3 |
 | **Bed** | `ui.arch.tool.bed` | Better rest, better mood | sheet 08 (salvage gear), high | M3 |
+| **Campfire** | `ui.arch.tool.campfire` | A fire: warmth you can build | no art | M4 |
 | **Table** | `ui.arch.tool.table` | Eating at one beats eating on the floor | sheet 03 (camp and crafting), high | M3 |
 | **Chair** | `ui.arch.tool.chair` | Comfort while working or eating | sheet 03 (camp and crafting), med | M3 |
 | **Lamp** | `ui.arch.tool.lamp` | Light. Costs power | sheet 08 (salvage gear), high | M3 |

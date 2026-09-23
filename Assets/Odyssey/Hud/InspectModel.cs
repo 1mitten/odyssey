@@ -744,6 +744,7 @@ namespace Odyssey.Hud
         int _cellRowsZoneYield;
         int _cellRowsCropGrowth;
         bool _cellRowsIndoors;
+        int _cellRowsTemp;
 
         /// <summary>
         /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
@@ -842,7 +843,8 @@ namespace Odyssey.Hud
                 && _cellRowsStoredStacks == detail.StoredStacks
                 && _cellRowsStoredUnits == detail.StoredUnits
                 && _cellRowsStoredDef == detail.StoredDef
-                && _cellRowsIndoors == detail.IsIndoors) return;
+                && _cellRowsIndoors == detail.IsIndoors
+                && _cellRowsTemp == detail.AmbientTempC) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -863,6 +865,7 @@ namespace Odyssey.Hud
             _cellRowsStoredUnits = detail.StoredUnits;
             _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
+            _cellRowsTemp = detail.AmbientTempC;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -956,6 +959,16 @@ namespace Odyssey.Hud
 
             if (detail.IsIndoors)
                 Row(n++, "environment", "indoors");
+
+            // How warm it is here, beside whether it is indoors: the room's air where the cell
+            // is in a room, the outdoor curve where it is not — the same number the colonists
+            // are feeling on the needs cadence and the crops on the growth one (design 28 §8).
+            // Centi-degrees to one decimal, signed, because −12.5 °C and 12.5 °C are different
+            // decisions and the pane exists to make the decision obvious. Silent only for a
+            // detail that was never told, which in the game never happens.
+            if (detail.AmbientTempC != int.MinValue)
+                Row(n++, "temperature", TemperatureLabels.Describe(detail.AmbientTempC),
+                    HudTheme.Temperature(detail.AmbientTempC));
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"

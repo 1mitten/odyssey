@@ -406,6 +406,15 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeShelf = 13;
 
         /// <summary>
+        /// The first heat source (design 28 §7). Like the bed, it arrives only by
+        /// <c>ConstructionGrid.Raise</c> — nothing stamps it — and it is the one building whose
+        /// <c>heatPerPass</c> is not zero, which is the whole reason it exists: Rime is survivable
+        /// by shelter and fire, and nothing else. 14, the next free id after the shelf — spelled as
+        /// a literal for the same reason the bed's is.
+        /// </summary>
+        public const ushort EdificeCampfire = 14;
+
+        /// <summary>
         /// The city's ten, which are the first ten of the one table. Loaded from
         /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
         /// in code and the XML mirrored it, which meant every terrain was written twice.

@@ -23,11 +23,12 @@ the next session learns to ignore.
 
 ## Open
 
-- **Can you see a stockpile, and does its outline read?** (`claude/research-tab`,
-  `docs/design/26-storage.md` §13.) Paint a stockpile on grass and one on a built floor. It had
-  been created and not drawn since 2026-09-21; now it should wash the ground and carry a line in
-  the store's hue round its outer edge only. A wrong answer is no wash, a line drawn between its own
-  cells, a line lost under grass tufts, or a line too heavy for a big warehouse floor.
+- **Can you see a stockpile, and does its outline read?** (`claude/stockpile-drawn`,
+  `docs/design/26-storage.md` §13.) Paint a stockpile on grass and one on a built floor, and two
+  at once. It had been created and not drawn since 2026-09-21 unless something else re-meshed its
+  chunk; now it should wash the ground and carry a line in the store's hue round its outer edge
+  only, within a couple of frames. A wrong answer is no wash, a delay, a line between its own
+  cells, a line lost under grass tufts, or one too heavy for a big warehouse floor.
 
 - **Does the Inventory tab find things, and does Go land where you meant?** (`claude/research-tab`,
   `docs/design/35-inventory-tab.md`.) F2 with a few stockpiles and a shelf holding goods. Judge
@@ -35,12 +36,6 @@ the next session learns to ignore.
   the store's largest stack, with the slice moved to its layer, is where you expected the camera;
   and whether the store pane that opens is the one the row named. A wrong answer is the camera
   landing on the store's corner away from the goods, or a pane titled with a different number.
-
-- **Does the Research tab read at a glance with no mechanism behind it?** (`claude/research-tab`,
-  `docs/design/34-research-tab.md`.) F3, press Research on Electricity, Queue on Ladder,
-  then debug menu *Finish research*: Power lines and Generator unlock and Ladder starts. Judge whether the four statuses read with the words covered,
-  and whether the flat window and 22 px close beside the rounded Work tab look like one interface
-  or two — a wrong answer is wanting them unified, and which way.
 
 - **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
   (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she
@@ -140,6 +135,29 @@ the next session learns to ignore.
   palette it may not be. If it reads as goggles rather than as shadow, §10 has three costed ways
   out and the cheapest experiment that decides between them.
 
+- **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
+  debug menu with backtick and press **Skip one month** four times — that is the row this review
+  added, because with only *Skip one day* the season the whole model was built for was sixty
+  presses away and so was never going to be looked at. Watch the clock as you go: the outdoor
+  reading beside the date is the curve, and Wash → Glare → Rime should feel like a year turning
+  rather than a number changing.
+
+  In **Rime**, stand a colonist outdoors at night: the pane should say a freezing tile, the clock
+  a freezing outdoors, and within hours her work should slow and then her condition. Then build a
+  hut — walls, door, a floor above — put a **campfire** in it (3 wood, furniture beside the bed)
+  and skip again: the room should hold comfortable, the pane should say so, and sleeping there
+  should rest better than the ground outside.
+
+  Four things only a keyboard decides. Whether **Wash's chill is mild enough** that spring feels
+  benign — a wrong answer is spring already wanting a fire, and the bands are in
+  `Temperature.xml`. Whether the **campfire feels like a fire or like a radiator** — a wrong
+  answer is one fire holding a hall, or a fire in a cupboard not being uncomfortable; the number
+  is `heatPerPass` in `Buildings.xml` and the design says what it was tuned against. Whether
+  **four hours outdoors in Candle is the right amount of rope** before a colonist is in trouble —
+  a wrong answer is either dying while you are reading the pane, or standing in −13 °C all night
+  and being fine. And whether **going down is worth it**: dig a cellar and click a tile, which
+  should read warmer than the surface in Rime and cooler in Glare — if it reads the same, the
+  ground damping is not arriving where a player would ever meet it.
 - **Does a wall ever go up around somebody now, and does the fix cost anything to watch?**
   (`claude/build-appearance-and-entombment`, `docs/design/30-nobody-in-a-wall.md`.) Order walls
   across a route colonists are using and let them finish while people are crossing. Three things

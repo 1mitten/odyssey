@@ -2500,6 +2500,17 @@ git worktree remove D:\code\<worktree>
 ```
 
 `rmdir` on a junction removes the link. A recursive delete follows it.
+
+
+## A benchmark that edits the grid directly bypasses every cache a real edit invalidates
+
+`TickBenchmarkTests.MineOneCell` flips a cell and marks the nav grid, and that was the whole
+"edit tick" the map-size numbers were taken on. A colonist's mined cell also marks the enclosure,
+the structure solver and the chunks — and the enclosure solve was the largest of them on Huge
+(2.3 ms of a real edit against 0.9 ms measured) before temperature made it larger. **When a
+benchmark stands in for a game action, list every mark the real action sets and set them all**,
+or the number is of a different action than the one it is named after. Found reviewing PR #164
+(2026-09-21); `EnclosureCostProbe` is the explicit arm that measures the missing one.
 ## A dead process can hold the build backend, and the batch run waits for it for ever
 
 `scripts/unity.sh test editmode` wrote its log up to `Compiling Scripts` and then sat there. The last
@@ -2568,3 +2579,34 @@ The second lesson is cheaper and cost more: **run the whole PlayMode tier before
 the tests you wrote.** Three PlayMode tests elsewhere counted pawns where the world now seeds
 animals beside the colonists, and the runner found all three one push at a time, each a
 fifteen-minute round trip. The tier is ten minutes here.
+## Four tiers, and a branch can report three of them (2026-09-22)
+
+PR #164 reported *"Fast tier 921 + 583 green, Long tier 23 green, Unity EditMode 2,280 total, 0
+failed"* — three tiers, all honest, and **no PlayMode figure**. PlayMode had one real failure
+waiting in it: the campfire was live on the Build palette with no glyph, so its chip drew the
+placeholder square the specification forbids, and it had been that way for as long as the campfire
+had existed.
+
+**Nothing else could have caught it.** `PaletteGlyphs` lives in `Odyssey.Presentation`, which the
+fast tier does not compile at all; EditMode compiles it and does not carry the test;
+`HudGeometryTests` is PlayMode because it needs a panel. So the one tier that was not run was the
+only tier that could see it.
+
+This is the Long tier's lesson again in different clothes — PR #145 merged with three green tiers
+on top of a Long tier nobody ran and turned `main` red on a wall-clock gate. **The rule that comes
+out of both: a report of "tiers green" names every tier, and a tier with no number beside it was
+not run.** "EditMode 2,280, 0 failed" reads like the authoritative gate because CLAUDE.md calls
+EditMode authoritative, and it is — for what it covers.
+
+The four, and what each is the only one able to see:
+
+| Tier | Compiles | Only it can catch |
+|---|---|---|
+| Fast (`test-fast.sh`) | Sim, Sim.Contracts, Hud | nothing exclusively — it is the inner loop, not a gate |
+| Long (`--filter TestCategory=Long`) | the same | soak runs, scale-target round trips, wall-clock gates |
+| Unity EditMode | **everything**, including Presentation and Editor | assembly-definition boundaries, editor tooling, anything that will not compile outside the editor |
+| Unity PlayMode | everything | anything that needs a panel, a frame or a player loop: HUD geometry, glyphs, frame time |
+
+And the player build is the fifth thing, which is not a tier and proves what none of them do: that
+a stripped shader and a runtime path under `Assets/` survive. Two green tiers say nothing about
+whether the game runs.

@@ -68,6 +68,13 @@ namespace Odyssey.Sim.Pawns
         {
             var content = _ctx.Content;
 
+            // The weather this colonist is standing in, refreshed once per interval for the
+            // rates and the mood to read (design 28 §8). Everything downstream — work, rest,
+            // severity, mood — uses this one number, so they cannot disagree about how cold the
+            // same room is.
+            if (_ctx.Temperature != null)
+                pawn.AmbientTempC = _ctx.Temperature.CellTemp(pawn.Cell, tick);
+
             // ---- food: always falls, even asleep -------------------------------------------
             Fall(pawn, NeedIndex.Food);
 
@@ -84,11 +91,48 @@ namespace Odyssey.Sim.Pawns
                 pawn.StarvationSeverity = System.Math.Max(
                     0, pawn.StarvationSeverity - content.Kind.starvationPerInterval);
 
+            // Temperature severity, the same shape one column along (design 28 §8): past the
+            // safe bounds the distance sets the rate — a cold snap is worse than a chill — and
+            // inside them the bar drains by a fixed number, so reaching shelter arrests it
+            // rather than merely stopping it. The sign flips when the danger flips, and a pawn
+            // moving from freezing to sweltering drains what it had before it starts earning
+            // the other way, one interval at a time.
+            var temperature = content.Temperature;
+            int severityDelta = temperature.SeverityDelta(pawn.AmbientTempC);
+            if (severityDelta != 0)
+            {
+                if (severityDelta < 0 && pawn.TemperatureSeverity > 0 ||
+                    severityDelta > 0 && pawn.TemperatureSeverity < 0)
+                {
+                    // Opposite danger: recover first, by the recovery rate, exactly as comfort
+                    // would — you cannot be hypothermic and heatstroked at once.
+                    int recovered = System.Math.Min(
+                        System.Math.Abs(pawn.TemperatureSeverity), temperature.severityRecoveryPerInterval);
+                    pawn.TemperatureSeverity -= System.Math.Sign(pawn.TemperatureSeverity) * recovered;
+                }
+                else
+                {
+                    pawn.TemperatureSeverity = System.Math.Max(
+                        -1_000, System.Math.Min(1_000, pawn.TemperatureSeverity + severityDelta));
+                }
+            }
+            else if (pawn.TemperatureSeverity != 0)
+            {
+                int recovered = System.Math.Min(
+                    System.Math.Abs(pawn.TemperatureSeverity), temperature.severityRecoveryPerInterval);
+                pawn.TemperatureSeverity -= System.Math.Sign(pawn.TemperatureSeverity) * recovered;
+            }
+
             // ---- rest: falls awake, recovers asleep, scaled by what is under the pawn -------
             if (pawn.Asleep)
             {
                 var rest = content.Needs[NeedIndex.Rest];
+                // The bed's answer scaled by the weather over it: a cold bedroom is a bad
+                // bedroom, by the temperature bands, before the tier the finisher rolled is
+                // ever consulted (design 28 §8).
                 int effectiveness = RestEffectiveness(pawn.Cell);
+                effectiveness = effectiveness * content.Temperature.SleepPerMille(pawn.AmbientTempC) / 1_000;
+                if (effectiveness < 1) effectiveness = 1;
 
                 // The interval this pawn is on, which is what spends the fractional part of the
                 // gain — see Pawn.RestGainPerInterval for why a tier is worth nothing without it.
@@ -146,6 +190,10 @@ namespace Odyssey.Sim.Pawns
             int target = mood.baseMood;
             for (int n = 0; n < NeedIndex.Count; n++)
                 target += _ctx.Content.Needs[n].MoodOffset(pawn.Needs[n]);
+            // The temperature's own offset, situational like the need bands and never stored:
+            // recomputed from the room on the same cadence, the same answer the sleep and work
+            // factors read, and gone the moment the colonist warms up (design 28 §8).
+            target += _ctx.Content.Temperature.MoodOffset(pawn.AmbientTempC);
             target += pawn.MemoryMoodOffset(tick);
 
             if (target < 0) target = 0;
