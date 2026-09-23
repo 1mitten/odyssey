@@ -65,7 +65,11 @@ brief — files owned, seams to fill, tests to add, files not to touch — is
 `docs/plans/combat-contracts.md`. Two refinements of the table below came out of cutting the seams:
 lane D's "stun from blunt" is rolled and applied by lane A from the armament lane D supplies, and the
 debug Spawn rows (the marauder and the four weapons) are lane C's, because they are interface and
-`GiveResource` already places any item. This is the only phase that edits the spine for everyone.
+`GiveResource` already places any item. **A seam review the same day** read the briefs against the
+code before any lane started and moved eleven things into the spine or into one written rule
+(design 33 §5j; the journal says why) — so the lanes start from the head of `claude/combat-c2`
+after it, not from the first contracts commit. This is the only phase that edits the spine for
+everyone.
 It delivers:
 
 - **Every handle the line needs, appended once.** No behaviour yet; stub drivers return `Failed`.

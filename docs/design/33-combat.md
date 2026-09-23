@@ -311,6 +311,7 @@ blade". The job words: Fighting, Fleeing, Downed (already in the registry), Equi
 | | `naturalAttack` | hog 6 dmg / 150 ticks / wind-up 30, blunt; rat 2 / 90 / 15, sharp (INVENTED); a person has none |
 | | `meleeSkill` | hog 6, rat 3 (INVENTED); animals have no skills to train |
 | `PawnKindDef` | `faction` | `Colony` (default), `Wild` for both animals, `Hostile` for the marauder |
+| | `weapon` | an item defName the kind arrives holding: `Item_Machete` for the marauder (owner: "armed"; which weapon INVENTED), empty for the rest. Resolved into `PawnContent.KindWeapon` / `WeaponOf(kind)`; a name that is not a weapon fails the load |
 | `ItemDef` | `weapon` (an `AttackDef`) | bat 7 / 120 / 30 blunt, stun 200 ‰ 60 ticks, heavy; crowbar 8 / 132 / 36 blunt, stun 250 ‰ 90 ticks, heavy; machete 8 / 96 / 22 sharp, light; arc blade 10 / 114 / 26 sharp, light; 50 points a swing (all inside the owner's 7–10 per 1.6–2.4 s, the split INVENTED) |
 | `BuildingDef` | `maxHitPoints` | wall 300, floor 250, deck plate 150, ladder 80, bed 120, door 160, shelf 100 (INVENTED, C6's to tune) |
 | `CombatDef` (`Combat.xml`) | `hitCurve` | 0 → 500, 10 → 800, 20 → 900 ‰ (owner) |
@@ -346,7 +347,24 @@ field on the job record would be a save-format bump) and `CarriedBy`. Derived: `
   fight, and a raider that went for the pantry would be a second design); a downed pawn's needs
   pause (the C2 default). `NeedsSystem` asks it and nothing else.
 - **A marauder is nobody's to draft**: `SetDrafted` and `OrderMove` ask `IsColonist`, and a downed
-  colonist cannot be drafted.
+  colonist cannot be drafted. **Nor is either anybody's to force**: `JobSystem.CanForce` refuses a
+  pawn that is not a colonist or is downed, so a forced build cannot end a `Job_Downed` (seam
+  review, 2026-09-23).
+- **A stun is a pause, not an interrupt** (seam review, 2026-09-23). `JobSystem.TickPawn` returns
+  for a stunned pawn after the finishing-step hold: its job neither ticks nor ends and it does not
+  think. `MovementSystem.Advance` lets it land the step in hand and take no other, with nothing
+  banked. So a stunned hauler keeps her load, a sleeper his bed, a drafted colonist the player's
+  order, and each carries on when it wears off. Interrupting the job instead would drop the load,
+  free the bed and throw the order away, which is a different mechanic. `StunnedUntilTick` is
+  nought in every golden window, so no golden moved.
+- **`PawnRegistry.Despawn` releases the pawn's beds** (`ConstructionGrid.ReleaseBedsOf`), so a dead
+  colonist does not keep hers under an id that no longer exists. In the despawn rather than the
+  death so that every way off the board releases the same things; it does not raise
+  `BedOwnershipChanged`, because a bed going to nobody takes nobody out of it.
+- **The marauder arrives armed.** `PawnRegistry.Spawn(cell, kind)` calls
+  `IWeaponRules.ArmOnSpawn` for a kind whose `weapon` names an item, after the pawn is adopted;
+  the loader never does (it restores the hand from the save). Lane D fills it; until then the
+  marauder fights with fists.
 
 ### 5d. What presentation reads
 
@@ -363,8 +381,11 @@ field on the job record would be a save-format bump) and `CarriedBy`. Derived: `
   changes. Written only through `CombatLog.Report`.
 - **`CorpseView`** (`WorldSnapshot.Corpses`): id, the dead pawn's id, kind, roll seed, cell, tick,
   facing (eight ways) and its person and hostile flags — enough to draw the same face and name it.
-- **Aspects**, sparse: `odyssey.pawn.hp` and `odyssey.pawn.hp.max` (thousandths, while hurt, downed
-  or drafted — animals too), `odyssey.pawn.weapon` (item def, while armed), `odyssey.pawn.order.target`
+- **Aspects**, sparse: `odyssey.pawn.hp` (thousandths, while hurt, downed or drafted — animals
+  too; its presence is what says a health bar is owed) and `odyssey.pawn.hp.max` (the pool, for
+  **every person always**, so the Health tab can say "100 / 100" of a whole colonist, and for an
+  animal beside its `hp`; a person with a pool and no `hp` is whole — seam review, 2026-09-23),
+  `odyssey.pawn.weapon` (item def, while armed), `odyssey.pawn.order.target`
   (pawn id, while under orders). Minted in `CombatAspects` (moved out of `Draft.cs`), copied as
   literals in `Hud.CombatAspectNames`, held together by a test on each side. A building target
   rides the existing `odyssey.pawn.order.cell`.
@@ -375,7 +396,7 @@ field on the job record would be a save-format bump) and `CarriedBy`. Derived: `
 | Seam | For | Owner |
 |---|---|---|
 | `IMeleeRules` / `MeleeRules` | melee level, hit and dodge chance, `Resolve` a swing (hit → dodge → damage in the spread → stun), deciding and never applying. `Resolve` throws until written | lane A |
-| `IWeaponRules` / `WeaponRules` | `ArmamentOf(pawn)` — equipped weapon, else natural attack, else fists (the last two already true); `CanEquip` (no until written) | lane D |
+| `IWeaponRules` / `WeaponRules` | `ArmamentOf(pawn)` — equipped weapon, else natural attack, else fists (the last two already true); `CanEquip` (no until written); `ArmOnSpawn(pawn, ctx)` — the kind's weapon into the hand, called by `Spawn` (nothing until written) | lane D |
 | `CombatSystem` | Pawns phase, order 25 (after jobs, before movement), holding the context and the job pipeline; resolves swings on their wind-up tick, applies damage, stun, downing, deferred death, healing, retaliation expiry. Empty tick | lane A |
 | `CombatHooks` / `ICombatListener` | `DamageApplied`, `Downed`, `Died`, raised by `CombatSystem` only, listeners called in registration order | raised by A; heard by C3 (drop on death), C4, C5 |
 | `CombatListeners.Register` | the one place listeners are added, called by the composition; empty | lane D in Phase 2, then C4 and C5 in turn |
@@ -405,8 +426,12 @@ sections after `odyssey.combat`.
 | `ModuleIds.Combat*` | nine clip rows by role — light and heavy swing, hit react, stagger, dodge, stun, downed, death, death pose — and four weapon item ids | lane B fills the catalogue |
 | `CombatFeedbackModel` | `HealthBar`, `FloatingText`, `FloatingColour`, `HostileMarker`: fixed signatures, each answering "draw nothing" | lane C writes; lane B calls |
 | `CombatOrders.Route` | the right-click's fight half, called first by `OrderModel.RightClick`; claims nothing yet | lane C |
-| `HudDirectors.ChooseCorpse(corpseId, snapshot)` | the click on a corpse: lane B's hit-test calls it, lane C selects the corpse and gives the pane its subject; answers false | lane C writes; lane B calls |
-| `HudShell.Combat.cs` | the Health tab's body (build, forget, show, sync — all called by `HudShell.Inspect`), the corpse pane, the Spawn rows | lane C |
+| `HudDirectors.ChooseCorpse(corpseId, snapshot)` | the click on a corpse: lane B's hit-test calls it, lane C checks the corpse is in the frame, calls `Selection.ChooseCorpse` and answers true; answers false | lane C writes; lane B calls |
+| `SelectionDirector.Corpse` / `HasCorpse` / `ChooseCorpse` | the selected corpse by `CorpseView.Id`, 0 for none; one subject like a pile, cleared by every other choice, let go after the grace when the frame stops carrying it. `HudShell` hands it to the pane (`InspectModel.SetCorpse`) | fixed; lane B's cursor brackets it, lane C's pane shows it |
+| `InspectSubject.Corpse`, `InspectModel.Corpse`, `SetCorpse` | the corpse as a pane subject. A stub refresh: the corpse badge, the registry's word, where it lies, no tabs or commands; its state line is the model's `Job` | lane C names it ("Corpse of X") |
+| `InspectModel.ShowsFace`, `ShowsColonistBody`, `ShowsTabBox`, `AvatarKey` | the pane's shape, which `HudShell.Inspect` reads instead of deciding from the subject and `IsAnimal`. Their values reproduce the pane as it was; a marauder and a corpse are lane C's to answer, in the fast tier. `Commands` is drawn for whatever subject the model fills it for | lane C |
+| `HudShell.Combat.cs` | the Health tab's body (build, forget, show, sync — all called by `HudShell.Inspect`) | lane C |
+| `HudShell.Debug.cs` | the Spawn tab's marauder and weapon rows | lane C |
 | Health tab | enabled in `InspectModel`, empty | lane C |
 
 ### 5g. Why the rules are two interfaces
@@ -431,6 +456,41 @@ started and failed and each of the first fourteen job defs' counts, and run on `
 `PawnPurpose.AnimalMind` is `0x165667B1`, the same value as `DeconstructRefund`. It predates combat;
 changing either moves a golden, and the two streams are keyed differently. Noted beside the new
 salts.
+
+An animal's pane builds the tab box from an empty tab list, so it carries an empty needs grid. That
+is the pane as it was before combat, and `InspectModel.ShowsTabBox` keeps it rather than a contracts
+step changing what a player sees; it is one line to change when somebody decides.
+
+### 5j. Rules two lanes share (the seam review, 2026-09-23)
+
+A reviewer read the contracts against the briefs before any lane started and found places where two
+lanes would each have decided the same thing, or neither would. Each is decided here once, and both
+briefs point at it.
+
+- **Equipping needs no draft.** A right-click on a weapon sends `OrderEquip` for the **primary
+  selected colonist, drafted or not** — it is a fetch, not a fight, and one weapon fills one hand —
+  and `HandleOrderEquip` accepts it for an undrafted colonist. Refused for a downed pawn, a
+  hostile, an animal and a pawn that does not exist. *Our call, not the owner's*: the reference
+  allows it, and the owner's controls row names the gesture without a draft. Lane C's
+  `CombatOrdersTests` sends it for an undrafted colonist and lane D's `EquipTests` accepts one.
+- **Attack and rescue need a draft**, as §1 has it: the right-click's fight half sends nothing for
+  an undrafted selection.
+- **A right-click on a building is not an attack until C6.** In C2/C3 it falls through to the move,
+  so a drafted colonist can still be moved on to a floored room. When C6 routes it, it attacks only
+  an **edifice that occupies the cell** — a wall, a door, furniture — never a floor, a slab or a
+  deck plate, although those carry `maxHitPoints` too; C6's `CombatOrdersTests` shows a click on a
+  floored cell still moves.
+- **Going down ends a mental break.** Lane A's one apply method sets `BreakTicksLeft = 0` when it
+  downs a pawn; otherwise `JobSystem.TickPawn` fails the downed job on every tick of the break and
+  the downed node restarts it, inflating the hashed counters and tripping the think-loop breaker.
+- **What the swing faces and swings with.** Every `CombatLog.Report` carries the armament's
+  `ItemDef` (−1 for fists or teeth). `AttackMeleeJobDriver.WorkFocus` returns the target's cell
+  during the wind-up only, which is how presentation turns the figure. **The computed work stroke
+  never plays for `Job_AttackMelee`** (`WorkSwing`/`WorkStyle` are for work); the swing's clip
+  family comes from the event's `Weapon` (its `AttackDef.style`), else from the flags — a person
+  fights with fists, an animal bites.
+- **A swing whose attacker is stunned or down when its wind-up ends does not land.** *INVENTED*:
+  "no swing before it" in the stun's definition, applied to a swing already begun. Lane A tests it.
 
 ## 6. Do not undo by tidying
 

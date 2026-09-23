@@ -10987,3 +10987,41 @@ change for it.
 
 Recorded rather than fixed: `PawnPurpose.AnimalMind` and `DeconstructRefund` share a salt. It
 predates combat, and fixing it moves a golden.
+
+## 2026-09-23 — Combat: the seam review, before any lane started
+
+A reviewer read the lane briefs against the code with one question — *can each lane do its job from
+the files it owns?* — and found eleven places where the answer was no, or where two lanes would each
+have answered the same question their own way. The spine was fixed for the first kind and the rule
+written down once for the second (design 33 §5j), so no lane has to edit a shared file and none has
+to guess what another decided.
+
+**The design said things the code could not make true.** The marauder is "armed" in the owner's
+table, the Def comment and the wiki, but no lane could arm it: the kind had no weapon field, the
+only spawn path belonged to nobody, and a phantom armament would not have reached the held prop or
+the drop on death, which both read a real `EquippedItem`. The kind now names `Item_Machete` and
+`Spawn` calls `IWeaponRules.ArmOnSpawn`, which is lane D's. Likewise a stun meant "no swing and no
+step", but only the publish read it: movement and the job pipeline, neither in the fight's lane,
+carried on regardless, and the one thing that lane could do — interrupt the job — would have dropped
+a carried load and thrown away a player's order. **A stun is a pause, not an interrupt**, held in
+`JobSystem.TickPawn` and `MovementSystem.Advance`, and the difference was worth deciding once rather
+than by whichever lane got there first.
+
+**Death found two things nothing had needed before.** Until today only animals were despawned, and
+they own no beds, so a dead colonist would have kept hers for ever under an id that no longer
+exists. `Despawn` releases the pawn's beds now — in the despawn rather than the death, so every way
+off the board releases the same things. And a colonist downed during a mental break would have had
+her `Job_Downed` failed and restarted every tick of the break, inflating the hashed counters; going
+down ends the break, in lane A's one apply method.
+
+**The pane was the largest seam, and it was invisible from the briefs.** Every shape decision in
+`HudShell.Inspect` — which avatar, whether needs and skills are synced, whether there is a tab box,
+who gets commands — was keyed on the subject and `IsAnimal`, in a file belonging to the drawing lane.
+A corpse would have worn the colonist badge; a marauder would have shown needs, skills and a Draft
+button the simulation refuses. `InspectModel` now answers four questions (`ShowsFace`,
+`ShowsColonistBody`, `ShowsTabBox`, `AvatarKey`) and the shell reads them, with values that
+reproduce the pane exactly as it was; the interface lane changes them in the fast tier. The corpse
+became a subject and a selection in the same move.
+
+Every spine fix has its negative control seen to fail with the fix withheld (six in the simulation,
+three in the interface). No golden moved; the content fingerprint moved once, for the machete.
