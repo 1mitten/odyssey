@@ -190,8 +190,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
         CorpseDirector? _corpses;
 
-        /// <summary>The one reader of the fight's events (design 33 §5). Lane B's to fill.</summary>
+        /// <summary>The one reader of the fight's events (design 33 §5).</summary>
         readonly CombatFeedback _combatFeedback = new CombatFeedback();
+
+        /// <summary>The fight's floating words on screen, beneath the HUD (design 33 §1). Built with the session.</summary>
+        Ui.CombatFloaterView? _floaterView;
+
+        /// <summary>The dead, for the pick that finds a corpse under the pointer (design 33 §5f).</summary>
+        public CorpseDirector? Corpses => _corpses;
 
         /// <summary>
         /// The title screen's bed. Owned by the root rather than by the session, because it is
@@ -993,6 +999,16 @@ namespace Odyssey.Presentation.Bootstrap
                 _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
             }
 
+            // Which family each weapon swings in (design 33 §5j), read once off the content, so a
+            // figure can pick its clip row from the event's weapon without asking the simulation.
+            if (_figures != null && _pawns != null)
+                _figures.WeaponStyles = CombatPose.StylesOf(_pawns.Content.Items);
+
+            // The fight's floating words, beneath the HUD's own tree (design 33 §1).
+            UnityEngine.UIElements.VisualElement? hudRoot =
+                GetComponent<UnityEngine.UIElements.UIDocument>()?.rootVisualElement;
+            if (hudRoot != null) _floaterView = new Ui.CombatFloaterView(hudRoot);
+
             // The light through the day. It finds the scene's own sun rather than making one,
             // because the scene builder already places it and two directional lights is a
             // doubled key nobody would think to look for.
@@ -1402,7 +1418,7 @@ namespace Odyssey.Presentation.Bootstrap
             MarkSection(FrameSection.Actors);
 
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
-            _corpses?.Sync(_world.Views.Current, activeLayer, slice);
+            _corpses?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime);
             MarkSection(FrameSection.Doors);
 
             DrawStandingOrders(_world.Views.Current);
@@ -1416,8 +1432,13 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.FlushCellPlates();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
-            // The fight's moments since last frame (design 33 §5), handed on once each.
+            // The fight (design 33 §1): a bar over the hurt and the drafted, the hostile marker,
+            // then the moments since last frame, handed on once each, and the words they float.
+            DrawCombatMarks(_world.Views.Current, movePerTick, activeLayer, slice);
+            _combatFeedback.Floaters.Step(_world.Views.Current.Running ? Time.deltaTime : 0f);
             _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio);
+            _floaterView?.Draw(_combatFeedback.Floaters,
+                cameraRig != null ? cameraRig.GetComponent<Camera>() : null);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -2611,6 +2632,59 @@ namespace Odyssey.Presentation.Bootstrap
             if (fresh && !first) _audio?.PlayOneShot(SoundIds.Draft, Vector3.zero);
         }
 
+        /// <summary>
+        /// The fight's marks over the pawns (design 33 §1): a health bar where
+        /// <see cref="CombatFeedbackModel.HealthBar"/> owes one — the hurt, the downed and the
+        /// drafted — and the red marker over a hostile. What is owed is the model's; where it
+        /// stands is <see cref="CombatMarks"/>'. Two or three submissions per marked pawn, and a
+        /// walk of the pawns on the drawn layers: it scales with the pawns in view, never with the
+        /// board.
+        /// </summary>
+        void DrawCombatMarks(WorldSnapshot snapshot, int movePerTick, int activeLayer, SliceSettings slice)
+        {
+            if (_renderer == null || _model == null) return;
+
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
+            Vector3 across = cameraRig != null ? cameraRig.transform.right : Vector3.right;
+            Color track = Ui.HudTokens.Convert(CombatMarks.TrackInk);
+            Color hostileInk = Ui.HudTokens.Convert(CombatMarks.HostileInk);
+
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (pawn.Cell.Y < lowest || pawn.Cell.Y > highest) continue;
+
+                bool bar = CombatFeedbackModel.HealthBar(snapshot, in pawn, out int hp, out int hpMax);
+                bool hostile = CombatFeedbackModel.HostileMarker(in pawn);
+                if (!bar && !hostile) continue;
+
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+
+                // The top of the pawn as the cursor has it: the colonist's box, an animal's own,
+                // and a body on the ground much lower.
+                float top = colonistCursor.y;
+                if (pawn.IsAnimal)
+                    top = _figures != null && _figures.TryGetAnimalBox(pawn.Id, out _, out Vector3 box) ? box.y : 1.0f;
+                if (pawn.IsDowned) top = CombatMarks.DownedTop;
+
+                if (bar)
+                {
+                    float fraction = CombatMarks.Fraction(hp, hpMax);
+                    Vector3 centre = feet + Vector3.up * (top + CombatMarks.BarLift);
+                    CombatMarks.Bar(centre, across, fraction, out Vector3 start, out Vector3 end, out Vector3 fillEnd);
+                    _renderer.DrawSegment(start, end, CombatMarks.BarThickness, track);
+                    _renderer.DrawSegment(start, fillEnd, CombatMarks.FillThickness,
+                        Ui.HudTokens.Convert(CombatMarks.BarInk(fraction)));
+                }
+
+                if (hostile)
+                    _renderer.DrawMarker(feet + Vector3.up * (top + DraftMarkerLift), DraftMarkerSize, hostileInk);
+            }
+        }
+
         // Who was drafted last frame, and in which world: the draft sound's memory.
         readonly HashSet<int> _draftedLastFrame = new HashSet<int>();
         object? _draftSoundWorld;
@@ -2667,6 +2741,14 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawSelectionBracket(
                         feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength);
                 }
+                return;
+            }
+
+            // A corpse is bracketed as the body lying there (design 33 §5f), not as its cell: it
+            // is a person's length along the ground and knee high.
+            if (_corpses != null && _corpses.TryBracket(selection, out Matrix4x4 corpsePlace, out Vector3 corpseBox))
+            {
+                _renderer.DrawSelectionBracket(corpsePlace, corpseBox, colour);
                 return;
             }
 
@@ -3311,6 +3393,8 @@ namespace Odyssey.Presentation.Bootstrap
             _figures?.Dispose();
             _doors?.Dispose();
             _corpses?.Dispose();
+            _floaterView?.Dispose();
+            _combatFeedback.Floaters.Clear();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is
@@ -3337,6 +3421,7 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = null;
             _doors = null;
             _corpses = null;
+            _floaterView = null;
             _colonistMaterials = null;
             _renderer = null;
             _actorMaterial = null;
