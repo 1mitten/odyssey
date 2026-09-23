@@ -148,6 +148,15 @@ namespace Odyssey.Sim.Pawns
                     pipeline.AddGivers(builder.WorkGivers);
                     return pipeline;
                 })
+                // The fight's own pass (design 33 §5): order 25, after the jobs decide who swings
+                // and before movement steps anybody. Built here and handed to the context, like the
+                // doors, so the job drivers reach it through ctx.Combat.
+                .AddSystem(_ =>
+                {
+                    var combat = new CombatSystem(pawns);
+                    pawns.Combat = combat;
+                    return combat;
+                })
                 .AddSystem(_ => new MovementSystem(pawns))
                 // The crops grow after the world has moved; Order 40 puts the pass there whatever
                 // line of this chain it sits on, which is the whole point of the schedule.
@@ -155,7 +164,15 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => doors)
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
+                // The dead and the struck buildings (design 33 §5): hashed only while either holds
+                // anything, so their registration moves no golden. Beside the pawns because the
+                // corpses are what the pawns become.
+                .AddHashable(pawns.Corpses)
+                .AddHashable(pawns.EdificeDamage)
                 .AddSnapshotContributor(pawns.Pawns)
+                .AddSnapshotContributor(pawns.Corpses)
+                // The telling of every fight, for presentation: never saved, never hashed.
+                .AddSnapshotContributor(pawns.CombatLog)
                 // The world's own answer to "what is this cell", beside the pawn registry's
                 // answer to "who is here". Every colony gets it, so a click is answered in any
                 // build rather than the ones that remembered to attach the question.
@@ -170,6 +187,12 @@ namespace Odyssey.Sim.Pawns
                 // The draft and its orders (design 33 §2d), on the pipeline for the same reason.
                 .AddIntentHandler(IntentKind.SetDrafted, pipeline.HandleSetDrafted)
                 .AddIntentHandler(IntentKind.OrderMove, pipeline.HandleOrderMove)
+                // The fight's three orders (design 33 §5), on the pipeline for the same reason.
+                // Registered from the contracts step so a command is never unhandled; each
+                // refuses until its lane writes it.
+                .AddIntentHandler(IntentKind.OrderAttack, pipeline.HandleOrderAttack)
+                .AddIntentHandler(IntentKind.OrderEquip, pipeline.HandleOrderEquip)
+                .AddIntentHandler(IntentKind.OrderRescue, pipeline.HandleOrderRescue)
                 // The Work tab's one command (design 27). It belongs to the registry because a
                 // priority is a field on a pawn and the registry is the one owner of those; the
                 // job pipeline only ever reads it.

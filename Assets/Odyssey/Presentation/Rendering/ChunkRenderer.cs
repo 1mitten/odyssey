@@ -924,7 +924,7 @@ namespace Odyssey.Presentation.Rendering
                 // An animal is drawn only as a figure (design 29): this pass deals every pawn a
                 // colonist's face, and a hog past the figure cap wearing one would be worse than
                 // a hog not drawn. A baked animal pose is a recorded gap, not an oversight.
-                if (pawns[i].Kind != 0) continue;
+                if (pawns[i].IsAnimal) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,

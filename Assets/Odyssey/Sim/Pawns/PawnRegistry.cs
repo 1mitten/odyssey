@@ -200,6 +200,12 @@ namespace Odyssey.Sim.Pawns
             new HarvestJobDriver(),
             new DraftHoldJobDriver(),
             new GotoJobDriver(),
+            // The combat line (design 33 §5), in JobHandle order: 14 to 18.
+            new AttackMeleeJobDriver(),
+            new FleeJobDriver(),
+            new DownedJobDriver(),
+            new EquipJobDriver(),
+            new RescueJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -272,6 +278,17 @@ namespace Odyssey.Sim.Pawns
                 // and a figure that swings an axe while walking is worse than one that glides.
                 int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
 
+                // What the pawn is and what state it is in (design 33 §5): the byte that replaced
+                // every "kind is not 0, so an animal" in the interface. A report, derived here
+                // from state hashed where it lives.
+                PawnFlags flags = PawnFlags.None;
+                if (pawn.IsPerson) flags |= PawnFlags.Person;
+                if (pawn.IsHostile) flags |= PawnFlags.Hostile;
+                if (pawn.Drafted) flags |= PawnFlags.Drafted;
+                if (pawn.Downed) flags |= PawnFlags.Downed;
+                if (pawn.StunnedAt(world.CurrentTick)) flags |= PawnFlags.Stunned;
+                if (pawn.CarriedBy != 0) flags |= PawnFlags.Carried;
+
                 writer.AddPawn(new PawnView(
                     pawn.Id,
                     cell,
@@ -288,7 +305,25 @@ namespace Odyssey.Sim.Pawns
                     pawn.Asleep,
                     movePerMille,
                     moveDeltaPerMille,
-                    pawn.Kind));
+                    pawn.Kind,
+                    flags));
+
+                // The fight (design 33 §5), sparse, and for animals as much as people: the health
+                // bar is drawn over the hurt, the downed and the drafted, and a hog can be all
+                // three but the last. A colony nobody has hurt publishes none of it.
+                if (pawn.HpMilli < pawn.HpMaxMilli || pawn.Downed || pawn.Drafted)
+                {
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.Hp, pawn.HpMilli);
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.HpMax, pawn.HpMaxMilli);
+                }
+                if (pawn.CombatTarget != 0)
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.OrderTarget, pawn.CombatTarget);
+                if (pawn.EquippedItem != 0)
+                {
+                    var weapon = _ctx.Items.Get(new ThingId(pawn.EquippedItem));
+                    if (weapon != null && !weapon.Despawned)
+                        writer.AddPawnAspect(pawn.Id, CombatAspects.Weapon, weapon.DefIndex);
+                }
 
                 // An animal publishes its kind and its pace and nothing else of what follows
                 // (design 29 §2): it has no skills, no work, no schedule, no name and nothing in

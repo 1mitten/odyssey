@@ -20,12 +20,16 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public IntentRejection HandleSetDrafted(Intent intent)
         {
+            // One of ours (design 33 §5): a marauder is a person and is nobody's to draft.
             Pawn? pawn = _ctx.Pawns.Get(new PawnId(intent.A));
-            if (pawn == null || !pawn.IsPerson) return IntentRejection.NotPermitted;
+            if (pawn == null || !pawn.IsColonist) return IntentRejection.NotPermitted;
 
             bool want = intent.B != 0;
             if (pawn.Drafted == want) return IntentRejection.AlreadyInThatState;
             if (want && pawn.IsBroken) return IntentRejection.NotPermitted;
+
+            // Going down ends a draft (design 33 §1), so a downed colonist cannot be given one.
+            if (want && pawn.Downed) return IntentRejection.NotPermitted;
 
             // Spent: the hold would let go on its first tick and she would lie down again, so the
             // key would wake a collapsed colonist for one frame and do nothing else (design 33 §2b).
@@ -70,7 +74,7 @@ namespace Odyssey.Sim.Pawns
         public IntentRejection HandleOrderMove(Intent intent)
         {
             Pawn? pawn = _ctx.Pawns.Get(new PawnId(intent.A));
-            if (pawn == null || !pawn.IsPerson || !pawn.Drafted) return IntentRejection.NotPermitted;
+            if (pawn == null || !pawn.IsColonist || !pawn.Drafted) return IntentRejection.NotPermitted;
 
             CellRef cell = intent.Cell;
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;

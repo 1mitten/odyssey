@@ -117,4 +117,15 @@
     <label>growing</label>
   </SkillDef>
 
+  <!--
+    Close combat (design 33 section 1), live from the combat contracts step: the Skills row stops
+    being greyed out, and the starting roll deals every colonist a level in it. The attacker's
+    level reads Combat.xml's hit curve and the defender's its dodge curve; every swing trains it,
+    by the weapon's experiencePerSwing. The parent's curve, cap and ladder, like every skill.
+  -->
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Melee</defName>
+    <label>melee</label>
+  </SkillDef>
+
 </Defs>

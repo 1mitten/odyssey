@@ -33,9 +33,13 @@ namespace Odyssey.Hud
         static readonly AspectKey DraftedKey = AspectKey.Of(DraftedAspect);
         static readonly AspectKey OrderCellKey = AspectKey.Of(OrderCellAspect);
 
-        /// <summary>Is this pawn a colonist — the only thing the draft applies to today?</summary>
+        /// <summary>
+        /// Is this pawn a colonist — the only thing the draft applies to? Asked of the view's
+        /// flags (design 33 §5), not of its kind: a marauder is kind 3 and a person, and "kind 0"
+        /// would have been right for the wrong reason until the first hostile arrived.
+        /// </summary>
         public static bool IsColonist(WorldSnapshot snapshot, PawnId pawn) =>
-            snapshot.TryGetPawn(pawn, out PawnView view) && view.Kind == 0;
+            snapshot.TryGetPawn(pawn, out PawnView view) && view.IsColonist;
 
         public static bool IsDrafted(WorldSnapshot snapshot, PawnId pawn) =>
             snapshot.TryGetPawnAspect(pawn, DraftedKey, out int drafted) && drafted != 0;
@@ -79,6 +83,11 @@ namespace Odyssey.Hud
         public static void RightClick(IReadOnlyList<PawnId> selection, WorldSnapshot snapshot,
             CellRef? cell, PawnId under, bool ctrl, List<Intent> into)
         {
+            // The fight's orders claim the clicks they are about first (design 33 §5): attack,
+            // rescue, equip. CombatOrders is lane C's file and answers no until lane C writes it,
+            // so until then every click is the move it was in C1.
+            if (CombatOrders.Route(selection, snapshot, cell, under, ctrl, into)) return;
+
             if (cell == null) return;
 
             for (int i = 0; i < selection.Count; i++)

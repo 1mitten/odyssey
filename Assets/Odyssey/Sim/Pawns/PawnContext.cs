@@ -28,7 +28,36 @@ namespace Odyssey.Sim.Pawns
             Items = new ColonyItems(content);
             Reservations = new ReservationManager();
             Pawns = new PawnRegistry(this);
+            Corpses = new CorpseRegistry(cells.Size, content);
         }
+
+        // ---- the fight's seams (design 33 §5) ---------------------------------------------------
+        //
+        // Built here rather than by the composition, like the items and the reservations, so that
+        // a bare pawn fixture has them too: a test that spawns two pawns and makes one hit the
+        // other should not have to assemble a colony first. The composition registers the ones that
+        // are saved, hashed or published (ColonyComposition.AddColony).
+
+        /// <summary>Who lands, who dodges, how hard (lane A). Settable so a test or a mod can swap it.</summary>
+        public IMeleeRules MeleeRules { get; set; } = new MeleeRules();
+
+        /// <summary>What a pawn swings with, and whether it may take a weapon up (lane D).</summary>
+        public IWeaponRules WeaponRules { get; set; } = new WeaponRules();
+
+        /// <summary>Damage, downed and died, heard by whoever registered (C3, C4, C5).</summary>
+        public CombatHooks CombatHooks { get; } = new CombatHooks();
+
+        /// <summary>The telling of every fight, for presentation. Not state.</summary>
+        public CombatLog CombatLog { get; } = new CombatLog();
+
+        /// <summary>The dead. Saved and hashed while there are any.</summary>
+        public CorpseRegistry Corpses { get; }
+
+        /// <summary>What is left of each struck building (C6). Saved and hashed while there is any.</summary>
+        public EdificeDamage EdificeDamage { get; } = new EdificeDamage();
+
+        /// <summary>The fight's own pass, when the world has one. Null in a bare pawn fixture.</summary>
+        public CombatSystem? Combat { get; set; }
 
         public CellGrid Cells { get; }
         public NavGraph Nav { get; }

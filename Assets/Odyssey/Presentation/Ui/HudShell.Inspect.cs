@@ -247,6 +247,8 @@ namespace Odyssey.Presentation.Ui
                 SkillRow row = _inspect.Skills[i];
                 SetSkill(i, row);
             }
+
+            SyncHealthTab();
         }
 
         /// <summary>
@@ -262,10 +264,15 @@ namespace Odyssey.Presentation.Ui
             string active = _inspect.ActiveTabName;
             bool skills = active == "Skills";
 
+            // The Health tab (design 33 §5): its body is lane C's, in HudShell.Combat.cs. While it
+            // is the active tab the needs grid steps aside, as it does for Skills.
+            bool health = active == "Health";
+
             if (_needsGrid != null)
-                _needsGrid.style.display = skills ? DisplayStyle.None : DisplayStyle.Flex;
+                _needsGrid.style.display = skills || health ? DisplayStyle.None : DisplayStyle.Flex;
             if (_skillsGrid != null)
                 _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
+            ShowHealthTab(health);
 
             // A store's two tabs stand in the same box and one of them is drawn, exactly as the
             // colonist's needs and skills do — so changing tab changes which rows are shown and
@@ -543,6 +550,7 @@ namespace Odyssey.Presentation.Ui
             _cellRows.Clear();
             _needsGrid = null;
             _skillsGrid = null;
+            ForgetHealthTab();
             _cellRowsGrid = null;
             _locationRow = null;
             _locationValue = null;
@@ -707,6 +715,9 @@ namespace Odyssey.Presentation.Ui
                 for (int i = 0; i < _inspect.Skills.Count; i++)
                     _skills.Add(SkillLine(_skillsGrid, withBar: true));
                 tabBody.Add(_skillsGrid);
+
+                // The Health tab's body, in the same fixed-height box (design 33 §5).
+                BuildHealthTab(tabBody);
 
                 _inspectBody.Add(tabBody);
 

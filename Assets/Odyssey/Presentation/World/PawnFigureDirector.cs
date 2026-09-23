@@ -977,7 +977,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>An animal's look is its kind's row; a person's is the face the book dealt.</summary>
         int LookFor(in PawnView pawn) =>
-            pawn.Kind != 0 ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
+            pawn.IsAnimal ? AnimalLookIndex(pawn.Kind) : LookFor(pawn.Id);
 
         /// <summary>
         /// How far the sole sits below the ankle, on the figure whose boot is thickest.
@@ -1009,7 +1009,7 @@ namespace Odyssey.Presentation.World
 
         /// <summary>The same question of a view, which is the only thing that knows a pawn's kind.</summary>
         bool CanDraw(in PawnView pawn) =>
-            pawn.Kind != 0
+            pawn.IsAnimal
                 ? (uint)pawn.Kind < (uint)_animalLooks.Length && _animalLooks[pawn.Kind] != null
                 : CanDraw(pawn.Id);
 

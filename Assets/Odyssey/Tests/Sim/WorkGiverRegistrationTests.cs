@@ -117,9 +117,13 @@ namespace Odyssey.Tests.Sim
             // a colony that pulls a wall down while a half-ordered hut waits for its last plank
             // finishes neither, and demolition is the one job here that is never urgent — the thing
             // being removed is already standing and already doing its job.
+            //
+            // Rescue leads everything (design 33 §5, C4): it is the one emergency giver, and an
+            // emergency is scanned ahead of every ordinary giver at the same priority, whatever the
+            // work types' order says. A colonist bleeding out on the grass outranks the wall.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
             Assert.That(names, Is.EqualTo(
-                new[] { "Deliver", "Build", "Deconstruct", "Harvest", "Sow", "Fell", "Mine", "Haul" }));
+                new[] { "Rescue", "Deliver", "Build", "Deconstruct", "Harvest", "Sow", "Fell", "Mine", "Haul" }));
         }
 
         [Test]

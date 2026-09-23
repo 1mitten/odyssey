@@ -140,6 +140,11 @@ namespace Odyssey.Sim.Pawns
         public const int Harvest = JobHandle.Harvest;
         public const int DraftHold = JobHandle.DraftHold;
         public const int Goto = JobHandle.Goto;
+        public const int AttackMelee = JobHandle.AttackMelee;
+        public const int Flee = JobHandle.Flee;
+        public const int Downed = JobHandle.Downed;
+        public const int Equip = JobHandle.Equip;
+        public const int Rescue = JobHandle.Rescue;
         public const int Count = JobHandle.Count;
     }
 
@@ -152,7 +157,26 @@ namespace Odyssey.Sim.Pawns
         public const int Colonist = 0;
         public const int MiddenHog = 1;
         public const int DuctRat = 2;
-        public const int Count = 3;
+
+        /// <summary>
+        /// The debug-spawned hostile person (design 33 §1): a person species under the Hostile
+        /// faction. Claimed by the combat contracts step.
+        /// </summary>
+        public const int Marauder = 3;
+        public const int Count = 4;
+    }
+
+    /// <summary>
+    /// Whose side a kind is on (design 33 §3): <b>hostility comes from the kind</b>, so no pawn
+    /// carries a saved field for it. The colony's own people are <see cref="Colony"/>; animals are
+    /// <see cref="Wild"/> until something tames one; a marauder is <see cref="Hostile"/> and fights
+    /// on sight.
+    /// </summary>
+    public enum Faction : byte
+    {
+        Colony = 0,
+        Wild = 1,
+        Hostile = 2,
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -239,6 +263,12 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public const int Growing = WorkHandle.Growing;
 
+        /// <summary>
+        /// Carrying a downed colonist to a bed (design 33 §4, C4). Its giver is an emergency one,
+        /// so it scans ahead of everything else at the same priority.
+        /// </summary>
+        public const int Rescue = WorkHandle.Rescue;
+
         public const int Count = WorkHandle.Count;
 
         /// <summary>
@@ -252,7 +282,7 @@ namespace Odyssey.Sim.Pawns
         /// than a missing aspect — which is why growing is in both or in neither.</para>
         /// </summary>
         public static readonly string[] Names =
-            { "haul", "cutting", "mining", "construction", "growing" };
+            { "haul", "cutting", "mining", "construction", "growing", "rescue" };
     }
 
     /// <summary>
@@ -270,7 +300,14 @@ namespace Odyssey.Sim.Pawns
         public const int Mining = 2;
         public const int Construction = 3;
         public const int Growing = 4;
-        public const int Count = 5;
+
+        /// <summary>
+        /// Close combat (design 33 §1): the attacker's level reads the hit curve and the
+        /// defender's the dodge curve, both in <see cref="CombatDef"/>, and every swing trains it.
+        /// Claimed by the combat contracts step.
+        /// </summary>
+        public const int Melee = 5;
+        public const int Count = 6;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -280,7 +317,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing", "melee" };
     }
 
     /// <summary>
@@ -510,6 +547,10 @@ namespace Odyssey.Sim.Pawns
         public const int IronOre = ItemHandle.IronOre;
         public const int Coal = ItemHandle.Coal;
         public const int Carrots = ItemHandle.Carrots;
+        public const int Bat = ItemHandle.Bat;
+        public const int Crowbar = ItemHandle.Crowbar;
+        public const int Machete = ItemHandle.Machete;
+        public const int ArcBlade = ItemHandle.ArcBlade;
         public const int Count = ItemHandle.Count;
     }
 
@@ -536,6 +577,12 @@ namespace Odyssey.Sim.Pawns
         /// the harmless answer and the commonest one.</para>
         /// </summary>
         public ItemCategory category = ItemCategory.Materials;
+
+        /// <summary>
+        /// What it does in a hand, or null for anything that is not a weapon (design 33 §1, C3).
+        /// Read through <c>IWeaponRules</c>, never directly, so the lookup has one owner.
+        /// </summary>
+        public AttackDef? weapon;
     }
 
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
@@ -634,6 +681,41 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
         public string figureKey = string.Empty;
+
+        // ---- combat (design 33 §1, §3) -----------------------------------------------------
+
+        /// <summary>
+        /// The hit-point pool, in whole points (owner, 2026-09-23: person 100, hog 60, rat 15).
+        /// A pawn carries its hit points in thousandths of these, <c>Pawn.HpMilli</c>, the
+        /// <c>Rates</c> convention, so a slow heal is exact without a float.
+        /// </summary>
+        public int healthPoints = 100;
+
+        /// <summary>
+        /// Dead at this fraction of the pool, per mille and negative (owner: dead at −50 %).
+        /// Downed at nought and below; dead at or below <c>healthPoints × this / 1000</c>.
+        /// </summary>
+        public int deathAtPerMille = -500;
+
+        /// <summary>
+        /// The chance, per mille, that a hurt animal turns on whoever hurt it rather than running
+        /// (owner: a hog usually turns, a rat usually runs). Rolled on every hit. Unread for a
+        /// person, whose answer is the faction's.
+        /// </summary>
+        public int revengePerMille;
+
+        /// <summary>
+        /// What it fights with when it holds nothing, or null for a person, whose bare hands are
+        /// <see cref="CombatDef.fists"/>. A hog's tusks, a rat's teeth.
+        /// </summary>
+        public AttackDef? naturalAttack;
+
+        /// <summary>
+        /// The melee level an animal fights at, 0–20, read on the same hit and dodge curves as a
+        /// colonist's skill. Animals have no skills to train (design 29 §2), so it is a constant
+        /// of the species. Unread for a person.
+        /// </summary>
+        public int meleeSkill;
     }
 
     /// <summary>What a pawn starts life with.</summary>
@@ -645,6 +727,9 @@ namespace Odyssey.Sim.Pawns
         /// fails the load rather than the first tick.
         /// </summary>
         public string species = "Species_Person";
+
+        /// <summary>Whose side it is on (design 33 §3). See <see cref="Faction"/>.</summary>
+        public Faction faction = Faction.Colony;
 
         public int startingMood = 600;
         public int[] startingNeeds = { 800, 800, 800 };
@@ -761,6 +846,9 @@ namespace Odyssey.Sim.Pawns
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
         public MovementDef Movement = new MovementDef();
+
+        /// <summary>The fight's numbers (design 33 §1): the curves, bare hands, healing, the windows.</summary>
+        public CombatDef Combat = new CombatDef();
 
         /// <summary>
         /// The colonist's kind — <see cref="Kinds"/>[0] once loaded. Kept as a field of its own
@@ -910,7 +998,8 @@ namespace Odyssey.Sim.Pawns
                 .Register<MovementDef>()
                 .Register<PawnKindDef>()
                 .Register<SpeciesDef>()
-                .Register<PawnTuningDef>();
+                .Register<PawnTuningDef>()
+                .Register<CombatDef>();
 
         /// <summary>
         /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
@@ -941,19 +1030,28 @@ namespace Odyssey.Sim.Pawns
                 // every save taken with one running, so its number is a save contract.
                 "Job_Sow", "Job_Harvest",
                 // The draft (design 33 §2c).
-                "Job_DraftHold", "Job_Goto");
+                "Job_DraftHold", "Job_Goto",
+                // The combat line, claimed together by its contracts step (design 33 §5).
+                "Job_AttackMelee", "Job_Flee", "Job_Downed", "Job_Equip", "Job_Rescue");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
-                "Work_Growing");
+                "Work_Growing",
+                // Appended with the combat line (design 33 §5): a pawn's priority array is indexed
+                // by this order, so it is a save contract like the rest.
+                "Work_Rescue");
             content.Skills = ByName<SkillDef>(defs,
                 "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
-                "Skill_Growing");
+                "Skill_Growing",
+                // Appended with the combat line (design 33 §5).
+                "Skill_Melee");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul
                 // job and every stockpile's allow list, so its number is a save contract
                 // (docs/design/22-growing.md §2).
-                "Item_Carrots");
+                "Item_Carrots",
+                // The four melee weapons (design 33 §1, C3), appended together.
+                "Item_Bat", "Item_Crowbar", "Item_Machete", "Item_ArcBlade");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
@@ -964,7 +1062,9 @@ namespace Odyssey.Sim.Pawns
             // as this index. The colonist is 0 so that every pawn from before the table reads
             // as what it was.
             content.Kinds = ByName<PawnKindDef>(defs,
-                "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat");
+                "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat",
+                // The debug-spawned hostile person (design 33 §1), appended.
+                "PawnKind_Marauder");
             content.Species = ByName<SpeciesDef>(defs,
                 "Species_Person", "Species_MiddenHog", "Species_DuctRat");
             content.KindSpecies = new int[content.Kinds.Length];
@@ -995,6 +1095,8 @@ namespace Odyssey.Sim.Pawns
             content.LiftTicks = tuning.liftTicks;
             content.LiftGraspTicks = tuning.liftGraspTicks;
             content.DraftQuietTicks = tuning.draftQuietTicks;
+
+            content.Combat = One<CombatDef>(defs, "Combat_Default");
 
             return content;
         }
@@ -1124,5 +1226,32 @@ namespace Odyssey.Sim.Pawns
         /// gone and distinct families read as the discipline they are.</para>
         /// </summary>
         public const uint MovePace = 0x428A_2F98;
+
+        // ---- combat (design 33 §3) -------------------------------------------------------------
+        //
+        // Claimed by the combat contracts step so that the two lanes that roll dice in a fight
+        // cannot pick the same salt on two branches — the fault StartingSkill and
+        // DeconstructRefund once had. SHA-256's round constants, continuing where MovePace (the
+        // first) and the two incident salts (the second and third) left off, so no value here is
+        // one already in use anywhere in the simulation.
+        //
+        // AnimalMind, above, is 0x165667B1 — the same value as DeconstructRefund. That collision
+        // predates combat and is recorded, not fixed here: changing either moves a golden, and
+        // the two streams are keyed differently (a pawn id against a cell) so they rarely meet.
+
+        /// <summary>Whether a swing lands, on the attacker's hit curve. Drawn from (seed, tick, attacker id).</summary>
+        public const uint MeleeHit = 0xE9B5_DBA5;
+
+        /// <summary>Whether a landed swing is dodged, on the defender's dodge curve.</summary>
+        public const uint MeleeDodge = 0x3956_C25B;
+
+        /// <summary>How hard it lands, within <see cref="CombatDef.damageSpreadPerMille"/> of the weapon's figure.</summary>
+        public const uint MeleeDamage = 0x59F1_11F1;
+
+        /// <summary>Whether a hurt animal turns on its attacker or runs (<see cref="SpeciesDef.revengePerMille"/>).</summary>
+        public const uint Revenge = 0x923F_82A4;
+
+        /// <summary>Whether a blunt blow stuns (<see cref="AttackDef.stunPerMille"/>).</summary>
+        public const uint Stun = 0xAB1C_5ED5;
     }
 }

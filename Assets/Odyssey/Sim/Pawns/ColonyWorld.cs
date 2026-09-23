@@ -159,6 +159,10 @@ namespace Odyssey.Sim.Pawns
                 // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
                 // older save, which loads with nobody drafted.
                 new CombatSection(pawns.Pawns),
+                // The dead, and what is left of each struck building (design 33 §5). Appended;
+                // absent from an older save, which loads with no corpses and every building whole.
+                pawns.Corpses,
+                pawns.EdificeDamage,
             };
         }
 

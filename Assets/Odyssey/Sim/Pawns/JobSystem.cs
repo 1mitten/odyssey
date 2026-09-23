@@ -177,9 +177,15 @@ namespace Odyssey.Sim.Pawns
 
         public static ThinkNode[] DefaultTree() => new ThinkNode[]
         {
+            // First of all (design 33 §5): a downed colonist lies where she fell, whatever else
+            // is true of her. Declines for anybody standing, so it costs one branch a think.
+            new DownedThinkNode(),
             new MentalStateThinkNode(),
             // Above the needs branch, or a drafted colonist wanders off to eat (design 33 §2b).
             new DraftedThinkNode(),
+            // Below the draft — a drafted colonist's hold does its own fighting — and above the
+            // needs, because being struck outranks being hungry (design 33 §5).
+            new SelfDefenceThinkNode(),
             new CriticalNeedsThinkNode(),
             new WorkThinkNode(),
             new IdleThinkNode(),
@@ -401,7 +407,7 @@ namespace Odyssey.Sim.Pawns
 
             // Fewer is an older save and is fine: the job table is append-only, so the defs the
             // save does not know are exactly the newest ones, and nothing ever ran them (design 33
-            // §5). It refused any difference until the draft's two jobs arrived, which would have
+            // §6). It refused any difference until the draft's two jobs arrived, which would have
             // made every earlier save unloadable. More is a save from a newer build, and guessing
             // at that mapping would silently attribute one job's history to another.
             int count = reader.ReadInt();
@@ -446,7 +452,8 @@ namespace Odyssey.Sim.Pawns
             // An animal consults the animal tree (design 29 §3), never the colonist's: a node
             // that returned false for a person would be a node every colonist evaluated on
             // every think, and the animal's whole mind is one node anyway.
-            ThinkNode[] tree = pawn.IsPerson ? _tree : AnimalTree;
+            // A hostile person consults the hostile tree (design 33 §5), for the same reason.
+            ThinkNode[] tree = !pawn.IsPerson ? AnimalTree : pawn.IsHostile ? HostileTree : _tree;
             var job = pawn.JobBuffer;
             for (int i = 0; i < tree.Length; i++)
             {
@@ -456,8 +463,30 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
-        /// <summary>The whole of an animal's mind. Shared: the node holds no state.</summary>
-        static readonly ThinkNode[] AnimalTree = { new AnimalIdleThinkNode() };
+        /// <summary>
+        /// The whole of an animal's mind. Shared: the nodes hold no state. The fight's two nodes
+        /// (design 33 §5) stand ahead of the idle one and decline for an animal nobody has hurt,
+        /// so an animal at peace thinks exactly as it did before combat.
+        /// </summary>
+        static readonly ThinkNode[] AnimalTree =
+        {
+            new DownedThinkNode(), new AnimalCombatThinkNode(), new AnimalIdleThinkNode(),
+        };
+
+        /// <summary>
+        /// A marauder's mind (design 33 §1, §5): down, else hunt, else idle. No needs, no work, no
+        /// draft: it is debug-spawned to fight and is never one of ours.
+        /// </summary>
+        static readonly ThinkNode[] HostileTree =
+        {
+            new DownedThinkNode(), new HostileThinkNode(), new IdleThinkNode(),
+        };
+
+        /// <summary>The animal tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> AnimalMind => AnimalTree;
+
+        /// <summary>The hostile tree, in traversal order, so a test can assert it.</summary>
+        public static IReadOnlyList<ThinkNode> HostileMind => HostileTree;
 
         /// <summary>
         /// Claim everything, then run. A driver whose claims cannot all be taken releases what it

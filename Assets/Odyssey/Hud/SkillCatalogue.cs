@@ -120,10 +120,12 @@ namespace Odyssey.Hud
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),
             new Entry("ui.skill.fabrication", NotSimulated, "no production chain"),
-            new Entry("ui.skill.medicine", NotSimulated, "a colonist cannot be hurt"),
+            new Entry("ui.skill.medicine", NotSimulated, "wounds heal in bed, untreated"),
             new Entry("ui.skill.social", NotSimulated, "no other people"),
             new Entry("ui.skill.shooting", NotSimulated, "no combat"),
-            new Entry("ui.skill.melee", NotSimulated, "no combat"),
+            // Live from the combat contracts step (design 33 §5): Skill_Melee, rolled at the start
+            // and read by the hit and dodge curves.
+            new Entry("ui.skill.melee", "melee", string.Empty),
             new Entry("ui.skill.intellect", NotSimulated, "no research"),
         };
 

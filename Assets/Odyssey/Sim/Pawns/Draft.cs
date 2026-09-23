@@ -72,21 +72,8 @@ namespace Odyssey.Sim.Pawns
         public override JobStatus Tick(PawnContext ctx) => GotoCell(ctx, Job.TargetCell);
     }
 
-    /// <summary>
-    /// The names the draft is published under (design 33 §2e), minted the way
-    /// <see cref="RateAspects"/> mints the rates: <c>Sim.Contracts</c> never hears that drafting
-    /// exists, and the interface asks for it by name. Both are sparse — published only for a
-    /// drafted colonist — so a colony nobody drafts publishes nothing new.
-    /// </summary>
-    public static class CombatAspects
-    {
-        /// <summary>1 while the colonist is drafted; absent otherwise.</summary>
-        public const string DraftedName = "odyssey.pawn.drafted";
-
-        /// <summary>The cell index a drafted colonist is walking to; absent while it holds.</summary>
-        public const string OrderCellName = "odyssey.pawn.order.cell";
-
-        public static readonly AspectKey Drafted = AspectKey.Of(DraftedName);
-        public static readonly AspectKey OrderCell = AspectKey.Of(OrderCellName);
-    }
+    // The draft's aspect names moved to Combat/CombatAspects.cs with the combat contracts step
+    // (design 33 §5): this file now belongs to the fight's lane, which fills the drafted
+    // colonist's adjacent auto-attack into the hold above, and a contract should not live in a
+    // file somebody is rewriting.
 }

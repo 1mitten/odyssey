@@ -187,6 +187,12 @@ namespace Odyssey.Presentation.Bootstrap
         AudioDirector? _audio;
         DoorDirector? _doors;
 
+        /// <summary>The dead, drawn (design 33 §5). Built, synced and disposed beside the doors; lane B's to fill.</summary>
+        CorpseDirector? _corpses;
+
+        /// <summary>The one reader of the fight's events (design 33 §5). Lane B's to fill.</summary>
+        readonly CombatFeedback _combatFeedback = new CombatFeedback();
+
         /// <summary>
         /// The title screen's bed. Owned by the root rather than by the session, because it is
         /// the sound of there being no session: it is built once at <see cref="Start"/>, it
@@ -984,6 +990,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_model != null)
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
+                _corpses = new CorpseDirector(_model, moduleCatalogue, _figures, transform, gameObject.layer);
             }
 
             // The light through the day. It finds the scene's own sun rather than making one,
@@ -1395,6 +1402,7 @@ namespace Odyssey.Presentation.Bootstrap
             MarkSection(FrameSection.Actors);
 
             _doors?.Sync(_world.Views.Current, activeLayer, slice, Time.deltaTime, _audio);
+            _corpses?.Sync(_world.Views.Current, activeLayer, slice);
             MarkSection(FrameSection.Doors);
 
             DrawStandingOrders(_world.Views.Current);
@@ -1408,6 +1416,8 @@ namespace Odyssey.Presentation.Bootstrap
             _renderer.FlushCellPlates();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             DrawDraftMarks(_world.Views.Current, movePerTick);
+            // The fight's moments since last frame (design 33 §5), handed on once each.
+            _combatFeedback.Consume(_world.Views.Current, _world, _figures, _audio);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -2642,7 +2652,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // An animal is bracketed as its own drawn box, turned the way it faces, with
                     // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
                     // hog highlighted the whole tile). A colonist keeps the one fixed box below.
-                    if (pawn.Kind != 0 && _figures != null
+                    if (pawn.IsAnimal && _figures != null
                         && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
                     {
                         _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength);
@@ -3300,6 +3310,7 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight?.Dispose();
             _figures?.Dispose();
             _doors?.Dispose();
+            _corpses?.Dispose();
 
             // The pictures go with the materials that painted them — a portrait outlives a colony
             // but not the materials it was rendered through, and a cached texture whose shader is
@@ -3325,6 +3336,7 @@ namespace Odyssey.Presentation.Bootstrap
             _daylight = null;
             _figures = null;
             _doors = null;
+            _corpses = null;
             _colonistMaterials = null;
             _renderer = null;
             _actorMaterial = null;

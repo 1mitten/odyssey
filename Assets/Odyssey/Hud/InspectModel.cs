@@ -364,7 +364,7 @@ namespace Odyssey.Hud
 
             if (Subject == InspectSubject.Colonist)
             {
-                if (snapshot.TryGetPawn(Pawn, out PawnView pawn) && PawnKindLabels.IsAnimal(pawn.Kind))
+                if (snapshot.TryGetPawn(Pawn, out PawnView pawn) && PawnKindLabels.IsAnimal(pawn))
                 {
                     // An animal (design 29 §8): species, activity, where. The colonist's tabs,
                     // commands and skills are not added, so the pane below the header is empty.
@@ -1137,7 +1137,10 @@ namespace Odyssey.Hud
             Tabs.Add(new InspectTab { Name = "Gear", Enabled = false, Reason = "equipment arrives with the inventory" });
             Tabs.Add(new InspectTab { Name = "Thoughts", Enabled = false, Reason = "arrives with the thought log" });
             Tabs.Add(new InspectTab { Name = "Social", Enabled = false, Reason = "M6" });
-            Tabs.Add(new InspectTab { Name = "Health", Enabled = false, Reason = "M6" });
+            // Live from the combat contracts step (design 33 §5): a colonist can be hurt now. The
+            // tab's body is lane C's (HudShell.Combat.cs, CombatFeedbackModel) and is empty until
+            // it is written.
+            Tabs.Add(new InspectTab { Name = "Health", Enabled = true, Reason = string.Empty });
             Tabs.Add(new InspectTab { Name = "Log", Enabled = false, Reason = "M6" });
         }
 

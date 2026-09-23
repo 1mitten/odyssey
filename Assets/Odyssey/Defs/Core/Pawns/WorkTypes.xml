@@ -105,4 +105,17 @@
     <workRateSlopePerLevel>100</workRateSlopePerLevel>
   </WorkTypeDef>
 
+  <!--
+    Carrying the downed to a bed (design 33 sections 1 and 4, C4): the ui.work.rescue column,
+    live from the combat contracts step. Its one giver is an emergency one, so it scans ahead of
+    every ordinary giver at the same priority whatever this order says; the order only places it
+    behind hauling among the non-emergency types, which it never is. No rateSkill: carrying a body
+    is a walk, and a walk is priced by the pawn's pace, as hauling's is.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Rescue</defName>
+    <label>rescue</label>
+    <order>5</order>
+  </WorkTypeDef>
+
 </Defs>

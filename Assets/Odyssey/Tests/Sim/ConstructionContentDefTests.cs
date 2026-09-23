@@ -69,7 +69,11 @@ namespace Odyssey.Tests.Sim
         // rather than a rule keyed off the edifice id, for the reason `needsClearCell` is one — it
         // is a fact about the shape of the thing — and it is what makes a second, larger store one
         // row of content rather than a second code path.
-        const ulong BuildingFingerprint = 18276317653320036380UL;
+        // 2026-09-23, the combat contracts step (design 33 §4, §5): BuildingDef gained
+        // `maxHitPoints`, what a finished thing has when it is struck (C6) — wall 300, floor 250,
+        // deck plate 150, ladder 80, bed 120, door 160, shelf 100, all INVENTED and C6's to tune.
+        // Added to the XML and the code oracle together, and taken from a freshly loaded pack.
+        const ulong BuildingFingerprint = 915997625047511719UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

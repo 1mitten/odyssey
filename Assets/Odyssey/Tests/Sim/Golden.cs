@@ -355,6 +355,21 @@ namespace Odyssey.Tests.Sim
         /// flag itself is hashed only while it is set, so it moved nothing. Measured with
         /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
         /// outputs diff clean for all three colonies.</para>
+        ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by the combat contracts step (design 33
+        /// §5) — the first kind again, and the last time the combat line moves these.</b> Every
+        /// handle the line needs was claimed at once: five job defs (ten more zeros in the job
+        /// counters), <c>Skill_Melee</c> (a sixth experience, passion and daily-gain slot on every
+        /// colonist, rolled at spawn and on the first tick on streams that draw the first five
+        /// exactly as before), <c>Work_Rescue</c> (a sixth priority) and four weapons (four more
+        /// slots in every storage allow list). The combat state on a pawn, the corpse registry and
+        /// the edifice damage store are hashed only while set, and nothing in these windows fights,
+        /// so they moved nothing. <b>Measured</b>: <c>GoldenColonyProbe</c>, widened the same day to
+        /// print mood, mid-step progress, the first five skills' experience and passions, jobs
+        /// started and failed and every job def's completed and failed counts (the first fourteen,
+        /// so the file runs unchanged on both sides), was run on <c>origin/main</c> (33525521) and
+        /// on this branch: the two outputs diff clean for all three colonies. From here every
+        /// combat lane asserts these six numbers unchanged (<c>docs/plans/combat-contracts.md</c>).</para>
         /// </remarks>
         public static readonly Case Meadow = new Case
         {
@@ -364,8 +379,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 11435578929042502374UL,
-            Simulated = 6849796621813291164UL,
+            Generated = 11937131597458600852UL,
+            Simulated = 8975469227685500991UL,
         };
 
         /// <summary>
@@ -388,8 +403,10 @@ namespace Odyssey.Tests.Sim
             // loose); the probe read the same as the first time — the animals' cells, nothing else.
             // 2026-09-23 again, the draft's two job defs (see the meadow's remarks): four more
             // zeros in the job counters; the probe diffs clean.
-            Generated = 14177109647017402279UL,
-            Simulated = 11101947533371264551UL,
+            // 2026-09-23, the combat contracts step (the meadow's remarks): the combat line's
+            // handles, hashed as more zeros; the widened probe diffs clean against origin/main.
+            Generated = 15580267997334477270UL,
+            Simulated = 9335640233082031256UL,
         };
 
         /// <summary>
@@ -427,8 +444,9 @@ namespace Odyssey.Tests.Sim
             Wooded = false,
             // 2026-09-23, wildlife (design 30): the ruin is seeded with its rats and hogs.
             // 2026-09-23 again, the draft's two job defs; the probe diffs clean.
-            Generated = 16760212594496635847UL,
-            Simulated = 17350012236707786580UL,
+            // 2026-09-23, the combat contracts step; the widened probe diffs clean.
+            Generated = 17033198106188971448UL,
+            Simulated = 161591351707358587UL,
         };
     }
 }

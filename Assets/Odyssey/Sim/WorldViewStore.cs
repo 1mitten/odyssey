@@ -70,6 +70,12 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one thing in the air. See <see cref="FallingView"/>.</summary>
         public void AddFalling(in FallingView view) => _target.AddFalling(view);
+
+        /// <summary>Publish one moment of a fight. See <see cref="CombatEventView"/>.</summary>
+        public void AddCombatEvent(in CombatEventView view) => _target.AddCombatEvent(view);
+
+        /// <summary>Publish one corpse. See <see cref="CorpseView"/>.</summary>
+        public void AddCorpse(in CorpseView view) => _target.AddCorpse(view);
     }
 
     /// <summary>

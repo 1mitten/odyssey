@@ -168,7 +168,17 @@ namespace Odyssey.Tests.Sim
         // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
         // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
         // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
-        const ulong ContentFingerprint = 15492604582855010655UL;
+        //
+        // Moved a seventeenth time, 2026-09-23, by the combat contracts step (design 33 §5), which
+        // claims every handle the combat line needs at once: five jobs (Job_AttackMelee, Job_Flee,
+        // Job_Downed, Job_Equip, Job_Rescue at drivers 14 to 18), Skill_Melee, Work_Rescue, four
+        // weapons (Item_Bat, Item_Crowbar, Item_Machete, Item_ArcBlade, each with a weapon block),
+        // PawnKind_Marauder with PawnKindDef.faction (the two animal kinds Wild), SpeciesDef's
+        // combat fields with the owner's pools (person 100, hog 60, rat 15), death at -500 per mille,
+        // revenge (hog 700, rat 50) and the two natural attacks, and a new CombatDef carrying the
+        // owner's hit and dodge curves and fists. Taken from a freshly loaded pack. The goldens
+        // moved in the same commit, and not for any of the numbers: see Golden.cs.
+        const ulong ContentFingerprint = 14184824215602652456UL;
 
 
         [Test]

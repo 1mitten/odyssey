@@ -213,6 +213,33 @@ namespace Odyssey.Sim.Contracts
         /// a <c>PawnId</c> value. Refused for a colonist who is not drafted.
         /// </summary>
         OrderMove,
+
+        // The combat line's three orders (design 33 §5), claimed together by the contracts step.
+        // Each has a handler registered from that commit; each refuses with NotPermitted until
+        // the lane that owns it fills the handler in.
+
+        /// <summary>
+        /// Send one drafted colonist to attack (design 33 §1, C2): <c>A</c> is the attacker's
+        /// <c>PawnId</c> value and <c>B</c> the target's. A target of 0 names no pawn, and then
+        /// <see cref="Intent.Cell"/> is a building to strike (C6). Handler:
+        /// <c>JobSystem.HandleOrderAttack</c>.
+        /// </summary>
+        OrderAttack,
+
+        /// <summary>
+        /// Send one colonist to pick a weapon up and hold it (design 33 §1, C3): <c>A</c> is the
+        /// colonist's <c>PawnId</c> value and <c>B</c> the weapon's <c>ThingId</c> value;
+        /// <see cref="Intent.Cell"/> is where it was clicked. Handler:
+        /// <c>JobSystem.HandleOrderEquip</c>.
+        /// </summary>
+        OrderEquip,
+
+        /// <summary>
+        /// Send one drafted colonist to carry a downed one to a bed (design 33 §1, C4): <c>A</c>
+        /// is the rescuer's <c>PawnId</c> value and <c>B</c> the patient's. Handler:
+        /// <c>JobSystem.HandleOrderRescue</c>.
+        /// </summary>
+        OrderRescue,
     }
 
     /// <summary>
@@ -282,6 +309,12 @@ namespace Odyssey.Sim.Contracts
             // the thing a player pauses to give — a fight is planned with the clock stopped.
             IntentKind.SetDrafted => true,
             IntentKind.OrderMove => true,
+            // The fight's orders, on the same test (design 33 §5): a player's order over a
+            // colonist, written by the player and finished by no system — the job it starts is
+            // the next tick's business, exactly as a move's walk is.
+            IntentKind.OrderAttack => true,
+            IntentKind.OrderEquip => true,
+            IntentKind.OrderRescue => true,
             _ => false,
         };
     }

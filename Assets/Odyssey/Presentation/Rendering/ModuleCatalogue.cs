@@ -602,6 +602,50 @@ namespace Odyssey.Presentation.Rendering
             kind > 0 && kind < AnimalNames.Length ? AnimalBase + "." + AnimalNames[kind] : string.Empty;
 
         /// <summary>
+        /// The fight's clip rows (design 33 §1, <c>docs/research/synty-sword-combat.md</c>), one
+        /// row per <b>role</b>, never per clip name: a row's clips are the Sword Combat pack's
+        /// Polygon, in-place, non-returning clips for that role — its directional or combo variants
+        /// as the row's entries — and a checkout without the pack has the row with no clips and
+        /// falls back to <c>CombatPose</c>. Claimed by the combat contracts step so the rows' ids
+        /// are fixed before lane B writes the catalogue build (<c>PlayScene.cs</c>) that fills them.
+        /// </summary>
+        public const string CombatBase = Prefix + "anim.combat";
+
+        /// <summary>A light one-handed swing: <c>LightCombo01A/B/C</c>, alternated.</summary>
+        public const string CombatSwingLight = CombatBase + ".swing.light";
+
+        /// <summary>A heavy swing: <c>HeavyCombo01A</c>, <c>HeavyStab01</c>.</summary>
+        public const string CombatSwingHeavy = CombatBase + ".swing.heavy";
+
+        /// <summary>Taking a blow, by direction: <c>Hit_F/B/L/R_React</c>.</summary>
+        public const string CombatHitReact = CombatBase + ".react.hit";
+
+        /// <summary>A big blow or a stun's first beat, by direction: <c>Hit_F/B/L/R_Stagger</c>.</summary>
+        public const string CombatStagger = CombatBase + ".react.stagger";
+
+        /// <summary>Getting out of the way: <c>Dodge_F/B/L</c> (never <c>_R</c>, which imports Generic).</summary>
+        public const string CombatDodge = CombatBase + ".dodge";
+
+        /// <summary>Stunned: begin, loop, end.</summary>
+        public const string CombatStun = CombatBase + ".stun";
+
+        /// <summary>Downed: <c>KnockDown_Begin</c>, then <c>_Loop</c>; the get-up for a recovery.</summary>
+        public const string CombatDowned = CombatBase + ".downed";
+
+        /// <summary>Dying, by direction: <c>Death_F/B/L/R</c>.</summary>
+        public const string CombatDeath = CombatBase + ".death";
+
+        /// <summary>The corpse: each death's one-frame <c>_Pose</c> clip, held.</summary>
+        public const string CombatDeathPose = CombatBase + ".death.pose";
+
+        /// <summary>Every combat row, for the catalogue build and the test that each resolves or falls back.</summary>
+        public static readonly string[] CombatRows =
+        {
+            CombatSwingLight, CombatSwingHeavy, CombatHitReact, CombatStagger, CombatDodge,
+            CombatStun, CombatDowned, CombatDeath, CombatDeathPose,
+        };
+
+        /// <summary>
         /// Hair pieces a colonist can be dealt, as a family
         /// (<c>docs/design/29-modular-colonists.md</c>).
         ///
@@ -634,6 +678,14 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemCoal = Prefix + "item.coal";
         public const string ItemCarrots = Prefix + "item.carrots";
 
+        // The four melee weapons lying on the ground (design 33 §1, C3), claimed by the combat
+        // contracts step so the table below stays as long as ItemIndex. No rows yet: each falls
+        // back to the stand-in until lane B's catalogue build gives it a prop.
+        public const string ItemBat = Prefix + "item.bat";
+        public const string ItemCrowbar = Prefix + "item.crowbar";
+        public const string ItemMachete = Prefix + "item.machete";
+        public const string ItemArcBlade = Prefix + "item.arcblade";
+
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -647,6 +699,7 @@ namespace Odyssey.Presentation.Rendering
         static readonly string[] ItemModules =
         {
             ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal, ItemCarrots,
+            ItemBat, ItemCrowbar, ItemMachete, ItemArcBlade,
         };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>

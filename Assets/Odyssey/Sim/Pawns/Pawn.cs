@@ -93,6 +93,7 @@ namespace Odyssey.Sim.Pawns
             Skills = new int[SkillIndex.Count];
             Passions = new byte[SkillIndex.Count];
             SkillGainedToday = new int[SkillIndex.Count];
+            HpMilli = HpMaxMilli;
         }
 
         public PawnId Id { get; }
@@ -108,8 +109,26 @@ namespace Odyssey.Sim.Pawns
         ///
         /// <para>Settable only by the loader, which builds the pawn before the section that
         /// names its kind is read. Nothing else may change what a pawn is.</para>
+        ///
+        /// <para><b>A pawn at full health stays at full health when its kind is set</b> (design 33
+        /// §5). The loader builds every pawn as a colonist, whose pool is 100, and only then reads
+        /// that it is a hog, whose pool is 60 — so without this a reloaded hog carried 100 of 60
+        /// hit points, which is combat state, which is saved and hashed, and every round trip of a
+        /// board with an animal on it would have disagreed with itself. A hurt pawn is left alone:
+        /// its hit points come back from the combat section, which is read after the kinds.</para>
         /// </summary>
-        public int Kind { get; internal set; }
+        public int Kind
+        {
+            get => _kind;
+            internal set
+            {
+                bool full = HpMilli == HpMaxMilli;
+                _kind = value;
+                if (full) HpMilli = HpMaxMilli;
+            }
+        }
+
+        int _kind;
 
         /// <summary>
         /// An animal that has decided to walk off the board (design 30 §3). Set by the wildlife
@@ -151,11 +170,102 @@ namespace Odyssey.Sim.Pawns
         public SpeciesDef Species => Content.SpeciesOf(Kind);
 
         /// <summary>
-        /// A colonist, as against an animal. Every pawn-wide system asks this once at the top of
-        /// its loop (design 29 §2): an animal has no needs tick, no mood, no skills, no work and no
-        /// schedule, and the same movement, doors and falling as anyone.
+        /// A person, as against an animal — a colonist <b>or a hostile one</b>. Every pawn-wide
+        /// system asks this once at the top of its loop (design 29 §2): an animal has no needs
+        /// tick, no mood, no skills, no work and no schedule, and the same movement, doors and
+        /// falling as anyone. Since combat a person may be a marauder: a system that means "one
+        /// of ours" asks <see cref="IsColonist"/>.
         /// </summary>
         public bool IsPerson => Species.person;
+
+        /// <summary>Whose side this pawn is on — its kind's (design 33 §3). Nothing is saved for it.</summary>
+        public Faction Faction => Content.KindOf(Kind).faction;
+
+        /// <summary>Fights the colony on sight: a marauder (design 33 §1).</summary>
+        public bool IsHostile => Faction == Faction.Hostile;
+
+        /// <summary>One of ours: a person of the colony's faction. The draft, the roster and the Work tab mean this.</summary>
+        public bool IsColonist => IsPerson && Faction == Faction.Colony;
+
+        /// <summary>
+        /// Whether the needs system ticks this pawn's needs, mood and breaks. A colonist's do; an
+        /// animal's never have (design 29 §2); a hostile's do not — a marauder is debug-spawned to
+        /// hunt until it is killed, and one that went looking for the colony's meals would be a
+        /// raider with a pantry (design 33 §5); and <b>a downed pawn's needs pause</b>, the C2
+        /// default the owner did not object to.
+        /// </summary>
+        public virtual bool NeedsTick => IsColonist && !Downed;
+
+        // ---- combat state (design 33 §3, §5) ---------------------------------------------------
+        //
+        // Saved in CombatSection (layout 2), keyed by pawn id and written only for a pawn with
+        // something to say, and hashed only while set (ContributeTo, bit 19 of the kind word), so
+        // a colony that has never fought saves and hashes exactly as it did before combat. Every
+        // field below is written by the combat lanes and by nothing else; the contracts step only
+        // declared them.
+
+        /// <summary>This pawn's full pool, in thousandths of a hit point: the species' <see cref="SpeciesDef.healthPoints"/> × 1,000.</summary>
+        public int HpMaxMilli => Species.healthPoints * Rates.Scale;
+
+        /// <summary>
+        /// Hit points, in thousandths (<c>Rates</c>), so a slow heal is exact without a float.
+        /// Full at spawn. <b>Downed</b> at nought and below; <b>dead</b> at or below
+        /// <see cref="DeathAtMilli"/>.
+        /// </summary>
+        public int HpMilli { get; internal set; }
+
+        /// <summary>The hit points at or below which this pawn dies: <see cref="SpeciesDef.deathAtPerMille"/> of the pool.</summary>
+        public int DeathAtMilli => (int)((long)HpMaxMilli * Species.deathAtPerMille / 1_000);
+
+        /// <summary>Lying where it fell (design 33 §1). Set and cleared by the fight's rules, never inferred from <see cref="HpMilli"/> by a reader.</summary>
+        public bool Downed { get; internal set; }
+
+        /// <summary>
+        /// The tick the next swing may start on. On the pawn rather than the job, so a new order
+        /// does not reset the cooldown (design 33 §3). Nought for a pawn that has never swung.
+        /// </summary>
+        public int NextSwingTick { get; internal set; }
+
+        /// <summary>Stunned until this tick: no swing and no step before it. Nought when never stunned.</summary>
+        public int StunnedUntilTick { get; internal set; }
+
+        /// <summary>
+        /// Who this pawn is fighting back against, as a <see cref="PawnId"/> value, or 0 — an
+        /// animal's revenge or a colonist struck by a colonist (design 33 §1). Paired with
+        /// <see cref="RetaliateUntilTick"/>.
+        /// </summary>
+        public int RetaliateAgainst { get; internal set; }
+
+        /// <summary>The tick the retaliation runs out. Meaningless while <see cref="RetaliateAgainst"/> is 0.</summary>
+        public int RetaliateUntilTick { get; internal set; }
+
+        /// <summary>
+        /// The weapon in the hand, as a <see cref="ThingId"/> value, or 0 for bare hands (C3). The
+        /// item itself stays in <c>ColonyItems</c> with no cell; lane D owns how it gets there.
+        /// </summary>
+        public int EquippedItem { get; internal set; }
+
+        /// <summary>
+        /// The pawn this one is under orders to attack or rescue, as a <see cref="PawnId"/> value,
+        /// or 0. On the pawn rather than the job record because the job record is read
+        /// sequentially inside the pawns section, and a field there would be a save-format bump.
+        /// A building target rides the job's own <see cref="Job.TargetCell"/> (C6).
+        /// </summary>
+        public int CombatTarget { get; internal set; }
+
+        /// <summary>The <see cref="PawnId"/> value of whoever is carrying this pawn, or 0 (C4).</summary>
+        public int CarriedBy { get; internal set; }
+
+        /// <summary>Stunned right now, at <paramref name="tick"/>.</summary>
+        public bool StunnedAt(int tick) => StunnedUntilTick > tick;
+
+        /// <summary>
+        /// Does this pawn have any combat state to save and hash? False for every pawn in a colony
+        /// that has never fought, which is what keeps its save and its hash exactly as they were.
+        /// </summary>
+        public bool HasCombatState =>
+            HpMilli != HpMaxMilli || Downed || NextSwingTick != 0 || StunnedUntilTick != 0
+            || RetaliateAgainst != 0 || EquippedItem != 0 || CombatTarget != 0 || CarriedBy != 0;
 
         /// <summary>Cell index, layer included. Always layer-aware; there is no 2D form of this.</summary>
         public int Cell { get; set; }
@@ -770,10 +880,25 @@ namespace Odyssey.Sim.Pawns
             // The draft rides in the same word, and its clock only while it is set (design 33
             // §2a): a colony nobody drafts hashes exactly as it did before drafting existed.
             // A finishing step (design 33 §2d) is flagged in the same word for the same reason.
+            // And the fight's state (design 33 §5), flagged in the same word and walked only while
+            // there is any, so a colony that has never fought hashes exactly as before combat.
+            bool combat = HasCombatState;
             hash.Add(Kind | (Leaving ? 1 << 16 : 0) | (Drafted ? 1 << 17 : 0)
-                | (FinishingStepTo >= 0 ? 1 << 18 : 0));
+                | (FinishingStepTo >= 0 ? 1 << 18 : 0) | (combat ? 1 << 19 : 0));
             if (Drafted) hash.Add(DraftQuietSinceTick);
             if (FinishingStepTo >= 0) hash.Add(FinishingStepTo);
+            if (combat)
+            {
+                hash.Add(HpMilli);
+                hash.Add(Downed);
+                hash.Add(NextSwingTick);
+                hash.Add(StunnedUntilTick);
+                hash.Add(RetaliateAgainst);
+                hash.Add(RetaliateUntilTick);
+                hash.Add(EquippedItem);
+                hash.Add(CombatTarget);
+                hash.Add(CarriedBy);
+            }
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);

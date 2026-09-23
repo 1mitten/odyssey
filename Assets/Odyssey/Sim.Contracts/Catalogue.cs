@@ -40,7 +40,26 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A drafted colonist walking to the cell the player named (design 33 §2c).</summary>
         public const int Goto = 13;
 
-        public const int Count = 14;
+        // The combat line's five (design 33 §5), claimed together by the contracts step so that
+        // no two lanes can each append a job and both call it 14. Every one exists from this
+        // commit; the drivers behind them are stubs that fail until their lane fills them.
+
+        /// <summary>Close on a target and swing at it until one of the two goes down (C2).</summary>
+        public const int AttackMelee = 14;
+
+        /// <summary>Run from whatever hurt it (C2): an animal that did not turn on its attacker.</summary>
+        public const int Flee = 15;
+
+        /// <summary>Lying where it fell, at nought hit points or less, until healed, rescued or dead (C2).</summary>
+        public const int Downed = 16;
+
+        /// <summary>Walk to a weapon and take it into the hand (C3).</summary>
+        public const int Equip = 17;
+
+        /// <summary>Carry a downed colonist to a bed (C4).</summary>
+        public const int Rescue = 18;
+
+        public const int Count = 19;
     }
 
     /// <summary>
@@ -86,7 +105,14 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Growing = 4;
 
-        public const int Count = 5;
+        /// <summary>
+        /// Carrying a downed colonist to a bed (design 33 §4, C4). Claimed by the combat
+        /// contracts step with the rest of the line's handles; its giver is an emergency one and
+        /// answers no until C4 fills it.
+        /// </summary>
+        public const int Rescue = 5;
+
+        public const int Count = 6;
 
         /// <summary>What a work type the simulation does not run answers to. Never sent.</summary>
         public const int None = -1;
@@ -145,7 +171,23 @@ namespace Odyssey.Sim.Contracts
         /// handle order is the save contract.
         /// </summary>
         public const int Carrots = 6;
-        public const int Count = 7;
+
+        // The four melee weapons (design 33 §1, C3), appended together by the combat contracts
+        // step. Real items: one to a stack, category Weapons, each with a weapon block in its Def.
+
+        /// <summary>Blunt, and a chance to stun.</summary>
+        public const int Bat = 7;
+
+        /// <summary>Blunt, heavier, and a better chance to stun.</summary>
+        public const int Crowbar = 8;
+
+        /// <summary>Sharp and quick.</summary>
+        public const int Machete = 9;
+
+        /// <summary>Sharp, and the best thing a colonist can hold.</summary>
+        public const int ArcBlade = 10;
+
+        public const int Count = 11;
     }
 
     /// <summary>
