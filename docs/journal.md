@@ -10748,3 +10748,43 @@ also stopped allocating on its arrival check — the census refills one kept ins
 the idle-tick allocation test failed once in the Long tier and passed alone; that was collector
 noise from a neighbour, since the test builds a world with no wildlife system in it, but a
 system that allocates tens of thousands of ints six times a minute is not one to leave.
+
+## 2026-09-23 — Combat: the interview, and the draft (C1)
+
+The owner asked for an MVP of RimWorld's attack system — a colonist put into an attack mode,
+ordered to move and to attack animals, colonists, buildings and enemies — and asked to be
+interviewed on every detail. Five rounds settled the table in `docs/design/33-combat.md` §1. Most
+of the recommended defaults were taken. Three were not, and they are the ones worth remembering:
+- **Downed colonists heal only in a bed**, so rescue is in the MVP.
+- **Draft is on T**, because R stays slice-up.
+- Box selection already existed, so orders apply to **every selected drafted colonist** rather
+  than the single colonist the interview assumed.
+
+The owner also handed over Synty's Sword Combat animation package mid-plan. It was unpacked into
+the shared `Assets/Synty` entry by entry, GUIDs kept, with its runtime C# tool left out so no
+junctioned checkout gained scripts. Its attacks come pre-cut at the impact frame, which is what
+C2's wind-up will be timed against (`docs/research/synty-sword-combat.md`).
+
+The branch sits on `claude/wildlife` because animals are targets, so it merges after #167 and
+#169.
+
+**The one thing C1 found that nobody asked for was a snap.** An order has to take effect now: a
+player who clicks expects the colonist to respond. But ending a job clears the path, and with it
+the step in progress. Every draft of a walking colonist, and every re-aimed right-click, would
+have put the pawn back on the cell it was leaving while its figure stood most of the way into the
+next. That is the fault the job expiry was taught to avoid on 2026-09-22.
+
+The fix is `JobSystem.Interrupt`: end the job, keep the one step as a path of its own, and have
+the next walk wait for it to land. The kept step has to be saved and hashed, because its
+destination went with the job that chose it. Without that, a save taken mid-step resumed on a
+different trajectory, which `ASaveTakenMidStepResumesIdentically` pins. The test that proves the
+step is kept was run once with the keep withheld, and it failed there first.
+
+**The goldens moved, all six, and the colony did not.** Two job defs means four more hashed zeros
+in the job counters before a tick. The colony probe run on `claude/wildlife` and on this branch
+diffs clean. The draft flag itself is hashed only while set, on the `Leaving` precedent, which is
+what will let C5 and C6 assert that nothing moves.
+
+`JobSystem.Load` used to refuse any save whose job count differed from the build's. That would
+have made every save before C1 unloadable, so it now accepts fewer, since the table is
+append-only.

@@ -105,6 +105,17 @@ which is the thing a player pauses to give.
   (`CellGrid.NearestWalkableInColumn`, the debug spawn's rule), and requires it reachable.
   Refused for a colonist who is not drafted: the reference moves only drafted pawns, and a
   right-click on an undrafted colonist's behalf is not a gesture this build gives a meaning.
+- **An order given mid-step keeps the step.** Ending a job clears the path and with it the step
+  in progress, so the figure — drawn most of the way into the next cell — snapped back by up to a
+  cell on every draft and every re-aimed right-click. `JobSystem.Interrupt` ends the job and then
+  re-adopts that one step as a path of its own, marking the pawn `FinishingStepTo`; the next job's
+  walk (`JobDriver.GotoCell`) waits for it to land, and the mover clears the mark on arrival. The
+  mark is saved in `odyssey.combat` and hashed while set, because it is a path the world cannot
+  re-derive — its destination went with the job that chose it — and without it a save taken
+  mid-step resumed on a different trajectory. `AnOrderGivenMidStepLandsTheStepBeforeTurning`
+  fails when the kept step is withheld (measured). A diagonal step is 141 ticks at the standard
+  pace, so a colonist drafted mid-stride can take over two seconds to stop; that is the step,
+  not a delay.
 - **Two colonists sent to one cell are spread.** If another drafted colonist already stands on, or
   is walking to, the chosen cell, the handler takes the nearest free reachable cell within two rings
   of it, in a fixed scan order. This is what makes a box selection moved with one click stand as a
@@ -127,11 +138,16 @@ the carry aspects, the two spellings are held together by a test on each side.
 - **T** (`HotkeyAction.Draft`, rebindable) drafts every selected colonist if any of them is
   undrafted, and undrafts them all otherwise. The rule is the reference's for a mixed selection.
 - **The pane's Draft button** is live, and reads Undraft on a drafted colonist.
-- **A right-click on the world with no tool armed** is an order. `DesignatePresenter` keeps first
-  refusal: with a tool in hand the right-click still puts it down, exactly as before. With none,
-  it forwards to `OrderPresenter`, the one subscriber that turns the click into orders. The
-  gesture `15-building.md` §8 reserved for "build this now" is the same gesture, for the same kind
-  of thing: a player overruling the scan for a colonist.
+- **A right-click on the world with no tool armed** is an order.
+  - `SliceCameraRig.WorldRightClicked` now carries the pick, the cell and the ray, as `Picked`
+    does.
+  - `DesignatePresenter` keeps first refusal: with a tool in hand the right-click still puts it
+    down, exactly as before.
+  - With no tool armed it hands the click to `SelectionPresenter.Order`. That presenter already
+    owns the hit-test that says who is under the pointer, and it was in every play scene already,
+    so the feature needs no scene rebuild. A new `OrderPresenter` component would have needed one.
+  - The gesture `15-building.md` §8 reserved for "build this now" is the same gesture, for the
+    same kind of thing: a player overruling the scan for a colonist.
 - `Hud.OrderModel` is the decision, Unity-free and tested in the fast tier. Given the selection,
   who is drafted, the clicked cell, the pawn under the pointer and whether Ctrl is held, it returns
   the intents to send, or none. In C1 its only answer is a move for each selected drafted colonist.

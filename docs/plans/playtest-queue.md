@@ -23,6 +23,19 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does drafting feel like taking a colonist in hand, and does a right-click send them where you
+  meant?** (`claude/combat-mvp`, C1, `docs/design/33-combat.md` §2). Select a colonist, press
+  **T**: they stop what they were doing, a red-orange diamond appears over their head, the pane
+  says *Drafted* and its button now reads *Undraft*. Right-click the ground: they walk there and
+  stand. Box-select three, T, right-click one tile: they should stand as a group on neighbouring
+  tiles, not in one pile. Things to judge that no test can: whether a colonist drafted mid-stride
+  finishing their step (up to two seconds on a diagonal) reads as *obeying* or as *ignoring you*;
+  whether the diamond and the order line are findable at the play camera without being loud;
+  whether four in-game hours before an idle draft lets go is right; and whether right-clicking
+  a drafted colonist's destination again mid-walk turns them cleanly. A wrong answer is a figure
+  that snaps back a cell, a drafted colonist who wanders off to eat, or a right-click that does
+  nothing while the orbit still works.
+
 - **Does the meadow feel lived in, and do the comings and goings read as wildlife?**
   (`claude/wildlife`, PR to follow #167, `docs/design/30-wildlife.md`). Press Play → New game
   on the meadow and do not spawn anything: nine or ten animals should already be on the board —
