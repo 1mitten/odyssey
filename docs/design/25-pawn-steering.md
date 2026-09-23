@@ -177,4 +177,227 @@ ceiling every pawn has a figure and the scan is the capped 64 x N one.
 `Proximity` is exactly zero beyond roughly one cell: a cell-bucketed index over the pawn span
 would skip only pairs that contribute nothing, and the offsets it computes would be identical to
 the last bit. The sidestep as judged stays as judged; what changes is how many pairs are asked
-about. Held as the next unit rather than done, so that the sweep above stands as its before.
+about.
+
+> **Done, 2026-09-23 — see §9 below**, which supersedes this paragraph. The index is built, the
+> pose is pinned bit-for-bit, and the frame at 384 colonists went 27.81 ms to 14.99 ms on a clear
+> machine. Two things in §9 are worth reading even if the fix is not in question: **44% of the cost
+> was the `WhereItIsNow` recompute rather than the quadratic**, which is why the plan's instruction
+> to measure the cheap candidate alone earned its keep; and the cull uncovered **a second O(N²) in
+> the same pass** which is reported and not fixed.
+
+## 9. Making the scan stop walking the colony
+
+*Written 2026-09-23. The prompt and the evidence that started it are `docs/plans/pf-crowd-scan.md`;
+the frame context is `docs/design/06-rendering-and-camera.md` §6c.2. **Nothing about the sidestep
+changed.** §1–§8 above stand exactly as they were, and that is the constraint this section is
+written under rather than a claim it makes in passing.*
+
+### 9a. What it cost, measured here
+
+The `Actors` and `Figures` passes both call `PawnPose.Of`, and `PawnPose.Of` walked the whole pawn
+span for every pawn it posed. The earlier readings (§6c.2, and the plan's) were taken on a machine
+running several editors; this is the same sweep taken on a clear machine, and it is the *before* the
+rest of this section is measured against. `FrameTimeTests.TheFrameAgainstColonySize`, barren natural
+board, 640 × 480, RTX 5070 Ti, 2026-09-23.
+
+| pawns | figures | frame | `Figures` | `Actors` | draw calls |
+|---|---|---|---|---|---|
+| 8 | 8 | 2.08 ms | 0.091 | 0.017 | 1,125 |
+| 32 | 32 | 2.59 ms | 0.499 | 0.020 | 1,125 |
+| 64 | 64 | 3.72 ms | 1.425 | 0.023 | 1,125 |
+| 96 | 64 | 4.65 ms | 1.870 | 0.467 | 1,147 |
+| 128 | 64 | 5.90 ms | 2.361 | 1.180 | 1,149 |
+| 192 | 64 | 9.35 ms | 3.583 | 3.315 | 1,151 |
+| 256 | 64 | 14.09 ms | 5.020 | 6.433 | 1,151 |
+| 384 | 64 | **27.81 ms** | **8.646** | **15.785** | 1,152 |
+
+**The causal model predicts this to within a few per cent, which is what licenced going straight at
+it.** `Actors` poses every pawn without a figure against every pawn, so its pair count is
+`(N − 64) × N`:
+
+| pawns | pairs | `Actors` | ns a pair |
+|---|---|---|---|
+| 96 | 3,072 | 0.467 ms | 152 |
+| 128 | 8,192 | 1.180 ms | 144 |
+| 192 | 24,576 | 3.315 ms | 135 |
+| 256 | 49,152 | 6.433 ms | 131 |
+| 384 | 122,880 | 15.785 ms | **128** |
+
+A flat ~130 ns a pair across a forty-fold range of pair counts. It is the scan and nothing else.
+
+> **One correction to the plan while it is in view.** `docs/plans/pf-crowd-scan.md` gives 147,456
+> pairs at 384 and calls it `(N − 64) × N`. 147,456 is `384²`; `(N − 64) × N` is **122,880**. The
+> shape of the argument is untouched and the per-pair figure moves from ~117 ns to ~128 ns, which is
+> if anything a better fit. Recorded because the next person to check the model against a measurement
+> will otherwise find it 20% out and go looking for a second effect that is not there.
+
+**And the open question the plan asked to answer on the way is answered.** It asked why `Actors` is
+0.027 ms at 64 figures when `Figures` is already 1.5 ms and climbing. Both pay the scan; the figure
+cap is what separates them. Below 64 every pawn is a live figure, so `Actors` poses nobody at all and
+`Figures` pays the `min(64, N) × N` linear scan on its own. Above it `Figures` is pinned at 64 posed
+pawns and grows only through the span it walks — from 1.425 ms at 64 pawns (4,096 pairs) to 8.646 ms
+at 384 (24,576 pairs), which is **353 ns a pair against `Actors`' 128**. So the live side pays the
+same scan at a worse constant, and one fix serves both call sites. What the extra 225 ns is has not
+been isolated and is not claimed here.
+
+### 9b. The shape chosen, and why it is allowed to exist
+
+**`PawnCrowdIndex`: every pawn's position computed once a frame and bucketed on a 3 m grid, built in
+the composition root and shared by every pass that poses a pawn.**
+
+The licence for it is that the cull is **exact, not approximate**. `SteeringCurve.Proximity` is
+`SmoothStep((3.0 − d) / 1.5)`, which returns exactly `0f` at and beyond `CrowdFarRadius`, and the
+loop already discarded a zero. So every pair the index skips is a pair the old loop visited and threw
+away, and the reduction is a `max`, which does not care in what order it sees its arguments. The
+result is the same pose, not a similar one — the bar the plan set, and the thing
+`PawnCrowdIndexTests.EveryScanModeDrawsTheIdenticalPose` pins component by component with no
+tolerance anywhere in it.
+
+Three decisions inside that are worth not undoing:
+
+- **The bucket is the radius, not the cell.** 3.0 m, which is `CrowdFarRadius` and also exactly one
+  cell layer, against a cell 2.5 m square. At bucket size `B ≥ r` the 3 × 3 × 3 block around a query
+  point provably holds everybody within `r`: for `p ∈ [Bb, Bb+B)` and `|q − p| ≤ r ≤ B`, `floor(q/B)`
+  lies in `[b−1, b+1]`. Keying on the cell instead would need a **fourth** neighbour in x and z,
+  because 2.5 m buckets do not reach 3 m in one step — which is the off-by-one this note exists to
+  stop somebody reintroducing while tidying the bucket size to match `CellMetrics`.
+- **The vertical is a real axis.** Distance is 3D on purpose (§2: a colonist on the terrace above was
+  nought metres away under the old x/z measure, on a board whose whole surface is 3 m risers). A
+  3.0 m bucket in y keeps that exactly, and `SomebodyJustInsideTheRadiusOverheadIsStillReached` is
+  the guard.
+- **The table is sized to the colony, not to the board.** Open addressing with a generation stamp, so
+  a rebuild clears nothing. A dense grid over 120 × 120 × 16 cells would be 160,000 buckets to clear
+  every frame for a colony of fifty, which is the per-board-rather-than-per-thing cost the audit's
+  scaling rules exist to catch (`docs/process.md` §3).
+
+**One index, built once, in the composition root.** Three passes pose a pawn against its neighbours —
+the live figures, the baked far form and the stand-in load a carrier holds. Building it in any of
+them would build it two or three times and leave them able to disagree, which is the exact fault
+`PawnPose` itself exists to prevent (§1). It is rebuilt from `Views.Current`, the same snapshot all
+three read, so it cannot be a frame out of step with what is drawn. It has its own `FrameSection`
+rather than a charge on `Figures`, because billing a shared O(N) rebuild to the first of its three
+consumers would flatter `Actors` by exactly the amount it hid.
+
+**Nothing here is in a cell, a save or the state hash**, and no golden moved.
+
+### 9c. Three arms, because the plan warned against two
+
+The plan named hoisting `SteeringCurve.WhereItIsNow` out of the inner loop as the cheap candidate —
+N² calls for N distinct answers — and said to **measure it alone** before building a spatial index on
+top of an unmeasured constant factor. Building the index subsumes that hoist, so after the fact the
+two cannot be told apart.
+
+So the control is three-valued rather than a bool. `CrowdScan.Span` is what shipped; `Cached` is the
+hoist and nothing else, the same N² visit reading positions from the frame's cache; `Bucketed` adds
+the cull. All three reach one shared `PawnPose.CrowdWeight`, so they are three ways of finding the
+survivors and one way of weighing them — which is what makes the exactness structural rather than a
+coincidence a later edit could break.
+
+**`FrameTimeTests.TheCrowdScanCostsWhatItVisits`**, each arm timed twice, alternating, in one run on
+a clear machine. Barren natural board, 640 × 480, RTX 5070 Ti, 2026-09-23.
+
+| colony | scan | frame | `Figures` | `Actors` | `Crowd` |
+|---|---|---|---|---|---|
+| 64 | Span | 4.508 ms | 1.734 | 0.029 | 0.008 |
+| 64 | Cached | 3.967 ms | 1.378 | 0.027 | 0.007 |
+| 64 | Bucketed | **3.867 ms** | 1.231 | 0.028 | 0.007 |
+| 192 | Span | 10.578 ms | 4.034 | 3.717 | 0.022 |
+| 192 | Cached | 7.747 ms | 3.096 | 2.054 | 0.020 |
+| 192 | Bucketed | **6.219 ms** | 2.598 | 1.076 | 0.021 |
+| 384 | Span | 30.104 ms | 9.388 | 17.259 | 0.042 |
+| 384 | Cached | 20.846 ms | 7.942 | 9.710 | 0.041 |
+| 384 | Bucketed | **16.027 ms** | 7.290 | 5.303 | 0.042 |
+
+**The plan's warning was right, and it is the most useful thing in this table.** At 384 colonists the
+hoist *alone* takes `Actors` from 17.259 ms to 9.710 — **44% of the cost was one line**, recomputing
+N distinct positions N times. The cull takes it on to 5.303. Had the index been built and measured
+only against `Span`, it would have been credited with all 11.96 ms when 7.55 of it belonged to a
+change that needs no data structure at all. **Measure the cheap candidate alone, even when you
+intend to build the expensive one.**
+
+**The index itself costs 0.042 ms at 384 colonists** — one O(N) pass, serving all three consumers.
+
+**Taken three times on a clear machine, and the three agree.** `Actors` at 384 colonists, for
+Span / Cached / Bucketed:
+
+| run | Span | Cached | Bucketed |
+|---|---|---|---|
+| 1 (control alone) | 17.259 ms | 9.710 ms | 5.303 ms |
+| 2 (control alone, repeat) | 16.466 ms | 9.696 ms | 4.865 ms |
+| 3 (inside the full PlayMode tier) | 17.703 ms | 9.710 ms | 5.186 ms |
+
+**The `Cached` arm landed on 9.710, 9.696, 9.710.** Three independent runs, one of them inside the
+whole PlayMode tier rather than alone, agreeing to about a part in a thousand. **No single run is
+quoted as "the number"** — what is being offered is the same three ratios three times, which is the
+most this machine supports. The frame at 384 was 14.494 to 17.137 ms Bucketed against 28.657 to
+33.809 Span, and the spread there is the machine rather than the pass: it is why the `Actors` split
+is the figure to read and the whole frame is not.
+
+### 9d. It uncovered a second O(N squared), which is not fixed
+
+**`Actors` is still quadratic after the cull, and the arithmetic says so plainly.** Against the
+`(N − 64) × N` pair count: 1.076 ms over 24,576 at 192 is **43.8 ns** a pair, and 5.303 ms over
+122,880 at 384 is **43.2 ns**. Flat across a five-fold range of pair counts is the same signature
+that identified the crowd scan, at a third of the cost.
+
+It is a different pass. The far-form loop asks `Cast.LookFor(snapshot, pawns[i].Id)` for each pawn
+it draws, which is `ColonistNames.RollSeedOf` → **`WorldSnapshot.TryGetPawnAspect`, a linear scan
+over every published aspect** (`Sim.Contracts/Views.cs`). The aspect count grows with the colony, so
+one lookup per far-form pawn per frame is `(N − 64) × kN`.
+
+**Left for its own unit, deliberately.** This one was asked to make `PawnPose.Of` stop scanning the
+colony, and it does; the remaining term is in the snapshot contract rather than in steering, and
+changing how aspects are read is a wider blast radius than a presentation-side mirror.
+
+> **Done the same day — `docs/design/31-aspect-lookup.md`.** A colonist publishes **57** aspect rows
+> a tick, so the published set is 57 × colonists and `TryGetPawnAspect` scanned it. A lazy index
+> built on the first lookup of each frame took `Actors` at 384 colonists from 4.59 ms to **0.83**,
+> and `Figures` from 6.39 to **0.74** — the prediction in the next paragraph, confirmed. The whole
+> frame at 384 is **4.82 ms**, against 27.81 before this line of work began, and **the knee is
+> gone**.
+
+**And `Figures` is now linear**, which is the other half of the plan's open question. With the figure
+count pinned at 64, it goes 1.231 ms at 64 pawns to 7.290 at 384 — 5.9× for a 6× colony. That is
+`64 × kN`: the same aspect lookup, once per drawn figure rather than once per pair, and linear in the
+colony rather than quadratic.
+
+### 9e. The whole sweep, before and after
+
+`FrameTimeTests.TheFrameAgainstColonySize`, the same eight colony sizes. Before is the clear-machine
+baseline in §9a; after is the same test in the run that took the control above.
+
+| pawns | frame before | frame after | `Actors` before | `Actors` after | `Figures` before | `Figures` after |
+|---|---|---|---|---|---|---|
+| 8 | 2.08 ms | 2.49 ms | 0.017 | 0.022 | 0.091 | 0.104 |
+| 32 | 2.59 ms | 2.99 ms | 0.020 | 0.024 | 0.499 | 0.476 |
+| 64 | 3.72 ms | 3.68 ms | 0.023 | 0.026 | 1.425 | 1.173 |
+| 96 | 4.65 ms | 4.88 ms | 0.467 | 0.259 | 1.870 | 1.615 |
+| 128 | 5.90 ms | 4.82 ms | 1.180 | 0.504 | 2.361 | 1.774 |
+| 192 | 9.35 ms | 9.17 ms | 3.315 | 1.532 | 3.583 | 3.561 |
+| 256 | 14.09 ms | 8.60 ms | 6.433 | 2.179 | 5.020 | 3.733 |
+| 384 | **27.81 ms** | **14.99 ms** | **15.785** | **4.937** | 8.646 | 6.835 |
+
+The confirming run's sweep is cleaner still and monotonic throughout —
+2.26 / 2.70 / 3.59 / 4.08 / 4.71 / 6.22 / 8.48 / **14.41 ms** across the same eight sizes — which is
+the shape to trust where the two disagree in the middle of the table.
+
+**Read the small sizes as noise, not as a regression.** At 8 and 32 pawns the two runs differ by
+0.4 ms in a frame where `World` and `Surround` alone moved by 0.13 ms between them, and the passes
+being changed cost 0.02 ms there. The `Crowd` rebuild is 0.001 ms at 8 pawns. Nothing at the scale
+target moved, which is the honest summary of the top half of this table.
+
+**At the scale target — fifty colonists — this changes nothing perceptible, and that was known before
+it was built** (§6c.2: "a ceiling on how big a colony may get, discovered four years before it
+binds"). What it buys is that the ceiling is no longer where it was.
+
+### 9f. What was not done
+
+
+- **The figure ceiling is untouched.** 64 is a hard ceiling (owner, 2026-09-20) and
+  `FigureCeilingTests` still fails anything that raises it. Making the scan cheap is not a licence to
+  raise it; that remains a frame measurement.
+- **The sidestep is untouched.** §1–§8 stand. The open questions in §8 are still open and still only
+  a person at the keyboard can answer them.
+- **The second quadratic found on the way is reported, not fixed** — the aspect scan behind
+  `Cast.LookFor`, §9d. It is now the largest per-frame quadratic left.

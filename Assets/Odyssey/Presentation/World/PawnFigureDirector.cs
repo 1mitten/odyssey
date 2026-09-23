@@ -860,15 +860,23 @@ namespace Odyssey.Presentation.World
         /// answer separately would put a different person on screen the moment a colonist crossed
         /// the figure cap, and the fault would be hunted in the simulation.</para>
         ///
-        /// <para>A harness that never sets one gets a book dealt from seed 0 over the same number
-        /// of faces, so an editor tool still draws a varied cast without having to know this type
-        /// exists. That is safe precisely because the derivation is pure: two books with the same
-        /// seed and the same face count give the same answers, object identity or not. Identity
-        /// still matters once overrides exist, which is why the game hands one object to both.</para>
+        /// <para>A harness that never sets one gets a book dealt from seed 0 <b>over the same
+        /// catalogue</b>, so an editor tool still draws a varied cast without having to know this
+        /// type exists. That is safe precisely because the derivation is pure: two books built the
+        /// same way from the same catalogue give the same answers, object identity or not.
+        /// Identity still matters once overrides exist, which is why the game hands one object to
+        /// both.</para>
+        ///
+        /// <para><b>"The same face count" used to be enough and is not any more.</b> A book now
+        /// carries the gendered pools of bodies, hair and beards, so a fallback built from a row
+        /// count deals from every row, ungendered, with no hair — a different person entirely. The
+        /// setup screen hit exactly that and the colonist you picked was not the colonist you got
+        /// (owner, 2026-09-22; <c>docs/design/29-modular-colonists.md</c> §8). Build it from the
+        /// catalogue or do not build it.</para>
         /// </summary>
         public ColonistAppearanceBook Appearances
         {
-            get => _appearances ??= new ColonistAppearanceBook(0u, _looks.Length);
+            get => _appearances ??= AppearanceBooks.For(0u, _catalogue);
             set => _appearances = value;
         }
 
@@ -1024,7 +1032,7 @@ namespace Odyssey.Presentation.World
             {
                 int i = _eligible[n];
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading,
-                    World, pawns, out Vector3 steer);
+                    World, pawns, Crowd, out Vector3 steer);
                 Figure figure = Lease(pawns[i].Id, position);
                 Pose(figure, in pawns[i], position, heading, steer, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
@@ -1116,6 +1124,15 @@ namespace Odyssey.Presentation.World
         /// director's own root, which is what a harness with no camera gets.
         /// </summary>
         public Vector3? ViewerPosition { get; set; }
+        /// <summary>
+        /// This frame's crowd buckets, or null for the plain scan.
+        ///
+        /// <para>Set once a frame by the composition root, which rebuilds one index and hands the
+        /// same one to every pass that poses a pawn — see <c>OdysseyBootstrap</c> and
+        /// <see cref="Odyssey.Presentation.Rendering.PawnCrowdIndex"/>. Null is correct and merely
+        /// slow, which is what a harness or an editor tool with no bootstrap gets.</para>
+        /// </summary>
+        public Odyssey.Presentation.Rendering.PawnCrowdIndex? Crowd { get; set; }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
         /// tool can step the clock deliberately rather than relying on a running player.</summary>
@@ -2058,6 +2075,11 @@ namespace Odyssey.Presentation.World
             AppearanceCells? cells = CellsFor(figure.Look);
             ColonistAppearance look = Appearances.For(pawn.Value, RollSeedOf(pawn));
 
+            // The hair and the beard, before the body: they are part of being dressed in this
+            // pawn's colours rather than a separate pass, so nothing can repaint one and forget
+            // the other (docs/design/29-modular-colonists.md, MC5).
+            Dress(figure, look);
+
             for (int i = 0; i < figure.Skins.Length; i++)
             {
                 SkinnedMeshRenderer skin = figure.Skins[i];
@@ -2086,6 +2108,30 @@ namespace Odyssey.Presentation.World
                 if (figure.Pawn < 0) continue;
                 Repaint(figure, new PawnId(figure.Pawn));
             }
+        }
+
+        ColonistAttachments? _attachments;
+
+        /// <summary>
+        /// The hair and beards, resolved once and shared with every other drawer of a colonist.
+        ///
+        /// <para>Held here rather than resolved here: <see cref="ColonistAttachments"/> is the one
+        /// owner, because <see cref="PortraitStudio"/> dresses the same colonist for their roster
+        /// card and the two must not answer differently.</para>
+        /// </summary>
+        ColonistAttachments Attachments => _attachments ??= new ColonistAttachments(_catalogue);
+
+        /// <summary>
+        /// Put this pawn's hair and beard on, or take them off.
+        /// </summary>
+        void Dress(Figure figure, in ColonistAppearance look)
+        {
+            ColonistAttachments.Wear(
+                figure.HairMesh, figure.HairRenderer, Attachments.Hair(look.HairPiece),
+                Materials, look);
+            ColonistAttachments.Wear(
+                figure.BeardMesh, figure.BeardRenderer, Attachments.Beard(look.BeardPiece),
+                Materials, look);
         }
 
         /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
@@ -2199,6 +2245,10 @@ namespace Odyssey.Presentation.World
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
 
+            // Whatever the pack already put on this head comes off, so our hair is the only hair
+            // and a bare head is reachable at all (docs/design/29-modular-colonists.md).
+            ColonistAttachments.BareTheHead(instance);
+
             // Re-skin from the bones as they are at the moment of drawing, not as they were when
             // the animation system last looked at them.
             //
@@ -2247,6 +2297,22 @@ namespace Odyssey.Presentation.World
             figure.ArtMaterials = new Material?[skins.Length];
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+
+            // After BindWorkBones, which is what finds the head. The slots are empty until a
+            // lease dresses them, so a figure built for a bald colonist costs two disabled
+            // renderers and nothing else.
+            if (figure.Head != null)
+            {
+                ColonistAttachments.MakeSlot(figure.Head, "Hair", _layer,
+                    out MeshFilter hf, out MeshRenderer hr);
+                ColonistAttachments.MakeSlot(figure.Head, "Beard", _layer,
+                    out MeshFilter bf, out MeshRenderer br);
+                figure.HairMesh = hf;
+                figure.HairRenderer = hr;
+                figure.BeardMesh = bf;
+                figure.BeardRenderer = br;
+            }
+
             figure.SoleOffset = MeasureSole(figure);
             // And how long a body there is to lay down. Measured here, beside the sole, because
             // both are one bake of the posed mesh and both are properties of the rig rather than

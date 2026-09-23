@@ -92,13 +92,18 @@ namespace Odyssey.Tests.Hud
             // red hair also wears red. Asserted as conditional distribution — the spread of hair
             // among the colonists wearing one particular garment must look like the spread of hair
             // over everybody.
-            var book = new ColonistAppearanceBook(4242u, Faces);
+            //
+            // Asked of the derivation at a fixed age rather than through the book, because the
+            // book greys a colonist's hair with age (MC3) and a greyed colour is a mix rather than
+            // a palette entry. The independence being tested here is a property of the four
+            // streams, and thirty is simply an age at which nothing has greyed yet.
+            ColonistCastPools pools = ColonistCastPools.AllBodies(Faces);
             var byCloth = new Dictionary<uint, HashSet<uint>>();
             var allHair = new HashSet<uint>();
 
             for (int id = 1; id <= 4000; id++)
             {
-                ColonistAppearance a = book.For(id, NoRollSeed);
+                ColonistAppearance a = ColonistAppearance.Of(4242u, id, pools, 'n', 30);
                 allHair.Add(a.Hair.Packed);
                 if (!byCloth.TryGetValue(a.Cloth.Packed, out HashSet<uint>? hairs))
                     byCloth[a.Cloth.Packed] = hairs = new HashSet<uint>();
@@ -115,14 +120,18 @@ namespace Odyssey.Tests.Hud
         public void EveryColourInEveryTableIsReachable()
         {
             // A palette entry nothing can ever draw is a table edit that silently did nothing.
-            var book = new ColonistAppearanceBook(7u, Faces);
+            //
+            // At a fixed age, for the reason TheThreeSlotsAreIndependent gives: greying makes a
+            // hair colour a mix of a palette entry and grey, and what is being asserted here is
+            // that every palette entry can be drawn at all.
+            ColonistCastPools pools = ColonistCastPools.AllBodies(Faces);
             var skin = new HashSet<uint>();
             var hair = new HashSet<uint>();
             var cloth = new HashSet<uint>();
 
             for (int id = 1; id <= 2000; id++)
             {
-                ColonistAppearance a = book.For(id, NoRollSeed);
+                ColonistAppearance a = ColonistAppearance.Of(7u, id, pools, 'n', 30);
                 skin.Add(a.Skin.Packed);
                 hair.Add(a.Hair.Packed);
                 cloth.Add(a.Cloth.Packed);

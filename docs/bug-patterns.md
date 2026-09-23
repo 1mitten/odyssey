@@ -281,7 +281,14 @@ tests with the quadratic term is smaller than the noise.
 
 | The pass | What it consults | What it cost | State |
 |---|---|---|---|
-| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **13.3 ms of a 22.5 ms frame at 384 colonists**, 0.02 ms at 64 | open; the fix is exact, see below |
+| `PawnPose.Of` crowd sidestep | every other pawn, per posed pawn, per frame | **15.8 ms of a 27.8 ms frame at 384 colonists** in `Actors` alone, 0.02 ms at 64 (2026-09-23, clear machine) | **fixed** — `PawnCrowdIndex`, a 3 m bucket index built once a frame; `docs/design/25-pawn-steering.md` §9 |
+| `WorldSnapshot.TryGetPawnAspect` | every published aspect row, per lookup — and a colonist publishes **57 rows a tick**, so the set is 57 × colonists | **4.59 ms in `Actors` and 6.39 ms in `Figures` at 384 colonists**, hidden underneath the crowd scan until that was fixed | **fixed** — a lazy index built on the first lookup of each frame; `docs/design/31-aspect-lookup.md` |
+
+**And one pass can hold two of them, which is the lesson from the second row.** The crowd scan was
+3.5× the aspect scan, so until it was removed the aspect scan looked like a constant — the bend was
+attributed entirely to the larger term, and the smaller one only became visible, and obviously
+quadratic, once the larger had gone. **After fixing a quadratic, measure the same pass again rather
+than declaring it linear.**
 
 **The tell:** a cost that is flat while the count is small and then bends upward, with **draw
 calls and tick time both flat through the bend**. If neither the submissions nor the simulation
@@ -415,6 +422,38 @@ is beside it. Check the marks *before* narrowing the stamp, not after a stale ti
 
 ---
 
+### P16 — The exactness test, run on the case where exactness cannot show
+
+An optimisation that is *provably* exact still has to be tested, and the obvious test — "compute it
+both ways on a busy fixture and compare" — is often blind to the only way the optimisation can
+actually be wrong.
+
+**What decides where a miss is visible is the reduction that consumes the set**, not the set. The
+crowd sidestep reduces with a `max`: the nearest colonist wins and every other contributor is
+discarded. A cull that loses somebody at the *edge* of the influence radius therefore changes
+nothing, because that contributor was never the maximum — it is worth about 0.007 of the envelope
+where a near neighbour is worth 1.0. On a crowded fixture there is nearly always a nearer neighbour
+to hide behind.
+
+**Measured, 2026-09-23.** `PawnCrowdIndex`'s bucket size was mutated from the 3 m influence radius
+to the 2.5 m cell — the exact tidy-up its own doc comment warns against, and a plausible one — and
+`PawnCrowdIndexTests.EveryScanModeDrawsTheIdenticalPose`, 220 pawns and the headline claim of the
+whole unit, **passed**. Only the brute-force set-membership test caught it, and that one asserts no
+pose at all. Had it not been written, a broken cull would have shipped behind a green test named for
+exactly the property it was not checking.
+
+**The check:** for an exact optimisation, ask *where is the smallest surviving contribution, and
+what would hide it?* Then write the fixture where that contribution is **decisive** — one
+contributor, at the boundary, nothing larger in the set — and sweep it across the boundary.
+`AnInfluenceAtTheVeryEdgeOfTheRadiusSurvivesTheCull` is that test: two pawns, no crowd, walking from
+outside the radius to inside it.
+
+**And mutate the constant to prove the test can fail.** Both tests were green before the mutation
+and both were believed; one of them was decorative. A test for an exactness claim is worth what a
+deliberate break costs it and nothing more — the same lesson as *"A test that could not fail for the
+reason it named"* in the register below, reached from the opposite direction.
+
+---
 
 ---
 
@@ -2195,3 +2234,37 @@ guard and the other had nothing, and the guard's own prose was the specification
   plus `ATreeGoesWithTheGroundAndLeavesNoWood`. **Run with the two lines removed from `OutOf`**: the
   three mining tests fail and the rest pass, which is what says the tests fail on the reported bug
   and not on something adjacent.
+
+### 2026-09-22 — Every portrait on the setup screen was magenta (P14)
+
+**Symptom.** The owner's screenshot: three candidate cards and a detail pane, every colonist a flat
+pink silhouette. The shapes were right — head, hair, shoulders — so meshes and attachments resolved.
+Only the material was wrong, which in Unity means the error shader.
+
+**Cause: a cached object outlived the materials it wears.** `PortraitStudio` keeps one subject
+GameObject and reuses it while the look is unchanged. A colony ending disposes `ColonistMaterials`,
+which `DestroyImmediate`s every material it cloned, and sets the studio's `Materials` to null —
+deliberately, because the pictures were rendered through them. **The subject was not part of that.**
+It survived, still pointing at destroyed materials, and `Paint` then early-returned because
+`Materials` was null, so nothing reassigned them. Unity draws a destroyed material as magenta.
+
+**Why it appeared only now.** It was latent for as long as there were seventy-three bodies: the
+subject is kept only while the look is unchanged, so a different colonist almost always rebuilt it
+and got fresh materials off the prefab. The issued uniform took the cast down to **two** looks, so
+the stale subject is reused nearly every time. A rare fault became the normal one.
+
+**The fix.** `Materials` is a property, and setting it drops the subject and clears the pictures —
+both are painted with materials that have just gone. The composition root also hands the studio live
+materials back when it is asked for one after a colony ended, rather than leaving it permanently
+unpainted.
+
+**The check this earns.** *An object cached across a session boundary must be dropped by whatever
+disposes the things it holds.* The texture cache was already handled — the comment beside it even
+says "a cached texture whose shader is gone is worse than one render" — and the subject beside it
+was not. When something is disposed, ask what else is still holding it, and prefer a property setter
+that invalidates over a comment asking callers to remember.
+
+**The generalisation of P14: a cache keyed on identity outlives a change to what identity means.**
+Its sibling is the same day's `ColonistAppearance.Equals`, which kept its old idea of "the same
+person" after two fields were added, so a portrait cache handed fifteen different hairstyles the
+same picture. Both are caches that were right until something underneath them moved.

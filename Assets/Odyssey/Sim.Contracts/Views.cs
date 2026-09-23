@@ -1131,13 +1131,55 @@ namespace Odyssey.Sim.Contracts
         /// pawn this frame, which callers must handle and which is the ordinary case: the feature
         /// may not be installed, the pawn may not be doing the thing, or the pawn may have died.
         ///
-        /// <para>A scan, like <see cref="TryGetPawn"/> beside it. The published set is tens of
-        /// rows on a real colony — sparse is the whole shape of <see cref="PawnAspect"/> — so an
-        /// index would cost a dictionary per frame to save arithmetic that does not show up.
-        /// A reader that wants every aspect of every pawn walks <see cref="PawnAspects"/> once
-        /// instead of calling this in a loop.</para>
+        /// <para><b>O(1), off an index built on the first lookup of each published frame</b>
+        /// (2026-09-23, <c>docs/design/31-aspect-lookup.md</c>). It was a scan, and its comment
+        /// here justified that with "the published set is tens of rows on a real colony". That
+        /// stopped being true when work priorities and the colonist schedule were added: a
+        /// colonist publishes <b>57 rows</b>, every tick, measured by
+        /// <c>AspectScaleTests</c> — so the set is 57 × colonists, a lookup scanned half of it,
+        /// and a caller doing one per colonist was quadratic in the colony. That was 4.9 ms of a
+        /// frame at 384 colonists in the far-form renderer alone
+        /// (<c>docs/design/25-pawn-steering.md</c> §9d).</para>
+        ///
+        /// <para><b>The advice in the old comment still stands, and is the reason this is not
+        /// enough on its own:</b> sparse is the whole shape of <see cref="PawnAspect"/>, and a
+        /// reader that wants many aspects of one pawn should still walk
+        /// <see cref="PawnAspects"/> once rather than call this in a loop. What changed is what a
+        /// single lookup costs.</para>
         /// </summary>
         public bool TryGetPawnAspect(PawnId pawn, AspectKey key, out int value)
+        {
+            if (!IndexAspects) return ScanForPawnAspect(pawn, key, out value);
+            if (!_aspectsIndexed) BuildAspectIndex();
+
+            int slot = AspectHash(pawn, key) & _aspectMask;
+            while (true)
+            {
+                int row = _aspectSlots[slot];
+                if (row < 0) { value = 0; return false; }
+
+                ref readonly var aspect = ref _aspects[row];
+                if (aspect.Pawn == pawn && aspect.Key == key)
+                {
+                    value = aspect.Value;
+                    return true;
+                }
+                slot = (slot + 1) & _aspectMask;
+            }
+        }
+
+        /// <summary>
+        /// Whether lookups use the index. **A measurement control, not a setting** — it exists so
+        /// <c>FrameTimeTests.TheAspectLookupCostsWhatItScans</c> can time the same world both ways
+        /// in one run, which is the only comparison this project's machine supports
+        /// (<c>docs/design/06-rendering-and-camera.md</c> §6c.1). False is the scan this replaced,
+        /// kept as the control rather than as a second code path: both arms return the same answer
+        /// and <c>AspectScaleTests</c> asserts it.
+        /// </summary>
+        public static bool IndexAspects = true;
+
+        /// <summary>The lookup as it was before 2026-09-23. See <see cref="IndexAspects"/>.</summary>
+        bool ScanForPawnAspect(PawnId pawn, AspectKey key, out int value)
         {
             for (int i = 0; i < AspectCount; i++)
             {
@@ -1148,6 +1190,82 @@ namespace Odyssey.Sim.Contracts
             }
             value = 0;
             return false;
+        }
+
+        /// <summary>
+        /// Row indices by <c>(pawn, key)</c>, open-addressed with linear probing; <c>-1</c> is a
+        /// free slot. Rebuilt lazily — see <see cref="BuildAspectIndex"/>.
+        /// </summary>
+        int[] _aspectSlots = Array.Empty<int>();
+        int _aspectMask;
+        bool _aspectsIndexed;
+
+        /// <summary>
+        /// Index this frame's aspect rows, once, on the first lookup that wants one.
+        ///
+        /// <para><b>Lazy rather than built as rows are added</b>, which is the whole of the
+        /// decision (<c>docs/design/31-aspect-lookup.md</c> §3). Indexing at publish time would
+        /// put the cost inside the <i>tick</i> — the budget this project guards hardest — and
+        /// would charge every world that publishes aspects whether anything ever read one; a
+        /// headless golden run reads none at all. Built here, a snapshot nobody queries pays
+        /// nothing, and one that is queried pays a single O(rows) pass that is then amortised
+        /// over the hundreds of lookups a frame of interface makes.</para>
+        ///
+        /// <para><b>The first row wins, and that is not a detail.</b> The scan this replaces
+        /// returned the earliest matching row, so if a contributor ever publishes one
+        /// <c>(pawn, key)</c> twice, the index has to return the earlier one as well — otherwise a
+        /// snapshot's answer would depend on whether anything had queried it yet, which is exactly
+        /// the kind of order-dependence the published frame exists to not have.</para>
+        ///
+        /// <para>No <c>Dictionary</c> and no <c>Mathf</c>: this assembly is UnityEngine-free and
+        /// the fast tier and the headless runs depend on its staying that way.</para>
+        /// </summary>
+        void BuildAspectIndex()
+        {
+            // Two slots a row keeps the probe short. The table is reused between frames and only
+            // ever grows, so a colony crossing a power of two does not reallocate it every tick.
+            int wanted = 64;
+            while (wanted < (AspectCount + 1) * 2) wanted *= 2;
+            if (_aspectSlots.Length < wanted) _aspectSlots = new int[wanted];
+            _aspectMask = _aspectSlots.Length - 1;
+
+            for (int i = 0; i < _aspectSlots.Length; i++) _aspectSlots[i] = -1;
+
+            for (int i = 0; i < AspectCount; i++)
+            {
+                ref readonly var aspect = ref _aspects[i];
+                int slot = AspectHash(aspect.Pawn, aspect.Key) & _aspectMask;
+                while (true)
+                {
+                    int row = _aspectSlots[slot];
+                    if (row < 0) { _aspectSlots[slot] = i; break; }
+
+                    // Already published this frame: keep the earlier row, as the scan did.
+                    ref readonly var seen = ref _aspects[row];
+                    if (seen.Pawn == aspect.Pawn && seen.Key == aspect.Key) break;
+
+                    slot = (slot + 1) & _aspectMask;
+                }
+            }
+
+            _aspectsIndexed = true;
+        }
+
+        /// <summary>
+        /// Mixes the pawn and the key into a slot. <see cref="AspectKey.Value"/> is already an FNV
+        /// hash of the symbolic name, so its own bits are well spread; what this has to do is fold
+        /// the pawn in and spread the result over the low bits the mask takes.
+        /// </summary>
+        static int AspectHash(PawnId pawn, AspectKey key)
+        {
+            unchecked
+            {
+                ulong h = key.Value ^ ((ulong)(uint)pawn.Value * 2654435761u);
+                h ^= h >> 33;
+                h *= 0xFF51AFD7ED558CCDUL;
+                h ^= h >> 29;
+                return (int)((uint)h & 0x7FFFFFFF);
+            }
         }
 
         /// <summary>
@@ -1188,6 +1306,9 @@ namespace Odyssey.Sim.Contracts
             PlantCount = 0;
 
             AspectCount = 0;
+            // The frame the index described has gone. Cleared rather than rebuilt: the next
+            // reader rebuilds it, and a frame nobody asks about never pays for one at all.
+            _aspectsIndexed = false;
             CellDetailCount = 0;
             BulletinCount = 0;
             FallingCount = 0;
