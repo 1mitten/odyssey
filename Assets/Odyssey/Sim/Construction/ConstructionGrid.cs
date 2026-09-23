@@ -1382,6 +1382,12 @@ namespace Odyssey.Sim.Construction
             int above = cell + _grid.Size.LayerStride;
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
 
+            // The slab was the roof of whatever is under it, and a room with a hole in its roof
+            // is not a room: the enclosure must hear about it exactly as Demolish tells it about
+            // a wall. It did not until the 2026-09-21 review (design 28 §12, F3), and a roof taken
+            // off stayed warm until an unrelated edit re-solved the layer.
+            ctx.Enclosure?.MarkDirty(cell);
+
             // Pawns and loose items resting on the removed slab drop to the landing floor below.
             // A colonist tearing down the floor underfoot steps down without panic (NoThought).
             Falling.OutOf(ctx, cell, thought: Falling.NoThought, tick: 0);

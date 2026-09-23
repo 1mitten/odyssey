@@ -9324,6 +9324,40 @@ built, and that the collector does not run at all while the panel sits open.
 
 It logs its baseline and says to read that first, because the last timing test to fail on this
 machine failed to contention and not to a regression.
+## 2026-09-21 — temperature lands (design 28, the a-06 model)
+
+The M4 core pulled forward on the owner's ask. The model is the one `a-06` recommended and the
+design doc restates: per-room scalars, one pass per 120 ticks, conductances in per-mille, buoyancy
+as one asymmetric number on vertical openings, the ground as a boundary that damps the season by
+depth. Three things the implementation itself found, all now amendments in §3 and §4 of the
+design doc:
+
+**The quarter clamp strangled the fire.** ONI's rule bounds how fast two temperatures may
+approach each other; the first cut clamped the room's whole step with it, and a fired room at
+one with the outdoors had a driving difference of zero — a limit of zero — and could never warm.
+Sources are now clamped by nothing; the exchanges alone carry the bound.
+
+**A cellar with a way up was not a room.** The 100%-roofed rule read a ladder shaft as a hole in
+the roof, so any room with a stairwell or a hatch read the outdoor curve — the buoyancy feature
+dead on arrival, the cellar being the whole point. The shaft rule: a hole into *the room above*
+still counts as roofed, and the model carries it as an Opening surface. Rooms then needed the
+sweep to run ascending to fixed point, because each sweep pulls one more layer of a shaft chain
+to life — found as a round-trip divergence, a played world and a loaded one disagreeing about
+which caverns existed three layers down, which is also why rooms resolve their starting
+temperature at solve time rather than at the next pass: the warm half of a split room was
+snapping to the outdoors between the two.
+
+**Heat rises, read the right way round.** The buoyancy experiment's first assertion demanded the
+loft *warmer* than a fired hall below, which equilibrium forbids — the source is downstairs. What
+the 4:1 actually buys is the *gradient*: driven from below, the fast upward coupling keeps the
+loft close behind; driven from above, the slow downward one leaves the cellar far below. The test
+asserts the separation between the two, which is a-06's tie-breaker stated properly.
+
+Balance note: the first climate made a Wash night "bad-band" cold and the session round trip
+found a colony that hauled nothing — 5.8 °C nights against band edges tuned for autumn. The
+shipped table lifts Wash (mean 15/19 °C, ±5 swing) and widens the mild band so spring nights are
+full-rate work and mild mood; Rime still crosses the floor. The numbers are the owner's to tune;
+the shapes are pinned by tests.
 
 ---
 
@@ -10327,6 +10361,60 @@ enough not to be worth one.
 **What is not measured, said out loud:** the write is synchronous and lands inside one frame. On a
 large colony that is a hitch every game morning, and it is the first thing to look at if a daily
 stutter is ever reported.
+
+## 2026-09-21 — temperature reviewed: nine findings, the playtest held
+
+PR #164 reviewed on its own worktree with `main` merged in (seven conflicts, all docs, the wiki
+and one fingerprint; the code merged clean). The method was the one this project keeps having to
+relearn: **a probe test per suspicion, before believing any of them** — nine were written, one
+passed for a reason that turned out to be the probe's own (an unroofed gap), and after that fix
+all nine fail on the branch. They are `[Explicit]` in `TemperatureReviewProbes.cs`; a fix turns
+its probe into a test. The findings and the numbers are `docs/design/28-temperature.md` §12.
+
+The one that would have decided the playtest on its own: the severity bar fills in fourteen
+game-minutes at a Candle night, against the four hours every comment promises — a per-mille
+applied per centi-degree, so the shipped 300 is ten to twenty times the intent, and the test
+that pins it says "three" in its message while pinning 300. The two that matter for the record
+are both load divergences the round trip cannot see because it runs in Wash: the fixed-point
+sweep only re-solves the layers the edit marked, so a house roofed last has a cellar that is a
+room after a load and not before; and a re-sealed room resumes its old temperature in play and
+resolves from the outdoors after a load, because only live rooms are saved. And a surface one
+that the buoyancy test hides: a shared slab is charged to the sky *and* to the room above, so
+building upstairs makes downstairs colder.
+
+The cost was measured because the benchmark could not: `TickBenchmarkTests`' edit arm marks nav
+alone, so the enclosure has never been in the edit tick. Same probe on both, one after the
+other: the per-edit solve is up 1.6× (0.56 → 0.92 ms Standard, 2.6 → 4.3 ms Huge), the initial
+solve 5–6× on the wooded boards (37 ms and 106 ms), the worst single edit on Huge 11 ms — and
+the enclosure was already most of a real edit's cost on Huge before this branch, invisible.
+
+Nothing was fixed; the owner asked for a review. The merge with `main` is pushed to the branch,
+the playtest row is held until F1–F4 are in, and the PR carries the review.
+
+## 2026-09-21 — the nine fixed, and the goldens measured before they were re-baked
+
+The temperature review's findings (design 28 §12), fixed in the order the review ranked them and
+recorded in §12a. The one restructure is the enclosure solve: identity top-down with dirtiness
+carried downward on change, surfaces built once after — which is both the correctness fix (the
+cellar under a house roofed last) and the cost fix (no fixed-point sweep). The rest are a number,
+a mark, a ledger that counts a room's own votes, a ceiling that is not sky when a room is above it,
+a remainder that is kept, and a field that is saved.
+
+Two things worth writing down about the method. **The fastest way to know what moved a golden is
+to hash its components separately** — cells, pawns, edifices, the thermal section — before and
+after, on the same worlds: five minutes, and it turned "the Simulated hash changed on two boards"
+into "only the thermal section changed, the colony did nothing different" with no reasoning at
+all. And **disable the new hash fields and re-run before believing a tick-zero move is only the
+hash seeing more**; it was, on all three, and now the sentence in `Golden.cs` can say so.
+
+The playtest row is un-held. The residual and the saved ambient are two more hashed fields; the
+severity slope is one content line; the enclosure's first solve on a wooded board is back near
+what it was.
+
+The edit-tick benchmark ran with the enclosure in it for the first time: Standard's lattice world
+3.86 → 5.76 ms per tick, nav alone against nav and the enclosure. The 0.298 ms `28-map-size.md`
+quotes for Standard is the generated board and never was this arm — one more number that meant a
+different world from the one it was read as.
 ## 2026-09-21 — Two reports: sealed in a wall, and a building that takes a second to appear
 
 The owner asked to be interviewed before either was fixed, which was the right instinct for the
@@ -10945,3 +11033,83 @@ drafted colonist should run. That was the first reason to run the game has had s
 rate, `Pawn.UrgencyPerMille`: 2,000 while drafted and 1,000 otherwise. It needs no animation work,
 because the gait blend already draws the run clip in above 2 m/s. No golden moved, since nobody in
 a golden window is drafted. The second ask was a deeper, translucent red for the draft's marks.
+## 2026-09-22 — Temperature merged with main: the campfire renumbers, and the season becomes reachable
+
+`main` moved twice under PR #164 while it sat in review — the shelf (#158) and floating crops
+(#163) — and the merge turned out to be the interesting part rather than a formality. **Both
+branches had appended at the same two slots.** The shelf reached `main` first and took edifice 13
+and `BuildingHandle` 7; the campfire had both. The rule for that is already written down in two
+places (`BuildingHandle.Bed`'s own comment records the bed moving from 2 to 5 for exactly this),
+so the campfire moves to 14 and 8. It is only safe because no save with a campfire in it has ever
+left the branch, and that sentence is the whole of the argument.
+
+Eighteen files conflicted. Seventeen were a union — one branch appending a row, the other
+appending a different row to the same table — and resolving them was mechanical. **The interesting
+ones are the two tables that did not conflict at all.** `BuildShapes.Cells` is parallel to
+`BuildingHandle`, and both branches had added a `1` to it; git took one of the two, so the merged
+table was one entry short and the campfire had no shape. `EdificeHandle.Count` and
+`BuildingHandle.Count` likewise merged clean and were both wrong by one.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught the shape table. That test exists *because
+of this exact failure* — its own comment records the day the bed's handle moved from 2 to 5, the
+three-entry table merged in silence, and the bed became a one-cell thing that could not be turned
+while three `DesignateDirector` tests failed and none of them named the cause. It has now earned
+its keep twice, on the same fault, two months apart. **The lesson it teaches is not about shapes:
+a merge conflict marks where two branches wrote different text, and the dangerous case is where
+they wrote the *same* text for different reasons.** Every hand-maintained parallel table in this
+codebase has that property, and only the ones with a length assertion are defended.
+
+**The goldens and the building fingerprint were re-baked, and measured before they were.** A merge
+of two branches that each moved a golden leaves neither side's number right, so taking either
+would have committed a number nothing had produced. `GoldenColonyProbe` — committed by the shelf
+work for exactly this — was run on the merged branch, on the branch head and on `main`, and the
+three outputs **diff clean**: all nine census numbers identical on all three boards across all
+three commits. The hash sees more; no colony does anything different. Which also says something
+quieter and worth writing down: **in the ten-thousand-tick golden windows, temperature changes
+nothing at all**, because those windows sit in the work band, nobody sleeps in them, and the
+boards have no crops. The goldens are not evidence the model bites, and were never going to be.
+
+### Three findings, and one of them is not about code
+
+**The pass is O(standing edifices) and its own summary said it was not.** `TemperatureSystem`
+claimed *"O(rooms + surfaces), never O(cells)"*. Measured with the edifice count printed beside
+the time, the shape is the opposite of the claim: 250 × 250 × 40 barren — 2.5 M cells, 0 rooms,
+**5 edifices** — costs 0.0054 ms, while 240 × 240 × 16 wooded — 69 rooms, **6,311 edifices** —
+costs 0.17 ms. The sweep for heat sources has to visit every standing thing to find the warm ones,
+a wooded board is mostly trees, and it was calling `BuildingForEdifice` — *a linear scan of the
+building table* — once per tree. A scan inside a sweep. Precomputing the answer by edifice id in
+the constructor took it to 0.051 and 0.013 ms, both arms in one run.
+
+The number is not the point. **The point is that a complexity claim in a doc comment is not a
+measurement, and this one had survived a nine-finding review.** It reads as true because the room
+half of the sentence is true, and the half that is not is the half that grows. `P10` in
+`bug-patterns.md` is the drawing-side version of the same thing — a pass that costs once per cell,
+which reviews cannot see — and this is its tick-side twin: a pass that costs once per *thing*,
+hidden behind a cadence that makes the amortised figure look like nothing.
+
+**The form of a temperature had two owners.** The pane's tile row and the clock's outdoor reading
+each carried their own copy of centi-degrees-to-one-signed-decimal, in two assemblies, agreeing by
+luck. P1 again. `TemperatureLabels.Describe` is the one owner now, and the guard **reads the C#
+files** rather than asserting behaviour, because two copies of a rule that happen to agree cannot
+be caught by running either of them. It immediately found `AlmanacCatalogue` writing `20°C` where
+the pane writes `20.0 °C` — prose rather than a second implementation, so exempted, but the
+exemption says what it is leaving unchecked instead of quietly widening the rule to fit.
+
+**And the finding that mattered most was not a bug.** This work's headline sentence is *"Rime
+kills"*, and Rime is months four and five of six. The debug menu offered **Skip one day**. Reaching
+the season the entire model exists for was therefore sixty presses — and the branch's own "still
+owed" note asked only whether *Wash's* chill reads as mild. That is what a question looks like when
+the interesting one cannot be asked: the scope of a playtest had been silently set by the tooling
+rather than by the work. **Skip one month** is one new row using the day row's own mechanism, and
+six presses now walk the year.
+
+Worth keeping as a habit: before handing something over, ask what the playtest instruction actually
+is, and then try to *follow it*. "Fast forward into Rime" was already written in the queue, by
+somebody who had not counted the presses.
+
+**What was deliberately left alone.** `WeatherOffsetC` is a settable seam with nothing setting it,
+so a cold snap cannot be reached in any season — and a debug row for it would have been one line.
+It was not written. The incident that owns weather is deferred work with a design behind it, and a
+debug switch that sets a field an incident is supposed to own is how a seam quietly becomes an
+interface. If the playtest comes back wanting the cold snap first, that is the moment to
+reconsider, and the reason will be on record rather than reconstructed.

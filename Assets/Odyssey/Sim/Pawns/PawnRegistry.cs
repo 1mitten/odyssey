@@ -519,6 +519,17 @@ namespace Odyssey.Sim.Pawns
                 // where an older reader stops rather than where it would shift every read after
                 // it. Format 6, see WorldSave's version history.
                 writer.Write(pawn.StarvationSeverity);
+
+                // And last again, for the same reason one field later (design 28 §9): format 8
+                // ends at the severity above, and the temperature bar is appended where an
+                // older reader stops rather than where it would shift nothing and mean it.
+                writer.Write(pawn.TemperatureSeverity);
+
+                // The ambient the colonist last felt, beside the bar it feeds. It is a sample,
+                // not a derivation — the cell and the room may both have moved since — and for
+                // up to an interval after a load the work rate reads it, so a file that left it
+                // out diverged from its own game (design 28 §12, F8). Format 9 with the bar.
+                writer.Write(pawn.AmbientTempC);
             }
         }
 
@@ -634,6 +645,14 @@ namespace Odyssey.Sim.Pawns
                 // colonist from one had never been starving by a definition that did not exist.
                 if (reader.FormatVersion >= 6)
                     pawn.StarvationSeverity = reader.ReadInt();
+
+                // And last again, from format 9 on (design 28 §9): a colonist from an older
+                // file had never been cold by a definition that did not exist.
+                if (reader.FormatVersion >= 9)
+                {
+                    pawn.TemperatureSeverity = reader.ReadInt();
+                    pawn.AmbientTempC = reader.ReadInt();
+                }
 
                 _byId[pawn.Id.Value] = _pawns.Count;
                 _pawns.Add(pawn);

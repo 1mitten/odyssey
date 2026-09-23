@@ -54,6 +54,25 @@ namespace Odyssey.Hud
         public const string RipenCropsKey = "ui.debug.ripen";
 
         /// <summary>
+        /// Spend a whole game month at once, so the year can be walked through.
+        ///
+        /// <para><b>It exists because the season was otherwise unreachable.</b> Temperature
+        /// (design 28) puts the year's shape into the game — Wash benign, Glare warm, Rime
+        /// lethal — and Rime is months four and five of six. With a day a press that is sixty
+        /// presses to reach the season the whole model was built for, which is not a playtest
+        /// anybody runs; the one question the work most needs answered would have been the one
+        /// question nobody could ask. Six presses now walk the year from spring to the cold and
+        /// back, which is also the shape of the test: the seasons are only worth having if the
+        /// turn between them is worth watching.</para>
+        ///
+        /// <para>The same mechanism as <see cref="SkipDayKey"/> and deliberately not a new one —
+        /// a month is the calendar's own <c>DaysPerMonth</c> days of ticks, read rather than
+        /// written, so a retuned calendar does not leave this row skipping some other amount.
+        /// </para>
+        /// </summary>
+        public const string SkipMonthKey = "ui.debug.skipmonth";
+
+        /// <summary>
         /// Write a marker into the performance trace.
         ///
         /// <para><b>Why this is a menu row and not a key of its own.</b> A marker wants to be
@@ -88,7 +107,7 @@ namespace Odyssey.Hud
         {
             PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
             GiveWoodKey, GiveStoneKey, GiveFoodKey,
-            SkipDayKey, SkipMorningKey, RipenCropsKey, MarkTraceKey, TraceKey,
+            SkipDayKey, SkipMonthKey, SkipMorningKey, RipenCropsKey, MarkTraceKey, TraceKey,
         };
 
         public static string TabKey(DebugTab tab) =>

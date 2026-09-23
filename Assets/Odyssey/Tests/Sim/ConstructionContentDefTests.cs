@@ -69,14 +69,20 @@ namespace Odyssey.Tests.Sim
         // rather than a rule keyed off the edifice id, for the reason `needsClearCell` is one — it
         // is a fact about the shape of the thing — and it is what makes a second, larger store one
         // row of content rather than a second code path.
-        const ulong BuildingFingerprint = 18276317653320036380UL;
+        // 2026-09-22: Appended Building_Campfire at handle 8 — edifice 14, the first heat source
+        // (design 28 §7) and the one building whose `heatPerPass` is not zero. Blocking, wanting a
+        // clear cell like the bed, 3 stuff and 60 ticks. Written at handle 7 / edifice 13 and moved
+        // here on the merge with main: the shelf reached main first and both numbers are contracts,
+        // so the later branch is the one that moves — the same rule Building_Bed records at 5.
+        // The same merge added `heatPerPass` to BuildingDef, which is nought on every other row.
+        const ulong BuildingFingerprint = 11920351214251548753UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone
         /// 15). Update this only when you meant to change a material's numbers, and say what moved
         /// in the commit message.
         /// </summary>
-        const ulong StuffFingerprint = 5872933115437906559UL;
+        const ulong StuffFingerprint = 4054578596745551293UL;
 
         /// <summary>
         /// The quality tiers as they stand: Poor 85, Normal 100, Decent 112, Uber 125, Epic 140

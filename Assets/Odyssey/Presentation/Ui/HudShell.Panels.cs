@@ -1031,8 +1031,16 @@ namespace Odyssey.Presentation.Ui
             if (world == null) return;
             long tick = world.CurrentTick;
             HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
+
+            // The outdoor temperature beside the date, labelled outdoor because it is not the
+            // temperature anywhere in particular — it is the one the unenclosed world reads, and
+            // the pane's own row is where a tile's answer lives (design 28 §8, panel A3).
+            var temperature = _boot.Colony?.Pawns.Temperature;
+            string outdoor = temperature == null
+                ? string.Empty
+                : $" · {TemperatureLabels.Describe(temperature.OutdoorTempC(tick))} outdoors";
             HudText.Set(_clockDate,
-                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}",
+                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}{outdoor}",
                 HudTextRole.Body);
         }
 

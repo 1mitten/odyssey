@@ -86,6 +86,12 @@ namespace Odyssey.Sim.Pawns
                 Needs[i] = kindDef.startingNeeds[i];
             Mood = kindDef.startingMood;
             MoodTarget = kindDef.startingMood;
+            // Comfortable until a world with a thermal pass says otherwise: a bare pawn
+            // fixture has no thermal system, and zero — freezing — would have been a
+            // silently cold test world (design 28 §8). Read from the colonist's tuning and
+            // not the kind's: a hog has no comfort band of its own yet, and the midpoint of
+            // the one band there is beats inventing a second (design 29).
+            AmbientTempC = (content.Temperature.comfortMinC + content.Temperature.comfortMaxC) / 2;
             WorkPriorities = new byte[WorkTypeIndex.Count];
             for (int i = 0; i < WorkPriorities.Length; i++) WorkPriorities[i] = 3;
             ScheduleHours = new byte[ScheduleHandle.Hours];
@@ -173,6 +179,37 @@ namespace Odyssey.Sim.Pawns
         /// gone is the whole of the answer to "how much time have I got".</para>
         /// </summary>
         public int StarvationSeverity { get; set; }
+
+        /// <summary>
+        /// How far gone this colonist is from the cold or the heat, signed: negative is
+        /// hypothermia, positive heatstroke, and they cannot both be true of one person at one
+        /// time, which is the argument for one bar rather than two (design 28 §8).
+        ///
+        /// <para>Grown by <see cref="NeedsSystem"/> past the safe bounds — the same
+        /// build-and-drain shape <see cref="StarvationSeverity"/> has, with the distance beyond
+        /// the bound setting the rate so a cold snap is worse than a chill — and read by
+        /// <see cref="TemperatureOffsetPerMille"/> in the same thirds starvation steps through.
+        /// Real lethality is the health milestone's to add; today, as with starvation, the bar
+        /// slows a colonist to the condition floor and stops there.</para>
+        ///
+        /// <para><b>Saved.</b> How cold someone got is the whole of the answer to how long they
+        /// take to warm through, and a colonist reloaded mid-winter is still mid-winter.</para>
+        /// </summary>
+        public int TemperatureSeverity { get; set; }
+
+        /// <summary>
+        /// The ambient temperature this colonist is standing in, centi-degrees — a cache
+        /// refreshed on the needs cadence and read by the rates, so work and rest feel a
+        /// temperature that is minutes stale at worst and costs nothing per tick to know.
+        ///
+        /// <para><b>Saved and hashed, because it is a sample and not a derivation.</b> It was
+        /// meant to be the <see cref="MoveStepCost"/> arrangement — a copy of an answer the
+        /// world can give again — but the answer it copies is the one at the colonist's last
+        /// interval, in the cell she stood in then, and the work rate reads it for up to an
+        /// interval after a load. A file without it ran a saved 700‰ colonist at 1000‰ until
+        /// her next interval, and milliwork is hashed (design 28 §12, F8).</para>
+        /// </summary>
+        public int AmbientTempC { get; internal set; }
 
         /// <summary>Displayed mood, 0..1000. Drifts toward <see cref="MoodTarget"/>.</summary>
         public int Mood { get; set; }
@@ -426,6 +463,10 @@ namespace Odyssey.Sim.Pawns
                 ? Rates.Scale
                 : def.WorkRatePerMille(SkillLevel(def.rateSkill));
             int rate = curve * ConditionPerMille() / 1_000;
+            // Then the room: too cold or too hot to work well, as a factor on everything the
+            // curve said (design 28 §8). Composed here rather than in the drivers so every job
+            // inherits it from the one seam, exactly as condition is.
+            rate = rate * Content.Temperature.WorkPerMille(AmbientTempC) / 1_000;
             return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
         }
 
@@ -497,7 +538,7 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public virtual int ConditionPerMille()
         {
-            int condition = Rates.Scale - StarvationOffsetPerMille();
+            int condition = Rates.Scale - StarvationOffsetPerMille() - TemperatureOffsetPerMille();
             if (condition > Rates.Scale) condition = Rates.Scale;
             if (condition < ConditionFloorPerMille) condition = ConditionFloorPerMille;
             return condition;
@@ -519,6 +560,22 @@ namespace Odyssey.Sim.Pawns
             if (StarvationSeverity >= 750) return 300;
             if (StarvationSeverity >= 500) return 200;
             if (StarvationSeverity >= 250) return 100;
+            return 0;
+        }
+
+        /// <summary>
+        /// The offset the cold or the heat applies to <see cref="ConditionPerMille"/>, read off
+        /// the severity bar in the same thirds starvation uses: −100 minor, −200 moderate,
+        /// −300 severe (design 28 §8). The bar's sign says which way it went; the thirds do not
+        /// care, because shivering and sweltering slow a person down about equally and one
+        /// number is easier to read on the way past.
+        /// </summary>
+        public virtual int TemperatureOffsetPerMille()
+        {
+            int magnitude = TemperatureSeverity < 0 ? -TemperatureSeverity : TemperatureSeverity;
+            if (magnitude >= 750) return 300;
+            if (magnitude >= 500) return 200;
+            if (magnitude >= 250) return 100;
             return 0;
         }
 
@@ -777,6 +834,11 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);
+            // Saved state that is not derived belongs in the hash (OQ-50) — the same sentence
+            // that put RollSeed here. The severity bar decides condition, and a run that could
+            // not see it could diverge by three hundred per-mille of work rate in silence.
+            hash.Add(TemperatureSeverity);
+            hash.Add(AmbientTempC);
             for (int i = 0; i < Skills.Length; i++) hash.Add(Skills[i]);
             for (int i = 0; i < Passions.Length; i++) hash.Add(Passions[i]);
             for (int i = 0; i < SkillGainedToday.Length; i++) hash.Add(SkillGainedToday[i]);

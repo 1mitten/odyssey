@@ -192,6 +192,7 @@ ui.arch.tool.researchbench,Research bench,ui.arch.tool,M3,Where research happens
 ui.arch.tool.comms,Comms console,ui.arch.tool,M3,Talk to factions and traders
 ui.arch.tool.bunk,Bunk,ui.arch.tool,M3,Cheap sleeping. Poor comfort
 ui.arch.tool.bed,Bed,ui.arch.tool,M3,"Better rest, better mood"
+ui.arch.tool.campfire,Campfire,ui.arch.tool,M4,"A fire: warmth you can build"
 ui.arch.tool.table,Table,ui.arch.tool,M3,Eating at one beats eating on the floor
 ui.arch.tool.chair,Chair,ui.arch.tool,M3,Comfort while working or eating
 ui.arch.tool.lamp,Lamp,ui.arch.tool,M3,Light. Costs power
@@ -476,6 +477,7 @@ ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
 ui.debug.tab.spawn,Spawn,ui.debug,AN,"Colonists and animals, placed near the camera"
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
+ui.debug.skipmonth,Skip one month,ui.debug,M4,"Spends a whole game month of ticks at once, so the year and its seasons can be walked through"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
 ui.debug.spawnhog,Spawn midden hog,ui.debug,AN,"Adds a wild midden hog near the camera"

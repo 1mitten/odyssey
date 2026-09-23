@@ -115,6 +115,11 @@ namespace Odyssey.Hud
         /// </summary>
         public const string Shelf = "ui.arch.tool.shelf";
 
+        /// The campfire (design 28 §7): the first heat source, and the reason Rime is survivable
+        /// by anything but digging. Beside the bed under furniture — one placement, no rotation,
+        /// nothing to choose but the material.
+        /// </summary>
+        public const string Campfire = "ui.arch.tool.campfire";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -166,7 +171,7 @@ namespace Odyssey.Hud
         {
             ("ui.arch.category.structure", new[] { Wall, Paving, Door, "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", new[] { Bed, Shelf, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
+            ("ui.arch.category.furniture", new[] { Bed, Shelf, Campfire, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
@@ -314,6 +319,11 @@ namespace Odyssey.Hud
             new PaletteTool(Shelf,
                 d => d.ArmBuild(BuildingHandle.Shelf),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Shelf,
+                wantsMaterial: true),
+
+            new PaletteTool(Campfire,
+                d => d.ArmBuild(BuildingHandle.Campfire),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Campfire,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

@@ -212,6 +212,18 @@ constant came from each drew a real mesh, and a mark is a unit cube. The counted
 this pattern is the reliable one; the it-must-be-expensive half is a hypothesis to test.
 `docs/design/06-rendering-and-camera.md` §6c.1.
 
+**And once per *thing* rather than once per cell, hidden behind a cadence.** The thermal pass
+(2026-09-22) runs one tick in 120 and sweeps **every standing edifice** to find the ones that are
+warm — so it is priced by how much is on the board, not by how many rooms there are. On a wooded
+board that is trees: 2.5 M cells with 5 edifices cost 0.0054 ms, and 921 k cells with 6,311
+edifices cost 0.17. **The class's own summary said "O(rooms + surfaces), never O(cells)"**, and it
+had survived a nine-finding review, because the sentence is half true and the false half is the
+half that grows. The inner step was `BuildingForEdifice`, a linear scan of the building table — a
+scan inside a sweep — and precomputing it by edifice id took the pass to 0.051 ms.
+**The cadence is what hides it:** amortised over 120 ticks any of those numbers rounds to nothing,
+so the honest figure to look at is the cost of the pass itself and the count it scales with, printed
+side by side. A complexity claim in a doc comment is not a measurement.
+
 **The same shape on the simulation side**, found the same day and not yet fixed: `GrowingZones`
 publishes one `ZoneView` per zoned cell *every tick* for a list that changes only when the player
 paints. With **no colonists alive at all** a 2,015-cell field still cost 0.035 ms a tick, ~97% of
@@ -446,6 +458,91 @@ reason it named"* in the register below, reached from the opposite direction.
 ---
 
 ## The register
+
+### 2026-09-22 — A merge with no conflict where the fault was, and a claim that outlived a review (P1, P10)
+
+PR #164 merged with a `main` that had moved twice under it. Eighteen files conflicted and the
+merge was mechanical; **the fault was in a file that did not conflict.**
+
+**Two branches that wrote the same text for different reasons.** `BuildShapes.Cells` is a table
+parallel to `BuildingHandle`, and the shelf branch and the campfire branch had each appended a
+`1` to it. Git saw one added line and took it once. The merged table was one entry short, so the
+campfire silently had no shape — and `EdificeHandle.Count` and `BuildingHandle.Count` merged clean
+and were both wrong by one for the same reason.
+
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` caught it. **That test exists because of this
+exact failure**, two months earlier: when the bed's handle moved from 2 to 5, the same table
+merged in silence, the bed became a one-cell thing that could not be turned, and three
+`DesignateDirector` tests failed without naming the cause. It has now paid for itself twice on the
+same fault.
+
+**The tell:** a merge conflict marks where two branches wrote *different* text. The dangerous case
+is where they wrote the *same* text for different reasons — which is the normal case for a
+hand-maintained parallel table, since every entry in one is some flavour of `1`, `false` or `""`.
+**The check:** every such table wants a length assertion against the enum it parallels, and only
+the ones that have one are defended. `BuildShapes`, `BuildLabels`, `EdificeLabels`,
+`QualityLabels`, `TerrainLabels` and `ItemLabels` are the family.
+
+**And a golden conflict has exactly one honest resolution.** Both branches had moved all six
+numbers, so neither side's value was right for the merged code and taking either would have
+committed a number nothing had produced. Re-baked, then *measured* with `GoldenColonyProbe` on the
+merged branch, the branch head and `main` — three diffs, clean. Which also established the quieter
+fact that **the goldens were never evidence the thermal model bites**: their windows sit inside the
+work band, nobody sleeps in them, and the boards have no crops.
+
+The other two findings are P1 in its usual clothes (the temperature-to-text form written out in two
+assemblies, agreeing by luck — now `TemperatureLabels`, guarded by a test that reads the C# files)
+and the P10 entry above.
+
+**A third kind, which this catalogue had no room for and gets a sentence here instead.** The work's
+headline claim was *"Rime kills"*; Rime is month five of six; the debug menu offered *Skip one day*.
+Sixty presses. Nothing was broken, every test was green, and the effect was that **the scope of the
+playtest had been set by the tooling rather than by the work** — the branch's own "still owed" note
+asked only about the mild season, which is what a question looks like when the interesting one
+cannot be asked. The check is cheap and belongs beside the handover: **read your own playtest
+instruction and try to follow it.** "Fast forward into Rime" was already written down, by somebody
+who had not counted the presses.
+
+### 2026-09-21 — Nine faults in a thermal model that had thirteen green tests (P1, P2, P11)
+
+Reviewed before its first playtest, PR #164, by writing one probe test per suspicion and
+believing none of them until it failed (`docs/design/28-temperature.md` §12, §12a). Four shapes
+this catalogue already has, in new clothes:
+
+**A per-mille applied to the wrong unit (P11).** `severitySlopePerMille` 300, "per centi-degree
+of distance": a Candle night filled the hypothermia bar in fourteen game-minutes while the XML,
+the def comment and the pinning test's own message all promised hours. The number was pinned and
+green; the message beside it said "three" and the value said 300. **A test that pins a number
+under a sentence describing a different number is the tell** — read the message against the
+value, not just the value against the code.
+
+**A fixed point over a fixed set (P2).** The enclosure swept "until nothing changed" over the
+layers the edit had marked, but the change it was converging on propagates *downward* (a layer's
+roof rule reads the layer above), so the cellar under a house roofed last was never re-solved.
+The played world and a loaded one disagreed — the divergence the sweep had been written to end.
+The fix is not a wider window: identity solves top-down, and a layer that changed marks the one
+below itself. **When a solve iterates to a fixed point, ask whether the set it iterates over can
+grow; if the dependency has a direction, solve in that direction and let change carry the mark.**
+
+**One event, several caches, one missed (P1).** `Demolish` and `MineJob` told the enclosure; the
+floor's `RemoveSlab` told nav and the structure solver and not the enclosure. Grepping every
+caller of `Enclosure` in `Sim` took a minute and is the whole check: **list the caches a world
+edit invalidates, then list the edits, and look for the empty cell.** The tick benchmark's own
+edit arm was another empty cell — it marked nav alone, so the enclosure had never been in the
+edit tick (`docs/lessons.md`).
+
+**A shortcut ahead of the rule (P2 again).** "Return the known key's temperature" sat before the
+ledger that knew what the room's cells had been, so a room re-sealed after a day open to the sky
+came back at a season-old temperature, and a hall knocked through to a cupboard took the
+cupboard's. The rule was right; the shortcut in front of it answered first. And the same shape
+once more in the surfaces: a ceiling was "rock or sky", and the third case — another room's
+floor — fell into sky, so building upstairs made downstairs colder.
+
+**What now stops it:** `TemperatureRegressionTests`, fifteen tests, one per finding and one per
+other side of each rule; `EnclosureCostProbe` for the number the benchmark could not see; the
+benchmark's miner marks the enclosure. And the goldens were re-baked only after hashing each
+world *component by component* before and after — five minutes that turned "the hash moved"
+into "only the thermal section moved".
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 

@@ -282,7 +282,12 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Shelf = 13;
 
-        public const int Count = 14;
+        /// <summary>The campfire, the third id the interface names that no generator stamps:
+        /// 14, after the shelf, and like it the reason <c>CoreContent.EdificeCampfire</c> spells
+        /// the literal beside the ones it must not collide with (design 28 §7).</summary>
+        public const int Campfire = 14;
+
+        public const int Count = 15;
     }
 
     /// <summary>
@@ -345,7 +350,16 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Shelf = 7;
 
-        public const int Count = 8;
+        /// <summary>The first heat source (design 28 §7): one cell, blocking, and the one
+        /// building whose <c>heatPerPass</c> is not zero.
+        ///
+        /// <para>Eight because the shelf reached main first and took seven, the same
+        /// rule the shelf's own note records against the door. Handle order is the save
+        /// contract and positions are append-only.</para>
+        /// </summary>
+        public const int Campfire = 8;
+
+        public const int Count = 9;
     }
 
     /// <summary>

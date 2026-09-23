@@ -917,13 +917,23 @@ namespace Odyssey.Sim.Contracts
         public const byte StoreZone = 1;
         public const byte StoreShelf = 2;
 
+        /// <summary>
+        /// How warm it is here, in centi-degrees (1,250 is 12.5 °C): the room's air where the
+        /// cell is in an enclosed room, the outdoor curve where it is not. Every cell has an
+        /// answer in a world with a thermal pass, which every colony has; <see cref="int.MinValue"/>
+        /// is the one "nothing to say" — a hand-built detail from a fixture that never asked,
+        /// and the pane stays silent for it exactly as it does for a wall's quality.
+        /// </summary>
+        public readonly int AmbientTempC;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
             ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0,
             byte zonePlant = 255, ushort cropGrowth = ushort.MaxValue, byte zoneYield = 0,
             bool isIndoors = false, int storageZone = -1, byte storagePriority = 0,
             int storageCells = 0, int storageOrdinal = 0,
             byte storeKind = StoreNone, byte storedStacks = 0, byte storeSlots = 0,
-            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1)
+            byte storedDef = 255, int storedUnits = 0, int storeCellIndex = -1,
+            int ambientTempC = int.MinValue)
         {
             StoreCellIndex = storeCellIndex;
             StorageZone = storageZone;
@@ -935,6 +945,7 @@ namespace Odyssey.Sim.Contracts
             StoreSlots = storeSlots;
             StoredDef = storedDef;
             StoredUnits = storedUnits;
+            AmbientTempC = ambientTempC;
             CellIndex = cellIndex;
             Terrain = terrain;
             Edifice = edifice;

@@ -43,8 +43,9 @@ worker, ignoring the gates on purpose (design 23 §3). Today that is one row:
 | Row | What it does | Backed by |
 |---|---|---|
 | Supply drop | A stack of meals falls from the sky somewhere on the board, an Events row appears, and the colony hauls it. Lands on the next tick, so unpause to see it | `SupplyDropWorker` |
-| Skip one day | Spends one whole game day of ticks in one synchronous batch (~0.2 s), then hands the clock back. Works while paused |
-| Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn | `OdysseyBootstrap.DebugSkipTicks` — the composition root's own batch tick, not an intent: ticking is the root's one job and the bus is drained *inside* a tick |
+| Skip one day | Spends one whole game day of ticks in one synchronous batch (~0.2 s), then hands the clock back. Works while paused | `OdysseyBootstrap.DebugSkipTicks` — the composition root's own batch tick, not an intent: ticking is the root's one job and the bus is drained *inside* a tick |
+| Skip one month | The same, twelve days at a time (~2.4 s), so **the year can be walked through**. Added 2026-09-22 with temperature: Rime is month five of six, and at a day a press the season the whole thermal model exists for was sixty presses away — which is not a playtest anybody runs. Six presses now take you Wash → Glare → Rime and back | `DebugSkipTicks` again, sized `Content.DayTicks * Calendar.DaysPerMonth` — both read rather than written, so a retuned calendar cannot leave this row skipping some other amount |
+| Skip to morning | Skips the night and hands the clock back at dawn, with a whole watchable day ahead — the harvest happens on screen, not inside the skip | `OdysseyBootstrap.DebugSkipToMorning` — the same batch tick, sized to the next dawn |
 | Ripen crops | Brings every standing crop to ripeness at once, daylight window and all — the harvest half without the four-day wait | `IntentKind.DebugRipen` → `GrowingZones.RipenAll`, refused with AlreadyInThatState when nothing stands |
 
 ### "Near the camera" is a column, not a cell (corrected 2026-09-19)

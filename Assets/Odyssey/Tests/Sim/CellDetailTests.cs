@@ -99,11 +99,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(TerrainHandle.DeepWater, Is.EqualTo(NaturalContent.TerrainDeepWater));
             Assert.That(TerrainHandle.Marsh, Is.EqualTo(NaturalContent.TerrainMarsh));
 
-            // The bed and the shelf are the edifices past the generators' own numbering:
-            // CoreContent's ids end at 9, the trees continue from 10, and each takes the next free
-            // id rather than either family's next offset — see CoreContent.EdificeBed for why 12
-            // and not 10, and CoreContent.EdificeShelf for why 13.
-            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeShelf + 1));
+            // The bed, the shelf and the campfire are the edifices past the generators' own
+            // numbering: CoreContent's ids end at 9, the trees continue from 10, and each takes
+            // the next free id rather than either family's next offset - see CoreContent.EdificeBed
+            // for why 12 and not 10, EdificeShelf for 13 and EdificeCampfire for 14.
+            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeCampfire + 1));
             Assert.That(EdificeHandle.Wall, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(EdificeHandle.Door, Is.EqualTo(CoreContent.EdificeDoor));
             Assert.That(EdificeHandle.Ladder, Is.EqualTo(CoreContent.EdificeLadder));
@@ -111,6 +111,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(EdificeHandle.TreeBroadleaf, Is.EqualTo(NaturalContent.EdificeTreeBroadleaf));
             Assert.That(EdificeHandle.Bed, Is.EqualTo(CoreContent.EdificeBed));
             Assert.That(EdificeHandle.Shelf, Is.EqualTo(CoreContent.EdificeShelf));
+            Assert.That(EdificeHandle.Campfire, Is.EqualTo(CoreContent.EdificeCampfire));
         }
 
         // ---- the answer -------------------------------------------------------------------

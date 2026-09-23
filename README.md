@@ -38,7 +38,7 @@ What the game does **not** have yet, so nobody has to guess:
 
 - **No storyteller.** Nothing fires on its own; the supply drop is debug-menu only. The seams a scheduler needs (incident gates, refire memory in the ledger) are in and waiting.
 - **Nobody can be hurt.** There is no health model: no injuries, illness, death or combat. A colonist rides a collapsing floor down unharmed, and fall damage has a number and nothing to apply it to.
-- **The environment is uniform.** No rooms, temperature, weather, seasons, fire or light levels. Enclosed or not, every cell is comfortable.
+- **The weather is uniform.** Temperature is in (design 28): seasons, day and night, rooms that hold their air, a campfire to warm them, cold that slows and eventually drops a colonist, crops that wait for warmth. Weather, fire and light levels are still to come.
 - **Food has no source.** Meals come from the starting kit or supply drops. No growing (a branch is in review), cooking, spoilage or seeds. Starving colonists collapse rather than die.
 - **Going up is barely possible.** Stairs are the next unit, and a hauler cannot climb a ladder, so materials cannot be carried between floors — multi-storey building is impractical today.
 - **No doors.** A functional-doors branch is in review; until it merges there is no room enclosure and every hut is open-fronted.
