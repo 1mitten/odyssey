@@ -849,6 +849,15 @@ namespace Odyssey.Presentation.Ui
             line.Add(_clockDate);
             clock.Add(line);
 
+            // The outdoor temperature on a line of its own (owner, 2026-09-23: it "is leaking out
+            // into over controls"). It was appended to the date — "Day 3 · Larkspur · Wash ·
+            // 12.5 °C outdoors" — on one fixed-width row shared with the time, so the longest
+            // reading pushed the row past the panel and over whatever sat beside it. A season
+            // name, a day number and a signed decimal cannot be made to fit a row that already
+            // holds the clock; the fix is a second row rather than a shorter word.
+            _clockTemp = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "clock__temp");
+            clock.Add(_clockTemp);
+
             var speed = new VisualElement();
             speed.AddToClassList("speed");
             (HudGlyphKind glyph, string name)[] speeds =
@@ -1032,16 +1041,20 @@ namespace Odyssey.Presentation.Ui
             long tick = world.CurrentTick;
             HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
 
-            // The outdoor temperature beside the date, labelled outdoor because it is not the
-            // temperature anywhere in particular — it is the one the unenclosed world reads, and
-            // the pane's own row is where a tile's answer lives (design 28 §8, panel A3).
-            var temperature = _boot.Colony?.Pawns.Temperature;
-            string outdoor = temperature == null
-                ? string.Empty
-                : $" · {TemperatureLabels.Describe(temperature.OutdoorTempC(tick))} outdoors";
             HudText.Set(_clockDate,
-                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}{outdoor}",
+                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}",
                 HudTextRole.Body);
+
+            // The outdoor reading, on its own row and in its own colour. The word "outdoors" is
+            // gone with the overflow it caused (owner, 2026-09-23) — which costs the one thing it
+            // was carrying, that this is the *unenclosed* temperature and not the temperature
+            // where you happen to be looking. That distinction now lives only in the pane's own
+            // tile row (design 28 §8), and if the reading ever reads as "the temperature here",
+            // a label is what puts it back.
+            var temperature = _boot.Colony?.Pawns.Temperature;
+            HudText.Set(_clockTemp, temperature == null
+                ? string.Empty
+                : TemperatureLabels.Describe(temperature.OutdoorTempC(tick)), HudTextRole.Body);
         }
 
         void RefreshSpeed()

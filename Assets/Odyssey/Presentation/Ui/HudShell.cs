@@ -153,6 +153,7 @@ namespace Odyssey.Presentation.Ui
         // ---- clock and speed (A3/A4)
         Label _clockTime = null!;
         Label _clockDate = null!;
+        Label _clockTemp = null!;
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
 
         // ---- alerts (A5)
