@@ -1434,3 +1434,15 @@ fists, and the resolution is total. Negative controls seen to fail: the weapon i
 real content resolves the bat and crowbar blunt, the machete and arc blade sharp, fists blunt, the
 rat sharp and the hog blunt. **Never compiled here**: `CombatFeedback.cs`, `IBloodEffects.cs`,
 `BloodSeamTests.cs`.
+
+## 8. The second playtest's round (2026-09-23)
+
+The owner played `claude/combat-c2` (`50ced466`), **not** the polish branch: their editor was open
+on `D:\code\odyssey-combat`. That is why the context menu did not appear and why enemies still shared
+tiles. Neither was a fault in §7a or §7c. The asks that stand on their own:
+
+| Ask | Decision (owner, interviewed 2026-09-23) | Section |
+|---|---|---|
+| *"The bar above their heads flicker ... use a green like the one used in the colony stats — more greener — deeper colours please and more prominent"* | Find and fix the flicker, measured rather than guessed. The bar's green is the colony-stat green, deeper and more saturated, as are the amber and red. The bar is thicker and has a dark backing, so it reads at the play camera. | §8a |
+| *"The weapon is not drawn until the attack is about to happen ... marauders always have their weapons drawn ... we need a good mechanism"* | **Sheathed at the left hip**, where it can be seen. **Drawn** when a colonist is drafted, when its attack target is within 2 tiles, or when it is struck and fights back. The pack's *Draw* clip moves the weapon to the right hand. About 2 s after the fight ends, or on release from the draft, the *Sheathe* clip puts it back. Without the pack it snaps between the two. **Marauders always have theirs drawn.** A tool (axe, pick, hammer) still takes the right hand while a colonist works, and the weapon stays at the hip. | §8b |
+| *"Make it a guard that enemies when sharing tiles going side by side as well or handled uniformly"* | One rule for every pawn in a fight: nobody fighting shares a tile. There is a test that walks every tick of mixed brawls (colonists, marauders, hogs, rats, any side) and fails on a shared tile. The drawn crowd sidestep reads the published *person* flag, not "kind 0", so marauders step round each other and round colonists as colonists do. Animals stay outside it (design 29). | §8c |
