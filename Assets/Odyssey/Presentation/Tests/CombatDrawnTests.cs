@@ -725,6 +725,15 @@ namespace Odyssey.Tests.Presentation
             return n;
         }
 
+        static string DrawnNames(GameObject root)
+        {
+            var names = new List<string>();
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(includeInactive: false))
+                if (renderer.enabled && !renderer.forceRenderingOff)
+                    names.Add(renderer.transform.parent != null ? renderer.transform.parent.name + "/" + renderer.name : renderer.name);
+            return string.Join(", ", names);
+        }
+
         /// <summary>
         /// Putting a session down while a body is still falling does not throw. The bootstrap
         /// disposed the figures before the corpses, and handing the lent figure back then indexed
@@ -829,22 +838,24 @@ namespace Odyssey.Tests.Presentation
                 var hidden = new SliceSettings { below = BelowMode.Hide };
                 var shown = new SliceSettings();
                 corpses.Sync(Running(990), 2, hidden, 1f / 60f);
+                // Whatever the directors draw with no body at all (the chips' mesh): the floor.
+                int none = Drawn(parent);
                 WorldSnapshot frame = Running(1_000);
                 frame.AddCorpse(corpse);
 
                 corpses.Sync(frame, 0, shown, 1f / 60f);
                 Assume.That(corpses.Falling, Is.EqualTo(1), "a fresh death is seen falling");
-                Assert.That(Drawn(parent), Is.GreaterThan(0), "the control: a fall on a drawn layer is drawn");
+                Assert.That(Drawn(parent), Is.GreaterThan(none), "the control: a fall on a drawn layer is drawn");
 
                 corpses.Sync(frame, 2, hidden, 1f / 60f);
-                Assert.That(Drawn(parent), Is.Zero, "a body falling on a hidden layer was drawn");
+                Assert.That(Drawn(parent), Is.EqualTo(none), "a body falling on a hidden layer was drawn: " + DrawnNames(parent));
 
                 for (int i = 0; i < 20 && corpses.Falling > 0; i++) corpses.Sync(frame, 2, hidden, 0.25f);
                 Assert.That(corpses.Falling, Is.Zero, "the fall never finished");
-                Assert.That(Drawn(parent), Is.Zero, "a body baked on a hidden layer was drawn");
+                Assert.That(Drawn(parent), Is.EqualTo(none), "a body baked on a hidden layer was drawn: " + DrawnNames(parent));
 
                 corpses.Sync(frame, 0, shown, 1f / 60f);
-                Assert.That(Drawn(parent), Is.GreaterThan(0), "the body is drawn once its layer is");
+                Assert.That(Drawn(parent), Is.GreaterThan(none), "the body is drawn once its layer is");
                 Assert.That(corpses.TryGetBox(3, out Bounds box), Is.True);
                 Vector3 floor = CellMetrics.FloorCentre(cell);
                 Assert.That(new Vector2(box.center.x - floor.x, box.center.z - floor.z).magnitude, Is.LessThan(CellMetrics.SizeXZ),

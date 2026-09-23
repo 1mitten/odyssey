@@ -2,7 +2,8 @@
 
 **Checkpoints 2 and 3 together** (`docs/plans/combat.md`): health and melee against a marauder
 (C2) and weapons (C3). Built 2026-09-23 by four parallel lanes and integrated the same day; what was
-merged, wired, measured and decided is `docs/design/33-combat.md` §6E.
+merged, wired, measured and decided is `docs/design/33-combat.md` §6E; the eight faults two
+reviewers found afterwards, all fixed, are §6F.
 
 ## Where
 
@@ -31,6 +32,12 @@ debug menu is **backtick**; its **Spawn** tab has *Spawn marauder* and one row p
 | The Health tab | empty | *73 / 100*, a bar, and two rows: condition (*Unhurt*, *Hurt*, *Stunned*, *Downed*) and weapon (*Bare hands* or the weapon) | §6C |
 | A marauder's pane | a colonist's, with a Draft button | no face, no tabs, no commands; its line says what it is doing, e.g. *Fighting* | §6C |
 | Melee | not a skill | a live skill on the Skills tab, trained by every swing | §5a |
+| A second colonist hitting a marauder | it dropped the swing it was winding up and seldom turned on her | it keeps fighting the colonist in front of it and goes for the hitter when that one is down; a marauder still chasing somebody turns on whoever hits it | §6A.6, §6F |
+| Right-clicking the same target again | restarted the attack and threw away the wind-up | ignored: the swing in the air lands | §6A.8, §6F |
+| Finishing a downed pawn | the body stood up and fell over a second time | it dies where it lies | §6F |
+| A fight on a layer that is not drawn | its words floated over whatever hid it, and a body fell in view | no words, no fall; the body is there, and clickable, when the layer is shown | §6F |
+| A corpse chosen again after a colonist | wore the colonist's name and activity | its own | §6F |
+| Pausing on a death, then Load, New game or Leave | an error, and a load left half a colony | works | §6F |
 
 ## What to test
 
@@ -41,13 +48,30 @@ debug menu is **backtick**; its **Spawn** tab has *Spawn marauder* and one row p
 | Select a colonist, **undrafted**, and right-click the **bat** by the food | she walks over, stoops, and stands up with the bat in her right hand, gripped at the handle, pointing out of the fist | nothing happens; the bat hovers off the hand, is held by its head, sticks sideways through the forearm, or is far too big or small (the grip is measured and has never been seen) |
 | Look at the **bat and machete lying** beside the food at the start | two recognisable weapons lying flat on the grass | standing on end like fence posts, sunk into the ground, or the orange box |
 | Fight until **somebody goes down** | she drops to the ground; her bar empties to red; *Downed* floats and lingers; the marauder turns to the next colonist still standing | she stays upright; the marauder keeps beating a body on the ground; the bar vanishes |
-| **Finish a downed marauder**: draft a colonist, right-click the body | she strikes until it dies; *Dead*; the body stays lying; clicking it says *Corpse of a marauder*; the machete lies beside it | the body vanishes or stands up; the machete is gone; a click on the body selects nothing |
+| **Finish a downed marauder**: draft a colonist, right-click the body | she strikes until it dies; *Dead*; the body stays lying — it does not get up to fall again; clicking it says *Corpse of a marauder*; the machete lies beside it | the body vanishes, or stands and falls over; the machete is gone; a click on the body selects nothing |
+| Two colonists, **undrafted**, beside one marauder | it keeps swinging at the one in front of it; when she goes down it turns on the other, not on whoever is nearest | it stops landing blows while both hit it; it ignores the one still hitting it; it flips between them every blow |
 | **Is it right that only an order kills?** Let a fight run unattended | it ends in downs, never corpses — the killing blow must cross −50 % of the pool, and nobody strikes a body on the ground unless told to | you expected unattended fights to be lethal: say so, and the rule in design 33 §3 changes |
 | Select a **hurt colonist** and open the Health tab | *73 / 100*, *Hurt*, the weapon she holds; the bar in the tab is the colour of the bar over her head | the tab is empty; the two bars disagree in colour; a whole colonist reads *0 / 0* |
 | Two drafted colonists attack a **hog**, then a **rat** | the hog usually turns on them; the rat usually runs | the hog always runs, or the rat always fights |
 | **Pause** in the middle of a swing | the figure freezes mid-blow and carries on when unpaused | the swing plays on while paused, or restarts |
 | Read the bars, diamond and words **at the play camera's distance** | legible at a glance with a few fighting | too small to read, or so many that the fight is hidden under them |
 | **Listen** | — | a fight is silent: the five combat sounds have no clips yet. That is expected, not a fault |
+
+## The review's fixes (2026-09-23)
+
+Eight faults, all confirmed and fixed, each with a test seen failing first (design 33 §6F). Tiers
+after the fixes, at the commit this section was written for:
+
+- **Fast:** Sim 1,164, Hud 797, 0 failed. **Long:** 39, 0 failed. Both content gates pass.
+- **EditMode:** 2,832 total, 2,806 passed, 0 failed (17 skipped, 9 inconclusive).
+- **PlayMode:** 107 total, 102 passed, 0 failed, 5 skipped — started alone; another project's
+  batch run began three minutes in, and nothing failed.
+- **Goldens:** unchanged; `Golden.cs` untouched and every golden test green.
+- **Seen failing first:** the three simulation tests and the two pane tests in the fast tier, the
+  four drawing tests in EditMode and `CorpseTeardownTests` in PlayMode, each with the fix withheld
+  (the teardown with the reviewer's exact `ArgumentOutOfRangeException`). One half of one finding
+  did **not** reproduce: a body baked while hidden measured the right box in this Unity, so the
+  reorder that fixes it is kept as the safe order and is not what the test proves.
 
 ## Still owed
 
