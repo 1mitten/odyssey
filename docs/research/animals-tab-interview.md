@@ -70,4 +70,7 @@ pipeline as the HUD did. The alternative is images, which cannot be diffed or me
 
 ## Answers
 
-*(pending)*
+**2026-09-23, owner:** one tab, called *Animals*, with wildlife under it and tamed animals
+later; the tamed half **deferred entirely** (questions 2–5); the Work tab's table shape (6) and
+the inspect pane (7): yes; the recommended inputs (8) and deliverables (9). The brief:
+`docs/reference/mockups/animals-tab-brief.md`.
