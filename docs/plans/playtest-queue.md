@@ -23,6 +23,12 @@ the next session learns to ignore.
 
 ## Open
 
+- **Can you see a stockpile, and does its outline read?** (`claude/research-tab`,
+  `docs/design/26-storage.md` §13.) Paint a stockpile on grass and one on a built floor. It had
+  been created and not drawn since 2026-09-21; now it should wash the ground and carry a line in
+  the store's hue round its outer edge only. A wrong answer is no wash, a line drawn between its own
+  cells, a line lost under grass tufts, or a line too heavy for a big warehouse floor.
+
 - **Does the Inventory tab find things, and does Go land where you meant?** (`claude/research-tab`,
   `docs/design/35-inventory-tab.md`.) F2 with a few stockpiles and a shelf holding goods. Judge
   whether a second click on an item row reads as "go there" or surprises you; whether Go landing on

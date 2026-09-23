@@ -10996,3 +10996,13 @@ click handlers a stockpile box and asserts a zone is published: that half passes
 fault on the pointer side of the presenter, a side this branch does not touch. The pointer side
 cannot be driven in a batch run (CLAUDE.md, known gaps), so the next measurement is a Play session
 on `main` doing the same drag, to learn whether the fault came with this branch at all.
+
+**Then the stockpile had its interview.** The owner's second report — *"There is no visual to the
+stockpile"* — was the true one: the zone existed and was not drawn, because the ground under a store
+on grass is meshed a layer down and only the store's own chunk was being marked, which stopped
+being enough when chunks got their own versions. The answers that followed: the drag's preview had
+shown (so the pointer was never at fault, and the earlier "fault is on the input side" was wrong
+reasoning from an incomplete test that had only asked whether a zone was *published*), keep the
+wash, add a line round the outer edge, and nothing about priority or fullness. The outline is baked
+into the chunk, one bucket per chunk with a store. The lesson for the test: **"was it made" and "is
+it on screen" are two questions, and the second is the one a player asks.** `26-storage.md` §13.

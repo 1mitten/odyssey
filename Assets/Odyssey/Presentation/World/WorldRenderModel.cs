@@ -150,6 +150,10 @@ namespace Odyssey.Presentation.World
         readonly int _bedModule;
         readonly int _bedPillowModule;
         readonly int _shelfModule;
+        readonly int _storeEdgeModule;
+
+        /// <summary>The strip drawn along a stockpile's outer edge. See <c>ChunkMesher.EmitStoreEdge</c>.</summary>
+        public int StoreEdgeModule => _storeEdgeModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library, PlantDef[]? plants = null)
         {
@@ -212,6 +216,7 @@ namespace Odyssey.Presentation.World
             // whatever the bed's frame is made of (BedShape, PillowMesh).
             _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
             _shelfModule = library.Resolve(ModuleIds.Shelf, ModuleShape.SolidBlock);
+            _storeEdgeModule = library.Resolve(ModuleIds.StoreEdge, ModuleShape.FloorSlab);
         }
 
         /// <summary>

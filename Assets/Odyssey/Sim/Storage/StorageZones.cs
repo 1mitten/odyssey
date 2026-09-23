@@ -359,6 +359,16 @@ namespace Odyssey.Sim.Storage
             // left every stockpile on grass undrawn (owner, 2026-09-23: "There is no visual to
             // the stockpile"). docs/bug-patterns.md P15.
             if (cell.Y > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z, cell.Y - 1));
+
+            // And the four neighbours' chunks, which differ from this one only at a chunk's edge:
+            // the line round a store is drawn on the side of each stored cell that faces an
+            // unstored one, so a cell joining or leaving redraws its neighbours' lines too
+            // (ChunkMesher.EmitStoreEdge).
+            GridSize size = _grid.Size;
+            if (cell.X + 1 < size.SizeX) _chunks.MarkDirty(new CellRef(cell.X + 1, cell.Z, cell.Y));
+            if (cell.X > 0) _chunks.MarkDirty(new CellRef(cell.X - 1, cell.Z, cell.Y));
+            if (cell.Z + 1 < size.SizeZ) _chunks.MarkDirty(new CellRef(cell.X, cell.Z + 1, cell.Y));
+            if (cell.Z > 0) _chunks.MarkDirty(new CellRef(cell.X, cell.Z - 1, cell.Y));
         }
 
         // ---- the intent seam ---------------------------------------------------------------------
