@@ -584,9 +584,10 @@ the next session learns to ignore.
   at 16, 17 and 30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads,
   17 px loses the grooves, 16 px goes to noise.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
-- **The Synty junction chain wants inverting.** The only real copy of the licensed packs sits inside
-  `D:\code\odyssey-audio`, a worktree on a merged branch; the main checkout junctions to it. See
-  `docs/lessons.md` — do not prune a worktree without checking.
+- ~~**The Synty junction chain wants inverting.**~~ **Done, and verified 2026-09-23.** The real
+  copy is `D:\code\odyssey\Assets\Synty`, a real directory, and every worktree junctions straight
+  to it in one hop; `D:\code\odyssey-audio` no longer exists. The standing rule is unchanged and
+  is in `docs/lessons.md` — do not prune a worktree without checking for reparse points first.
 
 
 ## Judged
