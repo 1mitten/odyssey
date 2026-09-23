@@ -508,3 +508,115 @@ briefs point at it.
 - **`JobSystem.Load` accepts a save with fewer job defs than the build.** The job table is
   append-only, so the missing ones are the new ones, and their counters start at zero. It used to
   refuse any difference, which would have made every save from before C1 unloadable.
+
+### 6B. Lane B — the fight (drawn)
+
+**Built 2026-09-23 on `claude/combat-drawn`** (worktree `D:\code\odyssey-combat-drawn`, from the
+contracts head `229b00a0`), against the `CombatEventView` contract with a scripted event feed, not
+against lane A's code. Everything here is presentation: no simulation, interface, Def or golden
+changed. Tests: `Presentation/Tests/CombatDrawnTests.cs` (EditMode), each with a negative control
+seen to fail (below).
+
+**The clip layer.** A person's graph is now the gait mixer on input 0 of an
+`AnimationLayerMixerPlayable` and a two-slot action mixer on input 1 (`PawnFigureDirector.Combat.cs`,
+`BuildCombatLayer`). A combat clip goes into the free slot and cross-fades against the other over
+0.1 s; the layer's weight eases the action in and out over 0.12 s. **Every action clip plays at
+speed nought and has its time set each frame**, so a pause holds it and the game speed cannot run it
+away from the blow. An animal, and a checkout without the pack, keep the graph exactly as it was
+(output reads the gait mixer).
+
+**The swing's clock is the simulation's.** A `Strike` on the gesture serial starts the swing; its
+`Swing` event, read the same frame, refines the start tick, the wind-up and the weapon without
+starting a second one. The swing is timed in ticks since the wind-up began — the frame's tick plus
+its part-tick — and the clip is scaled by `impactSeconds / windupTicks`, so **the authored impact
+frame lands on the tick the simulation resolves the blow** (`CombatPose.ClipTime`). The impact is
+measured, not typed: every attack FBX is cut by its author into WindUp, Hit and FollowThrough, and
+the catalogue build reads the WindUp's last frame off the importer (`PlayScene.MeasureImpact`):
+LightCombo01 A/B/C 0.333/0.167/0.367 s, HeavyCombo01A 0.967 s, HeavyStab01 0.867 s. At the owner's
+wind-ups (18–36 ticks) the light swings play at 0.3–1.2× their authored rate and the heavy ones at
+1.4–1.9×; the follow-through keeps the pace the blow was struck at.
+
+**Which clip.** The family is the event's weapon's `AttackDef.style` (`WeaponStyles`, read once off
+the content by the bootstrap), else the body: a person punches, an animal bites (§5j). Light swings
+take LightCombo01 A, B, C in turn; heavy ones HeavyCombo01A and HeavyStab01. A hit reacts by the side
+the blow came from (`CombatPose.SideOf`, F/B/L/R); a stun, or a blow of 10 points or more, staggers;
+a dodge steps away from the blow, **never right** (`Dodge_R` imports Generic), so a blow from the
+left is dodged backwards. Downed is `KnockDown_Begin` then `_Loop`, and `_End` on getting up; stunned
+is `Stun_Begin`, `_Loop`, `_End`. The held states are read off `PawnView.Flags`, not events, so a
+figure leased mid-fight shows them — with no begin clip, because it did not see the fall.
+
+**A react never cuts off the figure's own swing**, which the simulation will still land on its tick;
+a stagger does, because a stunned attacker's wound-up swing does not land (§5j). Going down or
+getting up ends any one-shot.
+
+**The work stroke never plays for `Job_AttackMelee`** (`PawnFigureDirector.PlaysWorkStroke`): the
+attack driver's work focus during the wind-up turns the figure to its target and does nothing else.
+The step-up to a work cell and the gaze's work focus are gated the same way. A `Strike` is never
+drawn as the lift's crouch (`GestureOf` would otherwise read it as one).
+
+**The computed fallbacks** (`CombatPose`), laid on after the graph exactly as the work stroke is:
+a swing for each style as three keys (rest, the cock at 0.7 of the wind-up, the blow at 1.0) and a
+recovery of 0.8 of the wind-up; the punch and the bite are always computed (the pack has neither);
+a hit react (0.5 s), a stagger (0.9 s) and a dodge (0.6 s) as a jolt away from the blow; a stun as a
+slow sway; **the downed lie is the sleeper's lie on the ground**, and the computed corpse is
+`CombatPose.LieFlat`. An animal has no bones bound, so its bite and its jolts move and pitch the
+whole body. Every angle and distance here is INVENTED and wants a contact sheet.
+
+**The dead** (`CorpseDirector`). A corpse is a figure lent out (`BorrowForCorpse`), dressed in the
+colours its **own roll seed** deals — the frame no longer carries the pawn, so a seed read off the
+frame would be nought and deal somebody else — laid down, baked to static meshes and handed straight
+back to the pool. **Corpses never count against the 64-figure ceiling** and cost a static mesh each.
+A death seen happening (within 120 ticks, in a world already on screen) plays `Death_{side}` first;
+one found lying is baked at once. The body is turned so its head lies along the corpse's own facing:
+the finished `_Pose` is measured (which way the head ends up from the feet) and turned to it, and its
+middle is put on the middle of the cell. With no art for the face, a grey capsule lies there. The
+cursor brackets the corpse's own box (`TryBracket`), and a click that finds no living pawn asks
+`CorpseUnderRay` and hands the corpse to `HudDirectors.ChooseCorpse` (lane C's; until it answers yes
+the click falls through as before).
+
+**The marks and the words.** `DrawCombatMarks` draws a bar over every pawn
+`CombatFeedbackModel.HealthBar` owes one to (track in the panel's ink, fill in `HudTheme` good,
+warning or bad by the fraction, along the camera's right) and the hostile marker (the draft's
+diamond in `HudTheme.Bad`, brighter than the draft's red) where `HostileMarker` says. The floating
+words are `CombatFloaters` (1.2 s, 0.9 m rise, fading over the last 40 %, at most 32) drawn by
+`Ui.CombatFloaterView`, a layer inserted **beneath** the HUD's tree in the HUD's own fonts. All
+three draw nothing until lane C's model answers. Sounds: `SoundIds.CombatSwing/Hit/Miss/Down/Death`,
+named and in no catalogue yet — the director declines a sound it has no clip for.
+
+**Per-frame cost** scales with the live figures (capped at 64), the pawns on drawn layers for the
+marks, the events since the last frame (at most the published 32) and the corpses (one visibility
+test each, a pose and an evaluate for the few still falling). Nothing walks the board.
+
+**The catalogue.** Nine rows, 30 clips, all resolved: 181 → 190 rows, the appearance block intact
+(97 classified rows before and after, `PlayScene.RebuildCatalogue` then `CharacterSwatches.Classify`).
+Two files name their clip differently from themselves (`A_Stun_Loop_Sword` holds
+`A_Stunned_Loop_Sword`, `A_Death_B_01_Pose_Sword` holds `A_Death_B_Pose_01_Sword`), so a clip is
+found by its **file's** name and is that file's one whole clip — the first build lost both.
+
+**Negative controls, each seen to fail** (one run with all seven withheld, then restored): the clip
+played at its authored rate (`AClipsImpactLandsOnTheWindupTick`); the watermark not reset on a new
+world (`CombatFeedbackHandsEachEventOnOnce…`); the stroke gated on `Working` alone
+(`AnAttackingFigurePlaysNoWorkStroke`); the corpse's face dealt from seed 0
+(`ACorpseWearsTheFaceItsRollSeedDeals`); the bracket refusing a selected corpse
+(`TheCursorBracketsASelectedCorpse`); the computed lie withheld
+(`WithThePackAbsentADownedColonistLiesOnTheComputedPose`); a strike read as a gesture
+(`AStrikeStartsASwingAndItsEventRefinesIt`). The row test failed on the catalogue before the rows
+existed and again on the build that lost two clips.
+
+**Do not undo by tidying.**
+- **Action clips are timed by hand at speed nought.** Given a speed, a clip runs on the graph's own
+  clock, ignores a pause and drifts off the tick its blow belongs to.
+- **The held states come off the flags, the reactions off the events.** A figure leased mid-fight
+  has no events to replay, and flags cannot say which side a blow came from.
+- **A corpse's face is dealt from the corpse's seed**, never the frame's.
+- **A corpse figure is borrowed, baked and returned**; keeping it would put the dead under the
+  ceiling and a graph under every body.
+
+**Open, for the integrator and the first playtest.** Whether the pack's sword swings read with a bat
+or a crowbar in the hand, and whether a heavy swing at 1.9× reads as a blow or a twitch; every
+computed angle; which way `Death_F` actually falls (the turn is measured, so the body lies along the
+facing either way, but the fall's direction relative to the attacker is not chosen yet — the loan is
+always asked for the front variant); a downed pawn past the figure cap is still drawn standing by the
+instanced pass; a downed colonist's click box is still the standing one; the pack-present tests ran
+here only, and PlayMode, the frame budget with a fight in view and the player build have not been
+run.
