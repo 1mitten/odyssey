@@ -37,9 +37,9 @@ namespace Odyssey.Tests.Presentation
             return snapshot;
         }
 
-        static PawnView Colonist(int job = JobHandle.Wait, bool working = false) =>
+        static PawnView Colonist(int job = JobHandle.Wait, bool working = false, PawnFlags flags = PawnFlags.Person) =>
             new PawnView(new PawnId(1), new CellRef(3, 3, 0), 800, 800, 600, job,
-                working: working, workCell: working ? new CellRef(4, 3, 0) : default, flags: PawnFlags.Person);
+                working: working, workCell: working ? new CellRef(4, 3, 0) : default, flags: flags);
 
         static void Step(PawnFigureDirector director, WorldSnapshot frame, int frames)
         {
@@ -74,12 +74,14 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// A colonist the simulation says is holding a machete is drawn holding one, in the right
-        /// hand; it goes away while she works with a tool and comes back after; and
-        /// a colonist holding nothing holds nothing — the control.
+        /// A colonist the simulation says is holding a machete is drawn wearing it — at the hip at
+        /// peace, in the right hand once the simulation says drawn (design 33 §8b) — and still at
+        /// the hip, and still showing, while she works with a tool; a colonist holding nothing
+        /// holds nothing — the control. Until 2026-09-23 the weapon was in the hand whenever the
+        /// hand was free and hidden while she worked.
         /// </summary>
         [Test]
-        public void AColonistHoldingAWeaponIsDrawnHoldingItAndPutsItAwayToWork()
+        public void AColonistHoldingAWeaponWearsItAtTheHipAndDrawsItWhenTheSimulationSays()
         {
             ModuleCatalogue catalogue = Catalogue();
             if (catalogue.Find(ModuleIds.ItemMachete)?.prefab == null)
@@ -100,18 +102,28 @@ namespace Odyssey.Tests.Presentation
                 Transform? prop = director.WeaponOf(id);
                 Assert.That(prop, Is.Not.Null, "the machete in the simulation's hand was not drawn");
                 Assert.That(prop!.gameObject.activeInHierarchy, Is.True, "the machete was made and hidden");
-                Assert.That(prop.parent, Is.Not.Null.And.Property("name").Contains("Hand"),
-                    "the machete is not in a hand");
+                Assert.That(director.PelvisOf(id), Is.Not.Null, "a colonist rig with no left thigh");
+                Assert.That(director.TryGetWeaponPlace(id, out bool atHip, out Transform? on), Is.True);
+                Assert.That(atHip, Is.True, "at peace, and the machete was out");
+                Assert.That(on, Is.SameAs(director.PelvisOf(id)), "sheathed, but not on the pelvis");
                 Assert.That(director.ArmedFigures, Is.EqualTo(1));
 
-                Step(director, Frame(120, Colonist(JobHandle.Fell, working: true), ItemIndex.Machete), 60);
-                Assert.That(prop.gameObject.activeSelf, Is.False, "the machete stayed out while the axe was in the hand");
+                // Drafted: out. Long enough for the pack's draw (about a second) or at once without it.
+                Step(director, Frame(120, Colonist(flags: PawnFlags.Person | PawnFlags.Drafted | PawnFlags.Drawn),
+                    ItemIndex.Machete), 120);
+                Assert.That(director.TryGetWeaponPlace(id, out atHip, out on), Is.True);
+                Assert.That(atHip, Is.False, "drafted, and the machete stayed at the hip");
+                Assert.That(on, Is.SameAs(director.RightHandOf(id)), "drawn, but not in the right hand");
+                Assert.That(on!.name, Does.Contain("Hand"));
 
-                Step(director, Frame(200, Colonist(), ItemIndex.Machete), 60);
-                Assert.That(prop.gameObject.activeSelf, Is.True, "the machete did not come back after the work");
+                // Released, and at work: at the hip at once, showing, with the axe in the hand.
+                Step(director, Frame(130, Colonist(JobHandle.Fell, working: true), ItemIndex.Machete), 60);
+                Assert.That(prop.gameObject.activeSelf, Is.True, "the machete was hidden while she worked");
+                Assert.That(director.TryGetWeaponPlace(id, out atHip, out _), Is.True);
+                Assert.That(atHip, Is.True, "the machete stayed in the hand beside the axe");
 
                 Step(director, Frame(300, Colonist(), weapon: -1), 2);
-                Assert.That(director.WeaponOf(id), Is.Null, "the machete stayed in a hand the simulation emptied");
+                Assert.That(director.WeaponOf(id), Is.Null, "the machete stayed on a colonist the simulation emptied");
             }
             finally
             {

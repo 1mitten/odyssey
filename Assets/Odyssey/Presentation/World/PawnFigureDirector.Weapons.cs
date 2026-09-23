@@ -24,18 +24,20 @@ namespace Odyssey.Presentation.World
     /// that. The graph rewrites bones and never touches a prop, so there is nothing to wind
     /// (<see cref="PlaceTool"/> says why that matters).</para>
     ///
-    /// <para><b>Shown only while the hand is free:</b> not while a work tool is in it, not while a
-    /// load is in the arms, not lying down (asleep or downed — a downed pawn keeps its weapon in the
-    /// simulation, owner's C2 default, but a body on the ground is drawn without it). Scales with
-    /// the live figures, capped at 64: one aspect read each, and an instantiate only when the
-    /// weapon a pawn holds changes.</para>
+    /// <para><b>At the hip or in the hand</b> (design 33 §8b): sheathed at the left hip unless the
+    /// simulation publishes <c>PawnFlags.Drawn</c>, and always at the hip while a work tool is in the
+    /// hand or a load in the arms; not drawn at all lying down (asleep or downed — a downed pawn
+    /// keeps its weapon in the simulation, owner's C2 default). <c>PawnFigureDirector.Sheath.cs</c>
+    /// holds the hip, the draw and the sheathe. Scales with the live figures, capped at 64: one
+    /// aspect read and one clock step each, and an instantiate only when the weapon a pawn holds
+    /// changes.</para>
     /// </summary>
     public sealed partial class PawnFigureDirector
     {
         /// <summary>Where a weapon is held, from its butt, as a fraction of its length. INVENTED.</summary>
         public const float WeaponGripFraction = 0.1f;
 
-        /// <summary>The weapon each figure is drawn holding this frame, for tests: live figures with a prop showing.</summary>
+        /// <summary>Live figures with a weapon prop showing, at the hip or in the hand. For tests.</summary>
         public int ArmedFigures
         {
             get
@@ -54,10 +56,11 @@ namespace Odyssey.Presentation.World
                 : null;
 
         /// <summary>
-        /// Show, swap or hide the weapon in this figure's right hand for this frame. Called at the
-        /// end of <see cref="Pose"/>'s state updates, after the carry and the sleep weight it reads.
+        /// Show, swap or hide this figure's weapon for this frame, and put it at the hip or in the
+        /// hand (design 33 §8b, <c>PawnFigureDirector.Sheath.cs</c>). Called at the end of
+        /// <see cref="Pose"/>'s state updates, after the tool, the carry and the sleep weight it reads.
         /// </summary>
-        void ShowWeapon(Figure figure, in PawnView pawn, bool carrying)
+        void ShowWeapon(Figure figure, in PawnView pawn, bool carrying, float deltaTime)
         {
             int def = -1;
             if (pawn.IsPerson && _frame != null
@@ -65,11 +68,22 @@ namespace Odyssey.Presentation.World
                 def = held;
 
             if (def != figure.WeaponDef) SwapWeapon(figure, def);
-            if (figure.Weapon == null) return;
+            if (figure.Weapon == null)
+            {
+                // Still stepped, so a weapon taken up mid-fight is drawn from the state it finds.
+                WeaponSheath.Step(ref figure.Sheath, in pawn, _frame != null ? _frame.Tick : 0);
+                return;
+            }
 
-            bool handFree = figure.WorkWeight <= 0.001f && !carrying && figure.SleepWeight <= 0.001f
-                            && !pawn.IsDowned;
-            if (figure.Weapon.activeSelf != handFree) figure.Weapon.SetActive(handFree);
+            // A body on the ground is drawn without it (a downed pawn keeps it in the simulation).
+            bool shown = figure.SleepWeight <= 0.001f && !pawn.IsDowned;
+            if (figure.Weapon.activeSelf != shown) figure.Weapon.SetActive(shown);
+
+            // The one hand: a tool in it or a load in the arms sends the weapon to the hip. The same
+            // threshold ShowHeldTool shows the tool at, so the two never share the fist.
+            bool handBusy = figure.WorkWeight > 0.001f || carrying;
+            Look? face = LookAt(figure.Look);
+            PoseSheath(figure, in pawn, handBusy, face != null && face.Feminine, deltaTime);
         }
 
         /// <summary>Put the weapon away: into the pool, lent as a corpse, or any figure changing hands.</summary>
@@ -100,7 +114,7 @@ namespace Odyssey.Presentation.World
             var colliders = prop.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
 
-            FitWeapon(figure, prop.transform);
+            FitWeaponBothWays(figure, prop.transform);
             figure.Weapon = prop;
         }
 

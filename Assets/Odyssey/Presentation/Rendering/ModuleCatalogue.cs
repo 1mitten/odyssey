@@ -690,6 +690,20 @@ namespace Odyssey.Presentation.Rendering
         };
 
         /// <summary>
+        /// The weapon out of its sheath at the left hip and into the right hand (design 33 §8b):
+        /// <c>A_Draw_Sword_Masc</c> and <c>_Femn</c>, the variant by the body's sex. Played on an
+        /// upper-body layer over the walk. <b>Not in <see cref="CombatRows"/></b>, whose order is
+        /// the combat roles' and whose test holds every clip without a blow to an impact of nought.
+        /// </summary>
+        public const string CombatDraw = CombatBase + ".sheath.draw";
+
+        /// <summary>The weapon back from the hand to the hip: <c>A_Sheathe_Sword_Masc</c> and <c>_Femn</c>.</summary>
+        public const string CombatSheathe = CombatBase + ".sheath.sheathe";
+
+        /// <summary>The two sheath rows, for the catalogue build and the test that each resolves or snaps.</summary>
+        public static readonly string[] SheathRows = { CombatDraw, CombatSheathe };
+
+        /// <summary>
         /// Hair pieces a colonist can be dealt, as a family
         /// (<c>docs/design/29-modular-colonists.md</c>).
         ///

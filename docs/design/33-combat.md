@@ -1563,3 +1563,93 @@ each seen to fail and then restored:
   again.
 - The Health tab's fill is now deeper than the need bars beside it on the pane. Keeping one owner
   for the colour costs the two bars on the pane their match.
+
+### 8b. Drawn and sheathed
+
+Built 2026-09-23 on `claude/combat-sheath` (from `claude/combat-c2-polish`, `70253cdf`). The
+owner's rule, and who owns each half of it:
+
+| Half | Owner | Where |
+|---|---|---|
+| **Whether** the weapon is out | the simulation, derived at each publish | `WeaponDraw`, published as `PawnFlags.Drawn` |
+| **When** it goes back after the last reason | presentation's clock, in simulation ticks | `Odyssey.Hud.WeaponSheath` (Hud assembly, so the fast tier holds it) |
+| **Where** it hangs and **how** it moves | the figure | `PawnFigureDirector.Sheath.cs` |
+
+**The rule** (`WeaponDraw.IsDrawn`). Drawn when the pawn holds a weapon (`WeaponHand.Held`, so a
+field naming a thing on the ground draws nothing) and any of: it is **hostile** (a marauder always
+has its weapon out); it is **drafted**; it is in `Job_AttackMelee` and its target is within
+**2 tiles**, Chebyshev on the ground and at most one layer up or down (a rescue names its patient
+in the same `CombatTarget` field, which is why the job is asked and not only the field); or it is
+inside the **retaliation window** a blow opened (`RetaliateUntilTick`, 1,200 ticks from the Def).
+Every input is saved and hashed where it lives, so the flag is a report: neither saved nor hashed,
+the same after a load, read back by nothing in the simulation. **No golden moved.**
+
+**The put-away** (`WeaponSheath.Step`). Out on the frame a reason arrives; back **120 ticks** (about
+2 s at the composition root's 60 a second) after the last one, or **at once on release from the
+draft** when the simulation no longer says drawn. In the simulation there is no saved tick the last
+reason ended on, and adding one would be state that decides nothing and still has to be saved, so
+the hold is presentation's. It counts ticks off the frame, so a pause holds a weapon out. A first
+sighting (a figure lent mid-fight) takes the weapon as it finds it and animates nothing.
+
+**The hip.** The sheath hangs off the **real pelvis**: the parent of the left thigh, because the
+Synty avatar maps `HumanBodyBones.Hips` to `Root` on the floor (`20-beds.md` §7b). Measured once at
+bind, in the idle, off the drawn mesh (`HipReach`): at the height of the left hip joint, the
+outermost baked vertex on the figure's left that lies nearer the thigh or the pelvis than the left
+arm's segments — at hip height the hanging hand sticks out further than the hip, and a sheath hung
+outside it hangs in the air. Nearest bone segment rather than skin weights, which a mesh not marked
+readable does not give up in a player. Each weapon is then fitted to it off its own mesh, as the
+fist's fit is (`FitWeaponAtHip`): the haft down, leaning back 25° and splayed out 6°, the blade's
+width along the figure's front so the flat lies on the thigh, the point a quarter of the way up
+from the butt at the hip, stood off the body by the weapon's own half-thickness. Both fits are kept
+as local poses, and moving between hip and hand is a re-parent, never a re-fit.
+
+**The draw and the sheathe.** Two rows outside `ModuleIds.CombatRows` (whose order is the combat
+roles' and whose test holds every non-blow clip to an impact of nought): `CombatDraw`
+(`A_Draw_Sword_Masc`, `_Femn`) and `CombatSheathe` (`A_Sheathe_Sword_Masc`, `_Femn`), Polygon, in
+place, the variant by the body's sex (the colonist row's `sex`). They play on a **third input of the
+fight's layer mixer, masked to the upper body** (`UpperBody`: everything but the root, the legs and
+the foot IK), so a colonist drafted mid-stride keeps walking; its weight is multiplied by one minus
+the fight layer's, so a swing, a react or a held state wins, and any of them finishes the draw at
+once. **The prop changes bone at the hand-on-hilt moment, not at the clip's start**: measured once
+per clip, on the first figure of that sex built, by sampling the clip at 60 Hz and taking the time
+the palm (`HandGrip.Palm`) comes nearest the stow point; nearer than a fifth of the figure's height
+or the fallback fraction (0.35 of the draw, 0.65 of the sheathe, INVENTED) stands. Without the
+pack's rows the weapon **snaps** on the edge.
+
+**One hand.** While a tool is in it (the work weight above the threshold `ShowHeldTool` shows the
+tool at) or a load is in the arms, the weapon is at the hip whatever the rule says and nothing
+plays; lying down (asleep or downed) it is not drawn at all. This replaces the integration's rule
+(§6E) that hid the weapon whenever the hand was busy: it is now always visible, at the hip or in the
+hand.
+
+**Tests.** Fast tier, `WeaponDrawTests` (7): drafted → drawn and bare hands draw nothing; released
+from the draft with nobody near → not drawn on the next publish; an undrafted colonist going about
+3,000 ticks of her day → never drawn; the target at 3 tiles → sheathed, at 2 → drawn, at 5 → sheathed;
+the distance rule's layer arithmetic; struck with the striker stood 5 tiles off → drawn, and an armed
+bystander not; a marauder stood 10 tiles from anybody → drawn every tick, and bare-handed → not.
+**Six mutations of the rule, each seen to fail the test that owns it**: no draft clause, no hostile
+clause, no retaliation clause, reach 3, always a reason, no hand gate. `WeaponSheathTests` (7, Hud):
+the hold, a reason inside it restarting it, the release, a pause, a rewound tick, the first sighting;
+three mutations (no hold, release ignored, a first sighting animating) each seen to fail.
+`CombatContractTests.EveryPawnViewSaysWhatItIs` now expects a spawned marauder to publish `Drawn`.
+EditMode, **written without a Unity run**: `WeaponSheathPlacementTests` — the rows resolve or the
+weapon snaps; at peace the weapon is on the pelvis (not the floor bone), on the left, at the hip;
+with the pack stripped it snaps both ways, and the hold is 120 ticks; with the pack the draw leaves
+it at the hip on its first frame and puts it in the hand past the measured grasp, and the sheathe
+brings it back; the tool and the weapon never both in the fist, and the weapon under exactly one
+bone, every frame. `WeaponPropTests`' hand test is rewritten for the hip. Their negative controls
+are named here and **not yet seen to fail**: the stow parented to `HumanBodyBones.Hips`; the grasp
+taken at the clip's start; the hand-busy test removed from `PoseSheath`.
+
+**For the integrator.** Rebuild the catalogue (`PlayScene.RebuildCatalogue`, then
+`CharacterSwatches.Classify`): the two rows are new and `TheSheathRowsResolveToAllowedClipsOrTheWeaponSnaps`
+fails until they are in the committed asset. Presentation and the two test files were compiled with
+`dotnet` against the editor's `UnityEngine` module DLLs as a check; Unity has compiled none of it.
+
+**Open.** Every number in the hip fit (tilt, splay, hang point, forward, clearance, band) is
+INVENTED and unseen; whether the grasp measured on one body lands on the hilt on the other sixty;
+whether the pack's draw, authored for a sword at the pack's own hip, reads with a bat or a crowbar
+hung at ours; the sheathe opens from the sword stance, so the arm lifts into it over the 0.12 s ease
+from wherever it was; a hog's revenge draws nothing (no weapon), and a colonist struck keeps her
+weapon out for the whole 20 s retaliation window, which is the owner's rule read literally and the
+first thing to ask about at the playtest.
