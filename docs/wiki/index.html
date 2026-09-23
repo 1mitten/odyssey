@@ -146,12 +146,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <nav aria-label="Sections"><h2>Sections</h2><ul class="navlist">
 <li><a href="#commodities">Commodities<b>50</b></a></li>
 <li><a href="#items">Items and equipment<b>30</b></a></li>
-<li><a href="#buildings">Buildings and orders<b>82</b></a></li>
+<li><a href="#buildings">Buildings and orders<b>83</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
 <li><a href="#work">Work and skills<b>42</b></a></li>
 <li><a href="#colonists">Colonists<b>37</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
-<li><a href="#events">Events<b>40</b></a></li>
+<li><a href="#events">Events<b>41</b></a></li>
 <li><a href="#world">World and interface<b>96</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
@@ -161,8 +161,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>712</b><i>named entries</i></div>
-<div class="stat"><b>270</b><i>with icon art</i></div>
+<div class="stat"><b>714</b><i>named entries</i></div>
+<div class="stat"><b>272</b><i>with icon art</i></div>
 <div class="stat m"><b>442</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
@@ -665,7 +665,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="buildings" data-sec="1">
-<h2>Buildings and orders <em class="count">82 entries</em></h2>
+<h2>Buildings and orders <em class="count">83 entries</em></h2>
 <p class="blurb">Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.</p>
 <h3 class="nsh">Architect categories</h3>
 <div class="tbl">
@@ -894,6 +894,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="nm">Conduit<span class="k">ui.arch.tool.conduit</span></div>
 <div class="dsc">Carries power. Connects vertically</div>
 <div class="art"><span class="pill">high</span> manufactured</div>
+<div class="ms">M3</div>
+</div>
+<div class="row" id="ui.arch.tool.unwire" data-hay="remove conduit ui.arch.tool.unwire takes a conduit up, and nothing else in the cell " data-gap="0">
+<div class="nm">Remove conduit<span class="k">ui.arch.tool.unwire</span></div>
+<div class="dsc">Takes a conduit up, and nothing else in the cell</div>
+<div class="art"><span class="pill">med</span> manufactured</div>
 <div class="ms">M3</div>
 </div>
 <div class="row" id="ui.arch.tool.battery" data-hay="battery ui.arch.tool.battery stores charge against the night " data-gap="0">
@@ -2154,7 +2160,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="events" data-sec="1">
-<h2>Events <em class="count">40 entries</em></h2>
+<h2>Events <em class="count">41 entries</em></h2>
 <p class="blurb">Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.</p>
 <h3 class="nsh">Alerts</h3>
 <div class="tbl">
@@ -2272,6 +2278,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">A net has gone dark</div>
 <div class="art"><span class="pill">med</span> salvage gear</div>
 <div class="ms">M2</div>
+</div>
+<div class="row" id="ui.alert.nofuel" data-hay="out of fuel ui.alert.nofuel a generator is empty and its net wants power " data-gap="0">
+<div class="nm">Out of fuel<span class="k">ui.alert.nofuel</span></div>
+<div class="dsc">A generator is empty and its net wants power</div>
+<div class="art"><span class="pill">med</span> salvage gear</div>
+<div class="ms">M3</div>
 </div>
 <div class="row" id="ui.alert.spoilage" data-hay="spoiling ui.alert.spoilage food is going off " data-gap="0">
 <div class="nm">Spoiling<span class="k">ui.alert.spoilage</span></div>
@@ -3205,7 +3217,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 712, "gaps": 442};</script>
+<script>window.WIKI={"total": 714, "gaps": 442};</script>
 <script>
 (function(){
   var D = window.WIKI;

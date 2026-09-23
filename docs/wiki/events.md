@@ -2,7 +2,7 @@
 
 Three channels, and the difference is not cosmetic. Alerts are conditions that persist until fixed. Bulletins are things that happened and are kept until dismissed. Toasts are things that happened and are gone in six seconds, which is the right home for anything that recurs often enough that clearing it by hand would become a chore. Alerts and bulletins carry the layer they occurred on and jump the camera there, which a flat colony sim never has to think about.
 
-40 entries, 16 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+41 entries, 16 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Alerts
 
@@ -27,6 +27,7 @@ Three channels, and the difference is not cosmetic. Alerts are conditions that p
 | **Raid** | `ui.alert.raid` | Hostiles are here | sheet 06 (action tiles), med | M2 |
 | **Drop from above** | `ui.alert.drop` | Something came in through open sky <br>**Needs:** something arriving through open sky. Our own concept, and verticality-specific | no art | M2 |
 | **Power failure** | `ui.alert.powerloss` | A net has gone dark | sheet 08 (salvage gear), med | M2 |
+| **Out of fuel** | `ui.alert.nofuel` | A generator is empty and its net wants power | sheet 08 (salvage gear), med | M3 |
 | **Spoiling** | `ui.alert.spoilage` | Food is going off | sheet 02 (food), low | M2 |
 | **No light** | `ui.alert.darkness` | Work is slowed for want of a lamp | sheet 06 (action tiles), low | M2 |
 | **Trapped** | `ui.alert.trapped` | Someone cannot reach the colony <br>**Needs:** a colonist cut off from the colony | no art | M2 |

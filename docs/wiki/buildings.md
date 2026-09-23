@@ -2,7 +2,7 @@
 
 Everything on the architect menu: what can be built, and the one-off orders that can be given to things that already exist. The vertical connectors matter more here than in a flat colony sim, because a stair occupies two cells and a ladder one.
 
-82 entries, 24 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+83 entries, 24 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Architect categories
 
@@ -50,6 +50,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Extinguish** | `ui.arch.tool.extinguish` | Put this fire out now | sheet 05 (tools and weapons), low | M3 |
 | **Harvest** | `ui.arch.tool.harvest` | Take the crop | sheet 05 (tools and weapons), high | M3 |
 | **Conduit** | `ui.arch.tool.conduit` | Carries power. Connects vertically | sheet 04 (manufactured), high | M3 |
+| **Remove conduit** | `ui.arch.tool.unwire` | Takes a conduit up, and nothing else in the cell | sheet 04 (manufactured), med | M3 |
 | **Battery** | `ui.arch.tool.battery` | Stores charge against the night | sheet 08 (salvage gear), high | M3 |
 | **Generator** | `ui.arch.tool.generator` | Burns fuel for power | sheet 08 (salvage gear), high | M3 |
 | **Solar array** | `ui.arch.tool.solar` | Free power, and useless in the dark | sheet 08 (salvage gear), high | M3 |

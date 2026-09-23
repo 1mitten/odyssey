@@ -363,6 +363,9 @@ namespace Odyssey.Tests.Hud
             {
                 PaletteTools.Wall, PaletteTools.Slab, PaletteTools.Paving, PaletteTools.Ladder,
                 PaletteTools.Bed, PaletteTools.Door, PaletteTools.Shelf, PaletteTools.Campfire,
+                // Power (design 32): the generator and the heater are built of wood or stone; the
+                // line is always wood and asks nothing, and taking one up is an order.
+                PaletteTools.Generator, PaletteTools.Heater,
             };
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),

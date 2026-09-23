@@ -347,6 +347,7 @@ namespace Odyssey.Hud
             Tabs.Clear();
             Commands.Clear();
             _bedUnderPane = false;
+            _powerSwitchUnderPane = false;
             IsStore = false;
             IsBuiltStore = false;
             StoreSummary = string.Empty;
@@ -724,6 +725,48 @@ namespace Odyssey.Hud
         bool _bedUnderPane;
 
         /// <summary>
+        /// Whether the tile under the pane is a power building whose switch row can be pressed
+        /// (design 32 §5) — the pane's second interactive fact, kept exactly as the bed's is:
+        /// cleared every refresh, set only by <see cref="SetCellRows"/> and set <b>above</b> its
+        /// early return, so the control cannot die on the second refresh and go on looking alive.
+        /// </summary>
+        public bool PowerSwitchUnderPane => _powerSwitchUnderPane;
+
+        /// <summary>Whether the building under the pane is switched on; what a press on its switch row reverses.</summary>
+        public bool PowerSwitchOn { get; private set; }
+
+        bool _powerSwitchUnderPane;
+
+        /// <summary>Everything the power rows quote, folded into one number for the rebuild guard.</summary>
+        int _cellRowsPower;
+
+        /// <summary>The switch row's key, which the shell compares against rather than against a word.</summary>
+        public const string PowerSwitchRow = "switch";
+
+        /// <summary>
+        /// The power building and net at this cell, folded to one number for the guard — every
+        /// field the rows below print, so a hopper going down a unit or a net going dark rebuilds
+        /// the rows and nothing else does.
+        /// </summary>
+        static int PowerSignature(WorldSnapshot snapshot, int cell)
+        {
+            int sig = 17;
+            if (snapshot.TryGetPowerDevice(cell, out PowerDeviceView d))
+            {
+                sig = sig * 31 + (d.On ? 1 : 2);
+                sig = sig * 31 + (d.Powered ? 1 : 2);
+                sig = sig * 31 + d.NetKey;
+                sig = sig * 31 + d.LoadW;
+                sig = sig * 31 + d.FuelMilli / 1_000;
+                if (snapshot.TryGetPowerNet(d.NetKey, out PowerNetView net))
+                    sig = sig * 31 + net.SupplyW * 7 + net.DemandW * 13 + (int)net.State;
+            }
+            foreach (ConduitView line in snapshot.Conduits)
+                if (line.CellIndex == cell) sig = sig * 31 + (int)line.Kind * 3 + (int)line.State + 1_000;
+            return sig;
+        }
+
+        /// <summary>
         /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
         /// title is the zone's, the subtitle is its extent, and there are two tabs with Storage
         /// first and the tile's own facts second.
@@ -787,6 +830,12 @@ namespace Odyssey.Hud
             // piece of quality-bearing furniture would, and the row it grew would open the *bed*
             // picker over it. Three characters against a report.
             _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
+            {
+                _powerSwitchUnderPane = true;
+                PowerSwitchOn = switchable.On;
+            }
+            int powerSignature = PowerSignature(snapshot, detail.CellIndex);
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
@@ -811,7 +860,8 @@ namespace Odyssey.Hud
                 && _cellRowsStoredUnits == detail.StoredUnits
                 && _cellRowsStoredDef == detail.StoredDef
                 && _cellRowsIndoors == detail.IsIndoors
-                && _cellRowsTemp == detail.AmbientTempC) return;
+                && _cellRowsTemp == detail.AmbientTempC
+                && _cellRowsPower == powerSignature) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -833,6 +883,7 @@ namespace Odyssey.Hud
             _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
             _cellRowsTemp = detail.AmbientTempC;
+            _cellRowsPower = powerSignature;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -860,6 +911,40 @@ namespace Odyssey.Hud
                 Row(n++, "owner", detail.EdificeOwner > 0
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
+            }
+
+            // A power building's own facts (design 32 §10), beside what it is: what it is doing —
+            // the actionable clause, so it leads — its hopper, its net's balance, and the switch,
+            // which the shell turns a press on into the switch intent, as it does the bed's owner.
+            if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView device))
+            {
+                bool netKnown = snapshot.TryGetPowerNet(device.NetKey, out PowerNetView net);
+                HudColour? tint = !device.On || device.NetKey < 0 ? HudTheme.TextMeta
+                    : device.Role == PowerRole.Generator && device.BurnsFuel && device.FuelMilli <= 0 ? HudTheme.Bad
+                    : netKnown ? PowerLabels.Colour(net.State) : (HudColour?)null;
+                Row(n++, "power", PowerLabels.Status(device, netKnown, net), tint);
+                if (device.BurnsFuel)
+                    Row(n++, "fuel", PowerLabels.Fuel(device),
+                        device.FuelMilli * 2 < device.FuelCapacityMilli ? HudTheme.Warn : (HudColour?)null);
+                if (netKnown)
+                    Row(n++, "net", PowerLabels.Balance(net) + " — " + PowerLabels.State(net.State),
+                        PowerLabels.Colour(net.State));
+                Row(n++, PowerSwitchRow, Registry.Label(device.On ? "ui.command.switchoff" : "ui.command.switchon"));
+            }
+
+            // A line in the cell, when it is drawn: laid (and on what), ordered, or marked to come
+            // up. Silent while the lines are hidden — a hidden thing the pane announced would be
+            // the pane contradicting the picture.
+            foreach (ConduitView line in snapshot.Conduits)
+            {
+                if (line.CellIndex != detail.CellIndex) continue;
+                string lineSays = line.Kind == ConduitKind.Ordered ? "ordered"
+                    : line.Kind == ConduitKind.Marked ? "marked to come up"
+                    : "laid — " + PowerLabels.State(line.State);
+                if (line.Kind == ConduitKind.Built && snapshot.TryGetPowerNet(line.NetKey, out PowerNetView lineNet))
+                    lineSays += ", " + PowerLabels.Balance(lineNet);
+                Row(n++, "conduit", lineSays, line.Kind == ConduitKind.Built ? PowerLabels.Colour(line.State) : (HudColour?)null);
+                break;
             }
 
             // A field's own answer, beside the ground's (owner, 2026-09-18 - clicking a growing

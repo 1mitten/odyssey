@@ -170,6 +170,7 @@ ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
 ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
 ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
+ui.arch.tool.unwire,Remove conduit,ui.arch.tool,M3,"Takes a conduit up, and nothing else in the cell"
 ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night
 ui.arch.tool.generator,Generator,ui.arch.tool,M3,Burns fuel for power
 ui.arch.tool.solar,Solar array,ui.arch.tool,M3,"Free power, and useless in the dark"
@@ -305,6 +306,7 @@ ui.alert.prisonerescape,Prisoner escaping,ui.alert,M2,One is getting out
 ui.alert.raid,Raid,ui.alert,M2,Hostiles are here
 ui.alert.drop,Drop from above,ui.alert,M2,Something came in through open sky
 ui.alert.powerloss,Power failure,ui.alert,M2,A net has gone dark
+ui.alert.nofuel,Out of fuel,ui.alert,M3,A generator is empty and its net wants power
 ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
 ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
