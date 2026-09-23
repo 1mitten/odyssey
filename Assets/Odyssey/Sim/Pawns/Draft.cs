@@ -29,6 +29,20 @@ namespace Odyssey.Sim.Pawns
                 return false;
             }
 
+            // A threat beside her is hit without an order (design 33 §1): a standing hostile, or
+            // anybody attacking her. Not a forced job, so the attack driver never chases — she
+            // strikes from where she stands and holds again when it steps away or goes down. A
+            // threat is activity, so the four quiet hours start again.
+            Pawn? threat = Melee.AdjacentThreat(ctx, pawn);
+            if (threat != null)
+            {
+                pawn.DraftQuietSinceTick = ctx.CurrentTick;
+                job.Reset(JobIndex.AttackMelee);
+                job.TargetCell = threat.Cell;
+                pawn.CombatTarget = threat.Id.Value;
+                return true;
+            }
+
             job.Reset(JobIndex.DraftHold);
             return true;
         }
@@ -49,6 +63,13 @@ namespace Odyssey.Sim.Pawns
         public override JobStatus Tick(PawnContext ctx)
         {
             if (!Pawn.Drafted) return JobStatus.Succeeded;
+
+            // A threat within reach ends the hold, and the Drafted node's next answer is the blow
+            // (design 33 §1). Asked every tick, and it scales with the pawns on the board for each
+            // colonist drafted: an integer comparison each, and a step test for the few that are
+            // threats. A drafted colonist is exempt from the think-loop breaker, so the hold, the
+            // blow and the hold again cost nothing but the job counters.
+            if (Melee.AdjacentThreat(ctx, Pawn) != null) return JobStatus.Succeeded;
 
             // Exhaustion, asked here as well as in the node: a colonist already holding never
             // thinks again, so the node alone would never see her rest reach nought.
