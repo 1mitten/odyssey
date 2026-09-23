@@ -38,14 +38,36 @@ namespace Odyssey.Presentation.Rendering
     /// <summary>A module id resolved to drawable parts.</summary>
     public sealed class ResolvedModule
     {
-        public ResolvedModule(string id, ModuleShape shape, ModulePart[] parts, bool usesArt)
+        public ResolvedModule(string id, ModuleShape shape, ModulePart[] parts, bool usesArt,
+            Matrix4x4 head = default, bool hasHead = false)
         {
             Id = id;
             Shape = shape;
             Parts = parts;
             UsesArt = usesArt;
+            Head = head;
+            HasHead = hasHead;
             Bounds = BoundsOf(parts);
         }
+
+        /// <summary>
+        /// Where this module's head bone sits, in the same space <see cref="ModulePart.Local"/> is
+        /// in, so that <c>placement * Head</c> puts a thing on its head
+        /// (<c>docs/design/29-modular-colonists.md</c>, MC6).
+        ///
+        /// <para><b>Captured at bake time because there is nothing to ask afterwards.</b> A baked
+        /// module is a mesh and a matrix; the rig it came from was instantiated, posed, measured
+        /// and destroyed inside one method. The head is read there, in the posed rig, and pushed
+        /// through the same normalisation every part gets — so it inherits the pivot convention and
+        /// the 1.4 scale rather than having them applied a second time by a caller who might get
+        /// one of them wrong.</para>
+        ///
+        /// <para>Meaningless unless <see cref="HasHead"/>; most modules are walls.</para>
+        /// </summary>
+        public Matrix4x4 Head { get; }
+
+        /// <summary>Whether this module had a head bone to find. False for everything but a body.</summary>
+        public bool HasHead { get; }
 
         public string Id { get; }
         public ModuleShape Shape { get; }
@@ -236,6 +258,8 @@ namespace Odyssey.Presentation.Rendering
 
             ModulePart[] parts;
             bool usesArt = false;
+            Matrix4x4 head = Matrix4x4.identity;
+            bool hasHead = false;
             if (entry != null && entry.material != null)
             {
                 // A material straight onto the cell-shaped box: how textured ground is drawn.
@@ -260,7 +284,7 @@ namespace Odyssey.Presentation.Rendering
             }
             else if (entry != null && entry.prefab != null)
             {
-                parts = FlattenPrefab(entry.prefab!, entry, shape);
+                parts = FlattenPrefab(entry.prefab!, entry, shape, out head, out hasHead);
                 usesArt = parts.Length > 0;
             }
             else
@@ -274,7 +298,7 @@ namespace Odyssey.Presentation.Rendering
                 _missing.Add(moduleId!);
             }
 
-            var module = new ResolvedModule(moduleId!, shape, parts, usesArt);
+            var module = new ResolvedModule(moduleId!, shape, parts, usesArt, head, hasHead);
             _modules.Add(module);
             int index = _modules.Count - 1;
             _byId[moduleId!] = index;
@@ -328,8 +352,12 @@ namespace Odyssey.Presentation.Rendering
             return keep;
         }
 
-        ModulePart[] FlattenPrefab(GameObject prefab, ModuleEntry entry, ModuleShape shape)
+        ModulePart[] FlattenPrefab(GameObject prefab, ModuleEntry entry, ModuleShape shape,
+            out Matrix4x4 head, out bool hasHead)
         {
+            head = Matrix4x4.identity;
+            hasHead = false;
+
             var filters = prefab.GetComponentsInChildren<MeshFilter>(includeInactive: false);
             var raw = new List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)>();
             Matrix4x4 rootInverse = prefab.transform.worldToLocalMatrix;
@@ -379,7 +407,8 @@ namespace Odyssey.Presentation.Rendering
                 else bounds.Encapsulate(local_b);
             }
 
-            CollectSkinned(prefab, entry, raw, ref bounds, ref hasBounds);
+            CollectSkinned(prefab, entry, raw, ref bounds, ref hasBounds,
+                out Matrix4x4 headLocal, out hasHead);
 
             if (raw.Count == 0) return new ModulePart[0];
 
@@ -418,6 +447,10 @@ namespace Odyssey.Presentation.Rendering
 
             Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry))
                               * Matrix4x4.Translate(-normalise);
+
+            // The head goes through the same `place` every part does, so it inherits the pivot
+            // convention and the scale rather than having them re-applied by a caller.
+            if (hasHead) head = place * headLocal;
 
             var parts = new ModulePart[merged.Count];
             for (int i = 0; i < merged.Count; i++)
@@ -545,8 +578,12 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void CollectSkinned(GameObject prefab, ModuleEntry entry,
             List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw,
-            ref Bounds bounds, ref bool hasBounds)
+            ref Bounds bounds, ref bool hasBounds,
+            out Matrix4x4 headLocal, out bool hasHead)
         {
+            headLocal = Matrix4x4.identity;
+            hasHead = false;
+
             if (prefab.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true).Length == 0)
                 return;
 
@@ -554,11 +591,30 @@ namespace Odyssey.Presentation.Rendering
             instance.hideFlags = HideFlags.HideAndDontSave;
             try
             {
+                // The same bare head the live figures get. The packs ship hair, hats and hoods as
+                // active skinned children, and this bakes every active one -- so without this a
+                // colonist past the figure cap wore the pack's own hair while the same colonist in
+                // front of the camera wore ours. Two drawers, one answer
+                // (docs/design/29-modular-colonists.md, MC6).
+                ColonistAttachments.BareTheHead(instance);
+
                 // Pose it before the snapshot is taken, or the bind pose is what gets captured.
                 if (entry.poseClip != null)
                     entry.poseClip!.SampleAnimation(instance, entry.poseClipTime);
 
                 Matrix4x4 rootInverse = instance.transform.worldToLocalMatrix;
+
+                // Read after the pose, so it is where the head actually is in the baked figure.
+                var animator = instance.GetComponent<Animator>();
+                if (animator != null && animator.isHuman)
+                {
+                    Transform? headBone = animator.GetBoneTransform(HumanBodyBones.Head);
+                    if (headBone != null)
+                    {
+                        headLocal = rootInverse * headBone.localToWorldMatrix;
+                        hasHead = true;
+                    }
+                }
                 var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: false);
 
                 for (int i = 0; i < skins.Length; i++)
