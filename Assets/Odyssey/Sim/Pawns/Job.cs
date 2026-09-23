@@ -437,6 +437,7 @@ namespace Odyssey.Sim.Pawns
         {
             if (dest < 0) return JobStatus.Failed;
 
+
             if (Pawn.Cell == dest)
             {
                 Pawn.ClearPath();

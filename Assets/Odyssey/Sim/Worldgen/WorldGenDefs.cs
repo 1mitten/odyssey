@@ -226,6 +226,31 @@ namespace Odyssey.Sim.Worldgen
         /// </summary>
         public byte constructedSupport = 4;
 
+        // ---- wildlife (design 30 §1) ----------------------------------------------------------
+
+        /// <summary>
+        /// The kinds that live on this world, how common each is, how many arrive together and
+        /// where they are put. Empty is a world with no animals, which is what the bare board is
+        /// on purpose: anything that is not grass on it is a bug.
+        /// </summary>
+        public Pawns.Wildlife.WildlifeEntry[] wildlife = Array.Empty<Pawns.Wildlife.WildlifeEntry>();
+
+        /// <summary>
+        /// The population the board holds, per ten thousand walkable, dry, reachable surface
+        /// columns — a census taken of the board as generated, not a number typed for one size.
+        /// Reachable is the word that matters: an animal hops only at a drawn ramp, so it can
+        /// walk to under half of the meadow's 14,400 columns (6,354 on seed 1), and fifteen per
+        /// ten thousand of those is nine or ten animals — about one per 1,500 cells of board.
+        /// Zero is no wildlife and no level-keeping at all.
+        /// </summary>
+        public int wildlifePer10000Columns;
+
+        /// <summary>
+        /// The most animals the level-keeper will let a board carry, whatever the census says.
+        /// The 64 drawn figures are the colonists' first (design 29 §8, the figure ceiling).
+        /// </summary>
+        public int wildlifeCeiling = 24;
+
         /// <summary>The slice map: 60 x 60 x 5 — one service layer, street level, three storeys.</summary>
         public static MapGenDef Slice() => new MapGenDef { defName = "MapGen_Slice", groundLayer = 1 };
 
@@ -238,6 +263,14 @@ namespace Odyssey.Sim.Worldgen
         {
             var gen = new MapGenDef { defName = "MapGen_" + size };
             gen.groundLayer = Math.Max(1, Math.Min(12, size.SizeY / 3));
+            // The ruin's wildlife: rats first, in the rubble, and a few hogs at the middens
+            // (design 30 §1). The same density as the meadow; a city block is no emptier.
+            gen.wildlife = new[]
+            {
+                new Pawns.Wildlife.WildlifeEntry("PawnKind_DuctRat", 3, 1, 2, Pawns.Wildlife.Habitat.Rock),
+                new Pawns.Wildlife.WildlifeEntry("PawnKind_MiddenHog", 1, 2, 3, Pawns.Wildlife.Habitat.Any),
+            };
+            gen.wildlifePer10000Columns = 15;
             return gen;
         }
 
@@ -251,6 +284,9 @@ namespace Odyssey.Sim.Worldgen
             if (minSoilDepth < 1 || maxSoilDepth < minSoilDepth) throw new ArgumentOutOfRangeException(nameof(minSoilDepth));
             if (minRockDepth <= maxSoilDepth || maxRockDepth < minRockDepth) throw new ArgumentOutOfRangeException(nameof(minRockDepth));
             if (vaultSize < 3) throw new ArgumentOutOfRangeException(nameof(vaultSize));
+            if (wildlifePer10000Columns < 0) throw new ArgumentOutOfRangeException(nameof(wildlifePer10000Columns));
+            if (wildlifeCeiling < 0) throw new ArgumentOutOfRangeException(nameof(wildlifeCeiling));
+            for (int i = 0; i < wildlife.Length; i++) wildlife[i].Validate();
         }
     }
 

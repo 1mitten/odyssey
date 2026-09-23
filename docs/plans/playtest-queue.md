@@ -23,6 +23,44 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
+  (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she
+  should visibly **run** — about twice her walking speed, the run clip, not a sped-up walk. The
+  diamond, the order line and the destination bracket are now a deep, dark, translucent red. A
+  wrong answer is a figure that skates (the walk clip played fast) or jogs so little it still
+  reads as a walk; or a red too dark to find at dusk or against dark rock. The pace is one number,
+  `draftedPacePerMille` in `Colonist.xml`. **And listen:** pressing T should draw a blade, once
+  however many are selected, and releasing should be silent. A wrong answer is a sound late
+  enough to feel like lag, one loud enough to jump at, or a clatter when five are drafted at once
+  (design 33 §2i).
+
+- **Does the meadow feel lived in, and do the comings and goings read as wildlife?**
+  (`claude/wildlife`, PR to follow #167, `docs/design/30-wildlife.md`). Press Play → New game
+  on the meadow and do not spawn anything: nine or ten animals should already be on the board —
+  hog sounders of three to five in the woodland, rats alone by outcrops and rock faces — and
+  **none inside the starting clearing**. Watch for a quarter of an hour. Things to judge that
+  no test can: whether nine or ten on a 120 × 120 board reads as *alive* or as *empty*
+  (`wildlifePer10000Columns` is the dial; the ceiling is 24 and the figures are the colonists'
+  first); whether a **sounder** landing together reads as a family or as a clump; whether a hog
+  that decides to go and walks to the edge reads as *wandering off* or as *fleeing* — a wrong
+  answer is one that looks pursued; whether an arrival at the edge is noticed at all, and
+  whether it looks like it walked in or like it appeared (it is placed on the ring on a rare
+  tick, so it appears; the honest fix is a walk-in from off-board); whether a rat by day and a
+  hog by night, resting three times as long, read as *asleep* or as *stuck*; and whether the
+  city's rats in the rubble are visible from the play camera at all. Click one: still
+  *Midden hog · Wandering* or *Resting*. Then **F5**, or the Animals item on the bar: the count
+  strip should say how many of each kind are out there and the rows should list them nearest
+  first with the KIND heading marked; click DOING and the resting ones should gather; click a
+  row and the tab should close, the camera land on that animal and the pane show it, with the
+  depth where you had it (owner, 2026-09-23) — a wrong answer is the view lurching to another
+  layer, or the tab and the pane both on screen; an animal in a cavern below the slice is
+  selected without being shown, which is the price of the depth staying put. Whether the tab **needs the distance back** (the brief dropped it; the rows are still
+  ordered by it) is the question only you can answer, and whether 560 wide reads as a tab or
+  as a card. After the third look (2026-09-23): whether two sounders now land in different
+  parts of the meadow and each reads as a loose family rather than a knot — a wrong answer is
+  all the hogs in one glade again, or a sounder so scattered it is not a sounder; and press the
+  info button on a selected hog: the Almanac should open on *Midden hog* under Fauna, and what
+  it says should be true of what you have watched.
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five
@@ -53,6 +91,7 @@ the next session learns to ignore.
   living rather than pacing a corner or standing for minutes. Click one: the pane should say
   *Midden hog · Wandering* or *Resting*, with no face, needs or tabs; the roster should not gain
   a card. Both scales are one number each in `AnimalImport.Scales`.
+
 - **Does the frame still fall over at a high colony count?** (PRs #171 and the aspect-lookup PR,
   `docs/design/25-pawn-steering.md` §9 and `31-aspect-lookup.md`.) **One row for two units**, because
   they are one answer. Spawn colonists past a couple of
@@ -655,6 +694,7 @@ Rows move here with the date, the verdict in one line, and where the consequence
 
 | Judged | What | Verdict | Consequence |
 |---|---|---|---|
+| 2026-09-23 | **Drafting and moving** (C1, `claude/combat-mvp`, `docs/design/33-combat.md` §2) | working — owner: *"the drafting, T and moving onto surfaces, diamond and 4 hours all seemed to work"* | two asks: a drafted colonist runs (§2h), the marks a deeper translucent red (§2g); both built, re-queued above |
 | 2026-09-20 | **Head turning and gaze** (PR #128, `docs/design/23-head-turning-and-gaze.md`) | working — owner: *"gaze … is all working now"* | none; the design doc stands |
 | 2026-09-20 | **The flush selection cursor** (PR #127, `docs/design/23-flush-selection-cursor.md`) | working | none; the design doc stands |
 | 2026-09-20 | **The sight fade leaving water, banks and marsh whole** (PR #123) | working — the exemptions read as deliberate | none |

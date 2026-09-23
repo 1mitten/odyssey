@@ -63,7 +63,10 @@ namespace Odyssey.Tests.Sim
         {
             ColonyWorld colony = Build(seed: 1u, acrossStoreys: true);
 
-            int pawnCount = colony.Pawns.Pawns.Count;
+            // The ruin seeds its own rats and hogs beside the colonists (design 30); the count
+            // this run is about is the people.
+            int pawnCount = 0;
+            foreach (Odyssey.Sim.Pawns.Pawn pawn in colony.Pawns.Pawns.All) if (pawn.IsPerson) pawnCount++;
             Assert.That(pawnCount, Is.EqualTo(Colonists), colony.Placement.ToString());
 
             // The run proves nothing about storeys if the colony was never spread over them. A
@@ -109,7 +112,9 @@ namespace Odyssey.Tests.Sim
                 $"Placement: {colony.Placement}");
 
             Assert.That(colony.World.CurrentTick, Is.EqualTo(Day));
-            Assert.That(colony.Pawns.Pawns.Count, Is.EqualTo(pawnCount), "a colonist left the registry");
+            int peopleAtEnd = 0;
+            foreach (Odyssey.Sim.Pawns.Pawn pawn in colony.Pawns.Pawns.All) if (pawn.IsPerson) peopleAtEnd++;
+            Assert.That(peopleAtEnd, Is.EqualTo(pawnCount), "a colonist left the registry");
 
             // M2's whole claim: not that a colonist *can* reach another storey, which
             // StampedConnectorTests proves on a graph, but that one does it in the course of an
@@ -268,6 +273,7 @@ namespace Odyssey.Tests.Sim
             var pawns = colony.World.Views.Current.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
+                if (pawns[i].Kind != 0) continue;   // the ruin's animals are not the colony (design 30)
                 int id = pawns[i].Id.Value;
                 if (!visited.TryGetValue(id, out HashSet<int>? layers))
                 {
@@ -286,10 +292,14 @@ namespace Odyssey.Tests.Sim
         static void SampleNeeds(ColonyWorld colony, int step, int[] zeroStreak, int done)
         {
             var pawns = colony.World.Views.Current.Pawns;
+            int person = 0;
             for (int i = 0; i < pawns.Length; i++)
             {
-                Check(i, NeedIndex.Food, pawns[i].Food, "food");
-                Check(i, NeedIndex.Rest, pawns[i].Rest, "rest");
+                // The ruin's own animals are published too (design 30) and need nothing.
+                if (pawns[i].Kind != 0) continue;
+                Check(person, NeedIndex.Food, pawns[i].Food, "food");
+                Check(person, NeedIndex.Rest, pawns[i].Rest, "rest");
+                person++;
             }
 
             void Check(int pawn, int need, int value, string label)

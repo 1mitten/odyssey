@@ -358,6 +358,14 @@ namespace Odyssey.Tests.Sim
         /// are identical in every one of those numbers. The hash sees one more zero and the
         /// colonies do not know it. Earlier re-bakes used a throwaway probe and had to describe it
         /// afterwards; this one leaves the probe behind so the next re-bake starts with it.</para>
+        ///
+        /// <para><b>Re-baked a seventh time, 2026-09-23, by the draft (design 33 §2c) — the first
+        /// kind again.</b> Two jobs joined the job table, and <c>JobSystem</c> hashes a completed
+        /// and a failed counter per job def, so every board in the game contributes four more
+        /// zeros before a tick runs: all six numbers move, the three here included. The drafted
+        /// flag itself is hashed only while it is set, so it moved nothing. Measured with
+        /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
+        /// outputs diff clean for all three colonies.</para>
         /// </remarks>
         /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
         /// that had gained animals, and neither side's numbers were right for the merged code.</b>
@@ -380,8 +388,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 4330111643675104378UL,
-            Simulated = 4998053273604083060UL,
+            Generated = 12790787154328167162UL,
+            Simulated = 3706175734146959988UL,
         };
 
         /// <summary>
@@ -397,8 +405,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 615395511223038293UL,
-            Simulated = 2208959963572250979UL,
+            Generated = 16220491228864799437UL,
+            Simulated = 15373625479848544007UL,
         };
 
         /// <summary>
@@ -434,8 +442,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 2167611594478323175UL,
-            Simulated = 10733399126698945757UL,
+            Generated = 15126826616277547412UL,
+            Simulated = 3524714457912801410UL,
         };
     }
 }

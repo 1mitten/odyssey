@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
@@ -51,7 +52,9 @@ namespace Odyssey.Tests.Sim
             ColonyWorld colony = BuiltWith(chosen);
             colony.World.Tick();   // the starting-skill roll happens on the first tick
 
-            var placed = colony.Pawns.Pawns.All;
+            // The world seeds its own animals beside the colonists (design 30); they are not on a card.
+            var placed = new List<Pawn>();
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) if (pawn.IsPerson) placed.Add(pawn);
             Assert.That(placed.Count, Is.EqualTo(chosen.Length), "the colony is not the size chosen");
 
             for (int slot = 0; slot < chosen.Length; slot++)

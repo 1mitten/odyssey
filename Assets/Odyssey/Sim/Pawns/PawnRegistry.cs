@@ -155,6 +155,24 @@ namespace Odyssey.Sim.Pawns
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// Take a pawn off the board (design 30 §3). The first thing that ever removes one: there
+        /// is no health model and no death, so until wildlife could walk off the edge nothing
+        /// left the registry. Reservations are released; the job is the caller's to have ended,
+        /// because the registry does not know the job system. Iteration order — ascending id — is
+        /// kept by removing in place and renumbering the index after it, which is O(n) on an
+        /// event that happens a few times a day.
+        /// </summary>
+        public void Despawn(Pawn pawn)
+        {
+            if (pawn == null) throw new System.ArgumentNullException(nameof(pawn));
+            if (!_byId.TryGetValue(pawn.Id.Value, out int index) || !ReferenceEquals(_pawns[index], pawn)) return;
+            _ctx.Reservations.ReleaseAll(pawn);
+            _pawns.RemoveAt(index);
+            _byId.Remove(pawn.Id.Value);
+            for (int i = index; i < _pawns.Count; i++) _byId[_pawns[i].Id.Value] = i;
+        }
+
         /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
         public Pawn Adopt(Pawn pawn)
         {
@@ -180,6 +198,8 @@ namespace Odyssey.Sim.Pawns
             new DeconstructJobDriver(),
             new SowJobDriver(),
             new HarvestJobDriver(),
+            new DraftHoldJobDriver(),
+            new GotoJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -341,6 +361,15 @@ namespace Odyssey.Sim.Pawns
                 // publishes for every colonist and not only a working one: whatever draws a
                 // colonist's pace wants to be able to ask it of an idle one.
                 writer.AddPawnAspect(pawn.Id, RateAspects.Move, pawn.MoveRatePerMille());
+
+                // The draft (design 33 §2e), sparse: a colony nobody drafts publishes nothing
+                // new. The order cell only while a move is being walked.
+                if (pawn.Drafted)
+                {
+                    writer.AddPawnAspect(pawn.Id, CombatAspects.Drafted, 1);
+                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Goto)
+                        writer.AddPawnAspect(pawn.Id, CombatAspects.OrderCell, pawn.CurrentJob.TargetCell);
+                }
 
                 // What she has in her arms (design 24 §5b). Two rows, and only while there is
                 // something to publish — a carried thing has no cell, so it is delisted from the
