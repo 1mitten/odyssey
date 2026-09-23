@@ -89,12 +89,19 @@ namespace Odyssey.Sim.Pawns
         public static int SideOf(Pawn pawn) => pawn.Destination >= 0 ? pawn.Destination : pawn.Cell;
 
         /// <summary>
-        /// Does another pawn in an attack hold <paramref name="cell"/> as its side? <b>Scales with
-        /// the pawns on the board</b>: one integer comparison each for those not fighting. Asked
-        /// when an attacker would stop on a cell in reach, and before each swing — never per tick
-        /// by one standing waiting for her swing clock.
+        /// Does another pawn in a fight hold <paramref name="cell"/> (design 33 §7c, §8c)? A pawn
+        /// in an attack holds its side (<see cref="SideOf"/>), and so does a pawn somebody is
+        /// attacking — the cell it stands on or is walking to — whatever it is doing, standing or
+        /// down. That is the one rule every fighter obeys: nobody in a fight stops on a cell
+        /// another in a fight holds. <paramref name="me"/>'s own claims are not counted against
+        /// her.
+        ///
+        /// <para><b>Scales with the pawns on the board</b>: one integer comparison each for those
+        /// not fighting, and a lookup by id for each attacker's target. Asked when an attacker
+        /// would stop on a cell in reach, before each swing, and by the orders that place a
+        /// drafted colonist — never per tick by one standing waiting for her swing clock.</para>
         /// </summary>
-        public static bool SideTaken(PawnContext ctx, Pawn me, int cell)
+        public static bool Holds(PawnContext ctx, Pawn me, int cell)
         {
             var pawns = ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++)
@@ -102,6 +109,9 @@ namespace Odyssey.Sim.Pawns
                 Pawn other = pawns[i];
                 if (other == me || !IsInAnAttack(other)) continue;
                 if (SideOf(other) == cell) return true;
+                if (other.CombatTarget == me.Id.Value) continue;
+                Pawn? target = ctx.Pawns.Get(new PawnId(other.CombatTarget));
+                if (target != null && SideOf(target) == cell) return true;
             }
             return false;
         }
@@ -112,9 +122,10 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Where <paramref name="me"/> should stand to fight <paramref name="target"/> (design 33
         /// §7c): of the cells beside it on its layer that she could strike it from and can reach,
-        /// the one no other attacker holds and nearest her; all eight held, the nearest free one
-        /// she can stand on and reach in the ring beyond, to wait there until a side frees up; and
-        /// −1 when that ring is full too. Her own cell counts as free for her, so an attacker
+        /// the one no other fighter holds (<see cref="Holds"/>, and where the target itself is
+        /// walking to) and nearest her; all eight held, the nearest free one she can stand on and
+        /// reach in the ring beyond, to wait there until a side frees up; and −1 when that ring is
+        /// full too. Her own cell counts as free for her, so an attacker
         /// already beside the target keeps where she is.
         ///
         /// <para><b>Deterministic, and integer.</b> "Nearest" is the squared distance in cells from
@@ -142,13 +153,18 @@ namespace Odyssey.Sim.Pawns
             {
                 Pawn other = pawns[i];
                 if (other == me || !IsInAnAttack(other)) continue;
-                int side = SideOf(other);
-                if (side < 0) continue;
-                CellRef s = size.FromIndex(side);
-                int dx = s.X - t.X, dz = s.Z - t.Z;
-                if (s.Y != t.Y || dx < -SideRings || dx > SideRings || dz < -SideRings || dz > SideRings) continue;
-                taken |= 1 << ((dz + SideRings) * 5 + dx + SideRings);
+                taken |= Bit(size, t, SideOf(other));
+
+                // What another fight is aimed at holds its cell too (design 33 §8c): a side chosen
+                // on it would stand two fighters on one tile. Not the target's own cell, which is
+                // never a side, and not me.
+                if (other.CombatTarget == me.Id.Value || other.CombatTarget == target.Id.Value) continue;
+                Pawn? aimed = ctx.Pawns.Get(new PawnId(other.CombatTarget));
+                if (aimed != null) taken |= Bit(size, t, SideOf(aimed));
             }
+
+            // Nor where my own target is walking to: it will stand there.
+            if (target.Destination >= 0) taken |= Bit(size, t, target.Destination);
 
             for (int ring = 1; ring <= SideRings; ring++)
             {
@@ -176,6 +192,16 @@ namespace Odyssey.Sim.Pawns
                 if (best >= 0) return best;
             }
             return -1;
+        }
+
+        /// <summary>The bit for <paramref name="cell"/> in the 5 × 5 mask round <paramref name="t"/>, or nought outside it.</summary>
+        static int Bit(GridSize size, CellRef t, int cell)
+        {
+            if (cell < 0) return 0;
+            CellRef s = size.FromIndex(cell);
+            int dx = s.X - t.X, dz = s.Z - t.Z;
+            if (s.Y != t.Y || dx < -SideRings || dx > SideRings || dz < -SideRings || dz > SideRings) return 0;
+            return 1 << ((dz + SideRings) * 5 + dx + SideRings);
         }
 
         /// <summary>

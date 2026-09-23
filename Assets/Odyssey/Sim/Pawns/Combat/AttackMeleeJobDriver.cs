@@ -32,8 +32,9 @@ namespace Odyssey.Sim.Pawns
     /// cell: <see cref="Melee.ChooseSide"/> picks the free cell beside it nearest the attacker, or
     /// one ring back when all eight are held. A side is held by walking to it or standing on it —
     /// <see cref="Pawn.Destination"/> and <see cref="Pawn.Cell"/>, both saved — so two attackers
-    /// never stand on one tile and no new state was needed. The drafted hold's blow is exempt: it
-    /// strikes from wherever she stands, and holds her cell as her side.</para>
+    /// never stand on one tile and no new state was needed. The drafted hold's blow strikes from
+    /// wherever she stands and holds her cell as her side — unless another fighter already holds
+    /// it, when she steps to a free side like anybody (§8c); she still never chases.</para>
     ///
     /// <para><b>When it ends.</b> The target gone, dead, or — unless the job was ordered on a pawn
     /// already down — down (the owner's "until one of them goes down"); unreachable; out of reach
@@ -106,11 +107,14 @@ namespace Odyssey.Sim.Pawns
                 // Land a step that is well under way; stop on one that has barely begun.
                 if (!boundary) return JobStatus.Ongoing;
 
-                // Side by side (design 33 §7c): she stops here only if it is a side of her own.
-                if (hold || MayFightFrom(ctx, target, tick))
+                // Side by side (design 33 §7c): she stops here only if it is a side of her own. The
+                // hold too (§8c): she strikes from where she stands unless another fighter holds
+                // that cell, and then she steps to a free side as anybody would.
+                if (MayFightFrom(ctx, target, tick))
                 {
                     Pawn.ClearPath();
                     Pawn.Destination = -1;
+                    if (Job.WorkTicks == 0) Job.WorkTicks = tick;
 
                     if (tick >= Pawn.NextSwingTick) StartSwing(ctx, target, tick);
                     return JobStatus.Ongoing;
@@ -118,7 +122,7 @@ namespace Odyssey.Sim.Pawns
             }
 
             // The hold never chases: out of reach, she holds again.
-            if (hold) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
+            if (hold && !inReach) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
 
             // A hunt, a revenge or a self-defence thinks again now and then.
             if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks) return JobStatus.Succeeded;
@@ -130,11 +134,13 @@ namespace Odyssey.Sim.Pawns
             // back), once the target has left the cell the side was chosen against, and no oftener
             // than the content allows. Not walking: at once when it has left, or the attack is new;
             // otherwise at the same cadence, which is how one waiting a ring back finds a side
-            // freed up. Job.TargetCell is the target's cell the side was chosen against.
+            // freed up — and at once when she is in reach on a cell she may not fight from, so she
+            // never waits out the cadence on somebody else's tile (§8c). Job.TargetCell is the
+            // target's cell the side was chosen against.
             int dest = Pawn.Destination;
             bool moved = Job.TargetCell != target.Cell;
             bool due = tick - Job.WorkTicks >= ctx.Content.Combat.chaseRepathTicks;
-            bool choose = dest >= 0 ? boundary && moved && due : moved || due || Job.WorkTicks == 0;
+            bool choose = dest >= 0 ? boundary && moved && due : inReach || moved || due || Job.WorkTicks == 0;
             if (choose)
             {
                 Job.WorkTicks = tick;
@@ -157,18 +163,21 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// May she fight from the cell she is on (design 33 §7c)? Never from the target's own cell,
-        /// and never from a side another attacker holds — so walking past a side somebody else is
-        /// making for, she walks on. <b>Scales with the pawns on the board</b>, and is asked only when
-        /// the answer can have changed: at a step boundary in reach while walking, and before each
-        /// swing. One standing waiting for her swing clock is on a side she already took, so she is
-        /// not asked every tick.
+        /// May she fight from the cell she is on (design 33 §7c, §8c)? Never from the target's own
+        /// cell, never from a side another attacker holds, and never from the cell of a pawn
+        /// somebody else is fighting (<see cref="Melee.Holds"/>) — so walking past a side somebody
+        /// else is making for, she walks on. The drafted hold is asked too. <b>Scales with the pawns
+        /// on the board</b>, and is asked only when the answer can have changed: at a step boundary
+        /// in reach while walking, on the first stop, and before each swing. One standing waiting
+        /// for her swing clock is on a side she already took, so she is not asked every tick.
         /// </summary>
         bool MayFightFrom(PawnContext ctx, Pawn target, int tick)
         {
             if (Pawn.Cell == target.Cell) return false;
+            // Standing on a side she took, waiting for her swing clock: nobody else chooses a cell
+            // a fighter holds, so it is still hers. Job.WorkTicks is set from the first stop.
             if (Pawn.Destination < 0 && tick < Pawn.NextSwingTick && Job.WorkTicks != 0) return true;
-            return !Melee.SideTaken(ctx, Pawn, Pawn.Cell);
+            return !Melee.Holds(ctx, Pawn, Pawn.Cell);
         }
 
         void StartSwing(PawnContext ctx, Pawn target, int tick)

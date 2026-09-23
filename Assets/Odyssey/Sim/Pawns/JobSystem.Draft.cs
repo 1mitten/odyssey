@@ -45,6 +45,8 @@ namespace Odyssey.Sim.Pawns
         /// drivers' own cleanup — keeping the step in progress (<see cref="Interrupt"/>). A draft
         /// then starts the hold in the same call, so a paused game already reads "Drafted"; a
         /// release leaves the colonist between jobs and the tree gives it work on its next tick.
+        /// A colonist drafted on a tile another drafted colonist or a fighter holds walks to the
+        /// nearest free one instead (<see cref="Spread"/>, design 33 §8c).
         /// </summary>
         public void SetDrafted(Pawn pawn, bool drafted, int tick)
         {
@@ -55,8 +57,16 @@ namespace Odyssey.Sim.Pawns
             if (!drafted) return;
 
             pawn.DraftQuietSinceTick = tick;
+
+            // Drafted where she stands is sent to her own cell, and spread off it like any move
+            // order (design 33 §8c): two colonists drafted on one tile, or one drafted on a cell
+            // somebody in a fight holds, would otherwise hold and fight there together, and the
+            // hold never moves.
+            int standing = pawn.FinishingStepTo >= 0 ? pawn.FinishingStepTo : pawn.Cell;
+            int dest = Spread(pawn, standing);
             Job job = pawn.JobBuffer;
-            job.Reset(JobIndex.DraftHold);
+            job.Reset(dest == standing ? JobIndex.DraftHold : JobIndex.Goto);
+            job.TargetCell = dest == standing ? -1 : dest;
             job.PlayerForced = true;
             StartJob(pawn, job, tick);
         }
@@ -68,8 +78,9 @@ namespace Odyssey.Sim.Pawns
         /// (<see cref="StandAt"/>), because a click names the ground and a colonist stands on it —
         /// and must be reachable. Only a drafted colonist takes the order, as in the reference: a
         /// right-click on an undrafted colonist's behalf is not a gesture this build gives a
-        /// meaning. A colonist sent where another drafted colonist already stands or is going is
-        /// spread to the nearest free cell beside it (<see cref="Spread"/>).</para>
+        /// meaning. A colonist sent where another drafted colonist already stands or is going, or
+        /// on to a cell somebody in a fight holds (§8c), is spread to the nearest free cell beside
+        /// it (<see cref="Spread"/>).</para>
         /// </summary>
         public IntentRejection HandleOrderMove(Intent intent)
         {
@@ -195,10 +206,13 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Is another drafted colonist standing on this cell, landing on it, or on its way to it?
+        /// Is another drafted colonist standing on this cell, landing on it, or on its way to it —
+        /// or does another pawn in a fight hold it (<see cref="Melee.Holds"/>, design 33 §8c)? A
+        /// colonist sent into a brawl stops beside the fighters, never on one of them.
         /// </summary>
         bool Taken(Pawn pawn, int cell)
         {
+            if (Melee.Holds(_ctx, pawn, cell)) return true;
             var pawns = _ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++)
             {
