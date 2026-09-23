@@ -318,12 +318,21 @@ intend to build the expensive one.**
 
 **The index itself costs 0.042 ms at 384 colonists** — one O(N) pass, serving all three consumers.
 
-**Repeated, on a second clear machine run, and the two agree.** The whole control was taken again
-end to end. At 384 colonists: `Actors` **16.466 / 9.696 / 4.865 ms** for Span / Cached / Bucketed,
-against **17.259 / 9.710 / 5.303** above — and the `Cached` arm landed within 14 microseconds of
-itself across two independent runs. The second run's frame at 384 was 14.494 ms Bucketed against
-28.657 Span. **Neither run is quoted as the number**; what they are offered as is the same three
-ratios twice, which is the most this machine supports.
+**Taken three times on a clear machine, and the three agree.** `Actors` at 384 colonists, for
+Span / Cached / Bucketed:
+
+| run | Span | Cached | Bucketed |
+|---|---|---|---|
+| 1 (control alone) | 17.259 ms | 9.710 ms | 5.303 ms |
+| 2 (control alone, repeat) | 16.466 ms | 9.696 ms | 4.865 ms |
+| 3 (inside the full PlayMode tier) | 17.703 ms | 9.710 ms | 5.186 ms |
+
+**The `Cached` arm landed on 9.710, 9.696, 9.710.** Three independent runs, one of them inside the
+whole PlayMode tier rather than alone, agreeing to about a part in a thousand. **No single run is
+quoted as "the number"** — what is being offered is the same three ratios three times, which is the
+most this machine supports. The frame at 384 was 14.494 to 17.137 ms Bucketed against 28.657 to
+33.809 Span, and the spread there is the machine rather than the pass: it is why the `Actors` split
+is the figure to read and the whole frame is not.
 
 ### 9d. It uncovered a second O(N squared), which is not fixed
 

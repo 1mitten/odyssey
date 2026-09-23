@@ -399,9 +399,13 @@ invisible where the game is played.
   rounds on 2026-09-21: a callback parameter in `FrameTimeTests` shadowed a local, and later a
   `List<>` went in without its `using` — the fast tier was green in twenty seconds both times and
   the second one put the editor into Safe Mode.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-22 on
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-23 on
+  `claude/pf-crowd-scan` (off `origin/main`): EditMode **2,527 total, 2,503 passed, 0 failed**;
+  PlayMode **102 total, 97 passed, 0 failed**. The nine new EditMode ones are `PawnCrowdIndexTests`,
+  which pin the crowd cull as *exact* rather than close; the two new PlayMode ones are
+  `TheCrowdScanCostsWhatItVisits` and its repeat. The run before it, 2026-09-22 on
   `claude/modular-colonists` **after merging main**: EditMode **2,518 total, 2,494 passed,
-  0 failed**; PlayMode **100 total, 95 passed, 0 failed** (EditMode 2,520 / 2,496 with MC6's two head tests). The run before it, on
+  0 failed**; PlayMode **100 total, 95 passed, 0 failed** (EditMode 2,520 / 2,496 with MC6's two head tests). The run before that, on
   `claude/build-appearance-and-entombment`, was EditMode 2,406 / 2,385 and PlayMode 98 / 93. The new ones are
   `EntombmentTests` in the fast tier and `BuildAppearanceTests` in PlayMode, whose logged line on
   that run is the whole of the build-delay answer: *in the mirror on frame 33 (1 ticks, 12.4 ms),
