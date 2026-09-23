@@ -126,8 +126,15 @@ namespace Odyssey.Presentation.Bootstrap
         /// <see cref="DesignatePresenter"/>. <see cref="OrderModel.RightClick"/> decides; this only
         /// supplies the two things a Unity-free model cannot find for itself — who is under the
         /// pointer, by the same hit-test a left click uses, and whether Ctrl is held — and carries
-        /// the answer to the world. A selection with nobody drafted in it is not asked at all, so
+        /// the answer to the world. A selection with no colonist in it is not asked at all, so
         /// a right-click that is not an order costs nothing.
+        ///
+        /// <para><b>A colonist, not a drafted one</b> (design 33 §5j): a right-click on a weapon
+        /// sends the primary colonist for it drafted or not, so the gate is
+        /// <see cref="OrderModel.HearsRightClick"/>. Behind <c>AnyDrafted</c>, as C1 left it, an
+        /// undrafted colonist could not be sent for a weapon at all — the model said yes and the
+        /// click never reached it (integration, 2026-09-23). Everything else still needs a draft
+        /// inside the model, so the wider gate sends nothing new.</para>
         /// </summary>
         public void Order(CellRef? cell, Ray ray)
         {
@@ -137,7 +144,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             WorldSnapshot snapshot = world.Views.Current;
             IReadOnlyList<PawnId> selection = directors.Selection.Pawns;
-            if (!OrderModel.AnyDrafted(selection, snapshot)) return;
+            if (!OrderModel.HearsRightClick(selection, snapshot)) return;
 
             PawnId under = cell.HasValue ? PawnUnderRay(snapshot, ray, cell.Value.Y) : PawnId.None;
             bool ctrl = Keyboard.current?.ctrlKey.isPressed == true;
