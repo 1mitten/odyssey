@@ -109,10 +109,56 @@ namespace Odyssey.Sim.Pawns
             if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             int index = _ctx.Cells.NearestWalkableInColumn(cell.X, cell.Z, cell.Y);
             if (index < 0) return IntentRejection.NotPermitted;
+            index = FreeSpawnCell(index);
             Pawn pawn = Spawn(index, kind);
             // An animal has no skills to be passionate about (design 29 §2).
             if (pawn.IsPerson) pawn.RollPassions();
             return IntentRejection.None;
+        }
+
+        /// <summary>How far round the spawn point a debug spawn looks for a free tile, in rings.</summary>
+        public const int SpawnSpreadRings = 4;
+
+        /// <summary>
+        /// The spawn cell if nobody stands on it, else the nearest free tile round it (owner,
+        /// 2026-09-24: marauders spawned in quick succession must not pile on one tile; design 33
+        /// §9h). Rings outward from the spawn point, in a fixed scan order so the answer is a
+        /// function of the world; each column is tried on the spawn layer, then one up, then one
+        /// down — the same lift a move order uses — and a tile must be standable, unoccupied and
+        /// reachable from the spawn point, so a pawn never arrives walled into a pocket. Falls back
+        /// to the spawn cell itself if every ring is full. Every kind, not only marauders: a
+        /// shared tile is the same fault whoever stands on it. A debug command, so it costs a scan
+        /// of the pawns per candidate and nothing per tick.
+        /// </summary>
+        int FreeSpawnCell(int anchor)
+        {
+            if (!Occupied(anchor)) return anchor;
+
+            GridSize size = _ctx.Size;
+            CellRef at = size.FromIndex(anchor);
+            for (int ring = 1; ring <= SpawnSpreadRings; ring++)
+            for (int dz = -ring; dz <= ring; dz++)
+            for (int dx = -ring; dx <= ring; dx++)
+            {
+                if (System.Math.Abs(dx) != ring && System.Math.Abs(dz) != ring) continue;
+                int x = at.X + dx, z = at.Z + dz;
+                for (int dy = 0; dy <= 2; dy++)
+                {
+                    int y = at.Y + (dy == 0 ? 0 : dy == 1 ? 1 : -1);
+                    if (!size.Contains(x, z, y)) continue;
+                    int c = size.Index(x, z, y);
+                    if (!_ctx.Cells.IsWalkable(c) || Occupied(c)) continue;
+                    if (!_ctx.Nav.Reachable(anchor, c, TraverseMode.Colonist)) continue;
+                    return c;
+                }
+            }
+            return anchor;
+        }
+
+        bool Occupied(int cell)
+        {
+            for (int i = 0; i < _pawns.Count; i++) if (_pawns[i].Cell == cell) return true;
+            return false;
         }
 
         /// <summary>

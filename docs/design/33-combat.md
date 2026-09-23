@@ -1755,3 +1755,21 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
+
+### 9h. Spawns spread (built 2026-09-24, `claude/combat-spawn`)
+
+**Owner, 2026-09-24:** *"when you spawn a marauder they don't spawn from same tile so quickly — spawn
+on free tiles around if quick succession."* A debug spawn used to land on the walkable cell nearest
+the camera's column, whoever already stood there, so marauders spawned in quick succession stacked
+on one tile. `PawnRegistry.FreeSpawnCell` keeps that cell when nobody stands on it. So the first
+spawn lands exactly where it always did, and `SixMaraudersSentInOneTickStandOnSixTiles` pins that.
+Otherwise it takes the nearest free tile in rings of up to 4 cells round it, in a fixed scan order.
+Each column is tried on the spawn layer, then one up, then one down, the same lift a move order
+uses. The tile must be standable, unoccupied, and reachable from the spawn point, so nobody arrives
+walled into a pocket. It applies to **every kind**, not only marauders, because a shared tile is the
+same fault whoever stands on it.
+
+It is a debug command, so it costs a scan of the pawns per candidate tile and nothing per tick. All
+three `SpawnSpreadTests` fail with the spread withheld. `DebugIntentTests`' fall-down-the-column test
+now aims three columns away from its own colonist, because the column it used was hers and is now
+spread off.
