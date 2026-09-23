@@ -1367,7 +1367,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_fires != null)
             {
                 _fires.Running = _figures?.Running ?? true;
-                _fires.Sync(activeLayer, slice, Time.deltaTime);
+                _fires.Sync(activeLayer, slice, Time.deltaTime, _audio);
             }
 
             DrawStandingOrders(_world.Views.Current);

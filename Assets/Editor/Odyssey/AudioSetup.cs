@@ -626,16 +626,24 @@ namespace Odyssey.EditorTools
                 AlertSound(SoundIds.AlertRaid, "alert-raid", 0.9f, cooldown: 10f),
             });
 
-            // The campfire: in the library, played by nothing. A looping sound that belongs to a
-            // thing at a place is a kind of emitter the director does not have — see
-            // SoundIds.Campfire. The row is here so the day fires arrive the sound is already
-            // named, imported and mixed, and the work is whatever plays it.
+            // The campfire, and it is played by something at last (design 31 §7): FireDirector
+            // declares every drawn fire each frame and AudioDirector.SyncLoops keeps the nearest
+            // few sounding. The emitter this row waited for is LoopEmitters.
+            //
+            // **Volume 0.55 -> 0.75, and the reason is a measurement rather than an ear.** The
+            // placeholder this mix was set against was synthesised and sat at -19.8 LUFS. The
+            // real recording is a field capture with a ~38 dB crest — a quiet bed under sharp
+            // cracks — and at the -3 dBFS peak the sourcing doc asks for it lands at -23.8 LUFS.
+            // Reaching -19.8 would have taken about 19 dB of limiting on the cracks, which is
+            // the one thing that makes it a fire rather than a hiss, so the clip keeps its
+            // dynamics and the catalogue makes up 2.7 dB of the 4 dB difference. The rest is
+            // deliberately left: a campfire is a quiet thing, and MinDistance 15 m is generous.
             catalogue.Sounds.Add(new AudioCatalogue.SoundDef
             {
                 Id = SoundIds.Campfire,
                 Clips = Variants("campfire"),
                 Bus = SoundBus.Ambience,
-                Volume = 0.55f, VolumeVariance = 0f, PitchVariance = 0f,
+                Volume = 0.75f, VolumeVariance = 0f, PitchVariance = 0f,
                 SpatialBlend = 1f, MinDistance = 15f, MaxDistance = 110f,
                 Priority = 180, Cooldown = 0f,
             });

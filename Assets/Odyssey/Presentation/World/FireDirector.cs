@@ -5,6 +5,7 @@ using UnityEngine;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Rendering;
 
 namespace Odyssey.Presentation.World
@@ -104,6 +105,10 @@ namespace Odyssey.Presentation.World
 
         readonly List<int> _cells = new List<int>(8);
         readonly List<Light> _lights = new List<Light>(8);
+
+        /// <summary>The fires that are audible this frame, refilled rather than rebuilt — a
+        /// sound that plays forever must not cost an allocation a frame to keep playing.</summary>
+        readonly List<LoopPoint> _audible = new List<LoopPoint>(8);
         int _cellsVersion = -1;
 
         float _clock;
@@ -299,10 +304,26 @@ namespace Odyssey.Presentation.World
         /// light does not know what the slice camera is doing and would go on lighting the floor
         /// above it from underneath.</para>
         /// </summary>
-        public void Sync(int activeLayer, SliceSettings slice, float dt)
+        public void Sync(int activeLayer, SliceSettings slice, float dt) =>
+            Sync(activeLayer, slice, dt, null);
+
+        /// <summary>
+        /// Burn, and — given the director — crackle.
+        ///
+        /// <para>The sound is declared from here rather than from the audio side because this is
+        /// the class that already knows which fires are <b>drawn</b>, and a fire on a hidden
+        /// storey should be inaudible for the same reason it is unlit. Working that out twice, in
+        /// two places, is how the two come to disagree.</para>
+        /// </summary>
+        public void Sync(int activeLayer, SliceSettings slice, float dt, AudioDirector? audio)
         {
             LitFires = 0;
-            if (_root == null) return;
+            _audible.Clear();
+            if (_root == null)
+            {
+                audio?.SyncLoops(SoundIds.Campfire, _audible);
+                return;
+            }
 
             RefreshCells();
 
@@ -332,6 +353,7 @@ namespace Odyssey.Presentation.World
 
                 if (throwNow) Throw(floor);
                 Lamp(used++, floor, _cells[i]);
+                _audible.Add(new LoopPoint(_cells[i], floor));
                 LitFires++;
             }
 
@@ -339,6 +361,10 @@ namespace Odyssey.Presentation.World
             // whose fires come and go should not churn GameObjects every time the slice moves.
             for (int i = used; i < _lights.Count; i++)
                 if (_lights[i] != null) _lights[i].enabled = false;
+
+            // The crackle, from the same set. The pool keeps the nearest few and stops the rest,
+            // so this stays one list however many fires a colony ends up with.
+            audio?.SyncLoops(SoundIds.Campfire, _audible);
         }
 
         /// <summary>Seconds between feeds of the emitters.</summary>

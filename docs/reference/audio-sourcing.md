@@ -94,7 +94,40 @@ the lossless master.
   and dusk over six and eight seconds, so a day bed recorded in woodland and a night bed recorded
   on a moor will read as the map changing underfoot. Same location, twelve hours apart.
 
+## What arrived, and what was done to it
+
+| Clip | Source | Processing |
+|---|---|---|
+| `campfire` | owner-supplied, `soundsforyou-campfire-crackling-fireplace-sound-119594.mp3`, 2026-09-23 | see below |
+
+**The campfire, 2026-09-23.** 140 s stereo MP3 in, 30 s mono 44.1 kHz 16-bit WAV out.
+
+- **Mono**, because it has a position (the rule above).
+- **A 33 s window from 12 s in**, chosen by measuring: the middle of the recording (45–105 s)
+  peaks at or above 0 dBFS and is already clipped, and the last ten seconds fade.
+- **High-passed at 45 Hz**, then **compressed** (−36 dB, 4:1) — which is the part worth arguing
+  about. The raw recording has a **~38 dB crest factor**: a very quiet bed under sharp cracks.
+  Left alone it sits at −46.9 LUFS, and getting it to the −19.8 LUFS the synthesised placeholder
+  had would have taken about 19 dB of limiting on the cracks, which is the one thing that makes
+  it a fire rather than a hiss. Compressed and gained, it lands at **−23.8 LUFS with sample peaks
+  at exactly −3.0 dBFS**, which is what this document asks for.
+- **The catalogue makes up the difference**: `Volume` 0.55 → 0.75, +2.7 dB of the remaining 4 dB.
+  The rest is left — a campfire is a quiet thing and `MinDistance` is 15 m.
+- **Looped by folding its own tail over its head**, 3 s equal-power crossfade, so the wrap is
+  continuous by construction rather than a splice between two unrelated moments. Verified by
+  measurement rather than by listening: the discontinuity at the wrap is **303** against a typical
+  sample-to-sample step of **1,246** and a worst of **21,619** — a quarter of ordinary movement,
+  which is below the noise.
+
+The lossless master is what is committed; the MP3 is not, per the rule above.
+
 ## Licensing
+
+**Open, and it has to be decided rather than discovered — `campfire.wav`.** The file the clip was
+made from is `soundsforyou-campfire-crackling-fireplace-sound-119594.mp3`. The name is the shape a
+Pixabay download has, and the Pixabay licence would allow this, but **nobody has confirmed where it
+came from** and the clip is committed to git. If it is not redistributable it belongs in a
+gitignored folder the way `Assets/Synty/` does, and the game already runs silent without it.
 
 Note the licence with the files. If it forbids redistribution, say so **before** they go in —
 `Assets/Odyssey/Presentation/Audio/Clips/` is committed to git, and licensed content that cannot

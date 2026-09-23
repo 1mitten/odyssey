@@ -432,6 +432,17 @@ namespace Odyssey.Hud
         public const int ClockWidth = 266;
 
         /// <summary>The clock's own baseline row: 24 px of mono with room to sit in.</summary>
+        /// <summary>
+        /// The clock's one row: the time, the date and the outdoor temperature side by side.
+        ///
+        /// <para><b>One row, and it was nearly two.</b> The temperature was appended to the date
+        /// string and pushed this row over the controls beside it (owner, 2026-09-23). A row of
+        /// its own was the obvious fix and cost 20 px of screen the HUD does not have:
+        /// <c>HudLayoutTests.TheStripIsAlwaysOneRowAndNoFurther</c> caps the resting interface at
+        /// 20% of the viewport and it came to 20.27% at 1280x720. Dropping the word "outdoors",
+        /// which is what the owner asked for, bought back more width than the reading needs, so
+        /// the reading is a third element on this row instead and the height is unchanged.</para>
+        /// </summary>
         public const int ClockRow = 28;
 
         /// <summary>One of the four speed buttons.</summary>

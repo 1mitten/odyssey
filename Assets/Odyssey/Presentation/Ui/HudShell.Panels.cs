@@ -847,16 +847,20 @@ namespace Odyssey.Presentation.Ui
             _clockDate = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "clock__date");
             line.Add(_clockTime);
             line.Add(_clockDate);
-            clock.Add(line);
 
-            // The outdoor temperature on a line of its own (owner, 2026-09-23: it "is leaking out
-            // into over controls"). It was appended to the date — "Day 3 · Larkspur · Wash ·
-            // 12.5 °C outdoors" — on one fixed-width row shared with the time, so the longest
-            // reading pushed the row past the panel and over whatever sat beside it. A season
-            // name, a day number and a signed decimal cannot be made to fit a row that already
-            // holds the clock; the fix is a second row rather than a shorter word.
+            // The outdoor temperature, third on the same row (owner, 2026-09-23: it "is leaking
+            // out into over controls"). It was *inside* the date string — "Day 3 · Larkspur ·
+            // Wash · 12.5 °C outdoors" — which ran the row past the panel and over the controls
+            // beside it. Dropping "outdoors" is most of the fix; an element of its own is the
+            // rest, and is what lets it carry its own colour.
+            //
+            // A row and not a second line, although a second line was tried: it cost 20 px that
+            // HudLayoutTests.TheStripIsAlwaysOneRowAndNoFurther does not have, taking the resting
+            // interface to 20.27% of a 1280x720 viewport against a 20% ceiling.
             _clockTemp = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "clock__temp");
-            clock.Add(_clockTemp);
+            line.Add(_clockTemp);
+
+            clock.Add(line);
 
             var speed = new VisualElement();
             speed.AddToClassList("speed");
