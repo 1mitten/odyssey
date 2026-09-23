@@ -2552,6 +2552,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _model == null || _world == null) return;
 
             OrderModel.CollectDrafted(snapshot, _draftMarks);
+            SoundTheDraft();
             if (_draftMarks.Count == 0) return;
 
             Color hue = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha));
@@ -2574,6 +2575,35 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawFloorBracket(dest, hue);
             }
         }
+
+        /// <summary>
+        /// A blade drawn, once, on the frame the snapshot first shows a colonist drafted (design 33
+        /// §2i; owner, 2026-09-23: <i>"use it when draft mode is clicked/actioned as an
+        /// indicator"</i>). Read off the frame rather than the key, so the key, the pane's button
+        /// and anything later that drafts all sound, and a refused draft — a broken or spent
+        /// colonist — stays silent. Releasing is silent, and so is the four-hour let-go.
+        ///
+        /// <para>A world seen for the first time is taken as it is and never sounds: loading a
+        /// save with three colonists drafted is not three orders given.</para>
+        /// </summary>
+        void SoundTheDraft()
+        {
+            bool first = !ReferenceEquals(_draftSoundWorld, _world);
+            _draftSoundWorld = _world;
+
+            bool fresh = false;
+            for (int i = 0; i < _draftMarks.Count; i++)
+                if (!_draftedLastFrame.Contains(_draftMarks[i].Pawn.Value)) fresh = true;
+
+            _draftedLastFrame.Clear();
+            for (int i = 0; i < _draftMarks.Count; i++) _draftedLastFrame.Add(_draftMarks[i].Pawn.Value);
+
+            if (fresh && !first) _audio?.PlayOneShot(SoundIds.Draft, Vector3.zero);
+        }
+
+        // Who was drafted last frame, and in which world: the draft sound's memory.
+        readonly HashSet<int> _draftedLastFrame = new HashSet<int>();
+        object? _draftSoundWorld;
 
         static bool IsSelected(SelectionDirector selection, PawnId pawn)
         {

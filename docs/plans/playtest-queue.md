@@ -29,7 +29,10 @@ the next session learns to ignore.
   diamond, the order line and the destination bracket are now a deep, dark, translucent red. A
   wrong answer is a figure that skates (the walk clip played fast) or jogs so little it still
   reads as a walk; or a red too dark to find at dusk or against dark rock. The pace is one number,
-  `draftedPacePerMille` in `Colonist.xml`.
+  `draftedPacePerMille` in `Colonist.xml`. **And listen:** pressing T should draw a blade, once
+  however many are selected, and releasing should be silent. A wrong answer is a sound late
+  enough to feel like lag, one loud enough to jump at, or a clatter when five are drafted at once
+  (design 33 §2i).
 
 - **Does the meadow feel lived in, and do the comings and goings read as wildlife?**
   (`claude/wildlife`, PR to follow #167, `docs/design/30-wildlife.md`). Press Play → New game

@@ -167,6 +167,11 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, placeholder: null),
             new("carry-drop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, placeholder: null),
+            // The draft's blade (design 33 §2i): two thirds of a second, mono in the file already,
+            // and it has to sound on the frame the order lands — so PCM, decompressed on load, the
+            // chimes' class. 58 KB.
+            new("draft", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, placeholder: null),
             new("alert-normal", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
             new("alert-negative", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
@@ -608,6 +613,20 @@ namespace Odyssey.EditorTools
                 // together are what stop a stockpile run sounding like one file on repeat.
                 CarrySound(SoundIds.CarryLift, "carry-lift"),
                 CarrySound(SoundIds.CarryDrop, "carry-drop"),
+                // The draft (design 33 §2i): a blade drawn when a colonist is drafted. An
+                // indicator, so 2D like a chime and with no variance — a signal that wobbles reads
+                // as a fault — but on the Effects bus rather than Alerts: it answers the player's
+                // own click and must not duck the music the way an alert does. The cooldown makes
+                // a box of five drafted at once one draw, not a clatter.
+                new AudioCatalogue.SoundDef
+                {
+                    Id = SoundIds.Draft,
+                    Clips = Variants("draft"),
+                    Bus = SoundBus.Effects,
+                    Volume = 0.7f, VolumeVariance = 0f, PitchVariance = 0f,
+                    SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
+                    Priority = 24, Cooldown = 0.25f,
+                },
                 // The alerts. Zero variance on all five: a chime is a signal and a signal that
                 // wobbles reads as a fault, which is the opposite of what the work sounds want
                 // variance for. 2D, top voice priority, and a cooldown long enough that two

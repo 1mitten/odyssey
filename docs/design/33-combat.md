@@ -208,6 +208,28 @@ they exist. The rate is a pawn factor, never a cell cost, so the planner's price
 (design 17 §4g). `ADraftedColonistRunsAtTwiceHerOwnPace` times the same crossing drafted and
 walked.
 
+### 2i. The sound of a draft
+
+**Owner, 2026-09-23**, supplying a recording of a sword being drawn: *"use it when draft mode is
+clicked/actioned as an indicator."* `SoundIds.Draft`, baked by `tools/audio/bake_draft.sh`
+into `Clips/draft.wav`. The source has 108 ms of silence at the head, which is trimmed hard
+because a tenth of a second of nothing after the key reads as lag. The tail is trimmed gently, since
+the ring is the sound. It is mono, because the channels were identical, and levelled to a −3 dBFS
+peak: 0.66 s, 58 KB.
+
+- **Played off the frame, not the key.** `OdysseyBootstrap.SoundTheDraft` sounds once on the frame
+  the snapshot first shows a colonist drafted. The key, the pane's button and anything later that
+  drafts all sound, and a refused draft (a broken or spent colonist) stays silent. Releasing and
+  the four-hour let-go are silent. A world seen for the first time never sounds, so loading a save
+  with colonists drafted is not heard as orders.
+- **An indicator in the mix:** 2D, no variance, and on the **Effects** bus rather than Alerts. It
+  answers the player's own click and must not duck the music the way an alert does. A 0.25 s
+  cooldown makes a box of five drafted at once one draw. `DraftSoundTests` holds the shipped row.
+- **Licence:** Pixabay, by Dragon Studio, under the Pixabay Content License, which allows use inside
+  a product without attribution but not redistribution on its own. It is committed with the game,
+  as `docs/reference/audio-sourcing.md` requires the licence to be noted. **The owner to confirm the
+  source.**
+
 ## 3. Health and melee (C2, designed)
 
 - **Hit points** are integers in thousandths (`HpMilli`, the `Rates` convention), so a slow heal is
