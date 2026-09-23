@@ -1653,3 +1653,91 @@ hung at ours; the sheathe opens from the sword stance, so the arm lifts into it 
 from wherever it was; a hog's revenge draws nothing (no weapon), and a colonist struck keeps her
 weapon out for the whole 20 s retaliation window, which is the owner's rule read literally and the
 first thing to ask about at the playtest.
+
+### 8c. One guard for every fighter (built 2026-09-23, `claude/combat-guard`)
+
+Owner: *"make it a guard that enemies when sharing tiles going side by side as well or handled
+uniformly as we can"*. Simulation, the fast and Long tiers, no Unity. **No golden moved, no save
+format changed, no new state.** No golden window drafts or fights, and every claim is still read
+off `Destination` and `Cell`, which every pawn already saves and hashes.
+
+**The rule.** At every tick, no two pawns in a fight stand on one cell. A pawn is **in a fight**
+while it is in a melee attack on its feet, of any kind — ordered, the drafted hold's blow,
+self-defence, the hunt, an animal's revenge. It is also in a fight while it is the target of
+one, whatever it is doing: standing, walking, down, or hunted from across the board. A pawn
+**stands** once it has arrived and has had a tick to act on it. That means no walk in hand and no
+interrupted step still landing, now and at the tick before, and it is in a job it has ticked or
+held by a stun. Walking through somebody's cell is not sharing it. The simulation has no collision,
+and the drawn sidestep carries a passer-by round. Neither is the one tick a pawn spends between
+jobs or landing. Anything that stays is.
+
+**The guard** is `FightGuardTests` (fast tier, 16 cases), which asserts the rule after every tick
+of each brawl, with a control that the fight happened:
+
+- several marauders on one colonist;
+- several colonists on one marauder;
+- two marauders on two colonists side by side;
+- marauders walking into a drafted line;
+- marauders converging from one side;
+- hogs turning on the colonists who hit them;
+- a rat fleeing past a brawl;
+- drafted targets ordered about mid-fight;
+- a body being finished off;
+- a colonist sent onto a fighter;
+- every mind at once.
+
+The first five run both with every swing a miss and with the shipped rules. **Long:**
+`MixedBrawlsOnManySeeds` runs twelve seeded colonies of three to six colonists, marauders, hogs and
+rats. Some colonists are drafted and ordered onto the animals. Each colony runs for 4,000 ticks,
+and the control is that every kind fought.
+
+**What it found: four holes, each seen to fail with its fix withheld.** §7c held for attackers
+against attackers, but not for everyone else in a fight:
+
+| Hole | Evidence before the fix | Fix |
+|---|---|---|
+| A pawn somebody is attacking held nothing, so another fight's attacker could take its cell as a side | `ABodyBeingFinishedOffIsNobodysSide`: a marauder coming for a colonist stood on the downed marauder a colonist was finishing off beside her, **677 pair-ticks** | `Melee.Holds` (was `SideTaken`) and `ChooseSide`'s mask count **every fighter's `SideOf`**, attacker or target, and the target's own destination |
+| The drafted hold struck from wherever she stood | Long seed 12: two drafted colonists on one tile both swinging at marauder 8 from it, **94 pair-ticks** | the hold asks `MayFightFrom` like anybody. On a cell another fighter holds, or on her threat's own cell, she steps to a free side, and she still never chases. Out of reach, she holds again |
+| Drafting in place never spread | `MaraudersIntoADraftedLine`: two colonists drafted on one tile held there, hunted, **269 pair-ticks** (1,410 with nothing fixed) | a draft is a move order to her own cell, and `SetDrafted` spreads it with the move order's own `Spread` |
+| A move order's spread ignored fighters | `AColonistSentOnToAFighterStopsBesideIt`: sent onto the tile a marauder was swinging from, she was given it | `Spread`'s `Taken` also asks `Melee.Holds` |
+
+With everything withheld, `TargetsThatKeepMoving` also failed, with **8 pair-ticks**: a drafted
+colonist was moved onto a marauder's side and swung from it. It passes with either the hold's step
+or the move order's spread alone.
+
+**What the rule costs.** `Holds` and `ChooseSide` gain a lookup by id per attacker, for its target.
+The hold is asked `MayFightFrom` on her first stop and before each swing, the same cadence §7c set,
+because `Job.WorkTicks` is now set on the first stop. A refused attacker chooses again at once
+rather than waiting out the chase cadence on somebody's tile. `TickBenchmarkTests.TwentyAgainstTwenty`
+was measured in one session, twice each way. The tick was 0.080–0.087 ms before and 0.070–0.087 ms
+after. The pawns phase was 0.021–0.023 ms before and 0.014–0.020 ms after. Both are inside their
+own noise.
+
+**The drawn half had already moved.** The combat contracts (`500a6f09`, §5d) put the crowd sidestep
+on the published person flag: `PawnPose` gates on `pawn.IsPerson`, and `CrowdWeight` skips
+`other.IsAnimal`. So a marauder steps round colonists and marauders and is stepped round, and
+animals stay outside it (design 29). No other presentation or HUD site reads "a person" as
+`Kind == 0`. Every remaining `Kind` read is a species-table row: animal looks, labels and bite
+sharpness. Nothing pinned it, though, so two tests now do.
+`PawnPassingTests.ThePersonFlagDecidesWhoStepsRound` covers the seven pairings of colonist,
+marauder and hog. `PawnCrowdIndexTests`' crowd is now a fifth marauders and a seventh hogs, so the
+exactness claim holds across the gate as well as the arithmetic. **Both have never been compiled or
+run**, because the fast tier does not build Presentation.
+
+**Do not undo by tidying:**
+
+- **A target holds its `SideOf`, not only its cell.** A target walking to a cell will stand there.
+  Choosing that cell as a side is how a colonist ordered onto a marauder's flank met the marauder
+  arriving on it.
+- **The guard's one-tick grace is not a loophole.** Between jobs, on the tick a job is given, and
+  on the tick a step lands, a pawn has not yet chosen its cell. The very next tick is checked, and
+  every hole above failed for tens to hundreds of ticks. When the grace was tried stricter, every
+  failure was a single tick of that kind.
+- **The draft spreads; the hold does not wander.** The hold steps only when her cell is held and
+  never chases. A side a ring back leaves her out of reach, and she holds there.
+
+**Open.** A colonist going about her day — hunted, not yet struck, not drafted — has no rule that
+moves her off a fighter's cell. Nothing she does is the fight's until the first blow, after which
+self-defence moves her. The guard counts her from the moment she is hunted, and no brawl here
+catches it, because an ordinary job rarely stops on a fighter's tile. If one ever does, the guard
+will name it.

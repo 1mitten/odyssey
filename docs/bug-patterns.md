@@ -2330,3 +2330,24 @@ green, because each tested its own copy.
 give each one owner in the brief.* The contracts named which lane "writes" and which "calls" for the
 four fixed answers, and those four did not diverge. The bar colour was an answer lane C offered as
 optional, so lane B wrote its own; the gate was a rule the brief gave lane C in a file it gave lane B.
+
+### 2026-09-23 — Side by side held for attackers, and nobody else in the fight (P15)
+
+**Symptom, found by the guard before anyone played it.** The owner asked that fighters never
+share a tile, *"handled uniformly"*. §7c had given every attacker a side of its own. A test that
+walked every tick of mixed brawls then found fighters standing together for hundreds of ticks
+anyway. A marauder stood on a downed body a colonist was finishing off beside it. Two drafted
+colonists swung from one tile. A colonist ordered onto a marauder's tile was given it.
+
+**Cause.** The rule was written for one side of the relation. An attacker held its side, but a pawn
+being attacked held nothing. Three ways into a fight also had no rule at all: the drafted hold
+("strikes from where she stands"), drafting in place, and the move order's spread. Each was right
+for the pawns it had been written for, and none asked about the others.
+
+**Fix.** One answer, `Melee.Holds`: every fighter holds its `SideOf`, attacker or target. The
+hold, the draft and the move order all ask it. `docs/design/33-combat.md` §8c.
+
+**The check this earns.** *When a rule is about a relation, test it over the relation, not over
+the actor that prompted it.* `SideBySideTests` checked attackers against attackers, and all of
+them passed. `FightGuardTests` checks everyone in the fight, on every tick. Each hole it found was
+seen to fail with its fix withheld.

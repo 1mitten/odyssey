@@ -37,7 +37,11 @@ namespace Odyssey.Tests.Presentation
         /// <summary>
         /// A crowd worth measuring: pawns packed tightly enough that plenty of pairs are inside
         /// the 3 m radius, spread over several layers so the vertical axis is exercised, and a
-        /// mixture of walking and standing so <c>InTheWay</c> takes both of its branches.
+        /// mixture of walking and standing so <c>InTheWay</c> takes both of its branches. And a
+        /// mixture of kinds as the simulation publishes them (design 33 §8c): colonists,
+        /// marauders - persons under the hostile flag, who step round and are stepped round - and
+        /// animals, who are outside the sidestep on both sides, so every scan is pinned to the
+        /// same gate and not only to the same arithmetic.
         /// </summary>
         static PawnView[] Crowd(int count, int seed)
         {
@@ -52,10 +56,16 @@ namespace Odyssey.Tests.Presentation
                 int y = random.Next(0, 3);
                 var cell = new CellRef(x, z, y);
 
+                // One in five a marauder (kind 3), one in seven a hog (kind 1), the rest colonists.
+                int kind = i % 5 == 4 ? 3 : i % 7 == 6 ? 1 : 0;
+                PawnFlags flags = kind == 3 ? PawnFlags.Person | PawnFlags.Hostile
+                    : kind == 1 ? PawnFlags.None : PawnFlags.Person;
+
                 bool moving = random.Next(0, 4) != 0;
                 if (!moving)
                 {
-                    pawns[i] = new PawnView(new PawnId(i + 1), cell, 100, 100, 50, -1, cell, 0);
+                    pawns[i] = new PawnView(new PawnId(i + 1), cell, 100, 100, 50, -1, cell, 0,
+                        kind: kind, flags: flags);
                     continue;
                 }
 
@@ -64,7 +74,7 @@ namespace Odyssey.Tests.Presentation
                 if (dx == 0 && dz == 0) dx = 1;
                 var next = new CellRef(Mathf.Clamp(x + dx, 0, 11), Mathf.Clamp(z + dz, 0, 11), y);
                 pawns[i] = new PawnView(new PawnId(i + 1), cell, 100, 100, 50, -1, next, 0,
-                    movePerMille: random.Next(1, 1000));
+                    movePerMille: random.Next(1, 1000), kind: kind, flags: flags);
             }
             return pawns;
         }
