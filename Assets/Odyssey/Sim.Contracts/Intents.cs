@@ -199,6 +199,22 @@ namespace Odyssey.Sim.Contracts
         /// a preset is not a switch.
         /// </summary>
         SetStorageFilter,
+
+        /// <summary>
+        /// Mark the built line in <see cref="Intent.Cell"/> for a colonist to take up (design 32
+        /// §3). Its own kind rather than a <see cref="Designate"/>, because a designation is one
+        /// byte per cell and a cell with a line in it very often has a wall or a floor in it too,
+        /// which the deconstruct designation already names. Named at the ground, the line
+        /// standing on it.
+        /// </summary>
+        RemoveConduit,
+
+        /// <summary>
+        /// Switch the power building in <see cref="Intent.Cell"/> on (<c>A</c> = 1) or off
+        /// (<c>A</c> = 0). Either cell of a two-cell building names it. Applied at once, with no
+        /// colonist sent to do it (design 32 §5).
+        /// </summary>
+        SetPowerSwitch,
     }
 
     /// <summary>
@@ -264,6 +280,10 @@ namespace Odyssey.Sim.Contracts
             IntentKind.CancelStorage => true,
             IntentKind.SetStoragePriority => true,
             IntentKind.SetStorageFilter => true,
+            // Taking a line up and throwing a switch are orders over a cell like any other: the
+            // player authored them and nothing needs to run to make them true (design 32).
+            IntentKind.RemoveConduit => true,
+            IntentKind.SetPowerSwitch => true,
             _ => false,
         };
     }

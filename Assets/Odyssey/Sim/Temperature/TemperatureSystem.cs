@@ -99,6 +99,9 @@ namespace Odyssey.Sim.Temperature
         /// </summary>
         readonly int[] _heatByEdificeDef;
 
+        /// <summary>Edifice ids whose heat the power grid decides (design 32 §7), indexed as the table above.</summary>
+        readonly bool[] _powerDef;
+
         public TemperatureSystem(PawnContext ctx, IReadOnlyList<Worldgen.PlacedEdifice> edifices,
             ClimateDef climate)
         {
@@ -112,6 +115,9 @@ namespace Odyssey.Sim.Temperature
             for (int i = 1; i < table.Count; i++)
                 if (table[i].edifice > widest) widest = table[i].edifice;
             _heatByEdificeDef = new int[widest + 1];
+            _powerDef = new bool[widest + 1];
+            for (int i = 1; i < table.Count; i++)
+                if (table[i].IsPowered && table[i].heatPerPass != 0) _powerDef[table[i].edifice] = true;
             // A power building's heat is not in this table: it is gated on the building being
             // powered, or burning, and the power grid owns that answer (design 32 §7). Its row
             // stays zero here so an unpowered heater never warms a room through the back door.
@@ -246,6 +252,10 @@ namespace Odyssey.Sim.Temperature
                 if (placed.Removed) continue;
                 if (placed.Def >= _heatByEdificeDef.Length) continue;
                 int heat = _heatByEdificeDef[placed.Def];
+                // A power building's heat is the power grid's answer — a heater's while it is
+                // powered, a generator's in proportion to its load (design 32 §6–§7). Asked only
+                // of a building the table left at zero, so the woodland's trees cost one read.
+                if (heat == 0 && _ctx.Power != null && _powerDef[placed.Def]) heat = _ctx.Power.HeatOf(e);
                 if (heat == 0) continue;
                 if (_slotByKey.TryGetValue(_ctx.Enclosure!.RoomAt(placed.CellIndex), out int slot))
                     _sources[slot] += heat;

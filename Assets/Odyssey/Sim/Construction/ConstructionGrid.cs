@@ -90,6 +90,16 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public Pathing.NavGraph? Nav { get; set; }
 
+        /// <summary>
+        /// The power grid (design 32), which owns lines. A line is ordered with the same intent,
+        /// cursor and palette row as a wall, so this grid is where the order arrives — and hands it
+        /// on, because a line is not a site of this grid and not an edifice. Asked too for where a
+        /// line may go, so <see cref="Allows(int, int)"/> and <see cref="WhereItWouldLand"/> give
+        /// the cursor the power grid's own answer. Set by the composition like <see cref="Nav"/>;
+        /// null in a fixture with no power, where a line order is refused.
+        /// </summary>
+        public Power.PowerGrid? Power { get; set; }
+
         public GridSize Size => _grid.Size;
 
         /// <summary>
@@ -164,10 +174,11 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
 
-            // A line is not a site of this grid: it lives in the power grid's own layer (design 32
-            // §3). Refused here until that grid takes it, rather than built as a wall with no
-            // edifice.
-            if (def.conduit) return IntentRejection.NotPermitted;
+            // A line is not a site of this grid: it lives in the power grid's own layer, where a
+            // cell can hold a line and a wall at once (design 32 §3). Handed on whole — the lift,
+            // the rule and the refusal are the power grid's.
+            if (def.conduit)
+                return Power != null ? Power.PlaceLine(_grid.Index(cell)) : IntentRejection.NotPermitted;
 
             // A thing that does not rotate never carries one, even if the interface sent a stale
             // number: a site's facing is hashed, and two identical wall orders that arrived with
@@ -256,8 +267,14 @@ namespace Odyssey.Sim.Construction
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
+            // Every order in the cell, the line orders included: a cancel drag is "undo what I
+            // asked for here", and a cell can hold a wall order and a line order at once (design
+            // 32 §3). Asked first and separately, so a cell with only a line order in it is a
+            // cancel that did something rather than AlreadyInThatState.
+            bool line = Power != null && Power.CancelAt(_grid.Index(cell));
+
             int index = SiteAt(cell);
-            if (index < 0) return IntentRejection.AlreadyInThatState;
+            if (index < 0) return line ? IntentRejection.None : IntentRejection.AlreadyInThatState;
 
             Refund(index);
             Set(index, BuildingHandle.None, StuffHandle.None);
@@ -322,6 +339,10 @@ namespace Odyssey.Sim.Construction
             if ((uint)index >= (uint)_grid.Size.CellCount) return index;
 
             BuildingDef what = ConstructionContent.BuildingAt(building);
+
+            // A line takes its own lift, asked with its own rule: a click on the ground under a
+            // wall names the wall's cell for a line, where the wall's rule would refuse it.
+            if (what.conduit) return Power != null ? Power.WhereItWouldLand(index) : index;
 
             // A covering takes the WALL's lift, not the slab's: a click on grass names the ground
             // block and paving goes in the air cell above it, which is exactly what StandingOn
@@ -415,6 +436,12 @@ namespace Odyssey.Sim.Construction
         public bool Allows(int index, int building)
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return false;
+
+            // A line answers to the power grid's rule alone — it may go where a wall stands, which
+            // every line below would refuse (design 32 §3).
+            if (ConstructionContent.BuildingAt(building).conduit)
+                return Power != null && Power.AllowsLine(index);
+
             if (_grid.IsSolidTerrain(index)) return false;
             if (NaturalContent.IsWater(_grid.Terrain[index])) return false;
             if (_grid.Edifice[index] >= 0) return false;
@@ -1034,6 +1061,10 @@ namespace Odyssey.Sim.Construction
             if (def.edifice == CoreContent.EdificeDoor) ctx.Nav.SetDoor(cell, isDoor: true, open: false);
             if (def.edifice == CoreContent.EdificeBed) _items.AddBed(cell);
 
+            // 1b. A thing that makes or spends power has a switch and a hopper the world does not,
+            //     and joins whatever net a line beside it is on (design 32 §5).
+            if (def.IsPowered) ctx.Power?.AddDevice(_grid.Edifice[cell]);
+
             // 1a. A store that was built rather than painted. The cell leaves whatever zone held
             //     it *first*, so nothing can ever observe a cell that is in two stores at once: a
             //     shelf carries its own filter and its own rung, and a cell with two answers to
@@ -1457,6 +1488,9 @@ namespace Odyssey.Sim.Construction
             // a shelf whose contents have nowhere to go, so by the time this runs either the shelf
             // is empty or the building fell on it.
             if (ConstructionContent.SlotsOf(was.Def) > 0) ctx.StorageUnits?.Dissolve(ctx, handle);
+
+            // Its switch and whatever wood was in its hopper go with it (design 32 §5).
+            ctx.Power?.RemoveDevice(handle);
 
             // 2. The cells and everything touching them must be re-meshed: a thing coming down
             // changes how its neighbours draw their own faces, and the vertical neighbours are in

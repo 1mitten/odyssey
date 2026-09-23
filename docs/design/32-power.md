@@ -177,7 +177,24 @@ touched. The sim publishes each line's six-way links, so presentation never work
 
 ## 11. Measurements
 
-*(Filled in as they are taken, with the machine and the date.)*
+**One line edit, at the scale target** (250 × 250 × 40), `PowerCostProbe`, the Windows dev
+machine, 2026-09-23 — a serpentine of lines climbing several layers, the middle line taken up and
+put back fifty times, a full solve after each:
+
+| Lines | One edit's solve | A clean ask |
+|---|---|---|
+| 500 | 0.021 ms | 0.002 us |
+| 2,000 | 0.078 ms | 0.002 us |
+| 10,000 | 0.43 ms | 0.002 us |
+
+**The first cut measured seven times that** — 0.12, 0.56 and 3.1 ms — because it flooded outward
+with a binary search per face. At 10,000 lines that is the audit's `NavGraph.Rebuild` fault told
+again (a global rebuild on one local edit, 1.19 ms). The solve is a union-find over the sorted
+line list now, each face found from its lower side by a pointer that only moves forward, so it is
+linear in lines with no search at all. A colony at rest pays nothing: the solve is lazy and the
+burn pass is linear in power buildings, every 120 ticks.
+
+Not yet measured: the drawing of the lines (§9), which is the next number owed.
 
 ## 12. Seams left open
 
