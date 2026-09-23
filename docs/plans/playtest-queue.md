@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **The orange suits: editor or a built player, and roughly what number?** (Report 2026-09-23; the
+  investigation is in `docs/journal.md`.) The orange is the stand-in marker — a person-sized cube in
+  the actor orange, drawn when a colonist's body module does not resolve. **It could not be
+  reproduced**: a barren board at 384 colonists draws zero stand-ins, resolves two faces (the MC
+  uniform, by design) and holds flat at 23 materials, and a built player resolves its art. Two facts
+  would unblock it and only a person has them: **was it the editor or a build**, and **what number
+  did it start at**. A wrong answer looks like "it happens in the editor at any size", which would
+  mean the sweep's barren board is missing something the played world has.
+
+
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five

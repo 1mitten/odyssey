@@ -10824,3 +10824,51 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+
+## 2026-09-23 — the orange suits: what was ruled out, and a rail that is not a fix
+
+Owner, playing after the frame work: past a certain number of colonists, some "spawned in an orange
+suit", textures "kept switching" and the session "got buggy". They asked whether colonists should be
+hard capped, including on the debug menu.
+
+**The orange is identified and it is not a texture.** `OdysseyBootstrap` paints `_actorMaterial`
+`Color(0.98, 0.36, 0.20)`, and `ChunkRenderer`'s fallback branch draws
+`new Vector3(1.4f, 2.6f, 1.4f)` in it — a person-sized cube. A colonist is drawn that way when
+`!colonist.UsesArt || colonist.IsEmpty`, so the report names one branch exactly: **those colonists'
+body modules did not resolve.**
+
+**Two hypotheses, both mine, both refuted by measurement.** This is the record of what it is *not*,
+which is worth as much as a diagnosis would have been.
+
+1. *Faces failing to bake as the colony grows.* `ColonistModule` resolves lazily — instantiating a
+   rigged character and baking its skinned meshes — so I supposed a growing colony touched more
+   faces until something gave way. Instrumented (`ColonistStandIns`, `ColonistLooksUsed`) and swept
+   8 to 384 colonists: **zero stand-ins at every size**, and the lottery resolves **two** faces, not
+   more. Two is the MC uniform working as designed — everyone wears the issued jumpsuit, so there is
+   a male body and a female body, and identity is carried by face, hair and beard. The mechanism I
+   proposed does not exist.
+2. *The recoloured material cache leaking per colonist.* `ColonistMaterials` keys on
+   `(source, cells, skin, hair, cloth, cloth2)` and those colours are per colonist, so it looked
+   unbounded. Measured: **flat at 22–23 materials from 8 colonists to 384.** No leak.
+
+**A third, checked and weakened.** `Odyssey/Character` missing from a build would draw colonists "in
+the pack's own colours", which is the right shape — but it is in `ShaderInclusion`'s always-included
+list. A player was built and smoke-run: `162/179 rows have art`, no colonist module in the fallback
+list, no missing-shader warning. I briefly read `colonist cast seed 1 over 73 faces, the fallback
+only` as a fault; it is the healthy state — the cast seed *is* only a fallback when every colonist
+has their own roll seed.
+
+**So the editor is clean on every axis I can measure at 384 colonists** — 3.90 ms, no stand-ins, 23
+materials, two faces — and I could not reproduce the report. What remains needs two facts only the
+owner has: whether this was the editor or a built player, and roughly what number it began at. A
+number near 61 would have meant faces; it is not faces. A sharp round number points somewhere I have
+not looked.
+
+**The ceiling is built anyway, and is deliberately not presented as the fix.** `PawnRegistry.PawnCeiling`
+is 200, enforced on the spawn *intent* as a refusal rather than a clamp, in the same shape as
+`PawnFigureDirector.FigureCeiling`: a test pins the number and moving it is a measurement. It is four
+times the audit's scale target and three times the figure ceiling, and **384 was measured healthy**,
+so it is not where anything was found to break. Its whole job is that a debug command cannot run a
+session into a state nobody designed for. `PawnCeilingTests` carries the negative control that
+matters — under the ceiling nothing is refused — because a rail that started governing ordinary play
+would be worse than the fault it guards.
