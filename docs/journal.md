@@ -10599,3 +10599,51 @@ pass by never having built one. That version fails on the mutation.
 while it stood the aspect scan looked like a constant and the whole bend was attributed to the larger
 term. One pass held two quadratics. **After fixing a quadratic, measure the same pass again rather
 than declaring it linear.**
+### The arms were measuring a board nobody plays, and a play log found it
+
+The owner pasted a console log while playing — not a bug report, just context for a question about
+whether the editor felt slow. Their 120 × 120 × 16 session read `patches 0, trees 1598`. Every
+measurement arm written that day had been reporting `patches 2210, trees 1222` for the same board.
+
+**Two owners for one choice.** `Assets/Scenes/Play.unity` carries `barrenMap: 1, woodedMap: 1`, so
+`ColonyWorld.Build` applied `MakeWooded()` on top of `MapGenerator.DefaultDef`. Every arm —
+worldgen, nav statistics, save — reached for `NaturalMapGenDef.For(size)`, which *is*
+`DefaultDef`, and got the def without it. `BoardMemoryTests` was further out again:
+`ColonyWorld.Build`'s `wooded` parameter defaults to `false`, and `false` means `MakeBarren()` — a
+board with no trees and no water at all. So the memory figures were for a bare board, the rest for
+a half-wooded one, and the game plays neither.
+
+**The fix was to delete the second owner rather than copy the first.** `ColonyWorld.DefFor` is now
+the one place that decision is made; `Build` calls it and `PlayedMap` calls it. A copy would have
+been quicker and would have re-created the fault the moment either side moved — which is the shape
+`HopCost` and `OrderColours` already exist to prevent, and now the third instance of it.
+
+**The first guard was itself wrong, and the guard caught that too.** The obvious oracle is to hash a
+grid built by `PlayedMap` against one built by `ColonyWorld.Build` and assert they match. They do
+not: `Build` also applies the scenario's placements, so it compares far more than the def. The test
+failed, and the failure was the instrument rather than the subject — twice in one day. What replaced
+it holds the helper to an *observable property* of `MakeWooded` — trees present, patches zero —
+with a negative control that fails if the helper ever becomes a synonym for the plain default.
+
+**What it moved was less than feared, and saying so is part of the record.** Live regions and links
+came out **identical on every board**: 2,110/1,477, 7,360/3,511, 8,406/6,180, 24,141/6,772. Trees and
+surface patches do not change how the region graph carves a 10 × 10 block, so the region counts, the
+edit tick and the whole ceiling argument stand. Huge is 0.865 ms an edited cell against the 0.883
+first reported — noise, on the same structure. What did move: generation time (24 / 77 / 104 ms),
+the feature counts, memory by about 2 B/cell, save size by a few per cent.
+
+One finding sharpened rather than softened. Water shapes across the four boards are **2, 4, 7 and
+5** — Huge has *fewer* than Large while covering nearly twice the ground, because `streamCount` is a
+per-map absolute. That was a theory in §4 and is now a number, and a better playtest question for it.
+
+**The uncomfortable part.** `docs/bug-patterns.md` P14 — *an instrument that cannot see the thing it
+is comparing, and passes* — was written one commit earlier, in this same branch, about two other
+faults of the same shape found the same afternoon. It was not applied to the arms it was written
+about. Writing the pattern down is not the same as running it over the work in hand, and the thing
+that actually caught this was a person pasting a log.
+
+Three instrument faults in one day, none found by a failing assertion: one found by a control, one
+by noticing two "different" readings printed the same draw-call count, and one by an owner's console
+output. The rule that covers all three is already written — **assert on the deterministic half** —
+and the arms now do: `MineOneCell.Mined == Ticks`, `callsOn < callsOff`, trees present and patches
+zero. A millisecond never catches a fixture that has stopped doing its job.

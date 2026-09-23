@@ -664,13 +664,23 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public event Action<CellRef>? ToolClick;
 
+        UnityEngine.Camera? _camera;
+
+        /// <summary>
+        /// The camera this rig drives. Required by the component, so it always exists; cached
+        /// because it is now wanted every frame for the frustum the chunk renderer culls against,
+        /// and a <c>GetComponent</c> a frame is the sort of thing that is invisible until it is
+        /// in a profile.
+        /// </summary>
+        public UnityEngine.Camera Camera =>
+            _camera != null ? _camera : _camera = GetComponent<UnityEngine.Camera>();
+
         /// <summary>
         /// The one place a screen position becomes a ray. Shared so that a tool drag and a
         /// selection click cannot resolve the same pixel to different cells.
         /// </summary>
         Ray RayAt(Vector2 screenPosition) =>
-            GetComponent<UnityEngine.Camera>()
-                .ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+            Camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
 
         /// <summary>
         /// The highest layer a click may land on, and the lowest. The picker's band, published so
