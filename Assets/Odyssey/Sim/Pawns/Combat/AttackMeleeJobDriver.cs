@@ -30,7 +30,7 @@ namespace Odyssey.Sim.Pawns
     /// <para><b>When it ends.</b> The target gone, dead, or — unless the job was ordered on a pawn
     /// already down — down (the owner's "until one of them goes down"); unreachable; out of reach
     /// for a drafted colonist's hold-attack, which never chases; and, for any attack nobody
-    /// ordered, after <see cref="RechooseTicks"/> at a step boundary, so a hunt or a revenge picks
+    /// ordered, after <see cref="CombatDef.rechooseTicks"/> at a step boundary, so a hunt or a revenge picks
     /// its target again rather than chasing the first one across the board for ever.</para>
     ///
     /// <para><b>Buildings are C6's.</b> A job with no <see cref="Pawn.CombatTarget"/> is the
@@ -46,13 +46,6 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary><see cref="Job.DestCell"/> for an order given on a pawn already down: carry on until it is dead.</summary>
         public const int ToTheDeath = 1;
-
-        /// <summary>
-        /// How long an attack nobody ordered keeps its first target before thinking again, in
-        /// ticks. INVENTED (lane A): five seconds at one speed. Proposed for <c>CombatDef</c> in the
-        /// hand-over, since Def values are frozen in Phase 2.
-        /// </summary>
-        public const int RechooseTicks = 300;
 
         public override bool TryMakeReservations(PawnContext ctx) => true;
 
@@ -111,7 +104,7 @@ namespace Odyssey.Sim.Pawns
             if (Pawn.Drafted && !Job.PlayerForced) return boundary ? JobStatus.Succeeded : JobStatus.Ongoing;
 
             // A hunt, a revenge or a self-defence thinks again now and then.
-            if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= RechooseTicks) return JobStatus.Succeeded;
+            if (!Job.PlayerForced && boundary && tick - Pawn.JobStartTick >= ctx.Content.Combat.rechooseTicks) return JobStatus.Succeeded;
 
             if (!ctx.Reachable(Pawn, target.Cell, mode)) return JobStatus.Failed;
 

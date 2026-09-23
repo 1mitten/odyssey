@@ -183,7 +183,12 @@ namespace Odyssey.Tests.Sim
         // gained `weapon` and PawnKind_Marauder names Item_Machete (design 33 §1: "debug-spawned,
         // armed"; IWeaponRules.ArmOnSpawn puts it in the hand). No golden moved: no golden spawns
         // a marauder.
-        const ulong ContentFingerprint = 3115960914970437026UL;
+        //
+        // Moved a nineteenth time, 2026-09-23, at the C2/C3 integration: CombatDef gained
+        // `rechooseTicks` (300), lane A's constant on the attack driver, proposed for the Def in its
+        // hand-over because Defs were frozen while the lanes ran. Same value, so no behaviour and no
+        // golden moved.
+        const ulong ContentFingerprint = 1633548697748405690UL;
 
 
         [Test]

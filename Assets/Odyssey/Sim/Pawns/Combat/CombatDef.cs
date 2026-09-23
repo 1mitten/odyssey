@@ -114,6 +114,13 @@ namespace Odyssey.Sim.Pawns
         /// <summary>How often a chase re-plans its path to a moving target, in ticks.</summary>
         public int chaseRepathTicks = 60;
 
+        /// <summary>
+        /// How long an attack nobody ordered — a hunt, a revenge, a self-defence — keeps its first
+        /// target before thinking again, in ticks, so a nearer colonist is noticed. INVENTED (lane A,
+        /// five seconds at one speed); moved from a constant on the driver at the integration.
+        /// </summary>
+        public int rechooseTicks = 300;
+
         /// <summary>How long a colonist struck by a colonist fights back for, in ticks.</summary>
         public int retaliationTicks = 1_200;
 

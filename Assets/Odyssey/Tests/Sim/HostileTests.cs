@@ -115,5 +115,40 @@ namespace Odyssey.Tests.Sim
             Strike(colony, marauder, by, 1_000);
             Assert.That(by.RetaliateAgainst, Is.EqualTo(0), "the control: a drafted colonist remembered the blow");
         }
+
+        /// <summary>
+        /// A hunt thinks again after <c>CombatDef.rechooseTicks</c> (§6A), and not before: the
+        /// marauder's attack ends at the first step boundary past it and the hunt starts a fresh
+        /// one, so a nearer colonist would be noticed. The number moved from a constant on the
+        /// driver into the Def at the integration (2026-09-23); nothing tested it before.
+        /// </summary>
+        [Test]
+        public void AHuntThinksAgainAfterTheContentsRechooseTicks()
+        {
+            var colony = Board(colonists: 1);
+            colony.World.Tick(5);
+            Pawn her = colony.Pawns.Pawns.All[0];
+            Stand(colony, her, Near(colony, 22, 22));
+            Assert.That(Draft(colony, her), Is.EqualTo(IntentRejection.None), "drafted, so she holds where she is");
+
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, -4, -4));
+            colony.World.Tick();
+            Assume.That(marauder.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee));
+            int started = marauder.JobStartTick;
+            int rechoose = colony.Pawns.Content.Combat.rechooseTicks;
+
+            int rethought = -1;
+            for (int t = 0; t < rechoose * 3 && rethought < 0; t++)
+            {
+                colony.World.Tick();
+                if (marauder.JobStartTick != started) rethought = marauder.JobStartTick;
+            }
+
+            Assert.That(rethought, Is.GreaterThanOrEqualTo(0), "the hunt never thought again");
+            Assert.That(rethought - started, Is.GreaterThanOrEqualTo(rechoose), "the hunt thought again early");
+            Assert.That(rethought - started, Is.LessThan(rechoose + 120), "the hunt waited well past a step boundary");
+            Assert.That(marauder.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "with nobody nearer, it hunts her again");
+            Assert.That(marauder.CombatTarget, Is.EqualTo(her.Id.Value));
+        }
     }
 }
