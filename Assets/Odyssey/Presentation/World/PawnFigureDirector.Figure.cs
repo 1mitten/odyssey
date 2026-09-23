@@ -85,6 +85,14 @@ namespace Odyssey.Presentation.World
             public CombatState Fight = new CombatState();
 
             /// <summary>
+            /// The weapon prop in the right hand, seated once when the pawn's weapon changes, or
+            /// null; and the item def it was made for, -1 for bare hands. See
+            /// <c>PawnFigureDirector.Weapons.cs</c>.
+            /// </summary>
+            public GameObject? Weapon;
+            public int WeaponDef = -1;
+
+            /// <summary>
             /// The computed gait, for an animal whose row asks for one and whose rig has the
             /// four legs (design 29). Null on every colonist and on an animal that walks on its
             /// own clips.

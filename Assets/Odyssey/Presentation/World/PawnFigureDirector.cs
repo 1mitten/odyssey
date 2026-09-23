@@ -1789,6 +1789,9 @@ namespace Odyssey.Presentation.World
                 : SleepPose.Settle(figure.SleepWeight, pawn.Asleep || figure.Fight.Lying ? 1f : 0f, deltaTime);
             if (figure.SleepWeight > 0.001f) AimSleep(figure, in pawn);
 
+            // The weapon in the right hand, now that the tool, the load and the lie are known.
+            ShowWeapon(figure, in pawn, carrying: carryDef >= 0);
+
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
@@ -2306,6 +2309,8 @@ namespace Odyssey.Presentation.World
             // And somebody else's fight: a body lent to a colonist walking into view must not open
             // with the last tenant's stagger (design 33 §5f).
             figure.Fight.Forget();
+            // And somebody else's weapon, until this pawn's own is read on the first pose.
+            HideWeapon(figure);
             figure.WorkCentre = at;
             figure.SimPosition = at;
             figure.Steer = Vector3.zero;
@@ -2366,6 +2371,7 @@ namespace Odyssey.Presentation.World
                 // to a colonist who is only walking past would otherwise arrive carrying it.
                 figure.WorkWeight = 0f;
                 ShowHeldTool(figure, working: false);
+                HideWeapon(figure);
                 figure.GameObject.SetActive(false);
                 _byPawn.Remove(_retired[i]);
             }

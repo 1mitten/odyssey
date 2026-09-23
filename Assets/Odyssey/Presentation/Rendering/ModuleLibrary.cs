@@ -432,6 +432,12 @@ namespace Odyssey.Presentation.Rendering
             }
             if (hasExact) bounds = exact;
 
+            // A piece dropped on the ground that was modelled standing up lies on its broadest
+            // face (ModuleEntry.lieFlat), turned before it is measured so the centring and the base
+            // below see it as it lies.
+            Quaternion lie = entry.lieFlat && hasExact ? LieFlat(bounds.size) : Quaternion.identity;
+            if (entry.lieFlat && hasExact) bounds = TransformBounds(bounds, Matrix4x4.Rotate(lie));
+
             // Neutralise whichever pivot convention the piece uses, once per module rather than
             // once per instance: the same trick the look-check scene plays, moved off the hot path.
             var normalise = Vector3.zero;
@@ -446,7 +452,8 @@ namespace Odyssey.Presentation.Rendering
             else if (entry.topAtY) normalise.y = bounds.max.y - CellMetrics.SlabLift;
 
             Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry))
-                              * Matrix4x4.Translate(-normalise);
+                              * Matrix4x4.Translate(-normalise)
+                              * Matrix4x4.Rotate(lie);
 
             // The head goes through the same `place` every part does, so it inherits the pivot
             // convention and the scale rather than having them re-applied by a caller.
@@ -649,6 +656,16 @@ namespace Odyssey.Presentation.Rendering
                 if (Application.isPlaying) Object.Destroy(instance);
                 else Object.DestroyImmediate(instance);
             }
+        }
+
+        /// <summary>
+        /// The turn that stands a box's thinnest axis up: nothing when it already is, a roll about
+        /// z when x is thinnest, a pitch about x when z is. See <see cref="ModuleEntry.lieFlat"/>.
+        /// </summary>
+        public static Quaternion LieFlat(Vector3 size)
+        {
+            if (size.y <= size.x && size.y <= size.z) return Quaternion.identity;
+            return size.x <= size.z ? Quaternion.Euler(0f, 0f, 90f) : Quaternion.Euler(-90f, 0f, 0f);
         }
 
         internal static Bounds TransformBounds(Bounds b, Matrix4x4 m)

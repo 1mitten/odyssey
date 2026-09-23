@@ -178,6 +178,16 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("Extra local yaw in degrees. Use it when a piece faces the wrong way.")]
         public float yaw;
 
+        /// <summary>
+        /// Lay the art on its broadest face: its thinnest axis turned vertical before anything
+        /// else is measured. For a thing modelled standing up that is dropped on the ground — a
+        /// weapon is modelled haft-up, the way a hand holds it, and a bat stood on its end in a
+        /// field reads as a post (C3, the integration, 2026-09-23). Applied before the centring
+        /// and the base, so both measure the piece as it lies.
+        /// </summary>
+        [Tooltip("Lay the art on its broadest face (thinnest axis up). For props modelled standing, dropped on the ground.")]
+        public bool lieFlat;
+
         [Tooltip("Uniform scale applied to the art. 1 unless a piece must be stretched to the cell.")]
         public Vector3 scale = Vector3.one;
 
@@ -713,8 +723,9 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemCarrots = Prefix + "item.carrots";
 
         // The four melee weapons lying on the ground (design 33 §1, C3), claimed by the combat
-        // contracts step so the table below stays as long as ItemIndex. No rows yet: each falls
-        // back to the stand-in until lane B's catalogue build gives it a prop.
+        // contracts step so the table below stays as long as ItemIndex. Their rows came at the
+        // C2/C3 integration, and the same row is the prop a figure holds
+        // (PawnFigureDirector.Weapons.cs): one piece of art for the weapon wherever it is.
         public const string ItemBat = Prefix + "item.bat";
         public const string ItemCrowbar = Prefix + "item.crowbar";
         public const string ItemMachete = Prefix + "item.machete";

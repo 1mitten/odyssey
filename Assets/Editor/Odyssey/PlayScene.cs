@@ -1825,6 +1825,44 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(0.6f, 0.6f, 0.6f),
             });
 
+            // The four weapons (design 33 §1, C3). Each row is the weapon lying on the ground AND
+            // the prop a figure holds (PawnFigureDirector.Weapons.cs), so a machete looks the same
+            // in a hand as on the grass. The Battle Royale pack has a bat, a crowbar and a machete
+            // by name; the arc blade is the Sci-Fi City sword, the one blade in the packs that
+            // reads as the future rather than the frontier. The hand ignores the placement fields
+            // (it seats the prop by its own measurement); the ground wants them lying on their
+            // broadest face, centred, and half again as large, like every other item, because at
+            // true scale a bat on a 2.5 m cell is a stick. Chosen by name, not by a contact sheet:
+            // the look is the owner's to judge (C3 playtest).
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemBat, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Bat_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemCrowbar, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Crowbar_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMachete, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Machete_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemArcBlade, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Sword_01",
+                centreXZ = true, baseAtY = true, lieFlat = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+
             AddCombatRows(rows);
 
             return rows;

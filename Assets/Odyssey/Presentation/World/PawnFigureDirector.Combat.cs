@@ -712,6 +712,8 @@ namespace Odyssey.Presentation.World
             figure.Fight.Forget();
             figure.WorkWeight = 0f;
             ShowHeldTool(figure, working: false);
+            // A corpse lets go of its weapon: the simulation laid it on the ground at the body.
+            HideWeapon(figure);
             figure.GameObject.SetActive(true);
 
             string variant = CombatPose.VariantOf(side);
