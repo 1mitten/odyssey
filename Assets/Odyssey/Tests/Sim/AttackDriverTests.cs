@@ -78,6 +78,11 @@ namespace Odyssey.Tests.Sim
         /// a swing starts a new job and the next swing still waits out the cooldown. The control is
         /// the same board with the clock cleared at the re-order, which swings early — what a clock
         /// on the job would have done.
+        ///
+        /// <para>The first attack is ended before the second order, because the same order repeated
+        /// on the same target is a no-op since 2026-09-23 (<see cref="ARepeatedAttackOrderIsQuietAndKeepsTheSwingInTheAir"/>);
+        /// what is asserted here is a new job, which is what a player gets by ordering something
+        /// else in between.</para>
         /// </summary>
         [Test]
         public void ANewOrderDoesNotResetTheSwingClock()
@@ -88,6 +93,7 @@ namespace Odyssey.Tests.Sim
                 TickUntil(colony, () => rules.TicksOf(a).Count >= 1, 1_500, "no first swing");
                 int first = rules.TicksOf(a)[0];
                 colony.World.Tick(10);
+                colony.Jobs.EndJob(a, JobStatus.Failed);
                 Assert.That(Attack(colony, a, b), Is.EqualTo(IntentRejection.None));
                 if (clearTheClock) a.NextSwingTick = 0;
                 TickUntil(colony, () => rules.TicksOf(a).Count >= 2, 1_500, "no second swing");
@@ -97,6 +103,35 @@ namespace Odyssey.Tests.Sim
             int cooldown = Board().Pawns.Content.Combat.fists.cooldownTicks;
             Assert.That(Gap(clearTheClock: false), Is.GreaterThanOrEqualTo(cooldown));
             Assert.That(Gap(clearTheClock: true), Is.LessThan(cooldown), "the control: a reset clock swings early");
+        }
+
+        /// <summary>
+        /// The same attack order given again — a confirm-click, sent for every selected drafted
+        /// colonist — is <c>AlreadyInThatState</c> and changes nothing: the job goes on and the
+        /// swing in the air lands. Before the fix (review, 2026-09-23) it restarted the job, which
+        /// lost the wound-up swing while the pawn's swing clock still waited a full cooldown, so a
+        /// player clicking faster than a wind-up stopped her landing anything. The control is the
+        /// hold's own blow, which nobody ordered: the order takes it over.
+        /// </summary>
+        [Test]
+        public void ARepeatedAttackOrderIsQuietAndKeepsTheSwingInTheAir()
+        {
+            var (colony, a, b, rules) = Duel();
+            TickUntil(colony, () => Swing(a)?.InWindup == true, 1_500, "she never wound up a swing");
+            int started = a.JobStartTick;
+            int landed = rules.TicksOf(a).Count;
+
+            Assert.That(Attack(colony, a, b), Is.EqualTo(IntentRejection.AlreadyInThatState));
+            Assert.That(a.JobStartTick, Is.EqualTo(started), "the order restarted her attack");
+            Assert.That(Swing(a)?.InWindup, Is.True, "the swing in the air was lost");
+            int windup = colony.Pawns.Content.Combat.fists.windupTicks;
+            TickUntil(colony, () => rules.TicksOf(a).Count > landed, windup + 2, "the wound-up swing never landed");
+
+            // The control: B's blow back at A is the hold's, not an order, so ordering it is new.
+            TickUntil(colony, () => b.CurrentJob?.DefIndex == JobIndex.AttackMelee, 600, "B never struck back");
+            Assume.That(b.CurrentJob!.PlayerForced, Is.False);
+            Assert.That(Attack(colony, b, a), Is.EqualTo(IntentRejection.None), "the control: an order over the hold's blow");
+            Assert.That(b.CurrentJob?.PlayerForced, Is.True);
         }
 
         /// <summary>The figure turns to the target during the wind-up, and at no other time.</summary>

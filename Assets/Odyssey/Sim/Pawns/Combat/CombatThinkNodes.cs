@@ -75,7 +75,10 @@ namespace Odyssey.Sim.Pawns
     /// A marauder's whole purpose (design 33 §1): hunt the nearest reachable colonist who is
     /// standing, and attack. A downed colonist is not hunted; a marauder with nobody left to
     /// hunt falls through to idling. The attack it starts re-chooses after
-    /// <see cref="CombatDef.rechooseTicks"/>, so a nearer colonist is noticed.
+    /// <see cref="CombatDef.rechooseTicks"/>, so a nearer colonist is noticed. <b>A colonist who
+    /// struck it</b> comes first while <see cref="Pawn.RetaliateAgainst"/> holds and she is
+    /// standing and reachable (<c>CombatSystem.React</c> records her), so the hitter is fought
+    /// even when another colonist is as near.
     /// <b>Scales with the pawns on the board</b> per think: one pass, a reachability test (two
     /// array reads) for each standing colonist nearer than the best so far.
     /// </summary>
@@ -87,6 +90,13 @@ namespace Odyssey.Sim.Pawns
         {
             if (pawn.Downed) return false;
             TraverseMode mode = pawn.Species.traverseMode;
+
+            if (pawn.RetaliateAgainst != 0 && ctx.CurrentTick < pawn.RetaliateUntilTick)
+            {
+                Pawn? foe = ctx.Pawns.Get(new PawnId(pawn.RetaliateAgainst));
+                if (foe != null && foe.IsColonist && Melee.IsStanding(foe) && ctx.Reachable(pawn, foe.Cell, mode))
+                    return AttackJob.Fill(pawn, foe, job, mode);
+            }
 
             Pawn? best = null;
             int bestDistance = int.MaxValue;

@@ -2,6 +2,7 @@
 using System.Linq;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using static Odyssey.Tests.Sim.CombatFixture;
 
@@ -149,6 +150,94 @@ namespace Odyssey.Tests.Sim
             Assert.That(rethought - started, Is.LessThan(rechoose + 120), "the hunt waited well past a step boundary");
             Assert.That(marauder.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee), "with nobody nearer, it hunts her again");
             Assert.That(marauder.CombatTarget, Is.EqualTo(her.Id.Value));
+        }
+
+        /// <summary>
+        /// A marauder chasing somebody else turns on the colonist who hits it (design 33 §6A), and
+        /// the hitter is remembered rather than rediscovered: with two colonists equally near, the
+        /// one who struck is the one it fights. Before the fix (review, 2026-09-23) a blow only
+        /// interrupted it, the hunt chose the nearest again, and a tie went to the lower id — the
+        /// colonist who had not touched it.
+        /// </summary>
+        [Test]
+        public void AMarauderChasingSomebodyElseTurnsOnTheColonistWhoHitsIt()
+        {
+            var colony = Board(colonists: 3);
+            colony.World.Tick(5);
+            Pawn bystander = colony.Pawns.Pawns.All[0], hitter = colony.Pawns.Pawns.All[1], quarry = colony.Pawns.Pawns.All[2];
+            Assume.That(bystander.Id.Value, Is.LessThan(hitter.Id.Value), "the tie goes to the lower id");
+            Stand(colony, bystander, Near(colony, 20, 20));
+            Stand(colony, hitter, Near(colony, 20, -20));
+            Stand(colony, quarry, Near(colony, 8, 0));
+            foreach (Pawn p in new[] { bystander, hitter, quarry }) Assert.That(Draft(colony, p), Is.EqualTo(IntentRejection.None));
+
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 0, 0));
+            colony.World.Tick();
+            Assert.That(marauder.CombatTarget, Is.EqualTo(quarry.Id.Value), "the control: it chases the nearest");
+
+            // Stop it where it is, mid-chase, and bring the other two up beside it, one on each
+            // side and equally near.
+            marauder.ClearPath();
+            marauder.Destination = -1;
+            marauder.MoveProgress = 0;
+            CellRef at = colony.Pawns.Size.FromIndex(marauder.Cell);
+            Stand(colony, bystander, colony.Pawns.Cells.NearestWalkableInColumn(at.X, at.Z - 1, at.Y));
+            Stand(colony, hitter, colony.Pawns.Cells.NearestWalkableInColumn(at.X, at.Z + 1, at.Y));
+            Assume.That(colony.Pawns.Distance(marauder.Cell, bystander.Cell),
+                Is.EqualTo(colony.Pawns.Distance(marauder.Cell, hitter.Cell)), "the two are equally near");
+            Assume.That(Melee.InReach(colony.Pawns, marauder, quarry, TraverseMode.Colonist), Is.False, "still chasing");
+
+            Strike(colony, hitter, marauder, 1_000);
+            Assert.That(marauder.RetaliateAgainst, Is.EqualTo(hitter.Id.Value), "the blow is remembered on the marauder");
+            colony.World.Tick(2);
+
+            Assert.That(marauder.CurrentJob?.DefIndex, Is.EqualTo(JobIndex.AttackMelee));
+            Assert.That(marauder.CombatTarget, Is.EqualTo(hitter.Id.Value), "it turned on somebody who had not hit it");
+        }
+
+        /// <summary>
+        /// A marauder already trading blows with a colonist beside it keeps to her when a second
+        /// colonist hits it: the swing in the air is not thrown away, and the hitter is remembered
+        /// for when she goes down. Before the fix every such blow interrupted the marauder, lost the
+        /// swing it had wound up and left it a whole cooldown before it could swing again, so two
+        /// colonists could keep a marauder from ever landing a blow (review, 2026-09-23).
+        /// </summary>
+        [Test]
+        public void AMarauderInAFightKeepsItsSwingWhenASecondColonistHitsIt()
+        {
+            var colony = Board(colonists: 2);
+            colony.World.Tick(5);
+            Pawn engaged = colony.Pawns.Pawns.All[0], hitter = colony.Pawns.Pawns.All[1];
+            Stand(colony, engaged, Near(colony, 1, 0));
+            Stand(colony, hitter, Near(colony, 20, 20));
+            foreach (Pawn p in new[] { engaged, hitter }) Assert.That(Draft(colony, p), Is.EqualTo(IntentRejection.None));
+            var rules = new RecordingRules();
+            colony.Pawns.MeleeRules = rules;
+
+            Pawn marauder = Spawn(colony, PawnKindIndex.Marauder, Near(colony, 0, 0));
+            for (int t = 0; t < 600 && !(marauder.Driver is AttackMeleeJobDriver { InWindup: true }); t++) colony.World.Tick();
+            Assert.That(marauder.Driver is AttackMeleeJobDriver { InWindup: true }, Is.True, "the marauder never wound up a swing");
+            Assert.That(marauder.CombatTarget, Is.EqualTo(engaged.Id.Value));
+            int swings = rules.TicksOf(marauder).Count;
+            int started = marauder.JobStartTick;
+
+            CellRef at = colony.Pawns.Size.FromIndex(marauder.Cell);
+            Stand(colony, hitter, colony.Pawns.Cells.NearestWalkableInColumn(at.X, at.Z + 1, at.Y));
+            Strike(colony, hitter, marauder, 1_000);
+
+            Assert.That(marauder.JobStartTick, Is.EqualTo(started), "the blow ended the marauder's attack");
+            Assert.That(marauder.Driver is AttackMeleeJobDriver { InWindup: true }, Is.True, "the swing in the air was lost");
+            Assert.That(marauder.CombatTarget, Is.EqualTo(engaged.Id.Value), "it let go of the colonist beside it");
+            Assert.That(marauder.RetaliateAgainst, Is.EqualTo(hitter.Id.Value), "the hitter is remembered");
+
+            int windup = colony.Pawns.Content.Items[colony.Pawns.Content.WeaponOf(PawnKindIndex.Marauder)].weapon!.windupTicks;
+            for (int t = 0; t <= windup + 1 && rules.TicksOf(marauder).Count == swings; t++) colony.World.Tick();
+            Assert.That(rules.TicksOf(marauder).Count, Is.EqualTo(swings + 1), "the swing it had wound up never landed");
+
+            // She goes down: the one who hit it is next, as remembered.
+            Strike(colony, marauder, engaged, engaged.HpMilli);
+            colony.World.Tick(2);
+            Assert.That(marauder.CombatTarget, Is.EqualTo(hitter.Id.Value));
         }
     }
 }

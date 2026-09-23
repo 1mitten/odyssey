@@ -23,7 +23,8 @@ namespace Odyssey.Sim.Pawns
         /// herself, or cannot be reached. <b>Any pawn may be the target</b> — an animal, a
         /// marauder, a colonist: the Ctrl that a colonist target needs is the interface's gesture
         /// (<c>CombatOrders.Route</c>), and the contract gives the intent no argument to carry it
-        /// (design 33 §6A).</para>
+        /// (design 33 §6A). <b><c>AlreadyInThatState</c></b> for the order she is already carrying
+        /// out: the same target, forced, to the same end.</para>
         /// </summary>
         public IntentRejection HandleOrderAttack(Intent intent)
         {
@@ -39,6 +40,16 @@ namespace Odyssey.Sim.Pawns
                 && !_ctx.Reachable(pawn, target.Cell, TraverseMode.Colonist))
                 return IntentRejection.NotPermitted;
 
+            // The same order again — a confirm-click, sent for every selected drafted colonist — is
+            // a no-op. Restarting threw away the swing in the air while the pawn's swing clock
+            // still waited out a cooldown, so clicking faster than a wind-up stopped her landing
+            // anything (review, 2026-09-23). Ordered on a target gone down since, the order is new:
+            // it carries on to the death.
+            int toTheDeath = target.Downed ? AttackMeleeJobDriver.ToTheDeath : -1;
+            if (pawn.CurrentJob is { DefIndex: JobIndex.AttackMelee, PlayerForced: true } current
+                && pawn.CombatTarget == target.Id.Value && current.DestCell == toTheDeath)
+                return IntentRejection.AlreadyInThatState;
+
             int tick = IntentTick;
             pawn.DraftQuietSinceTick = tick;
 
@@ -50,7 +61,7 @@ namespace Odyssey.Sim.Pawns
             Job job = pawn.JobBuffer;
             job.Reset(JobIndex.AttackMelee);
             job.TargetCell = target.Cell;
-            job.DestCell = target.Downed ? AttackMeleeJobDriver.ToTheDeath : -1;
+            job.DestCell = toTheDeath;
             job.PlayerForced = true;
             return StartJob(pawn, job, tick) ? IntentRejection.None : IntentRejection.NotPermitted;
         }

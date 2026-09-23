@@ -138,7 +138,8 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="CombatDef.revengeTicks"/>; not turning, it runs — unless it had already
         /// turned on this attacker, which a failed roll does not undo. A colonist not under the
         /// player's hand stops what she is doing and fights back against whoever struck her for
-        /// <see cref="CombatDef.retaliationTicks"/>. A marauder turns on a colonist hitting it.
+        /// <see cref="CombatDef.retaliationTicks"/>. A marauder remembers a colonist hitting it for the
+        /// same window and turns on her, unless it is already fighting somebody beside it.
         /// </summary>
         void React(Pawn target, Pawn attacker, int tick)
         {
@@ -163,11 +164,18 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            // A marauder chasing somebody else turns to the one hitting it: its hunt chooses the
-            // nearest standing colonist, and that is now whoever is beside it.
+            // A marauder struck by a colonist it is not fighting remembers her for the retaliation
+            // window, and its hunt prefers her (HostileThinkNode). Chasing somebody else, it turns
+            // now. Already trading blows with a colonist beside it, it keeps to her: an interrupt
+            // there threw away the swing in the air and left the marauder a whole cooldown, so two
+            // colonists could keep it from ever landing a blow — and the re-think chose the
+            // nearest, which on a tie was the lower id, not the hitter (review, 2026-09-23).
             if (target.IsHostile)
             {
-                if (attacker.IsColonist && !Melee.IsAttacking(target, attacker)) _jobs.Interrupt(target, JobStatus.Failed);
+                if (!attacker.IsColonist || Melee.IsAttacking(target, attacker)) return;
+                target.RetaliateAgainst = attacker.Id.Value;
+                target.RetaliateUntilTick = tick + combat.retaliationTicks;
+                if (!FightingBeside(target)) _jobs.Interrupt(target, JobStatus.Failed);
                 return;
             }
 
@@ -181,6 +189,18 @@ namespace Odyssey.Sim.Pawns
             target.RetaliateUntilTick = tick + combat.retaliationTicks;
 
             if (!Melee.IsAttacking(target, attacker)) _jobs.Interrupt(target, JobStatus.Failed);
+        }
+
+        /// <summary>
+        /// Is <paramref name="pawn"/> attacking somebody standing within reach — in the fight
+        /// rather than on the way to one?
+        /// </summary>
+        bool FightingBeside(Pawn pawn)
+        {
+            if (pawn.CombatTarget == 0 || pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.AttackMelee)
+                return false;
+            Pawn? foe = _ctx.Pawns.Get(new PawnId(pawn.CombatTarget));
+            return foe != null && Melee.IsStanding(foe) && Melee.InReach(_ctx, pawn, foe, pawn.Species.traverseMode);
         }
 
         /// <summary>
