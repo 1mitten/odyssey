@@ -40,6 +40,12 @@ namespace Odyssey.Sim.Pawns.Wildlife
         readonly int _keepClear;
         readonly List<Pawn> _scratch = new List<Pawn>();
 
+        // Kept and refilled rather than made per arrival check: a census of a 120 x 120 board
+        // is tens of thousands of ints, and an idle tick is held to sixteen bytes.
+        readonly SurfaceCensus _census = new SurfaceCensus();
+        readonly HashSet<int> _taken = new HashSet<int>();
+        readonly List<int> _candidates = new List<int>();
+
         public WildlifeSystem(PawnContext pawns, JobSystem jobs, MapGenDef gen, CellRef start, int keepClear)
         {
             _pawns = pawns ?? throw new ArgumentNullException(nameof(pawns));
@@ -97,7 +103,7 @@ namespace Odyssey.Sim.Pawns.Wildlife
             // the board is mined and built on, and a stale edge list is an arrival in a wall.
             if (population >= _gen.wildlifeCeiling) return;
             if (rng.NextInt(1000) >= ArrivalPerMille) return;
-            SurfaceCensus census = SurfaceCensus.Take(_pawns.Cells, _pawns.Nav, _pawns.Designations, _start, _keepClear, TraverseMode.Animal);
+            SurfaceCensus census = SurfaceCensus.Take(_pawns.Cells, _pawns.Nav, _pawns.Designations, _start, _keepClear, TraverseMode.Animal, _census);
             int target = Target(census);
             if (population >= target || census.Edge.Count == 0) return;
 
@@ -108,7 +114,8 @@ namespace Odyssey.Sim.Pawns.Wildlife
             int group = Math.Min(WildlifeSeeder.GroupSize(entry, ref rng), Math.Min(target, _gen.wildlifeCeiling) - population);
             if (group <= 0) return;
             int centre = census.Edge[rng.NextInt(census.Edge.Count)];
-            WildlifeSeeder.PlaceGroup(_pawns, census, new HashSet<int>(), centre, kind, group);
+            _taken.Clear();
+            WildlifeSeeder.PlaceGroup(_pawns, census, _taken, centre, kind, group, ref rng, _candidates);
         }
 
         /// <summary>On the board's outer ring, whatever the layer.</summary>

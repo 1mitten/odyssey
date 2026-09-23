@@ -185,7 +185,7 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void TheBarsAnimalsItemIsLiveOnF5AndWildlifeIsDead()
+        public void TheBarsAnimalsItemIsLiveOnF5AndWildlifeIsNotOnTheBar()
         {
             HudCommand? animals = null, wildlife = null;
             foreach (HudCommand command in HudCommands.All)
@@ -196,8 +196,32 @@ namespace Odyssey.Tests.Hud
             Assert.That(animals, Is.Not.Null);
             Assert.That(animals!.Value.Live, Is.True);
             Assert.That(animals.Value.Hotkey, Is.EqualTo("F5"));
-            Assert.That(wildlife, Is.Not.Null);
-            Assert.That(wildlife!.Value.Live, Is.False, "wildlife is listed under Animals for now");
+            Assert.That(wildlife, Is.Null, "wildlife left the bar (owner, 2026-09-23); what is out there is the Animals tab");
+        }
+
+        [Test]
+        public void TheInspectPanesInfoButtonOpensAnAnimalsFaunaEntry()
+        {
+            var inspect = new InspectModel { Subject = InspectSubject.Colonist, IsAnimal = true, KindIconKey = "ui.pawn.hog" };
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Fauna", Registry.Label("ui.pawn.hog"))));
+            inspect.KindIconKey = "ui.pawn.rat";
+            Assert.That(AlmanacDirector.ResolveSelection(inspect), Is.EqualTo(("Fauna", Registry.Label("ui.pawn.rat"))));
+        }
+
+        /// <summary>The Almanac's Fauna is the two animals the game has, by their registry names, and nothing invented.</summary>
+        [Test]
+        public void TheAlmanacsFaunaAreTheAnimalsInTheGame()
+        {
+            AlmanacCategory? fauna = AlmanacCatalogue.GetCategory("Fauna");
+            Assert.That(fauna, Is.Not.Null);
+            var names = new List<string>();
+            foreach (AlmanacEntry entry in fauna!.Entries) names.Add(entry.Name);
+            Assert.That(names, Is.EquivalentTo(new[] { Registry.Label("ui.pawn.hog"), Registry.Label("ui.pawn.rat") }));
+            foreach (AlmanacEntry entry in fauna.Entries)
+            {
+                Assert.That(entry.Definition, Does.Not.Contain("Tame chance"), "taming is not in the game");
+                Assert.That(entry.PrimaryAction, Does.Contain("Animals"), "the live half of the entry is the Animals tab");
+            }
         }
     }
 }

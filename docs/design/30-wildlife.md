@@ -57,8 +57,19 @@ census was read; seven of the reachable count was four hogs on the whole meadow.
 
 Then groups until the target is met, at most 64 draws: pick an entry by weight, roll its group
 size, draw a centre from its habitat cells (never inside the clearing: `startingFellRadius`
-plus six), and fill the walkable census cells within three of the centre, skipping any cell a
-pawn already stands on. A sounder lands together; a rat lands alone by a rock.
+plus six), and **scatter** the members over the walkable census cells within four of the
+centre, drawn at random, skipping any cell a pawn already stands on. A sounder lands together
+but loosely, across its glade rather than knotted on one cell and its neighbours; a rat lands
+alone by a rock.
+
+**Groups keep their distance** (owner, 2026-09-23: *"spread the animals more as I noticed the
+pigs were all together - which is fine sometimes"*). A centre is drawn up to twelve times
+looking for one at least `GroupSpacing` (24 cells) from every centre already used, and the
+last draw is taken whatever its distance, so a cramped board still seeds and a board with one
+small woodland gets its hogs there. Two sounders and the rats land in different parts of the
+meadow; `SoundersLandApartFromEachOtherAndLooselyWithin` holds both halves on the played
+board. Arrivals at the edge scatter the same way. The goldens moved again for it, and the
+probe says the same thing it said the first time: the animals' cells and nothing else.
 
 **Nothing lands in the clearing and nothing lands sealed away.** Both are the census: the
 clearing is excluded from every habitat list, and an unreachable column never enters the census
@@ -124,7 +135,10 @@ now - just call it animals"*; the tamed half deferred entirely). It was the Wild
 for a day — the registry has carried both tabs since M1, and F6 was the one whose placeholder
 said "what is out there" — and it is the Animals tab now, rebuilt to a design brief
 (`docs/reference/mockups/animals-tab-brief.md`, answered through Claude Design) with the
-Wildlife item on F6 a dead item again ("wildlife is listed under Animals for now").
+Wildlife item **off the bar altogether** (owner, 2026-09-23: "remove Wildlife bottom bar"); the
+registry keeps `ui.tab.wildlife` for the day the tamed half arrives and the two halves want
+naming apart. The Esc cap the brief drew beside the close X was built and then removed on the
+same instruction; Escape still closes the tab.
 
 **What it shows.** A count strip across the top, one entry per kind present — the word at the
 meta step, the figure in mono beside it — then one row per animal: a 22 px portrait tile
@@ -159,6 +173,14 @@ number of kinds changes, nothing rebuilt per frame, the refresh in the Work tab'
 bucket. Opening any of Build, Work, the menu or this tab puts the others away; Escape closes it
 at the Work tab's rung. `AnimalsModel` is Unity-free and runs in the fast tier; every rendered
 string is ASCII, which `HudFontTests` and the PlayMode test both hold.
+
+**The Almanac knows them.** Its Fauna category was two invented entries — a "Scraphound" that
+is in no register and a rat with tame chances and bite damage the game does not have — and is
+now the two animals the game has, by their registry names, saying only what the simulation
+does: pace, habitat, group, day or night, what they climb, how long they stay. The inspect
+pane's info button on an animal opens its entry (`AlmanacDirector.ResolveSelection`), which
+returned nothing for an animal until there was an entry to open.
+`TheAlmanacsFaunaAreTheAnimalsInTheGame` holds the names to the registry.
 
 **The colony is where its people stand.** "How far" has to be from something the frame carries,
 and the mean of the colonists' cells is; the start cell is not, and a colony that has moved

@@ -110,7 +110,9 @@ namespace Odyssey.Hud
             ("ui.tab.research", "F3", "research arrives with M7"),
             ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
             (AnimalsKey, "F5", ""),
-            ("ui.tab.wildlife", "F6", "wildlife is listed under Animals for now"),
+            // Wildlife left the bar on 2026-09-23 (owner: "remove Wildlife bottom bar"): what is
+            // out there is the Animals tab. The key stays in the registry for the day the tamed
+            // half arrives and the two halves want naming apart.
             ("ui.tab.bills", "F7", "bills arrive with M5"),
             ("ui.tab.factions", "F8", "factions arrive with M7"),
             (AlmanacKey, "F9", ""),

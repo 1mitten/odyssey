@@ -189,10 +189,14 @@ namespace Odyssey.Hud
 
             if (inspect.Subject == InspectSubject.Colonist)
             {
-                // An animal has no almanac entry yet (design 29 §11: the health model and the
-                // hunt are later units, and the entry arrives with whichever first has something
-                // to say).
-                if (inspect.IsAnimal) return null;
+                // An animal opens its own Fauna entry (design 30; owner, 2026-09-23: "make sure
+                // the almanac is up-to-date with animals"), by the kind's registry name, which
+                // is the entry's name.
+                if (inspect.IsAnimal)
+                {
+                    string kind = Registry.Label(inspect.KindIconKey);
+                    return AlmanacCatalogue.GetEntry(kind) != null ? ("Fauna", kind) : null;
+                }
 
                 if (string.Equals(inspect.ActiveTabName, "Skills", StringComparison.OrdinalIgnoreCase))
                     return ("Skills", "Construction");

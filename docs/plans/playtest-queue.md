@@ -44,7 +44,11 @@ the next session learns to ignore.
   answer is a jump to the right cell on the wrong layer, or the tab and the pane both on
   screen. Whether the tab **needs the distance back** (the brief dropped it; the rows are still
   ordered by it) is the question only you can answer, and whether 560 wide reads as a tab or
-  as a card.
+  as a card. After the third look (2026-09-23): whether two sounders now land in different
+  parts of the meadow and each reads as a loose family rather than a knot — a wrong answer is
+  all the hogs in one glade again, or a sounder so scattered it is not a sounder; and press the
+  info button on a selected hog: the Almanac should open on *Midden hog* under Fauna, and what
+  it says should be true of what you have watched.
 - **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
   (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
   *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five

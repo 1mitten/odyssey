@@ -132,6 +132,38 @@ namespace Odyssey.Tests.Sim
             return false;
         }
 
+        /// <summary>
+        /// Groups land apart (owner, 2026-09-23: "the pigs were all together"): on the played
+        /// board two sounders' centres keep their spacing, so the hogs' spread is at least that,
+        /// and a sounder's members are scattered across their square rather than knotted on
+        /// adjacent cells.
+        /// </summary>
+        [Test]
+        public void SoundersLandApartFromEachOtherAndLooselyWithin()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 1;
+            scenario.beds = 1;
+            ColonyWorld colony = ColonyWorld.Build(new GridSize(120, 120, 16), 1u, scenario, barren: true, wooded: true);
+            GridSize size = colony.Grid.Size;
+            var hogs = new List<CellRef>();
+            foreach (Pawn animal in Animals(colony)) if (animal.Kind == PawnKindIndex.MiddenHog) hogs.Add(size.FromIndex(animal.Cell));
+            Assume.That(hogs.Count, Is.GreaterThanOrEqualTo(6), "two sounders on the meadow");
+
+            int widest = 0, adjacentPairs = 0, pairs = 0;
+            for (int i = 0; i < hogs.Count; i++)
+            for (int j = i + 1; j < hogs.Count; j++)
+            {
+                int d = System.Math.Max(System.Math.Abs(hogs[i].X - hogs[j].X), System.Math.Abs(hogs[i].Z - hogs[j].Z));
+                widest = System.Math.Max(widest, d);
+                pairs++;
+                if (d <= 1) adjacentPairs++;
+            }
+            Assert.That(widest, Is.GreaterThanOrEqualTo(WildlifeSeeder.GroupSpacing - 2 * WildlifeSeeder.GroupRadius),
+                "the two sounders are in different parts of the board");
+            Assert.That(adjacentPairs, Is.LessThan(pairs / 2), "a sounder is loose, not a knot of neighbours");
+        }
+
         [Test]
         public void NothingLandsInTheClearingAndEverythingCanReachTheStart()
         {

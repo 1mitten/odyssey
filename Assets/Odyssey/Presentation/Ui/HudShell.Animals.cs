@@ -107,14 +107,6 @@ namespace Odyssey.Presentation.Ui
             // 12 px padding and 1 px border on each side are inside it and the grid gets 534.
             _animalsPanel.style.width = AnimalsLayout.TabWidth;
 
-            // The Esc cap beside the close X, on the window's own header row.
-            VisualElement header = _animalsPanel.Q(className: "panel__hdr");
-            VisualElement close = header.Q(className: "panel__close");
-            Label cap = HudText.Make("Esc", HudTextRole.Hotkey, ussClass: "animals__cap");
-            cap.style.marginRight = HudLayout.Gap;
-            cap.style.color = HudTokens.TextFaint;
-            header.Insert(header.IndexOf(close), cap);
-
             // The count strip: "Midden hog 6   Duct rat 4", hidden on an empty board.
             _animalsCounts = new VisualElement();
             _animalsCounts.AddToClassList("animals__counts");

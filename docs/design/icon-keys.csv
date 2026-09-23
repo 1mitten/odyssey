@@ -281,7 +281,7 @@ ui.tab.schedule,Schedule,ui.tab,M1,"Folded into Work: one table says who does wh
 ui.tab.research,Research,ui.tab,M1,"The tree, and what is being worked on"
 ui.tab.colonists,Colonists,ui.tab,M1,"Everyone, at a glance"
 ui.tab.animals,Animals,ui.tab,M1,Tame beasts and their training
-ui.tab.wildlife,Wildlife,ui.tab,M1,What is out there
+ui.tab.wildlife,Wildlife,ui.tab,M1,"What is out there. Listed under Animals for now; not on the bar"
 ui.tab.bills,Bills,ui.tab,M1,Standing production orders
 ui.tab.trade,Trade,ui.tab,M1,Caravans and traders
 ui.tab.factions,Factions,ui.tab,M1,"Who likes us, and how much"

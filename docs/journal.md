@@ -10734,3 +10734,17 @@ the style is built and unseen, and the note is in §6 so nobody spends an aftern
 the row that never highlights. The arithmetic in the brief was right: 560 less the panel's own
 padding and border is exactly the three columns, which is the border-box lesson of design 27
 §17 arriving from the design side for once.
+
+**The third look, the same afternoon.** Three small things and one that was not: Wildlife off
+the bar, the Esc cap off the tab's header, sounders spread — a centre drawn up to twelve times
+for one twenty-four cells from the others, members scattered over a four-cell square instead of
+filling a spiral from the centre outward, which is what had put five hogs on six adjacent cells
+— and the Almanac. The Almanac's Fauna turned out to be two invented entries, a "Scraphound"
+and a rat with bite damage and tame chances, written before there were animals; they are the
+two real animals now, saying only what the simulation does, and the inspect pane's info button
+opens them, which it had declined to do for an animal because there was nothing to open. The
+goldens moved for the scatter and the probe read the same as the first time. The level-keeper
+also stopped allocating on its arrival check — the census refills one kept instance — after
+the idle-tick allocation test failed once in the Long tier and passed alone; that was collector
+noise from a neighbour, since the test builds a world with no wildlife system in it, but a
+system that allocates tens of thousands of ints six times a minute is not one to leave.
