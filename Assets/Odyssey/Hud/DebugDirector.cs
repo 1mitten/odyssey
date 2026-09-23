@@ -11,6 +11,9 @@ namespace Odyssey.Hud
 
         /// <summary>One row per incident the content declares, each fired on click (design 23 §3).</summary>
         Events,
+
+        /// <summary>Colonists and animals, placed near the camera (owner, 2026-09-22: a tab of its own).</summary>
+        Spawn,
     }
 
     /// <summary>
@@ -35,7 +38,14 @@ namespace Odyssey.Hud
         public const string PanelKey = "ui.debug.panel";
         public const string CheatsKey = "ui.debug.tab.cheats";
         public const string EventsKey = "ui.debug.tab.events";
+        public const string SpawnTabKey = "ui.debug.tab.spawn";
         public const string SpawnPawnKey = "ui.debug.spawnpawn";
+
+        /// <summary>The two animals (design 29 §7): the same intent as the colonist's, with a kind.</summary>
+        public const string SpawnHogKey = "ui.debug.spawnhog";
+
+        public const string SpawnRatKey = "ui.debug.spawnrat";
+
         public const string GiveWoodKey = "ui.debug.givewood";
         public const string GiveStoneKey = "ui.debug.givestone";
         public const string GiveFoodKey = "ui.debug.givefood";
@@ -76,11 +86,15 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly string[] IconKeys =
         {
-            PanelKey, CheatsKey, EventsKey, SpawnPawnKey, GiveWoodKey, GiveStoneKey, GiveFoodKey,
+            PanelKey, CheatsKey, EventsKey, SpawnTabKey, SpawnPawnKey, SpawnHogKey, SpawnRatKey,
+            GiveWoodKey, GiveStoneKey, GiveFoodKey,
             SkipDayKey, SkipMorningKey, RipenCropsKey, MarkTraceKey, TraceKey,
         };
 
-        public static string TabKey(DebugTab tab) => tab == DebugTab.Events ? EventsKey : CheatsKey;
+        public static string TabKey(DebugTab tab) =>
+            tab == DebugTab.Events ? EventsKey
+            : tab == DebugTab.Spawn ? SpawnTabKey
+            : CheatsKey;
 
         public bool Open { get; private set; }
 

@@ -149,6 +149,10 @@ namespace Odyssey.Sim.Pawns
                 // are only ever read together at the end of the load, not during it, so this is an
                 // ordering of convenience rather than one anything depends on.
                 pawns.StorageUnits!,
+                // Appended (design 29 §6). Writes into pawns the registry has rebuilt, on the
+                // terms of the seed section above; a save from before animals has no entry here
+                // and every restored pawn is the colonist it was.
+                new PawnKindSection(pawns.Pawns),
             };
         }
 

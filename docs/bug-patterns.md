@@ -449,6 +449,112 @@ reason it named"* in the register below, reached from the opposite direction.
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-22 — A hog walks past a tree, snaps back a cell, walks past it again
+
+Owner: *"saw a pig walk through a tree went past it then suddenly appear before the tree again
+and snapped/teleported back to a position then walked through it again."* The snap detector
+(`AnimalProbe.Snaps`) found four in a hundred seconds, every one a hog, every one on the tick a
+wander job **expired**. The simulation is discrete: a pawn is on a cell with progress toward the
+next, and the figure is drawn that fraction of the way along. Ending a job clears the path and
+zeroes the progress, so the pawn is back on the cell it was leaving and the figure — drawn 85% of
+the way into the next — snaps back to it. The wander's expiry is 1,200 ticks and a hog's leg at
+its pace can be longer, so the expiry landed mid-step, reliably, at ticks 1,200 and 3,200.
+
+**The shape: a discrete state dropped under a continuous drawing.** Anything that resets a
+pawn's step — a job ending, a path cleared, a reservation lost — resets the figure by a cell.
+The fix for an animal is to end the job on a cell rather than between two: the expiry waits for
+progress to reach nought, at most one step late — for every pawn, since the same afternoon: the
+colonists' copy of the snap, at the end of a mental-break wander, was a recorded gap for a few
+hours until the owner asked for it closed on the PR, and two goldens re-baked for it.
+
+**What now stops it:** `AnAnimalsJobNeverEndsMidStep` — every job an animal starts begins with
+its move progress at nought, over twenty thousand ticks — and `AnimalProbe.Snaps`, which is the
+instrument the report needed: a hundred seconds of six animals under the director with every
+drawn position recorded, and every frame that moves a figure more than 0.35 m or backwards
+against its own motion printed with the simulation's view of that pawn. It read four before the
+fix and none after.
+
+### 2026-09-22 — Legs drawn as rods: a pose multiplied onto itself, frame after frame
+
+Owner, with a screenshot: *"The pig is terrible - the legs and spindles and too thin."* The legs
+were drawn as thin rods longer than the body, which the model never had: every still taken of it
+at rest, and every still taken with the gait applied to a bare instance, showed a stubby pig.
+The difference in the game was the animator. The computed gait pitched each leg bone by
+pre-multiplying onto its current rotation, exactly as the colonists' `WorkSwing` does — and that
+is safe only while the clip underneath rewrites every bone before every pass. Under the game's
+own loop, with the idle held at speed nought beneath the gait, it did not, and the same pitch
+landed on top of last frame's, and the frame before's, until the skin stretched along a bone
+pointing somewhere no leg points. `PawnFigureDirector.Evaluate`'s own comment names this trap
+for the sleep pose ("the figure winds itself into a spiral"); the gait walked into it anyway.
+
+**The shape: an additive pose whose base is assumed, not owned.** Anything that composes onto
+"whatever is there" is correct only under an assumption about who wrote "there" and when. The
+fix is to own the base: capture each driven bone's rest at bind and write the pose absolutely,
+so nothing about what the clip did that frame can reach the answer.
+
+**What now stops it:** `AnimalProbe.ShootMoving` runs a real hog under the director's real
+animator for three seconds and prints leg lengths every twenty frames — a length that grows is
+compounding, one that holds is not — and photographs the result. And the standing instruments
+were the wrong ones: a still on a bare instance can never show a fault that only the animator
+produces, which is why the earlier strips looked fine and the game did not.
+
+### 2026-09-22 — A walk cycling once per authored metre, on legs that are 23 cm long (P11)
+
+Owner, on the first animal figure: *"The pig walking looks awful - it looks odd and screwed up -
+I can't even explain because it's so odd."* The computed gait advanced one cycle per **authored
+stride of 1 m**, a number typed from a research table for a pig-sized quadruped. The rig's own
+legs, read from the joint positions the probe prints, are **0.23 m** from shoulder joint to sole
+on a 1.2 m body: a leg that short swinging 25° covers about 0.2 m a cycle, so the feet slid over
+four fifths of every stride while the legs waved once a second, and a 2 cm bob rode on top at the
+same slow rate. Nothing was wrong with the sines; the number they were driven by described a
+different animal.
+
+**P11 again, in its plainest form: a length written in metres where the rig should have been
+asked.** Every other length in the figure director is deliberately measured off the rig, and the
+one that was typed was the one that looked wrong. The fix measures the leg at bind and derives
+the stride from it — and, because a model this squat must then either scurry or slide, names the
+compromise as one constant (`QuadrupedGait.SlideFactor`) rather than hiding it in a stride.
+
+**And the instrument that certified the fix was measuring the wrong thing** (found on the fifth
+look, 2026-09-22). `AnimalProbe.ShootMoving`'s leg report took the joint-to-`Foot` distance and
+reported it holding to the millimetre; the rig's `Foot` bones are IK targets outside the leg
+chain, planted on the ground whatever the leg does, so the number could only ever move with the
+body bob. It was a true statement about the wrong length. The report now measures each segment
+along its own bone axis and puts the sole at the lower segment's end; it reads a ninety-degree
+fold and a lifted sole on the swinging leg and nought on the planted one. **Check a new
+instrument against a pose it should reject before trusting a pose it accepts.**
+
+**What now stops it:** `AnimalFigureTests.TheHogsLegsTrotWhenItMovesAndRestWhenItStands` pins the
+measured leg to the rig (0.15–0.35 m) and the derived stride to what that leg can cover;
+`AnimalProbe.Shoot` writes a four-phase side-on strip so the gait is judged from a picture before
+a playtest. And the wider rule for the next animal: **a gait's numbers come from the rig, and a
+rig's numbers come from its bones or its picture, never from a table.**
+
+### 2026-09-22 — The baked mesh said eleven centimetres; the bones said eleven metres (P11)
+
+Not a report: a measurement taken before anything was built, which is the point of recording it.
+The two animal models (`Assets/Art/Custom/Animals`) are a Blender "units scale" export — 1 cm file
+units with a ×100 on the mesh node and, on the rat, a ×39.55 on the armature. A first probe
+measured them with `SkinnedMeshRenderer.BakeMesh(useScale: true)` and reported a pig **0.114 m**
+long and a rat 0.071 m: in range, plausible for a "small placeholder", and wrong by a factor of
+a hundred. The bind pose folds the node scale into the skinning, so the baked vertices came out in
+the mesh's own space and the renderer's ×100 was never applied. The bone world positions — head
+at 3.07 m, front foot to back foot 5 m apart — said 11.39 m, and a photograph on a 2.5 m cell
+agreed: the pig covered the whole cell and hid the rat behind it.
+
+**P11's third face: the measurement was of a real thing, correctly computed, in the wrong frame.**
+The tell was the same as ever — a number nothing could argue with — and the cure was the same as
+`MeasureSole`'s: prefer what the player would see. Here that meant two readings that must agree
+(bones and bake) and a picture as the tie-break.
+
+**What now stops it:** `AnimalImport.Scales` carries the measured ×0.105 and ×0.09 with the two
+readings in its comment; `AnimalProbe.Shoot` photographs both animals on a cell beside a 1 m cube,
+and `AnimalFigureTests.TheAnimalRowsResolveFromTheProjectsOwnArt` pins that the rows resolve.
+The rule for the next model: **measure a rig from its bones or its picture, never from a bake
+alone**, and if two readings of the same length disagree by more than a few per cent, the
+smaller one is in the wrong frame.
+
+
 ### 2026-09-21 — Both tabs underlined, and the contents invisible until you clicked (P1)
 
 Owner, on the store pane: *"storage and tile are both underlined when you enter the shelve menu.

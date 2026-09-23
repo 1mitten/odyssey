@@ -214,38 +214,46 @@ namespace Odyssey.Presentation.Rendering
                 // snapshot's, and the cached positions would be wrong — so fall back to the scan,
                 // which is always right and merely slow.
                 float crowd = 0f;
-                bool usable = index != null && index.Count == otherPawns.Length &&
-                              PawnCrowdIndex.Mode != CrowdScan.Span;
+                // Animals are outside the sidestep on both sides (design 29 §7 of the plan): a
+                // hog does not dodge a colonist and a colonist does not dodge a hog. Recorded
+                // against P11, whose per-pawn scan this is; CrowdWeight is where the other side
+                // of it lives. Merged over the crowd index on 2026-09-23: the gate is on the
+                // posed pawn and the weight, whichever scan finds the pair.
+                if (pawn.Kind == 0)
+                {
+                    bool usable = index != null && index.Count == otherPawns.Length &&
+                                  PawnCrowdIndex.Mode != CrowdScan.Span;
 
-                if (usable && PawnCrowdIndex.Mode == CrowdScan.Bucketed)
-                {
-                    foreach (int i in index!.Near(hereNow))
+                    if (usable && PawnCrowdIndex.Mode == CrowdScan.Bucketed)
                     {
-                        float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
-                            index.PositionAt(i));
-                        if (weight > crowd) crowd = weight;
+                        foreach (int i in index!.Near(hereNow))
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                index.PositionAt(i));
+                            if (weight > crowd) crowd = weight;
+                        }
                     }
-                }
-                else if (usable)
-                {
-                    // CrowdScan.Cached: the same N-squared visit, but reading each pawn's position
-                    // from the frame's cache instead of recomputing it once per pair. Kept as a
-                    // measurement arm rather than a mode anybody plays, because the plan asked
-                    // what the constant factor alone was worth before an index was built on it.
-                    for (int i = 0; i < otherPawns.Length; i++)
+                    else if (usable)
                     {
-                        float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
-                            index!.PositionAt(i));
-                        if (weight > crowd) crowd = weight;
+                        // CrowdScan.Cached: the same N-squared visit, but reading each pawn's position
+                        // from the frame's cache instead of recomputing it once per pair. Kept as a
+                        // measurement arm rather than a mode anybody plays, because the plan asked
+                        // what the constant factor alone was worth before an index was built on it.
+                        for (int i = 0; i < otherPawns.Length; i++)
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                index!.PositionAt(i));
+                            if (weight > crowd) crowd = weight;
+                        }
                     }
-                }
-                else
-                {
-                    for (int i = 0; i < otherPawns.Length; i++)
+                    else
                     {
-                        float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
-                            SteeringCurve.WhereItIsNow(in otherPawns[i]));
-                        if (weight > crowd) crowd = weight;
+                        for (int i = 0; i < otherPawns.Length; i++)
+                        {
+                            float weight = CrowdWeight(in otherPawns[i], in pawn, hereNow, headingDir,
+                                SteeringCurve.WhereItIsNow(in otherPawns[i]));
+                            if (weight > crowd) crowd = weight;
+                        }
                     }
                 }
                 lateral += SteeringCurve.MaxLateralOffset * envelope * crowd;
@@ -315,6 +323,8 @@ namespace Odyssey.Presentation.Rendering
                                  Vector3 headingDir, Vector3 otherAt)
         {
             if (other.Id == self.Id) return 0f;
+            // An animal is outside the sidestep on both sides (design 29): nobody dodges a hog.
+            if (other.Kind != 0) return 0f;
             float near = SteeringCurve.Proximity(Vector3.Distance(hereNow, otherAt));
             if (near <= 0f) return 0f;
             return near * SteeringCurve.InTheWay(headingDir, in other);

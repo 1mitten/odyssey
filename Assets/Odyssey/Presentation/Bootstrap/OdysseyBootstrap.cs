@@ -2554,14 +2554,25 @@ namespace Odyssey.Presentation.Bootstrap
                 for (int i = 0; i < selection.Pawns.Count; i++)
                 {
                     if (!snapshot.TryGetPawn(selection.Pawns[i], out PawnView pawn)) continue;
+                    Color strength = i == 0 ? colour : SecondarySelectionColour;
+
+                    // An animal is bracketed as its own drawn box, turned the way it faces, with
+                    // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
+                    // hog highlighted the whole tile). A colonist keeps the one fixed box below.
+                    if (pawn.Kind != 0 && _figures != null
+                        && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
+                    {
+                        _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength);
+                        continue;
+                    }
+
                     // The figure's own position where there is one, for the same reason the hit-test
                     // uses it: a working colonist is stepped off their cell, and a bracket drawn from
                     // the pose would sit on the cell while the person stands beside it.
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                         feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
                     _renderer.DrawSelectionBracket(
-                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor,
-                        i == 0 ? colour : SecondarySelectionColour);
+                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength);
                 }
                 return;
             }

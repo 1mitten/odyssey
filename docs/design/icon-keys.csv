@@ -88,6 +88,8 @@ ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
 ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
 ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
+ui.pawn.hog,Midden hog,ui.pawn,AN,"Pig-descended, thrives on refuse heaps. Wild for now; the one you meet first"
+ui.pawn.rat,Duct rat,ui.pawn,AN,"Vermin from the ducts and the caverns. Climbs anything"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
@@ -104,6 +106,8 @@ ui.status.downed,Downed,ui.status,M2,Cannot move. Needs rescue
 ui.status.bleeding,Bleeding,ui.status,M2,Losing blood. Timed problem
 ui.status.burning,On fire,ui.status,M2,Burning now
 ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
+ui.status.wandering,Wandering,ui.status,AN,"An animal on a leg of its own: going somewhere nearby for no reason"
+ui.status.resting,Resting,ui.status,AN,"An animal between legs"
 ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
 ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
 ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
@@ -465,9 +469,12 @@ ui.debug.givestone,Give stone,ui.debug,M3,"Adds 50 stone near the camera"
 ui.debug.givefood,Give food,ui.debug,M3,"Adds 50 meals near the camera"
 ui.debug.tab.cheats,Cheats,ui.debug,M3,"The overlay toggle and the grants"
 ui.debug.tab.events,Events,ui.debug,M3,"One row per event the content declares, each fired on click"
+ui.debug.tab.spawn,Spawn,ui.debug,AN,"Colonists and animals, placed near the camera"
 ui.debug.skipday,Skip one day,ui.debug,GR,"Spends one whole game day of ticks at once"
 ui.debug.skipmorning,Skip to morning,ui.debug,GR,"Skips the night and hands the clock back at dawn"
 ui.debug.ripen,Ripen crops,ui.debug,GR,"Brings every standing crop to ripeness at once"
+ui.debug.spawnhog,Spawn midden hog,ui.debug,AN,"Adds a wild midden hog near the camera"
+ui.debug.spawnrat,Spawn duct rat,ui.debug,AN,"Adds a duct rat near the camera"
 ui.debug.marktrace,Mark this moment,ui.debug,PT,"Writes a marker into the performance trace, so the seconds around now can be found"
 ui.debug.trace,Performance trace,ui.debug,PT,"Stops or starts the per-second performance trace this session writes"
 ui.settings.display,Display,ui.settings,M3,"How the frame is paced and how large it is drawn"

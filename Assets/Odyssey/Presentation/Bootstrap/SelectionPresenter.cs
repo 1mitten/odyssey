@@ -240,10 +240,23 @@ namespace Odyssey.Presentation.Bootstrap
                 // a pawn drawn by the instanced pass. A working figure is stepped off its cell to
                 // reach the wood, so the pose and the screen disagree by most of a stride exactly
                 // while a colonist is chopping — which is when the player is trying to click them.
-                if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(
-                        pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
-                var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                Bounds bounds;
+                if (pawn.Kind != 0 && _bootstrap?.Figures != null
+                    && _bootstrap.Figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 animal))
+                {
+                    // An animal is clicked through its own drawn box, the one the cursor draws
+                    // (owner, 2026-09-22). Axis-aligned at the longer of its two footprint sides,
+                    // which is a square a turned hog still fits inside.
+                    float side = Mathf.Max(animal.x, animal.z);
+                    bounds = new Bounds(place.GetPosition(), new Vector3(side, animal.y, side));
+                }
+                else
+                {
+                    if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                        feet = Odyssey.Presentation.Rendering.PawnPose.Of(
+                            pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
+                    bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                }
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
 
                 nearest = distance;

@@ -10451,6 +10451,231 @@ that rule would die.
 tree canopy are all drawn off theirs. At 48 degrees that reads as an inaccurate cursor too. Doing
 both at once would leave the playtest unable to say which one it had judged.
 
+## 2026-09-22 — Animals: two files in a Downloads folder, and the plan they turned into
+
+The owner dropped `Pig.fbx` and `Rat.fbx` into the conversation and asked for the animals plan
+to be reviewed. There was none — the systems catalogue had said "no animal art exists" since
+Phase 2 and the A9 research lane never ran — so the day went through the phases from the start:
+ground, interview, research, plan, and stopped there for approval.
+
+**The ground was read from the files, not from the editor,** with a forty-line binary-FBX
+reader: Blender 2.79 exports on one quadruped bone convention (the pig's bones are a subset of
+the rat's), no UVs, two flat materials each, the rat with Idle/Walk/Run/Jump/Attack/Death and the
+pig with Idle and Jump only. That last fact decided more than anything else: a pig that cannot
+walk needs a gait from somewhere, and the owner chose a computed one over retargeting the rat's
+or authoring one — the same call as the axe and pick strokes, for the same reason.
+
+**The size was measured, and the first measurement lied.** `SkinnedMeshRenderer.BakeMesh` said
+the pig was 11 cm long; the bone positions said 11.4 m; the picture on a 2.5 m cell agreed with
+the bones. The bind pose folds the node scale in, so a baked mesh is not the honest number for a
+Blender "units scale" export — the bones are, and a photograph beside a known cube is the
+tie-break. Both models now carry an import scale (`AnimalProbe.ImportScale`) that stands them
+life-size, and the first playtest question is whether life-size is right in a world where a
+colonist is 2.49 m tall.
+
+**Three things were already there.** `TraverseMode.Animal` — no ladders, no doors — has been in
+the nav graph since the pathfinding lane, with a mask on every link; `WanderJobDriver` and
+`WanderTarget` drive the mental break's wander; `PawnKindDef` exists, carrying the colonist's
+needs tuning. And `proper-nouns.csv` already calls the pig the *midden hog*. The plan is mostly
+a matter of naming a species and letting a pawn carry a kind.
+
+**One thing was in the way.** `PawnPose.Of` scans every other pawn for the crowd sidestep, once
+per posed pawn per frame (P11, open). Animals are pawns; every one added would sit on both sides
+of that scan. The plan keeps them out of it rather than waiting for the fix.
+
+**The interview** (`docs/research/animals-interview.md`): CC0, so committed; pig wild first,
+livestock later; the rat is vermin, game, threat and the walking proof; the MVP is spawn, wander,
+draw, click, from the debug menu only; rats climb anything and pigs never take a ladder; the
+health model is the unit after. `docs/plans/animals.md` holds the five units and the decisions
+the design doc must record. Save format: temperature is at 9 in review, so animals rebase after
+it and take 10.
+
+## 2026-09-22 — Animals built: a pawn with a kind, and the hog that walks on arithmetic
+
+The plan was approved in the morning and the MVP — spawn, wander, draw, click — was built in the
+day. What follows is what was decided on the way and why, in the order it happened.
+
+**The save did not need a format bump, and the plan said it would.** `PawnSeedSection` already
+answers the question: a section keyed by pawn id is skippable in both directions, a file without
+one reads every pawn as the colonist it was, and nothing about the pawn record's layout changes.
+`PawnKindSection` is that pattern again, and it also removes the collision the plan warned about
+with the temperature branch's format 9. The kind *is* hashed, so all six goldens moved; the golden
+colony probe run on `main` and on the branch diffs clean in every number, which is the measured
+form of "the hash sees one more zero per colonist".
+
+**Three things were already there**, and the design leaned on all of them: `TraverseMode.Animal`
+(no ladders, no doors) has been in the nav graph since the pathfinding lane with a mask on every
+link; the mental break's `WanderTarget` and `WanderJobDriver` are the animal's whole locomotion;
+and `PawnKindDef` existed, carrying the colonist's needs tuning. The animal mind is one think
+node — a leg or a rest, off its own random stream — and every system about being a person asks
+`IsPerson` once at the top of its loop. Fifteen fast-tier tests, and a twenty-animal ten-day run
+on three seeds in the Long tier, went green first time.
+
+**The interface kept its one rule.** The roster leaves animals out by the view's new `Kind`
+field; the pane says species, activity and where, with no face, needs, tabs or commands; and the
+species names went through the registry (`ui.pawn.hog`, `ui.pawn.rat`) beside the proper noun
+the CSV already held for the hog. The rat is the **duct rat**, proposed in the register of the
+midden hog and the girder cat, for the owner to correct in the CSV.
+
+**The figure was the day's real work, and the baked mesh lied first.** A probe measuring the two
+models with `BakeMesh` reported an eleven-centimetre pig; the bones said eleven metres and a
+photograph on a 2.5 m cell agreed with the bones (`bug-patterns.md`, 2026-09-22). With the
+import scale set from the bones the two animals stand life-size — and life-size beside a 2.49 m
+colonist is the first playtest question. The director gained a second look table indexed by
+kind, so an animal is a figure through the same pool, create and blend as a colonist; the rat
+walks on its own clips with declared speeds; the hog, which has no walk clip, walks on
+`QuadrupedGait` — sines on hip and knee laid over its idle in the pose pass, exactly where
+`WorkSwing` lays an axe stroke, advanced once a frame from the figure's measured speed so the
+feet cannot slide whatever the speed. One index into the colonist table survived the change and
+threw out of range on the first animal figure; the test that found it is the one that keeps it.
+
+**Two gaps are recorded rather than hidden**: an animal past the figure cap is not drawn (the
+baked pass deals every pawn a colonist's face), and animals are outside the crowd sidestep on
+both sides, because the sidestep's per-pawn scan is P11 and open.
+
+**The animal rows are the first figures CI can build.** Every colonist test ignores itself on
+the runner, which has no Synty folder; the animals are committed CC0 art, so
+`AnimalFigureTests` runs there. That was not the reason to commit them, but it is a reason to
+be glad they were.
+
+## 2026-09-22 — The pig's walk, and what a typed metre cost
+
+The owner's first look at the hog: *"it looks odd and screwed up - I can't even explain
+because it's so odd."* The fault was found by measuring rather than by watching: the probe's
+joint report put the rig's legs at 23 cm from shoulder joint to sole on a 1.2 m body, and the
+gait was cycling once per authored metre — a research-table number for a pig-sized quadruped
+that this squat model is not. A 23 cm leg swinging 25° covers about 20 cm a cycle, so the feet
+slid over four fifths of every stride while the legs waved slowly. The number was the whole of
+the oddness; the sines were fine (`bug-patterns.md`, 2026-09-22, P11 again).
+
+The gait is a **trot** now — diagonal pairs, which is what a short-legged animal does at a
+metre a second — with the stride **derived from the measured leg** and one named constant,
+`SlideFactor`, for the compromise a model this squat forces between scurrying and sliding. The
+knees are signed by anatomy (fore folds back, hind folds forward), and the idle clip underneath
+is frozen as the trot fades in. A four-phase side-on strip is the instrument that judged it
+(`docs/reference/screenshots/2026-09-22-hog-trot-strip.png`).
+
+The **cursor** round an animal is now its own drawn box, turned the way it faces, and the click
+box is the same box — `TryGetAnimalBox` owns both. The box comes from the renderer bounds and
+not from a bake, because on these rigs the bake reports a hundredth of the truth; the standing
+height an animal reports comes from the same box for the same reason.
+
+## 2026-09-22 — The pig's legs as rods, and the still that could not have shown it
+
+The owner's second look came with a screenshot: the hog's legs drawn as thin rods longer than
+the body. Every still taken until then — at rest, and with the gait applied to a bare instance —
+had shown a stubby pig, so the instrument was wrong before the code was: a still on a bare
+instance can never show a fault that only the animator produces. `AnimalProbe.ShootMoving` is
+the instrument that can — a real colony, a real hog, the director's own animator, three seconds
+of trot with leg lengths printed every twenty frames and a photograph at the end.
+
+Under it, the fault is what `PawnFigureDirector.Evaluate`'s own comment warns of for the sleep
+pose: an additive pose pre-multiplied onto whatever the bone already had, compounding frame on
+frame whenever the clip underneath is not the one rewriting the bone first. The gait now captures
+each driven bone's rest at bind and writes the pose absolutely, so the clip's behaviour cannot
+reach it; the leg lengths hold to the millimetre and the photograph is a pig mid-trot.
+
+"Way too fast" in the same look moved the hog's pace from 700 to 600 per mille and the gait's
+slide factor from 2 to 2.5, about 1.7 cycles a second. The model itself has never been the
+problem, and the honest answer to "is there another file" is yes: a walk or trot clip for this
+pig, if the pack has one, replaces the computed gait with one flag.
+
+## 2026-09-22 — No animal swims, and none rests on a step
+
+Two rules from the owner's third look, both simulation-side. **Water:** a fifth traverse mode,
+`Climber` — as a colonist but no water — for the rat, and `Animal` now refuses water too, with
+`TraverseModes.Swims` the one place that says who may wade. The refusal is at `CanEnter`, and so
+that the district knows it rather than a failed search finding it, shallow water became a region
+kind of its own; the links into a water region are masked by the same `CanEnter`, so a hog on
+one bank is told the other is out of its world. No golden moved. **Slopes:** the animal mind
+refuses the foot cell of a terrace step as a destination, so no leg ends there and no rest
+begins there; walking through is untouched. The colonists' wander was left alone on purpose, as
+it is the mental break's and moving it moves every golden.
+
+One thing about the harness: painting terrain behind the graph's back leaves its per-cell cost
+class stale, and the first version of the water test read a stream as clear ground. The graph
+refreshes what it is told has changed — `MarkDirty` — and the test helper now tells it.
+
+## 2026-09-22 — The snap that was an expiry, and the hop that was a rock
+
+The owner's fourth look had four items and the instrument came first: `AnimalProbe.Snaps`,
+a wooded colony with six animals run for a hundred seconds under the director with a frame
+between every pair of ticks, every drawn position recorded, every jump or reversal printed
+with the simulation's view of that pawn. It found four snaps, all hogs, all on the tick a
+wander **expired** — 1,200 ticks, shorter than a hog's longest leg — and the expiry dropped
+the step in progress, so the pawn went back to the cell it was leaving while the figure had
+been drawn most of the way into the next. That is "went past the tree, then snapped back and
+walked through it again", exactly. An animal's expiry now waits for the next cell boundary; the
+detector reads none; colonists keep their old rule and their own version of the snap as a
+recorded gap, because the change would move every golden.
+
+The hog on the rock was the one-block hop, which a person takes anywhere the upper end is a
+block top. An animal now takes it only where the lower cell is the foot of a terrace step —
+where a ramp is drawn — and `NavGraph.HopMask` is the one owner for the link, the step check
+and the search. Digging a step's floor out turns it into a cut face and closes it to animals in
+the same rebuild, which is what the test does with a colonist as the control.
+
+"Twisting in one spot": the hip swing went to 40° and the knee to 35° with the slide factor
+lowered to keep the cadence, so the legs travel far enough to be seen from the play camera.
+The turn on the spot before each leg is the wander picking a new heading, and a walk clip
+would still be the better answer to all of it.
+
+**Later the same day, the gap closed.** The owner asked for the colonists' copy of the snap fixed
+on the PR, so the boundary rule is everyone's now. Two goldens moved and the meadow did not, and
+the probe says why in one number per board: the sum of the pawns' cells, with food, rest, items
+and orders identical. A break wander ends a step later. That is the first re-bake in this unit
+where the colony itself changed rather than the hash seeing more, and it is written down as such.
+
+## 2026-09-22 — The pig's step, from the owner's own account of a pig
+
+The fifth look at the hog came with something better than a screenshot: a description of how a
+pig's legs work. The scapula floats and drives the front stride; the carpus and the hock are
+hinges on one axis; the hock bends backwards while the stifle bends forwards; a trot is diagonal
+pairs half a cycle apart, each foot planted for the first half; a swing is a quick lift, a flat
+carry close to the ground and a sharp plant; the pelvis drops twice a stride, lowest at the
+quarter points; and the spine neither rolls nor yaws.
+
+Held against the gait, half of that was already there and half was the fault. The diagonal
+pairing, the one-axis hinge and the two-cycle bob were in. What was not was any difference
+between a foot on the ground and a foot in the air. A sine on the hip has the foot moving fastest
+at mid-stance, when it should be moving at exactly the body's speed backwards and no faster, and
+the cosine on the knee had the fold peaking at mid-swing and still half there as the foot
+planted. Both sinusoids were smooth and both were wrong in the same way: they described a leg
+that never touches anything.
+
+The gait now has a stance and a swing. The hip sweeps back in a straight line for six tenths of
+the cycle and returns, eased, in the rest; the fold is nought through the stance, full within the
+first third of the swing, held, and gone by the plant. Two things fell out. The stride became
+geometric — the reach of one stance over the duty factor, 0.46 m on the rig's legs — so the slide
+factor that had been the tuning dial through three looks is one, and stays only as a dial. And
+the rig's root bone per leg, at the centre line above the upper leg, turned out to be the scapula
+the owner named, undriven until now; it swings a few degrees with the hip and the front stride
+stops looking pinned at the shoulder. The bob's sign was wrong as well: the body rose at the
+quarter points where it should drop.
+
+The trot test had to change its question. At a quarter cycle the planted leg and the swinging
+leg were mirror images under the sine and are not under a step, so the assertion that the
+opposite fore "swung as far the other way" is now that it swung the *other way*, measured as a
+signed pitch, and that the planted leg is straight while the swinging one is folded. A walk clip
+would still be better than all of this, and the owner has been asked whether the pack has one.
+
+The probe then caught its own fault. The moving hog's leg report, which had certified the rods
+fix by reading lengths that "held to the millimetre", read the same lengths under the new gait
+while the folds it also printed swung through ninety degrees — impossible on one rig. The `Foot`
+bones it measured to are the rig's IK targets, siblings of the legs that sit on the ground
+whatever the leg does, so the joint-to-foot distance could only ever move with the body bob, and
+that is what three looks had been reading. The report measures the segments along their own
+bones now. The lesson is the one the instrument was meant to teach: a number that never moves
+is either a guarantee or a gauge that is not connected, and the way to tell is to feed it a
+pose it should reject.
+
+Connected, it found the signs backwards within a minute: the hind sole three centimetres under
+the ground at mid-swing. A positive pitch about the figure's right swings a hanging leg back,
+not forward, so "reach" had been retreat and the fold had been landing at mid-stance. Every
+look since the first had been judged from a strip in which the legs moved the wrong way round
+and nobody, the owner included, could say what was wrong beyond "odd" — which is what a gait
+running backwards under a body moving forwards looks like. The sign is one named constant now
+and a test measures the sole.
 
 ## 2026-09-22 — Modular colonists, and four caches that were right until something moved
 
