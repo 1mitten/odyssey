@@ -155,7 +155,10 @@ namespace Odyssey.Presentation.Ui
             // can reach several cells of it.
             string signature =
                 _inspect.Subject + ":" +
-                (_inspect.Subject == InspectSubject.Colonist ? _inspect.Pawn.ToString()
+                // The draft is in it too (design 33 §2f): the Draft button changes face, and the
+                // header it sits in is structure.
+                (_inspect.Subject == InspectSubject.Colonist
+                    ? _inspect.Pawn.ToString() + (_inspect.Drafted ? ":drafted" : string.Empty)
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
                  : _inspect.Position + ":" + _inspect.Layer);
             if (signature != _inspectBuiltFor)
@@ -1940,6 +1943,12 @@ namespace Odyssey.Presentation.Ui
             button.Add(icon);
             button.Add(HudText.Make(command.Label, HudTextRole.Meta, ussClass: "action__label"));
             button.tooltip = command.Label + " — " + command.Reason;
+
+            // The one live command (design 33 §2f). The same rule the key follows, so the button
+            // and T can never disagree about what the selection is.
+            if (command.Enabled
+                && (command.IconKey == InspectModel.DraftKey || command.IconKey == InspectModel.UndraftKey))
+                button.RegisterCallback<ClickEvent>(_ => ToggleDraft());
             return button;
         }
 

@@ -53,6 +53,14 @@ namespace Odyssey.Presentation.Audio
         public const string CarryDrop = SoundPrefix + "carry.drop";
 
         /// <summary>
+        /// A blade drawn: a colonist has been drafted (design 33 §2i). 2D — it confirms an order
+        /// the player gave, wherever the camera is — and played once on the frame the snapshot
+        /// first shows a colonist drafted, never on the key press, so a refused draft is silent.
+        /// Baked by <c>tools/audio/bake_draft.sh</c> from the owner's recording.
+        /// </summary>
+        public const string Draft = SoundPrefix + "draft";
+
+        /// <summary>
         /// A sliding door opening. <b>Named, and in no catalogue yet</b>:
         /// the director declines a sound it has no clip for, so this plays the day the owner adds
         /// the row and not before.

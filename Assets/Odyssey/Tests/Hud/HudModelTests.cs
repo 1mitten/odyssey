@@ -440,8 +440,10 @@ namespace Odyssey.Tests.Hud
                 "with reasons");
 
             Assert.That(pane.Commands, Is.Not.Empty);
-            Assert.That(pane.Commands.Count(c => c.Enabled), Is.Zero,
-                "no colonist command is wired yet, and none may pretend to be");
+            // The draft is the one command wired (design 33 §2f); the rest may not pretend to be.
+            Assert.That(pane.Commands.Where(c => c.Enabled).Select(c => c.IconKey),
+                Is.EqualTo(new[] { InspectModel.DraftKey }),
+                "only Draft is wired, and none of the others may pretend to be");
         }
 
         /// <summary>

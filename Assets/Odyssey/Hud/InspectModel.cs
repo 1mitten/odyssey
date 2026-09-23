@@ -407,7 +407,7 @@ namespace Odyssey.Hud
                 }
 
                 AddColonistTabs();
-                AddColonistCommands();
+                AddColonistCommands(!Tombstoned && OrderModel.IsDrafted(snapshot, Pawn));
                 RefreshSkills(snapshot);
                 return;
             }
@@ -1154,8 +1154,18 @@ namespace Odyssey.Hud
             Tabs.Add(new InspectTab { Name = "Log", Enabled = false, Reason = "M6" });
         }
 
-        void AddColonistCommands()
+        /// <summary>
+        /// The draft's key names, one per face of the one button (design 33 §2f). Public so the
+        /// shell that draws the button can tell it is the one that does something.
+        /// </summary>
+        public const string DraftKey = "ui.command.draft", UndraftKey = "ui.command.undraft";
+
+        /// <summary>Whether the colonist on the pane is drafted: which face the Draft button shows.</summary>
+        public bool Drafted { get; private set; }
+
+        void AddColonistCommands(bool drafted)
         {
+            Drafted = drafted;
             Commands.Add(new InspectCommand
             {
                 IconKey = "ui.command.inspect", Label = "Inspect",
@@ -1166,10 +1176,15 @@ namespace Odyssey.Hud
                 IconKey = "ui.command.prioritise", Label = "Prioritise",
                 Enabled = false, Reason = "job priorities arrive with the work grid (M7)",
             });
+            // Live since the draft (design 33 §2f). One button with two faces, as the reference
+            // has it: it says what pressing it will do, and a tombstoned colonist has nothing to
+            // command.
+            string key = drafted ? UndraftKey : DraftKey;
             Commands.Add(new InspectCommand
             {
-                IconKey = "ui.command.draft", Label = "Draft",
-                Enabled = false, Reason = "combat arrives with M6",
+                IconKey = key, Label = Registry.Label(key),
+                Enabled = !Tombstoned,
+                Reason = drafted ? "give back to the work list (T)" : "take direct control: right-click to move (T)",
             });
         }
     }

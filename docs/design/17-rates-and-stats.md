@@ -517,6 +517,13 @@ invent an urgency model.** The capability costs nothing to keep available — it
 rate that will already exist after `WS3`, and the gait blend already does the rest — so nothing is
 lost by waiting until there is something worth running from.
 
+**The first reason arrived on 2026-09-23: a drafted colonist runs** (owner, after the first draft
+playtest: *"when you are drafted you should walk faster/run as this would make sense with the
+urgency"*). It is exactly the rate this section describes — `Pawn.UrgencyPerMille`, the last factor
+in `MoveRatePerMille`, 2,000 per mille while drafted and 1,000 otherwise — and nothing more: fleeing,
+breaks and emergency jobs are still unanswered, and they answer through the same method when they
+come. `docs/design/33-combat.md` §2h.
+
 ### 4g. The trap: do not double-count terrain
 
 Terrain cost is already live and belongs to the **cell being entered** — clear ground 0, marsh +40,

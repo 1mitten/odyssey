@@ -26,6 +26,10 @@ namespace Odyssey.Hud
         public static string Materials => Registry.Label("ui.res.category.materials");
         public static string Items => Registry.Label("ui.res.category.items");
         public static string Food => Registry.Label("ui.res.category.food");
+        public static string Hog => Registry.Label("ui.pawn.hog");
+        public static string Rat => Registry.Label("ui.pawn.rat");
+        public static string Wandering => Registry.Label("ui.status.wandering");
+        public static string Resting => Registry.Label("ui.status.resting");
     }
 
     public sealed class AlmanacIcon
@@ -871,45 +875,50 @@ namespace Odyssey.Hud
             }));
 
             // 10. Fauna
+            // 10. Fauna: the animals that are actually in the game (design 29, design 30), by
+            // the names the registry gives them. Everything here is what the simulation does;
+            // taming, hunting, meat and health are not in the game and are not claimed.
             list.Add(new AlmanacCategory("Fauna", "M4.5 9.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z M12.5 9.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z M8.5 15.5a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z", new List<AlmanacEntry>
             {
                 new AlmanacEntry(
-                    "Scraphound", "Fauna", "Hardy feral canine adapted to scavenging wreck fields", "Fauna", "Canine", false, "#c49a45",
-                    new AlmanacIcon("fauna_scraphound", "#c49a45", "M8 5l2 3h4l2-3 2 4-2 7H6L4 9l4-4z M7 19h10v2H7z"),
-                    "Semi-domesticated cybernetic scavenger hound. Roams wreckage perimeters hunting vermin; can be tamed as a loyal guard beast.",
-                    "Native wildlife · 2 roaming map periphery", "Track on map",
+                    AlmanacKeys.Hog, "Fauna", "Pig-descended, thrives on refuse heaps; the one you meet first", "Fauna", "Wild", false, "#c49a7a",
+                    new AlmanacIcon("fauna_hog", "#c49a7a", "M4 13c0-3 3-6 8-6s8 3 8 6v3H4v-3z M6 16v3 M18 16v3 M20 12l2-1"),
+                    "The midden hog is pig stock gone feral among the refuse of the ruin. It ambles in family groups through the woodland and clearings, rests often, and takes the terrace ramps but never a ladder, a door or water. Wild for now; the reliable meat animal when there is a health model to take it.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
-                        ("Temperament", "Docile unless starving"), ("Sprint speed", "5.2 cells / sec (Fast)"), ("Bite damage", "9 blunt/piercing"),
-                        ("Tame chance", "35% (Requires Plants/Animals L4)"), ("Diet", "Omnivore (Ration packs, meat, raw carrots)"),
-                        ("Meat yield", "45 raw meat"), ("Leather yield", "18 tough hound leather"), ("Lifespan", "12 solar years")
+                        ("Pace", "60% of a colonist's walk"), ("Lives", "Woodland and clearings, in sounders of 3 to 5"),
+                        ("Day", "Out by day, rests three times longer at night"), ("Leg", "Within 8 cells, then a rest of 5 to 15 s"),
+                        ("Climbs", "Terrace ramps only; never a ladder, a door or water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "1.2 m long"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
-                        "Scraphounds will not attack unless provoked or driven mad by starvation. Once tamed, their keen senses detect incoming raiders through deep fog.",
+                        "A sounder lands together and drifts apart across its glade. Each hog takes a short leg and then rests, and by night rests far longer. One that decides to go walks to the nearest board edge and is gone; another sounder walks in when the board is short.",
                         effects: new[] {
-                            ("Guard instinct", "Automatically attacks hostiles threatening its assigned colonist master."),
-                            ("Hauling training", "Can be trained to carry light item stacks between stockpiles."),
-                            ("Manhunter threat", "If shot from afar, has a 20% chance to enter enraged manhunter pack state.")
+                            ("Sounder", "Three to five arrive together and wander independently; the Animals tab counts them."),
+                            ("Ramps only", "A hog goes up and down a terrace step where a bank is drawn, and nowhere else."),
+                            ("No swimming", "Streams and ponds are walls to it; the census keeps it off water when it lands.")
                         }),
-                    new[] { ("Duct Rat", "natural rodent prey"), ("Moving", "speed comparison benchmark"), (AlmanacKeys.Wall, "fencing barrier keeping hounds out") }
+                    new[] { (AlmanacKeys.Rat, "the other animal on the board"), ("Pine", "the woodland it is seeded beside"), (AlmanacKeys.Ladder, "the one climb it never takes") }
                 ),
                 new AlmanacEntry(
-                    "Duct Rat", "Fauna", "Prolific subterranean rodent nesting in conduit shafts", "Fauna", "Rodent", false, "#8c7d75",
+                    AlmanacKeys.Rat, "Fauna", "The rat of the ruin: ducts, caverns, and anything it can climb", "Fauna", "Vermin", false, "#8c7d75",
                     new AlmanacIcon("fauna_duct_rat", "#8c7d75", "M3 13c1-2 4-3 7-3 4 0 8 2 10 6H2c0-1 0-2 1-3z M17 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"),
-                    "Omnipresent subterranean pest. Chews through insulation wiring and raids unattended grain and carrot stockpiles.",
-                    "Native pest · 7 infesting lower ruins", "Track on map",
+                    "The duct rat lives in the ducts and the caverns and climbs anything a colonist can, ladders included, though it will not swim. Out at night and resting by day, alone, beside rock and rubble. Vermin and small game once there is a health model to make it either.",
+                    "Wild " + AlmanacKeys.Wandering.ToLowerInvariant() + " " + AlmanacKeys.Resting.ToLowerInvariant() + " on the Animals tab (F5)", "Open the Animals tab",
                     new[] {
-                        ("Temperament", "Skittish (Flees from humans)"), ("Sprint speed", "3.8 cells / sec"), ("Bite damage", "3 scratch"),
-                        ("Tame chance", "10% (Low utility)"), ("Diet", "Omnivore (Carrots, timber, wire insulation)"),
-                        ("Meat yield", "12 raw meat"), ("Leather yield", "6 rodent pelt"), ("Disease vector", "15% chance to transmit wound infection")
+                        ("Pace", "90% of a colonist's walk"), ("Lives", "Beside rock, rubble and cavern mouths, alone"),
+                        ("Day", "Out at night, rests three times longer by day"), ("Leg", "Within 5 cells, then a rest of 2 to 8 s"),
+                        ("Climbs", "Anything a colonist can, ladders included; never water"), ("Stays", "About two days, then walks off the edge"),
+                        ("Body", "0.3 m long"), ("Tame", "Not yet")
                     },
                     new AlmanacBody("simple", "BEHAVIOUR",
-                        "While individually harmless, duct rats burrow into unguarded pantry stores, eating through valuable carrot stacks over winter.",
+                        "A rat darts and stops: short legs, short rests, and most of its living done in the dark. It takes the ladders a hog cannot, so a rat can turn up on a storey no hog reaches.",
                         effects: new[] {
-                            ("Food raid", "Sniffs out unsealed stockpiles and nibbles through stacks tile by tile."),
-                            ("Wiring fire risk", "Chews electrical conduits, triggering spontaneous short-circuit spark fires."),
-                            ("Pest culling", "Easy target practice for apprentice colonist hunters.")
+                            ("Nocturnal", "By day it rests three times as long and takes a third as many legs."),
+                            ("Climber", "Ladders and hops are open to it; water is not."),
+                            ("Alone", "Lands and arrives one at a time, by rock.")
                         }),
-                    new[] { (AlmanacKeys.Carrots, "favoured stolen food source"), ("Scraphound", "predatory counter-hunter"), (AlmanacKeys.Door, "essential barrier keeping rats out of larder") }
+                    new[] { (AlmanacKeys.Hog, "the other animal on the board"), (AlmanacKeys.Ladder, "a climb it takes and a hog does not"), (AlmanacKeys.Stone, "the rock it is seeded beside") }
                 )
             }));
 

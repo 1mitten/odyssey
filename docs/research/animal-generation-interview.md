@@ -79,4 +79,8 @@ join the state hash at tick zero.
 
 ## Answers
 
-*(pending)*
+**2026-09-23, owner:** *"ok pig is good enough for now - please plan out and execute"* — the
+recommendations adopted whole, and the plan and execute phases run together on the owner's
+word. One number moved in execution: the density is **15** per ten thousand, not seven,
+because the census counts *reachable* columns and an animal hops only at ramps, so it reaches
+under half the meadow (§2 of design 30). The result is the nine or ten the question asked for.

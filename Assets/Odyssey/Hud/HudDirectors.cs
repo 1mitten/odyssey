@@ -25,6 +25,9 @@ namespace Odyssey.Hud
         /// for the reason <see cref="Debug"/> is.</summary>
         public WorkDirector Work { get; } = new WorkDirector();
 
+        /// <summary>Whether the Animals tab is open (design 30 §6). Session state, likewise.</summary>
+        public AnimalsDirector Animals { get; } = new AnimalsDirector();
+
         /// <summary>Whether the Almanac reference browser is open, and what entry it shows.</summary>
         public AlmanacDirector Almanac { get; } = new AlmanacDirector();
 
@@ -93,6 +96,21 @@ namespace Odyssey.Hud
         {
             if (!snapshot.TryGetPawn(id, out PawnView view)) return false;
             Slice.SetLayer(view.Cell.Y);
+            Selection.Choose(id);
+            Camera.JumpTo(view.Cell);
+            return true;
+        }
+
+        /// <summary>
+        /// The Animals tab's path (design 30 §6; owner, 2026-09-23: "can the depth remain the
+        /// same"): the selection and the camera jump, and <b>the slice left where it is</b>. A
+        /// wild animal is almost always on the surface the player is looking at, and a row click
+        /// that also moved the depth read as the view lurching. An animal below the slice is
+        /// selected and jumped to all the same; the player changes depth if they want to see it.
+        /// </summary>
+        public bool ChooseAnimal(PawnId id, WorldSnapshot snapshot)
+        {
+            if (!snapshot.TryGetPawn(id, out PawnView view)) return false;
             Selection.Choose(id);
             Camera.JumpTo(view.Cell);
             return true;

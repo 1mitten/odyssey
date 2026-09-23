@@ -159,14 +159,22 @@ namespace Odyssey.Tests.Sim
         // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
         // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
         // can't swim by default"). No golden moved.
+        // 2026-09-23: SpeciesDef gained `nocturnal` and the duct rat sets it (design 30 §4).
         //
-        // Moved a fifteenth time, 2026-09-23, on the merge of temperature into a main that
-        // had gained animals. Neither side's number was right for the merged pack: main's
-        // covers SpeciesDef and the two animal kinds, this branch's covers TemperatureDef,
-        // and the pack now holds both. Re-taken from a freshly loaded pack rather than
-        // adopted from either side, which is the only honest resolution of a pinned number
-        // that two branches moved.
-        const ulong ContentFingerprint = 8707215249590019137UL;
+        // Moved a fifteenth time, 2026-09-23, by the draft (design 33 §2c): Job_DraftHold and
+        // Job_Goto at drivers 12 and 13, and PawnTuningDef gained draftQuietTicks (10,000 — four
+        // in-game hours, the reference's auto-undraft). Taken from a freshly loaded pack.
+        //
+        // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
+        // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
+        // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
+        //
+        // Moved again, 2026-09-23, merging temperature into a main that had taken combat and
+        // wildlife. Neither side's number covers the merged pack - main's has the combat and
+        // wildlife tuning, this branch's has TemperatureDef - so it is re-taken from a freshly
+        // loaded pack rather than adopted from either. Third pass of the same resolution in one
+        // day; main is moving under this branch faster than it is being reviewed.
+        const ulong ContentFingerprint = 8058600451355972608UL;
 
 
         [Test]
