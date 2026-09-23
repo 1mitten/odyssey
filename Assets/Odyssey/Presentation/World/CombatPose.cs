@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
@@ -32,7 +33,10 @@ namespace Odyssey.Presentation.World
         Bite = 11,
     }
 
-    /// <summary>Which side of a figure a blow came from, in the figure's own frame.</summary>
+    /// <summary>
+    /// Which side of a figure a blow came from, in the figure's own frame. The same values as
+    /// <see cref="HitSide"/>, which the Unity-free model answers in and which this casts to.
+    /// </summary>
     public enum BlowSide : byte
     {
         Front = 0,
@@ -73,7 +77,8 @@ namespace Odyssey.Presentation.World
     /// working arm is raised forward and bent, positive up and in; <see cref="Spine"/> is the
     /// fold, positive forward into the blow and negative leaning back; <see cref="Twist"/> turns
     /// the chest, positive to the figure's right; <see cref="Lunge"/> and <see cref="Side"/> move
-    /// the whole figure, in metres, forward and to its right.</para>
+    /// the whole figure, in metres, forward and to its right; <see cref="Head"/> nods the head on top of
+    /// the chest, positive forward — the flinch's snap (design 33 §9a).</para>
     /// </summary>
     public readonly struct CombatShape
     {
@@ -84,9 +89,10 @@ namespace Odyssey.Presentation.World
         public readonly float Twist;
         public readonly float Lunge;
         public readonly float Side;
+        public readonly float Head;
 
         public CombatShape(float shoulder, float elbow, float offShoulder, float spine, float twist,
-            float lunge, float side)
+            float lunge, float side, float head = 0f)
         {
             Shoulder = shoulder;
             Elbow = elbow;
@@ -95,13 +101,24 @@ namespace Odyssey.Presentation.World
             Twist = twist;
             Lunge = lunge;
             Side = side;
+            Head = head;
         }
 
         public static readonly CombatShape Rest = default;
 
         public CombatShape Scaled(float weight) => new CombatShape(
             Shoulder * weight, Elbow * weight, OffShoulder * weight, Spine * weight, Twist * weight,
-            Lunge * weight, Side * weight);
+            Lunge * weight, Side * weight, Head * weight);
+
+        /// <summary>Two shapes laid on together: a flinch over a computed swing.</summary>
+        public CombatShape Plus(in CombatShape other) => new CombatShape(
+            Shoulder + other.Shoulder, Elbow + other.Elbow, OffShoulder + other.OffShoulder,
+            Spine + other.Spine, Twist + other.Twist, Lunge + other.Lunge, Side + other.Side,
+            Head + other.Head);
+
+        /// <summary>A computed reaction from the Unity-free model: the body and the head, never the arms.</summary>
+        public static CombatShape Of(in ReactionPose pose) =>
+            new CombatShape(0f, 0f, 0f, pose.Spine, pose.Twist, pose.Lunge, pose.Side, pose.Head);
 
         public static CombatShape Lerp(in CombatShape a, in CombatShape b, float t) => new CombatShape(
             Mathf.LerpUnclamped(a.Shoulder, b.Shoulder, t),
@@ -110,12 +127,13 @@ namespace Odyssey.Presentation.World
             Mathf.LerpUnclamped(a.Spine, b.Spine, t),
             Mathf.LerpUnclamped(a.Twist, b.Twist, t),
             Mathf.LerpUnclamped(a.Lunge, b.Lunge, t),
-            Mathf.LerpUnclamped(a.Side, b.Side, t));
+            Mathf.LerpUnclamped(a.Side, b.Side, t),
+            Mathf.LerpUnclamped(a.Head, b.Head, t));
 
         /// <summary>True when nothing in it would move a bone or the body.</summary>
         public bool IsRest =>
             Mathf.Abs(Shoulder) < 1e-3f && Mathf.Abs(Elbow) < 1e-3f && Mathf.Abs(OffShoulder) < 1e-3f
-            && Mathf.Abs(Spine) < 1e-3f && Mathf.Abs(Twist) < 1e-3f
+            && Mathf.Abs(Spine) < 1e-3f && Mathf.Abs(Twist) < 1e-3f && Mathf.Abs(Head) < 1e-3f
             && Mathf.Abs(Lunge) < 1e-4f && Mathf.Abs(Side) < 1e-4f;
     }
 
@@ -153,20 +171,20 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public const float RecoverFraction = 0.8f;
 
-        /// <summary>How long a computed hit react runs, in seconds.</summary>
-        public const float ReactSeconds = 0.5f;
+        /// <summary>How long a computed hit react runs, in seconds: the flinch (design 33 §9a).</summary>
+        public const float ReactSeconds = CombatReactions.FlinchSeconds;
 
         /// <summary>How long a computed stagger runs: longer and bigger than a react.</summary>
-        public const float StaggerSeconds = 0.9f;
+        public const float StaggerSeconds = CombatReactions.StaggerSeconds;
 
         /// <summary>How long a computed dodge runs.</summary>
         public const float DodgeSeconds = 0.6f;
 
         /// <summary>
-        /// A blow at or above this, in thousandths of a hit point, staggers rather than jolts —
-        /// the top of the owner's 7–10 band with its spread. A stun always staggers.
+        /// A blow at or above this, in thousandths of a hit point, staggers rather than flinches
+        /// (owner, 2026-09-23: 12 or more). A stun and a critical always stagger. The model's number.
         /// </summary>
-        public const int StaggerDamageMilli = 10_000;
+        public const int StaggerDamageMilli = CombatReactions.StaggerDamageMilli;
 
         /// <summary>
         /// How far a body lying on its back is raised off the floor it lies on, in metres at the
@@ -238,21 +256,8 @@ namespace Odyssey.Presentation.World
         /// with no direction at all is taken as from the front, which is where a figure that turned
         /// to fight is looking.
         /// </summary>
-        public static BlowSide SideOf(Vector3 forward, Vector3 toAttacker)
-        {
-            forward.y = 0f;
-            toAttacker.y = 0f;
-            if (forward.sqrMagnitude < 1e-8f || toAttacker.sqrMagnitude < 1e-8f) return BlowSide.Front;
-            forward.Normalize();
-            toAttacker.Normalize();
-
-            float ahead = Vector3.Dot(forward, toAttacker);
-            if (ahead >= 0.7071f) return BlowSide.Front;
-            if (ahead <= -0.7071f) return BlowSide.Back;
-            // forward × toAttacker points up when the attacker is on the figure's right: (0,0,1) ×
-            // (1,0,0) = (0,1,0), and down when it is on the left.
-            return Vector3.Cross(forward, toAttacker).y > 0f ? BlowSide.Right : BlowSide.Left;
-        }
+        public static BlowSide SideOf(Vector3 forward, Vector3 toAttacker) =>
+            (BlowSide)CombatReactions.SideOf(forward.x, forward.z, toAttacker.x, toAttacker.z);
 
         /// <summary>The directional variant a hit react, a stagger or a death is drawn from.</summary>
         public static string VariantOf(BlowSide side) => side switch
@@ -380,6 +385,11 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static CombatShape Reaction(CombatRole role, BlowSide side, float seconds)
         {
+            // The flinch and the stagger are the Unity-free model's (design 33 §9a).
+            if (role == CombatRole.HitReact || role == CombatRole.Stagger)
+                return CombatShape.Of(CombatReactions.Pose(
+                    role == CombatRole.Stagger ? HitReaction.Stagger : HitReaction.Flinch, (HitSide)side, seconds));
+
             float span = ReactionSeconds(role);
             if (span <= 0f || seconds <= 0f || seconds >= span) return CombatShape.Rest;
 
@@ -398,19 +408,22 @@ namespace Odyssey.Presentation.World
                     : new CombatShape(0f, 0f, 0f, -10f * amount, 0f, -step, 0f);
             }
 
-            bool stagger = role == CombatRole.Stagger;
-            float lean = (stagger ? 28f : 16f) * amount;
-            float shove = (stagger ? 0.35f : 0.08f) * amount;
-            return side switch
-            {
-                // Struck from behind: folded forward and pushed on.
-                BlowSide.Back => new CombatShape(0f, 0f, 0f, lean, 0f, shove, 0f),
-                // From the left: turned away to the right and pushed right; and the mirror.
-                BlowSide.Left => new CombatShape(0f, 0f, 0f, -lean * 0.4f, lean * 0.6f, 0f, shove),
-                BlowSide.Right => new CombatShape(0f, 0f, 0f, -lean * 0.4f, -lean * 0.6f, 0f, -shove),
-                _ => new CombatShape(0f, 0f, 0f, -lean, 0f, -shove, 0f),
-            };
+            return CombatShape.Rest;
         }
+
+        /// <summary>
+        /// The reaction a figure is drawing, as a computed shape at its instant: the whole of it
+        /// where it has the clip layer and nothing draws it, or laid over a swing that holds the
+        /// layer (design 33 §9a). Rest when nothing is running.
+        /// </summary>
+        public static CombatShape Reaction(in ReactionTrack track) =>
+            track.Live ? CombatShape.Of(track.Pose()) : CombatShape.Rest;
+
+        /// <summary>The pack's row a reaction plays from: the hit react or the stagger.</summary>
+        public static CombatRole RoleOf(HitReaction reaction) =>
+            reaction == HitReaction.Stagger ? CombatRole.Stagger
+            : reaction == HitReaction.Flinch ? CombatRole.HitReact
+            : CombatRole.None;
 
         /// <summary>
         /// The stunned sway, <paramref name="seconds"/> into the stun: a slow, unsteady circle of
