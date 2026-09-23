@@ -2541,3 +2541,19 @@ scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify
 and the diff of `ModuleCatalogue.asset` is checked for `quality: [1-9]` still counting sixty-one
 before the commit. The right fix is for the rebuild to carry the cells across from the asset it
 is replacing; until then this is the rule.
+
+## The runner has art of its own now, and "is the art here" must name the rows it means
+
+**2026-09-23, the animals and wildlife PRs.** Both were green on every tier here and red on the
+self-hosted runner, twice over, for one cause: the animals unit committed two rows of the
+project's own art (`Assets/Art/Custom/Animals`), which resolve on the runner precisely because
+they are not the licensed packs. Every guard that asked "is there any art at all" — a slab
+test's "does any catalogue row resolve", `PawnFigureDirector.Enabled` in a colonist test —
+flipped from *ignore* to *run* on the one machine with no colonist art, and failed on what it
+then measured. **A guard asks about the rows the rule is about:** slab rows for a slab rule,
+`CanDrawColonists` for a colonist figure, `Enabled` only for "can anything be drawn".
+
+The second lesson is cheaper and cost more: **run the whole PlayMode tier before the push, not
+the tests you wrote.** Three PlayMode tests elsewhere counted pawns where the world now seeds
+animals beside the colonists, and the runner found all three one push at a time, each a
+fifteen-minute round trip. The tier is ten minutes here.
