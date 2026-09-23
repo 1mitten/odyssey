@@ -11194,3 +11194,12 @@ reasoning from an incomplete test that had only asked whether a zone was *publis
 wash, add a line round the outer edge, and nothing about priority or fullness. The outline is baked
 into the chunk, one bucket per chunk with a store. The lesson for the test: **"was it made" and "is
 it on screen" are two questions, and the second is the one a player asks.** `26-storage.md` §13.
+
+**The Inventory's first look, and a palette that was only safe for most eyes.** The owner asked for
+the Inventory's rows to match the stockpile pane and to be checked for accessibility, and asked
+whether many colours or one was better. Measured before answering: every category hue cleared
+contrast easily, and three of them were one colour under deuteranopia. The answer given — and taken —
+was many colours as a second cue behind a glyph and a name, which is what the stockpile pane already
+did; the hues were re-tuned within their families until every pair stayed apart under all three
+dichromacies, and a test now simulates them. Contrast ratios are what accessibility checks usually
+stop at; they said nothing here about the fault that mattered. Design 35 §5a.

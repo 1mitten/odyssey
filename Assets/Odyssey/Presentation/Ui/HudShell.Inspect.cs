@@ -1656,8 +1656,8 @@ namespace Odyssey.Presentation.Ui
             element.style.flexShrink = 0;
             element.style.paddingLeft = 10;
             element.style.paddingRight = 10;
-            element.style.backgroundColor =
-                new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f, empty ? 0.045f : 0.09f);
+            element.style.backgroundColor = new Color(hue.R / 255f, hue.G / 255f, hue.B / 255f,
+                empty ? HudTheme.ItemCategoryWashEmpty : HudTheme.ItemCategoryWash);
 
             // The caret column exists whether or not this row has a caret, so every box below it
             // starts at the same x. An empty category has none at all, which is how it says it
@@ -1679,7 +1679,7 @@ namespace Odyssey.Presentation.Ui
             element.Add(StorageCheckbox(row.State, hue, 10));
 
             var icon = new HudGlyph(CategoryGlyph(row.Category), StorageGlyph,
-                HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue));
+                HudTokens.Convert(empty ? hue.WithAlpha(HudTheme.ItemCategoryEmptyInk) : hue));
             icon.style.marginLeft = 10;
             element.Add(icon);
 
@@ -1689,7 +1689,7 @@ namespace Odyssey.Presentation.Ui
             // next heading somewhere else is capitalised by hand and the two drift apart.
             Label text = HudText.Make(row.Label, HudTextRole.ListHeading);
             text.style.marginLeft = 10;
-            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(0.45f) : hue);
+            text.style.color = HudTokens.Convert(empty ? hue.WithAlpha(HudTheme.ItemCategoryEmptyInk) : hue);
             element.Add(text);
 
             // The member count, a step up and set as a figure (owner, 2026-09-21: "make the

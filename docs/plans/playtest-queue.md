@@ -36,6 +36,11 @@ the next session learns to ignore.
   the store's largest stack, with the slice moved to its layer, is where you expected the camera;
   and whether the store pane that opens is the one the row named. A wrong answer is the camera
   landing on the store's corner away from the goods, or a pane titled with a different number.
+  **And the restyle** (35 §5a): the category headings should look exactly like the stockpile
+  pane's, the item rows should show wood, stone, scrap, iron ore and meat as pictures and the rest
+  as their category's glyph, and the re-tuned hues should still read as green, pink, tan, violet,
+  blue and rust. A wrong answer is the two panes looking different, or a hue that no longer reads
+  as its category.
 
 - **Does a drafted colonist's run read as urgency, and is the deeper red findable?**
   (`claude/combat-mvp`, design 33 §2g–§2h). Draft a colonist and right-click across the board: she

@@ -60,6 +60,40 @@ next page when its items run on. Category headings count as rows.
 | Places listed without limit | **six rows** | What the pane's height holds under the identity band, the hint and the pinned button. A seventh store holding one item is not listed; recorded below. |
 | Bar 44 high, 12% wash | as design 34 §5 | Same reasons. |
 
+## 5a. Uniform with the stockpile pane, and accessible — 2026-09-23
+
+Owner, first look: *"the inventory tile needs to match the same style as the stockpile menu with
+icons, background colours and appropriate theme so they are uniform for easy identification — also
+check this for accessibility"*. The interview settled three things:
+
+- **Six hues, backed by shapes.** A category heading is drawn exactly as the storage pane draws
+  one: the row washed with the category's hue (`HudTheme.ItemCategoryWash`, one owner for both
+  panes now), the category's drawn glyph and its name in that hue (`ListHeading`), and the count.
+  Item rows stay neutral — the colour marks the group, not every line. The spec's 8 px square and
+  the tiles' coloured bottom edges are gone.
+- **Item icons:** the pixel art where it exists (wood, stone, scrap, iron ore and meat today),
+  otherwise the category's glyph in its hue — never a blank square. `IconBadge`'s two sizes,
+  17 and 30, not the spec's 18 and 32: *"three sizes exist and no others"*.
+- **The hues were re-tuned for colour-blind players, in both panes.** Contrast was never the
+  problem (6.75:1 and up); under deuteranopia Food, Weapons and Materials simulated within 2 to 3
+  Lab units of one another. The new six keep their families and move at most 12 units; every pair is
+  now at least 15 apart under normal vision and all three dichromacies, every label clears 4.84:1 over
+  its own wash, and the 60 channel-point rule still holds. `StorageThemeTests` pins all three, and
+  the colour-blind test was checked to fail on the old palette.
+
+| Category | Was | Now |
+|---|---|---|
+| Food | #7fb85a | #93d17e |
+| Medicine | #f086a8 | #f086a8 |
+| Materials | #c4a05a | #c7a54f |
+| Books | #bb94dd | #ba99f5 |
+| Items | #8fb3d9 | #75a3cb |
+| Weapons | #e88d66 | #c17349 |
+
+**The rule this leaves**, for any later coloured list: colour is the second cue, never the only one.
+Every category keeps its glyph and name, and the selection keeps the accent cyan, which no category
+hue is allowed near.
+
 ## 6. Open
 
 - **More than six stores holding one item** are not listed. Paging the WHERE table is the fix if

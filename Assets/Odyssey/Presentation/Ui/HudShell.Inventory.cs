@@ -38,7 +38,8 @@ namespace Odyssey.Presentation.Ui
         HudGlyph _inventoryNextGlyph = null!;
 
         VisualElement _inventoryDetail = null!;
-        VisualElement _inventoryTile = null!;
+        IconBadge _inventoryArt = null!;
+        HudGlyph _inventoryGlyph = null!;
         Label _inventoryName = null!;
         Label _inventoryMeta = null!;
         Label _inventoryItemTotal = null!;
@@ -58,11 +59,12 @@ namespace Odyssey.Presentation.Ui
             public VisualElement Root = null!;
             public VisualElement Rail = null!;
             public VisualElement Group = null!;
-            public VisualElement GroupMark = null!;
+            public HudGlyph GroupGlyph = null!;
             public Label GroupName = null!;
             public Label GroupCount = null!;
             public VisualElement Item = null!;
-            public VisualElement Tile = null!;
+            public IconBadge Art = null!;
+            public HudGlyph Glyph = null!;
             public Label Name = null!;
             public Label Places = null!;
             public Label Total = null!;
@@ -327,33 +329,32 @@ namespace Odyssey.Presentation.Ui
             view.Root.style.borderBottomColor = HudTokens.Divider;
             view.Root.style.display = DisplayStyle.None;
 
-            // A category's heading: its hue, its name, how many kinds it holds.
+            // A category's heading, drawn as the storage pane draws one (owner, 2026-09-23:
+            // "uniform for easy identification"): the row washed with the category's hue, its
+            // glyph and its name in that hue, and how many kinds it holds. The colour is the second
+            // cue; the glyph and the name are the first, which is what makes it safe for a
+            // colour-blind player (HudTheme.ItemCategoryHues).
             view.Group = new VisualElement();
             view.Group.style.flexDirection = FlexDirection.Row;
             view.Group.style.alignItems = Align.Center;
             view.Group.style.flexGrow = 1;
-            view.GroupMark = Placeholder(InventoryLayout.CategoryMark);
-            view.GroupMark.style.marginRight = InventoryLayout.Gap;
-            view.Group.Add(view.GroupMark);
-            view.GroupName = HudText.Make(string.Empty, HudTextRole.PanelLabel);
-            view.GroupName.style.color = HudTokens.TextDim;
+            view.GroupGlyph = new HudGlyph(CategoryGlyph(0), InventoryLayout.CategoryGlyph, HudTokens.TextDim);
+            view.GroupGlyph.style.marginRight = InventoryLayout.Gap;
+            view.Group.Add(view.GroupGlyph);
+            view.GroupName = HudText.Make(string.Empty, HudTextRole.ListHeading);
             view.GroupName.style.marginRight = InventoryLayout.Gap;
             view.Group.Add(view.GroupName);
-            view.GroupCount = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true);
-            view.GroupCount.style.color = HudTokens.TextFaint;
+            view.GroupCount = HudText.Make(string.Empty, HudTextRole.Row, numeric: true);
             view.Group.Add(view.GroupCount);
             view.Root.Add(view.Group);
 
-            // An item: indent, tile with its category edge, name, places, total.
+            // An item: indent, its icon, name, places, total. The name stays neutral: the colour
+            // marks the group, not every line.
             view.Item = new VisualElement();
             view.Item.style.flexDirection = FlexDirection.Row;
             view.Item.style.alignItems = Align.Center;
             view.Item.style.flexGrow = 1;
-            view.Tile = Placeholder(InventoryLayout.ItemTile);
-            view.Tile.style.marginLeft = InventoryLayout.ItemIndent;
-            view.Tile.style.marginRight = InventoryLayout.Gap;
-            view.Tile.style.borderBottomWidth = InventoryLayout.ItemTileEdge;
-            view.Item.Add(view.Tile);
+            view.Item.Add(IconSlot(InventoryLayout.ItemIcon, InventoryLayout.ItemIndent, out view.Art, out view.Glyph));
             view.Name = Cell(string.Empty, HudTextRole.Row, false, 0, TextAnchor.MiddleLeft);
             view.Item.Add(view.Name);
             view.Places = Cell(string.Empty, HudTextRole.Meta, true, InventoryLayout.PlacesColumn, TextAnchor.MiddleRight);
@@ -387,10 +388,9 @@ namespace Odyssey.Presentation.Ui
             identity.style.paddingBottom = HudLayout.Pad;
             identity.style.borderBottomWidth = HudTheme.BorderWidth;
             identity.style.borderBottomColor = HudTokens.PanelBorder;
-            _inventoryTile = Placeholder(InventoryLayout.DetailTile);
-            _inventoryTile.style.borderBottomWidth = InventoryLayout.DetailTileEdge;
-            _inventoryTile.style.marginRight = HudLayout.Pad;
-            identity.Add(_inventoryTile);
+            VisualElement detailSlot = IconSlot(InventoryLayout.DetailIcon, 0, out _inventoryArt, out _inventoryGlyph);
+            detailSlot.style.marginRight = HudLayout.Pad;
+            identity.Add(detailSlot);
             var names = new VisualElement();
             names.style.flexGrow = 1;
             names.style.flexShrink = 1;
@@ -581,19 +581,26 @@ namespace Odyssey.Presentation.Ui
                 if (row.IsGroup)
                 {
                     view.Def = -1;
-                    view.GroupMark.style.backgroundColor = hue;
+                    bool empty = row.Kinds == 0;
+                    HudColour raw = HudTheme.ItemCategoryHue(row.Category);
+                    Color ink = HudTokens.Convert(empty ? raw.WithAlpha(HudTheme.ItemCategoryEmptyInk) : raw);
+                    view.GroupGlyph.Kind = CategoryGlyph(row.Category);
+                    view.GroupGlyph.Tint = ink;
                     HudText.Set(view.GroupName, Registry.Label(StorageSettingsModel.CategoryKeys[row.Category]),
-                        HudTextRole.PanelLabel);
+                        HudTextRole.ListHeading);
+                    view.GroupName.style.color = ink;
                     // An empty category shows its name and nothing else.
-                    view.GroupCount.text = row.Kinds > 0 ? row.Kinds.ToString(CultureInfo.InvariantCulture) : string.Empty;
+                    view.GroupCount.text = empty ? string.Empty : row.Kinds.ToString(CultureInfo.InvariantCulture);
                     PaintSelected(view.Root, view.Rail, false);
+                    view.Root.style.backgroundColor = new Color(hue.r, hue.g, hue.b,
+                        empty ? HudTheme.ItemCategoryWashEmpty : HudTheme.ItemCategoryWash);
                     continue;
                 }
 
                 InventoryItem item = row.Item!;
                 bool selected = item.DefIndex == _inventory.SelectedDef;
                 view.Def = item.DefIndex;
-                view.Tile.style.borderBottomColor = hue;
+                PaintIcon(view.Art, view.Glyph, item);
                 view.Name.text = item.Name;
                 view.Name.style.color = selected ? HudTokens.Accent : HudTokens.TextPrimary;
                 view.Places.text = item.Places.Count.ToString(CultureInfo.InvariantCulture);
@@ -622,7 +629,7 @@ namespace Odyssey.Presentation.Ui
             if (item == null) return;
 
             Color hue = HudTokens.Convert(HudTheme.ItemCategoryHue(item.Category));
-            _inventoryTile.style.borderBottomColor = hue;
+            PaintIcon(_inventoryArt, _inventoryGlyph, item);
             _inventoryName.text = item.Name;
             _inventoryMeta.text = InventoryModel.Meta(item);
             _inventoryItemTotal.text = item.Total.ToString(CultureInfo.InvariantCulture);
@@ -647,6 +654,41 @@ namespace Odyssey.Presentation.Ui
             }
 
             _inventoryPrimaryLabel.text = chosen != null ? InventoryModel.GoTo(chosen) : string.Empty;
+        }
+
+        /// <summary>
+        /// An icon slot holding both answers, one shown: the item's pixel art where it exists, and
+        /// its category's glyph in the category's hue where it does not. Both are built once so a
+        /// pooled row only switches which one shows.
+        /// </summary>
+        static VisualElement IconSlot(int size, int marginLeft, out IconBadge art, out HudGlyph glyph)
+        {
+            var slot = new VisualElement { pickingMode = PickingMode.Ignore };
+            slot.style.width = size;
+            slot.style.height = size;
+            slot.style.flexShrink = 0;
+            slot.style.alignItems = Align.Center;
+            slot.style.justifyContent = Justify.Center;
+            if (marginLeft > 0) slot.style.marginLeft = marginLeft;
+            slot.style.marginRight = InventoryLayout.Gap;
+            art = new IconBadge(string.Empty, size);
+            glyph = new HudGlyph(HudGlyphKind.Placeholder, size, HudTokens.TextDim);
+            slot.Add(art);
+            slot.Add(glyph);
+            return slot;
+        }
+
+        static void PaintIcon(IconBadge art, HudGlyph glyph, InventoryItem item)
+        {
+            bool drawn = IconArt.Has(item.Key);
+            art.style.display = drawn ? DisplayStyle.Flex : DisplayStyle.None;
+            glyph.style.display = drawn ? DisplayStyle.None : DisplayStyle.Flex;
+            if (drawn) art.SetKey(item.Key);
+            else
+            {
+                glyph.Kind = CategoryGlyph(item.Category);
+                glyph.Tint = HudTokens.Convert(HudTheme.ItemCategoryHue(item.Category));
+            }
         }
 
         void OnInventoryRowClicked(InventoryRowView view)

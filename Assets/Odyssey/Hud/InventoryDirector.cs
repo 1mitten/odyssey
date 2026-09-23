@@ -90,11 +90,17 @@ namespace Odyssey.Hud
         public const int SidePad = 12;
         public const int Gap = 9;
         public const int ItemIndent = 9;
-        public const int ItemTile = 18;
-        public const int ItemTileEdge = 2;
-        public const int DetailTile = 32;
-        public const int DetailTileEdge = 3;
-        public const int CategoryMark = 8;
+
+        /// <summary>
+        /// The icon slots: a list row's and the selected item's. An item with pixel art draws it
+        /// untinted; one without draws its category's glyph in the category's hue, so no row is
+        /// ever a blank square (owner, 2026-09-23).
+        /// </summary>
+        public const int ItemIcon = 17;      // IconBadge.RowSize: three sizes exist and no others
+        public const int DetailIcon = 30;    // IconBadge.AvatarSize
+
+        /// <summary>The category glyph on a heading row: the storage pane's own size.</summary>
+        public const int CategoryGlyph = 18;
         public const int SelectedRail = 2;
 
         public const int SortMarkWidth = 7;
