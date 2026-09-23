@@ -552,6 +552,19 @@ this one guessed wrong in both directions on the same day.
 > the comparison cannot go quietly blind. **A tolerance you measured is a control; one you picked is
 > a hope.**
 
+**And a third machine found a third fault, which is the argument for having one.** The test then
+failed on the CI runner and nowhere else — not on pixels, but on its own precondition: `GameSpeed`
+was still 1, so it had photographed a moving world. The pause was submitted **once**, and an intent
+goes on a bus with a capacity and drains on a tick boundary, with the thousand designations the
+fixture had just queued still going through. It landed on the dev machine and did not on the runner.
+
+- **The rule:** *submitted* is not *applied*. Anything a test asks of the game through a queue is
+  asked until the state it wanted is readable, bounded, and then asserted — never submitted once and
+  waited a fixed number of frames.
+- **The guard is what made this cheap.** It failed loudly and named the precondition instead of
+  quietly photographing a moving scene and reporting a plausible noise figure. Assert on the
+  deterministic half: here that is *is the world actually paused*, not *how many pixels moved*.
+
 ---
 
 ## The register

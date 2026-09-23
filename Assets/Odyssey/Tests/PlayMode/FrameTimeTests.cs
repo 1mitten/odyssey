@@ -835,8 +835,18 @@ namespace Odyssey.Tests.PlayMode
 
                 // **Stop the world before photographing it.** A walking colonist and a drifting
                 // sun move more pixels than the thing being measured; see the remarks above.
-                boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
-                for (int i = 0; i < 4; i++) yield return null;
+                // **Submitted until it takes, not submitted once and hoped for.** An intent goes
+                // on a bus with a capacity and is drained on a tick boundary, and the thousand
+                // designations `SeedOrders` has just queued can still be going through. Submitted
+                // once and waited four frames, this passed on this machine and **failed on the CI
+                // runner**, where the speed was still 1 — a machine-dependent flake in a test whose
+                // whole job is to be believed.
+                for (int i = 0; i < 120 && boot.World!.GameSpeed != 0; i++)
+                {
+                    boot.World!.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, 0));
+                    yield return null;
+                }
+
                 Assert.That(boot.World!.GameSpeed, Is.Zero, "the world would not pause, so the " +
                     "shots below are of a moving scene and cannot measure a still difference");
 
