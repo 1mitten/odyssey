@@ -1755,3 +1755,216 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
+
+### 9b. Criticals and knockback (built 2026-09-24, `claude/combat-crit`)
+
+Simulation, the fast and Long tiers, no Unity. **No golden moved**: no golden window fights, so no
+swing is ever decided in one, and every new field is saved and hashed only while it is set. **The
+content fingerprint moved once**, for the six `CombatDef` numbers below
+(`PawnContentDefTests`, the twentieth move).
+
+**The numbers** are the owner's and live in `Combat.xml`:
+
+| `CombatDef` field | Value | Means |
+|---|---|---|
+| `critChancePerMille` | 100 | a blow that lands is critical one time in ten… |
+| `critPerMillePerFourLevels` | 10 | …plus 1 % for every four whole Melee levels of the attacker. An animal counts its species' `meleeSkill` |
+| `critDamagePerMille` | 1,500 | a critical does half as much again. The `Hit` carries the multiplied damage |
+| `knockbackPerMille` | 500 | a critical knocks its target back half the time… |
+| `knockbackBluntPerMille` | 750 | …three times in four with a blunt weapon. Fists count as blunt |
+| `knockedDownTicks` | 90 | a target knocked back lies where it landed for about 1.5 s |
+
+**The rolls.** `MeleeRules.Resolve` rolls the critical after hit, dodge, damage and stun, on its own
+stream, `PawnPurpose.MeleeCritical`. A critical then rolls its knockback on `PawnPurpose.Knockback`.
+Both salts are SHA-256's ninth and tenth round constants, which carry on the family the combat salts
+began. A miss or a dodge is never critical.
+
+- **The critical is its own stream.** On the hit roll's stream the critical share of landed blows at
+  level 0 read 208 in a thousand, not 100: the two rolls agree, and only low rolls land. Measured with
+  `CriticalsLandAtTheirRate`.
+- **A critical moves nothing else.** `ACriticalIsTheSameBlowHalfAsMuchAgain` resolves 20,000 swings
+  with and without criticals and finds the same hit, dodge, stun and damage every time, times 1.5
+  where it was critical.
+
+**The blow is decided when the swing begins (the §9g contract).** Owner, 2026-09-23: a sharp
+critical plays a sword-slice sound *during* the swing. So the outcome has to be known when the
+wind-up starts.
+
+- **When it is rolled.** `AttackMeleeJobDriver.StartSwing` asks `IMeleeRules.Resolve` on the tick
+  the wind-up begins. The odds and the salts are the same as before; only the tick moved.
+- **Where it is kept.** The answer stays on the pawn through the wind-up: `Pawn.HoldSwing` and
+  `HeldSwing`, three ints.
+- **What is published.** A critical that will land is published as **`SwingCritical`** (11) *in
+  place of* `Swing`. Its amount is the wind-up in ticks.
+- **What lands.** At the impact, `CombatSystem.LandOrLose` applies exactly the kept outcome. If
+  the target has since stepped out of reach, died, or gone down on a job that stops at down, the blow
+  is a `Miss`. So an announced critical can fall on air, but nothing is reported that did not happen.
+- **When it is let go.** The kept outcome is dropped when the swing lands, when it is lost (the
+  attacker stunned, down or dead) and when the job ends (the driver's cleanup).
+- **An old save.** A swing in the air in a save older than layout 3 has no kept outcome. It is
+  decided at the impact, as every swing was before.
+
+**Order of events at the impact:** `Hit` (the multiplied damage), then `Critical` (amount 0, same
+tick, same pair), then death, the fall, the stun, then `KnockedBack` if it went, then the
+reaction. A blow that kills or downs is never a knockback, because death and the fall return first.
+The stagger in place is presentation's, off `Critical`, when no `KnockedBack` follows it.
+
+**Where it may land** (`CombatSystem.KnockbackCell`):
+
+- **Directly away**: the step from the attacker's cell to the target's, continued one more cell,
+  diagonals included. Only from a neighbouring cell on the same layer.
+- **On the same layer**, by a step the target itself could take (`NavGraph.IsLegalStep`), so never
+  through a wall or its corner.
+- **Or one terrace step down**: the cell beyond is open air and the cell under it is ground the target
+  can stand on. On a diagonal, neither corner may be a wall.
+- **Never two layers or more down, never up.** A rise behind the target, or a wall, is simply no
+  knockback.
+- **Never water.** The cell beyond, and where it would land, must not be water, a wade, or the top
+  of water.
+- **Never on to a tile another fighter holds**: `Melee.Holds`, §8c's one rule. This is what keeps
+  a knockback from standing two fighters on one tile.
+
+When a knockback is not allowed, the target stays where it is and nothing more happens in the
+simulation.
+
+**What a knockback does** (`CombatSystem.KnockBack`), all in the blow's own call:
+
+1. The job ends through `JobSystem.EndJob`, the one release path. A carried load is put down by the
+   driver's cleanup where the blow found her, claims are let go, a swing in the air is lost, and the
+   path is cleared.
+2. The pawn is moved to the landing cell.
+3. It is knocked down for 90 ticks: `Pawn.KnockedDownUntilTick`.
+4. `KnockedBack` is reported, with the landing cell in `Cell` and the cell it came from in `Amount`.
+
+**The knock-down is the stun's hold.** `JobSystem.TickPawn` returns before the job and the tree while
+`KnockedDownAt(tick)`, and `MovementSystem.Advance` takes no step. So the pawn does nothing: no job
+ticks and no step. It is published as `PawnFlags.KnockedDown` until it stands, and the combat pass
+puts the clock back to nought once past. **Going down clears it**, because down outranks knocked
+down. An animal is knocked back the same way.
+
+**The player's attack order outlives the fall.** Ending the job ended the order too, and a drafted
+colonist then stood idle one tile off while the foe she was sent at walked up to her. The ordered
+duel in `EveryReportCarriesTheWeapon` fell from 23 swings in 3,000 ticks to 12. So a forced
+`Job_AttackMelee` is given again in the same call, with the same target and the same end. It is held
+with the rest of her until she stands (`AnAttackOrderOutlivesTheFall`). Everything else that was
+ended stays ended: a hold comes back from the draft, a hunt and a revenge from the mind, and a haul
+from the work scan.
+
+**Saved and hashed only while set.**
+
+- **Saved.** `CombatSection` is **layout 3**, which appends four ints to every record: the
+  knock-down clock and the kept swing (result word, damage, stun). Layouts 1 and 2 still load, with
+  nobody knocked down and no swing in the air (`AnOlderCombatSectionLoadsWithNobodyKnockedDown`).
+- **Hashed.** Each has a bit in the pawn's kind word (20 and 21) and is hashed only while set. A
+  pawn with neither hashes exactly as before.
+- **Round trips.** A save taken mid-knock-down resumes on an equal hash 300 ticks on. A save taken
+  mid-swing resumes on an equal hash 600 ticks on. Each was seen to fail with its field left out of
+  the load.
+
+**What it costs.** One integer comparison a pawn a tick in the combat pass (the clock), one in the job
+pipeline and one in the mover. `KnockbackCell` is one `Melee.Holds` pass over the pawns, asked only
+for a critical that rolled its knockback. `TickBenchmarkTests.TwentyAgainstTwenty`, one run: tick
+0.077 ms mean, Pawns phase 0.016 ms, 283 swings. That is inside §8c's band of 0.070–0.087 and
+0.014–0.020.
+
+**Tests** (fast tier unless marked). Each was seen to fail with its rule withheld:
+
+| Test | Covers |
+|---|---|
+| `CriticalTests` | the owner's chance by level (an animal at its `meleeSkill`); the rate over 20,000 rolls at levels 0 and 20 (208 ‰ on the hit's stream); ×1.5 of the same blow with nothing else moved; knockback 500 ‰ sharp and 750 ‰ blunt, and never without a critical; a critical announced at the swing's start lands as announced (with the outcome rolled again at the impact: *"the blow was not the one decided"*) |
+| `KnockbackTests` | one tile straight back in six directions, with `Hit`, `Critical` and `KnockedBack` in that order and the cells in the event; a critical with no knockback stays put; 90 ticks lying with no job and the flag published every frame, then standing (with the job pipeline's hold withheld it was given a job at once); one terrace step down; never two down; never up; never into water, level or below a step (both failed with the water check withheld); never on to a fighter's tile, with a non-fighter's as the control (failed with `Holds` withheld); the downed and the dead not knocked back; a hog knocked back; the order outliving the fall (withheld: *"the order was lost with the fall"*); the mid-knock-down save; layouts 2 and 3; a hauler's load put down where she was struck |
+| `FightGuardTests.KnockbacksNeverStackFighters` | four brawl shapes with every landed blow a knockback critical, §8c's guard after every tick. `Guard.Stands` counts a knocked-down pawn as standing from the tick it lands. With `Holds` withheld, three of the four shapes failed (10, 67 and 42 pair-ticks) |
+
+Three older tests read *when a swing landed* off the rules' own record, which now sees the swing
+start. They read the published impact instead (`Tape.Landed`): `ARepeatedAttackOrderIsQuiet…`,
+`AStunnedAttackersSwingDoesNotLand` and `AMarauderInAFightKeepsItsSwing…`. The damage-spread test
+skips criticals, which are 1.5 times the spread by design.
+
+**Do not undo by tidying:**
+
+- **The outcome lives on the pawn, not in the driver.** The driver pool is not saved; the pawn's
+  combat record is, and the mid-swing round trip needs it.
+- **`SwingCritical` replaces `Swing` rather than following it.** One swing, one start event. A reader
+  counting swings counts both kinds.
+- **The knockback ends the job.** A pause would keep a hauler's load in her arms across a tile she
+  never walked, and a path from a cell she is no longer on. Only the player's attack order is given
+  back.
+
+**Open.**
+
+- **Presentation does not yet read `SwingCritical`.** `PawnFigureDirector.OnCombatEvent` times a
+  swing on `case CombatEventKind.Swing`, and `CombatFeedback.WhereOf` places a swing's word at the
+  swinger for `Swing` only. Until both also take `SwingCritical`, a critical's wind-up plays at the
+  default timing and its moment is placed at the target. That is lane B's, and it could not be
+  compiled here (the fast tier does not build Presentation).
+- **A knocked-down pawn still dodges** at its level. "A pawn lying down does not dodge" is the
+  downed rule; whether it extends to the knock-down is a feel question for the playtest.
+- **A knocked-down pawn with nobody attacking it holds no tile.** A drafted hold's blow ends when
+  its target is out of reach, so a marauder knocked back by the hold lies on a tile no fighter
+  claims. It is in nobody's fight until it stands, so §8c's rule does not count it.
+
+### 9e. The dead are not targets (built 2026-09-24, `claude/combat-crit`)
+
+Owner: *"You could still attack a pig after it died — make a guard for this for now — check marauder
+does this."*
+
+**What let the owner attack the dead pig.** Reproduced before anything was changed. The
+simulation never let anybody order or choose an attack on a pawn that had left the board: the order
+is refused on a missing or dead pawn, and every automatic choice asks `Melee.IsStanding`. What
+there was:
+
+1. **A downed pig reads as a dead one, and attacking it is an order to the death.** A hog goes down
+   at nought and dies only at −30, half its pool again. Lying down, it looks like the corpse it will
+   become: the corpse director even finds a pawn killed where it lay already lying rather than
+   falling. A right-click on it is accepted as `ToTheDeath` (§6A.8), by design. That is the one way
+   a corpse is made, and it takes three or four more machete blows. **This is almost certainly what
+   the owner did**: the pig "died", and the colonist went on hitting it.
+2. **Every attacker carried its job on the dead for a tick.** The guard below caught it on every
+   brawl before any fix: *"keeps an attack job on 5, who is gone (dead)"*, on six of six seeds. The
+   pawn is removed at the end of the tick it dies, and each attacker only noticed on its own next
+   tick. A strike clip begun before the death also plays through over the body; that is
+   presentation, and short.
+3. **A swing in the air on the killing tick** falls on the dead pawn's cell as a `Miss`. It began
+   against the living, so it is kept, as §9b's "no event lies" puts it.
+
+**What is guarded:**
+
+- **The order.** `OrderAttack` is refused (`NotPermitted`) on a dead pawn still on the board — killed
+  between ticks, which is when an order can meet one — on a pawn gone from the board, and on a
+  corpse, which is not a pawn and names nobody. The rule was already there; it is now pinned
+  (`TheOrderIsRefusedOnTheDeadAndTheGone`, which failed with the `IsDead` check withheld).
+- **The job ends the tick its target goes.** `PawnRegistry.Despawn`, the one way off the board, now
+  calls `CombatSystem.EndAttacksOn`. That ends every attack on the pawn through `JobSystem.Interrupt`
+  (keeping the step in hand) on the tick it dies, becomes a corpse, or walks off an edge
+  (`AnAttackEndsTheTickItsTargetLeavesTheBoard`). It scales with the pawns on the board, once per
+  pawn that leaves.
+- **Every automatic choice skips the dead**: the hunt, self-defence and the threat beside her, an
+  animal's revenge, and the drafted hold. `EveryAutomaticChoiceSkipsTheDead` asks each with a dead
+  pawn still on the board, with the living as the control. It failed on each check withheld in
+  turn: `IsThreatTo`, self-defence's retaliation, the animal's revenge, and the hunt.
+
+**The guard** is `DeadTargetGuardTests.NobodyFightsTheDead`, fast tier, six cases, plus
+`NobodyFightsTheDeadOnManySeeds` in the Long tier (24 more). Each case is a fight to the death:
+
+- colonists with machetes against marauders, and colonists against hogs, with a player who keeps
+  ordering every drafted colonist on to the nearest foe, standing or down, and who right-clicks every
+  body the moment it dies;
+- marauders and hogs, with no player: the hogs are set on the marauders and the marauders hunt a
+  colonist. This is the "check marauder" case.
+
+Half the fights land blows at ten times the damage, so pawns die from standing with several
+attackers on them.
+
+After every tick the guard fails if anybody holds an attack job on a pawn that is dead or gone. It
+also fails if any swing, blow, dodge, stun, critical or knockback is published against a pawn after
+its death was. The one exception is the same-tick `Miss` above. It also checks that every attack
+order sent on a body was refused.
+
+With `EndAttacksOn` withheld, all six fast cases failed (two to six violations each), and so did
+the Long sweep. **Marauders did it too**: on seeds 2, 5 and 6, marauders kept their attack on the
+colonist they had just killed. No hog dies in the marauders-and-hogs mix, because a marauder never
+answers a hog (§6A.6). What that mix guards is the hogs' revenge and the marauders' hunt.
+
+**Open.** Whether a downed animal should look different from a dead one, or whether a right-click on
+a downed animal should ask before finishing it, is the owner's call. The simulation's rule, that a
+corpse is made by an order on a downed pawn, is unchanged.
