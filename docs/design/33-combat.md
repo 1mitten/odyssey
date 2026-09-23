@@ -2042,6 +2042,60 @@ skips criticals, which are 1.5 times the spread by design.
   its target is out of reach, so a marauder knocked back by the hold lies on a tile no fighter
   claims. It is in nobody's fight until it stands, so §8c's rule does not count it.
 
+### 9d. The gear seam
+
+Built 2026-09-23 on `claude/combat-cards`. The owner's words: *"We'll make a entry for gear later to
+include equipped weapon (seam for later)"*. **This is a seam only.** The Gear tab stays disabled
+with its reason (`InspectModel.AddColonistTabs`: *"equipment arrives with the inventory"*), and
+nothing draws the model yet.
+
+**`Odyssey.Hud.GearModel`** is Unity-free. `Refresh(snapshot, pawn)` fills `Rows`, a reused list of
+`GearRow`, and allocates nothing. It returns false with no rows for a pawn the frame no longer
+carries. It returns true with no rows for an animal. For a person, colonist or marauder, it returns
+true with one row today:
+
+| Field | Today | From |
+|---|---|---|
+| `Slot` / `SlotName` | `GearSlot.Weapon`, "Weapon" | `ui.combat.weapon` |
+| `ItemDef` / `Name` / `IconKey` | the weapon in the hand, or −1, "Bare hands", no icon | `odyssey.pawn.weapon` through `ItemLabels`; `ui.combat.barehands` |
+| `Carry` / `CarryWord` | `Drawn` "Drawn", `AtHip` "At the hip", or `None` for the bare hands | `PawnFlags.Drawn` (§8b), never the draft; `ui.combat.drawn`, `ui.combat.athip` (new keys, wiki rebuilt) |
+
+**What the Gear tab will be built from**, when it is built:
+
+- **The model: `GearModel.Rows`, and nothing else.** `InspectModel` owns one and refreshes it for the
+  pane's pawn on the pane's cadence, exactly as it refreshes `HealthRows`, and it sets the Gear
+  tab's `Enabled` when the subject is a person. The words and the carry come from the model, so
+  the view never reads an aspect.
+- **The view: a partial of `HudShell` shaped like `HudShell.Combat.cs`.** Build the body once per
+  subject into the pane's fixed-height tab box, forget it on rebuild, show it with the tab strip, and
+  sync it 15 times a second, writing an element only when its value moved. Each row is the item's
+  icon (`IconKey`), its name, and the carry word dimmed. The bare hands row has no icon.
+- **The rows it grows.** A `GearSlot` per new place something is held: apparel by body part when
+  clothing exists, then the pack when an inventory exists (the carried stack is
+  `JobLabels.CarryingAspect` today, a load in the arms and not gear). Each new slot is an enum value,
+  a published aspect, a registry key and a test. It is never a second reading in the view.
+- **The commands it will carry.** Drop, and equip from the stockpile. Equipping is already an order
+  (§6C, the context menu's Equip row, §7a), so the tab's button sends the same intent and adds no
+  new path.
+- **The Health tab's weapon row stays until the Gear tab ships.** Then the owner decides whether it
+  moves. Until then, `GearModelTests.TheGearRowNamesWhatTheHealthTabNames` holds the two to one name
+  across every weapon and the bare hands.
+
+**Tests** (fast tier, `GearModelTests`, 12 cases): the bare hands; a weapon at the hip; the drawn
+flag; drafted without the flag still at the hip; the flag over empty hands still the bare hands; a
+marauder read the same way; an animal and a pawn that has gone; and the gear row agreeing with the
+Health tab for each of the four weapons and the bare hands. Negative controls, each seen to fail and
+then restored:
+
+- the drawn flag ignored (2 failures);
+- drawn read from the draft instead (2);
+- the bare hands named by a literal rather than the registry (3).
+
+**Open.** The tab names on the pane ("Needs", "Skills", "Gear", …) and their disabled reasons are
+C# literals and not registry keys. That is older than this seam and outside
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp`'s six namespaces. Whoever enables the Gear tab
+should move the tab names into the registry in the same commit.
+
 ### 9e. The dead are not targets (built 2026-09-24, `claude/combat-crit`)
 
 Owner: *"You could still attack a pig after it died — make a guard for this for now — check marauder
@@ -2107,6 +2161,78 @@ answers a hog (§6A.6). What that mix guards is the hogs' revenge and the maraud
 **Open.** Whether a downed animal should look different from a dead one, or whether a right-click on
 a downed animal should ask before finishing it, is the owner's call. The simulation's rule, that a
 corpse is made by an order on a downed pawn, is unchanged.
+
+### 9f. Health on the cards
+
+Built 2026-09-23 on `claude/combat-cards` (from `claude/combat-c2-r3`). The owner's words:
+*"Their health needs to be also displayed on their colony stats as it appears above them"*.
+
+**It is the card's only bar, not its fourth.** The interview recorded "a fourth bar", but the roster
+card has carried no need bars since 2026-09-17, when the owner took mood, food and rest off it to
+fit more colonists in the strip (`HudLayout.CardWidth`). So a card is now the face, the name and
+one health bar under the name. Putting the three need bars back is a separate decision for the owner.
+
+**What it reads** (`RosterModel.Health`, `RosterCard.Health` / `HealthInk` / `Downed` /
+`HealthWord`). The bar is always drawn. The bar over a colonist's head is drawn only while
+`odyssey.pawn.hp` is published, so the card cannot use that rule. It uses the Health tab's rule
+instead: `odyssey.pawn.hp.max` is published for every person always, and a pool with no hit points
+beside it is a whole colonist (§5d). The fill is the hit points over the pool, clamped, in
+thousandths. The ink is `CombatFeedbackModel.HealthBarColour`, the one owner of the bar's colours,
+so the card and the bar over her head change colour on the same hit: green, amber below 60 %, red
+below 40 %. **Downed is read from the flag, not from the hit points.** The bar is empty and red,
+whatever is left of the −50 % a downed pawn may sink to, and the word is `ui.status.downed`. A frame
+with no pool (from before combat, or built by hand) reads −1: the track with no fill, never a guess
+at whole. Each card costs two O(1) aspect lookups and a flag test per refresh, with no allocation.
+
+**Where it is drawn, and why so thin.** It is a 4 px bar the full width inside the padding, one
+pixel under the name (`HudLayout.CardHealthGap`, `CardHealthBar`). The card went from **89 to 94**,
+and `CardHeight` is now written as the sum of its parts. **Five pixels was all the coverage ceiling
+had left.** A full one-row strip at 1280 × 720 is 480.7 px wide, and the resting HUD there was
+19.69 % against the 20 % `CoverageCeiling`. The first cut, a 10 px bar under a 3 px gap (card 102),
+measured **20.37 %** and failed `TheStripIsAlwaysOneRowAndNoFurther`. The owner had already
+declined raising the ceiling for the name pool (2026-09-18), so the bar took the room there was. At
+94 the same HUD is **19.95 %**. **The roster card now spends the last of the ceiling**, so the next
+pixel any resting region gains has to be paid for. A 4 px bar is too thin to hold a word, so
+**"Downed" goes across the foot of the portrait**, on a plate in the bar's red at 85 %. The job
+badge is added after the plate, so it still sits on top at the right. The downed card's track is
+tinted the same red at 35 %.
+
+The drag ghost (`.card-drag-ghost`) keeps 89 and no bar. It is a picture of who is being moved, not
+a card, and it is still centred on `CardHeight`, so it rides 2.5 px higher than it did.
+
+**Tests.** Fast tier: `RosterHealthTests` (14 cases) covers a whole colonist being full and green,
+the fill and each of the three bands at their edges, the card agreeing with the overhead bar at every
+hit point from −50 % to past the pool, a downed colonist at −20 %, 0 and a stale +35 % (empty, red,
+"Downed") against the same numbers without the flag, no pool reading −1, and each card on a page
+reading its own colonist. The stylesheet now pins `.card__name`'s gap and line and `.card__health`'s
+gap and height to the model (`HudStyleSheetTests`). Negative controls, each seen to fail and then
+restored:
+
+- a pool with no `hp` read as nought, not whole (2 failures);
+- the downed flag ignored (4);
+- the stat green `HudTheme.Good` in place of `HealthBarColour` (9);
+- `.card__health` set to 10 px in the sheet (`EveryAnchorInTheSheetIsTheNumberTheLayoutModelUses`).
+
+**Do not undo by tidying.**
+- **Never draw the card's bar only where the overhead bar is owed.** The card is always shown, and
+  the absent `hp` beside a pool is *whole*, not missing.
+- **The ink is `HealthBarColour`**, never `HudTokens.NeedBand` and never a colour in the sheet. The
+  need bars and this bar share thresholds, not inks (§8a).
+- **Downed is the flag.** A frame can carry a positive `hp` on the tick a pawn goes down.
+- **Growing the card is a coverage decision**, not a styling one. Read `HudLayout.CardHeight`
+  before adding a pixel.
+
+**Where.** `Hud/RosterModel.cs`, `Hud/HudLayout.cs` (`CardHeight` and its parts),
+`Presentation/Ui/HudShell.Panels.cs` (`SyncCardHealth`, `NewCard`), `Presentation/Ui/HudShell.cs`
+(`CardView`), `Presentation/Ui/Hud.uss` (`.card`, `.card__health`, `.card__health-fill`,
+`.card__downed`). **Never compiled here**: `HudShell.Panels.cs`, `HudShell.cs`, and the sheet has
+not been loaded by Unity.
+
+**Open, for the playtest.**
+- Whether a 4 px bar reads at a glance across the strip, or whether the owner would rather spend
+  more of the ceiling (a 6 px bar is card 96, about 20.06 %, and needs `CoverageCeiling` moved).
+- Whether "Downed" across the face reads as a state or hides who it is.
+- Whether the owner wants the need bars back on the card now that it has a bar again.
 
 ### 9h. Spawns spread (built 2026-09-24, `claude/combat-spawn`)
 
