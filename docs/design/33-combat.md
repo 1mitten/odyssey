@@ -708,3 +708,86 @@ Each claim was seen to fail with its rule withheld.
 - **The Ctrl flag on `OrderAttack`** — see §6A.8.
 - **A downed body slides the rest of its step.** The price of keeping the step (§2d): the figure
   lands where it is drawn, rather than snapping back.
+
+### 6D. Lane D — weapons (C3 simulation)
+
+Built 2026-09-23 on `claude/combat-weapons` from the contracts commit `229b00a0`. Fast tier only;
+nothing here touches presentation.
+
+**The hand.** `WeaponHand` is the only code that puts a weapon in a hand or takes one out. A held
+weapon stays an ordinary `ColonyItem` with **no cell**, `CarriedBy` its holder, named by
+`Pawn.EquippedItem`. It goes up through `ColonyItems.PickUp` — the door every lift uses — and down
+through `ColonyItems.Drop`, so it leaves and rejoins the listers exactly as a hauled load does.
+**Held is one fact with one owner, the item's carrier**: `WeaponHand.Held` believes the pawn's field
+only while that thing is carried by that pawn, with no cell and in no store, so a field naming a
+thing on the ground arms nobody (`AWeaponLyingOnTheGroundArmsNobody`, which fails with the check
+loosened — measured). The hand is **not** the job's `CarriedItem`: that is the load a job is moving
+and `DropCarried` puts it down when the job ends, and a weapon has to outlast every job, a haul
+included. A colonist can hold a machete and carry a log at once, and neither field reads the other.
+
+**What reads a carried thing** (the audit the brief asked for). `ColonyItem.CarriedBy` is read only by
+the item section's hash and save. Every scan that looks for something to fetch — haul, eat, deliver,
+the storage re-bucketing — asks `PawnContext.WhereIs`, which answers -1 for a thing in a pair of
+hands, so a held weapon is invisible to all of them; the snapshot's thing list skips it for the same
+reason, and the carry aspects publish only `Job.CarriedItem`. `Falling.DropFloatingItems` skips a
+thing with no cell. Nothing needed changing. `AHeldWeaponStaysInTheHandWhileTheColonyWorks` runs a
+working colony round an armed colonist for 2,000 ticks. (`Pawn.CarriedBy` is a different field — a
+carried *patient*, C4's — and nothing here touches it.)
+
+**Rules** (`WeaponRules`):
+
+- `ArmamentOf`: the held weapon's `ItemDef.weapon` and its def index, else the species' natural
+  attack, else `CombatDef.fists`. It never rolls: a bat's or a crowbar's stun rides in the
+  `Armament`, and lane A rolls it.
+- `CanEquip`: a standing colonist of ours (not an animal, not a hostile, not downed), a thing whose
+  def has a `weapon` block, not forbidden, and lying somewhere a colonist can take it from — a cell
+  or a store, never somebody's hands. Reachability is the order's question, not this one's.
+- `ArmOnSpawn`: the kind's weapon is made on the nearest cell to the spawn that can take it and
+  taken straight up through `WeaponHand.TakeUp`, the same door the equip job uses. A marauder spawned
+  on a pile is still armed and the pile is undisturbed. A board with nowhere within
+  `JobDriver.DropSearchRadius` leaves it bare-handed.
+
+**The order and the job.** `OrderEquip(cell, A = colonist, B = thing)` is accepted **drafted or
+not** (§5j). Every question is asked before anything is interrupted, so a refusal claims nothing:
+`NotPermitted` for a pawn that does not exist, an animal, a hostile, a downed colonist and — *our
+call, the draft's rule* — a colonist in a mental break; and for a thing that does not exist, is not a
+weapon, is forbidden, is in somebody's hands, cannot be reached, or is already claimed by somebody
+else's fetch. `AlreadyInThatState` for the weapon already in the hand. The cell is not read; the
+thing's own record says where it is. Then the job in hand ends through `Interrupt` (the kept step,
+§2d), a drafted colonist's quiet clock resets, and a **forced** `Job_Equip` starts. `EquipJobDriver`
+claims the weapon (an item reservation, as a haul or a meal does), walks to it, and runs
+`LiftToil` — the one stoop every lift uses. **It changes hands at the grasp**: the lift puts it in
+her arms as a job's load and on that same tick it moves to the hand and the old weapon goes down, on
+the cell the new one just left if it is free, else the nearest that can take it. No stow is reported
+for the old one, because a second gesture would cut the stoop off halfway down. A drafted colonist
+returns to the hold when the job ends; an undrafted one to her work.
+
+**Death.** `WeaponDropListener`, the first listener `CombatListeners.Register` adds: on `Died` the
+weapon goes down at the corpse's cell, or the nearest cell that can take it; on `Downed` nothing
+happens (the C2 default: a downed pawn keeps its weapon). **A dropped weapon is not forbidden** —
+*our call*: a marauder's machete is the colony's the moment it falls, and a line in the listener is
+where a forbid would go.
+
+**The starting kit.** `ScenarioDef.startingWeapons`, item defs, **empty by default**, so `Bare` and
+every golden are untouched (an empty kit asks the storey search for no more spots). `Playtest` lays a
+**bat and a machete** on the ground beside the food, one a cell, in nobody's hand — a blunt and a
+sharp, so the first fight shows both a stun and the quicker blade (*INVENTED* inside the owner's "one
+or two"). Placement reports them as `Result.Weapons`. A debug-spawned weapon needs nothing here:
+`GiveResource` already places any item (lane C's row).
+
+**Scales with** nothing per tick: the equip driver is one pawn and one thing; the listener runs on a
+death; the rules are constant-time lookups. No sweep was added.
+
+**Goldens: unchanged** — no golden builds on `Playtest`, spawns a marauder or equips anything.
+
+**One spine edit**: `CombatContractTests.AMarauderIsSpawnedThroughTheArmingSeamAndAnAnimalIsNot`
+ended by asserting that the stub rules arm nobody. That assertion is exactly what this lane exists
+to make false; it now asserts the machete. Nothing else in the file moved.
+
+**Recorded, not fixed:**
+
+- A pawn **despawned without dying** while holding a weapon would leave it held by an id that no
+  longer exists — carried, with no cell, for ever. Nothing does that today (only animals leave the
+  board, and no animal is armed), but a marauder that flees off the edge would. The fix is one line
+  in `PawnRegistry.Despawn` (put the hand down, as it already releases beds), which is spine.
+- `Job_Equip` has no status word wired in the interface yet (`ui.status.equipping` exists); lane C.

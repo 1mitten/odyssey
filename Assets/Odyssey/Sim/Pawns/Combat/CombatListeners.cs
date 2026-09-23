@@ -9,12 +9,17 @@ namespace Odyssey.Sim.Pawns
     /// <para><b>One file, so a lane adding a listener edits no spine.</b> In Phase 2 of
     /// <c>docs/plans/combat.md</c> this is <b>lane D's</b> (drop the weapon on a death); in Phase 4
     /// the C4 and C5 lanes append theirs after it, one at a time, in that order
-    /// (<c>docs/plans/combat-contracts.md</c>). Empty from the contracts step.</para>
+    /// (<c>docs/plans/combat-contracts.md</c>).</para>
     /// </summary>
     public static class CombatListeners
     {
         public static void Register(PawnContext ctx, JobSystem jobs)
         {
+            // C3 (lane D): the dead let go of their weapon; the downed keep it. First, so that a
+            // later listener hearing the same death sees the weapon already on the ground.
+            ctx.CombatHooks.Add(new WeaponDropListener(ctx));
+
+            // C4 (rescue), then C5 (friendly fire), append here.
         }
     }
 }

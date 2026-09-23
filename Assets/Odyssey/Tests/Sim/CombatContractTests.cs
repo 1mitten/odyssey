@@ -546,9 +546,11 @@ namespace Odyssey.Tests.Sim
             Assert.That(arming.KnownWhenArmed, Is.True, "armed before the registry knew the pawn");
             Assert.That(hog.EquippedItem, Is.EqualTo(0));
 
-            // The stub from the contracts step arms nobody; the hand is lane D's to fill.
+            // Lane D filled the hand (design 33 §6D): the real rules arm the marauder with the
+            // kind's own weapon. MarauderArmsTests holds the rest of it.
             colony.Pawns.WeaponRules = new WeaponRules();
-            Assert.That(SpawnKind(colony, PawnKindIndex.Marauder).EquippedItem, Is.EqualTo(0));
+            Pawn armed = SpawnKind(colony, PawnKindIndex.Marauder);
+            Assert.That(colony.Pawns.Items.Get(new ThingId(armed.EquippedItem))?.DefIndex, Is.EqualTo(ItemIndex.Machete));
         }
 
         sealed class ArmingRecorder : WeaponRules
