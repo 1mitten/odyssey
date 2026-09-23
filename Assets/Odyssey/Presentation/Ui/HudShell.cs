@@ -1144,6 +1144,7 @@ namespace Odyssey.Presentation.Ui
 
             if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
             else if (selection.HasThing) _inspect.SetItem(selection.Thing);
+            else if (selection.HasCorpse) _inspect.SetCorpse(selection.Corpse);
             else if (selection.Cell is { } cell) _inspect.SetCell(cell);
             else _inspect.ClearSelection();
 

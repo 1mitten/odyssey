@@ -10,6 +10,12 @@ namespace Odyssey.Hud
         Colonist,
         Item,
         Cell,
+
+        /// <summary>
+        /// A corpse (design 33 §1: "clickable as Corpse of X"), by <see cref="InspectModel.Corpse"/>.
+        /// Appended with the combat contracts step; lane C fills its pane.
+        /// </summary>
+        Corpse,
     }
 
     /// <summary>
@@ -138,6 +144,47 @@ namespace Odyssey.Hud
         public PawnId Pawn;
         public ThingId Thing;
 
+        /// <summary>The corpse on the pane, as a <see cref="CorpseView.Id"/>, or 0 (design 33 §5f).</summary>
+        public int Corpse;
+
+        // ---- what the pane's shell builds (design 33 §5f) ------------------------------------
+        //
+        // The shell (HudShell.Inspect, Presentation) used to decide its shape from the subject
+        // and IsAnimal, which left every new kind of pawn — the marauder, the corpse — falling to
+        // the colonist's defaults in a file the interface lane does not own. It reads these four
+        // answers instead, and they live here, in the fast tier, where lane C can change them and
+        // test them. Their values as the contracts step left them reproduce the pane exactly as it
+        // was; the marauder and the corpse are lane C's to answer.
+
+        /// <summary>
+        /// The pane's avatar slot shows this pawn's own face (and portrait) rather than a keyed
+        /// badge. A colonist's today.
+        /// </summary>
+        public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal;
+
+        /// <summary>
+        /// The needs, the skills, the Health tab's values and the mood in the state line are
+        /// synced. A colonist's today; lane C decides a marauder's.
+        /// </summary>
+        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal;
+
+        /// <summary>
+        /// The tab strip and the fixed-height tab box are built. Every pawn's today — an animal's
+        /// box is built from an empty tab list, which is the pane as it was and is kept rather
+        /// than changed by a contracts step.
+        /// </summary>
+        public bool ShowsTabBox => Subject == InspectSubject.Colonist;
+
+        /// <summary>The badge the avatar slot shows when <see cref="ShowsFace"/> is false.</summary>
+        public string AvatarKey =>
+            Subject == InspectSubject.Item ? ItemIconKey
+            : Subject == InspectSubject.Cell ? CellIconKey
+            : IsAnimal || Subject == InspectSubject.Corpse ? KindIconKey
+            : PawnKindLabels.Colonist;
+
+        /// <summary>The corpse's registry key: its badge and, until lane C names it, its title.</summary>
+        public const string CorpseKey = "ui.pawn.corpse";
+
         /// <summary>Last-known values of a colonist who has left the frame, shown greyed.</summary>
         public bool Tombstoned;
 
@@ -194,6 +241,11 @@ namespace Odyssey.Hud
         public string KindIconKey = PawnKindLabels.Colonist;
 
         // ---- colonist body, the Needs tab
+        /// <summary>
+        /// The activity line. For an animal and for any pawn without <see cref="ShowsColonistBody"/>
+        /// it is the whole of the line under the name; for a corpse it is the line the corpse's
+        /// pane says there (lane C's words, set in <see cref="Refresh"/>).
+        /// </summary>
         public string Job = "idle";
         public string JobIconKey = "ui.status.idle";
         public int Food;
@@ -279,6 +331,7 @@ namespace Odyssey.Hud
             Subject = InspectSubject.Colonist;
             Pawn = id;
             Thing = ThingId.None;
+            Corpse = 0;
         }
 
         public void SetItem(ThingId id)
@@ -286,6 +339,7 @@ namespace Odyssey.Hud
             Subject = InspectSubject.Item;
             Thing = id;
             Pawn = PawnId.None;
+            Corpse = 0;
         }
 
         public void SetCell(CellRef cell)
@@ -293,7 +347,17 @@ namespace Odyssey.Hud
             Subject = InspectSubject.Cell;
             Pawn = PawnId.None;
             Thing = ThingId.None;
+            Corpse = 0;
             _cell = cell;
+        }
+
+        /// <summary>A corpse, by <see cref="CorpseView.Id"/> (design 33 §5f).</summary>
+        public void SetCorpse(int corpseId)
+        {
+            Subject = InspectSubject.Corpse;
+            Pawn = PawnId.None;
+            Thing = ThingId.None;
+            Corpse = corpseId;
         }
 
         public void ClearSelection()
@@ -301,6 +365,7 @@ namespace Odyssey.Hud
             Subject = InspectSubject.None;
             Pawn = PawnId.None;
             Thing = ThingId.None;
+            Corpse = 0;
             Tombstoned = false;
         }
 
@@ -414,6 +479,29 @@ namespace Odyssey.Hud
 
             Tombstoned = false;
             IsAnimal = false;
+
+            // A corpse (design 33 §1, §5f). The contracts step's stub: the badge, the kind's word
+            // and where it lies, with no tabs and no commands. Lane C names it — "Corpse of X"
+            // from ColonistNames over its RollSeed, or the kind's label — and writes its state
+            // line into Job.
+            if (Subject == InspectSubject.Corpse)
+            {
+                Skills.Clear();
+                KindIconKey = CorpseKey;
+                Title = Registry.Label(CorpseKey);
+                Subtitle = string.Empty;
+                Job = string.Empty;
+                var corpses = snapshot.Corpses;
+                for (int i = 0; i < corpses.Length; i++)
+                {
+                    if (corpses[i].Id != Corpse) continue;
+                    SetPosition(corpses[i].Cell);
+                    Layer = corpses[i].Cell.Y;
+                    break;
+                }
+                return;
+            }
+
             if (Subject == InspectSubject.Item)
             {
                 bool found = false;
