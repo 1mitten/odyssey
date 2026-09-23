@@ -153,6 +153,12 @@ namespace Odyssey.Sim.Pawns
                 // terms of the seed section above; a save from before animals has no entry here
                 // and every restored pawn is the colonist it was.
                 new PawnKindSection(pawns.Pawns),
+                // Which animals have decided to leave (design 30 §3). Absent from an older save,
+                // which loads with nobody leaving.
+                new WildlifeSection(pawns.Pawns),
+                // Who is drafted, and a step an order interrupted (design 33 §2a). Absent from an
+                // older save, which loads with nobody drafted.
+                new CombatSection(pawns.Pawns),
             };
         }
 
@@ -312,6 +318,11 @@ namespace Odyssey.Sim.Pawns
                 if (request.Wooded) natural.MakeWooded();
                 else natural.MakeBarren();
             }
+            if (!request.Wildlife)
+            {
+                gen.wildlife = System.Array.Empty<Wildlife.WildlifeEntry>();
+                gen.wildlifePer10000Columns = 0;
+            }
 
             var grid = new CellGrid(size);
             MapGenOutcome outcome = MapGenerator.Generate(grid, seed, gen);
@@ -343,6 +354,10 @@ namespace Odyssey.Sim.Pawns
             SimWorld world = builder
                 .AddColony(pawns, designations, support, nav, outcome.Placements,
                     out ConstructionGrid construction, jobs)
+                // The level-keeper for the world's animals (design 30 §3). Inert on a world whose
+                // table is empty, which is the bare board and every test built on it.
+                .AddTickable(_ => new Wildlife.WildlifeSystem(pawns, jobs, gen, outcome.StartCell,
+                    request.Scenario.startingFellRadius + Wildlife.WildlifeSeeder.ClearingMargin))
                 .Build();
 
             // Before anything is placed and before the first tick, which is the only window
@@ -364,6 +379,11 @@ namespace Odyssey.Sim.Pawns
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
                 scenario, request.Colonists);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
+            // The world's animals, after its people and before its first tick (design 30 §2):
+            // the seeder reads the trees and the rock the generator left and the clearing the
+            // scenario is about to fell, and draws from the world's own seed.
+            Wildlife.WildlifeSeeder.Seed(pawns, gen, outcome.StartCell,
+                scenario.startingFellRadius + Wildlife.WildlifeSeeder.ClearingMargin, seed);
 
             var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement,
                 solver, nav, jobs, gen, marked, request);

@@ -392,6 +392,29 @@ namespace Odyssey.Tests.Hud
             Assert.That(order, Is.EqualTo(new[] { "LayerChanged", "layer", "Chosen" }));
         }
 
+        /// <summary>
+        /// The Animals tab's row (design 30 §6): the selection and the jump, and the slice
+        /// exactly where it was (owner, 2026-09-23: "can the depth remain the same").
+        /// </summary>
+        [Test]
+        public void ChoosingAnAnimalKeepsTheDepth()
+        {
+            var directors = new HudDirectors(4, 1);
+            var snapshot = Frame.Write();
+            var at = new CellRef(6, 2, 3);
+            snapshot.AddPawn(new PawnView(new PawnId(7), at, 800, 800, 800, JobHandle.Wander, kind: 1));
+            int layers = 0;
+            directors.Slice.LayerChanged += _ => layers++;
+
+            Assert.That(directors.ChooseAnimal(new PawnId(7), snapshot), Is.True);
+
+            Assert.That(directors.Slice.ActiveLayer, Is.EqualTo(1), "the slice stayed where the player had it");
+            Assert.That(layers, Is.Zero);
+            Assert.That(directors.Selection.Pawn, Is.EqualTo(new PawnId(7)));
+            Assert.That(directors.Camera.JumpTarget, Is.EqualTo(at));
+            Assert.That(directors.ChooseAnimal(new PawnId(99), snapshot), Is.False);
+        }
+
         [Test]
         public void ChoosingAColonistNotInTheFrameDoesNothing()
         {

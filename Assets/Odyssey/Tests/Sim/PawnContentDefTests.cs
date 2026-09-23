@@ -159,7 +159,16 @@ namespace Odyssey.Tests.Sim
         // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
         // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
         // can't swim by default"). No golden moved.
-        const ulong ContentFingerprint = 10013780930231455378UL;
+        // 2026-09-23: SpeciesDef gained `nocturnal` and the duct rat sets it (design 30 §4).
+        //
+        // Moved a fifteenth time, 2026-09-23, by the draft (design 33 §2c): Job_DraftHold and
+        // Job_Goto at drivers 12 and 13, and PawnTuningDef gained draftQuietTicks (10,000 — four
+        // in-game hours, the reference's auto-undraft). Taken from a freshly loaded pack.
+        //
+        // Moved a sixteenth time, 2026-09-23, after the first draft playtest: MovementDef gained
+        // draftedPacePerMille (2,000 — a drafted colonist runs; owner: "when you are drafted you
+        // should walk faster/run"). No golden moved: nobody in a golden window is drafted.
+        const ulong ContentFingerprint = 15492604582855010655UL;
 
 
         [Test]

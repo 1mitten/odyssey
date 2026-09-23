@@ -58,6 +58,7 @@
   -->
   <SpeciesDef>
     <defName>Species_DuctRat</defName>
+    <nocturnal>true</nocturnal>
     <labelKey>ui.pawn.rat</labelKey>
     <person>false</person>
     <bodyLengthMm>250</bodyLengthMm>

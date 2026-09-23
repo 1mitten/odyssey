@@ -1407,6 +1407,7 @@ namespace Odyssey.Presentation.Bootstrap
             // per cell, counted nowhere - P10.
             _renderer.FlushCellPlates();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
+            DrawDraftMarks(_world.Views.Current, movePerTick);
             MarkSection(FrameSection.Overlays);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -2537,6 +2538,88 @@ namespace Odyssey.Presentation.Bootstrap
         const int MaxSightLines = 8;
 
         readonly SightLines _sight = new SightLines();
+
+        /// <summary>
+        /// The draft on the board (design 33 §2g): a diamond over every drafted colonist's head, and
+        /// for the <i>selected</i> ones that are walking under orders, a line to where they were
+        /// sent and a floor bracket on it. Twenty lines across the board would be noise; the ones
+        /// being commanded are signal. One walk of the aspects finds them all
+        /// (<see cref="OrderModel.CollectDrafted"/>), and the cost is a submission or three per
+        /// drafted colonist — it scales with the draft, never with the board.
+        /// </summary>
+        void DrawDraftMarks(WorldSnapshot snapshot, int movePerTick)
+        {
+            if (_renderer == null || _model == null || _world == null) return;
+
+            OrderModel.CollectDrafted(snapshot, _draftMarks);
+            SoundTheDraft();
+            if (_draftMarks.Count == 0) return;
+
+            Color hue = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha));
+            Color line = Ui.HudTokens.Convert(OrderColours.Draft.WithAlpha(OrderColours.DraftAlpha * 0.75f));
+            SelectionDirector? selection = Directors?.Selection;
+
+            for (int i = 0; i < _draftMarks.Count; i++)
+            {
+                OrderModel.DraftedMark mark = _draftMarks[i];
+                if (!snapshot.TryGetPawn(mark.Pawn, out PawnView pawn)) continue;
+
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                _renderer.DrawMarker(feet + Vector3.up * (colonistCursor.y + DraftMarkerLift), DraftMarkerSize, hue);
+
+                if (mark.OrderCell < 0 || selection == null || !IsSelected(selection, pawn.Id)) continue;
+                CellRef dest = _world.Size.FromIndex(mark.OrderCell);
+                Vector3 to = GroundRelief.Drape(CellMetrics.FloorCentre(dest)).GetPosition() + Vector3.up * 0.12f;
+                _renderer.DrawSegment(feet + Vector3.up * 0.12f, to, DraftLineThickness, line);
+                _renderer.DrawFloorBracket(dest, hue);
+            }
+        }
+
+        /// <summary>
+        /// A blade drawn, once, on the frame the snapshot first shows a colonist drafted (design 33
+        /// §2i; owner, 2026-09-23: <i>"use it when draft mode is clicked/actioned as an
+        /// indicator"</i>). Read off the frame rather than the key, so the key, the pane's button
+        /// and anything later that drafts all sound, and a refused draft — a broken or spent
+        /// colonist — stays silent. Releasing is silent, and so is the four-hour let-go.
+        ///
+        /// <para>A world seen for the first time is taken as it is and never sounds: loading a
+        /// save with three colonists drafted is not three orders given.</para>
+        /// </summary>
+        void SoundTheDraft()
+        {
+            bool first = !ReferenceEquals(_draftSoundWorld, _world);
+            _draftSoundWorld = _world;
+
+            bool fresh = false;
+            for (int i = 0; i < _draftMarks.Count; i++)
+                if (!_draftedLastFrame.Contains(_draftMarks[i].Pawn.Value)) fresh = true;
+
+            _draftedLastFrame.Clear();
+            for (int i = 0; i < _draftMarks.Count; i++) _draftedLastFrame.Add(_draftMarks[i].Pawn.Value);
+
+            if (fresh && !first) _audio?.PlayOneShot(SoundIds.Draft, Vector3.zero);
+        }
+
+        // Who was drafted last frame, and in which world: the draft sound's memory.
+        readonly HashSet<int> _draftedLastFrame = new HashSet<int>();
+        object? _draftSoundWorld;
+
+        static bool IsSelected(SelectionDirector selection, PawnId pawn)
+        {
+            IReadOnlyList<PawnId> pawns = selection.Pawns;
+            for (int i = 0; i < pawns.Count; i++) if (pawns[i] == pawn) return true;
+            return false;
+        }
+
+        // Scratch for DrawDraftMarks, refilled every frame.
+        readonly List<OrderModel.DraftedMark> _draftMarks = new List<OrderModel.DraftedMark>();
+
+        /// <summary>How far above the cursor box's top the drafted diamond floats, and how big it is, in metres.</summary>
+        const float DraftMarkerLift = 0.35f, DraftMarkerSize = 0.28f;
+
+        /// <summary>The order line's thickness in metres: thin enough to read as a line from the play camera.</summary>
+        const float DraftLineThickness = 0.06f;
 
         void DrawSelectionCursor(WorldSnapshot snapshot, int movePerTick)
         {

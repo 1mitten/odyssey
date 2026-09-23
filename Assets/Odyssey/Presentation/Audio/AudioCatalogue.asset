@@ -94,6 +94,18 @@ MonoBehaviour:
     MaxDistance: 120
     Priority: 150
     Cooldown: 0.1
+  - Id: odyssey.sound.draft
+    Clips:
+    - {fileID: 8300000, guid: 5e6c1491ffcfc234eae67a16d50ec33c, type: 3}
+    Bus: 3
+    Volume: 0.7
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 24
+    Cooldown: 0.25
   - Id: odyssey.sound.alert.normal
     Clips:
     - {fileID: 8300000, guid: 4fbee70b8ee55175ff8cf6688ed11531, type: 3}

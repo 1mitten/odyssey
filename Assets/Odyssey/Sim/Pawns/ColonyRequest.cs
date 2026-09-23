@@ -69,6 +69,13 @@ namespace Odyssey.Sim.Pawns
         public bool Wooded;
 
         /// <summary>
+        /// Whether the world's own animals are seeded and kept (design 30). On by default and
+        /// off only for a fixture that deals pawn ids by hand: a seeded hog would take the id
+        /// the test meant for a colonist. Not a player setting.
+        /// </summary>
+        public bool Wildlife = true;
+
+        /// <summary>
         /// Natural by owner instruction, which is what the scene loads. The ruined city is still
         /// generated and still tested (ADR 0008).
         /// </summary>

@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
@@ -63,8 +64,9 @@ namespace Odyssey.Tests.Sim
             scenario.miners = 2;
             ColonyWorld colony = ColonyWorld.Build(Size, 1u, scenario, barren: true, wooded: true);
 
-            var pawns = colony.Pawns.Pawns.All;
-            Assert.That(pawns.Count, Is.EqualTo(4));
+            var pawns = new List<Pawn>();
+            foreach (Pawn pawn in colony.Pawns.Pawns.All) if (pawn.IsPerson) pawns.Add(pawn);
+            Assert.That(pawns.Count, Is.EqualTo(4), "the four colonists; the world's own animals are not dealt a trade");
 
             for (int i = 0; i < pawns.Count; i++)
             {
@@ -147,6 +149,7 @@ namespace Odyssey.Tests.Sim
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
             for (int w = 0; w < WorkTypeIndex.Count; w++)
             {
+                if (!pawn.IsPerson) continue;   // the world's animals do no work (design 30)
                 Assert.That(frame.TryGetPawnAspect(pawn.Id, WorkAspects.Priority[w], out int p),
                     Is.True, "Every colonist's every work type, not only the selected one.");
                 Assert.That(p, Is.EqualTo(pawn.WorkPriority(w)));

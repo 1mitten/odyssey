@@ -78,7 +78,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |
 | **Colonists** | `ui.tab.colonists` | Everyone, at a glance | sheet 06 (action tiles), high | M1 |
 | **Animals** | `ui.tab.animals` | Tame beasts and their training | sheet 06 (action tiles), high | M1 |
-| **Wildlife** | `ui.tab.wildlife` | What is out there | sheet 06 (action tiles), med | M1 |
+| **Wildlife** | `ui.tab.wildlife` | What is out there. Listed under Animals for now; not on the bar | sheet 06 (action tiles), med | M1 |
 | **Bills** | `ui.tab.bills` | Standing production orders | sheet 04 (manufactured), high | M1 |
 | **Trade** | `ui.tab.trade` | Caravans and traders | sheet 08 (salvage gear), high | M1 |
 | **Factions** | `ui.tab.factions` | Who likes us, and how much | sheet 08 (salvage gear), high | M1 |
