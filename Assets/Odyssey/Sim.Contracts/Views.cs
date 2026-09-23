@@ -507,6 +507,16 @@ namespace Odyssey.Sim.Contracts
         /// from, so presentation can slide it along the line of the blow.
         /// </summary>
         KnockedBack = 10,
+
+        /// <summary>
+        /// A swing's wind-up began, and the blow it will land — rolled when the wind-up starts — is
+        /// critical (design 33 §9b, §9g). Published <b>instead of</b> <see cref="Swing"/>, never beside
+        /// it; <see cref="CombatEventView.Amount"/> is the wind-up in ticks, as a swing's is. Everything
+        /// that times a swing treats the two alike; the sound of a sharp weapon's critical is the
+        /// slice, landed on the impact. <b>One copy:</b> added on <c>claude/combat-sound</c> ahead of
+        /// the simulation change that publishes it — a merge keeps exactly one.
+        /// </summary>
+        SwingCritical = 11,
     }
 
     /// <summary>
