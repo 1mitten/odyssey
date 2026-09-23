@@ -189,6 +189,11 @@ namespace Odyssey.Hud
 
             if (inspect.Subject == InspectSubject.Colonist)
             {
+                // An animal has no almanac entry yet (design 29 §11: the health model and the
+                // hunt are later units, and the entry arrives with whichever first has something
+                // to say).
+                if (inspect.IsAnimal) return null;
+
                 if (string.Equals(inspect.ActiveTabName, "Skills", StringComparison.OrdinalIgnoreCase))
                     return ("Skills", "Construction");
                 if (string.Equals(inspect.ActiveTabName, "Needs", StringComparison.OrdinalIgnoreCase))

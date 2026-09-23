@@ -52,6 +52,10 @@ namespace Odyssey.Sim.Pawns
             {
                 var pawn = pawns[i];
 
+                // An animal has no needs, no mood and no mental break (design 29 §2): the values
+                // it was built with never move. The day it eats is the day the loop is designed.
+                if (!pawn.IsPerson) continue;
+
                 // Phase spreading by id. Over any window of exactly `interval` ticks each pawn
                 // updates exactly once, which is what keeps the cadence exact and testable while
                 // the cost stays flat.

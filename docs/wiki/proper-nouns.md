@@ -19,6 +19,7 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | City predator | **girder cat** | proposed  | A lean climbing predator that hunts along the structure of a ruin. Named for the verticality on purpose: it arrives from a layer you were not watching |
 | Feral machine | **loper** | proposed  | A long-legged maintenance unit still walking its rounds, now hostile to anything that moves. Not alive, not intelligent, not harmless. ui.pawn.synth points at this |
 | Pack animal | **dray hog** | proposed  | A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale |
+| City vermin | **duct rat** | proposed  | The rat of the ruin: lives in the ducts and the caverns, climbs anything, eats what the colony stores. Named in the register of the midden hog and the girder cat; the first animal with a full set of movements, so the one the figure work is proven on |
 | The calendar | **6 months of 12 days, 72-day year** | proposed  | Three seasons of two months each. A short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. Days stay 24 hours for legibility |
 | Month | **Larkspur** | proposed  | First month of Wash. Botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. Invented earlier for the clock readout and kept |
 | Month | **Tansy** | proposed  | Second month of Wash |
@@ -34,7 +35,7 @@ Names that are not interface keys: people, places, factions, creatures, the cale
 | Colonist names | **Given names only, no surnames** | proposed  | A holding is small enough to be on first-name terms, and a single short name fits the roster bar, which is the densest region in the interface. Short, consonant-forward, mixed origin, nothing that reads as a joke |
 | Starter name pool | **See docs/design/colonist-names.csv** | approved  | 244 given names in three registers — settled, frontier and yard — owner-supplied 2026-09-18. The eight invented for the mockups are in the frontier register. The pool has its own file because it would drown this table, and its own wiki page so every name can be read and struck; the order of that file is load-bearing, since a name is arithmetic on a saved seed |
 
-**0 of 29 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
+**0 of 30 rows have no name at all.** Those are not oversights to tidy up later: a storyteller and a faction with no name cannot be written about, and the city the whole prototype is set in is currently called nothing.
 
 ---
 

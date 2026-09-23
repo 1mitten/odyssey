@@ -628,6 +628,17 @@ answered within one row, never for absolutes. And a milestone report stated a re
 harness before the harness had been checked against an empty render placed last — the control that
 should have been the first row written, not the last.
 
+**"Is the machine clear?" needs three answers, not one** (2026-09-23). A frame number is only
+comparable with one from the same run, so a measurement waits for every other Unity batch run to
+finish — and a single sample of the process list is not enough to know that it has. A batch run
+that has already printed `total=… passed=…` can still be shutting down for another minute
+(the run that finishes without exiting, above), and a sibling worktree can start one in the gap.
+Three attempts were needed for the crowd-scan measurement: the first raced the session's *own*
+EditMode run, the second refused correctly and reported "still busy", and only the third had the
+machine. **Poll until it has been quiet on three consecutive checks**, and have the script exit
+non-zero rather than measure a contended machine — a refusal costs a retry, a contended number
+costs a wrong conclusion and is indistinguishable from a real regression.
+
 **A profiler recorder is not free to start.** Merely creating `ProfilerRecorder`s for the render
 statistics made every row of the same benchmark ten times slower. Counters that change the thing
 they count are worse than none; the editor's own `UnityStats` (what the Stats overlay reads) costs
@@ -2536,6 +2547,22 @@ once a *tick*, and a rig with nothing to draw runs frames far faster than the fi
 machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
 both of those are worth logging. The frame count is a diagnostic, never a gate.
 
+**Rebuilding the module catalogue wipes the recolour classification, and nothing says so** (2026-09-22).
+`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue` replaces every row with
+`SetEntries`, and the `appearance` cells on the sixty-one colonist rows are written by a
+*different* tool that deliberately does not rebuild the catalogue. So a rebuild that adds two
+animal rows also empties every colonist's swatches, every colonist draws in the pack's paint, and
+the only thing that notices is `AppearanceCatalogueTests.EveryBodyHasSomethingToRecolour…`
+("Expected 61, but was 0") a full EditMode tier later. **The pair is always run together:**
+
+```
+scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify
+```
+
+and the diff of `ModuleCatalogue.asset` is checked for `quality: [1-9]` still counting sixty-one
+before the commit. The right fix is for the rebuild to carry the cells across from the asset it
+is replacing; until then this is the rule.
 
 ## Four tiers, and a branch can report three of them (2026-09-22)
 

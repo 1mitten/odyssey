@@ -219,6 +219,15 @@ namespace Odyssey.Presentation.Bootstrap
                     _portraits = new PortraitStudio(moduleCatalogue,
                         _colonistMaterials ??= new ColonistMaterials());
                 }
+                else if (_portraits.Materials == null)
+                {
+                    // A colony ending takes the materials with it -- deliberately, since the
+                    // pictures were rendered through them. The studio outlives the colony, so
+                    // asking for it again has to give it live ones back or it would photograph
+                    // every colonist from then on with no shader at all.
+                    ColonistMaterials.AdoptInkFrom();
+                    _portraits.Materials = _colonistMaterials ??= new ColonistMaterials();
+                }
 
                 return _portraits;
             }
@@ -307,6 +316,17 @@ namespace Odyssey.Presentation.Bootstrap
             /// separate numbers.</para>
             /// </summary>
             Surround,
+            /// <summary>
+            /// Bucketing the colony so the sidestep can ask who is within three metres.
+            ///
+            /// <para>Its own section rather than a charge on <see cref="Figures"/>, which is where
+            /// it is built: the index is rebuilt once and shared by the figures, the baked far
+            /// form and the carried stand-in, so billing it to the first of the three would
+            /// flatter <see cref="Actors"/> by exactly the amount it hid. It is O(N) and it
+            /// replaces an O(N squared) in both of the other two — see
+            /// <c>docs/design/25-pawn-steering.md</c>.</para>
+            /// </summary>
+            Crowd,
             /// <summary>The live Synty figures, capped at <c>PawnFigureDirector.FigureCeiling</c>.</summary>
             Figures,
             /// <summary>Sound: what played, what was culled, the ambience.</summary>
@@ -319,6 +339,12 @@ namespace Odyssey.Presentation.Bootstrap
             Overlays,
             Count,
         }
+
+        /// <summary>
+        /// This frame's crowd buckets, rebuilt once in <c>LateUpdate</c> and shared by everything
+        /// that poses a pawn. See <see cref="FrameSection.Crowd"/>.
+        /// </summary>
+        readonly Rendering.PawnCrowdIndex _crowd = new Rendering.PawnCrowdIndex();
 
         readonly double[] _sectionMs = new double[(int)FrameSection.Count];
         readonly Stopwatch _sectionTimer = new Stopwatch();
@@ -1330,6 +1356,21 @@ namespace Odyssey.Presentation.Bootstrap
                 _sectionMs[(int)FrameSection.Surround] += surroundMs;
                 _sectionMs[(int)FrameSection.World] -= surroundMs;
             }
+
+            // **Where every colonist is, bucketed, once.**
+            //
+            // Three things pose a pawn against its neighbours this frame — the live figures, the
+            // baked far form and the stand-in load a carrier holds — and each of them used to
+            // walk the whole colony per pawn to do it. One index, built here and handed to both
+            // owners, is what makes that a neighbourhood lookup instead. Built from
+            // `Views.Current`, which is the same snapshot all three of them read, so it cannot be
+            // a frame out of step with what is being drawn.
+            //
+            // Before the figures, because they are the first to ask.
+            _crowd.Rebuild(_world.Views.Current.Pawns);
+            if (_renderer != null) _renderer.Crowd = _crowd;
+            if (_figures != null) _figures.Crowd = _crowd;
+            MarkSection(FrameSection.Crowd);
 
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
@@ -2513,14 +2554,25 @@ namespace Odyssey.Presentation.Bootstrap
                 for (int i = 0; i < selection.Pawns.Count; i++)
                 {
                     if (!snapshot.TryGetPawn(selection.Pawns[i], out PawnView pawn)) continue;
+                    Color strength = i == 0 ? colour : SecondarySelectionColour;
+
+                    // An animal is bracketed as its own drawn box, turned the way it faces, with
+                    // the item bracket's margin (owner, 2026-09-22: the cell-sized column round a
+                    // hog highlighted the whole tile). A colonist keeps the one fixed box below.
+                    if (pawn.Kind != 0 && _figures != null
+                        && _figures.TryGetAnimalBox(pawn.Id, out Matrix4x4 place, out Vector3 box))
+                    {
+                        _renderer.DrawSelectionBracket(place, box + Vector3.one * ItemCursorMargin, strength);
+                        continue;
+                    }
+
                     // The figure's own position where there is one, for the same reason the hit-test
                     // uses it: a working colonist is stepped off their cell, and a bracket drawn from
                     // the pose would sit on the cell while the person stands beside it.
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
                         feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
                     _renderer.DrawSelectionBracket(
-                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor,
-                        i == 0 ? colour : SecondarySelectionColour);
+                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, strength);
                 }
                 return;
             }

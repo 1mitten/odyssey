@@ -23,6 +23,65 @@ the next session learns to ignore.
 
 ## Open
 
+- **Do the two animals read as animals, and does the hog's computed walk read as a walk?**
+  (`claude/animals`, `docs/design/29-animals.md`, plan `docs/plans/animals.md`.) Debug menu →
+  *Spawn midden hog* and *Spawn duct rat*, several of each, near the camera; then watch. Five
+  things to judge, none a test can answer: whether a **life-size** hog (1.2 m) beside a 2.49 m
+  colonist reads as a pig or as a piglet, and whether the rat is visible at all at play height;
+  whether the hog's **computed trot** reads as a pig trotting beside the rat's authored walk
+  (first look, 2026-09-22: *"looks awful"*, which was a walk cycling once per metre on 23 cm
+  legs; it is a measured-stride trot now) — a wrong answer is feet that still slide, legs that
+  paddle, or a cadence that reads as scurrying, and `QuadrupedGait.SlideFactor` is the dial;
+  whether the **cursor** now sits flush round a selected hog and a rat rather than round the
+  tile, and whether a click on the animal's body lands; and, after the second look ("legs are
+  spindles", 2026-09-22), whether the hog's body and legs now stay the model's own shape while it
+  trots — a wrong answer is any leg longer than the body is tall; whether a hog or a rat ever
+  enters a stream or pond (owner, 2026-09-22: *"animals can't swim by default"*) — a wrong answer
+  is either wading; and whether either ever **rests on a terrace step's foot** and snaps down
+  when it sets off — a wrong answer is the snap, since walking up and down a step is allowed;
+  after the fourth look (2026-09-22), whether a hog ever **snaps back a cell** mid-walk (it was
+  the wander expiring mid-step; the detector reads none now), whether a hog or rat ever climbs a
+  **mined face or a rock** that has no ramp drawn (a wrong answer is one on top of an outcrop or
+  up a dug step), and whether the wider trot now reads as **legs moving** rather than the body
+  twisting — a wrong answer is still a twist, and the honest fix is a walk clip; after the
+  fifth look (2026-09-22, the owner's note on how a pig's legs work), whether a planted foot now
+  **holds the ground** while the body passes over it and the swinging one lifts, carries flat
+  and plants — a wrong answer is a foot that slides backwards against the ground or a leg that
+  is still bent as it lands; whether the **flat two-colour** models
+  read as the same game as the Synty colonists; whether a hog at the foot of a ladder **turns
+  away** rather than standing at it, and a rat goes up; and whether the wander reads as an animal
+  living rather than pacing a corner or standing for minutes. Click one: the pane should say
+  *Midden hog · Wandering* or *Resting*, with no face, needs or tabs; the roster should not gain
+  a card. Both scales are one number each in `AnimalImport.Scales`.
+- **Does the frame still fall over at a high colony count?** (PRs #171 and the aspect-lookup PR,
+  `docs/design/25-pawn-steering.md` §9 and `31-aspect-lookup.md`.) **One row for two units**, because
+  they are one answer. Spawn colonists past a couple of
+  hundred with the overlay up: the sweep now runs 2.2 to 4.8 ms across 8 to 384 colonists on this
+  machine with no knee in it, against 27.8 ms at 384 before. A wrong answer looks like a bend
+  anywhere in that range, which would mean a third term nobody has measured. **Nothing to look at
+  below about a hundred**, and a test proves the drawn sidestep is bit-for-bit unchanged, so there
+  is deliberately no "does it still look right" row.
+- **Can you tell three colonists apart without reading their names, and does the colony read as a
+  crew?** (PR #168, `docs/design/29-modular-colonists.md`.) Everyone now wears the same issued
+  jumpsuit and identity is carried entirely by face, hair and beard. Three things only a person can
+  answer: whether **three candidates** on the setup screen are distinguishable at a glance;
+  whether a colony of five reads as *a crew in uniform* rather than as clones; and whether the
+  uniform's white **takes the light** at dusk and dawn or goes to a flat hole in the frame. A wrong
+  answer looks like: you still click each card to tell who is who, or the suit glows white at
+  golden hour.
+
+- **Do the names suit the people?** (Same PR, §11.) A name's CSV row picks the body, and the thirty
+  unisex names are now dealt a sex rather than defaulting to male. Worth a few rerolls. A wrong
+  answer looks like a name that reads female on a body that does not, or the same unisex name
+  always coming out male across several colonies. **The pool skews male 120:90** and that is one
+  CSV column if you want it evened.
+
+- **Is the hair colour on the face a problem now?** (Same PR, §10.) Pre-existing and unchanged —
+  the hair rectangle paints the scalp, brows, a band across the eyes, the jaw and the lips. It was
+  invisible under brown hair and a varied cast; against a white uniform with teal and plum in the
+  palette it may not be. If it reads as goggles rather than as shadow, §10 has three costed ways
+  out and the cheapest experiment that decides between them.
+
 - **Does the cold read?** (`claude/temperature-core`, `docs/design/28-temperature.md`.) Open the
   debug menu with backtick and press **Skip one month** four times — that is the row this review
   added, because with only *Skip one day* the season the whole model was built for was sixty

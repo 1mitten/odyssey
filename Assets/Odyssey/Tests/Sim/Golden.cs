@@ -253,6 +253,21 @@ namespace Odyssey.Tests.Sim
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
+        /// <remarks>
+        /// <b>All six numbers re-baked 2026-09-22 for animals</b> (design 29 section 6): a pawn's
+        /// kind entered <c>Pawn.ContributeTo</c> beside its roll seed, so every Generated and
+        /// Simulated hash moved by the hash seeing one more zero per colonist. Measured, not
+        /// assumed: <see cref="GoldenColonyProbe"/> run on <c>main</c> and on the branch, same
+        /// file, diffs clean in every number on all three boards. No golden world has an animal
+        /// in it (the debug menu is the only spawner), so nothing here walks differently.
+        /// <para><b>Two Simulated numbers re-baked again the same day, and this time the colony
+        /// did change.</b> A job's expiry waits for the next cell boundary for every pawn now
+        /// (design 29 section 3a), so a mental-break wander ends one step later than it did. The
+        /// played board and the city moved; the bare meadow, where nobody breaks in the window,
+        /// did not. The probe on <c>main</c> and here differs in one number on each of the two
+        /// boards - the sum of the pawns' cells - and in nothing else: food, rest, items and
+        /// orders identical. That is a step taken, not a hash seeing more.</para>
+        /// </remarks>
         ///
         /// <remarks>
         /// <b>All three cases re-baked together on 2026-09-20, both halves of each.</b> A
@@ -344,6 +359,19 @@ namespace Odyssey.Tests.Sim
         /// colonies do not know it. Earlier re-bakes used a throwaway probe and had to describe it
         /// afterwards; this one leaves the probe behind so the next re-bake starts with it.</para>
         /// </remarks>
+        /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
+        /// that had gained animals, and neither side's numbers were right for the merged code.</b>
+        /// Both branches had moved all six — main for the pawn's kind entering the hash, this one
+        /// for the colonist's last-felt ambient and each room's energy residual — so taking either
+        /// side would have committed a number nothing had produced. Re-baked afresh, which is the
+        /// only honest resolution of a golden conflict.</para>
+        ///
+        /// <para><b>Measured before they were written.</b> <c>GoldenColonyProbe</c> run on the
+        /// merged branch and on <c>main</c>: the two outputs <b>diff clean</b>. Every census
+        /// number — live things, per-def stacks, item cells, the two lister counts, pawn cells,
+        /// total food, total rest, standing orders, zones — is identical on all three boards. The
+        /// hash sees more; no colony does anything different.</para>
+
         public static readonly Case Meadow = new Case
         {
             Name = "meadow 60x60x16 barren, seed 4242, 5,000 ticks",
@@ -352,8 +380,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 3323014265006917754UL,
-            Simulated = 4120321472792330164UL,
+            Generated = 4330111643675104378UL,
+            Simulated = 4998053273604083060UL,
         };
 
         /// <summary>
@@ -369,8 +397,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 17477209103796892501UL,
-            Simulated = 17573934566704327877UL,
+            Generated = 615395511223038293UL,
+            Simulated = 2208959963572250979UL,
         };
 
         /// <summary>
@@ -406,8 +434,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 13209551001083838375UL,
-            Simulated = 7413222100740120350UL,
+            Generated = 2167611594478323175UL,
+            Simulated = 10733399126698945757UL,
         };
     }
 }

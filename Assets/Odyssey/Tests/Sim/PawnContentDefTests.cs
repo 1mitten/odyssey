@@ -144,7 +144,29 @@ namespace Odyssey.Tests.Sim
         // starting zone moving to a real `StorageZones` does move them, and that is measured
         // separately. The day a golden window includes a zone, the curve will move a hash and that
         // will be correct.
-        const ulong ContentFingerprint = 3819759943885241130UL;
+        //
+        // Moved a twelfth time, 2026-09-22, by animals (design 29 §1): SpeciesDef arrived with
+        // three rows — the person, the midden hog and the duct rat — and PawnKindDef gained
+        // `species`, with two animal kinds beside the colonist's. Taken from a freshly loaded
+        // pack. Every Simulated AND Generated golden moved with it, and not for this: the pawn's
+        // kind entered the hash the same day (§6), and the golden colony probe run on both
+        // branches diffs clean in every number — the hash sees one more zero per colonist.
+        //
+        // Moved a thirteenth time, 2026-09-22, the same day: the midden hog's movePerMille went
+        // 700 to 600 after the owner's first look at the trot ("way too fast"). No golden moved:
+        // no golden world has an animal in it.
+        //
+        // Moved a fourteenth time, 2026-09-22: the duct rat's traverseMode went Colonist to the
+        // new Climber, which climbs anything a colonist can and does not swim (owner: "animals
+        // can't swim by default"). No golden moved.
+        //
+        // Moved a fifteenth time, 2026-09-23, on the merge of temperature into a main that
+        // had gained animals. Neither side's number was right for the merged pack: main's
+        // covers SpeciesDef and the two animal kinds, this branch's covers TemperatureDef,
+        // and the pack now holds both. Re-taken from a freshly loaded pack rather than
+        // adopted from either side, which is the only honest resolution of a pinned number
+        // that two branches moved.
+        const ulong ContentFingerprint = 8707215249590019137UL;
 
 
         [Test]

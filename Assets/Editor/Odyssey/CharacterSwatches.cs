@@ -147,6 +147,26 @@ namespace Odyssey.EditorTools
                     $"cloth2 {Slot(cells.cloth2, cells.cloth2Verts, cells.totalVerts)}  {note}");
             }
 
+            // The hair and beard pieces, on the same pass and for the same reason the bodies are
+            // done here rather than at runtime: three of the four character FBXs are imported
+            // without read/write, so Mesh.uv is unavailable in a player. What ships is a rectangle.
+            int pieces = 0;
+            foreach (string family in new[] { ModuleIds.HairBase, ModuleIds.BeardBase })
+            {
+                foreach (ModuleEntry row in catalogue.FindFamily(family))
+                {
+                    if (row.prefab == null) continue;
+
+                    AppearanceCells cells = ClassifyAttachment(row.prefab, out string note);
+                    if (write) row.appearance = cells;
+                    pieces++;
+                    report.AppendLine(
+                        $"  {row.prefabName,-38} {cells.quality,-10} " +
+                        $"hair {Slot(cells.hair, cells.hairVerts, cells.totalVerts)}  {note}");
+                }
+            }
+            report.AppendLine($"  attachments classified: {pieces}");
+
             report.AppendLine();
             foreach (KeyValuePair<AppearanceQuality, int> pair in tally)
                 report.AppendLine($"  {pair.Key}: {pair.Value}");
@@ -176,6 +196,77 @@ namespace Odyssey.EditorTools
             rects.Length == 0 ? "  -  " : $"{rects.Length}x{100 * verts / Mathf.Max(1, total),3}%";
 
         // ---------------------------------------------------------------- the classifier
+
+        /// <summary>
+        /// Where a hair or beard piece takes its colour from
+        /// (<c>docs/design/29-modular-colonists.md</c>, MC5).
+        ///
+        /// <para><b>No clustering, because there is nothing to cluster.</b> Measured, most of
+        /// these meshes map <i>every vertex</i> to one point of the atlas — the same cell the
+        /// bodies' own hair swatch uses — and the handful that do not were excluded from the
+        /// content tables rather than handled here
+        /// (<c>docs/research/e-06-modular-colonists.md</c> §6, §7). So the whole piece is one
+        /// slot, and the slot is the bounding box of its UVs with a little air around it.</para>
+        ///
+        /// <para>It is written into the <c>hair</c> slot specifically, which is what makes a beard
+        /// the hair colour exactly and unable to drift from it: one rectangle, one colour, both
+        /// slots painted by the same number.</para>
+        /// </summary>
+        public static AppearanceCells ClassifyAttachment(GameObject prefab, out string note)
+        {
+            note = string.Empty;
+            var cells = new AppearanceCells();
+
+            var filter = prefab.GetComponentInChildren<MeshFilter>(true);
+            var skinned = prefab.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            Mesh? mesh = filter != null ? filter.sharedMesh
+                : skinned != null ? skinned.sharedMesh : null;
+            if (mesh == null)
+            {
+                note = "no mesh";
+                return cells;
+            }
+
+            Vector2[] uv = mesh.uv;
+            if (uv.Length == 0)
+            {
+                note = "mesh has no UVs";
+                return cells;
+            }
+
+            float u0 = float.MaxValue, u1 = float.MinValue, v0 = float.MaxValue, v1 = float.MinValue;
+            foreach (Vector2 t in uv)
+            {
+                if (t.x < u0) u0 = t.x;
+                if (t.x > u1) u1 = t.x;
+                if (t.y < v0) v0 = t.y;
+                if (t.y > v1) v1 = t.y;
+            }
+
+            float extent = Mathf.Max(u1 - u0, v1 - v0);
+            if (extent > MaxSlotExtent)
+            {
+                // The piece spans real texture rather than one flat cell, so repainting it would
+                // throw the artist's work away. It should never have reached the catalogue -- the
+                // content tables exclude these by name -- so say so loudly rather than silently
+                // painting over it.
+                note = $"spans {extent:F4} UV, more than one cell: NOT recoloured";
+                return cells;
+            }
+
+            // A little air around the measured box. A rectangle of literally zero size is a
+            // degenerate thing to hand a shader, and the atlas cells either side are 0.002 or more
+            // away, so this cannot reach a neighbour.
+            const float Air = 0.0012f;
+            cells.hair = new[]
+            {
+                Rect.MinMaxRect(u0 - Air, v0 - Air, u1 + Air, v1 + Air),
+            };
+            cells.hairVerts = mesh.vertexCount;
+            cells.totalVerts = mesh.vertexCount;
+            cells.quality = AppearanceQuality.Full;
+            return cells;
+        }
 
         public static AppearanceCells Classify(GameObject prefab, out string note)
         {

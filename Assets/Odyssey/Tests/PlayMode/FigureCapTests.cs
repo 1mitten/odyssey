@@ -74,7 +74,10 @@ namespace Odyssey.Tests.PlayMode
                 // so on the self-hosted runner it loads perfectly with every reference null — and
                 // a catalogue null-check says "carry on" on exactly the machine that can draw
                 // nobody. See PortraitLightingTests.NoPacks, where that cost a red build.
-                if (!boot.Figures!.Enabled)
+                // And the colonist rows in particular: the animal rows are the project's own art
+                // and resolve on the runner, so `Enabled` is true there while no colonist can be
+                // drawn, which is exactly the frozen-figure count this test then read as zero.
+                if (!boot.Figures!.CanDrawColonists)
                     Assert.Ignore("the colonist rows resolved to no art (no Assets/Synty), " +
                                   "so nothing is drawn as a figure");
 

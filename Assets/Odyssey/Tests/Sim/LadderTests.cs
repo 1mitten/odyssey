@@ -75,7 +75,7 @@ namespace Odyssey.Tests.Sim
         /// <para>The shape: a wall, a slab on top of the wall as the landing, and the ladder in the
         /// column beside it with nothing above it at all.</para>
         /// </summary>
-        static void AShaftWithALandingBesideIt(
+        internal static void AShaftWithALandingBesideIt(
             ColonyWorld colony, out int ground, out int shaft, out int landing)
         {
             ground = GroundNear(colony, 3);

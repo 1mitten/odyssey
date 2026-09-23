@@ -1257,6 +1257,15 @@ Sight, Audio, Doors, Overlays — stays under 0.02 ms throughout.
   it measures linear. Actors is every pawn without a figure, so it is (N-64) x N — quadratic, and
   it measures quadratic: 147,456 pairs at 384 pawns, each with a `Vector3.Distance`, which at
   about 90 ns a pair is 13 ms against the 13.275 measured.
+- **Confirmed again 2026-09-23, from a sweep that was measuring something else** (PR #168, the
+  modular colonists). `Actors` went 0.027 ms at 64 figures to **17.208 ms at 384**, with the frame at
+  4.04 and 30.35 ms — while draw calls moved 1,125 → 1,152 and the hair-and-beard pass beside it,
+  measured against a control in the same run, cost a flat **0.05 ms at both 64 and 192**. So the
+  growth is neither submission nor the newest per-pawn pass, and the quadratic model above holds at
+  ~117 ns a pair on a busier machine. **The prompt for whoever picks this up is
+  `docs/plans/pf-crowd-scan.md`**, including the reason the fix can be exact: `CrowdFarRadius` is
+  3.0 m, `Proximity` returns zero beyond it, so every pair the scan discards contributes nothing and
+  a 3 m cull is bit-identical.
 
 **The knee the owner saw is the figure ceiling**, not because the ceiling is wrong but because
 crossing it is where the quadratic term starts: below 64 there are no stand-ins and the only crowd
@@ -1273,6 +1282,10 @@ not done: it is the next unit, and the sweep above is its before.
 **At the scale target it is not yet a problem.** Fifty colonists is under the ceiling and the
 whole frame is about 3.5 ms. This is a ceiling on how big a colony may get, discovered four years
 before it binds, and worth fixing because the fix is cheap and provably invisible.
+
+> **Fixed 2026-09-23 — §6c.9 below, and `docs/design/25-pawn-steering.md` §9.** The sweep in this
+> table stands as the before it was taken as, but note it was measured beside two other editors;
+> §9a is the same sweep on a clear machine and is the number to quote.
 
 ### 6c.3 The decoration, measured — the surround is 45 per cent of the meadow and the tufts are 7
 
@@ -1771,6 +1784,63 @@ compiles shader variants asynchronously (`ProjectSettings/EditorSettings.asset`,
 A batch run cannot reproduce it — `ShaderUtil.allowAsyncCompilation` is false in batch mode, and the
 probe recorded zero frames of compilation — so the next move is the owner flipping that one toggle
 in a real editor session and saying whether the delay becomes a brief hitch.
+
+### 6c.9 The crowd scan, fixed — and what the control says
+
+**2026-09-23.** The O(N squared) above is closed. `PawnCrowdIndex` buckets every pawn's position
+once a frame on a 3 m grid and `PawnPose.Of` asks the neighbourhood instead of the colony; the cull
+is exact, so no drawn position moved and the sidestep the owner judged is untouched. The shape, the
+alternatives and what not to undo are `docs/design/25-pawn-steering.md` §9; the pattern is P12 in
+`docs/bug-patterns.md`, now marked fixed, and the testing lesson that fell out of it is the new P16.
+
+**Two things in the measurement are worth carrying beyond this unit.**
+
+**The control was three-valued, not a bool.** The plan (`docs/plans/pf-crowd-scan.md`) named two
+candidates — hoisting `SteeringCurve.WhereItIsNow` out of the inner loop, and a spatial index — and
+warned against building the second on top of an unmeasured first. Building the index subsumes the
+hoist, so after the fact the two cannot be told apart. `CrowdScan.Cached` exists purely to keep them
+apart in one run: it is the hoist alone. That is the shape to copy whenever an optimisation contains
+a cheaper one.
+
+**And the numbers here were taken on a clear machine, which took three attempts to get.** The first
+queue raced its own EditMode run — a batch run that has printed its results can still be shutting
+down (`docs/lessons.md`) — and the sweep quoted in §6c.2 above was taken beside two other editors.
+The `Actors` figure at 384 moved from 13.3 ms (that sweep) to 15.8 ms (clear machine, unmodified
+code, same commit family). **Neither is a baseline for the other**, and the only reason the two can
+be read together at all is that the per-pair cost they imply — ~117 ns and ~128 ns — agrees.
+
+### 6c.10 The second quadratic in the same pass, and the end of the knee
+
+**2026-09-23, straight after §6c.9.** Fixing the crowd scan left `Actors` still growing as
+`(N - 64) x N` — 43 ns a pair, flat across a five-fold range. It was
+`WorldSnapshot.TryGetPawnAspect`, a linear scan over every published aspect row, called once per
+far-form colonist per frame. A colonist publishes **57 rows a tick** (measured, `AspectScaleTests`),
+so the published set is 57 x colonists and the scan grew with the colony.
+
+A lazy index, built on the first lookup of each published frame, closes it.
+`docs/design/31-aspect-lookup.md` has the decision and the alternatives; the numbers, measured with
+both arms alternated in one run on a clear machine:
+
+| colony | frame, scan | frame, index | `Actors` | `Figures` |
+|---|---|---|---|---|
+| 64 | 3.606 ms | 3.142 ms | 0.025 -> 0.024 | 1.185 -> 0.778 |
+| 192 | 6.189 ms | 3.428 ms | 1.076 -> 0.344 | 2.638 -> 0.754 |
+| 384 | 14.202 ms | **4.107 ms** | 4.587 -> **0.830** | 6.390 -> **0.743** |
+
+**`Figures` is flat at last** — 0.778, 0.754, 0.743 ms at 64, 192 and 384. The figure ceiling pins
+the number of posed figures at 64, but each of them was making a lookup whose cost grew with the
+whole colony, so the pass grew anyway. It is the first time the cap has actually capped anything.
+
+**And the colony sweep has no knee in it.** 2.20 / 2.61 / 3.21 / 3.37 / 3.53 / 3.75 / 4.99 /
+**4.82 ms** at 8 to 384 colonists. The Play report this whole line of work came from was *"it seemed
+to hover 1.7 ms no matter the colony size but then frames dropped after so many colonists"*; what is
+left is the hover. At 384 the frame has gone **27.81 -> 14.99 -> 4.82 ms** across the two units.
+
+**The finding worth carrying is not the fix.** The crowd scan was 3.5x the aspect scan, so while it
+stood the aspect scan looked like a constant and the bend was attributed wholly to the larger term.
+Neither was found by reading code; both were found by splitting the frame and noticing the growth
+had the wrong shape. **After fixing a quadratic, measure the same pass again rather than declaring
+it linear** — `docs/bug-patterns.md` P12.
 
 ## 7. Presentation is a reader
 
