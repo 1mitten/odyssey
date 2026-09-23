@@ -2539,6 +2539,22 @@ once a *tick*, and a rig with nothing to draw runs frames far faster than the fi
 machine happened to be going; seconds of wall clock are the unit the owner's report was made in, and
 both of those are worth logging. The frame count is a diagnostic, never a gate.
 
+**Rebuilding the module catalogue wipes the recolour classification, and nothing says so** (2026-09-22).
+`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue` replaces every row with
+`SetEntries`, and the `appearance` cells on the sixty-one colonist rows are written by a
+*different* tool that deliberately does not rebuild the catalogue. So a rebuild that adds two
+animal rows also empties every colonist's swatches, every colonist draws in the pack's paint, and
+the only thing that notices is `AppearanceCatalogueTests.EveryBodyHasSomethingToRecolour…`
+("Expected 61, but was 0") a full EditMode tier later. **The pair is always run together:**
+
+```
+scripts/unity.sh exec Odyssey.EditorTools.PlayScene.RebuildCatalogue
+scripts/unity.sh exec Odyssey.EditorTools.CharacterSwatches.Classify
+```
+
+and the diff of `ModuleCatalogue.asset` is checked for `quality: [1-9]` still counting sixty-one
+before the commit. The right fix is for the rebuild to carry the cells across from the asset it
+is replacing; until then this is the rule.
 
 ## Four tiers, and a branch can report three of them (2026-09-22)
 

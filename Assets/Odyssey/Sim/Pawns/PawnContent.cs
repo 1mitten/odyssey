@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -145,6 +146,18 @@ namespace Odyssey.Sim.Pawns
         public const int Sow = JobHandle.Sow;
         public const int Harvest = JobHandle.Harvest;
         public const int Count = JobHandle.Count;
+    }
+
+    /// <summary>
+    /// The kinds a pawn can be, as handles into <see cref="PawnContent.Kinds"/> (design 29 §1).
+    /// The order is a save contract: appended, never inserted.
+    /// </summary>
+    public static class PawnKindIndex
+    {
+        public const int Colonist = 0;
+        public const int MiddenHog = 1;
+        public const int DuctRat = 2;
+        public const int Count = 3;
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -564,9 +577,64 @@ namespace Odyssey.Sim.Pawns
         public int layerChangeEstimate = 300;
     }
 
+    /// <summary>
+    /// What a pawn <em>is</em> — the biology, as against <see cref="PawnKindDef"/>, which is
+    /// what spawns (design 29 §1, a-09 §1). The colonist is a species like any other, with
+    /// <see cref="person"/> set, and everything a person does that an animal does not — needs,
+    /// mood, skills, work, a schedule, a roster card — hangs off that one flag. The rest is what
+    /// walks: how it traverses, how fast against the colonist, how far it wanders and how long
+    /// it rests between legs.
+    ///
+    /// <para>Wildness, ecosystem weight and commonality are not here until something reads
+    /// them (design 29 §1).</para>
+    /// </summary>
+    public class SpeciesDef : Def
+    {
+        /// <summary>The registry key the interface names this species by.</summary>
+        public string labelKey = string.Empty;
+
+        /// <summary>The colonist's species, and nobody else's. See the class summary.</summary>
+        public bool person;
+
+        /// <summary>Nose to tail, for presentation to size a figure against. Not read by the simulation.</summary>
+        public int bodyLengthMm = 1_200;
+
+        /// <summary>
+        /// Pace relative to the colonist's standard walk, per mille: the last factor in
+        /// <see cref="Pawn.MoveRatePerMille"/>'s product. 1,000 is exact in integer arithmetic,
+        /// which is what keeps a person's speed where it was.
+        /// </summary>
+        public int movePerMille = 1_000;
+
+        /// <summary>
+        /// How this species traverses the graph — the mask every link and portal edge already
+        /// carries (design 29 §4). A hog is <see cref="TraverseMode.Animal"/>: no ladders and no
+        /// doors it must open. A rat climbs anything, so it is <see cref="TraverseMode.Colonist"/>.
+        /// </summary>
+        public TraverseMode traverseMode = TraverseMode.Colonist;
+
+        /// <summary>Cells either side of where it stands that a wander may pick.</summary>
+        public int wanderRadius = 6;
+
+        /// <summary>The rest between legs, in ticks, jittered between these two (design 29 §3).</summary>
+        public int restTicksMin = 300;
+
+        public int restTicksMax = 900;
+
+        /// <summary>The figure catalogue entry presentation draws this species with. Not read by the simulation.</summary>
+        public string figureKey = string.Empty;
+    }
+
     /// <summary>What a pawn starts life with.</summary>
     public class PawnKindDef : Def
     {
+        /// <summary>
+        /// The species this kind spawns as, by defName (design 29 §1). Resolved once, by name, in
+        /// <see cref="PawnContent.FromDefs"/>; a kind naming a species the content does not have
+        /// fails the load rather than the first tick.
+        /// </summary>
+        public string species = "Species_Person";
+
         public int startingMood = 600;
         public int[] startingNeeds = { 800, 800, 800 };
 
@@ -803,8 +871,42 @@ namespace Odyssey.Sim.Pawns
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
         public MovementDef Movement = new MovementDef();
+
+        /// <summary>
+        /// The colonist's kind — <see cref="Kinds"/>[0] once loaded. Kept as a field of its own
+        /// because every needs and rest rule reads its tuning through this name, and because a
+        /// <see cref="PawnContent"/> built in code rather than from Defs has no table at all.
+        /// </summary>
         public PawnKindDef Kind = new PawnKindDef();
         public TemperatureDef Temperature = new TemperatureDef();
+
+        /// <summary>
+        /// Every kind a pawn can be, in handle order (design 29 §1). <b>Appended, never
+        /// inserted</b>: a pawn's kind is saved by this index, so its number is a save contract,
+        /// exactly as a job def index or an item handle is. The colonist is 0 and every pawn from
+        /// before this table existed reads as 0.
+        /// </summary>
+        public PawnKindDef[] Kinds = System.Array.Empty<PawnKindDef>();
+
+        /// <summary>Every species, in handle order. Reached through <see cref="SpeciesOf"/>.</summary>
+        public SpeciesDef[] Species = System.Array.Empty<SpeciesDef>();
+
+        /// <summary>The species each kind spawns as, by index into <see cref="Species"/>.</summary>
+        public int[] KindSpecies = System.Array.Empty<int>();
+
+        /// <summary>
+        /// The one species a content set built in code has: a person. Content from Defs always
+        /// carries a table and never reaches this.
+        /// </summary>
+        public static readonly SpeciesDef PersonFallback = new SpeciesDef { defName = "Species_Person", person = true };
+
+        /// <summary>The kind by handle, or the colonist's for a content set with no table.</summary>
+        public PawnKindDef KindOf(int kind) =>
+            Kinds.Length == 0 ? Kind : Kinds[kind];
+
+        /// <summary>The species a kind spawns as, or the person for a content set with no table.</summary>
+        public SpeciesDef SpeciesOf(int kind) =>
+            Species.Length == 0 ? PersonFallback : Species[KindSpecies[kind]];
 
         /// <summary>The needs interval, in ticks. 150 is the cadence a-01-pawns.md measured.</summary>
         public int NeedsIntervalTicks = 150;
@@ -911,6 +1013,7 @@ namespace Odyssey.Sim.Pawns
                 .Register<MentalBreakDef>()
                 .Register<MovementDef>()
                 .Register<PawnKindDef>()
+                .Register<SpeciesDef>()
                 .Register<TemperatureDef>()
                 .Register<PawnTuningDef>();
 
@@ -963,6 +1066,28 @@ namespace Odyssey.Sim.Pawns
             content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
             content.Temperature = One<TemperatureDef>(defs, "Temperature_Colonist");
 
+            // Kinds and species (design 29 §1). Appended, never inserted: a pawn's kind is saved
+            // as this index. The colonist is 0 so that every pawn from before the table reads
+            // as what it was.
+            content.Kinds = ByName<PawnKindDef>(defs,
+                "PawnKind_Colonist", "PawnKind_MiddenHog", "PawnKind_DuctRat");
+            content.Species = ByName<SpeciesDef>(defs,
+                "Species_Person", "Species_MiddenHog", "Species_DuctRat");
+            content.KindSpecies = new int[content.Kinds.Length];
+            for (int k = 0; k < content.Kinds.Length; k++)
+            {
+                string wanted = content.Kinds[k].species;
+                int found = -1;
+                for (int s = 0; s < content.Species.Length; s++)
+                    if (content.Species[s].defName == wanted) { found = s; break; }
+                if (found < 0)
+                    throw new DefLoadException(
+                        $"PawnKindDef '{content.Kinds[k].defName}' names species '{wanted}', which the content does not have.");
+                content.KindSpecies[k] = found;
+            }
+            if (!content.SpeciesOf(0).person)
+                throw new DefLoadException("kind 0 must be a person: it is what every pawn from before the kind table reads as.");
+
             var tuning = One<PawnTuningDef>(defs, "Tuning_Pawns");
             content.NeedsIntervalTicks = tuning.needsIntervalTicks;
             content.DayTicks = tuning.dayTicks;
@@ -1005,6 +1130,14 @@ namespace Odyssey.Sim.Pawns
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
         public const uint Passion = 0xC2B2_AE35;
+
+        /// <summary>
+        /// An animal deciding between a leg and a rest, and how long the rest is (design 29 §3).
+        /// Its own stream, so an animal thinking on a tick cannot shift what a colonist on the
+        /// same tick wanders to. The salt is not one already in this list; two purposes sharing a
+        /// salt is two streams that agree.
+        /// </summary>
+        public const uint AnimalMind = 0x165667B1;
 
         /// <summary>
         /// Whether a rock cell gives up stone. Drawn from (world seed, <b>cell index</b>) rather

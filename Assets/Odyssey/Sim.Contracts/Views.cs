@@ -219,13 +219,24 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly bool Asleep;
 
+        /// <summary>
+        /// What this pawn is: an index into the simulation's kind table, 0 for a colonist
+        /// (design 29 §1). A field rather than an aspect for the reason <see cref="Asleep"/>
+        /// gives — every figure on screen is drawn as what it is whether or not anybody selected
+        /// it, and the roster has to leave the animals out before anyone clicks anything.
+        /// Presentation turns the index into a species through its own catalogue.
+        /// </summary>
+        public readonly int Kind;
+
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
-            bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0)
+            bool asleep = false, int movePerMille = 0, int moveDeltaPerMille = 0,
+            int kind = 0)
         {
+            Kind = kind;
             MovePerMille = movePerMille;
             MoveDeltaPerMille = moveDeltaPerMille;
             Asleep = asleep;

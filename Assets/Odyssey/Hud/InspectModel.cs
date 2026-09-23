@@ -183,6 +183,16 @@ namespace Odyssey.Hud
         /// <summary>The tile's own icon key, so the pane's avatar is the thing that was clicked.</summary>
         public string CellIconKey = "ui.overlay.zones";
 
+        /// <summary>
+        /// The selected pawn is an animal (design 29 §2, §8): the pane says its species, what it
+        /// is doing and where it is, and nothing a person has — no portrait, no needs, no tabs,
+        /// no commands. Set from the view's kind on every refresh.
+        /// </summary>
+        public bool IsAnimal;
+
+        /// <summary>The species' registry key, for the badge an animal shows where a person shows a face.</summary>
+        public string KindIconKey = PawnKindLabels.Colonist;
+
         // ---- colonist body, the Needs tab
         public string Job = "idle";
         public string JobIconKey = "ui.status.idle";
@@ -354,7 +364,29 @@ namespace Odyssey.Hud
 
             if (Subject == InspectSubject.Colonist)
             {
-                if (snapshot.TryGetPawn(Pawn, out PawnView pawn))
+                if (snapshot.TryGetPawn(Pawn, out PawnView pawn) && PawnKindLabels.IsAnimal(pawn.Kind))
+                {
+                    // An animal (design 29 §8): species, activity, where. The colonist's tabs,
+                    // commands and skills are not added, so the pane below the header is empty.
+                    IsAnimal = true;
+                    Tombstoned = false;
+                    Skills.Clear();
+                    KindIconKey = PawnKindLabels.IconKey(pawn.Kind);
+                    Title = PawnKindLabels.Label(pawn.Kind);
+                    Subtitle = "animal";
+                    if (_jobFor != pawn.JobDef)
+                    {
+                        _jobFor = pawn.JobDef;
+                        Job = PawnKindLabels.Activity(pawn.JobDef);
+                    }
+                    JobIconKey = PawnKindLabels.ActivityKey(pawn.JobDef);
+                    SetPosition(pawn.Cell);
+                    Layer = pawn.Cell.Y;
+                    return;
+                }
+
+                IsAnimal = false;
+                if (snapshot.TryGetPawn(Pawn, out pawn))
                 {
                     Tombstoned = false;
                     Title = ColonistNames.Of(snapshot, pawn.Id);
@@ -381,6 +413,7 @@ namespace Odyssey.Hud
             }
 
             Tombstoned = false;
+            IsAnimal = false;
             if (Subject == InspectSubject.Item)
             {
                 bool found = false;
