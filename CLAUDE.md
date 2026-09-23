@@ -452,7 +452,9 @@ invisible where the game is played.
   committed and its prefab references point into the gitignored folder, so it loads perfectly with
   every reference null on exactly the machine that can draw nobody. `PortraitStudio.Available` and
   `PawnFigureDirector.Enabled` are the two right questions; a `moduleCatalogue == null` check is
-  the wrong one and has now turned the runner red twice.
+  the wrong one and has now turned the runner red twice — and **"does any row have art" is wrong
+  too, since the animals unit committed art of the project's own** that resolves on the runner:
+  ask about the rows the rule is about (`WorldRenderModelTests`, 2026-09-23, the third time).
 - **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
   (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
   against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
