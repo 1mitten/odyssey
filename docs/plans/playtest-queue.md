@@ -23,6 +23,16 @@ the next session learns to ignore.
 
 ## Open
 
+- **Does the lock-on ring say who you sent them at?** (`claude/combat-ring`, design 33 §7b).
+  Spawn a marauder, draft two colonists, select both and right-click it: a translucent red ring
+  should appear wide round its feet and snap in, in a fifth of a second, flash once as it lands
+  and stay faint under it until it goes down — then fade. Right-click a hog: its ring hugs the
+  hog's own length. Deselect them: it fades; reselect: it is back at rest, without the snap. A
+  wrong answer is a ring you notice only when it lands (the 0.2 s is too quick), a flash that
+  reads as a glitch, a hold so faint it is lost on grass or at night, a red you confuse with the
+  draft's dark red over their heads or the salmon diamond over the marauder, or a ring sunk into a
+  slope or floating on a terrace step.
+
 - **Does a fight read, and does it end the way it should?** (checkpoint 2, C2 —
   `claude/combat-c2`, `docs/plans/combat-c2-handover.md`, design 33 §3, §6A–§6C, §6E). Spawn a
   marauder (backtick → Spawn) beside two colonists and do not draft: it should walk to the nearer,

@@ -1188,3 +1188,156 @@ all green; `GoldenMasterTests` green without a re-bake.
 lands, so for those few ticks it holds no side and may pass over one; nothing stops on it. A pawn
 walking to a side does not notice another taking it until she arrives, where she chooses again —
 which only the hold can cause, by striking from a cell someone was making for.
+
+### 7b. The lock-on ring
+
+**Built 2026-09-23 on `claude/combat-ring`**, from `claude/combat-c2-polish`. The owner's words:
+*"when I right click to attack an enemy it wasn't clear ... paints a red transparent circle quickly
+around the selected enemy to indicate that target"*; the decision was lock-on (§7).
+
+**What is drawn.** A flat, translucent red ring under the target. It appears at **1.6×** the
+target's footprint and closes on to its feet in **0.2 s** with a cubic ease-out (the owner's two
+numbers), flashing brightest on the instant it lands, then settles over 0.18 s to a faint ring that
+stays under the target while the order holds, and fades over 0.25 s when it stops holding. Cubic
+rather than a back-out, because a back-out overshoots inside the feet and a ring smaller than its
+target reads as the target shrinking. Every number but the 1.6 and the 0.2 is INVENTED
+(`LockOnRing`: the flash, the hold's opacity 0.35, the arrival's 0.5, the fade).
+
+**What starts one.** The frame a **selected, drafted** colonist's published target
+(`odyssey.pawn.order.target`, `Pawn.CombatTarget`) changes to that pawn — read off the snapshot, not
+the right-click, so a refused order publishes nothing and draws nothing, and the same order clicked
+again (`AlreadyInThatState`) is quiet here too. **At most one ring per target**: a squad sent at one
+marauder shares it, and a second order restarts the snap only once the first has settled, so one
+click on a box selection locks on once. An order already under way when the player first sees it —
+a colonist selected mid-fight, a save loaded mid-fight — is **adopted at rest**, not snapped.
+
+**What ends one.** The target goes down (unless the order was given on a pawn already down, to
+finish it — that holds until it dies), dies (a corpse is not a pawn, so it leaves the frame), the
+order changes, or the attacker is deselected. The ring remembers where its target stood for the
+fade, so a death's ring fades where the body fell.
+
+**Also drawn, by the same rule:** a drafted colonist's own blow at a threat beside her (§2b)
+publishes the same target, so a selected colonist who engages without an order wears a ring under
+what she is hitting. That is the aspect's meaning — *whom she is attacking* — and was kept rather
+than filtered, because the aspect does not say whose idea the fight was and a second aspect for it
+would be sim state bought for a colour.
+
+**The colour: `OrderColours.Attack`, `#f0282c`.** A clear saturated red that is neither red already
+on the board: not the draft's deep `#8b1212` (which marks *who* is under orders, over the head —
+the ring marks *whom*, under the feet, and both are on screen in every fight), and not
+`HudTheme.Bad`'s salmon `#e06a5c`, which is the Cancel tool and also the hostile marker over the
+very marauder the ring is under — a ring in the marker's colour would read as more marker.
+`OrderColoursTests.TheAttackRedIsNeitherTheDraftNorTheCancelRed` holds it 80 points from both and
+from every order hue, the board's own threshold (149 from the draft, 130 from the salmon).
+
+**How it is drawn.** `PrimitiveMeshes.UnitRing`, a flat annulus of 48 segments, outer radius 1 m
+and inner 0.85, built once from `LockOnRing.RingVertex` and `RingTriangles` so the fast tier checks
+it faces up. `ChunkRenderer.DrawRing` draws it in the bracket material — lit, translucent, steady
+at night — **one submission per ring**. Placed with `GroundRelief.Drape` at the target's feet for
+the relief's tilt and the figure's own height (lifted on to the same ground), 2 cm clear. The
+radius at rest is half the longer side of the target's box: an animal's drawn box
+(`PawnFigureDirector.TryGetAnimalBox`, centred on the box), a person's the colonist cursor's
+1.15 m (0.575 m), a downed person 1.0 m. The opacity is quantised to 32 steps, because the bracket
+material is cached per colour and an alpha free to take any value would mint a material per frame
+of the animation; quantised, the ring's hue costs at most 33 materials, once each. A target on a
+layer the slice does not draw draws no ring — the health bars' rule.
+
+**Where.** `Hud/LockOnRing.cs` (the clock and the mesh's shape), `Hud/LockOnRings.cs` (which
+targets, on which frame), `OdysseyBootstrap.DrawLockOnRings` (where each stands; called after the
+draft marks), `ChunkRenderer.DrawRing`, `PrimitiveMeshes.UnitRing`.
+
+**Tests** (fast tier, `LockOnRingTests`, 20; `OrderColoursTests`, one new; EditMode
+`PrimitiveMeshTests.TheRingFacesUp`, never run). Negative controls, each seen to fail and restored:
+an ease-in (`TheSnapEasesOutAndNeverOvershoots`, `TheRingStartsOnTheFrameTheTargetIsPublished`);
+no flash (`ItFlashesOnceAsItLandsAndThenHoldsFaint`); no fade (`AReleasedRingFadesToNothing…`,
+`ARingReleasedMidSnap…`); the band wound downwards (`TheRingFacesUp`); the attack red set to a
+darker draft red and to a near-salmon (`TheAttackRedIsNeither…`); a loaded world snapped
+(`AnOrderAlreadyUnderWayIsAdopted…`); an undrafted colonist's target counted
+(`AnUndraftedColonistsTargetIsNotAnOrder`); a down that kept the ring
+(`TheRingFadesWhenTheTargetGoesDown…`); every second order restarting the snap
+(`TwoAttackersShareOneRing`).
+
+**Cost.** Per frame, one indexed aspect lookup per selected pawn, a walk of the rings (one per
+target, a handful), a figure lookup and one submission per ring. It scales with the selection and
+the fight, never with the board; nothing allocates once the two memories and the place cache have
+grown.
+
+**Do not undo by tidying.**
+- **The ring starts off the frame, not the key.** Starting it on the click draws a lock-on for an
+  order the simulation refused.
+- **The alpha is quantised.** See above; it is what keeps the material cache bounded.
+- **An order already under way is adopted, not snapped.** A load is not an order.
+
+**Open, for the playtest.** Every INVENTED number, and whether the flash reads as a lock or a blink.
+A downed colonist's ring is a guessed 1.0 m round the figure's root, which may not be the body's
+middle. On a terrace ramp the ring lies at the figure's height with the relief's tilt, not the
+ramp's, so half of it may sink into the slope; in water it floats at the swimmer's feet. **Never
+compiled here**: `OdysseyBootstrap.cs`, `ChunkRenderer.cs`, `PrimitiveMeshes.cs`,
+`PrimitiveMeshTests.cs` — the integrator compiles.
+
+### 7d. The blood seam
+
+**The owner's decisions (2026-09-23), exactly as §7 records them:** *the seam is cut now; blood is
+built as the next unit.* Every landed hit spurts, scaled: **sharp** hits (machete, arc blade,
+bites) spurt more and leave a splatter, **blunt** hits (bat, crowbar, fists) a smaller puff and a
+smaller mark. **Misses and dodges draw nothing.** **Downs and deaths leave a pool under the body.**
+Ground marks **fade over about one in-game day**, **capped (around 200, oldest first)**. They are
+**presentation only**: not saved, not simulated, nothing to clean.
+
+**The seam, built 2026-09-23 on `claude/combat-ring`; nothing visible.**
+
+- `Presentation/World/IBloodEffects.cs`: `Spurt(Vector3 at, Vector3 direction, float amount, bool
+  sharp)` for a landed hit — `at` the wound (the struck pawn's feet plus 1.3 m for a person, 0.25 m
+  lying down, 0.6 of an animal's drawn box), `direction` the blow's travel, horizontal and
+  normalised (zero if the attacker could not be placed), `amount` the damage in whole points;
+  `Pool(Vector3 at, float sizeFactor)` for a down or a death, `at` the feet; and `Clear()` when the
+  world changes. The default is `NoBloodEffects.Instance`, which does nothing.
+- `CombatFeedback` calls it from `Handle`, for every event it hands on, **on every layer** — a
+  mark on the ground must exist when the player later looks at that layer — and clears it on a
+  world change and at teardown. `CombatFeedback.Blood` is the setter the blood unit uses.
+- **Which events bleed** is `Hud/BloodModel.For`: `Hit` spurts; `Downed` and `Died` pool (a down
+  0.6 of a death's size, INVENTED); `Swing`, `Miss`, `Dodge`, `Stun` and `Recovered` nothing. A stun
+  is reported beside the hit that caused it, which already spurted.
+- **Sharp or blunt** is `Hud/BloodSides.IsSharp`, resolved in the order the simulation arms a pawn
+  (`WeaponRules.ArmamentOf`): the event's weapon if it is an item with an attack, else the
+  attacker's species' natural attack, else fists. The table is read once off the content
+  (`CombatFeedback.BloodSidesOf`, set by the bootstrap beside the weapon styles), so **the Defs stay
+  the one owner** of which weapon cuts: `damageKind` in `Items.xml`, `Species.xml` and
+  `Combat.xml`'s fists.
+
+**One disagreement, for the owner.** The owner's list puts *bites* with the sharp hits. The rat's
+bite is `Sharp` in `Species.xml`, but **the hog's is `Blunt`** — its comment calls it *tusks*, a
+heavy animal that hits hard and slowly. The seam reads the content, so a hog's hit will draw the
+**blunt** puff. Recommendation: keep it — a hog's tusks goring and battering are a blunt wound, and
+the content is the one owner — but it is one line in `Species.xml` if the owner means every animal
+bite (sharp has no stun, and the hog has no stun chance, so the fight itself would not change; the
+content fingerprint would).
+
+**What the next unit must build**, and the rules it inherits:
+
+1. **Spurt particles** in the direction of the blow, scaled by `amount` and by sharp against
+   blunt — sharp more, and a splatter on the ground; blunt a smaller puff and a smaller mark.
+2. **Ground splatter decals** where the spurt lands, and a **pool** under a downed or dead body,
+   sized by `sizeFactor` and by the body (an animal's drawn box; a rat's pool is not a person's).
+3. **Fading over about one in-game day** (60,000 ticks), timed by the **simulation's tick**, not
+   real time: a pause holds the marks and speed three fades them three times as fast.
+4. **Capped at about 200 marks, oldest first**, drawn **instanced by material** — never one
+   submission per mark (`bug-patterns.md` P10) — and a per-frame cost that scales with the marks,
+   never the board.
+5. **Presentation only**: nothing in a cell, a save or the hash; a load starts with no blood
+   (`Clear`), and nothing in the simulation hears of it.
+6. **The slice**: a mark on a layer not drawn is hidden, as the corpses are; a mark on a floor that
+   is later removed should go with it or fall, which is the unit's own question.
+7. **A death's pool is placed at the event's cell**, because the pawn has left the frame by then;
+   the corpse director knows where the body's middle lies (`CorpseDirector`), and the pool should
+   sit there.
+
+**Tests.** Fast tier `BloodModelTests` (5): every landed hit spurts and nothing else does, a down
+and a death pool and a death's is larger, the weapon in the hand decides, then the species, then
+fists, and the resolution is total. Negative controls seen to fail: the weapon ignored
+(`TheWeaponInTheHandDecides`), a miss that bled (`EveryLandedHitSpurtsAndNothingElseDoes`). EditMode
+`BloodSeamTests` (3, **never compiled or run here**): a recorder behind the seam hears three spurts
+(sharp, blunt, fists) travelling along the blow, two pools, and a clear on each world change; the
+real content resolves the bat and crowbar blunt, the machete and arc blade sharp, fists blunt, the
+rat sharp and the hog blunt. **Never compiled here**: `CombatFeedback.cs`, `IBloodEffects.cs`,
+`BloodSeamTests.cs`.
