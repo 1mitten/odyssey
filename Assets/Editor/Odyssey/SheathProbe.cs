@@ -78,8 +78,8 @@ namespace Odyssey.EditorTools
                 List<ModuleEntry> rows = catalogue.FindFamily(ModuleIds.ColonistBase);
                 string tag = Environment.GetEnvironmentVariable("ODYSSEY_SHEATH_TAG") ?? "";
                 var report = new StringBuilder();
-                report.AppendLine($"[Sheath] tilt {PawnFigureDirector.SheathTiltDegrees} splay {PawnFigureDirector.SheathSplayDegrees} " +
-                                  $"hang {PawnFigureDirector.SheathHangFraction} tag '{tag}'");
+                report.AppendLine($"[Sheath] tilt {PawnFigureDirector.SheathTiltDegrees} hang {PawnFigureDirector.SheathHangFraction} " +
+                                  $"clearance {PawnFigureDirector.SheathClearance} tag '{tag}'");
 
                 for (int w = 0; w < Weapons.Length; w++)
                 {
@@ -110,6 +110,14 @@ namespace Odyssey.EditorTools
                     for (int w = 0; w < Weapons.Length; w++)
                     {
                         WorldSnapshot frame = Frame(100 + look, id, Weapons[w].Def);
+                        if (w == 0)
+                        {
+                            // The first frame builds the figure: what the bind, the relief included, costs.
+                            var watch = System.Diagnostics.Stopwatch.StartNew();
+                            director.Sync(frame, 0, new SliceSettings(), 0f, 1, 1f / 60f);
+                            report.AppendLine($"  {row.prefabName,-34} built in {watch.Elapsed.TotalMilliseconds:F1} ms " +
+                                              $"(the slowest hip measurement so far {director.MeasuredSheathBindMs:F1} ms)");
+                        }
                         for (int i = 0; i < 10; i++)
                         {
                             director.Sync(frame, 0, new SliceSettings(), 0f, 1, 1f / 60f);
@@ -123,14 +131,33 @@ namespace Odyssey.EditorTools
                         }
                         report.AppendLine($"  {row.prefabName,-34} {Weapons[w].Name,-8} {gap}");
 
+                        // And across the idle: the nearest and furthest the weapon comes over three seconds.
+                        float least = gap.Gap, most = gap.Gap;
+                        for (int step = 0; step < 6; step++)
+                        {
+                            for (int i = 0; i < 30; i++)
+                            {
+                                director.Sync(frame, 0, new SliceSettings(), 0f, 1, 1f / 60f);
+                                director.Evaluate(1f / 60f);
+                            }
+                            if (!director.TryMeasureSheath(id, out SheathGap later)) continue;
+                            least = Mathf.Min(least, later.Gap);
+                            most = Mathf.Max(most, later.Gap);
+                        }
+                        report.AppendLine($"  {"",-34} {"",-8} over the idle: nearest {least * 100f:F1} to {most * 100f:F1} cm");
+                        report.AppendLine($"  {"",-34} {"",-8} {director.DescribeSheathFit(id)}");
+                        report.AppendLine($"  {"",-34} {"",-8} nearest weapon point {director.DescribeInFrame(id, gap.Nearest)} " +
+                                          $"skin {director.DescribeInFrame(id, gap.NearestOn)} normal {director.DescribeInFrame(id, gap.NearestNormal * 0.01f, true)}");
+
                         if (photo < 0) continue;
                         Transform prop = director.WeaponOf(id)!;
                         Transform body = FigureRoot(prop, figures.transform);
                         float height = gap.Height;
-                        Vector3 focus = body.position + Vector3.up * (0.42f * height);
+                        // Sole to ribs, so the whole of the longest weapon is in the picture.
+                        Vector3 focus = body.position + Vector3.up * (0.36f * height);
                         int y = (Photographed.Length - 1 - photo) * TileHeight;
-                        Tile(camera, focus, -body.forward, 0.3f * height, sheets[w]!, 0, y);
-                        Tile(camera, focus, body.right, 0.3f * height, sheets[w]!, TileWidth, y);
+                        Tile(camera, focus, -body.forward, 0.37f * height, sheets[w]!, 0, y);
+                        Tile(camera, focus, body.right, 0.37f * height, sheets[w]!, TileWidth, y);
                     }
                 }
 

@@ -8,7 +8,7 @@ namespace Odyssey.Presentation.World
     /// How a sheathed weapon sits against the body it hangs on, measured on the drawn meshes
     /// (design 33 §9c).
     /// </summary>
-    public readonly struct SheathGap
+    public struct SheathGap
     {
         /// <summary>
         /// The signed distance from the weapon's surface to the nearest surface of the body that
@@ -43,6 +43,14 @@ namespace Odyssey.Presentation.World
         /// <summary>The figure's drawn height, in metres, for reading the others as fractions.</summary>
         public readonly float Height;
 
+        /// <summary>How far the lowest point of the weapon is above the floor the figure stands on, in metres.</summary>
+        public float BottomAboveFloor;
+
+        /// <summary>The weapon point that set <see cref="Gap"/>, the skin point nearest it and the skin's normal there, in world space.</summary>
+        public Vector3 Nearest;
+        public Vector3 NearestOn;
+        public Vector3 NearestNormal;
+
         public SheathGap(float gap, float gapAbove, float depth, int inside, int samples, float armGap,
             float lean, float topAboveHip, float topAbovePelvis, float height)
         {
@@ -56,6 +64,8 @@ namespace Odyssey.Presentation.World
             TopAboveHip = topAboveHip;
             TopAbovePelvis = topAbovePelvis;
             Height = height;
+            BottomAboveFloor = 0f;
+            Nearest = NearestOn = NearestNormal = Vector3.zero;
         }
 
         public override string ToString() =>
@@ -63,15 +73,18 @@ namespace Odyssey.Presentation.World
             $"inside {Inside,4}/{Samples,-5} (deepest {Depth * 100f,4:F1} cm), " +
             $"arm {(float.IsInfinity(ArmGap) ? "  none" : (ArmGap * 100f).ToString("F1").PadLeft(6))} cm, " +
             $"lean {Lean,5:F1} deg, top {TopAboveHip * 100f,5:F1} cm above the hip " +
-            $"({TopAbovePelvis * 100f,5:F1} above the pelvis), height {Height:F2} m";
+            $"({TopAbovePelvis * 100f,5:F1} above the pelvis), bottom {BottomAboveFloor * 100f,5:F1} cm off the floor, height {Height:F2} m";
     }
 
     /// <summary>
     /// Measures a sheathed weapon against the drawn body: the posed skin baked, split into the arms
-    /// and everything else by nearest bone segment (as <c>HipReach</c> does, because a mesh not
+    /// and everything else by nearest bone segment (as the hip's relief is, because a mesh not
     /// marked readable gives up no skin weights in a player), and every sampled point of the
-    /// weapon's surface taken to its nearest body triangle. Signed by that triangle's outward face,
-    /// so a weapon through the thigh reads as negative rather than as touching.
+    /// weapon's surface taken to its nearest body triangle. A point with skin further out than it
+    /// — a ray cast outward from it meets the body — is inside, and reads as negative by how far
+    /// the skin reaches past it, so a weapon through the thigh or under a skirt is not "touching".
+    /// (The nearest face's normal was tried first and read the lower edge of a jacket, an open
+    /// boundary, as ten centimetres of thigh.)
     ///
     /// <para>A diagnostic, for the tests and the contact sheet: it bakes the skin and walks every
     /// weapon point against every triangle near it, which is far too much for a frame.</para>
@@ -80,9 +93,6 @@ namespace Odyssey.Presentation.World
     {
         /// <summary>How far inside the body a weapon point must be to count as inside, in metres: a skin's own facets.</summary>
         public const float InsideTolerance = 0.002f;
-
-        /// <summary>Deeper than this below the nearest skin, a point is taken to be outside something else, in metres.</summary>
-        public const float MaxInside = 0.12f;
 
         /// <summary>How finely the weapon's surface is sampled, in metres.</summary>
         public const float Spacing = 0.01f;
@@ -94,22 +104,51 @@ namespace Odyssey.Presentation.World
             public Vector3 Pelvis, Spine, Chest;
             public Vector3 LeftShoulder, LeftElbow, LeftWrist, RightShoulder, RightElbow, RightWrist;
 
+            /// <summary>
+            /// The finger tips, where the rig maps fingers: the hand is a fan from the wrist to each,
+            /// not a straight line on from the forearm. A hanging hand curls its fingers towards
+            /// the thigh, and a line on from the forearm left them nearer the thigh than the hand,
+            /// so the fingers were mapped as hip and every weapon was hung outside them.
+            /// </summary>
+            public Vector3[]? LeftTips, RightTips;
+
+            /// <summary>The figure's height, which the limbs' thicknesses below are fractions of.</summary>
+            public float Height;
+
+            /// <summary>
+            /// How thick each part is, as a fraction of the figure's height: a point belongs to the
+            /// part whose surface, not whose bone, it is nearest. By bone alone, the side of the
+            /// waist is nearer the hanging elbow than the spine and was mapped as arm, and the
+            /// fingers nearer the thigh than the hand. Rough, and only ever compared with each
+            /// other.
+            /// </summary>
+            public const float TorsoThickness = 0.065f, ThighThickness = 0.045f, ShinThickness = 0.03f,
+                UpperArmThickness = 0.022f, ForearmThickness = 0.018f, HandThickness = 0.01f;
+
             public bool IsArm(Vector3 p)
             {
-                float arm = Mathf.Min(Arm(p, LeftShoulder, LeftElbow, LeftWrist), Arm(p, RightShoulder, RightElbow, RightWrist));
+                float h = Height > 0.01f ? Height : 2f;
+                float arm = Mathf.Min(Arm(p, LeftShoulder, LeftElbow, LeftWrist, LeftTips, h),
+                    Arm(p, RightShoulder, RightElbow, RightWrist, RightTips, h));
                 float body = Mathf.Min(
-                    Mathf.Min(SegmentDistanceSq(p, LeftThigh, LeftKnee), SegmentDistanceSq(p, LeftKnee, LeftFoot)),
-                    Mathf.Min(SegmentDistanceSq(p, RightThigh, RightKnee), SegmentDistanceSq(p, RightKnee, RightFoot)));
-                body = Mathf.Min(body, Mathf.Min(SegmentDistanceSq(p, Pelvis, Spine), SegmentDistanceSq(p, Spine, Chest)));
+                    Mathf.Min(Surface(p, LeftThigh, LeftKnee, ThighThickness * h), Surface(p, LeftKnee, LeftFoot, ShinThickness * h)),
+                    Mathf.Min(Surface(p, RightThigh, RightKnee, ThighThickness * h), Surface(p, RightKnee, RightFoot, ShinThickness * h)));
+                body = Mathf.Min(body, Mathf.Min(Surface(p, Pelvis, Spine, TorsoThickness * h), Surface(p, Spine, Chest, TorsoThickness * h)));
                 return arm < body;
             }
 
-            static float Arm(Vector3 p, Vector3 shoulder, Vector3 elbow, Vector3 wrist)
+            static float Arm(Vector3 p, Vector3 shoulder, Vector3 elbow, Vector3 wrist, Vector3[]? tips, float h)
             {
-                Vector3 fingers = wrist + (wrist - elbow) * 0.6f;
-                return Mathf.Min(SegmentDistanceSq(p, shoulder, elbow),
-                    Mathf.Min(SegmentDistanceSq(p, elbow, wrist), SegmentDistanceSq(p, wrist, fingers)));
+                float arm = Mathf.Min(Surface(p, shoulder, elbow, UpperArmThickness * h), Surface(p, elbow, wrist, ForearmThickness * h));
+                if (tips == null || tips.Length == 0)
+                    return Mathf.Min(arm, Surface(p, wrist, wrist + (wrist - elbow) * 0.6f, HandThickness * h));
+                for (int i = 0; i < tips.Length; i++) arm = Mathf.Min(arm, Surface(p, wrist, tips[i], HandThickness * h));
+                return arm;
             }
+
+            /// <summary>How far a point is from the surface of a round limb about a bone.</summary>
+            static float Surface(Vector3 p, Vector3 a, Vector3 b, float thickness) =>
+                Mathf.Sqrt(SegmentDistanceSq(p, a, b)) - thickness;
         }
 
         /// <summary>A triangle soup in world space with outward face normals and bounding spheres.</summary>
@@ -143,8 +182,81 @@ namespace Odyssey.Presentation.World
 
             public int Count => A.Count;
 
+            // The triangles bucketed by where they fall across a direction, for Beyond.
+            Dictionary<long, List<int>>? _buckets;
+            Vector3 _u, _v;
+            const float BucketSize = 0.02f;
+
+            static long Key(int a, int b) => ((long)a << 32) ^ (uint)b;
+
+            /// <summary>Bucket the triangles by their extent across a direction, spanned by u and v.</summary>
+            public void Index(Vector3 u, Vector3 v)
+            {
+                _u = u;
+                _v = v;
+                _buckets = new Dictionary<long, List<int>>();
+                for (int t = 0; t < A.Count; t++)
+                {
+                    float u0 = Mathf.Min(Vector3.Dot(A[t], u), Mathf.Min(Vector3.Dot(B[t], u), Vector3.Dot(C[t], u)));
+                    float u1 = Mathf.Max(Vector3.Dot(A[t], u), Mathf.Max(Vector3.Dot(B[t], u), Vector3.Dot(C[t], u)));
+                    float v0 = Mathf.Min(Vector3.Dot(A[t], v), Mathf.Min(Vector3.Dot(B[t], v), Vector3.Dot(C[t], v)));
+                    float v1 = Mathf.Max(Vector3.Dot(A[t], v), Mathf.Max(Vector3.Dot(B[t], v), Vector3.Dot(C[t], v)));
+                    for (int a = Mathf.FloorToInt(u0 / BucketSize); a <= Mathf.FloorToInt(u1 / BucketSize); a++)
+                    {
+                        for (int b = Mathf.FloorToInt(v0 / BucketSize); b <= Mathf.FloorToInt(v1 / BucketSize); b++)
+                        {
+                            long key = Key(a, b);
+                            if (!_buckets.TryGetValue(key, out List<int>? list)) _buckets[key] = list = new List<int>();
+                            list.Add(t);
+                        }
+                    }
+                }
+            }
+
+            /// <summary>
+            /// How far the skin reaches beyond a point along <paramref name="direction"/> (at right
+            /// angles to the plane <see cref="Index"/> was given): the furthest crossing of a ray
+            /// from the point that way, or nought when the ray meets no skin. A point on the
+            /// outside of the body has nothing of the body further out; a point in the thigh, or
+            /// under a skirt, has.
+            /// </summary>
+            public float Beyond(Vector3 p, Vector3 direction)
+            {
+                if (_buckets == null) return 0f;
+                long key = Key(Mathf.FloorToInt(Vector3.Dot(p, _u) / BucketSize), Mathf.FloorToInt(Vector3.Dot(p, _v) / BucketSize));
+                if (!_buckets.TryGetValue(key, out List<int>? list)) return 0f;
+                float furthest = 0f;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    int t = list[i];
+                    if (RayHits(p, direction, A[t], B[t], C[t], out float along) && along > furthest) furthest = along;
+                }
+                return furthest;
+            }
+
+            /// <summary>Möller–Trumbore, either face, forward of the origin only.</summary>
+            static bool RayHits(Vector3 origin, Vector3 direction, Vector3 a, Vector3 b, Vector3 c, out float along)
+            {
+                along = 0f;
+                Vector3 e1 = b - a, e2 = c - a;
+                Vector3 h = Vector3.Cross(direction, e2);
+                float det = Vector3.Dot(e1, h);
+                if (Mathf.Abs(det) < 1e-12f) return false;
+                float inv = 1f / det;
+                Vector3 s = origin - a;
+                float u = inv * Vector3.Dot(s, h);
+                if (u < 0f || u > 1f) return false;
+                Vector3 q = Vector3.Cross(s, e1);
+                float v = inv * Vector3.Dot(direction, q);
+                if (v < 0f || u + v > 1f) return false;
+                along = inv * Vector3.Dot(e2, q);
+                return along > 0f;
+            }
+
             /// <summary>The nearest triangle to a point: its index, the distance and the sign. -1 with none.</summary>
-            public int Nearest(Vector3 p, out float distance, out bool inside)
+            public int Nearest(Vector3 p, out float distance, out bool inside) => Nearest(p, out distance, out inside, out _, out _);
+
+            public int Nearest(Vector3 p, out float distance, out bool inside, out Vector3 on, out Vector3 normal)
             {
                 int best = -1;
                 float bestSq = float.MaxValue;
@@ -167,11 +279,12 @@ namespace Odyssey.Presentation.World
                 // edge or a corner shared by two faces cannot fool the way one face's normal can;
                 // and never deeper than a limb is thick.
                 inside = false;
-                if (best >= 0 && distance <= MaxInside)
+                on = bestQ;
+                normal = Vector3.zero;
+                if (best >= 0)
                 {
                     Vector3 w = Barycentric(bestQ, A[best], B[best], C[best]);
-                    Vector3 smooth = NA[best] * w.x + NB[best] * w.y + NC[best] * w.z;
-                    inside = Vector3.Dot(p - bestQ, smooth) < 0f && Vector3.Dot(p - bestQ, Normal[best]) < 0f;
+                    normal = NA[best] * w.x + NB[best] * w.y + NC[best] * w.z;
                 }
                 return best;
             }
@@ -194,48 +307,64 @@ namespace Odyssey.Presentation.World
         /// the pelvis bone's.
         /// </summary>
         public static SheathGap Measure(SkinnedMeshRenderer[] skins, in Bones bones, Transform prop,
-            Vector3 up, float hipY, float pelvisY, float height)
+            Vector3 outward, Vector3 up, Vector3 forward, float hipY, float pelvisY, float floorY, float height)
         {
             List<Vector3> samples = Samples(prop, Spacing, out Vector3 axis);
             if (samples.Count == 0)
                 return new SheathGap(float.PositiveInfinity, 0f, 0f, 0, 0, float.PositiveInfinity, 0f, 0f, 0f, height);
 
             Bounds near = new Bounds(samples[0], Vector3.zero);
-            float top = float.MinValue;
+            float top = float.MinValue, bottom = float.MaxValue;
             for (int i = 0; i < samples.Count; i++)
             {
                 near.Encapsulate(samples[i]);
                 float y = Vector3.Dot(samples[i], up);
                 if (y > top) top = y;
+                if (y < bottom) bottom = y;
             }
             near.Expand(0.3f);
 
             var body = new Soup();
             var arms = new Soup();
             Bake(skins, bones, near, body, arms);
+            body.Index(up, forward);
 
             float gap = float.PositiveInfinity, gapAbove = 0f, depth = 0f, armGap = float.PositiveInfinity;
             int inside = 0;
+            Vector3 nearest = default, nearestOn = default, nearestNormal = default;
             for (int i = 0; i < samples.Count; i++)
             {
                 Vector3 p = samples[i];
-                if (body.Nearest(p, out float d, out bool within) >= 0)
+                if (body.Nearest(p, out float d, out _, out Vector3 on, out Vector3 normal) >= 0)
                 {
-                    float signed = within ? -d : d;
+                    // Inside when there is skin further out than the point: the thigh it is in,
+                    // or the skirt it is under. How far is how deep.
+                    float beyond = body.Beyond(p, outward);
+                    bool within = beyond > InsideTolerance;
+                    float signed = within ? -beyond : d;
                     if (signed < gap)
                     {
                         gap = signed;
                         gapAbove = Vector3.Dot(p, up) - hipY;
+                        nearest = p;
+                        nearestOn = on;
+                        nearestNormal = normal;
                     }
-                    if (within && d > InsideTolerance) inside++;
-                    if (within && d > depth) depth = d;
+                    if (within) inside++;
+                    if (within && beyond > depth) depth = beyond;
                 }
                 if (arms.Nearest(p, out float a, out _) >= 0 && a < armGap) armGap = a;
             }
 
             float lean = Mathf.Acos(Mathf.Clamp01(Mathf.Abs(Vector3.Dot(axis.normalized, up)))) * Mathf.Rad2Deg;
             return new SheathGap(gap, gapAbove, depth, inside, samples.Count, armGap, lean,
-                top - hipY, top - pelvisY, height);
+                top - hipY, top - pelvisY, height)
+            {
+                BottomAboveFloor = bottom - floorY,
+                Nearest = nearest,
+                NearestOn = nearestOn,
+                NearestNormal = nearestNormal,
+            };
         }
 
         /// <summary>
@@ -278,8 +407,19 @@ namespace Odyssey.Presentation.World
         /// Every drawn skin's triangles, baked as posed, three world points each, split into the
         /// arms and the rest by nearest bone segment. For <see cref="SheathSurface.Map"/>.
         /// </summary>
-        public static void BakeTriangles(SkinnedMeshRenderer[] skins, in Bones bones, List<Vector3> body, List<Vector3> arms)
+        public static void BakeTriangles(SkinnedMeshRenderer[] skins, in Bones bones, List<Vector3> body, List<Vector3> arms) =>
+            BakeTriangles(skins, bones, body, arms, Vector3.zero, Vector3.zero, Vector3.zero, float.NegativeInfinity, float.PositiveInfinity);
+
+        /// <summary>
+        /// The same, keeping only triangles with a corner on the <paramref name="outward"/> side of
+        /// <paramref name="origin"/> and between the heights <paramref name="low"/> and
+        /// <paramref name="high"/> above it: the side of the body a sheath hangs on, which is a
+        /// third of the skin and spares classifying the rest.
+        /// </summary>
+        public static void BakeTriangles(SkinnedMeshRenderer[] skins, in Bones bones, List<Vector3> body, List<Vector3> arms,
+            Vector3 origin, Vector3 outward, Vector3 up, float low, float high)
         {
+            bool crop = outward != Vector3.zero;
             Mesh? baked = null;
             for (int s = 0; s < skins.Length; s++)
             {
@@ -295,6 +435,14 @@ namespace Odyssey.Presentation.World
                 for (int t = 0; t + 2 < triangles.Length; t += 3)
                 {
                     Vector3 a = world[triangles[t]], b = world[triangles[t + 1]], c = world[triangles[t + 2]];
+                    if (crop)
+                    {
+                        if (Vector3.Dot(a - origin, outward) < 0f && Vector3.Dot(b - origin, outward) < 0f
+                            && Vector3.Dot(c - origin, outward) < 0f)
+                            continue;
+                        float ya = Vector3.Dot(a - origin, up), yb = Vector3.Dot(b - origin, up), yc = Vector3.Dot(c - origin, up);
+                        if (Mathf.Max(ya, Mathf.Max(yb, yc)) < low || Mathf.Min(ya, Mathf.Min(yb, yc)) > high) continue;
+                    }
                     List<Vector3> into = bones.IsArm((a + b + c) / 3f) ? arms : body;
                     into.Add(a);
                     into.Add(b);
@@ -343,10 +491,10 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// Points over a prop that a player can read, in world space, no further apart than
-        /// <paramref name="spacing"/>: a mesh's own surface where it is marked readable, and
-        /// otherwise the surface of its bounds, which every mesh gives up. The weapons are not
-        /// readable, so in the game — and in the editor, which asks the same question — this is
-        /// their box: tight across a blade's flat, and a handle as fat as the barrel of a bat.
+        /// <paramref name="spacing"/>: a mesh's own surface where it is marked readable; its
+        /// measured <see cref="WeaponProfile"/> where the table has one; and otherwise the surface
+        /// of its bounds, which every mesh gives up. The weapons are not readable, so in the game —
+        /// and in the editor, which asks the same question — they are their profiles.
         /// </summary>
         public static List<Vector3> HullPoints(Transform prop, float spacing)
         {
@@ -366,6 +514,11 @@ namespace Odyssey.Presentation.World
                         SampleTriangle(points, at.TransformPoint(vertices[triangles[t]]),
                             at.TransformPoint(vertices[triangles[t + 1]]), at.TransformPoint(vertices[triangles[t + 2]]), spacing);
                     }
+                    continue;
+                }
+                if (WeaponProfiles.TryGet(mesh.name, out WeaponProfile? profile))
+                {
+                    profile!.AddPoints(at, spacing, points);
                     continue;
                 }
 

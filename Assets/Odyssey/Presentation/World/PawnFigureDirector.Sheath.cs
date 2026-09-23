@@ -19,15 +19,18 @@ namespace Odyssey.Presentation.World
     /// <see cref="WeaponSheath"/>'s; this file owns only where the prop hangs and the animation
     /// between the two. Nothing here is saved or hashed.</para>
     ///
-    /// <para><b>The sheath is measured, not authored.</b> At bind, in the idle, the stow point is
-    /// found on the drawn mesh: at the height of the left hip joint, the outermost vertex on the
-    /// figure's left that belongs to the thigh or the pelvis rather than to the hanging arm
-    /// (<see cref="HipReach"/>). It is kept in the pelvis's own space — the parent of the left thigh,
-    /// because <c>HumanBodyBones.Hips</c> on the Synty avatar is <c>Root</c>, on the floor — so it
-    /// rides the pelvis and not the swinging leg. Each weapon is then fitted to it once, off its own
-    /// mesh: the haft hanging down and back, the flat of the blade against the thigh, the point a
-    /// quarter of the way up from the butt at the hip, and the whole weapon stood off the body by
-    /// its own half-thickness.</para>
+    /// <para><b>The sheath is measured, not authored</b> (design 33 §9c). At bind, in the idle, the
+    /// drawn skin is baked and mapped as a relief of the figure's left side (<see cref="SheathSurface"/>):
+    /// how far out the body reaches, and how far in the hanging arm comes, at every height and depth
+    /// round the hip. It is kept in the pelvis's own space — the parent of the left thigh, because
+    /// <c>HumanBodyBones.Hips</c> on the Synty avatar is <c>Root</c>, on the floor — so it rides the
+    /// pelvis and not the swinging leg. The relief is the envelope of the whole idle, because every
+    /// pawn plays its idle from a phase of its own. Each weapon is then fitted once, off its measured
+    /// profile (<see cref="WeaponProfile"/>, since a player cannot read the meshes): the haft hanging
+    /// nearly straight down, splayed as far as the leg is, the flat of the blade against the thigh,
+    /// the point a quarter of the way up from the butt at the hip joint's height, and the whole weapon
+    /// slid out until its nearest point is <see cref="SheathClearance"/> off the relief — and back,
+    /// if that clears the hanging hand.</para>
     ///
     /// <para><b>The pack's clips, where they are.</b> <c>A_Draw_Sword</c> and <c>A_Sheathe_Sword</c>
     /// (masculine and feminine) play on an upper-body layer over the walk, and the prop changes
@@ -48,26 +51,46 @@ namespace Odyssey.Presentation.World
         /// <summary>The draw and the sheathe's input on the figure's layer mixer: over the gaits (0) and the fight (1).</summary>
         internal const int SheathLayerInput = 2;
 
-        /// <summary>How far the blade leans back from straight down, in degrees. INVENTED.</summary>
-        public const float SheathTiltDegrees = 25f;
+        /// <summary>
+        /// How far the weapon leans back from straight down, in degrees: near enough vertical that
+        /// it reads as hung at the hip (owner, 2026-09-23), with the butt a touch forward. Was 25,
+        /// which put a bat's head behind the knee (design 33 §9c).
+        /// </summary>
+        public const float SheathTiltDegrees = 8f;
 
-        /// <summary>How far the tip splays out from the leg, in degrees. INVENTED.</summary>
-        public const float SheathSplayDegrees = 6f;
-
-        /// <summary>The point of a weapon that hangs at the belt, as a fraction of its length from the butt. INVENTED.</summary>
+        /// <summary>The point of a weapon that hangs at the hip joint's height, as a fraction of its length from the butt.</summary>
         public const float SheathHangFraction = 0.25f;
 
-        /// <summary>The gap between the body and a sheathed weapon, as a fraction of the figure's height. INVENTED.</summary>
-        public const float SheathClearance = 0.005f;
-
-        /// <summary>How far forward of the hip joint the sheath hangs, as a fraction of the figure's height. INVENTED.</summary>
-        public const float SheathForward = 0.02f;
+        /// <summary>
+        /// The gap kept between the body and a sheathed weapon, as a fraction of the figure's height
+        /// (about a centimetre on a 2.4 m colonist). Kept between the weapon's measured profile and
+        /// the relief of the whole idle, so the drawn gap at the nearest point comes out at one to
+        /// three centimetres whatever instant of the idle is drawn (design 33 §9c, measured).
+        /// </summary>
+        public const float SheathClearance = 0.004f;
 
         /// <summary>
-        /// The band of heights round the hip joint that the mesh is searched in for the hip's
-        /// surface, as a fraction of the figure's height. INVENTED.
+        /// How far back, and how far forward, of the side of the hip a weapon may move to pass the
+        /// hanging hand rather than go through it, as fractions of the figure's height. Behind is
+        /// where a scabbard hangs; much in front, and a weapon hangs over the knee.
         /// </summary>
-        public const float HipBand = 0.03f;
+        public const float SheathBehind = 0.06f, SheathAhead = 0.02f;
+
+        /// <summary>
+        /// The least a sheathed weapon's lowest point clears the floor by, as a fraction of the
+        /// figure's height: the arc blade is longer than the leg and is hung higher to keep it.
+        /// </summary>
+        public const float SheathFloorClearance = 0.02f;
+
+        /// <summary>
+        /// The most a weapon is splayed out from plumb to follow a leg that stands wider at the
+        /// knee than at the hip, in degrees: with the lean back, still within the owner's
+        /// "roughly vertical".
+        /// </summary>
+        public const float SheathMostSplay = 10f;
+
+        /// <summary>How many instants of the idle the hip's relief is the envelope of.</summary>
+        public const int SheathIdleSamples = 6;
 
         /// <summary>
         /// Where in the draw the hand takes the hilt, and in the sheathe lets it go, as a fraction of
@@ -199,8 +222,11 @@ namespace Odyssey.Presentation.World
                 || !TryGaugeBones(figure, out SheathGauge.Bones bones))
                 return false;
             float height = figure.StandingHeight > 0.01f ? figure.StandingHeight : FigureBuild.FallbackHeight;
-            gap = SheathGauge.Measure(figure.Skins, bones, figure.Weapon.transform, Vector3.up,
-                figure.LeftUpperLeg!.position.y, figure.Pelvis!.position.y, height);
+            Transform root = figure.Transform;
+            Vector3 outward = -root.right;
+            if (Vector3.Dot(figure.LeftUpperLeg!.position - root.position, outward) < 0f) outward = -outward;
+            gap = SheathGauge.Measure(figure.Skins, bones, figure.Weapon.transform, outward, root.up, root.forward,
+                figure.LeftUpperLeg.position.y, figure.Pelvis!.position.y, root.position.y, height);
             return true;
         }
 
@@ -229,8 +255,47 @@ namespace Odyssey.Presentation.World
                 RightShoulder = Of(figure.RightUpperArm, spine),
                 RightElbow = Of(figure.RightLowerArm, Of(figure.RightUpperArm, spine)),
                 RightWrist = Of(figure.RightHand, Of(figure.RightLowerArm, Of(figure.RightUpperArm, spine))),
+                LeftTips = Tips(figure.Animator, true),
+                RightTips = Tips(figure.Animator, false),
+                Height = figure.StandingHeight > 0.01f ? figure.StandingHeight : FigureBuild.FallbackHeight,
             };
             return true;
+        }
+
+        static readonly HumanBodyBones[] LeftFingers =
+        {
+            HumanBodyBones.LeftThumbIntermediate, HumanBodyBones.LeftThumbDistal,
+            HumanBodyBones.LeftIndexIntermediate, HumanBodyBones.LeftIndexDistal,
+            HumanBodyBones.LeftMiddleIntermediate, HumanBodyBones.LeftMiddleDistal,
+            HumanBodyBones.LeftRingIntermediate, HumanBodyBones.LeftRingDistal,
+            HumanBodyBones.LeftLittleIntermediate, HumanBodyBones.LeftLittleDistal,
+        };
+
+        static readonly HumanBodyBones[] RightFingers =
+        {
+            HumanBodyBones.RightThumbIntermediate, HumanBodyBones.RightThumbDistal,
+            HumanBodyBones.RightIndexIntermediate, HumanBodyBones.RightIndexDistal,
+            HumanBodyBones.RightMiddleIntermediate, HumanBodyBones.RightMiddleDistal,
+            HumanBodyBones.RightRingIntermediate, HumanBodyBones.RightRingDistal,
+            HumanBodyBones.RightLittleIntermediate, HumanBodyBones.RightLittleDistal,
+        };
+
+        /// <summary>
+        /// Each mapped finger's tip as it hangs now: its last bone carried on by that bone's own
+        /// length. Null when the rig maps no fingers.
+        /// </summary>
+        static Vector3[]? Tips(Animator? animator, bool left)
+        {
+            if (animator == null || !animator.isHuman) return null;
+            HumanBodyBones[] fingers = left ? LeftFingers : RightFingers;
+            var tips = new List<Vector3>(fingers.Length / 2);
+            for (int i = 0; i + 1 < fingers.Length; i += 2)
+            {
+                Transform? middle = animator.GetBoneTransform(fingers[i]), last = animator.GetBoneTransform(fingers[i + 1]);
+                if (middle == null || last == null) continue;
+                tips.Add(last.position + (last.position - middle.position));
+            }
+            return tips.Count > 0 ? tips.ToArray() : null;
         }
 
         // ---- Bind: the stow point, and the clips' moments ------------------------------------------
@@ -261,12 +326,14 @@ namespace Odyssey.Presentation.World
 
         /// <summary>
         /// The stow frame, in the pelvis's space: the hip's surface on the figure's left at the
-        /// height of the hip joint, a touch forward of it, with the blade leaning back and splayed
-        /// out. The surface is the drawn mesh's; with nothing bakeable the hip joint's own offset,
-        /// doubled, stands in.
+        /// height and depth of the hip joint, with the blade leaning back by
+        /// <see cref="SheathTiltDegrees"/>; and the relief every weapon is fitted against. The
+        /// surface is the drawn mesh's; with nothing bakeable the hip joint's own offset, doubled,
+        /// stands in.
         /// </summary>
         void MeasureHipStow(Figure figure)
         {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             Transform root = figure.Transform;
             Transform pelvis = figure.Pelvis!;
             Transform thigh = figure.LeftUpperLeg!;
@@ -278,80 +345,122 @@ namespace Odyssey.Presentation.World
             // The avatar's left thigh says which side is left; a rig mirrored from ours is believed.
             if (Vector3.Dot(thigh.position - root.position, outward) < 0f) outward = -outward;
 
-            float hipY = thigh.position.y;
-            float reach = HipReach(figure, root.position, outward, hipY, HipBand * height);
-            if (reach <= 0f) reach = 2f * Mathf.Max(0.01f, Vector3.Dot(thigh.position - root.position, outward));
+            // The frame the relief is kept in: out, up and forward about the root, in metres.
+            Vector3 origin = root.position;
+            float hipY = Vector3.Dot(thigh.position - origin, up);
+            float thighZ = Vector3.Dot(thigh.position - origin, forward);
+            float joint = Vector3.Dot(thigh.position - origin, outward);
 
-            float along = Vector3.Dot(thigh.position - root.position, forward) + SheathForward * height;
-            Vector3 point = new Vector3(root.position.x, hipY, root.position.z) + outward * reach + forward * along;
+            // The whole idle, not its first frame: every pawn starts its clips at a phase of its
+            // own (Desynchronise), and the idle shifts its weight from leg to leg, so a relief of
+            // one instant is a hip another colonist's thigh swings through. Each sample is carried
+            // into the pelvis as it stands now, which is what the weapon rides.
+            //
+            // One body, one relief: every figure wearing a look shares its mesh, its scale and its
+            // idle, and the relief is kept in the pelvis's space, so it is measured once a look.
+            _sheathReliefs.TryGetValue(figure.Look, out SheathSurface? surface);
+            var body = new List<Vector3>();
+            var arms = new List<Vector3>();
+            Matrix4x4 bindPelvis = pelvis.localToWorldMatrix;
+            AnimationClipPlayable idle = figure.Clips.Length > 0 ? figure.Clips[0] : default;
+            double idleWas = idle.IsValid() ? idle.GetTime() : 0d;
+            double idleLength = idle.IsValid() && idle.GetAnimationClip() != null ? idle.GetAnimationClip().length : 0d;
+            int samples = surface != null ? 0 : idleLength > 1e-3 ? SheathIdleSamples : 1;
+            for (int s = 0; s < samples; s++)
+            {
+                if (samples > 1)
+                {
+                    idle.SetTime(idleWas + idleLength * s / samples);
+                    figure.Graph.Evaluate(0f);
+                }
+                if (!TryGaugeBones(figure, out SheathGauge.Bones bones)) break;
+                int bodyFrom = body.Count, armsFrom = arms.Count;
+                SheathGauge.BakeTriangles(figure.Skins, bones, body, arms, root.position, outward, up,
+                    hipY - (SheathSurface.BelowHip + 0.05f) * height, hipY + (SheathSurface.AboveHip + 0.05f) * height);
+                Matrix4x4 toBind = bindPelvis * pelvis.worldToLocalMatrix;
+                for (int i = bodyFrom; i < body.Count; i++) body[i] = toBind.MultiplyPoint3x4(body[i]);
+                for (int i = armsFrom; i < arms.Count; i++) arms[i] = toBind.MultiplyPoint3x4(arms[i]);
+            }
+            if (samples > 1)
+            {
+                idle.SetTime(idleWas);
+                figure.Graph.Evaluate(0f);
+            }
+            if (surface == null && body.Count > 0)
+            {
+                surface = SheathSurface.Map(body, arms, origin, outward, forward, hipY, thighZ, height, bindPelvis);
+                if (surface != null) _sheathReliefs[figure.Look] = surface;
+            }
+            if (surface != null) _sheathSurfaces[figure] = surface;
+            else _sheathSurfaces.Remove(figure);
+
+            // The hip's own surface beside the joint, for the grasp's sampling to aim at; with
+            // nothing bakeable, the joint's offset doubled.
+            float reach = surface != null ? surface.BodyAt(hipY, thighZ) : float.NegativeInfinity;
+            if (float.IsNegativeInfinity(reach)) reach = 2f * Mathf.Max(0.01f, joint);
+            Vector3 point = origin + outward * reach + up * hipY + forward * thighZ;
 
             float tilt = SheathTiltDegrees * Mathf.Deg2Rad;
             Vector3 down = (-up * Mathf.Cos(tilt) - forward * Mathf.Sin(tilt)).normalized;
-            down = (down + outward * Mathf.Tan(SheathSplayDegrees * Mathf.Deg2Rad)).normalized;
 
             figure.StowPoint = pelvis.InverseTransformPoint(point);
             figure.StowDown = pelvis.InverseTransformDirection(down);
             figure.StowOut = pelvis.InverseTransformDirection(outward);
             figure.StowForward = pelvis.InverseTransformDirection(forward);
             figure.HasStow = true;
+            MeasuredSheathBindMs = Math.Max(MeasuredSheathBindMs, watch.Elapsed.TotalMilliseconds);
+        }
+
+        /// <summary>The longest any figure's hip measurement has taken, in milliseconds: it is paid once, when a figure is built.</summary>
+        public double MeasuredSheathBindMs { get; private set; }
+
+        /// <summary>Each figure's measured hip relief (design 33 §9c), kept beside the figure rather than in it.</summary>
+        readonly Dictionary<Figure, SheathSurface> _sheathSurfaces = new Dictionary<Figure, SheathSurface>();
+
+        /// <summary>The relief measured for each look, shared by every figure wearing it.</summary>
+        readonly Dictionary<int, SheathSurface> _sheathReliefs = new Dictionary<int, SheathSurface>();
+
+        /// <summary>What each figure's last hip fit chose, for <see cref="DescribeSheathFit"/>.</summary>
+        readonly Dictionary<Figure, SheathSurface.Placement> _sheathPlacements = new Dictionary<Figure, SheathSurface.Placement>();
+
+        /// <summary>A world point (or, with <paramref name="direction"/>, a direction) in a pawn's figure's frame about its left hip joint, in centimetres. For the contact sheet.</summary>
+        public string DescribeInFrame(PawnId pawn, Vector3 world, bool direction = false)
+        {
+            if (!_byPawn.TryGetValue(pawn.Value, out Figure? figure) || figure.LeftUpperLeg == null) return "?";
+            Transform root = figure.Transform;
+            Vector3 outward = -root.right;
+            if (Vector3.Dot(figure.LeftUpperLeg.position - root.position, outward) < 0f) outward = -outward;
+            Vector3 d = direction ? world : world - figure.LeftUpperLeg.position;
+            return $"({Vector3.Dot(d, outward) * 100f:F1} out, {Vector3.Dot(d, root.up) * 100f:F1} up, {Vector3.Dot(d, root.forward) * 100f:F1} fwd)";
         }
 
         /// <summary>
-        /// How far out on <paramref name="outward"/> the drawn body reaches at the height
-        /// <paramref name="y"/> (± <paramref name="band"/>), from <paramref name="centre"/>, counting
-        /// only vertices nearer the left thigh or the pelvis than the left arm — at the hip, the
-        /// hanging hand is further out than the hip is, and a sheath hung outside it hangs in the air.
-        /// Nought when nothing bakeable is there.
-        ///
-        /// <para>Baked, not bounded, for <see cref="FigureBuild"/>'s reasons; which bone a vertex
-        /// "belongs to" is the nearest bone segment rather than its skin weights, which a mesh not
-        /// marked readable does not hand out in a player.</para>
+        /// What the hip fit chose for a pawn's weapon, in the figure's frame about the hip joint:
+        /// the splay, how far out and along it slid, what decided it, whether the hand was cleared,
+        /// and the relief down the weapon's line. For the contact sheet.
         /// </summary>
-        static float HipReach(Figure figure, Vector3 centre, Vector3 outward, float y, float band)
+        public string DescribeSheathFit(PawnId pawn)
         {
-            Transform? thigh = figure.LeftUpperLeg, knee = figure.LeftLowerLeg, pelvis = figure.Pelvis;
-            if (thigh == null || knee == null || pelvis == null) return 0f;
-            Vector3 spine = figure.Spine != null ? figure.Spine.position : pelvis.position + figure.Transform.up * 0.2f;
-
-            Vector3 shoulder = figure.LeftUpperArm != null ? figure.LeftUpperArm.position : spine;
-            Vector3 elbow = figure.LeftLowerArm != null ? figure.LeftLowerArm.position : shoulder;
-            Vector3 wrist = figure.LeftHand != null ? figure.LeftHand.position : elbow;
-            Vector3 fingers = wrist + (wrist - elbow) * 0.6f;
-
-            float best = 0f;
-            Mesh? baked = null;
-            SkinnedMeshRenderer[] skins = figure.Skins;
-            for (int s = 0; s < skins.Length; s++)
-            {
-                SkinnedMeshRenderer skin = skins[s];
-                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
-                baked ??= new Mesh { name = "Odyssey/HipProbe" };
-                skin.BakeMesh(baked, useScale: true);
-                Vector3[] vertices = baked.vertices;
-                Transform at = skin.transform;
-                for (int v = 0; v < vertices.Length; v++)
-                {
-                    Vector3 p = at.TransformPoint(vertices[v]);
-                    if (Mathf.Abs(p.y - y) > band) continue;
-                    float body = Mathf.Min(SegmentDistanceSq(p, thigh.position, knee.position),
-                        SegmentDistanceSq(p, pelvis.position, spine));
-                    float arm = Mathf.Min(SegmentDistanceSq(p, shoulder, elbow),
-                        Mathf.Min(SegmentDistanceSq(p, elbow, wrist), SegmentDistanceSq(p, wrist, fingers)));
-                    if (arm < body) continue;
-                    float reach = Vector3.Dot(p - centre, outward);
-                    if (reach > best) best = reach;
-                }
-            }
-            if (baked != null) UnityEngine.Object.DestroyImmediate(baked);
-            return best;
+            if (!_byPawn.TryGetValue(pawn.Value, out Figure? figure)) return "no figure";
+            if (!_sheathSurfaces.TryGetValue(figure, out SheathSurface? surface)) return "no relief";
+            if (!_sheathPlacements.TryGetValue(figure, out SheathSurface.Placement p)) return "not fitted to the relief";
+            Vector3 b = p.Binding;
+            _sheathSplays.TryGetValue(figure, out float splay);
+            return $"side depth {surface.SideDepth() * 100f:F1} cm, splay {splay:F0} deg, slid out {p.Outward * 100f:F1} along {p.Along * 100f:F1} cm, " +
+                   $"decided by the point {b.x * 100f:F1} out {(b.y - surface.HipY) * 100f:F1} up {(b.z - surface.ThighZ) * 100f:F1} fwd of the hip joint, " +
+                   $"hand {(p.ArmMiss > 0f ? $"overlapped by {p.ArmMiss * 100f:F1} cm" : "cleared")}; " +
+                   $"the body out at that depth, every 10 cm down from the hip:{Column(surface, b.z)}";
         }
 
-        static float SegmentDistanceSq(Vector3 p, Vector3 a, Vector3 b)
+        static string Column(SheathSurface surface, float z)
         {
-            Vector3 ab = b - a;
-            float lengthSq = ab.sqrMagnitude;
-            float t = lengthSq > 1e-8f ? Mathf.Clamp01(Vector3.Dot(p - a, ab) / lengthSq) : 0f;
-            return (a + ab * t - p).sqrMagnitude;
+            var text = new System.Text.StringBuilder();
+            for (int cm = 10; cm >= -110; cm -= 10)
+            {
+                float x = surface.BodyAt(surface.HipY + cm * 0.01f, z);
+                text.Append(' ').Append(float.IsNegativeInfinity(x) ? "-" : (x * 100f).ToString("F0"));
+            }
+            return text.ToString();
         }
 
         /// <summary>
@@ -436,7 +545,9 @@ namespace Odyssey.Presentation.World
         /// Hang a weapon (already a child of the pelvis) in the sheath, measured off its mesh as the
         /// fist's fit is: the haft along the stow's down, the blade's width along the figure's front
         /// so the flat lies against the thigh, the point <see cref="SheathHangFraction"/> up from the
-        /// butt at the stow point, stood off the body by the weapon's own half-thickness.
+        /// butt at the stow point; then slid out of the idle's relief until its nearest point is
+        /// <see cref="SheathClearance"/> clear (<see cref="SheathSurface.Fit"/>). The weapon's own
+        /// points are its measured profile, because its mesh is not readable in a player.
         /// </summary>
         void FitWeaponAtHip(Figure figure, Transform prop)
         {
@@ -470,11 +581,96 @@ namespace Odyssey.Presentation.World
             float standOff = prop.TransformVector(flat.normalized * halfThick).magnitude;
             float height = figure.StandingHeight > 0.01f ? figure.StandingHeight : FigureBuild.FallbackHeight;
 
+            // The hang point on the hip's surface beside the joint, then slid out of the body —
+            // and back or forward past the hanging hand — by the relief the idle left.
             Vector3 butt = bounds.center - haft * half;
             Vector3 hang = butt + haft * (2f * half * SheathHangFraction);
-            Vector3 target = point + outward * (standOff + SheathClearance * height);
-            prop.position += target - prop.TransformPoint(hang);
+            prop.position += point - prop.TransformPoint(hang);
+
+            if (_sheathSurfaces.TryGetValue(figure, out SheathSurface? surface))
+            {
+                Matrix4x4 toFrame = surface.PelvisToFrame * pelvis.worldToLocalMatrix;
+                List<Vector3> points = FramePoints(prop, surface, toFrame);
+
+                // Splayed out as far as the leg is: a wide stance puts the knee further out than
+                // the hip, and a weapon hung plumb from the hip then stands off it by the whole
+                // difference (seven centimetres on the widest). The splay that brings the belt end
+                // nearest the hip, searched a degree at a time.
+                float splay = BestSplay(surface, points, toFrame.MultiplyPoint3x4(point), SheathClearance * height);
+                if (splay > 0f)
+                {
+                    Vector3 axis = forward;
+                    Vector3 turned = Quaternion.AngleAxis(splay, axis) * down;
+                    if (Vector3.Dot(turned, outward) < 0f) axis = -axis;
+                    prop.RotateAround(point, axis, splay);
+                    points = FramePoints(prop, surface, toFrame);
+                }
+                _sheathSplays[figure] = splay;
+
+                // Clear of the floor: a weapon longer than the leg is hung higher, not dragged.
+                float lowest = float.PositiveInfinity;
+                for (int i = 0; i < points.Count; i++) lowest = Mathf.Min(lowest, points[i].y);
+                float lift = Mathf.Max(0f, SheathFloorClearance * height - lowest);
+                for (int i = 0; i < points.Count; i++) points[i] += new Vector3(0f, lift, 0f);
+
+                // The weapon's own line — a crowbar's shaft, not the middle of its claw — at the
+                // depth the side of the hip stands out furthest, then out until it clears.
+                float start = surface.SideDepth() - surface.SpineDepth(points);
+                if (surface.Fit(points, SheathClearance * height, start, SheathBehind * height, SheathAhead * height,
+                        out SheathSurface.Placement placement))
+                {
+                    Vector3 local = surface.FrameToPelvis.MultiplyVector(new Vector3(placement.Outward, lift, placement.Along));
+                    prop.position += pelvis.TransformVector(local);
+                    _sheathPlacements[figure] = placement;
+                    return;
+                }
+            }
+            _sheathPlacements.Remove(figure);
+
+            // Nothing bakeable: stood off the stow point by its own half-thickness.
+            prop.position += outward * (standOff + SheathClearance * height);
         }
+
+        static List<Vector3> FramePoints(Transform prop, SheathSurface surface, Matrix4x4 toFrame)
+        {
+            List<Vector3> points = SheathGauge.HullPoints(prop, surface.Cell);
+            for (int i = 0; i < points.Count; i++) points[i] = toFrame.MultiplyPoint3x4(points[i]);
+            return points;
+        }
+
+        /// <summary>
+        /// The splay, in whole degrees up to <see cref="SheathMostSplay"/>, that lets the belt end
+        /// of a weapon (<paramref name="hang"/>, in the frame) come nearest the hip once the whole
+        /// weapon is slid clear of the body; the least of equals.
+        /// </summary>
+        static float BestSplay(SheathSurface surface, List<Vector3> points, Vector3 hang, float clearance)
+        {
+            float start = surface.SideDepth() - surface.SpineDepth(points);
+            float best = 0f, bestSlide = float.PositiveInfinity;
+            var turned = new List<Vector3>(points.Count);
+            for (int degrees = 0; degrees <= (int)SheathMostSplay; degrees++)
+            {
+                float s = degrees * Mathf.Deg2Rad, cos = Mathf.Cos(s), sin = Mathf.Sin(s);
+                turned.Clear();
+                for (int i = 0; i < points.Count; i++)
+                {
+                    float dx = points[i].x - hang.x, dy = points[i].y - hang.y;
+                    // Below the belt moves out.
+                    turned.Add(new Vector3(hang.x + dx * cos - dy * sin, hang.y + dx * sin + dy * cos, points[i].z));
+                }
+                float slide = surface.Slide(turned, clearance, start);
+                if (float.IsNegativeInfinity(slide)) continue;
+                if (slide < bestSlide - 0.002f)
+                {
+                    bestSlide = slide;
+                    best = degrees;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>What each figure's last hip fit splayed its weapon by, for <see cref="DescribeSheathFit"/>.</summary>
+        readonly Dictionary<Figure, float> _sheathSplays = new Dictionary<Figure, float>();
 
         /// <summary>Put the weapon at the hip or in the hand, from the cached fits. A no-op when it is already there.</summary>
         static void PlaceWeapon(Figure figure, bool atHip)

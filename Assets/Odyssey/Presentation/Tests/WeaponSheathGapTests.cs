@@ -19,8 +19,9 @@ namespace Odyssey.Tests.Presentation
     /// <para>Measured on the drawn meshes by <see cref="SheathGauge"/>, not read off the fit's own
     /// numbers: every sampled point of the weapon's surface against the posed skin, the arms apart.
     /// Four bodies — masculine, feminine, and two builds unlike either — with each of the four
-    /// weapons, at two instants of the idle. The first hip fit put the nearest point anywhere from
-    /// 2.5 cm to 10 cm off the body, and through it on some; this fails on those numbers.</para>
+    /// weapons, at two instants of the idle. The first hip fit (design 33 §8b) put the nearest point
+    /// 0.9–7.4 cm off these four bodies (up to 10.9 cm across the cast) and leaned every weapon
+    /// 25.7° from plumb; this fails on those numbers, seen to on 2026-09-23.</para>
     ///
     /// <para>Needs the colonist art and the weapons, and ignores itself where they did not resolve.</para>
     /// </summary>
@@ -48,6 +49,13 @@ namespace Odyssey.Tests.Presentation
         /// <summary>The nearest point of the weapon to the body: about one to three centimetres.</summary>
         public const float NearestGap = 0.008f, FurthestGap = 0.03f;
 
+        /// <summary>
+        /// The furthest for a weapon longer than the leg, which is lifted clear of the floor and so
+        /// hangs its guard at the waist, beside the swinging elbow: measured 3.8–4.2 cm on the
+        /// military build over its idle (design 33 §9c).
+        /// </summary>
+        public const float FurthestLifted = 0.045f;
+
         /// <summary>Roughly vertical: the long axis within this of straight down, in degrees.</summary>
         public const float MostLean = 15f;
 
@@ -56,6 +64,13 @@ namespace Odyssey.Tests.Presentation
         /// it than this fraction of the figure's height.
         /// </summary>
         public const float HighestTop = 0.2f;
+
+        /// <summary>
+        /// A weapon hung higher than the belt allows is excused only if its lowest point is within
+        /// this fraction of the figure's height of the floor: lifted just clear of it, as the arc
+        /// blade — longer than the leg — has to be.
+        /// </summary>
+        public const float LiftedBottom = 0.04f;
 
         [Test]
         public void EverySheathedWeaponSitsAgainstTheHip()
@@ -109,11 +124,17 @@ namespace Odyssey.Tests.Presentation
                             table.AppendLine($"{label} {gap}");
                             if (gap.Inside > 0)
                                 failures.Add($"{label}: {gap.Inside} points inside the body, {gap.Depth * 100f:F1} cm deep");
-                            if (gap.Gap < NearestGap || gap.Gap > FurthestGap)
-                                failures.Add($"{label}: nearest point {gap.Gap * 100f:F1} cm off the body, not {NearestGap * 100f:F1}–{FurthestGap * 100f:F0} cm");
+                            bool longerThanTheLeg = gap.BottomAboveFloor < LiftedBottom * gap.Height;
+                            float furthest = longerThanTheLeg ? FurthestLifted : FurthestGap;
+                            if (gap.Gap < NearestGap || gap.Gap > furthest)
+                                failures.Add($"{label}: nearest point {gap.Gap * 100f:F1} cm off the body, not {NearestGap * 100f:F1}–{furthest * 100f:F1} cm");
                             if (gap.Lean > MostLean)
                                 failures.Add($"{label}: leaning {gap.Lean:F1} deg from straight down");
-                            if (gap.TopAbovePelvis < 0f || gap.TopAbovePelvis > HighestTop * gap.Height)
+                            if (gap.BottomAboveFloor < 0f)
+                                failures.Add($"{label}: {-gap.BottomAboveFloor * 100f:F1} cm through the floor");
+                            // At the belt — or, for a weapon longer than the leg, no higher than it
+                            // must be to clear the floor.
+                            if (gap.TopAbovePelvis < 0f || (gap.TopAbovePelvis > HighestTop * gap.Height && !longerThanTheLeg))
                                 failures.Add($"{label}: its top {gap.TopAbovePelvis * 100f:F1} cm above the pelvis, not at the belt");
                         }
                     }
