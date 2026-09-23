@@ -103,6 +103,30 @@ namespace Odyssey.Presentation.World
         readonly ParticleSystem? _smoke;
         readonly int _layer;
 
+        /// <summary>
+        /// How the campfires on the board are found. A control, so the two can be measured
+        /// against each other in one run — this machine drifts by more between runs than most
+        /// passes cost (CLAUDE.md).
+        /// </summary>
+        public enum Find
+        {
+            /// <summary>Sweep every cell. What this class shipped with, and the bug.</summary>
+            Cells,
+
+            /// <summary>Walk the standing edifices, which is where a campfire actually lives.</summary>
+            Edifices,
+        }
+
+        public static Find Mode = Find.Edifices;
+
+        /// <summary>How many times the board has been re-swept, and how many cells that cost.
+        /// Diagnostic: a rescan count near the frame count means the cache is not caching.</summary>
+        public int Rescans { get; private set; }
+
+        /// <summary>Cells or edifice records visited by all rescans so far.</summary>
+        public long RescanVisits { get; private set; }
+
+        readonly IReadOnlyList<PlacedEdifice>? _edifices;
         readonly List<int> _cells = new List<int>(8);
         readonly List<Light> _lights = new List<Light>(8);
 
@@ -114,10 +138,12 @@ namespace Odyssey.Presentation.World
         float _clock;
         float _emit;
 
-        public FireDirector(WorldRenderModel model, Transform? parent, int layer)
+        public FireDirector(WorldRenderModel model, Transform? parent, int layer,
+            IReadOnlyList<PlacedEdifice>? edifices = null)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
             _layer = layer;
+            _edifices = edifices;
 
             Material? flameMaterial = BuildMaterial("Odyssey/Flame", additive: true);
             Material? smokeMaterial = BuildMaterial("Odyssey/Smoke", additive: false);
@@ -446,20 +472,51 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// Which cells hold a campfire, rebuilt only when the render model says the board changed.
+        /// Which cells hold a campfire.
         ///
-        /// <para>The board is walked once per structural change rather than once a frame. A sweep
-        /// of every cell every frame to find a handful of fires is exactly `P10` on the frame side
-        /// — correct, obvious, three lines, and priced by the size of the board rather than by how
-        /// much there is to see.</para>
+        /// <para><b>This shipped as P10 wearing a different coat, and its own comment said it was
+        /// not.</b> The claim was that the board is swept "once per structural change rather than
+        /// once a frame", and the cache is keyed on <see cref="WorldRenderModel.Version"/> — which
+        /// <c>RefreshDirty</c> bumps whenever <b>any chunk remeshes</b>. In a colony that is doing
+        /// anything at all that is most frames, so the sweep ran at 230,400 cells a frame on the
+        /// played board to find at most a handful of fires. Exactly the fault this class was
+        /// written to avoid, and exactly the fault found in <c>TemperatureSystem</c> the day
+        /// before: a complexity claim in a doc comment is not a measurement.</para>
+        ///
+        /// <para><see cref="Find.Edifices"/> walks the standing edifices instead — where a
+        /// campfire actually lives, and a list two orders of magnitude shorter than the cell
+        /// grid. The trigger is unchanged, so the cache still refreshes exactly as often; what
+        /// changed is what a refresh costs. <see cref="Find.Cells"/> is kept as the control that
+        /// measured it.</para>
         /// </summary>
         void RefreshCells()
         {
             if (_cellsVersion == _model.Version) return;
             _cellsVersion = _model.Version;
+            Rescans++;
 
             _cells.Clear();
+
+            if (Mode == Find.Edifices && _edifices != null)
+            {
+                RescanVisits += _edifices.Count;
+                for (int i = 0; i < _edifices.Count; i++)
+                {
+                    PlacedEdifice placed = _edifices[i];
+                    if (placed.Removed) continue;
+                    if (placed.Def != CoreContent.EdificeCampfire) continue;
+
+                    // The model is still the authority on what is drawn where: an edifice record
+                    // can outlive the cell it was in, and the mesher reads the mirror rather than
+                    // the list. Asking it per candidate is a handful of lookups, not a sweep.
+                    if (_model.EdificeDef(placed.CellIndex) == CoreContent.EdificeCampfire)
+                        _cells.Add(placed.CellIndex);
+                }
+                return;
+            }
+
             int count = _model.Size.CellCount;
+            RescanVisits += count;
             for (int i = 0; i < count; i++)
                 if (_model.EdificeDef(i) == CoreContent.EdificeCampfire) _cells.Add(i);
         }

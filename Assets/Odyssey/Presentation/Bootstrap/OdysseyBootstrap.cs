@@ -988,7 +988,8 @@ namespace Odyssey.Presentation.Bootstrap
             if (_model != null)
             {
                 _doors = new DoorDirector(_model, moduleCatalogue, transform, gameObject.layer);
-                _fires = new FireDirector(_model, transform, gameObject.layer);
+                _fires = new FireDirector(_model, transform, gameObject.layer,
+                    _colony?.Construction.Edifices.Records);
             }
 
             // The light through the day. It finds the scene's own sun rather than making one,

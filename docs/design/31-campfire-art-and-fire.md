@@ -342,3 +342,73 @@ run beside anything else in flight.
 
 The one thing that reaches outside presentation is the naming fix in §9, which is a content change:
 `icon-map.csv` plus a wiki rebuild, both gates green, in the same commit as the rule requires.
+
+
+## 14. What it cost, measured — 2026-09-23
+
+The owner reported the frame going from **1.5 to 4.5 ms** with campfires on the board, and added
+that the machine might have been under load. Both were worth taking seriously and only a control
+inside one run can separate them: this machine drifted the city canary from 2.01 to 4.01 ms in an
+afternoon on what a sibling worktree was doing, and three Unity editors were open when the report
+came in.
+
+`FrameTimeTests.TheCampfireSweepCostsWhatItVisits` is that control — no fire, one fire, then nine,
+each timed twice with the lookup mode alternating, all in one run on the wooded board:
+
+| Fires drawn | Frame | Draw calls |
+|---|---|---|
+| 0 | 2.305 ms | 1,358 |
+| 1 | 2.329 ms | 1,359 |
+| **9** | **2.302 ms** | **1,359** |
+
+**Nine burning campfires cost nothing measurable.** The spread across all six rows is 0.027 ms,
+which is less than the run-to-run drift of the same board minutes earlier in the same session
+(2.56 → 2.30 ms on no change at all). **One** extra draw call carries all nine, which is the shared
+emitters doing what they were built for. The report was the machine.
+
+### 14a. But the sweep was a real bug, found while looking
+
+`RefreshCells` caches which cells hold a fire against `WorldRenderModel.Version`, and its comment
+claimed the board was therefore swept *"once per structural change rather than once a frame"*.
+`RefreshDirty` bumps that version whenever **any chunk remeshes** — in a colony doing anything, most
+frames. The sweep is 230,400 cells on the played board, to find at most a handful of fires, and it
+runs **whether or not a campfire exists**: a colony that has never seen a fire was paying to look
+for one.
+
+It is the same fault as `TemperatureSystem`'s in §13a, one day apart and written by the same hand:
+**a complexity claim in a doc comment is not a measurement.** `P10` in `bug-patterns.md` is its
+drawing-side twin.
+
+Fixed by walking the standing edifices instead — where a campfire actually lives, and a list two
+orders of magnitude shorter: **1,242 records against 230,400 cells**, a 185× reduction per sweep.
+The trigger is unchanged, so the cache refreshes exactly as often; what changed is what a refresh
+costs. `FireDirector.Find.Cells` is kept as the control that priced it.
+
+**And the honest part: it never showed up in the frame.** The measurement above records **1 rescan
+in 180 frames**, because the test colony is idle and nothing remeshes. The bug is real, the fix is
+right, and neither is why the owner saw 4.5 ms. Both facts belong here — quoting only the 185×
+would imply a saving nobody has observed.
+
+### 14b. The clock, the events column, and a budget that said no
+
+The outdoor temperature needed room. `HudLayout.ClockWidth` sizes the clock *and* the alerts,
+bulletins and toasts under it, so one number widens the whole right column together — which is what
+the owner's *"including events — widen this up to match"* asks for.
+
+**266 → 296, and not further, because the coverage budget is what was left.** Every pixel of width
+is 91 px of area in the resting HUD, and `HudLayoutTests.TheStripIsAlwaysOneRowAndNoFurther` caps
+that at 20% of a 1280 × 720 canvas. 300 came to **20.02%** and failed. Raising the ceiling is the
+obvious alternative and was deliberately not taken: `CoverageCeiling`'s own history records that it
+*"is the owner's to reverse"*, and that the colonist name pool nearly took it to 0.21 and **the
+owner declined**. Wider than 296 is that decision again rather than a tweak.
+
+The width is also **written twice** — `ClockWidth` in C# and `.column-right`'s `width` in
+`Hud.uss` — because the model is what the fast tier reasons about and the stylesheet is what the
+panel is laid out by. Nothing checks that they agree. Both carry a note saying so.
+
+### 14c. The fire is quieter
+
+`Volume` 0.75 → **0.45** (owner, 2026-09-23). It was 0.55 against the synthesised placeholder,
+raised to 0.75 on the loudness arithmetic in §13's audio note, and cut on hearing the real thing.
+An ear beats a calculation about loudness; the arithmetic is kept in `AudioSetup` because it still
+explains why the clip is quieter than the placeholder it replaced.

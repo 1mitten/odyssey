@@ -402,11 +402,13 @@
    twenty pixels below a strip beside it that started at zero, and the two read as misaligned
    because they were. It is not against the right edge — the depth rail is, and this column sits
    inside it — so only its top corners are squared. */
+/* Width is HudLayout.ClockWidth said again in the language the panel is actually laid out in.
+   Nothing checks that the two agree; change them together. */
 .column-right {
     position: absolute;
     right: 56px;
     top: 0;
-    width: 266px;
+    width: 296px;
 }
 
 .clock.panel {
