@@ -366,12 +366,16 @@ namespace Odyssey.Hud
             ActiveTab >= 0 && ActiveTab < Tabs.Count ? Tabs[ActiveTab].Name : string.Empty;
 
         // Selection state is set by the pick resolver; the model never reads input itself.
+        // Every subject but a corpse writes Title, Subtitle and Job itself, so each forgets which
+        // corpse last wrote them: otherwise choosing that corpse again kept the other subject's
+        // strings (review, 2026-09-23).
         public void SetColonist(PawnId id)
         {
             Subject = InspectSubject.Colonist;
             Pawn = id;
             Thing = ThingId.None;
             Corpse = 0;
+            _corpseFor = 0;
         }
 
         public void SetItem(ThingId id)
@@ -380,6 +384,7 @@ namespace Odyssey.Hud
             Thing = id;
             Pawn = PawnId.None;
             Corpse = 0;
+            _corpseFor = 0;
         }
 
         public void SetCell(CellRef cell)
@@ -389,6 +394,7 @@ namespace Odyssey.Hud
             Thing = ThingId.None;
             Corpse = 0;
             _cell = cell;
+            _corpseFor = 0;
         }
 
         /// <summary>A corpse, by <see cref="CorpseView.Id"/> (design 33 §5f).</summary>
@@ -407,6 +413,7 @@ namespace Odyssey.Hud
             Thing = ThingId.None;
             Corpse = 0;
             Tombstoned = false;
+            _corpseFor = 0;
         }
 
         CellRef _cell;
@@ -488,12 +495,19 @@ namespace Odyssey.Hud
                 ? ColonistNames.Of(corpse.RollSeed, corpse.Pawn)
                 : WithArticle(PawnKindLabels.Label(corpse.Kind).ToLowerInvariant());
             Title = Registry.Label(CorpseKey) + " of " + of;
-            Subtitle = colonist ? "colonist" : hostile ? "hostile" : "animal";
+            Subtitle = colonist ? ColonistWord : hostile ? HostileWord : AnimalWord;
             Job = Registry.Label(DeadKey) + " · since " + GameClock.HourOfDay(corpse.Tick).ToString("00")
                 + "h, day " + GameClock.DayOfMonth(corpse.Tick) + " of " + GameClock.MonthName(corpse.Tick);
         }
 
         const string DeadKey = "ui.combat.dead";
+
+        // What a pawn is, under its name, on the living pane and the corpse's alike: the
+        // registry's words lower-cased, once, so renaming a kind in icon-keys.csv renames it
+        // here too (RegistryTests.TheInspectPaneWritesNoPawnKindItself).
+        static readonly string ColonistWord = Registry.Label(PawnKindLabels.Colonist).ToLowerInvariant();
+        static readonly string HostileWord = Registry.Label("ui.pawn.hostile").ToLowerInvariant();
+        static readonly string AnimalWord = Registry.Label("ui.pawn.animal").ToLowerInvariant();
 
         static string WithArticle(string noun) =>
             noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
@@ -601,7 +615,7 @@ namespace Odyssey.Hud
                     Title = PawnKindLabels.Label(pawn.Kind);
                     if (IsAnimal)
                     {
-                        Subtitle = "animal";
+                        Subtitle = AnimalWord;
                         // Its own mark in the carried half of the cache, so a colonist's line and
                         // an animal's for the same job cannot be taken for each other.
                         if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity)
@@ -615,7 +629,7 @@ namespace Odyssey.Hud
                     else
                     {
                         // A marauder's job is a person's job — fighting, mostly — in a person's words.
-                        Subtitle = "hostile";
+                        Subtitle = HostileWord;
                         SetJob(snapshot, pawn);
                         JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     }
@@ -628,7 +642,7 @@ namespace Odyssey.Hud
                 {
                     Tombstoned = false;
                     Title = ColonistNames.Of(snapshot, pawn.Id);
-                    Subtitle = "colonist";
+                    Subtitle = ColonistWord;
                     SetJob(snapshot, pawn);
                     JobIconKey = JobLabels.IconKey(pawn.JobDef);
                     Food = pawn.Food;

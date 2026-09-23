@@ -87,9 +87,12 @@ namespace Odyssey.Tests.Hud
         {
             InspectModel pane = Corpse(7);
             Assert.That(pane.Job, Is.EqualTo(Registry.Label("ui.combat.dead") + " · since 07h, day 3 of Larkspur"));
-            Assert.That(pane.Subtitle, Is.EqualTo("colonist"), "what it was");
-            Assert.That(Corpse(8).Subtitle, Is.EqualTo("animal"));
-            Assert.That(Corpse(9).Subtitle, Is.EqualTo("hostile"));
+            // The registry's words, lower-cased, as the living pane says them: a renamed kind is
+            // renamed on the corpse too (RegistryTests.TheInspectPaneWritesNoPawnKindItself).
+            Assert.That(pane.Subtitle, Is.EqualTo(Registry.Label("ui.pawn.colonist").ToLowerInvariant()), "what it was");
+            Assert.That(Corpse(8).Subtitle, Is.EqualTo(Registry.Label("ui.pawn.animal").ToLowerInvariant()));
+            Assert.That(Corpse(9).Subtitle, Is.EqualTo(Registry.Label("ui.pawn.hostile").ToLowerInvariant()));
+            Assert.That(pane.Subtitle, Is.EqualTo("colonist"), "the words themselves did not change");
         }
 
         /// <summary>
@@ -104,6 +107,40 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(Board());
             Assert.That(pane.Title, Is.EqualTo(Registry.Label(InspectModel.CorpseKey)));
             Assert.That(pane.Job, Is.Empty);
+        }
+
+        /// <summary>
+        /// The pane is one long-lived model, and a corpse's three strings are composed once per
+        /// selection. Before the fix (review, 2026-09-23) "once" outlived the selection: click a
+        /// corpse, then a colonist or a cell, then the same corpse, and the corpse's pane wore the
+        /// colonist's name, kind and activity, because the corpse cache still said it had written
+        /// them. The control is the colonist's own pane in between, which must differ.
+        /// </summary>
+        [Test]
+        public void ACorpseChosenAgainAfterSomethingElseIsNamedAgain()
+        {
+            WorldSnapshot frame = Board();
+            InspectModel pane = Corpse(7, frame);
+            string title = pane.Title, subtitle = pane.Subtitle, job = pane.Job;
+
+            pane.SetColonist(Ada);
+            pane.Refresh(frame);
+            Assert.That(pane.Title, Is.Not.EqualTo(title), "the control: the colonist's pane wrote its own name");
+            pane.SetCorpse(7);
+            pane.Refresh(frame);
+            Assert.That((pane.Title, pane.Subtitle, pane.Job), Is.EqualTo((title, subtitle, job)), "after a colonist");
+
+            pane.SetCell(new CellRef(1, 1, 1));
+            pane.Refresh(frame);
+            pane.SetCorpse(7);
+            pane.Refresh(frame);
+            Assert.That((pane.Title, pane.Subtitle, pane.Job), Is.EqualTo((title, subtitle, job)), "after a cell");
+
+            pane.ClearSelection();
+            pane.Refresh(frame);
+            pane.SetCorpse(7);
+            pane.Refresh(frame);
+            Assert.That((pane.Title, pane.Subtitle, pane.Job), Is.EqualTo((title, subtitle, job)), "after nothing");
         }
 
         [Test]
