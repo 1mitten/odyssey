@@ -780,7 +780,8 @@ figure leased mid-fight shows them — with no begin clip, because it did not se
 
 **A react never cuts off the figure's own swing**, which the simulation will still land on its tick;
 a stagger does, because a stunned attacker's wound-up swing does not land (§5j). Going down or
-getting up ends any one-shot.
+getting up ends any one-shot. *Superseded by §9a (2026-09-24): this rule is why the owner saw no
+reaction to most blows. A reaction now runs beside the swing and every landed blow is drawn.*
 
 **The work stroke never plays for `Job_AttackMelee`** (`PawnFigureDirector.PlaysWorkStroke`): the
 attack driver's work focus during the wind-up turns the figure to its target and does nothing else.
@@ -1755,3 +1756,141 @@ Played on `claude/combat-c2-polish`. The owner's asks and the interview's answer
 | *"We'll make an entry for gear later to include equipped weapon (seam for later)"* | A **seam only**: a Unity-free `GearModel` that lists what the colonist holds (the equipped weapon, drawn or at the hip). The Gear tab stays disabled; later work fills it. | §9d |
 | *"You could still attack a pig after it died — make a guard for this — check marauder does this"* | **A dead pawn is never a target.** The attack order is refused on a dead pawn or a corpse, an attack job ends the tick its target dies or leaves the board, and hostile, animal and drafted target choice never picks the dead. A guard test runs every tick of mixed fights to the death and fails if anybody swings at, walks to, or keeps a job against a dead pawn. The same guard covers marauders. | §9e |
 | *"Their health needs to be also displayed on their colony stats"* | **The colonist cards along the top get a fourth bar, health, always shown**, in the overhead bar's colours (green, amber below 60%, red below 40%). A downed colonist's card shows it empty and red, with *Downed*. | §9f |
+
+### 9a. Reactions (built 2026-09-24, `claude/combat-react`)
+
+Owner: *"When a person is hit — there should be a reaction ... there needs to be visual reactions to
+hits."* Presentation only, against the contracts cut at `29864457` with a scripted event feed; the
+simulation half of §9b is another lane's. No simulation, save, hash or golden changed.
+
+**Why the owner saw no reaction.** Lane B had built hit-react and stagger rows (§6B), and they were
+routed to the struck figure, not the attacker. They were refused. Measured, not read:
+
+- **`React` returned without drawing anything while the struck figure's own swing was showing**
+  (§6B: "a react never cuts off the figure's own swing"), and a `Strike` started a swing over
+  whatever was showing, so the next swing cut a react off.
+- **In a fight the struck body is nearly always in its own swing.** Both fighters swing at each other
+  on cooldowns of 96–150 ticks, and a drawn swing is long, because the pack's clip is timed so its
+  impact lands on the wind-up tick: a light swing is drawn for 2.0–4.0 times its wind-up, a heavy
+  one 1.6–2.1 times, a computed punch 1.8 times. A machete (22 / 96) is drawn for about 64 % of its
+  cycle, and equal cooldowns lock the two fighters in phase.
+- **On real fights.** A probe on the fast tier (a drafted colonist ordered on to a marauder with the
+  machete, eight fights over three seeds and every weapon, the published tape with lane B's rule
+  applied to it; not committed): of **193 landed blows, 86 fell inside the target's own drawn swing
+  and drew nothing** (30–70 % per fight), and of the 99 that did start, the target's next swing began
+  within 20 ticks (a third of a second at speed one) for 47. **52 of 193 blows (27 %) drew a reaction
+  that lasted a third of a second at speed one.** At speed three, where a reaction runs on the
+  frame's seconds and a swing on ticks, almost none did.
+- **The stagger, which did cut through a swing, almost never fired**: its threshold was 10 points
+  and only the arc blade reaches it (bat 7, crowbar 8, machete 8, each ± 20 %).
+- **Not the cause:** subtlety (the pack's react is a whole-body clip), and the attacker taking the
+  reaction (the target's figure was the one asked).
+- **The same rule in the duel harness** (`CombatReactionsTests.LaneBsRuleLeftMostBlowsUnseen`, every
+  weapon pairing and phase offset in the content's numbers): **1,512 of 2,274 blows drew under
+  0.3 s of reaction at speed one, and 2,034 of 2,195 at speed three.**
+
+**What plays when** (`Odyssey.Hud.CombatReactions`, Unity-free; the figure only asks):
+
+| Event | The struck figure draws |
+|---|---|
+| `Hit` under 12 points | A **flinch**: the pack's `A_Hit_{F,B,L,R}_React` (0.87 s) on the clip layer, or computed for an animal and without the pack — the chest folded and the head snapped away from the blow, pushed 6 cm, over 0.4 s, peaking at 0.06 s |
+| `Hit` of 12 points or more (`Amount >= 12000`), any `Critical` | A **stagger**: `A_Hit_{side}_Stagger` (1.1 s), or computed over 0.9 s, rocked back 0.35 m (half a step) and recovered. Drawn only: the pawn stays on its tile. A critical arrives on the tick of its hit and upgrades that hit's flinch |
+| `Stun` | A stagger that ends the figure's own swing, which a stunned pawn does not land (§5j). With the pack, the stun's own begin clip, started by the flag, still wins |
+| `KnockedBack` | A **slide** from the cell in `Amount` to `Cell`, along the line of the blow, over 0.25 s: thrown and slowing along the ground, falling (t²) if it lands a layer down, so it goes over the lip before it drops. The frame the event is read was already posed on the landing tile, so the figure is put back where the blow found it that frame, and the speed that one-frame jump measured is forgotten |
+| `PawnFlags.KnockedDown` | Drawn as down (`CombatReactions.Floored`): the knock-down row's `Begin`, its `Loop` while the flag is up, its `End` as it stands. Without the pack, and for an animal, the sleeper's lie eased over 0.45 s is the computed topple and rise |
+
+The side is `CombatReactions.SideOf` — quarters at 45°, from the attacker's figure where it has one,
+else its cell, else the front. `CombatPose.SideOf` now answers through it.
+
+**Who has the clip layer.** A reaction is no longer a one-shot. It runs on its own track beside the
+figure's swing (`ReactionTrack`), and each frame `ReactionTrack.Show` decides between them:
+
+- **The strongest reaction wins**: knock-down, then stagger, then flinch. One as strong or stronger
+  restarts it from its own side, and a weaker one is let go while it runs.
+- **With the figure's own swing live, the swing has the layer from 0.35 of its wind-up before its
+  impact to 0.25 after, and the reaction has it the rest of the time.** A blow taken early in the
+  wind-up interrupts it, and the swing comes back in time to be seen landing. A blow taken in the
+  follow-through cuts the follow-through short.
+- **Once the swing takes the layer back, the reaction does not return to it.** There is one
+  hand-over per blow, not a flicker between two clips. From then on the reaction is laid on as the
+  computed flinch, over the swing and over the idle if it outlives the swing. So every blow is seen
+  for its whole flinch, whatever took the layer.
+- **A swing may cut a get-up short**, and so may a blow. The simulation has the pawn on its feet and
+  swinging while the pack's two-second get-up would still be playing.
+
+`TryGetFight`'s role now reports **what the layer shows** (`CombatState.Shown`), not the one-shot
+underneath. `TryGetReaction` reports the track, whether the flinch is laid over this frame, and
+whether a slide is running.
+
+**Tests.** Fast tier, `CombatReactionsTests` (14; Hud 865, Sim 1,196, all green). They cover:
+
+- which reaction each event asks for, and the 12-point line;
+- floored;
+- the four sides and their boundaries;
+- every computed shape moving away from the blow and settling;
+- the track's strongest-wins rule and a pause;
+- the arbitration window;
+- the one hand-over;
+- the slide's endpoints, monotony and drop over the lip.
+
+The main test is **`InADuelEveryLandedBlowIsSeen`**. It steps duels on the content's numbers frame
+by frame, in the director's order (pose, then the frame's events). It covers five weapon pairings,
+every 5-tick phase offset and speeds one and three, with the pack and without it. **Every one of the
+2,195–2,274 blows is seen for at least 0.3 s of its first 0.4 s.**
+
+Six mutations were each seen to fail the test that owns them:
+
+- the swing always keeps the layer;
+- no computed shape, so no overlay: the duel fails;
+- an equal reaction not restarting: the duel at speed three fails;
+- lane B's 10-point threshold;
+- a linear drop;
+- the overlay only over the swing. This was the first version of the hand-over rule, and the duel
+  caught it: 537 of 2,195 blows at speed three were under 0.3 s.
+
+EditMode, **written without a Unity run**, compiled with `dotnet` against the editor's module DLLs:
+`CombatReactionDrawnTests` (6). Each drives `CombatFeedback.Consume` with a scripted
+`CombatEventView` stream, as the bootstrap does:
+
+- struck early in her own wind-up, she flinches on the Hit frame, and the next frame shows
+  `HitReact` over the swing: the clip easing in, or the computed flinch;
+- struck round her own impact, her punch keeps the layer and the flinch is laid over it;
+- a critical staggers;
+- a knock-back is drawn at the from-cell on the frame it is read, between the cells seven frames on,
+  and on the landing tile after the slide;
+- knocked down, the head is on the ground, and a swing cuts the get-up short;
+- a hog flinches, computed.
+
+The negative control for the first is lane B's `React` and is **named, not yet seen to fail** there.
+Its fast-tier twin is.
+
+**Do not undo by tidying.**
+- **A reaction is not a one-shot.** Put it back in `CombatState.Action` and it is refused by, or cut
+  off by, the figure's own swing — which in a fight is always there. That is the bug the owner
+  reported.
+- **The swing's window round its impact stays the swing's.** The simulation lands that blow whatever
+  is drawn. A reaction drawn over it shows a hit landing out of no swing.
+- **The flinch laid over is what makes "every blow" true.** The window alone leaves a blow taken
+  inside it unseen, and so does the hand-over without the overlay.
+- **One hand-over per blow.** A reaction that takes the layer back after the swing's window pops
+  into the tail of its own clip.
+- **The slide is drawing only.** The pawn is on the landing tile from the blow's tick. Nothing may
+  read the drawn position back.
+
+**Open, for the integrator and the playtest.**
+- Every number here is INVENTED and unseen:
+  - the window, 0.35 before and 0.25 after;
+  - the flinch, 14° chest, 20° head and 6 cm;
+  - the stagger, 26°, 14° and 0.35 m;
+  - the slide, 0.25 s.
+- The pack's stagger plays at its authored 1.1 s, not the 0.9 s asked for.
+- At speed three the knock-down's ~1.5 s flag lasts half a second of real time. That is shorter
+  than the pack's 0.73 s `Begin`, so the get-up starts before the fall has finished. Every held
+  clip runs on the frame's seconds (§6B).
+- A knocked-down colonist keeps her weapon in her hand. `ShowWeapon` hides it for `IsDowned` and for
+  sleep, not for `KnockedDown`. `PawnFigureDirector.Weapons.cs` is not this lane's.
+- A knocked-down pawn past the figure cap is drawn standing by the instanced pass, as a downed one is.
+- The flinch over a pack swing folds the chest and head after the clip. The arms are counter-turned
+  by the chest's fold, as the computed swings do, so the blade stays where the clip put it.
+- Unity has compiled none of it. PlayMode, the frame budget in a fight and the player build have not
+  been run.
