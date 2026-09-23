@@ -213,6 +213,7 @@ this file.
 | The Work tab, priorities, the rotated headers | `docs/design/27-work-tab.md` |
 | VSync, frame cap, render scale, resolution, the URP copy | `docs/design/27-graphics-settings.md` |
 | Who may stand where a building goes, the eviction rule | `docs/design/30-nobody-in-a-wall.md` |
+| Power: lines, nets, the generator, the heater, showing the lines | `docs/design/32-power.md` |
 | Walls, sites, materials, the build botch | `docs/design/15-building.md` |
 | Cancel, deconstruct | `docs/design/16-cancel-and-deconstruct.md` |
 | The Build palette's three layouts | `docs/design/17-build-palette-layouts.md` |
