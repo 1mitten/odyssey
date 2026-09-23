@@ -357,6 +357,8 @@ namespace Odyssey.Hud
             Tabs.Clear();
             Commands.Clear();
             _bedUnderPane = false;
+            _powerSwitchUnderPane = false;
+            _orderActionUnderPane = false;
             IsStore = false;
             IsBuiltStore = false;
             StoreSummary = string.Empty;
@@ -470,10 +472,18 @@ namespace Odyssey.Hud
                 if (DescribeSiteAt(snapshot, _cell))
                 {
                     // A site leads and is the whole answer: the tile under a blueprint is the
-                    // least interesting thing about the click.
+                    // least interesting thing about the click — except the one thing a player
+                    // does with an order they have changed their mind about, which is cancel it
+                    // (owner, 2026-09-23). One row, in the cancel tool's red, taking the building
+                    // order only: a line ordered through the same cell has a pane of its own.
                     CellRows.Clear();
                     _cellRowsFor = -1;
                     CellIconKey = "ui.overlay.zones";
+                    _orderActionUnderPane = true;
+                    OrderAction = IntentKind.CancelBuilding;
+                    OrderActionA = 1;
+                    Row(0, OrderActionRow, Registry.Label(PaletteTools.Cancel),
+                        OrderActionTint(IntentKind.CancelBuilding, keep: false));
                     return;
                 }
 
@@ -562,19 +572,28 @@ namespace Odyssey.Hud
         void SetSiteLine(SiteView site, string stuff)
         {
             int seconds = site.IsFrame ? (site.WorkTotal - site.WorkDone + 59) / 60 : -1;
+            int delivered = site.Delivered * 1_000 + site.PartsDelivered;
             if (_siteFramedFor == site.IsFrame
-                && _siteDeliveredFor == site.Delivered
+                && _siteDeliveredFor == delivered
                 && _siteSecondsFor == seconds) return;
 
             _siteFramedFor = site.IsFrame;
-            _siteDeliveredFor = site.Delivered;
+            _siteDeliveredFor = delivered;
             _siteSecondsFor = seconds;
 
             // The material leads while it is missing, because that is the actionable half: a site
             // with no wood is not slow, it is stuck.
+            // A second payment follows the first (design 32 §14): the scrap metal a generator
+            // still wants is said once its wood is in — "20 of 30 wood" while that is the stuck
+            // half, then "4 of 20 scrap metal".
+            string parts = site.PartsItem >= 0
+                ? Registry.Label(ItemLabels.IconKey(site.PartsItem)).ToLowerInvariant()
+                : string.Empty;
             Site = site.IsFrame
                 ? "about " + Seconds(site.WorkTotal - site.WorkDone) + " left"
-                : $"{site.Delivered} of {site.Cost} {stuff} delivered";
+                : site.Delivered < site.Cost || site.PartsCost == 0
+                    ? $"{site.Delivered} of {site.Cost} {stuff} delivered"
+                    : $"{site.PartsDelivered} of {site.PartsCost} {parts} delivered";
         }
 
         /// <summary>
@@ -699,6 +718,18 @@ namespace Odyssey.Hud
                 tileIcon = "ui.overlay.zones";
             }
 
+            // A cell holding nothing but a line — an order over open ground, or a laid line in the
+            // air while the lines are shown — is about the line (design 32 §14): the ground under
+            // it is what a click on the ground means, and this click landed on the line.
+            if (edifice.Length == 0 && detail.FloorStuff == StuffHandle.None)
+                foreach (ConduitView line in snapshot.Conduits)
+                    if (line.CellIndex == detail.CellIndex)
+                    {
+                        tileTitle = Registry.Label(PaletteTools.Conduit);
+                        tileIcon = PaletteTools.Conduit;
+                        break;
+                    }
+
             if (!IsStore)
             {
                 Title = tileTitle;
@@ -755,6 +786,79 @@ namespace Odyssey.Hud
         public bool BedUnderPane => _bedUnderPane;
 
         bool _bedUnderPane;
+
+        /// <summary>
+        /// Whether the tile under the pane is a power building whose switch row can be pressed
+        /// (design 32 §5) — the pane's second interactive fact, kept exactly as the bed's is:
+        /// cleared every refresh, set only by <see cref="SetCellRows"/> and set <b>above</b> its
+        /// early return, so the control cannot die on the second refresh and go on looking alive.
+        /// </summary>
+        public bool PowerSwitchUnderPane => _powerSwitchUnderPane;
+
+        /// <summary>Whether the building under the pane is switched on; what a press on its switch row reverses.</summary>
+        public bool PowerSwitchOn { get; private set; }
+
+        bool _powerSwitchUnderPane;
+
+        /// <summary>
+        /// Whether the pane holds an order whose action row can be pressed: a building site's
+        /// Cancel, or a line's — Cancel an order, Remove a laid line, Keep one marked to come up
+        /// (design 32 §14; owner, 2026-09-23: "the same for any building blueprint that has been
+        /// put down so it can be cancelled"). Kept as the switch's and the bed's flags are —
+        /// cleared every refresh, set before any early return.
+        /// </summary>
+        public bool OrderActionUnderPane => _orderActionUnderPane;
+
+        /// <summary>What a press on the order row sends, about <see cref="Cell"/>, with <see cref="OrderActionA"/>.</summary>
+        public IntentKind OrderAction { get; private set; }
+
+        /// <summary>The intent's <c>A</c>: 1 on a building site's cancel, which takes the building order only.</summary>
+        public int OrderActionA { get; private set; }
+
+        bool _orderActionUnderPane;
+
+        /// <summary>The order row's key, which the shell compares against rather than against a word.</summary>
+        public const string OrderActionRow = "order";
+
+        /// <summary>
+        /// The colour an order's action is drawn in: a cancel in the cancel tool's red, taking a
+        /// line up in the remove tool's amber, and keeping a marked line in no colour of its own.
+        /// <c>OrderColours</c> is the one owner of an order's hue, so the button and the tool the
+        /// player would otherwise reach for are the same colour.
+        /// </summary>
+        public static HudColour? OrderActionTint(IntentKind action, bool keep) =>
+            keep ? (HudColour?)null
+            : action == IntentKind.RemoveConduit ? OrderColours.Hue(DesignateTool.RemoveConduit)
+            : OrderColours.Hue(DesignateTool.Cancel);
+
+        /// <summary>Everything the power rows quote, folded into one number for the rebuild guard.</summary>
+        int _cellRowsPower;
+
+        /// <summary>The switch row's key, which the shell compares against rather than against a word.</summary>
+        public const string PowerSwitchRow = "switch";
+
+        /// <summary>
+        /// The power building and net at this cell, folded to one number for the guard — every
+        /// field the rows below print, so a hopper going down a unit or a net going dark rebuilds
+        /// the rows and nothing else does.
+        /// </summary>
+        static int PowerSignature(WorldSnapshot snapshot, int cell)
+        {
+            int sig = 17;
+            if (snapshot.TryGetPowerDevice(cell, out PowerDeviceView d))
+            {
+                sig = sig * 31 + (d.On ? 1 : 2);
+                sig = sig * 31 + (d.Powered ? 1 : 2);
+                sig = sig * 31 + d.NetKey;
+                sig = sig * 31 + d.LoadW;
+                sig = sig * 31 + d.FuelMilli / 1_000;
+                if (snapshot.TryGetPowerNet(d.NetKey, out PowerNetView net))
+                    sig = sig * 31 + net.SupplyW * 7 + net.DemandW * 13 + (int)net.State;
+            }
+            foreach (ConduitView line in snapshot.Conduits)
+                if (line.CellIndex == cell) sig = sig * 31 + (int)line.Kind * 3 + (int)line.State + 1_000;
+            return sig;
+        }
 
         /// <summary>
         /// The selected cell is inside a storage zone, so the pane is about the <b>store</b>: the
@@ -820,6 +924,20 @@ namespace Odyssey.Hud
             // piece of quality-bearing furniture would, and the row it grew would open the *bed*
             // picker over it. Three characters against a report.
             _bedUnderPane = detail.EdificeQuality > 0 && detail.Edifice == EdificeHandle.Bed;
+            if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView switchable))
+            {
+                _powerSwitchUnderPane = true;
+                PowerSwitchOn = switchable.On;
+            }
+            int powerSignature = PowerSignature(snapshot, detail.CellIndex);
+            foreach (ConduitView held in snapshot.Conduits)
+            {
+                if (held.CellIndex != detail.CellIndex) continue;
+                _orderActionUnderPane = true;
+                OrderAction = held.Kind == ConduitKind.Built ? IntentKind.RemoveConduit : IntentKind.CancelConduit;
+                OrderActionA = 0;
+                break;
+            }
             // Set beside the bed's flag and **above** the early return below, for the reason that
             // whole paragraph exists: a flag cleared every refresh and set only after the return
             // is a control that dies on the second refresh and goes on looking alive.
@@ -844,7 +962,8 @@ namespace Odyssey.Hud
                 && _cellRowsStoredUnits == detail.StoredUnits
                 && _cellRowsStoredDef == detail.StoredDef
                 && _cellRowsIndoors == detail.IsIndoors
-                && _cellRowsTemp == detail.AmbientTempC) return;
+                && _cellRowsTemp == detail.AmbientTempC
+                && _cellRowsPower == powerSignature) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -866,6 +985,7 @@ namespace Odyssey.Hud
             _cellRowsStoredDef = detail.StoredDef;
             _cellRowsIndoors = detail.IsIndoors;
             _cellRowsTemp = detail.AmbientTempC;
+            _cellRowsPower = powerSignature;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -893,6 +1013,47 @@ namespace Odyssey.Hud
                 Row(n++, "owner", detail.EdificeOwner > 0
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "Assign…");
+            }
+
+            // A power building's own facts (design 32 §10), beside what it is: what it is doing —
+            // the actionable clause, so it leads — its hopper, its net's balance, and the switch,
+            // which the shell turns a press on into the switch intent, as it does the bed's owner.
+            if (snapshot.TryGetPowerDevice(detail.CellIndex, out PowerDeviceView device))
+            {
+                bool netKnown = snapshot.TryGetPowerNet(device.NetKey, out PowerNetView net);
+                HudColour? tint = !device.On || device.NetKey < 0 ? HudTheme.TextMeta
+                    : device.Role == PowerRole.Generator && device.BurnsFuel && device.FuelMilli <= 0 ? HudTheme.Bad
+                    : netKnown ? PowerLabels.Colour(net.State) : (HudColour?)null;
+                Row(n++, "power", PowerLabels.Status(device, netKnown, net), tint);
+                if (device.BurnsFuel)
+                    Row(n++, "fuel", PowerLabels.Fuel(device),
+                        device.FuelMilli * 2 < device.FuelCapacityMilli ? HudTheme.Warn : (HudColour?)null);
+                if (netKnown)
+                    Row(n++, "net", PowerLabels.Balance(net) + " — " + PowerLabels.State(net.State),
+                        PowerLabels.Colour(net.State));
+                Row(n++, PowerSwitchRow, Registry.Label(device.On ? "ui.command.switchoff" : "ui.command.switchon"));
+            }
+
+            // A line in the cell, when it is drawn: laid (and on what), ordered, or marked to come
+            // up. Silent while the lines are hidden — a hidden thing the pane announced would be
+            // the pane contradicting the picture.
+            foreach (ConduitView line in snapshot.Conduits)
+            {
+                if (line.CellIndex != detail.CellIndex) continue;
+                string lineSays = line.Kind == ConduitKind.Ordered ? "ordered"
+                    : line.Kind == ConduitKind.Marked ? "marked to come up"
+                    : "laid — " + PowerLabels.State(line.State);
+                if (line.Kind == ConduitKind.Built && snapshot.TryGetPowerNet(line.NetKey, out PowerNetView lineNet))
+                    lineSays += ", " + PowerLabels.Balance(lineNet);
+                Row(n++, "conduit", lineSays, line.Kind == ConduitKind.Built ? PowerLabels.Colour(line.State) : (HudColour?)null);
+                // The line's own action, which the shell turns a press on into an intent: cancel
+                // an order, take a laid line up, or keep one that is marked (design 32 §14).
+                bool keep = line.Kind == ConduitKind.Marked;
+                Row(n++, OrderActionRow, line.Kind == ConduitKind.Ordered ? Registry.Label(PaletteTools.Cancel)
+                    : keep ? "Keep it"
+                    : Registry.Label(PaletteTools.Unwire),
+                    OrderActionTint(line.Kind == ConduitKind.Built ? IntentKind.RemoveConduit : IntentKind.CancelConduit, keep));
+                break;
             }
 
             // A field's own answer, beside the ground's (owner, 2026-09-18 - clicking a growing

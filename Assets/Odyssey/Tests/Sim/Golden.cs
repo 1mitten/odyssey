@@ -366,6 +366,26 @@ namespace Odyssey.Tests.Sim
         /// flag itself is hashed only while it is set, so it moved nothing. Measured with
         /// <c>GoldenColonyProbe</c> run on <c>claude/wildlife</c> and on this branch: the two
         /// outputs diff clean for all three colonies.</para>
+        ///
+        /// <para><b>Re-baked an eighth time, 2026-09-23, by power (design 32) — the first kind
+        /// again.</b> Three job defs were appended (lay a line, take one up, refuel), and the job
+        /// system hashes a completed and a failed counter for every def, so every board's walk
+        /// gains six zeros and all six numbers move before a tick runs. The power grid itself adds
+        /// nothing: it is empty on all three boards, and an empty grid contributes nothing to the
+        /// hash by design (<c>PowerTests.AnEmptyGridAddsNothingToTheHashAndOneLineDoes</c>).</para>
+        ///
+        /// <para><b>Measured by the sharpest instrument available rather than the census:</b> the
+        /// job system's hash was cut back, uncommitted, to the first twelve defs — the pre-power
+        /// set — and all three boards then matched the <i>previous</i> committed values exactly,
+        /// generated and simulated. So nothing but those six zeros moved: the new givers never
+        /// fired and the new scan order changed no colonist's job on any board.</para>
+        ///
+        /// <para><b>Re-baked again on 2026-09-24, merging main into power.</b> Main had re-baked
+        /// for the draft's two jobs and this branch for power's three; the merged job table has
+        /// all five (drafting keeps 12 and 13, power follows at 14 to 16), so neither side's
+        /// numbers were produced by the merged code. <c>GoldenColonyProbe</c> run on the merge and
+        /// on <c>origin/main</c> (ee1f9fdc) <b>diffs clean</b> on all three boards: the hash sees
+        /// three more pairs of zeros, and no colony does anything different.</para>
         /// </remarks>
         /// <para><b>All six moved again on 2026-09-23, on the merge of temperature into a main
         /// that had gained animals, and neither side's numbers were right for the merged code.</b>
@@ -388,8 +408,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 12790787154328167162UL,
-            Simulated = 3706175734146959988UL,
+            Generated = 5251020562371429562UL,
+            Simulated = 7418675576234737140UL,
         };
 
         /// <summary>
@@ -405,8 +425,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 16220491228864799437UL,
-            Simulated = 15373625479848544007UL,
+            Generated = 3881740183191474605UL,
+            Simulated = 6116194826114977703UL,
         };
 
         /// <summary>
@@ -442,8 +462,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 15126826616277547412UL,
-            Simulated = 3524714457912801410UL,
+            Generated = 5742139862679591188UL,
+            Simulated = 2871813967894379842UL,
         };
     }
 }

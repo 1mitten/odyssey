@@ -138,6 +138,12 @@ namespace Odyssey.Hud
         public const string IdleKey = "ui.alert.idle";
         public const string StoreStuckKey = "ui.alert.storagestuck";
 
+        /// <summary>A net has gone dark with something on it wanting power (design 32 §10).</summary>
+        public const string PowerLossKey = "ui.alert.powerloss";
+
+        /// <summary>A switched-on generator is empty and its net wants power.</summary>
+        public const string NoFuelKey = "ui.alert.nofuel";
+
         /// <summary>
         /// Seconds a store must be marked for removal and still full before the panel says so.
         ///
@@ -150,7 +156,7 @@ namespace Odyssey.Hud
         public const double StoreStuckSustain = 10.0;
 
         /// <summary>Every key this panel can put on screen, for the registry test.</summary>
-        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey };
+        public static readonly string[] IconKeys = { StarveKey, BreakKey, IdleKey, StoreStuckKey, PowerLossKey, NoFuelKey };
 
         public readonly List<AlertRow> Rows = new List<AlertRow>();
 
@@ -164,6 +170,9 @@ namespace Odyssey.Hud
         double _storeStuckSince = -1.0;
         bool _wasStoreStuck;
 
+        int _wasDark = -1;
+        int _wasShortW = -1;
+        int _wasDry = -1;
         int _wasStarving = -1;
         int _wasBreaking = -1;
         bool _wasIdle;
@@ -271,11 +280,40 @@ namespace Odyssey.Hud
 
             bool storeStuck = _storeStuckSince >= 0.0 && seconds - _storeStuckSince >= StoreStuckSustain;
 
+            // Power (design 32 §10). No sustain on either: a dark net is a fact on the frame it
+            // happens, and the whole-net rule means it does not flicker — demand counts what is
+            // switched on, not what is powered, so a dark net stays dark until something changes.
+            int dark = 0, shortW = 0, dry = 0;
+            int darkCell = -1, dryCell = -1;
+            System.ReadOnlySpan<PowerNetView> nets = snapshot.PowerNets;
+            for (int i = 0; i < nets.Length; i++)
+            {
+                if (nets[i].State != PowerNetState.Dark) continue;
+                dark++;
+                shortW += nets[i].DemandW - nets[i].SupplyW;
+            }
+            System.ReadOnlySpan<PowerDeviceView> devices = snapshot.PowerDevices;
+            for (int i = 0; i < devices.Length; i++)
+            {
+                PowerDeviceView d = devices[i];
+                if (darkCell < 0 && d.Role == PowerRole.Consumer && d.On && !d.Powered
+                    && snapshot.TryGetPowerNet(d.NetKey, out PowerNetView dn) && dn.State == PowerNetState.Dark)
+                    darkCell = d.HeadCell;
+                if (d.Role != PowerRole.Generator || !d.On || !d.BurnsFuel || d.FuelMilli > 0) continue;
+                if (!snapshot.TryGetPowerNet(d.NetKey, out PowerNetView n) || n.DemandW <= 0) continue;
+                dry++;
+                if (dryCell < 0) dryCell = d.HeadCell;
+            }
+
             if (starving == _wasStarving && breaking == _wasBreaking &&
+                dark == _wasDark && shortW == _wasShortW && dry == _wasDry &&
                 idleStands == _wasIdle && storeStuck == _wasStoreStuck && pawns.Length == _wasColony &&
                 _latchVersion == _wasLatchVersion && _dismissVersion == _wasDismissVersion)
                 return;
 
+            _wasDark = dark;
+            _wasShortW = shortW;
+            _wasDry = dry;
             _wasStarving = starving;
             _wasBreaking = breaking;
             _wasIdle = idleStands;
@@ -325,6 +363,40 @@ namespace Odyssey.Hud
                     }
                 }
             }
+
+            // A dark net is Danger: whatever it was keeping warm is going cold now. The cell is a
+            // consumer on it, so a click on the row goes to what has stopped, which is where the
+            // player's eyes want to be.
+            if (dark > 0)
+            {
+                CellRef? at = darkCell >= 0 ? snapshot.Size.FromIndex(darkCell) : (CellRef?)null;
+                int dismissKey = AlertRow.ComputeDismissKey(PowerLossKey, default, null);
+                if (!_dismissed.Contains(dismissKey))
+                    Rows.Add(new AlertRow(
+                        PowerLossKey,
+                        Registry.Label(PowerLossKey),
+                        dark == 1 ? string.Empty : " × " + dark,
+                        AlertSeverity.Danger,
+                        count: dark,
+                        cell: at,
+                        detail: PowerLabels.Watts(shortW) + " short"));
+            }
+            else _dismissed.Remove(AlertRow.ComputeDismissKey(PowerLossKey, default, null));
+
+            if (dry > 0)
+            {
+                CellRef? at = dryCell >= 0 ? snapshot.Size.FromIndex(dryCell) : (CellRef?)null;
+                int dismissKey = AlertRow.ComputeDismissKey(NoFuelKey, default, null);
+                if (!_dismissed.Contains(dismissKey))
+                    Rows.Add(new AlertRow(
+                        NoFuelKey,
+                        Registry.Label(NoFuelKey),
+                        dry == 1 ? string.Empty : " × " + dry,
+                        AlertSeverity.Warning,
+                        count: dry,
+                        cell: at));
+            }
+            else _dismissed.Remove(AlertRow.ComputeDismissKey(NoFuelKey, default, null));
 
             if (storeStuck)
                 Rows.Add(new AlertRow(

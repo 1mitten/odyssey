@@ -40,7 +40,16 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A drafted colonist walking to the cell the player named (design 33 §2c).</summary>
         public const int Goto = 13;
 
-        public const int Count = 14;
+        /// <summary>Fetch one wood and lay an ordered power line with it (design 32 §3).</summary>
+        public const int LayConduit = 14;
+
+        /// <summary>Take up a power line marked for removal.</summary>
+        public const int RemoveConduit = 15;
+
+        /// <summary>Carry fuel to a generator below half and fill it (design 32 §6).</summary>
+        public const int Refuel = 16;
+
+        public const int Count = 17;
     }
 
     /// <summary>
@@ -207,7 +216,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>A stack of meals falling out of the sky on to whatever is under it.</summary>
         public const int SupplyDrop = 0;
 
-        public const int Count = 1;
+        /// <summary>A stack of scrap metal falling out of the sky (design 32 §14): the supply drop's worker, another cargo.</summary>
+        public const int ScrapDrop = 1;
+
+        public const int Count = 2;
     }
 
     /// <summary>
@@ -287,7 +299,15 @@ namespace Odyssey.Sim.Contracts
         /// the literal beside the ones it must not collide with (design 28 §7).</summary>
         public const int Campfire = 14;
 
-        public const int Count = 15;
+        /// <summary>The wood-fired generator (design 32 §6): two cells, the first thing that makes
+        /// power. 15, after the campfire; see <c>CoreContent.EdificeGenerator</c>.</summary>
+        public const int Generator = 15;
+
+        /// <summary>The electric heater (design 32 §7): one cell, the first thing that spends
+        /// power. See <c>CoreContent.EdificeHeater</c>.</summary>
+        public const int Heater = 16;
+
+        public const int Count = 17;
     }
 
     /// <summary>
@@ -359,7 +379,22 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public const int Campfire = 8;
 
-        public const int Count = 9;
+        /// <summary>
+        /// A power line (design 32 §3). <b>Not an edifice</b>: a line lives in its own per-cell
+        /// layer, so it can run through a wall or under a floor, and the order for one is handed
+        /// to the power grid rather than taking a construction site of its own. It is a building
+        /// handle all the same because it is armed, ghosted, dragged and ordered exactly as a wall
+        /// is — one intent, one cursor, one palette row.
+        /// </summary>
+        public const int Conduit = 9;
+
+        /// <summary>The wood-fired generator (design 32 §6).</summary>
+        public const int Generator = 10;
+
+        /// <summary>The electric heater (design 32 §7).</summary>
+        public const int Heater = 11;
+
+        public const int Count = 12;
     }
 
     /// <summary>

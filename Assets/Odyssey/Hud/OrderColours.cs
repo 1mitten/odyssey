@@ -113,6 +113,9 @@ namespace Odyssey.Hud
             // is not a transformation of the ground, so the order's colour and the result's can
             // be the same one.
             DesignateTool.Stockpile => StoreHue,
+            // Taking a line up is taking something apart, and says so in deconstruct's own amber:
+            // the two are the same act on two layers of one cell (design 32 §2a).
+            DesignateTool.RemoveConduit => HudTheme.Warn,
             _ => HudTheme.Accent,
         };
 

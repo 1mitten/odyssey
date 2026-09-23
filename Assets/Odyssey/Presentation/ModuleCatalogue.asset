@@ -713,6 +713,74 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.generator
+    shape: 4
+    prefab: {fileID: 1906143108443636, guid: 8c366b74a8be11d409236ded1f90f979, type: 3}
+    prefabName: SM_Prop_Generator_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 2.4, y: 4.9}
+    fitHeight: 2.1
+    fitStretch: 1
+    fitAgainstBack: 0
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.heater
+    shape: 4
+    prefab: {fileID: 1054224122226918, guid: 481f055a844be084eae4eefebdd9a49f, type: 3}
+    prefabName: SM_Prop_AirConditioningUnit_01
+    centreXZ: 1
+    baseAtY: 1
+    topAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    fitFootprint: {x: 2.4, y: 2.4}
+    fitHeight: 2.2
+    fitStretch: 0
+    fitAgainstBack: 1
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.slab
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}

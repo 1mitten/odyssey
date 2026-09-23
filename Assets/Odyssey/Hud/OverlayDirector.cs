@@ -26,5 +26,21 @@ namespace Odyssey.Hud
             DeveloperVisible = visible;
             Changed?.Invoke();
         }
+
+        /// <summary>
+        /// The power overlay (<c>ui.overlay.power</c>, design 32 §9): the lines shown whatever is
+        /// armed or selected. The first of A12's world channels to go live; the Menu's row is its
+        /// switch.
+        /// </summary>
+        public bool PowerVisible { get; private set; }
+
+        public void TogglePower() => SetPower(!PowerVisible);
+
+        public void SetPower(bool visible)
+        {
+            if (PowerVisible == visible) return;
+            PowerVisible = visible;
+            Changed?.Invoke();
+        }
     }
 }

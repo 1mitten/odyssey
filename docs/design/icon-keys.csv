@@ -1,5 +1,5 @@
 key,label,namespace,milestone,tooltip_seed
-ui.res.scrap,Scrap,ui.res,M1,Mixed unsorted salvage. Feeds the reclaimer
+ui.res.scrap,Scrap metal,ui.res,M1,"Salvaged metal. Power lines and machines are built from it"
 ui.res.rubble,Rubble,ui.res,M1,"Broken concrete and masonry. Cleared, not mined"
 ui.res.girder,Girder,ui.res,M1,"Structural steel cut from a shell. Heavy, valuable"
 ui.res.panel,Hull panel,ui.res,M1,Flat salvaged plating. The cheapest wall material
@@ -97,6 +97,7 @@ ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sowing,Sowing,ui.status,M3,Breaking ground and planting a zone cell
 ui.status.harvesting,Harvesting,ui.status,M3,Cutting a ripe crop and gathering it
+ui.status.refuelling,Refuelling,ui.status,M3,Carrying fuel to a generator and filling it
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
 ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem
@@ -173,6 +174,7 @@ ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
 ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
 ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
+ui.arch.tool.unwire,Remove conduit,ui.arch.tool,M3,"Takes a conduit up, and nothing else in the cell"
 ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night
 ui.arch.tool.generator,Generator,ui.arch.tool,M3,Burns fuel for power
 ui.arch.tool.solar,Solar array,ui.arch.tool,M3,"Free power, and useless in the dark"
@@ -308,12 +310,14 @@ ui.alert.prisonerescape,Prisoner escaping,ui.alert,M2,One is getting out
 ui.alert.raid,Raid,ui.alert,M2,Hostiles are here
 ui.alert.drop,Drop from above,ui.alert,M2,Something came in through open sky
 ui.alert.powerloss,Power failure,ui.alert,M2,A net has gone dark
+ui.alert.nofuel,Out of fuel,ui.alert,M3,A generator is empty and its net wants power
 ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
 ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
 ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
 ui.alert.storagestuck,Store cannot be emptied,ui.alert,M3,"A shelf is marked for removal and there is nowhere to put what is in it"
 ui.toast.skillup,{name} has reached {skill} {level},ui.toast,M2,A colonist's skill has gone up a level
 ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
+ui.bulletin.scrapdrop,Scrap drop,ui.bulletin,M3,Scrap metal fell from the sky
 ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
 ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us
 ui.bulletin.caravan,Caravan,ui.bulletin,M2,Ours has arrived or returned

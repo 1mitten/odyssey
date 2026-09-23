@@ -147,6 +147,9 @@ namespace Odyssey.Sim.Pawns
         public const int Harvest = JobHandle.Harvest;
         public const int DraftHold = JobHandle.DraftHold;
         public const int Goto = JobHandle.Goto;
+        public const int LayConduit = JobHandle.LayConduit;
+        public const int RemoveConduit = JobHandle.RemoveConduit;
+        public const int Refuel = JobHandle.Refuel;
         public const int Count = JobHandle.Count;
     }
 
@@ -1074,7 +1077,9 @@ namespace Odyssey.Sim.Pawns
                 // every save taken with one running, so its number is a save contract.
                 "Job_Sow", "Job_Harvest",
                 // The draft (design 33 §2c).
-                "Job_DraftHold", "Job_Goto");
+                "Job_DraftHold", "Job_Goto",
+                // Power (design 32), appended for the same reason.
+                "Job_LayConduit", "Job_RemoveConduit", "Job_Refuel");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
                 "Work_Growing");
