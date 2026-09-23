@@ -307,6 +307,14 @@ namespace Odyssey.Presentation.Rendering
         public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
 
         /// <summary>
+        /// The clips a <b>combat row</b> plays (design 33 §1, <c>ModuleIds.CombatRows</c>): one
+        /// entry per variant of the role — a direction, a combo step, or a begin, loop or end.
+        /// Empty on every other row, and every clip null on a checkout without the Sword Combat
+        /// pack, which is what sends the figure to <c>CombatPose</c>'s computed version.
+        /// </summary>
+        public List<CombatClipEntry> combat = new List<CombatClipEntry>();
+
+        /// <summary>
         /// Lay a <b>computed</b> four-legged gait over this row's idle (design 29 §8a,
         /// <c>QuadrupedGait</c>). The stride is measured off the rig's own legs at build, not
         /// declared here. Off, the default, means the row's clips are its whole locomotion. On for
@@ -409,6 +417,32 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Metres per second the gait covers ground at. Zero means standing still.")]
         public float metresPerSecond;
+    }
+
+    /// <summary>
+    /// One clip of a combat row: which variant of the role it is and, for a blow, where in it the
+    /// blow lands (design 33 §3, <c>docs/research/synty-sword-combat.md</c>).
+    ///
+    /// <para><b>The impact is measured, not typed.</b> Every attack in the Sword Combat pack is
+    /// cut by its author into WindUp, Hit and FollowThrough sub-clips, so the frame the blade
+    /// lands is the WindUp's last frame. The catalogue build reads it off the importer's own clip
+    /// ranges and writes it here in seconds from the clip's start; the figure then plays the clip
+    /// at the rate that puts this instant on the simulation's <c>windupTicks</c>.</para>
+    /// </summary>
+    [Serializable]
+    public sealed class CombatClipEntry
+    {
+        [Tooltip("The Polygon, in-place, non-returning clip, by its own name.")]
+        public string clipName = string.Empty;
+
+        [Tooltip("The clip. Null on a clone without the Sword Combat pack; the computed pose stands in.")]
+        public AnimationClip? clip;
+
+        [Tooltip("Which variant: F/B/L/R for a direction, A/B/C for a combo step, Begin/Loop/End for a phase.")]
+        public string variant = string.Empty;
+
+        [Tooltip("Seconds from the clip's start to the blow landing: where its WindUp sub-clip ends. 0 for a clip with no blow.")]
+        public float impactSeconds;
     }
 
     /// <summary>

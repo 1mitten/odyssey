@@ -76,6 +76,15 @@ namespace Odyssey.Presentation.World
             public int Pawn;
 
             /// <summary>
+            /// Lent out to lie down as a corpse (<see cref="BorrowForCorpse"/>): nobody's live
+            /// figure, and not in the pool either until it is handed back.
+            /// </summary>
+            public bool Borrowed;
+
+            /// <summary>The fight as this figure is drawing it: its action, its held states, its clip layer.</summary>
+            public CombatState Fight = new CombatState();
+
+            /// <summary>
             /// The computed gait, for an animal whose row asks for one and whose rig has the
             /// four legs (design 29). Null on every colonist and on an animal that walks on its
             /// own clips.

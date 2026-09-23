@@ -61,6 +61,40 @@ namespace Odyssey.Presentation.Audio
         public const string Draft = SoundPrefix + "draft";
 
         /// <summary>
+        /// A melee swing starting its wind-up (design 33 §1). <b>Named, and in no catalogue
+        /// yet</b>, like the four below it: the director declines a sound it has no clip for, so
+        /// the fight is heard the day the owner adds the rows and not before.
+        /// </summary>
+        public const string CombatSwing = SoundPrefix + "combat.swing";
+
+        /// <summary>A blow landing on somebody. Named, and in no catalogue yet.</summary>
+        public const string CombatHit = SoundPrefix + "combat.hit";
+
+        /// <summary>A blow meeting nothing — a miss or a dodge. Named, and in no catalogue yet.</summary>
+        public const string CombatMiss = SoundPrefix + "combat.miss";
+
+        /// <summary>Somebody going down. Named, and in no catalogue yet.</summary>
+        public const string CombatDown = SoundPrefix + "combat.down";
+
+        /// <summary>Somebody dying. Named, and in no catalogue yet.</summary>
+        public const string CombatDeath = SoundPrefix + "combat.death";
+
+        /// <summary>
+        /// The sound a moment of a fight makes, or null for one that makes none: a stun is the
+        /// blow that caused it and is already heard, and getting up is quiet.
+        /// </summary>
+        public static string? ForCombat(Odyssey.Sim.Contracts.CombatEventKind kind) => kind switch
+        {
+            Odyssey.Sim.Contracts.CombatEventKind.Swing => CombatSwing,
+            Odyssey.Sim.Contracts.CombatEventKind.Hit => CombatHit,
+            Odyssey.Sim.Contracts.CombatEventKind.Miss => CombatMiss,
+            Odyssey.Sim.Contracts.CombatEventKind.Dodge => CombatMiss,
+            Odyssey.Sim.Contracts.CombatEventKind.Downed => CombatDown,
+            Odyssey.Sim.Contracts.CombatEventKind.Died => CombatDeath,
+            _ => null,
+        };
+
+        /// <summary>
         /// A sliding door opening. <b>Named, and in no catalogue yet</b>:
         /// the director declines a sound it has no clip for, so this plays the day the owner adds
         /// the row and not before.

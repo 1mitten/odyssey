@@ -101,6 +101,17 @@ namespace Odyssey.Presentation.Bootstrap
             // readout visibly skipped to something else before settling). Republishing between
             // ticks is safe for exactly the reason a question is safe: it changes no state the
             // simulation owns, publishes over the same settled world, and moves no counter.
+            // A corpse under the pointer, where no living pawn is (design 33 §5f): clickable as
+            // "Corpse of X". The corpse's own box, the one its cursor draws. The choice is lane C's
+            // (HudDirectors.ChooseCorpse); until it answers yes the click falls through to the
+            // ground beneath, as it always did.
+            if (!under.IsValid && picked.HasValue && !shift && _bootstrap?.Corpses != null)
+            {
+                SelectableBand(out int lowest, out _);
+                int corpse = _bootstrap.Corpses.CorpseUnderRay(ray, Mathf.Max(lowest, picked.Value.Y));
+                if (corpse > 0 && directors.ChooseCorpse(corpse, world.Views.Current)) return;
+            }
+
             if (picked.HasValue)
                 world.Intents.Submit(new Intent(IntentKind.QueryCell, picked.Value));
             else
