@@ -461,6 +461,71 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// What the aspect lookup costs, against the scan it replaced, in one run.
+        ///
+        /// <para><b>The second O(N squared) found by fixing the first</b>
+        /// (<c>docs/design/31-aspect-lookup.md</c>, out of <c>25-pawn-steering.md</c> §9d). A
+        /// colonist publishes 57 aspect rows every tick, so the published set is 57 × colonists;
+        /// <c>TryGetPawnAspect</c> scanned it, and the far-form renderer called it once per
+        /// colonist it drew. <c>WorldSnapshot.IndexAspects</c> is the control — false is the scan,
+        /// true is the lazy index — and <c>AspectScaleTests.TheIndexAndTheScanAgreeRowForRow</c>
+        /// is what makes it a control rather than two games.</para>
+        ///
+        /// <para>Alternating, twice each, at three colony sizes spanning the figure ceiling — the
+        /// shape <c>TheAttachmentsCostWhatTheyDraw</c> established, because this machine drifts by
+        /// more between runs than most passes cost.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheAspectLookupCostsWhatItScans()
+        {
+            GameObject root = Build(Odyssey.Sim.Worldgen.Natural.MapType.Natural, barren: true,
+                out OdysseyBootstrap boot);
+            try
+            {
+                yield return null;
+                Assert.That(boot.World, Is.Not.Null, "the bootstrap never built a world");
+
+                foreach (int size in new[] { 64, 192, 384 })
+                {
+                    yield return GrowColonyTo(boot, size);
+                    int pawns = boot.World!.Views.Current.Pawns.Length;
+                    int rows = boot.World!.Views.Current.AspectCount;
+
+                    float scanA = 0f, indexA = 0f, scanB = 0f, indexB = 0f;
+                    double[] scanSplit = System.Array.Empty<double>();
+                    double[] indexSplit = System.Array.Empty<double>();
+
+                    WorldSnapshot.IndexAspects = false;
+                    yield return TimeFrames($"aspect/{pawns}/scan", boot, 30, x => scanA = x, s => scanSplit = s);
+                    WorldSnapshot.IndexAspects = true;
+                    yield return TimeFrames($"aspect/{pawns}/index", boot, 30, x => indexA = x, s => indexSplit = s);
+                    WorldSnapshot.IndexAspects = false;
+                    yield return TimeFrames($"aspect/{pawns}/scan", boot, 30, x => scanB = x);
+                    WorldSnapshot.IndexAspects = true;
+                    yield return TimeFrames($"aspect/{pawns}/index", boot, 30, x => indexB = x);
+
+                    double Part(double[] split, OdysseyBootstrap.FrameSection section) =>
+                        split.Length > (int)section ? split[(int)section] : 0d;
+
+                    Debug.Log($"[FrameTime] aspects at {pawns} pawns ({rows} rows, " +
+                              $"{(pawns > 0 ? rows / pawns : 0)} a colonist), " +
+                              $"{boot.Figures?.FigureCount ?? 0} figures: " +
+                              $"scan {(scanA + scanB) * 0.5f:0.000} ms ({scanA:0.000}/{scanB:0.000}), " +
+                              $"index {(indexA + indexB) * 0.5f:0.000} ms ({indexA:0.000}/{indexB:0.000}); " +
+                              $"Actors {Part(scanSplit, OdysseyBootstrap.FrameSection.Actors):0.000} -> " +
+                              $"{Part(indexSplit, OdysseyBootstrap.FrameSection.Actors):0.000} ms, " +
+                              $"Figures {Part(scanSplit, OdysseyBootstrap.FrameSection.Figures):0.000} -> " +
+                              $"{Part(indexSplit, OdysseyBootstrap.FrameSection.Figures):0.000} ms");
+                }
+            }
+            finally
+            {
+                WorldSnapshot.IndexAspects = true;
+                UnityEngine.Object.Destroy(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator TheFrameAgainstColonySize()
         {
