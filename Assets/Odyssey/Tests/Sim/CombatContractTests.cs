@@ -425,7 +425,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(Of(colonist), Is.EqualTo(PawnFlags.Person | PawnFlags.Drafted));
             Assert.That(Of(other), Is.EqualTo(PawnFlags.Person | PawnFlags.Downed | PawnFlags.Stunned | PawnFlags.Carried));
             Assert.That(Of(hog), Is.EqualTo(PawnFlags.None));
-            Assert.That(Of(marauder), Is.EqualTo(PawnFlags.Person | PawnFlags.Hostile));
+            Assert.That(Of(marauder), Is.EqualTo(PawnFlags.Person | PawnFlags.Hostile | PawnFlags.Drawn),
+                "a marauder spawns armed and always has its weapon out (design 33 §8b)");
 
             Assert.That(frame.TryGetPawn(marauder.Id, out PawnView m) && m.IsPerson && !m.IsColonist && !m.IsAnimal, Is.True,
                 "a marauder is kind 3 and a person: exactly the case 'kind 0 or an animal' got wrong");

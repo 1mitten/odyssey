@@ -84,6 +84,14 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>In somebody's arms (C4): drawn in the carrier's cradle, not at its own cell.</summary>
         Carried = 1 << 5,
+
+        /// <summary>
+        /// The weapon in the hand is out rather than at the hip (design 33 §8b): the pawn holds a
+        /// weapon and has a reason to fight with it now — hostile, drafted, its attack target within
+        /// two tiles, or fighting back after a blow. Derived each publish from saved state; the
+        /// ~2 s before a weapon is put away again is presentation's.
+        /// </summary>
+        Drawn = 1 << 6,
     }
 
     /// <summary>
@@ -299,6 +307,7 @@ namespace Odyssey.Sim.Contracts
         public bool IsDowned => (Flags & PawnFlags.Downed) != 0;
         public bool IsStunned => (Flags & PawnFlags.Stunned) != 0;
         public bool IsCarried => (Flags & PawnFlags.Carried) != 0;
+        public bool IsWeaponDrawn => (Flags & PawnFlags.Drawn) != 0;
 
         /// <param name="flags">What the pawn is. <b>Omitted, it is derived from the kind the way
         /// every view before combat was read</b> — kind 0 a person, anything else an animal — so a
