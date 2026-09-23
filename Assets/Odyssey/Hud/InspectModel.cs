@@ -158,35 +158,64 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// The pane's avatar slot shows this pawn's own face (and portrait) rather than a keyed
-        /// badge. A colonist's today.
+        /// badge. A colonist's, and nobody else's: an animal and a marauder wear their kind's
+        /// badge (design 33 §5f, lane C).
         /// </summary>
-        public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal;
+        public bool ShowsFace => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
 
         /// <summary>
         /// The needs, the skills, the Health tab's values and the mood in the state line are
-        /// synced. A colonist's today; lane C decides a marauder's.
+        /// synced. A colonist's only. <b>A marauder has none of them</b> (design 33 §5c: no needs;
+        /// its skills are not the player's to read and its health is the bar over its head), so
+        /// its pane is the animal's shape — kind, activity, where.
         /// </summary>
-        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal;
+        public bool ShowsColonistBody => Subject == InspectSubject.Colonist && !IsAnimal && !IsHostile;
 
         /// <summary>
-        /// The tab strip and the fixed-height tab box are built. Every pawn's today — an animal's
-        /// box is built from an empty tab list, which is the pane as it was and is kept rather
-        /// than changed by a contracts step.
+        /// The tab strip and the fixed-height tab box are built. A colonist's, and an animal's —
+        /// whose box is built from an empty tab list, the pane as it was (design 33 §5i) and kept
+        /// rather than changed without a decision. A marauder's is not: its pane has no tabs to
+        /// hold, and an empty box would be the Health tab's place with nothing in it.
         /// </summary>
-        public bool ShowsTabBox => Subject == InspectSubject.Colonist;
+        public bool ShowsTabBox => Subject == InspectSubject.Colonist && !IsHostile;
 
         /// <summary>The badge the avatar slot shows when <see cref="ShowsFace"/> is false.</summary>
         public string AvatarKey =>
             Subject == InspectSubject.Item ? ItemIconKey
             : Subject == InspectSubject.Cell ? CellIconKey
-            : IsAnimal || Subject == InspectSubject.Corpse ? KindIconKey
+            : IsAnimal || IsHostile || Subject == InspectSubject.Corpse ? KindIconKey
             : PawnKindLabels.Colonist;
 
-        /// <summary>The corpse's registry key: its badge and, until lane C names it, its title.</summary>
+        /// <summary>The corpse's registry key: its badge, and the first word of its title.</summary>
         public const string CorpseKey = "ui.pawn.corpse";
 
         /// <summary>Last-known values of a colonist who has left the frame, shown greyed.</summary>
         public bool Tombstoned;
+
+        // ---- the Health tab (design 33 §1, §5d; lane C) ---------------------------------------
+
+        /// <summary>
+        /// The Health tab's rows under the bar: the colonist's condition (unhurt, hurt, stunned,
+        /// downed) and what is in her hand. Rebuilt only when one of them changes.
+        /// </summary>
+        public readonly List<InspectRow> HealthRows = new List<InspectRow>();
+
+        /// <summary>
+        /// "73 / 100": hit points left out of the pool, in whole points, up to the next whole point
+        /// so a colonist on her feet never reads nought, and nought for anybody below it. Empty
+        /// when no pool is published (a frame from before combat).
+        /// </summary>
+        public string HealthValue = string.Empty;
+
+        /// <summary>The bar's fill, 0 to 1000: hit points over the pool, clamped.</summary>
+        public int HealthPerMille;
+
+        /// <summary>The bar's ink, from <see cref="CombatFeedbackModel.HealthBarColour"/>.</summary>
+        public HudColour HealthInk = HudTheme.Good;
+
+        /// <summary>The Health tab's row labels, by key.</summary>
+        public const string HealthKey = "ui.combat.health", ConditionKey = "ui.combat.condition",
+            WeaponKey = "ui.combat.weapon";
 
         // ---- header
         public string Title = string.Empty;
@@ -233,9 +262,20 @@ namespace Odyssey.Hud
         /// <summary>
         /// The selected pawn is an animal (design 29 §2, §8): the pane says its species, what it
         /// is doing and where it is, and nothing a person has — no portrait, no needs, no tabs,
-        /// no commands. Set from the view's kind on every refresh.
+        /// no commands. Set from the view's flags on every refresh.
         /// </summary>
         public bool IsAnimal;
+
+        /// <summary>
+        /// The selected pawn is hostile — a marauder (design 33 §1). A person, and not ours: its
+        /// pane is the animal's shape (kind, activity, where) with the kind's badge, and it has no
+        /// needs, skills, Health tab or Draft button. Set from the view's flags on every refresh.
+        /// </summary>
+        public bool IsHostile;
+
+        // Which pawn IsAnimal and IsHostile were last read for. A pawn that leaves the frame keeps
+        // the shape it had while it was in it, rather than falling to a colonist's tombstone.
+        PawnId _shapeFor;
 
         /// <summary>The species' registry key, for the badge an animal shows where a person shows a face.</summary>
         public string KindIconKey = PawnKindLabels.Colonist;
@@ -412,6 +452,96 @@ namespace Odyssey.Hud
             Position = $"at {cell.X}, {cell.Z}";
         }
 
+        /// <summary>The carried half of the activity cache while an animal's line is in it: no carried def is this.</summary>
+        const int AnimalActivity = int.MinValue + 1;
+
+        // The corpse the header strings were last written for. A corpse never changes, so its
+        // three strings are composed once per selection rather than fifteen times a second.
+        int _corpseFor;
+
+        /// <summary>
+        /// "Corpse of Wrenn" — "Corpse of a midden hog" — what it was, and when it died (design 33
+        /// §1). A colonist is named as she was named alive: <see cref="ColonistNames.Of(uint, PawnId)"/>
+        /// over the seed and id the corpse kept, which answers a player's own name first, so the
+        /// roster she left and the body she left agree. Nothing else has a name, so an animal and a
+        /// marauder are called by their kind.
+        /// </summary>
+        void DescribeCorpse(in CorpseView corpse)
+        {
+            if (_corpseFor == corpse.Id) return;
+            _corpseFor = corpse.Id;
+
+            bool colonist = (corpse.Flags & (PawnFlags.Person | PawnFlags.Hostile)) == PawnFlags.Person;
+            bool hostile = (corpse.Flags & PawnFlags.Hostile) != 0;
+            string of = colonist
+                ? ColonistNames.Of(corpse.RollSeed, corpse.Pawn)
+                : WithArticle(PawnKindLabels.Label(corpse.Kind).ToLowerInvariant());
+            Title = Registry.Label(CorpseKey) + " of " + of;
+            Subtitle = colonist ? "colonist" : hostile ? "hostile" : "animal";
+            Job = Registry.Label(DeadKey) + " · since " + GameClock.HourOfDay(corpse.Tick).ToString("00")
+                + "h, day " + GameClock.DayOfMonth(corpse.Tick) + " of " + GameClock.MonthName(corpse.Tick);
+        }
+
+        const string DeadKey = "ui.combat.dead";
+
+        static string WithArticle(string noun) =>
+            noun.Length > 0 && "aeiou".IndexOf(noun[0]) >= 0 ? "an " + noun : "a " + noun;
+
+        // What the Health tab's strings were last built from, so a refresh that says the same
+        // thing builds nothing — the pane refreshes fifteen times a second.
+        int _healthHp = int.MinValue, _healthMax = int.MinValue, _healthWeapon = int.MinValue, _healthCondition = -1;
+
+        /// <summary>
+        /// The Health tab (design 33 §1: HP, state, weapon). The pool is <c>odyssey.pawn.hp.max</c>,
+        /// published for every person always; <b>no <c>odyssey.pawn.hp</c> beside it means whole</b>
+        /// (design 33 §5d). The condition is the flags' — downed, then stunned — else hurt while
+        /// below the pool, else unhurt. The weapon is <c>odyssey.pawn.weapon</c>'s item, else bare
+        /// hands.
+        ///
+        /// <para>Three O(1) aspect lookups a refresh for the one pawn on the pane.</para>
+        /// </summary>
+        void RefreshHealth(WorldSnapshot snapshot, in PawnView pawn)
+        {
+            bool pooled = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpMaxKey, out int max) && max > 0;
+            if (!pooled) max = 0;
+            int hp = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.HpKey, out int published) ? published : max;
+            int weapon = snapshot.TryGetPawnAspect(pawn.Id, CombatAspectNames.WeaponKey, out int held) ? held : -1;
+            int condition = pawn.IsDowned ? 3 : pawn.IsStunned ? 2 : hp < max ? 1 : 0;
+
+            if (hp == _healthHp && max == _healthMax && weapon == _healthWeapon && condition == _healthCondition)
+                return;
+            _healthHp = hp;
+            _healthMax = max;
+            _healthWeapon = weapon;
+            _healthCondition = condition;
+
+            int shown = hp < 0 ? 0 : hp > max ? max : hp;
+            HealthValue = pooled ? WholePoints(hp) + " / " + WholePoints(max) : string.Empty;
+            HealthPerMille = pooled ? (int)((long)shown * 1000 / max) : 0;
+            HealthInk = CombatFeedbackModel.HealthBarColour(shown, max);
+
+            HealthRows.Clear();
+            HealthRows.Add(new InspectRow
+            {
+                Name = Registry.Label(ConditionKey),
+                Value = Registry.Label(condition switch
+                {
+                    3 => CombatFeedbackModel.DownedKey,
+                    2 => CombatFeedbackModel.StunnedKey,
+                    1 => "ui.combat.hurt",
+                    _ => "ui.combat.unhurt",
+                }),
+            });
+            HealthRows.Add(new InspectRow
+            {
+                Name = Registry.Label(WeaponKey),
+                Value = weapon >= 0 ? ItemLabels.Label(weapon) : Registry.Label("ui.combat.barehands"),
+            });
+        }
+
+        /// <summary>Thousandths to whole points, up to the next one: on her feet is never "0". Nought below it.</summary>
+        static int WholePoints(int milli) => milli <= 0 ? 0 : (milli + 999) / 1000;
+
         /// <summary>
         /// Refill every field from the current frame. Called on the pane's cadence (15 Hz in the
         /// catalogue), and once more the moment the selection changes, so a click answers in the
@@ -429,29 +559,61 @@ namespace Odyssey.Hud
 
             if (Subject == InspectSubject.Colonist)
             {
-                if (snapshot.TryGetPawn(Pawn, out PawnView pawn) && PawnKindLabels.IsAnimal(pawn))
+                bool present = snapshot.TryGetPawn(Pawn, out PawnView pawn);
+                if (present)
                 {
-                    // An animal (design 29 §8): species, activity, where. The colonist's tabs,
-                    // commands and skills are not added, so the pane below the header is empty.
-                    IsAnimal = true;
-                    Tombstoned = false;
+                    IsAnimal = PawnKindLabels.IsAnimal(pawn);
+                    IsHostile = pawn.IsHostile;
+                    _shapeFor = Pawn;
+                }
+                else if (_shapeFor != Pawn)
+                {
+                    // Never seen in a frame: the colonist's tombstone, as it always was.
+                    IsAnimal = false;
+                    IsHostile = false;
+                }
+
+                if (IsAnimal || IsHostile)
+                {
+                    // An animal (design 29 §8) or a marauder (design 33 §1): kind, activity,
+                    // where. The colonist's tabs, commands and skills are not added, so the pane
+                    // below the header is empty — and stays so when the pawn leaves the frame,
+                    // which a fight now makes ordinary: it keeps its shape, greyed.
                     Skills.Clear();
+                    if (!present)
+                    {
+                        Tombstoned = true;
+                        return;
+                    }
+                    Tombstoned = false;
                     KindIconKey = PawnKindLabels.IconKey(pawn.Kind);
                     Title = PawnKindLabels.Label(pawn.Kind);
-                    Subtitle = "animal";
-                    if (_jobFor != pawn.JobDef)
+                    if (IsAnimal)
                     {
-                        _jobFor = pawn.JobDef;
-                        Job = PawnKindLabels.Activity(pawn.JobDef);
+                        Subtitle = "animal";
+                        // Its own mark in the carried half of the cache, so a colonist's line and
+                        // an animal's for the same job cannot be taken for each other.
+                        if (_jobFor != pawn.JobDef || _carriedFor != AnimalActivity)
+                        {
+                            _jobFor = pawn.JobDef;
+                            _carriedFor = AnimalActivity;
+                            Job = PawnKindLabels.Activity(pawn.JobDef);
+                        }
+                        JobIconKey = PawnKindLabels.ActivityKey(pawn.JobDef);
                     }
-                    JobIconKey = PawnKindLabels.ActivityKey(pawn.JobDef);
+                    else
+                    {
+                        // A marauder's job is a person's job — fighting, mostly — in a person's words.
+                        Subtitle = "hostile";
+                        SetJob(snapshot, pawn);
+                        JobIconKey = JobLabels.IconKey(pawn.JobDef);
+                    }
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                     return;
                 }
 
-                IsAnimal = false;
-                if (snapshot.TryGetPawn(Pawn, out pawn))
+                if (present)
                 {
                     Tombstoned = false;
                     Title = ColonistNames.Of(snapshot, pawn.Id);
@@ -463,6 +625,7 @@ namespace Odyssey.Hud
                     Mood = pawn.Mood;
                     SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
+                    RefreshHealth(snapshot, pawn);
                 }
                 else
                 {
@@ -479,26 +642,30 @@ namespace Odyssey.Hud
 
             Tombstoned = false;
             IsAnimal = false;
+            IsHostile = false;
 
-            // A corpse (design 33 §1, §5f). The contracts step's stub: the badge, the kind's word
-            // and where it lies, with no tabs and no commands. Lane C names it — "Corpse of X"
-            // from ColonistNames over its RollSeed, or the kind's label — and writes its state
-            // line into Job.
+            // A corpse (design 33 §1, §5f): "Corpse of X", what it was, when it died and where it
+            // lies, with the corpse badge and no tabs or commands.
             if (Subject == InspectSubject.Corpse)
             {
                 Skills.Clear();
                 KindIconKey = CorpseKey;
-                Title = Registry.Label(CorpseKey);
-                Subtitle = string.Empty;
-                Job = string.Empty;
                 var corpses = snapshot.Corpses;
                 for (int i = 0; i < corpses.Length; i++)
                 {
                     if (corpses[i].Id != Corpse) continue;
+                    DescribeCorpse(corpses[i]);
                     SetPosition(corpses[i].Cell);
                     Layer = corpses[i].Cell.Y;
-                    break;
+                    return;
                 }
+
+                // Not in this frame (a load, or a later cleanup): the word alone, rather than the
+                // last corpse's name.
+                _corpseFor = 0;
+                Title = Registry.Label(CorpseKey);
+                Subtitle = string.Empty;
+                Job = string.Empty;
                 return;
             }
 
