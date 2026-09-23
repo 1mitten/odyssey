@@ -87,11 +87,14 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The seams lane C fills say "nothing" until it does: no routing, no bar, no text, no
-        /// marker. A right-click is therefore still exactly C1's move.
+        /// The seams lane C filled (design 33 §5f), read through the flags: the marauder wears the
+        /// marker and the colonist beside it does not; an undrafted colonist's right-click on it
+        /// sends nothing, because an attack needs a draft (§5j). Their full rules are
+        /// <c>CombatOrdersTests</c> and <c>CombatFeedbackModelTests</c>; this replaced the contracts
+        /// step's "claims nothing yet" when the lane filled them.
         /// </summary>
         [Test]
-        public void TheLaneSeamsClaimNothingYet()
+        public void TheLaneSeamsReadTheFlags()
         {
             WorldSnapshot snapshot = FrameWithAMarauder();
             var sent = new List<Intent>();
@@ -99,9 +102,12 @@ namespace Odyssey.Tests.Hud
                 new PawnId(2), ctrl: false, sent), Is.False);
             Assert.That(sent, Is.Empty);
 
+            snapshot.TryGetPawn(new PawnId(1), out PawnView colonist);
             snapshot.TryGetPawn(new PawnId(2), out PawnView marauder);
-            Assert.That(CombatFeedbackModel.HealthBar(snapshot, marauder, out _, out _), Is.False);
-            Assert.That(CombatFeedbackModel.HostileMarker(marauder), Is.False);
+            Assert.That(CombatFeedbackModel.HostileMarker(marauder), Is.True);
+            Assert.That(CombatFeedbackModel.HostileMarker(colonist), Is.False);
+            Assert.That(CombatFeedbackModel.HealthBar(snapshot, marauder, out _, out _), Is.False,
+                "no hit points were published, so no bar is owed");
             Assert.That(CombatFeedbackModel.FloatingText(default), Is.Empty);
         }
     }
