@@ -21,9 +21,10 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Somewhere to run to from <paramref name="threatCell"/>: a reachable cell about
         /// <paramref name="cells"/> away, straight away from the threat first, then turning 45° and
-        /// then 90° either side, at the full distance and then at half of it. A fixed scan, so the
-        /// answer is a function of the board and never of a die; -1 if nowhere will do.
-        /// <b>Scales with nothing</b>: at most twenty reachability tests, each two array reads.
+        /// then 90° either side, at the full distance and then halving it down to one cell. A fixed
+        /// scan, so the answer is a function of the board and never of a die; -1 if nowhere will
+        /// do. <b>Scales with nothing</b>: at most twenty-five column searches and reachability
+        /// tests, each a few array reads.
         /// </summary>
         public static int FindFleeCell(PawnContext ctx, Pawn pawn, int threatCell, int cells, TraverseMode mode)
         {

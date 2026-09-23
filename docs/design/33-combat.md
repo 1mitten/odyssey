@@ -508,3 +508,203 @@ briefs point at it.
 - **`JobSystem.Load` accepts a save with fewer job defs than the build.** The job table is
   append-only, so the missing ones are the new ones, and their counters start at zero. It used to
   refuse any difference, which would have made every save from before C1 unloadable.
+
+## 6A. Lane A — the fight (simulation)
+
+**Built 2026-09-23 on `claude/combat-fight`** (from the contracts head `229b00a0`), fast tier and
+Long tier only, no Unity. Every seam of §5e marked lane A is filled; nothing outside them moved but
+the one spine line in §6A.7. **No golden moved**: no golden window drafts, strikes or spawns a
+hostile, every node declines for a pawn at peace, and every clock the fight sets runs back out to
+nought (§6A.5), so a colony that fought and healed hashes as one that never fought.
+
+### 6A.1 A swing
+
+- **The driver starts it; the combat pass lands it.** `AttackMeleeJobDriver` has two toils:
+  *approach* and *wind-up*. In reach (`Melee.InReach`: the same cell, or a legal step to the next
+  one on the same layer — no blow through a wall's corner, none over a terrace edge) and with
+  `NextSwingTick` come, it starts a swing:
+  - sets `NextSwingTick` to now plus the attack's cooldown — on the pawn, so a re-order keeps it;
+  - reports `PawnGesture.Strike` and the `Swing` moment (amount = wind-up ticks, with the weapon);
+  - counts the wind-up in `ToilProgress`, milliwork like every driver.
+- **`CombatSystem` resolves the swing** on the tick the wind-up completes: after every job has
+  ticked (20), before anybody steps (30). It asks `IMeleeRules.Resolve`, then applies the outcome
+  through **`CombatSystem.ApplySwing`, the one method a hit point is lost through**, and puts the
+  driver back to *approach*.
+- **The four rolls** are hit, dodge, damage and stun, each on its own `PawnPurpose` stream salted by
+  the attacker's id.
+  - A downed defender does not dodge.
+  - Damage is uniform over the figure ±`damageSpreadPerMille`, both ends included.
+  - A sharp blow never stuns, whatever its numbers say.
+- **A swing whose attacker is stunned, down or dead when it would land is lost** (§5j). A stun
+  *pauses* the job (§5c), so without the rule the wind-up would wait out the stun and land the
+  moment it wore off. `AStunnedAttackersSwingDoesNotLand` failed with the check withheld
+  (measured).
+- **A swing that arrives on air** is reported as a `Miss` with no roll. That is a target that
+  stepped out of reach during the wind-up, or went down to somebody else's blow on a job that
+  stops at down.
+- **`WorkFocus`** is the target's cell during the wind-up only, else −1. The cell is kept in the
+  job's `TargetCell`, which is saved.
+- **Experience**: `experiencePerSwing` into Melee for a person, landed or not, at the resolve.
+
+### 6A.2 The chase, and when an attack ends
+
+- **What the driver decides with is saved.** Every decision reads the cells, the step progress,
+  `Destination`, `JobStartTick`, the toil and the job's fields, and never the path, which is not
+  saved.
+  - `Job.WorkTicks` holds the tick of the last re-plan. `BuildJobDriver` set the precedent of a
+    driver using that field for its own purpose.
+  - `Job.DestCell` is `ToTheDeath` (1) or −1.
+- **Re-plan** to the target's cell only when the target has left the cell the walk leads to. At
+  once if the pawn is not walking; otherwise at a step boundary (`MoveProgress` under one tick's
+  movement, so the step in hand is never snapped back), no oftener than `chaseRepathTicks` (60).
+  The computed brief said ~20; the Def says 60 and content is frozen, so 60.
+- **In reach mid-step**, the step is landed first; at the boundary the pawn stops and swings.
+- **It ends:**
+  - when the target is gone or dead;
+  - when the target is down — unless the order was given on a pawn already down, which is
+    `ToTheDeath` and is how a marauder that "stays down until killed" gets killed;
+  - when the target is unreachable;
+  - for a drafted colonist's own blow at an adjacent threat, when the target leaves reach: **the
+    hold never chases**;
+  - for any attack nobody ordered (the hunt, revenge, self-defence), after **`RechooseTicks` = 300**
+    at a step boundary, so the mind picks again. *INVENTED*, a constant in the driver because Defs
+    are frozen in Phase 2; proposed below for `CombatDef`.
+- **Buildings**: a job with no `CombatTarget` is C6's branch and fails. It is one marked line at
+  the top of `Tick`.
+
+### 6A.3 Down, dead, up
+
+- **Down at ≤ 0** (`CombatSystem.Down`), all in the same call:
+  - the job ends through `JobSystem.Interrupt`, **keeping the step in progress**, so the body lands
+    where its figure was drawn;
+  - the draft ends, and so does any break (`BreakTicksLeft = 0`, §5j);
+  - `Job_Downed` starts, so a paused frame reads "Downed";
+  - `Downed` is reported with the weapon, and `RaiseDowned` fires.
+- **A broken colonist downed** has one `Job_Downed` start and no failures for the rest of what
+  would have been her break. With the break left running, the downed job restarted (measured).
+- **Dead at ≤ −50 %** (`CombatSystem.Kill`):
+  - `Died` is reported at once, so it is published in the same frame as the corpse;
+  - the removal is `ctx.Defer`red to the end of the tick, and runs in order: `Corpses.Add` (facing
+    away from the blow, `Melee.FallFacing`), `RaiseDied`, `EndJob`, `PawnRegistry.Despawn`. The
+    despawn releases the pawn's reservations and beds itself.
+  - **Only the blow that crosses the line kills**, so two blows on one tick kill nobody twice.
+  - **A blow from standing to past the line kills without a fall**: no `Downed` hook, which is a rat
+    losing 23 of its 15.
+  - `ADeathIsDeferredToTheEndOfTheTick` failed with an immediate removal (measured).
+- **Up at 15 %** (`CombatSystem.Recover`), checked on the heal that crosses the line, never
+  inferred elsewhere. `Job_Downed` ends as a success, and `Recovered` is reported. A downed pawn
+  whose hit points are not rising stays down whatever they are — the contract test's colonist
+  flagged down at full health stays down.
+- **`Job_Downed`** answers `Ongoing` while down and fails on a pawn standing up, which is the stub's
+  contract. It never ends itself: getting up is the combat pass's decision.
+
+### 6A.4 Healing
+
+On the needs cadence and the needs system's own phase spreading (`(tick + id) % 150`), **over the
+hurt only**: a whole pawn costs one comparison.
+
+- An **animal** heals anywhere, at `animalHealPerDay`.
+- A **colonist** heals only **lying in a bed** (down or asleep, on a bed cell), at `bedHealPerDay`.
+- A **marauder** never heals.
+
+The fraction one interval cannot carry is spent by the interval index, so a day's healing is the
+content's figure to the thousandth (`ADaysHealingIsExact`).
+
+### 6A.5 The clocks run back to nought
+
+`StunnedUntilTick`, `NextSwingTick` and the retaliation are cleared once past. So is
+`CombatTarget`, by the attack driver's cleanup. A pawn over its fight — healed, unstunned, not
+fighting — therefore carries no combat state and hashes as it did before (§6), and that is what
+lets C5 and C6 assert the goldens unchanged.
+
+### 6A.6 The minds
+
+| Node | Does |
+|---|---|
+| `DownedThinkNode` | down → `Job_Downed`; one branch for anybody standing |
+| `DraftedThinkNode` (`Draft.cs`) | a threat in reach → the blow (not forced, so never chased), and the four quiet hours start again; else the hold. **The hold itself ends when a threat comes into reach**, since a holding colonist never thinks |
+| `SelfDefenceThinkNode` | the colonist who struck her while `RetaliateAgainst` holds; else a threat beside her |
+| `HostileThinkNode` | the nearest reachable standing colonist; nobody standing → idle |
+| `AnimalCombatThinkNode` | carries a revenge on across thinks; the roll itself is at the blow |
+
+**A threat** (`Melee.IsThreatTo`) is a standing hostile, or anybody standing whose attack is aimed
+at her. So a vengeful hog, or a colonist who Ctrl-attacked her, is answered by the hold as well.
+
+**At the blow** (`CombatSystem.React`), a pawn still standing answers:
+
+- **An animal** rolls its species' revenge on `PawnPurpose.Revenge`.
+  - Turning, it hunts the attacker for `revengeTicks`.
+  - Not turning, it runs (`Job_Flee`, to `FleeJobDriver.FindFleeCell`: a fixed scan straight away
+    from the threat, then turning 45° and 90° either way, at `fleeCells` halving to 1).
+  - **A failed roll does not un-turn an animal already turned on that attacker.**
+- **An undrafted, unbroken colonist** remembers **whoever** struck her for `retaliationTicks` and
+  is interrupted, so her self-defence answers on her next think.
+  - *Our call, past the owner's colonist-on-colonist rule.* Remembering only a colonist was
+    tried first, and it failed: the struck colonist landed the step she was on, which took her out
+    of reach; she found nobody beside her and went back to wandering while the marauder beat her
+    down (measured).
+- **A marauder** struck by a colonist it was not fighting re-thinks, and its hunt then finds the
+  colonist beside it.
+- **A drafted colonist** reacts to nothing here: her hold fights.
+
+### 6A.7 The one spine edit: a chase runs
+
+`Pawn.UrgencyPerMille` answers the run (`draftedPacePerMille`, 2,000) for `Job_AttackMelee` and
+`Job_Flee`, as well as for the draft. §2h named this seam for exactly that day.
+
+At walking pace a hunt closed on a wandering colonist at the speed she walked away, and in 3,000
+ticks on a bare board never reached her (measured). With the edit withheld,
+`AColonistStruckByAMarauderFightsBack` fails. No golden window fights, so no golden moved.
+
+### 6A.8 The order
+
+`OrderAttack(A, B)` is accepted for a drafted, standing colonist of ours against any pawn that
+exists, is alive, is not herself, and is within reach or reachable. The target may be an animal, a
+marauder, or a colonist.
+
+- **The Ctrl a colonist target needs is the interface's gesture** (`CombatOrders.Route`, lane C).
+  The contract gives the intent no argument to carry it. The computed brief asked for "colonist
+  only when the intent says forced/Ctrl"; honouring it would need a `C` argument that lane C does
+  not send, so it is left to the integrator (open below).
+- **`B = 0` stays refused** (C6).
+- The order ends the job in hand through `Interrupt`, names the target on the pawn, and starts a
+  forced `Job_AttackMelee`. An order given on a pawn already down is `ToTheDeath`.
+
+### 6A.9 What it costs
+
+`CombatSystem.Tick` is one pass over the pawns with a branch each, plus the swings landing and the
+heals due. The threat scan (`Melee.AdjacentThreat`) is one pass over the pawns per drafted
+colonist per tick, and per self-defence think.
+
+`TickBenchmarkTests.TwentyAgainstTwenty` (explicit), 120 × 120 × 16, twenty colonists, one run on
+the Windows dev machine, 2026-09-23:
+
+| Case | Tick, mean | Pawns phase, mean |
+|---|---|---|
+| At peace | 0.034 ms | 0.007 ms |
+| Against twenty marauders | 0.069 ms | 0.012 ms |
+
+The fight run resolved 272 swings in its 1,500 ticks.
+
+### 6A.10 Tests (fast tier unless marked)
+
+Each claim was seen to fail with its rule withheld.
+
+| Test file | What it covers |
+|---|---|
+| `CombatMathTests` | the owner's curves; the rates measured over 4,000 swings; the spread's ends; blunt stuns and sharp never; one stream per roll — failed with a shared stream (measured) |
+| `AttackDriverTests` | the chase; the cooldown; a re-order keeps the clock; the wind-up focus; the weapon on every report; the lost stunned swing; the refusals; the hold that never chases — failed with the rule withheld (measured); a save taken mid-swing resumes on the same hash 600 ticks on, with a forgetful load as the control |
+| `DownedDeathTests` | the fall, death and the corpse; the corpse's facing |
+| `HealingTests` | healing in a bed, and the animal and marauder cases |
+| `HostileTests` | the hunt and self-defence |
+| `AnimalRevengeTests` | revenge rates, a hog 700 ± 60 ‰ and a rat 50 ± 30 ‰ over 400 blows each |
+| **Long:** `MarauderSoakTests` | a marauder a day for ten days on the soak's board: invariants at every 500 ticks and a save on day five resumed equal a day later. 9.5 s; 536 swings, all ten marauders down, no deaths with fists |
+
+`CombatFixture` is the shared test fixture. `HeldWeapon` puts a weapon in a hand without lane D.
+
+### 6A.11 Open
+
+- **Proposed for `CombatDef` at the integrator's Def pass:** `rechooseTicks` = 300.
+- **The Ctrl flag on `OrderAttack`** — see §6A.8.
+- **A downed body slides the rest of its step.** The price of keeping the step (§2d): the figure
+  lands where it is drawn, rather than snapping back.
